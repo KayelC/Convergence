@@ -93,52 +93,100 @@ namespace JRPGPrototype.Entities
             BaseHP = 20; // 20 + (2*5) = 30HP at start
             BaseSP = 6;  // 6 + (2*3) = 12SP at start
         }
-
-        public static Combatant CreateFromData(EnemyData data)
+        // MODIFIED: This method is now the generic CreateEnemy factory.
+        /// <summary>
+        /// Creates a Combatant instance representing an enemy, hydrating data from PersonaData
+        /// and applying SMT-specific enemy rules (e.g., all skills available immediately, 0 base stats).
+        /// </summary>
+        /// <param name="requestedId">The ID from dungeon config (e.g., "E_pixie", "pixie").</param>
+        /// <returns>A configured Combatant ready for battle, or a "Glitch" fallback.</returns>
+        public static Combatant CreateEnemy(string requestedId)
         {
-            Combatant c = new Combatant(data.Name, ClassType.Demon);
-            c.SourceId = data.Id;
-            c.Level = data.Level;
-            c.Controller = ControllerType.AI;
+            string canonicalId = requestedId.ToLower();
 
-            foreach (var kvp in data.Stats)
+            // 1. Flexible ID Resolution: Try direct lookup, then try stripping "E_" prefix if present
+            PersonaData templateData = null;
+            if (!Database.Personas.TryGetValue(canonicalId, out templateData))
             {
-                if (Enum.TryParse(kvp.Key, true, out StatType stat))
-                    // Clamping enemy stats at 40
-                    c.CharacterStats[stat] = Math.Min(40, kvp.Value);
-            }
-
-            if (!string.IsNullOrEmpty(data.PersonaId) && Database.Personas.TryGetValue(data.PersonaId, out var pData))
-            {
-                c.ActivePersona = pData.ToPersona();
-                c.ActivePersona.Level = c.Level;
-                if (data.Skills != null)
+                if (canonicalId.StartsWith("e_"))
                 {
-                    foreach (var s in data.Skills)
-                        if (!c.ActivePersona.SkillSet.Contains(s))
-                            c.ActivePersona.SkillSet.Add(s);
+                    string unprefixedId = canonicalId.Substring(2);
+                    Database.Personas.TryGetValue(unprefixedId, out templateData);
                 }
             }
-            if (c.ActivePersona == null && data.Skills != null)
+
+            // 2. Fallback if no template is found
+            if (templateData == null)
             {
-                c.ExtraSkills.AddRange(data.Skills);
+                return new Combatant("Glitch", ClassType.Demon)
+                {
+                    SourceId = requestedId,
+                    Level = 1
+                };
             }
+
+            // 3. Create a new Combatant (representing the enemy)
+            Combatant c = new Combatant(templateData.Name, ClassType.Demon)
+            {
+                SourceId = requestedId,
+                Level = templateData.Level,
+                Controller = ControllerType.AI,
+                BattleControl = ControlState.ActFreely
+            };
+
+            // 4. IMPORTANT: Reset CharacterStats to 0 for Demons.
+            // Demons rely entirely on their ActivePersona's scaled stats.
+            foreach (StatType t in Enum.GetValues(typeof(StatType)))
+            {
+                c.CharacterStats[t] = 0;
+            }
+
+            // 5. Attach the PersonaData as the ActivePersona and scale it
+            c.ActivePersona = templateData.ToPersona();
+            c.ActivePersona.ScaleToLevel(c.Level);
+
+            // 6. Give enemies ALL their potential skills immediately (Base + Learned up to its level)
+            c.ExtraSkills.AddRange(templateData.BaseSkills ?? new List<string>());
+            if (templateData.LearnedSkillsRaw != null)
+            {
+                // Enemies get all learned skills up to their current level
+                foreach (var kvp in templateData.LearnedSkillsRaw)
+                {
+                    if (int.TryParse(kvp.Key, out int skillLevel) && skillLevel <= c.Level)
+                    {
+                        c.ExtraSkills.Add(kvp.Value);
+                    }
+                }
+            }
+            c.ExtraSkills = c.ExtraSkills.Distinct().ToList();
+
+            // 7. Calculate SMT-style Base Pools for Demons
+            // Demons have slightly lower base pools than humans, scaling with Vi (END) and Ma (MAG)
+            int vi = c.GetStat(StatType.Vi);
+            int ma = c.GetStat(StatType.Ma);
+
+            c.BaseHP = (int)((c.Level * 3.5) + (vi * 1.5));
+            c.BaseSP = (int)((c.Level * 1.0) + (ma * 1.0));
 
             c.RecalculateResources();
             c.CurrentHP = c.MaxHP;
             c.CurrentSP = c.MaxSP;
+
             return c;
         }
 
-        public static Combatant CreateDemon(string personaId, int level)
+        // MODIFIED: Old CreateDemon method (renamed from CreateDemon to CreatePlayerDemon)
+        // This method will now be used specifically for creating *player-allied* demons (e.g., from fusion)
+        // which will have progressive skill learning, unlike enemies.
+        public static Combatant CreatePlayerDemon(string personaId, int level)
         {
-            if (!Database.Personas.TryGetValue(personaId, out var pData))
+            if (!Database.Personas.TryGetValue(personaId.ToLower(), out var pData)) // Ensure canonical ID lookup
                 return new Combatant("Glitch", ClassType.Demon);
 
             Combatant c = new Combatant(pData.Name, ClassType.Demon);
             c.SourceId = personaId;
             c.Level = level;
-            c.Controller = ControllerType.AI;
+            c.Controller = ControllerType.AI; // Allied demons are AI controlled unless commanded
             c.BattleControl = ControlState.ActFreely;
 
             // Reset base stats to 0 for demons so they rely solely on Persona scaling
@@ -147,15 +195,15 @@ namespace JRPGPrototype.Entities
 
             c.ActivePersona = pData.ToPersona();
 
-            // Scale persona to target level to get correct stats
+            // Scale persona to target level to get correct stats and learned skills
             c.ActivePersona.ScaleToLevel(level);
 
             // SMT Logic for Demon Base Pools: Floors are slightly lower than humans
-            int end = c.GetStat(StatType.Vi);
-            int mag = c.GetStat(StatType.Ma);
+            int vi = c.GetStat(StatType.Vi); // Use GetStat to pull from scaled ActivePersona
+            int ma = c.GetStat(StatType.Ma); // Use GetStat to pull from scaled ActivePersona
 
-            c.BaseHP = (int)((level * 4) + (end * 2));
-            c.BaseSP = (int)((level * 1.5) + (mag * 1.5));
+            c.BaseHP = (int)((level * 4) + (vi * 2)); // Slightly different scaling for allied demons/personas
+            c.BaseSP = (int)((level * 1.5) + (ma * 1.5));
 
             c.RecalculateResources();
             c.CurrentHP = c.MaxHP;
@@ -163,6 +211,7 @@ namespace JRPGPrototype.Entities
 
             return c;
         }
+
 
         public List<string> GetConsolidatedSkills()
         {
@@ -177,13 +226,13 @@ namespace JRPGPrototype.Entities
             int rawStat = 0;
             // --- DEMON LOGIC ---
             // Demons are physical manifestations of Personas.
-            // They do not have "Base Stats" + "Modifiers". The Persona stats ARE their stats.
+            // They do not have "Base Stats" (CharacterStats) of their own. The Persona stats ARE their stats.
             if (Class == ClassType.Demon)
             {
                 rawStat = (ActivePersona == null) ? 0 : (ActivePersona.StatModifiers.ContainsKey(type) ? ActivePersona.StatModifiers[type] : 0);
             }
 
-            // --- HUMAN/OPERATOR LOGIC ---
+            // --- HUMAN/OPERATOR/PERSONAUSER/WILDCARD LOGIC ---
             else
             {
                 int charVal = CharacterStats.ContainsKey(type) ? CharacterStats[type] : 0;
@@ -197,7 +246,7 @@ namespace JRPGPrototype.Entities
                 else if (ActivePersona == null || !ActivePersona.StatModifiers.ContainsKey(type)) rawStat = charVal;
                 else
                 {
-                    int personaVal = ActivePersona.StatModifiers[type];
+                    int personaVal = ActivePersona.StatModifiers.GetValueOrDefault(type, 0); // Use GetValueOrDefault for safety
                     rawStat = (int)Math.Floor(type switch
                     {
                         StatType.St => charVal + (personaVal * 0.4),
@@ -250,7 +299,7 @@ namespace JRPGPrototype.Entities
             var keys = Buffs.Keys.ToList();
             foreach (var k in keys)
             {
-                if (Buffs[k] > 0)
+                if (Buffs.ContainsKey(k) && Buffs[k] > 0)
                 {
                     Buffs[k]--;
                     if (Buffs[k] == 0) messages.Add($"{Name}'s {k} effect wore off.");
@@ -261,7 +310,7 @@ namespace JRPGPrototype.Entities
             var breakKeys = BrokenAffinities.Keys.ToList();
             foreach (var b in breakKeys)
             {
-                if (BrokenAffinities[b] > 0)
+                if (BrokenAffinities.ContainsKey(b) && BrokenAffinities[b] > 0)
                 {
                     BrokenAffinities[b]--;
                     if (BrokenAffinities[b] == 0)
@@ -290,12 +339,13 @@ namespace JRPGPrototype.Entities
 
         public void RecalculateResources()
         {
-            int totalEnd = GetStat(StatType.END);
-            int totalMag = GetStat(StatType.MAG);
+            // UPDATED: Use new StatType enum names
+            int totalVi = GetStat(StatType.Vi);
+            int totalMa = GetStat(StatType.Ma);
 
             // Implementation of 666 HP and 333 SP caps
-            MaxHP = Math.Min(666, BaseHP + (totalEnd * 5));
-            MaxSP = Math.Min(333, BaseSP + (totalMag * 3));
+            MaxHP = Math.Min(666, BaseHP + (totalVi * 5));
+            MaxSP = Math.Min(333, BaseSP + (totalMa * 3));
 
             CurrentHP = Math.Min(CurrentHP, MaxHP);
             CurrentSP = Math.Min(CurrentSP, MaxSP);
@@ -342,14 +392,16 @@ namespace JRPGPrototype.Entities
             MagicKarnActive = false;
             BrokenAffinities.Clear();
             Buffs.Clear();
+            CurrentAilment = null; // Also clear ailment state
+            AilmentDuration = 0; // Reset ailment duration
         }
 
         public void AllocateStat(StatType type)
         {
             if (StatPoints <= 0) return;
             // Clamped at 40
-            if (CharacterStats[type] >= 40) return;
-            CharacterStats[type]++;
+            if (CharacterStats.ContainsKey(type) && CharacterStats[type] >= 40) return;
+            CharacterStats[type] = CharacterStats.GetValueOrDefault(type, 0) + 1; // Use GetValueOrDefault for safety
             StatPoints--;
             RecalculateResources();
         }
@@ -377,7 +429,7 @@ namespace JRPGPrototype.Entities
                 RemoveAilment();
                 return true;
             }
-            if (!string.IsNullOrEmpty(CurrentAilment.CureKeyword) && skillEffect.Contains(CurrentAilment.CureKeyword))
+            if (!string.IsNullOrEmpty(CurrentAilment.CureKeyword) && skillEffect.Contains(CurrentAilment.CureKeyword, StringComparison.OrdinalIgnoreCase)) // Added OrdinalIgnoreCase
             {
                 RemoveAilment();
                 return true;
@@ -426,7 +478,7 @@ namespace JRPGPrototype.Entities
                     result.Type = HitType.Repel;
                     result.DamageDealt = 0;
                     result.Message = "Repelled!";
-                    break;
+                    return result; // Repel is special, no HP deduction, just return
                 case Affinity.Absorb:
                     result.Type = HitType.Absorb;
                     CurrentHP = Math.Min(MaxHP, CurrentHP + damage);

@@ -44,7 +44,8 @@ namespace JRPGPrototype.Entities
 
             if (io != null)
             {
-                io.WriteLine($"\n[PERSONA] {Name} grew to Lv.{Level}!", ConsoleColor.Green);
+                io.WriteLine($"\n[PERSONA] {Name} grew to Lv.{Level}!",
+                    ConsoleColor.Green);
             }
 
             // 1. Stat Growth (Random)
@@ -52,12 +53,12 @@ namespace JRPGPrototype.Entities
             var validStats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
 
             // Gain 1 point randomly, capped at 40
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 1; i++) // Currently only 1 point per level, can be adjusted
             {
                 StatType stat = validStats[rnd.Next(validStats.Length)];
                 if (StatModifiers.ContainsKey(stat))
                 {
-                    if (StatModifiers[stat] < 40)
+                    if (StatModifiers[stat] < 40) // Capped at 40 per stat
                     {
                         StatModifiers[stat]++;
                         if (io != null) io.WriteLine($"-> {stat} increased!");
@@ -69,7 +70,7 @@ namespace JRPGPrototype.Entities
                     if (io != null) io.WriteLine($"-> {stat} increased!");
                 }
             }
-            
+
             // 2. Skill Learning Check
             if (SkillsToLearn.ContainsKey(Level))
             {
@@ -83,8 +84,7 @@ namespace JRPGPrototype.Entities
             }
         }
 
-        // --- NEW: Force Sync for Instantiation ---
-
+        //Force Sync for Instantiation
         // Called when creating a Demon/Persona at a specific level to ensure it has correct stats/skills
         public void ScaleToLevel(int targetLevel)
         {
@@ -93,11 +93,11 @@ namespace JRPGPrototype.Entities
                 RecalculateSkills();
                 return;
             }
-            
+
             // Simulate Level Ups without IO logs
             while (Level < targetLevel)
             {
-                LevelUp(null);
+                LevelUp(null); // Pass null to avoid console spam
             }
         }
 
