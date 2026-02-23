@@ -2,9 +2,10 @@ namespace JRPGPrototype.Core
 {
     public enum Element
     {
-        Slash, Strike, Pierce, // Physical
-        Fire, Ice, Elec, Wind, // Magical
-        Light, Dark, Almighty, // Special
+        Slash, Strike, Pierce,        // Physical
+        Fire, Ice, Elec, Wind, Earth, // Magical
+        Light, Dark, Almighty,        // Special
+        Mind, Nerve, Curse,           // Ailment Vectors
         None
     }
 
@@ -20,7 +21,7 @@ namespace JRPGPrototype.Core
 
     public enum StatType
     {
-        STR, MAG, AGI, END, LUK, // Common
+        St, Ma, Vi, Ag, Lu, // Common
     }
 
     public enum HitType

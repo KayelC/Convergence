@@ -151,8 +151,8 @@ namespace JRPGPrototype.Entities
             c.ActivePersona.ScaleToLevel(level);
 
             // SMT Logic for Demon Base Pools: Floors are slightly lower than humans
-            int end = c.GetStat(StatType.END);
-            int mag = c.GetStat(StatType.MAG);
+            int end = c.GetStat(StatType.Vi);
+            int mag = c.GetStat(StatType.Ma);
 
             c.BaseHP = (int)((level * 4) + (end * 2));
             c.BaseSP = (int)((level * 1.5) + (mag * 1.5));
@@ -200,11 +200,11 @@ namespace JRPGPrototype.Entities
                     int personaVal = ActivePersona.StatModifiers[type];
                     rawStat = (int)Math.Floor(type switch
                     {
-                        StatType.STR => charVal + (personaVal * 0.4),
-                        StatType.MAG => charVal + (personaVal * 0.4),
-                        StatType.END => charVal + (personaVal * 0.25),
-                        StatType.AGI => charVal + (personaVal * 0.25),
-                        StatType.LUK => charVal + (personaVal * 0.5),
+                        StatType.St => charVal + (personaVal * 0.4),
+                        StatType.Ma => charVal + (personaVal * 0.4),
+                        StatType.Vi => charVal + (personaVal * 0.25),
+                        StatType.Ag => charVal + (personaVal * 0.25),
+                        StatType.Lu => charVal + (personaVal * 0.5),
                         _ => charVal
                     });
                 }
@@ -214,17 +214,17 @@ namespace JRPGPrototype.Entities
             int cappedStat = Math.Min(40, rawStat);
 
             double finalValue = cappedStat;
-            if (type == StatType.STR || type == StatType.MAG)
+            if (type == StatType.St || type == StatType.Ma)
             {
                 if (Buffs.ContainsKey("Attack") && Buffs["Attack"] > 0) finalValue *= 1.4;
                 if (Buffs.ContainsKey("AttackDown") && Buffs["AttackDown"] > 0) finalValue *= 0.6;
             }
-            if (type == StatType.END)
+            if (type == StatType.Vi)
             {
                 if (Buffs.ContainsKey("Defense") && Buffs["Defense"] > 0) finalValue *= 1.4;
                 if (Buffs.ContainsKey("DefenseDown") && Buffs["DefenseDown"] > 0) finalValue *= 0.6;
             }
-            if (type == StatType.AGI)
+            if (type == StatType.Ag)
             {
                 if (Buffs.ContainsKey("Agility") && Buffs["Agility"] > 0) finalValue *= 1.4;
                 if (Buffs.ContainsKey("AgilityDown") && Buffs["AgilityDown"] > 0) finalValue *= 0.6;

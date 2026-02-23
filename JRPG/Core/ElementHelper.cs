@@ -8,15 +8,24 @@ namespace JRPGPrototype.Core
         {
             if (string.IsNullOrEmpty(category)) return Element.Almighty;
             string cat = category.ToLower();
+
             if (cat.Contains("slash")) return Element.Slash;
             if (cat.Contains("strike")) return Element.Strike;
             if (cat.Contains("pierce")) return Element.Pierce;
+
             if (cat.Contains("fire")) return Element.Fire;
             if (cat.Contains("ice")) return Element.Ice;
             if (cat.Contains("elec")) return Element.Elec;
             if (cat.Contains("wind")) return Element.Wind;
+            if (cat.Contains("earth")) return Element.Earth;
+
             if (cat.Contains("light")) return Element.Light;
             if (cat.Contains("dark")) return Element.Dark;
+
+            if (cat.Contains("mind")) return Element.Mind;
+            if (cat.Contains("nerve")) return Element.Nerve;
+            if (cat.Contains("curse")) return Element.Curse;
+
             return Element.Almighty;
         }
 

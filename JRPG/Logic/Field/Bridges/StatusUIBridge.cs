@@ -109,11 +109,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     StatType s = stats[index];
                     string bonus = s switch
                     {
-                        StatType.END => "Increases Max HP by 5",
-                        StatType.STR => "Increases Physical Damage",
-                        StatType.MAG => "Increases Magic Damage and +3 Max SP",
-                        StatType.AGI => "Increases Hit/Accuracy and Evasion Chance",
-                        StatType.LUK => "General Purpose Stat affecting Chances and Shop Prices",
+                        StatType.Vi => "Increases Max HP by 5",
+                        StatType.St => "Increases Physical Damage",
+                        StatType.Ma => "Increases Magic Damage and +3 Max SP",
+                        StatType.Ag => "Increases Hit/Accuracy and Evasion Chance",
+                        StatType.Lu => "General Purpose Stat affecting Chances and Shop Prices",
                         _ => ""
                     };
                     _io.WriteLine($"Highlight: {s} | Bonus: {bonus}");

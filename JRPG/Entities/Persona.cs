@@ -49,7 +49,7 @@ namespace JRPGPrototype.Entities
 
             // 1. Stat Growth (Random)
             Random rnd = new Random();
-            var validStats = new[] { StatType.STR, StatType.MAG, StatType.END, StatType.AGI, StatType.LUK };
+            var validStats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
 
             // Gain 1 point randomly, capped at 40
             for (int i = 0; i < 1; i++)

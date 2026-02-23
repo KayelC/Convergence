@@ -41,11 +41,11 @@ namespace JRPGPrototype.Logic.Battle
             bool isPhysical = (element == Element.Slash || element == Element.Strike || element == Element.Pierce);
 
             // Select the correct Attack Stat (SMT Standard: Phys = STR, Magic = MAG)
-            StatType atkStat = isPhysical ? StatType.STR : StatType.MAG;
+            StatType atkStat = isPhysical ? StatType.St : StatType.Ma;
             double atkPower = attacker.GetStat(atkStat);
 
             // Determine the Defensive Stat (Endurance + Armor Defense)
-            double defPower = target.GetStat(StatType.END) + target.GetDefense();
+            double defPower = target.GetStat(StatType.Vi) + target.GetDefense();
 
             // Apply Stacking Multipliers (Kaja/Nda)
             // Linear 25% logic: +4 = 200%, 0 = 100%, -4 = 50%

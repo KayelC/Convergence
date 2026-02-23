@@ -252,7 +252,7 @@ namespace JRPGPrototype.Logic
         private int GetBuyPrice(ShopEntry entry, Combatant player)
         {
             // Now uses LUK instead of CHA
-            int luk = player.GetStat(StatType.LUK);
+            int luk = player.GetStat(StatType.Lu);
             double discountMult = Math.Max(0.5, 1.0 - (luk * 0.01));
             return (int)(entry.BasePrice * discountMult);
         }
@@ -262,7 +262,7 @@ namespace JRPGPrototype.Logic
             var entry = Database.ShopInventory.FirstOrDefault(e => e.Id == id && e.Category == cat);
             int basePrice = entry?.BasePrice ?? 100;
 
-            int luk = player.GetStat(StatType.LUK);
+            int luk = player.GetStat(StatType.Lu);
             double sellMult = 0.50 + (luk * 0.01);
             return (int)(basePrice * sellMult);
         }
