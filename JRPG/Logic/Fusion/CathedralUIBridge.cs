@@ -10,7 +10,7 @@ using System.Linq;
 namespace JRPGPrototype.Logic.Fusion.Bridges
 {
     /// <summary>
-    /// The high-fidelity UI authority for the Cathedral of Shadows.
+    /// UI authority for the Cathedral of Shadows.
     /// Handles ritual presentation, deterministic skill inheritance, 
     /// and Compendium visualization.
     /// </summary>
@@ -82,11 +82,12 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 if (item is Combatant c)
                 {
-                    labels.Add($"{c.Name,-15} (Lv.{c.Level}) {c.ActivePersona?.Arcana}");
+                    string race = c.ActivePersona?.Race ?? "Unknown";
+                    labels.Add($"{c.Name,-15} (Lv.{c.Level}) {race}");
                 }
                 else if (item is Persona p)
                 {
-                    labels.Add($"{p.Name,-15} (Lv.{p.Level}) {p.Arcana}");
+                    labels.Add($"{p.Name,-15} (Lv.{p.Level}) {p.Race}");
                 }
             }
             labels.Add("Cancel");
@@ -186,7 +187,8 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.WriteLine("\n--- PROJECTED RESULT ---", ConsoleColor.Yellow);
                 _io.WriteLine($"Form   : {result.Name}", ConsoleColor.Yellow);
-                _io.WriteLine($"Arcana : {result.Arcana}", ConsoleColor.Yellow);
+               _io.WriteLine($"Race   : {result.Race}", ConsoleColor.Yellow);
+
                 _io.WriteLine($"Level  : {result.Level}", ConsoleColor.Yellow);
                 _io.WriteLine("------------------------");
                 _io.WriteLine("Inherited Skill Pool:");

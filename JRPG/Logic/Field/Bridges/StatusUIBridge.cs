@@ -85,7 +85,6 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         /// <summary>
         /// UI authority for stat allocation. Logic-less rendering.
-        /// Moved from FieldServiceEngine to resolve layer violations.
         /// </summary>
         public StatType? PromptStatAllocation(Combatant player)
         {
@@ -94,19 +93,19 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             foreach (StatType s in stats)
             {
-                options.Add($"{s,-5}: {player.CharacterStats[s]}");
+                options.Add($"{s,-5}: {player.CharacterStats.GetValueOrDefault(s, 0)}");
             }
             options.Add("Back");
 
-            // Ensure index is within bounds (safety check for data changes)
-            if (_uiState.StatAllocationIndex >= options.Count)
-                _uiState.StatAllocationIndex = 0;
+            // Ensure index is within bounds
+            if (_uiState.StatAllocationIndex >= options.Count) _uiState.StatAllocationIndex = 0;
 
             int idx = _io.RenderMenu($"=== STAT ALLOCATION (Pts: {player.StatPoints}) ===", options, _uiState.StatAllocationIndex, null, (index) =>
             {
                 if (index >= 0 && index < stats.Count)
                 {
                     StatType s = stats[index];
+                    // UPDATED: Description mapping to new StatType keys
                     string bonus = s switch
                     {
                         StatType.Vi => "Increases Max HP by 5",
@@ -150,12 +149,12 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
                 foreach (StatType st in Enum.GetValues(typeof(StatType)))
                 {
-                    int current = player.CharacterStats[st];
-                    int original = initialStats[st];
+                    int current = player.CharacterStats.GetValueOrDefault(st, 0);
+                    int original = initialStats.GetValueOrDefault(st, 0);
 
                     if (current > original)
                     {
-                    // Highlight altered stats in Yellow
+                        // Highlight altered stats in Yellow
                         _io.Write($"{st,-5}: {current}", ConsoleColor.Yellow);
                         _io.WriteLine($" (+{current - original})", ConsoleColor.Yellow);
                     }
@@ -189,7 +188,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             }
 
             List<string> options = allPersonas.Select(p =>
-                $"{p.Name,-15} (Lv.{p.Level}) {p.Arcana,-10} {(p == player.ActivePersona ? "[E]" : "")}").ToList();
+                $"{p.Name,-15} (Lv.{p.Level}) {p.Race,-10} {(p == player.ActivePersona ? "[E]" : "")}").ToList();
             options.Add("Back");
 
             int idx = _io.RenderMenu("=== PERSONA STOCK ===", options, 0);
@@ -332,7 +331,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             foreach (var stat in stats)
             {
                 int total = entity.GetStat(stat);
-                int baseVal = entity.CharacterStats[stat];
+                int baseVal = entity.CharacterStats.GetValueOrDefault(stat, 0);
                 int mod = total - baseVal;
 
                 if (mod > 0) output += $"{stat,-4}: {total,3} (+{mod})\n";
@@ -345,11 +344,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
         private string GetPersonaDetailString(Persona p, bool isEquipped)
         {
             string output = $"=== PERSONA DETAILS {(isEquipped ? "[EQUIPPED]" : "")} ===\n";
-            output += $"Name: {p.Name} (Lv.{p.Level}) | Arcana: {p.Arcana}\n";
+            output += $"Name: {p.Name} (Lv.{p.Level}) | Race: {p.Race}\n";
             output += $"EXP: {p.Exp,6}/{p.ExpRequired,6} Next: {p.ExpRequired - p.Exp,6}\n";
             output += "-----------------------------\nRaw Stats:\n";
 
-            var displayStats = new[] { StatType.STR, StatType.MAG, StatType.END, StatType.AGI, StatType.LUK };
+            var displayStats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
             foreach (var stat in displayStats)
             {
                 int val = p.StatModifiers.ContainsKey(stat) ? p.StatModifiers[stat] : 0;
@@ -380,7 +379,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             output += $"EXP: {demon.Exp,6}/{demon.ExpRequired,6} Next: {demon.ExpRequired - demon.Exp,6}\n";
             output += "-----------------------------\n";
 
-            var stats = new[] { StatType.STR, StatType.MAG, StatType.END, StatType.AGI, StatType.LUK };
+            var stats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
             foreach (var stat in stats)
             {
                 int total = demon.GetStat(stat);

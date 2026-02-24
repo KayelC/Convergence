@@ -251,7 +251,7 @@ namespace JRPGPrototype.Logic
 
         private int GetBuyPrice(ShopEntry entry, Combatant player)
         {
-            // Now uses LUK instead of CHA
+            // Now uses Lu (Luck) instead of LUK
             int luk = player.GetStat(StatType.Lu);
             double discountMult = Math.Max(0.5, 1.0 - (luk * 0.01));
             return (int)(entry.BasePrice * discountMult);
