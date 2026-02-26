@@ -63,6 +63,10 @@ namespace JRPGPrototype
                     player.DemonStock.Add(Combatant.CreatePlayerDemon("io", 50));
                     player.DemonStock.Add(Combatant.CreatePlayerDemon("hermes", 50));
                     player.DemonStock.Add(Combatant.CreatePlayerDemon("medea", 50));
+                    player.DemonStock.Add(Combatant.CreatePlayerDemon("mou_ryo", 50));
+                    player.DemonStock.Add(Combatant.CreatePlayerDemon("flaemis", 50));
+                    player.DemonStock.Add(Combatant.CreatePlayerDemon("aquans", 50));
+                    player.DemonStock.Add(Combatant.CreatePlayerDemon("erthrys", 50));
                     break;
             }
 

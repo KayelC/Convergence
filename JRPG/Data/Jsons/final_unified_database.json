@@ -1902,8 +1902,8 @@
         }
     },
     {
-        "Id": "erthys",
-        "Name": "Erthys",
+        "Id": "erthrys",
+        "Name": "Erthrys",
         "Race": "Element",
         "Level": 7,
         "Stats": {
