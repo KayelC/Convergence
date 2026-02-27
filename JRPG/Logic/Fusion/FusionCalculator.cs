@@ -118,7 +118,7 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else
                 {
-                    // This case is invalid if fusion table is correct (e.g. Element + Element can't rank up)
+                    // Invalid if fusion table is correct (e.g., Element + Element can't rank up)
                     return (FusionOperationType.NoFusionPossible, null, false);
                 }
             }
@@ -185,7 +185,7 @@ namespace JRPGPrototype.Logic.Fusion
         {
             int uniqueSkillCount = GetInheritableSkills(parents).Count;
 
-            // Inheritance Scaling (SMT III / Persona Standard)
+            // Inheritance Scaling
             // 1-6 skills = 1 slot
             // 7-9 skills = 2 slots
             // 10-13 skills = 3 slots

@@ -7,6 +7,7 @@ using JRPGPrototype.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace JRPGPrototype.Logic.Fusion
 {
@@ -207,19 +208,23 @@ namespace JRPGPrototype.Logic.Fusion
                 case FusionOperationType.CreateNewDemon:
                     _mutator.ExecuteFusion(_player, parents, targetEntityId, selectedSkills, sacrifice);
                     break;
+
                 case FusionOperationType.RankUpParent:
                     // parentA is the base for rank changes, as per discussion
                     _mutator.ExecuteRankUpFusion(_player, parentA, sacrifice);
                     break;
+
                 case FusionOperationType.RankDownParent:
                     _mutator.ExecuteRankDownFusion(_player, parentA, sacrifice);
                     break;
+
                 case FusionOperationType.StatBoostFusion:
                     // For Stat Boost, parentA is the demon to boost, parentB is the Mitama (or vice versa)
                     Combatant demonToBoost = (parentA.ActivePersona.Race == "Mitama") ? parentB : parentA;
                     Combatant mitamaParent = (parentA.ActivePersona.Race == "Mitama") ? parentA : parentB;
                     _mutator.ExecuteStatBoostFusion(_player, demonToBoost, mitamaParent, sacrifice);
                     break;
+
                 case FusionOperationType.NoFusionPossible:
                     // Already handled above, but included for completeness.
                     _io.WriteLine("The fusion yielded no result.", ConsoleColor.Red);
