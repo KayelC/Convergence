@@ -233,10 +233,21 @@ namespace JRPGPrototype.Logic.Battle
             return anyEffect;
         }
 
+        public event EventHandler<Combatant> OnAnalysisRequested;
+
         public void ExecuteAnalyze(Combatant target)
         {
-            // Analyze is primarily a UI operation, but emit a log event for consistency.
-            Publish($"Analyzed {target.Name} (Check status screen).");
+            // 1. LOGIC: Update the Knowledge Database (State Change)
+            foreach (Element elem in Enum.GetValues(typeof(Element)))
+            {
+                if (elem == Element.None) continue;
+                Affinity aff = target.ActivePersona?.GetAffinity(elem) ?? Affinity.Normal;
+                _knowledge.Learn(target.SourceId, elem, aff);
+            }
+
+            // 2. OBSERVER: Notify the UI to draw the Analysis screen
+            // We pass the 'target' so the UI knows whose stats to draw.
+            OnAnalysisRequested?.Invoke(this, target);
         }
 
         private CombatResult ProcessRepelEvent(Combatant attacker, Element element, int power)

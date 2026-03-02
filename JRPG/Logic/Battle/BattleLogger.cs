@@ -1,4 +1,6 @@
-﻿using JRPGPrototype.Services;
+﻿using JRPGPrototype.Core;
+using JRPGPrototype.Entities;
+using JRPGPrototype.Services;
 using System;
 
 namespace JRPGPrototype.Logic.Battle
@@ -21,6 +23,7 @@ namespace JRPGPrototype.Logic.Battle
         public void Subscribe(ActionProcessor processor)
         {
             processor.OnActionPerformed += HandleBattleMessage;
+            processor.OnAnalysisRequested += HandleAnalysisDisplay;
         }
 
         /// <summary>
@@ -30,6 +33,7 @@ namespace JRPGPrototype.Logic.Battle
         public void Unsubscribe(ActionProcessor processor)
         {
             processor.OnActionPerformed -= HandleBattleMessage;
+            processor.OnAnalysisRequested -= HandleAnalysisDisplay;
         }
 
         /// <summary>
@@ -53,6 +57,42 @@ namespace JRPGPrototype.Logic.Battle
                 _io.WriteLine("Press any key...");
                 _io.ReadKey();
             }
+        }
+
+        private void HandleAnalysisDisplay(object sender, Combatant target)
+        {
+            _io.Clear();
+            _io.WriteLine($"=== ANALYSIS: {target.Name} ===", ConsoleColor.Yellow);
+
+            _io.WriteLine($"Level: {target.Level} | HP: {target.CurrentHP}/{target.MaxHP} | SP: {target.CurrentSP}/{target.MaxSP}");
+            _io.WriteLine("--------------------------------------------------");
+            _io.WriteLine("Affinities:");
+
+            foreach (Element elem in Enum.GetValues(typeof(Element)))
+            {
+                if (elem == Element.None) continue;
+
+                // Note: The UI just reads the data, it doesn't calculate anything.
+                Affinity aff = target.ActivePersona?.GetAffinity(elem) ?? Affinity.Normal;
+
+                _io.Write($" {elem,-10}: ");
+
+                ConsoleColor affColor = aff switch
+                {
+                    Affinity.Weak => ConsoleColor.Red,
+                    Affinity.Resist => ConsoleColor.Green,
+                    Affinity.Null => ConsoleColor.Cyan,
+                    Affinity.Repel => ConsoleColor.Blue,
+                    Affinity.Absorb => ConsoleColor.Magenta,
+                    _ => ConsoleColor.White
+                };
+
+                _io.WriteLine($"{aff}", affColor);
+            }
+
+            _io.WriteLine("--------------------------------------------------");
+            _io.WriteLine("Press any key to continue...", ConsoleColor.Gray);
+            _io.ReadKey();
         }
     }
 }
