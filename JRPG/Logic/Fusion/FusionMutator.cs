@@ -77,7 +77,7 @@ namespace JRPGPrototype.Logic.Fusion
 
         #endregion
 
-        #region Fusion Execution (Atomic Transactions)
+        #region Fusion Execution
 
         /// <summary>
         /// Commits the fusion ritual to the game state.
@@ -88,13 +88,11 @@ namespace JRPGPrototype.Logic.Fusion
             switch (owner.Class)
             {
                 case ClassType.Operator:
-                    // Operators perform Demon-to-Demon fusion
                     List<Combatant> demonMaterials = materials.Cast<Combatant>().ToList();
                     ExecuteDemonToDemonFusion(owner, demonMaterials, resultId, chosenSkills, sacrifice);
                     break;
 
                 case ClassType.WildCard:
-                    // Wild Cards perform Persona-to-Persona fusion
                     List<Persona> personaMaterials = materials.Cast<Persona>().ToList();
                     ExecutePersonaToPersonaFusion(owner, personaMaterials, resultId, chosenSkills);
                     break;
@@ -137,7 +135,7 @@ namespace JRPGPrototype.Logic.Fusion
                 if (!child.ExtraSkills.Contains(skill))
                 {
                     child.ExtraSkills.Add(skill);
-                }
+            }
             }
 
             // 4. Sacrifice Logic: Grant EXP bonus based on sacrifice power
@@ -165,9 +163,7 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
-        /// <summary>
-        /// Logic for consuming spiritual Persona masks to create a new Persona.
-        /// </summary>
+        // Logic for consuming spiritual Persona masks to create a new Persona.
         private void ExecutePersonaToPersonaFusion(Combatant owner, List<Persona> materials, string resultId, List<string> chosenSkills)
         {
             // 1. Transaction Start: Remove parent personas
@@ -191,7 +187,7 @@ namespace JRPGPrototype.Logic.Fusion
                 if (!child.SkillSet.Contains(skill))
                 {
                     child.SkillSet.Add(skill);
-                }
+            }
             }
 
             // 4. Transaction End: Placement
@@ -217,9 +213,9 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank up.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankUpFusion(Combatant owner, object parentToModify, Combatant sacrifice)
+        public void ExecuteRankUpFusion(Combatant owner, object parentToModify, List<string> chosenSkills, Combatant sacrifice)
         {
-            ExecuteRankChange(owner, parentToModify, 1, sacrifice);
+            ExecuteRankChange(owner, parentToModify, 1, chosenSkills, sacrifice);
         }
 
         /// <summary>
@@ -228,9 +224,9 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankDownFusion(Combatant owner, object parentToModify, Combatant sacrifice)
+        public void ExecuteRankDownFusion(Combatant owner, object parentToModify, List<string> chosenSkills, Combatant sacrifice)
         {
-            ExecuteRankChange(owner, parentToModify, -1, sacrifice);
+            ExecuteRankChange(owner, parentToModify, -1, chosenSkills, sacrifice);
         }
 
         /// <summary>
@@ -240,7 +236,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="parentToModify">The original combatant demon undergoing the rank change.</param>
         /// <param name="rankDirection">+1 for Rank Up, -1 for Rank Down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        private void ExecuteRankChange(Combatant owner, object parentToModify, int rankDirection, Combatant sacrifice)
+        private void ExecuteRankChange(Combatant owner, object parentToModify, int rankDirection, List<string> chosenSkills, Combatant sacrifice)
         {
             if (owner.Class == ClassType.Operator)
             {
@@ -265,8 +261,8 @@ namespace JRPGPrototype.Logic.Fusion
 
                 Combatant newDemon = Combatant.CreatePlayerDemon(nextRankDemonData.Id, nextRankDemonData.Level);
 
-                // Inherit skills from the original demon
-                newDemon.ExtraSkills.AddRange(originalDemon.GetConsolidatedSkills());
+                newDemon.ExtraSkills.Clear();
+                newDemon.ExtraSkills.AddRange(chosenSkills);
                 newDemon.ExtraSkills = newDemon.ExtraSkills.Distinct().ToList();
 
                 if (sacrifice != null)
@@ -292,9 +288,8 @@ namespace JRPGPrototype.Logic.Fusion
 
                 Persona newPersona = nextRankData.ToPersona();
 
-                // Inherit skills from the original persona
                 newPersona.SkillSet.Clear();
-                newPersona.SkillSet.AddRange(originalPersona.SkillSet);
+                newPersona.SkillSet.AddRange(chosenSkills);
                 newPersona.SkillSet = newPersona.SkillSet.Distinct().ToList();
 
                 _io.WriteLine($"{originalPersona.Name} has transformed into {newPersona.Name}!", ConsoleColor.Magenta);
@@ -309,7 +304,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="demonToBoost">The demon whose stats will be boosted.</param>
         /// <param name="mitamaParent">The Mitama demon being consumed for the boost.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteStatBoostFusion(Combatant owner, object entityToBoost, object mitamaParent, Combatant sacrifice)
+        public void ExecuteStatBoostFusion(Combatant owner, object entityToBoost, object mitamaParent, List<string> chosenSkills, Combatant sacrifice)
         {
             if (owner.Class == ClassType.Operator)
             {
@@ -330,9 +325,8 @@ namespace JRPGPrototype.Logic.Fusion
                 Combatant boostedDemon = Combatant.CreatePlayerDemon(demonToBoost.SourceId, demonToBoost.Level);
                 boostedDemon.Exp = demonToBoost.Exp;
 
-                // Inherit Skills
                 boostedDemon.ExtraSkills.Clear();
-                boostedDemon.ExtraSkills.AddRange(demonToBoost.ExtraSkills);
+                boostedDemon.ExtraSkills.AddRange(chosenSkills);
 
                 // Ensure the copied persona has the same modifiers as the demonToBoost's active persona
                 foreach (var statMod in demonToBoost.ActivePersona.StatModifiers)
@@ -370,8 +364,10 @@ namespace JRPGPrototype.Logic.Fusion
                 // Restore state
                 newPersona.Level = personaToBoost.Level;
                 newPersona.Exp = personaToBoost.Exp;
+
+                // Apply Chosen skills
                 newPersona.SkillSet.Clear();
-                newPersona.SkillSet.AddRange(personaToBoost.SkillSet);
+                newPersona.SkillSet.AddRange(chosenSkills);
 
                 foreach (var statMod in personaToBoost.StatModifiers)
                 {
@@ -385,14 +381,10 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
-        /// <summary>
-        /// Centralized application of Mitama Stat Boosts to a Persona Object.
-        /// </summary>
+        // Centralized application of Mitama Stat Boosts to a Persona Object.
         private void ApplyMitamaBoosts(Persona targetPersona, string mitamaName)
         {
             Dictionary<StatType, int> boosts = new Dictionary<StatType, int>();
-
-            // Standardize spelling just in case of JSON variants
             switch (mitamaName)
             {
                 case "Ara Mitama": boosts.Add(StatType.St, 2); boosts.Add(StatType.Ag, 1); break;
@@ -449,9 +441,7 @@ namespace JRPGPrototype.Logic.Fusion
             owner.RecalculateResources();
         }
 
-        /// <summary>
-        /// Atomically replaces an old persona with a new one.
-        /// </summary>
+        // Atomically replaces an old persona with a new one.
         private void ReplacePersonaInState(Combatant owner, Persona oldPersona, Persona newPersona)
         {
             if (owner.ActivePersona == oldPersona)
@@ -496,7 +486,7 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else
                 {
-                    // WildCards receive the spiritual essence (Persona)
+                    // WildCards receive the Persona
                     Persona essence = snapshot.ActivePersona;
 
                     var combinedSkills = snapshot.GetConsolidatedSkills();
