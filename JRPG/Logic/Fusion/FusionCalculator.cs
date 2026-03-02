@@ -123,11 +123,18 @@ namespace JRPGPrototype.Logic.Fusion
                 }
             }
 
-            // 5. Handle Special Cases: Direct ID results (Elementals)
+            // 5. Handle Special Cases: Direct ID results (Elementals & Mitamas)
+            // FIX: Normalizes shorthand identifiers from the fusion matrix to actual Database IDs
+            string mappedResult = resultString.ToLower();
+            if (mappedResult == "ara") mappedResult = "ara-mitama";
+            else if (mappedResult == "nigi") mappedResult = "nigi-mitama";
+            else if (mappedResult == "kusi") mappedResult = "kusi-mitama";
+            else if (mappedResult == "saki") mappedResult = "saki-mitama";
+
             // If the result string directly matches a key in the Entity Database, it's a direct creation.
-            if (Database.Personas.ContainsKey(resultString.ToLower()))
+            if (Database.Personas.ContainsKey(mappedResult))
             {
-                return (FusionOperationType.CreateNewDemon, resultString.ToLower(), isAccident);
+                return (FusionOperationType.CreateNewDemon, mappedResult, isAccident);
             }
 
             // 6. Normal Race Fusion (Level-Based)

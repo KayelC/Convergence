@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Core;
@@ -128,9 +129,9 @@ namespace JRPGPrototype.Logic
 
                 // 2. Add to active battlefield
                 demon.PartySlot = ActiveParty.Count;
-                demon.BattleControl = ControlState.DirectControl;
+                demon.BattleControl = ControlState.DirectControl; // Should default to Direct Control upon summon
                 ActiveParty.Add(demon);
-                return true;
+                return true; // Party full
             }
             return false; // Party full
         }
@@ -156,14 +157,46 @@ namespace JRPGPrototype.Logic
             return false;
         }
 
+        // Checks if the ActiveParty has been entirely eliminated.
         public bool IsPartyWiped()
         {
             return ActiveParty.All(m => m.IsDead);
         }
 
+        // Provides a live-reactive list of currently alive members.
         public List<Combatant> GetAliveMembers()
         {
             return ActiveParty.Where(m => !m.IsDead).ToList();
+        }
+
+        /// <summary>
+        /// Replaces the oldDemon with the newDemon in the player's active party or stock.
+        /// </summary>
+        /// <param name="owner">Combatant performing the action</param>
+        /// <param name="oldDemon">The demon to be replaced.</param>
+        /// <param name="newDemon">The new demon replacing the old one</param>
+        public void ReplaceDemon(Combatant owner, Combatant oldDemon, Combatant newDemon)
+        {
+            // Check if the demon was in the active party and, if so, replace it
+            if (ActiveParty.Contains(oldDemon))
+            {
+                int slot = oldDemon.PartySlot;
+                ActiveParty[slot] = newDemon;
+                newDemon.PartySlot = slot; // Assign the new demon to that spot
+            }
+
+            // Ensure that the old demon is removed from the stock
+            if (owner.DemonStock.Contains(oldDemon))
+            {
+                owner.DemonStock.Remove(oldDemon);
+            }
+
+            // Add to Demon Stock now and update it
+            if (!owner.DemonStock.Contains(newDemon))
+            {
+                owner.DemonStock.Add(newDemon);
+            }
+
         }
     }
 }

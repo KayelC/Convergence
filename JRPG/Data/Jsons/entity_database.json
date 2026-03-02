@@ -8561,88 +8561,10 @@
     }
   },
   {
-    "Id": "ara-mitama",
-    "Name": "Ara Mitama",
-    "Race": "Mitama",
-    "Rank": 1,
-    "Level": 6,
-    "Stats": {
-      "St": 10,
-      "Ma": 2,
-      "Vi": 3,
-      "Ag": 6,
-      "Lu": 5
-    },
-    "Affinities": {
-      "Strike": "Resist",
-      "Slash": "Normal",
-      "Pierce": "Normal",
-      "Fire": "Resist",
-      "Ice": "Normal",
-      "Elec": "Normal",
-      "Wind": "Weak",
-      "Earth": "Normal",
-      "Light": "Normal",
-      "Dark": "Normal",
-      "Mind": "Normal",
-      "Nerve": "Normal",
-      "Curse": "Normal"
-    },
-    "BaseSkills": [
-      "Bash",
-      "Rakukaja",
-      "Provoke"
-    ],
-    "LearnedSkills": {
-      "7": "Agi",
-      "8": "Rakunda",
-      "10": "Rage Boost"
-    }
-  },
-  {
-    "Id": "nigi-mitama",
-    "Name": "Nigi Mitama",
-    "Race": "Mitama",
-    "Rank": 2,
-    "Level": 12,
-    "Stats": {
-      "St": 3,
-      "Ma": 9,
-      "Vi": 7,
-      "Ag": 8,
-      "Lu": 5
-    },
-    "Affinities": {
-      "Strike": "Normal",
-      "Slash": "Normal",
-      "Pierce": "Normal",
-      "Fire": "Normal",
-      "Ice": "Normal",
-      "Elec": "Normal",
-      "Wind": "Null",
-      "Earth": "Normal",
-      "Light": "Resist",
-      "Dark": "Resist",
-      "Mind": "Normal",
-      "Nerve": "Normal",
-      "Curse": "Normal"
-    },
-    "BaseSkills": [
-      "Media",
-      "Garu",
-      "Baisudi"
-    ],
-    "LearnedSkills": {
-      "14": "Magaru",
-      "15": "Sharp Student",
-      "17": "Recarm"
-    }
-  },
-  {
     "Id": "ara_mitama",
     "Name": "Ara Mitama",
     "Race": "Mitama",
-    "Rank": 3,
+    "Rank": 1,
     "Level": 25,
     "Stats": {
       "St": 9,
@@ -8679,50 +8601,10 @@
     }
   },
   {
-    "Id": "kushi-mitama",
-    "Name": "Kushi Mitama",
-    "Race": "Mitama",
-    "Rank": 4,
-    "Level": 28,
-    "Stats": {
-      "St": 8,
-      "Ma": 13,
-      "Vi": 10,
-      "Ag": 5,
-      "Lu": 12
-    },
-    "Affinities": {
-      "Strike": "Normal",
-      "Slash": "Normal",
-      "Pierce": "Normal",
-      "Fire": "Weak",
-      "Ice": "Normal",
-      "Elec": "Normal",
-      "Wind": "Null",
-      "Earth": "Normal",
-      "Light": "Normal",
-      "Dark": "Normal",
-      "Mind": "Normal",
-      "Nerve": "Normal",
-      "Curse": "Normal"
-    },
-    "BaseSkills": [
-      "Recarm",
-      "Garula",
-      "Magaru"
-    ],
-    "LearnedSkills": {
-      "29": "Wind Break",
-      "30": "Regenerate 2",
-      "32": "Magarula",
-      "33": "Marakunda"
-    }
-  },
-  {
     "Id": "nigi_mitama",
     "Name": "Nigi Mitama",
     "Race": "Mitama",
-    "Rank": 5,
+    "Rank": 2,
     "Level": 29,
     "Stats": {
       "St": 9,
@@ -8762,7 +8644,7 @@
     "Id": "kusi_mitama",
     "Name": "Kusi Mitama",
     "Race": "Mitama",
-    "Rank": 6,
+    "Rank": 3,
     "Level": 32,
     "Stats": {
       "St": 8,
@@ -8803,7 +8685,7 @@
     "Id": "saki_mitama",
     "Name": "Saki Mitama",
     "Race": "Mitama",
-    "Rank": 7,
+    "Rank": 4,
     "Level": 35,
     "Stats": {
       "St": 9,
@@ -8835,46 +8717,6 @@
       "36": "Magarula",
       "37": "Mazionga",
       "38": "Tetrakarn"
-    }
-  },
-  {
-    "Id": "saki-mitama",
-    "Name": "Saki Mitama",
-    "Race": "Mitama",
-    "Rank": 8,
-    "Level": 36,
-    "Stats": {
-      "St": 6,
-      "Ma": 17,
-      "Vi": 9,
-      "Ag": 10,
-      "Lu": 14
-    },
-    "Affinities": {
-      "Strike": "Weak",
-      "Slash": "Normal",
-      "Pierce": "Normal",
-      "Fire": "Resist",
-      "Ice": "Resist",
-      "Elec": "Normal",
-      "Wind": "Resist",
-      "Earth": "Normal",
-      "Light": "Normal",
-      "Dark": "Normal",
-      "Mind": "Normal",
-      "Nerve": "Normal",
-      "Curse": "Normal"
-    },
-    "BaseSkills": [
-      "Diarama",
-      "Mabufu",
-      "Ice Break"
-    ],
-    "LearnedSkills": {
-      "37": "Mediarama",
-      "38": "Dekunda",
-      "39": "Null Shock",
-      "41": "Divine Grace"
     }
   },
   {

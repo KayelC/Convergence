@@ -10,7 +10,7 @@ namespace JRPGPrototype.Logic.Fusion
 {
     /// <summary>
     /// The state-mutation authority for the Fusion Sub-System.
-    /// Handles the atomic transactions for participant consumption, child instantiation,
+    /// Handles the atomic transactions for participant consumption, child instantiation, 
     /// and class-specific stock management (DemonStock vs PersonaStock).
     /// </summary>
     public class FusionMutator
@@ -53,7 +53,7 @@ namespace JRPGPrototype.Logic.Fusion
         }
 
         /// <summary>
-        /// Retrieves the list of fusible entities for a Persona User or WildCard.
+        /// Retrieves the list of fusible entities for a WildCard.
         /// Sources: The currently manifested ActivePersona and the internal PersonaStock.
         /// </summary>
         public List<Persona> GetFusiblePersonaPool(Combatant owner)
@@ -212,163 +212,209 @@ namespace JRPGPrototype.Logic.Fusion
         }
 
         /// <summary>
-        /// Executes a "Rank Up" fusion, replacing an existing demon with its next higher rank counterpart.
+        /// Executes a "Rank Up" fusion, replacing an existing demon/persona with its next higher rank counterpart.
         /// </summary>
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank up.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankUpFusion(Combatant owner, Combatant parentToModify, Combatant sacrifice)
+        public void ExecuteRankUpFusion(Combatant owner, object parentToModify, Combatant sacrifice)
         {
             ExecuteRankChange(owner, parentToModify, 1, sacrifice);
         }
 
         /// <summary>
-        /// Executes a "Rank Down" fusion, replacing an existing demon with its next lower rank counterpart.
+        /// Executes a "Rank Down" fusion, replacing an existing demon/persona with its next lower rank counterpart.
         /// </summary>
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankDownFusion(Combatant owner, Combatant parentToModify, Combatant sacrifice)
+        public void ExecuteRankDownFusion(Combatant owner, object parentToModify, Combatant sacrifice)
         {
             ExecuteRankChange(owner, parentToModify, -1, sacrifice);
         }
 
         /// <summary>
-        /// Handles the core logic for Rank Up/Down fusions, replacing the parent with a new demon of target rank.
+        /// Handles the core logic for Rank Up/Down fusions, replacing the parent with a new entity of target rank.
         /// </summary>
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The original combatant demon undergoing the rank change.</param>
         /// <param name="rankDirection">+1 for Rank Up, -1 for Rank Down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        private void ExecuteRankChange(Combatant owner, Combatant parentToModify, int rankDirection, Combatant sacrifice)
+        private void ExecuteRankChange(Combatant owner, object parentToModify, int rankDirection, Combatant sacrifice)
         {
-            // The other parent (the elemental) has already been consumed by FusionConductor/SelectRitualParticipant
-            // Here, we only consume the sacrifice.
-            if (sacrifice != null)
+            if (owner.Class == ClassType.Operator)
             {
-                if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
-                owner.DemonStock.Remove(sacrifice);
+                Combatant originalDemon = (Combatant)parentToModify;
+
+                // The elemental has already been consumed. We only consume the sacrifice here.
+                if (sacrifice != null)
+                {
+                    if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
+                    owner.DemonStock.Remove(sacrifice);
+                }
+
+                string parentRace = originalDemon.ActivePersona.Race;
+                int targetRank = originalDemon.ActivePersona.Rank + rankDirection;
+
+                var nextRankDemonData = Database.Personas.Values
+                    .Where(p => p.Race == parentRace && p.Rank == targetRank)
+                    .OrderBy(p => p.Level)
+                    .FirstOrDefault();
+
+                if (nextRankDemonData == null) return; // Defensive return
+
+                Combatant newDemon = Combatant.CreatePlayerDemon(nextRankDemonData.Id, nextRankDemonData.Level);
+
+                // Inherit skills from the original demon
+                newDemon.ExtraSkills.AddRange(originalDemon.GetConsolidatedSkills());
+                newDemon.ExtraSkills = newDemon.ExtraSkills.Distinct().ToList();
+
+                if (sacrifice != null)
+                {
+                    int expBonus = (int)(sacrifice.Level * 250);
+                    newDemon.GainExp(expBonus);
+                }
+
+                _io.WriteLine($"{originalDemon.Name} has transformed into {newDemon.Name}!", ConsoleColor.Magenta);
+                ReplaceDemonInState(owner, originalDemon, newDemon);
             }
-
-            string parentRace = parentToModify.ActivePersona.Race;
-            int currentRank = parentToModify.ActivePersona.Rank;
-            int targetRank = currentRank + rankDirection;
-
-            // Find the PersonaData for the next/previous rank within the same Race
-            PersonaData nextRankDemonData = Database.Personas.Values
-                .Where(p => p.Race == parentRace && p.Rank == targetRank)
-                .OrderBy(p => p.Level) // If multiple with same rank (unlikely), order by level
-                .FirstOrDefault();
-
-            if (nextRankDemonData == null)
+            else if (owner.Class == ClassType.WildCard)
             {
-                // This scenario should ideally be caught by FusionCalculator so player knows in preview
-                _io.WriteLine($"{parentToModify.Name} is already the {(rankDirection > 0 ? "highest" : "lowest")} rank of the {parentRace} race. Fusion is not possible.", ConsoleColor.Yellow);
-                _io.Wait(1000);
-                return;
+                Persona originalPersona = (Persona)parentToModify;
+                int targetRank = originalPersona.Rank + rankDirection;
+
+                var nextRankData = Database.Personas.Values
+                    .Where(p => p.Race == originalPersona.Race && p.Rank == targetRank)
+                    .OrderBy(p => p.Level)
+                    .FirstOrDefault();
+
+                if (nextRankData == null) return;
+
+                Persona newPersona = nextRankData.ToPersona();
+
+                // Inherit skills from the original persona
+                newPersona.SkillSet.Clear();
+                newPersona.SkillSet.AddRange(originalPersona.SkillSet);
+                newPersona.SkillSet = newPersona.SkillSet.Distinct().ToList();
+
+                _io.WriteLine($"{originalPersona.Name} has transformed into {newPersona.Name}!", ConsoleColor.Magenta);
+                ReplacePersonaInState(owner, originalPersona, newPersona);
             }
-
-            // Create the new demon combatant for the player
-            Combatant newDemon = Combatant.CreatePlayerDemon(nextRankDemonData.Id, nextRankDemonData.Level);
-
-            // Apply sacrifice EXP bonus
-            if (sacrifice != null)
-            {
-                int expBonus = (int)(sacrifice.Level * 250);
-                newDemon.GainExp(expBonus);
-            }
-
-            _io.WriteLine($"{parentToModify.Name} has transformed into {newDemon.Name}!", ConsoleColor.Magenta);
-
-            // Atomically replace the old demon with the new one
-            ReplaceDemonInState(owner, parentToModify, newDemon);
         }
 
         /// <summary>
-        /// Executes a Mitama fusion, boosting specific stats of the target demon.
+        /// Executes a Mitama fusion, boosting specific stats of the target demon or persona.
         /// </summary>
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="demonToBoost">The demon whose stats will be boosted.</param>
         /// <param name="mitamaParent">The Mitama demon being consumed for the boost.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteStatBoostFusion(Combatant owner, Combatant demonToBoost, Combatant mitamaParent, Combatant sacrifice)
+        public void ExecuteStatBoostFusion(Combatant owner, object entityToBoost, object mitamaParent, Combatant sacrifice)
         {
-            // Consume the Mitama parent and any sacrifice
-            if (_partyManager.ActiveParty.Contains(mitamaParent)) _partyManager.ReturnDemon(owner, mitamaParent);
-            owner.DemonStock.Remove(mitamaParent);
-            if (sacrifice != null)
+            if (owner.Class == ClassType.Operator)
             {
-                if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
-                owner.DemonStock.Remove(sacrifice);
+                Combatant demonToBoost = (Combatant)entityToBoost;
+                Combatant mitamaDemon = (Combatant)mitamaParent;
+
+                // Consume the Mitama parent and any sacrifice
+                if (_partyManager.ActiveParty.Contains(mitamaDemon)) _partyManager.ReturnDemon(owner, mitamaDemon);
+                owner.DemonStock.Remove(mitamaDemon);
+
+                if (sacrifice != null)
+                {
+                    if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
+                    owner.DemonStock.Remove(sacrifice);
+                }
+
+                // Create a new Combatant instance to apply boosts to.
+                Combatant boostedDemon = Combatant.CreatePlayerDemon(demonToBoost.SourceId, demonToBoost.Level);
+                boostedDemon.Exp = demonToBoost.Exp;
+
+                // Inherit Skills
+                boostedDemon.ExtraSkills.Clear();
+                boostedDemon.ExtraSkills.AddRange(demonToBoost.ExtraSkills);
+
+                // Ensure the copied persona has the same modifiers as the demonToBoost's active persona
+                foreach (var statMod in demonToBoost.ActivePersona.StatModifiers)
+                {
+                    boostedDemon.ActivePersona.StatModifiers[statMod.Key] = statMod.Value;
+                }
+
+                ApplyMitamaBoosts(boostedDemon.ActivePersona, mitamaDemon.ActivePersona.Name);
+                boostedDemon.RecalculateResources();
+
+                // Apply sacrifice EXP bonus
+                if (sacrifice != null)
+                {
+                    int expBonus = (int)(sacrifice.Level * 250);
+                    boostedDemon.GainExp(expBonus);
+                }
+
+                _io.WriteLine($"{demonToBoost.Name}'s stats have been enhanced!", ConsoleColor.Magenta);
+                ReplaceDemonInState(owner, demonToBoost, boostedDemon);
             }
-
-            // Create a new Combatant instance to apply boosts to.
-            // This is crucial because `demonToBoost` might be in the active party.
-            // We deep-copy its current state (Level, Skills, etc.) but update its Persona's stats.
-            Combatant boostedDemon = Combatant.CreatePlayerDemon(demonToBoost.SourceId, demonToBoost.Level);
-            // Copy current EXP
-            boostedDemon.Exp = demonToBoost.Exp;
-
-            // Ensure the copied persona has the same modifiers as the demonToBoost's active persona
-            foreach (var statMod in demonToBoost.ActivePersona.StatModifiers)
+            else if (owner.Class == ClassType.WildCard)
             {
-                boostedDemon.ActivePersona.StatModifiers[statMod.Key] = statMod.Value;
-            }
+                Persona personaToBoost = (Persona)entityToBoost;
+                Persona mitamaPersona = (Persona)mitamaParent;
 
-            // Apply stat boosts based on Mitama name
+                // Consume Mitama
+                if (owner.ActivePersona == mitamaPersona) owner.ActivePersona = null;
+                owner.PersonaStock.Remove(mitamaPersona);
+
+                // Clone base template
+                var template = Database.Personas.Values.FirstOrDefault(p => p.Name == personaToBoost.Name);
+                if (template == null) return;
+                Persona newPersona = template.ToPersona();
+
+                // Restore state
+                newPersona.Level = personaToBoost.Level;
+                newPersona.Exp = personaToBoost.Exp;
+                newPersona.SkillSet.Clear();
+                newPersona.SkillSet.AddRange(personaToBoost.SkillSet);
+
+                foreach (var statMod in personaToBoost.StatModifiers)
+                {
+                    newPersona.StatModifiers[statMod.Key] = statMod.Value;
+                }
+
+                ApplyMitamaBoosts(newPersona, mitamaPersona.Name);
+
+                _io.WriteLine($"{personaToBoost.Name}'s stats have been enhanced!", ConsoleColor.Magenta);
+                ReplacePersonaInState(owner, personaToBoost, newPersona);
+            }
+        }
+
+        /// <summary>
+        /// Centralized application of Mitama Stat Boosts to a Persona Object.
+        /// </summary>
+        private void ApplyMitamaBoosts(Persona targetPersona, string mitamaName)
+        {
             Dictionary<StatType, int> boosts = new Dictionary<StatType, int>();
-            switch (mitamaParent.ActivePersona.Name) // Use ActivePersona.Name for Mitama type
+
+            // Standardize spelling just in case of JSON variants
+            switch (mitamaName)
             {
-                case "Ara Mitama":
-                    boosts.Add(StatType.St, 2); boosts.Add(StatType.Ag, 1);
-                    break;
-                case "Nigi Mitama":
-                    boosts.Add(StatType.Ma, 2); boosts.Add(StatType.Lu, 1);
-                    break;
-                case "Kusi Mitama":
-                    boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Ag, 1);
-                    break;
-                case "Saki Mitama":
-                    boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Lu, 1);
-                    break;
+                case "Ara Mitama": boosts.Add(StatType.St, 2); boosts.Add(StatType.Ag, 1); break;
+                case "Nigi Mitama": boosts.Add(StatType.Ma, 2); boosts.Add(StatType.Lu, 1); break;
+                case "Kusi Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Ag, 1); break;
+                case "Saki Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Lu, 1); break;
             }
 
             foreach (var entry in boosts)
             {
-                ApplyStatBoost(boostedDemon, entry.Key, entry.Value);
+                var mods = targetPersona.StatModifiers;
+                int current = mods.GetValueOrDefault(entry.Key, 0);
+                if (current < 40)
+                {
+                    mods[entry.Key] = Math.Min(40, current + entry.Value);
+                    _io.WriteLine($" -> {entry.Key} increased by {entry.Value}!", ConsoleColor.Cyan);
+                }
+                else
+                {
+                    _io.WriteLine($" -> {entry.Key} is already at its maximum!", ConsoleColor.Yellow);
+                }
             }
-
-            boostedDemon.RecalculateResources(); // Recalculate MaxHP/SP after stat changes
-
-            // Apply sacrifice EXP bonus
-            if (sacrifice != null)
-            {
-                int expBonus = (int)(sacrifice.Level * 250);
-                boostedDemon.GainExp(expBonus);
-            }
-
-            _io.WriteLine($"{demonToBoost.Name}'s stats have been enhanced!", ConsoleColor.Magenta);
-            ReplaceDemonInState(owner, demonToBoost, boostedDemon);
-        }
-
-        /// <summary>
-        /// Applies a specific stat boost to a demon's active persona's modifiers, respecting the cap.
-        /// </summary>
-        private void ApplyStatBoost(Combatant demon, StatType stat, int amount)
-        {
-            if (amount <= 0) return;
-
-            var personaStatModifiers = demon.ActivePersona.StatModifiers;
-            int currentStatValue = personaStatModifiers.GetValueOrDefault(stat, 0);
-
-            if (currentStatValue >= 40)
-            {
-                _io.WriteLine($" -> {stat} is already at its maximum!", ConsoleColor.Yellow);
-                return;
-            }
-
-            personaStatModifiers[stat] = Math.Min(40, currentStatValue + amount);
-            _io.WriteLine($" -> {stat} increased by {amount}!", ConsoleColor.Cyan); // Feedback for individual stat changes
         }
 
         /// <summary>
@@ -400,7 +446,26 @@ namespace JRPGPrototype.Logic.Fusion
 
             // Clean up the old demon's active party slot if it was in the party (should be -1 after returnDemon)
             oldDemon.PartySlot = -1;
-            owner.RecalculateResources(); // Recalculate owner's resources in case Persona changed
+            owner.RecalculateResources();
+        }
+
+        /// <summary>
+        /// Atomically replaces an old persona with a new one.
+        /// </summary>
+        private void ReplacePersonaInState(Combatant owner, Persona oldPersona, Persona newPersona)
+        {
+            if (owner.ActivePersona == oldPersona)
+            {
+                owner.ActivePersona = newPersona;
+                _io.WriteLine($"{newPersona.Name} has been manifested and equipped.", ConsoleColor.Green);
+            }
+            else
+            {
+                owner.PersonaStock.Remove(oldPersona);
+                owner.PersonaStock.Add(newPersona);
+                _io.WriteLine($"{newPersona.Name} has been added to your Persona stock.", ConsoleColor.Cyan);
+            }
+            owner.RecalculateResources();
         }
 
         #endregion
@@ -409,7 +474,7 @@ namespace JRPGPrototype.Logic.Fusion
 
         /// <summary>
         /// Finalizes the recall transaction from the Compendium.
-        /// Feature: Correctly forks logic to populate DemonStock or PersonaStock.
+        /// Correctly forks logic to populate DemonStock or PersonaStock.
         /// </summary>
         public bool FinalizeRecall(Combatant owner, Combatant snapshot, int cost)
         {
@@ -423,19 +488,17 @@ namespace JRPGPrototype.Logic.Fusion
             {
                 if (owner.Class == ClassType.Operator)
                 {
-                    // Operators receive the Demon entity (Combatant)
+                    // Operators receive the Demon entity
                     if (!_partyManager.SummonDemon(owner, snapshot))
                     {
                         owner.DemonStock.Add(snapshot);
                     }
                 }
-                else // WildCard
+                else
                 {
                     // WildCards receive the spiritual essence (Persona)
                     Persona essence = snapshot.ActivePersona;
 
-                    // Fidelity Requirement: Deep-copy skills from the combatant back to the persona
-                    // This ensures learned skills from the registration snapshot are preserved.
                     var combinedSkills = snapshot.GetConsolidatedSkills();
                     essence.SkillSet.Clear();
                     foreach (var s in combinedSkills)
