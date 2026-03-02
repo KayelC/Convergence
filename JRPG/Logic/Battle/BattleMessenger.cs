@@ -1,4 +1,5 @@
 ﻿using System;
+using JRPGPrototype.Entities;
 
 namespace JRPGPrototype.Logic.Battle
 {
