@@ -83,7 +83,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// Commits the fusion ritual to the game state.
         /// Dispatches the transaction to specific logic paths based on the owner's ClassType.
         /// </summary>
-        public void ExecuteFusion(Combatant owner, List<object> materials, string resultId, List<string> chosenSkills, Combatant? sacrifice = null)
+        public void ExecuteFusion(Combatant owner, List<object> materials, string resultId, List<string> chosenSkills, object? sacrifice = null)
         {
             switch (owner.Class)
             {
@@ -94,7 +94,7 @@ namespace JRPGPrototype.Logic.Fusion
 
                 case ClassType.WildCard:
                     List<Persona> personaMaterials = materials.Cast<Persona>().ToList();
-                    ExecutePersonaToPersonaFusion(owner, personaMaterials, resultId, chosenSkills);
+                    ExecutePersonaToPersonaFusion(owner, personaMaterials, resultId, chosenSkills, sacrifice);
                     break;
 
                 default:
@@ -107,11 +107,15 @@ namespace JRPGPrototype.Logic.Fusion
         /// Logic for consuming biological Demon entities to create a new Allied Combatant.
         /// Allies follow progression rules (start with base skills).
         /// </summary>
-        private void ExecuteDemonToDemonFusion(Combatant owner, List<Combatant> materials, string resultId, List<string> chosenSkills, Combatant? sacrifice)
+        private void ExecuteDemonToDemonFusion(Combatant owner, List<Combatant> materials, string resultId, List<string> chosenSkills, object? sacrifice)
         {
             // 1. Transaction Start: Remove all materials from the world
             List<Combatant> allParticipants = new List<Combatant>(materials);
-            if (sacrifice != null) allParticipants.Add(sacrifice);
+
+            if (sacrifice != null && sacrifice is Combatant sacrificialDemon)
+            {
+                allParticipants.Add(sacrificialDemon);
+            }
 
             foreach (var participant in allParticipants)
             {
@@ -135,13 +139,13 @@ namespace JRPGPrototype.Logic.Fusion
                 if (!child.ExtraSkills.Contains(skill))
                 {
                     child.ExtraSkills.Add(skill);
-            }
+                }
             }
 
             // 4. Sacrifice Logic: Grant EXP bonus based on sacrifice power
-            if (sacrifice != null)
+            if (sacrifice != null && sacrifice is Combatant offer)
             {
-                int expBonus = (int)(sacrifice.Level * 250);
+                int expBonus = (int)(offer.Level * 250);
                 child.GainExp(expBonus);
             }
 
@@ -164,7 +168,7 @@ namespace JRPGPrototype.Logic.Fusion
         }
 
         // Logic for consuming spiritual Persona masks to create a new Persona.
-        private void ExecutePersonaToPersonaFusion(Combatant owner, List<Persona> materials, string resultId, List<string> chosenSkills)
+        private void ExecutePersonaToPersonaFusion(Combatant owner, List<Persona> materials, string resultId, List<string> chosenSkills, object? sacrifice)
         {
             // 1. Transaction Start: Remove parent personas
             foreach (var persona in materials)
@@ -177,6 +181,13 @@ namespace JRPGPrototype.Logic.Fusion
                 owner.PersonaStock.Remove(persona);
             }
 
+            // Consume Persona offering
+            if (sacrifice != null && sacrifice is Persona sacrificialPersona)
+            {
+                if (owner.ActivePersona == sacrificialPersona) owner.ActivePersona = null;
+                owner.PersonaStock.Remove(sacrificialPersona);
+            }
+
             // 2. Transaction Phase: Create new Persona essence from template
             PersonaData template = Database.Personas[resultId.ToLower()];
             Persona child = template.ToPersona();
@@ -187,7 +198,7 @@ namespace JRPGPrototype.Logic.Fusion
                 if (!child.SkillSet.Contains(skill))
                 {
                     child.SkillSet.Add(skill);
-            }
+                }
             }
 
             // 4. Transaction End: Placement
@@ -213,7 +224,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank up.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankUpFusion(Combatant owner, object parentToModify, List<string> chosenSkills, Combatant? sacrifice)
+        public void ExecuteRankUpFusion(Combatant owner, object parentToModify, List<string> chosenSkills, object? sacrifice)
         {
             ExecuteRankChange(owner, parentToModify, 1, chosenSkills, sacrifice);
         }
@@ -224,7 +235,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="owner">The player combatant performing the fusion.</param>
         /// <param name="parentToModify">The specific combatant demon (not elemental) to rank down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteRankDownFusion(Combatant owner, object parentToModify, List<string> chosenSkills, Combatant? sacrifice)
+        public void ExecuteRankDownFusion(Combatant owner, object parentToModify, List<string> chosenSkills, object? sacrifice)
         {
             ExecuteRankChange(owner, parentToModify, -1, chosenSkills, sacrifice);
         }
@@ -236,17 +247,17 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="parentToModify">The original combatant demon undergoing the rank change.</param>
         /// <param name="rankDirection">+1 for Rank Up, -1 for Rank Down.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        private void ExecuteRankChange(Combatant owner, object parentToModify, int rankDirection, List<string> chosenSkills, Combatant? sacrifice)
+        private void ExecuteRankChange(Combatant owner, object parentToModify, int rankDirection, List<string> chosenSkills, object? sacrifice)
         {
             if (owner.Class == ClassType.Operator)
             {
                 Combatant originalDemon = (Combatant)parentToModify;
 
-                // The elemental has already been consumed. We only consume the sacrifice here.
-                if (sacrifice != null)
+                // Handle Operator-class Sacrifice (Combatant)
+                if (sacrifice != null && sacrifice is Combatant sacrificialDemon)
                 {
-                    if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
-                    owner.DemonStock.Remove(sacrifice);
+                    if (_partyManager.ActiveParty.Contains(sacrificialDemon)) _partyManager.ReturnDemon(owner, sacrificialDemon);
+                    owner.DemonStock.Remove(sacrificialDemon);
                 }
 
                 string parentRace = originalDemon.ActivePersona.Race;
@@ -265,9 +276,10 @@ namespace JRPGPrototype.Logic.Fusion
                 newDemon.ExtraSkills.AddRange(chosenSkills);
                 newDemon.ExtraSkills = newDemon.ExtraSkills.Distinct().ToList();
 
-                if (sacrifice != null)
+                // Apply Operator-class Sacrifice EXP bonus
+                if (sacrifice != null && sacrifice is Combatant offer)
                 {
-                    int expBonus = (int)(sacrifice.Level * 250);
+                    int expBonus = (int)(offer.Level * 250);
                     newDemon.GainExp(expBonus);
                 }
 
@@ -278,6 +290,13 @@ namespace JRPGPrototype.Logic.Fusion
             {
                 Persona originalPersona = (Persona)parentToModify;
                 int targetRank = originalPersona.Rank + rankDirection;
+
+                // Handle WildCard-class Sacrifice (Persona)
+                if (sacrifice != null && sacrifice is Persona sacrificialPersona)
+                {
+                    if (owner.ActivePersona == sacrificialPersona) owner.ActivePersona = null;
+                    owner.PersonaStock.Remove(sacrificialPersona);
+                }
 
                 var nextRankData = Database.Personas.Values
                     .Where(p => p.Race == originalPersona.Race && p.Rank == targetRank)
@@ -304,7 +323,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="demonToBoost">The demon whose stats will be boosted.</param>
         /// <param name="mitamaParent">The Mitama demon being consumed for the boost.</param>
         /// <param name="sacrifice">An optional third demon sacrificed for bonus XP.</param>
-        public void ExecuteStatBoostFusion(Combatant owner, object entityToBoost, object mitamaParent, List<string> chosenSkills, Combatant? sacrifice)
+        public void ExecuteStatBoostFusion(Combatant owner, object entityToBoost, object mitamaParent, List<string> chosenSkills, object? sacrifice)
         {
             if (owner.Class == ClassType.Operator)
             {
@@ -315,10 +334,10 @@ namespace JRPGPrototype.Logic.Fusion
                 if (_partyManager.ActiveParty.Contains(mitamaDemon)) _partyManager.ReturnDemon(owner, mitamaDemon);
                 owner.DemonStock.Remove(mitamaDemon);
 
-                if (sacrifice != null)
+                if (sacrifice != null && sacrifice is Combatant sacrificialDemon)
                 {
-                    if (_partyManager.ActiveParty.Contains(sacrifice)) _partyManager.ReturnDemon(owner, sacrifice);
-                    owner.DemonStock.Remove(sacrifice);
+                    if (_partyManager.ActiveParty.Contains(sacrificialDemon)) _partyManager.ReturnDemon(owner, sacrificialDemon);
+                    owner.DemonStock.Remove(sacrificialDemon);
                 }
 
                 // Create a new Combatant instance to apply boosts to.
@@ -338,9 +357,9 @@ namespace JRPGPrototype.Logic.Fusion
                 boostedDemon.RecalculateResources();
 
                 // Apply sacrifice EXP bonus
-                if (sacrifice != null)
+                if (sacrifice != null && sacrifice is Combatant offer)
                 {
-                    int expBonus = (int)(sacrifice.Level * 250);
+                    int expBonus = (int)(offer.Level * 250);
                     boostedDemon.GainExp(expBonus);
                 }
 
@@ -355,6 +374,13 @@ namespace JRPGPrototype.Logic.Fusion
                 // Consume Mitama
                 if (owner.ActivePersona == mitamaPersona) owner.ActivePersona = null;
                 owner.PersonaStock.Remove(mitamaPersona);
+
+                // Consume Persona Sacrifice
+                if (sacrifice != null && sacrifice is Persona sacrificialPersona)
+                {
+                    if (owner.ActivePersona == sacrificialPersona) owner.ActivePersona = null;
+                    owner.PersonaStock.Remove(sacrificialPersona);
+                }
 
                 // Clone base template
                 var template = Database.Personas.Values.FirstOrDefault(p => p.Name == personaToBoost.Name);

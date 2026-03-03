@@ -143,12 +143,27 @@ namespace JRPGPrototype.Logic.Fusion
                 parents.Add(p2);
 
                 // Select Sacrifice (Full Moon only)
-                Combatant sacrifice = null;
+                object sacrifice = null;
                 if (isSacrificial)
                 {
-                    // Sacrifices are always Demons (Combatants) even for WildCards
-                    var sacrificePool = _mutator.GetFusibleDemonPool(_player);
-                    sacrifice = _uiBridge.SelectRitualParticipant(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", new List<Combatant>());
+                    // Re-calculate sacrifice pool based on class to ensure proper type filtering
+                    List<object> sacrificePool = new List<object>();
+                    if (_player.Class == ClassType.Operator)
+                    {
+                        var demons = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
+                        demons.AddRange(_player.DemonStock);
+                        sacrificePool = demons.Distinct().Cast<object>().ToList();
+                    }
+                    else if (_player.Class == ClassType.WildCard)
+                    {
+                        var personas = new List<Persona>();
+                        if (_player.ActivePersona != null) personas.Add(_player.ActivePersona);
+                        personas.AddRange(_player.PersonaStock);
+                        sacrificePool = personas.Distinct().Cast<object>().ToList();
+                    }
+
+                    // Passing 'parents' as exclusions ensures Parent A and Parent B cannot be chosen as the sacrifice
+                    sacrifice = _uiBridge.SelectRitualParticipant(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
                     if (sacrifice == null) continue; // Go back to start of parent selection
                 }
 
@@ -202,7 +217,13 @@ namespace JRPGPrototype.Logic.Fusion
                 {
                     // --- Skill Selection (Now duplicate-aware) ---
                     var parentList = new List<Combatant> { parentA, parentB };
-                    if (sacrifice != null) parentList.Add(sacrifice);
+
+                    // If sacrifice is a Persona, we must also wrap it for inheritance calculations
+                    if (sacrifice != null)
+                    {
+                        if (sacrifice is Combatant sacrificialCom) parentList.Add(sacrificialCom);
+                        else if (sacrifice is Persona sacrificialPer) parentList.Add(CreateTransientCombatant(sacrilficialPer));
+                    }
 
                     var inheritablePool = _calculator.GetInheritableSkills(parentList.ToArray());
                     int maxInheritSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray());
