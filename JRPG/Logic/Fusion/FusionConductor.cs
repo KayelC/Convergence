@@ -53,7 +53,7 @@ namespace JRPGPrototype.Logic.Fusion
             _logger.Subscribe(_messenger);
 
             // 2. Initialize Logic & Bridges
-            _calculator = new FusionCalculator(_io);
+            _calculator = new FusionCalculator(_io, _messenger);
             _mutator = new FusionMutator(_partyManager, _economy, _messenger);
             _compendium = new CompendiumRegistry(_io);
             _uiBridge = new CathedralUIBridge(_io, _uiState, _compendium);
@@ -90,6 +90,8 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         private void PerformFusionRitual(bool isSacrificial)
         {
+            List<object> participantPool = new List<object>();
+
             while (true) // OUTER LOOP: Participant Selection
             {
                 // 1. Establish the pool of participants based on Character Class
@@ -117,15 +119,15 @@ namespace JRPGPrototype.Logic.Fusion
                 }
 
                 // 2. Participant Selection
-                List<object> parents = new();
+                List<object> parents = new List<object>();
 
                 // Select Parent 1
-                object? p1 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
+                object? p1 = _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
                 if (p1 == null) return;
                 parents.Add(p1);
 
                 // Select Parent 2
-                object? p2 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
+                object? p2 = _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
                 if (p2 == null) continue; // Go back to start of parent selection
                 parents.Add(p2);
 
@@ -152,14 +154,14 @@ namespace JRPGPrototype.Logic.Fusion
                     continue;
                 }
 
-                // --- Identify Result and Inherent Skills early for UI duplicate-checking ---
-                List<string> inherentSkills = new();
+                // --- 4. Identify Result and Inherent Skills early ---
+                List<string> inherentSkills = new List<string>();
                 PersonaData? resultTemplate = null;
 
                 if (operation == FusionOperationType.CreateNewDemon)
                 {
                     Database.Personas.TryGetValue(targetId.ToLower(), out resultTemplate);
-                    inherentSkills = resultTemplate?.BaseSkills ?? new();
+                    inherentSkills = resultTemplate?.BaseSkills ?? new List<string>();
                 }
                 else if (operation == FusionOperationType.StatBoostFusion)
                 {
@@ -169,9 +171,9 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else if (operation == FusionOperationType.RankUpParent || operation == FusionOperationType.RankDownParent)
                 {
-                    // NEW BLOCK: For Rank mutations, inherent skills are the base kit of the result tier
+                    // For Rank mutations, inherent skills are the base kit of the result tier
                     Database.Personas.TryGetValue(targetId.ToLower(), out resultTemplate);
-                    inherentSkills = resultTemplate?.BaseSkills ?? new();
+                    inherentSkills = resultTemplate?.BaseSkills ?? new List<string>();
                 }
 
                 while (true) // INNER LOOP: Skill Selection <-> Preview
@@ -237,7 +239,7 @@ namespace JRPGPrototype.Logic.Fusion
                 foreach (var mod in targetCom.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
 
                 // Simulate the Mitama boost on the dummy
-                ApplyMitamaStatBoost(staged, mitamaCom.ActivePersona.Name);
+                ApplyPreviewBoost(staged, mitamaCom.ActivePersona!.Name);
                 staged.RecalculateResources();
             }
             else if (op == FusionOperationType.RankUpParent || op == FusionOperationType.RankDownParent)
@@ -254,6 +256,25 @@ namespace JRPGPrototype.Logic.Fusion
             return staged;
         }
 
+        private void ApplyPreviewBoost(Combatant demon, string mitamaName)
+        {
+            Dictionary<StatType, int> boosts = new Dictionary<StatType, int>();
+            switch (mitamaName)
+            {
+                case "Ara Mitama": boosts.Add(StatType.St, 2); boosts.Add(StatType.Ag, 1); break;
+                case "Nigi Mitama": boosts.Add(StatType.Ma, 2); boosts.Add(StatType.Lu, 1); break;
+                case "Kusi Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Ag, 1); break;
+                case "Saki Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Lu, 1); break;
+            }
+
+            foreach (var entry in boosts)
+            {
+                var mods = demon.ActivePersona!.StatModifiers;
+                int current = mods.GetValueOrDefault(entry.Key, 0);
+                mods[entry.Key] = Math.Min(40, current + entry.Value);
+            }
+        }
+
         #endregion
 
         #region Compendium and Helpers
@@ -264,7 +285,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         private void HandleCompendiumRecall()
         {
-            Combatant entry = _uiBridge.ShowCompendiumRecallMenu();
+            Combatant? entry = _uiBridge.ShowCompendiumRecallMenu();
             if (entry == null) return;
 
             int cost = _compendium.CalculateRecallCost(entry.SourceId);
@@ -280,7 +301,9 @@ namespace JRPGPrototype.Logic.Fusion
 
             Combatant? snapshot = _compendium.GetRecallEntry(entry.SourceId);
             if (snapshot != null && _mutator.FinalizeRecall(_player, snapshot, cost))
+            {
                 _messenger.Publish($"{snapshot.Name} has been materialized.", ConsoleColor.Cyan, 800);
+            }
         }
 
         /// <summary>
@@ -293,13 +316,13 @@ namespace JRPGPrototype.Logic.Fusion
             {
                 var pool = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
                 pool.AddRange(_player.DemonStock);
-                Combatant selected = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
+                Combatant? selected = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
                 if (selected != null) _compendium.RegisterDemon(selected);
             }
             else if (_player.Class == ClassType.WildCard)
             {
                 // Registration source for WildCards is their PersonaStock
-                Persona p = _uiBridge.SelectRitualParticipant(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
+                Persona? p = _uiBridge.SelectRitualParticipant<Persona>(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
                 if (p != null) _compendium.RegisterDemon(CreateTransientCombatant(p));
             }
         }

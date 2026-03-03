@@ -27,6 +27,14 @@ namespace JRPGPrototype.Logic.Battle
     public class StatusRegistry
     {
         private readonly Random _rnd = new Random();
+        private IBattleMessenger? _messenger;
+
+
+        // Allows the conductor to inject the shared communication mediator.
+        public void SetMessenger(IBattleMessenger messenger)
+        {
+            _messenger = messenger;
+        }
 
         /// <summary>
         /// Attempts to inflict an ailment on a target.
@@ -46,7 +54,7 @@ namespace JRPGPrototype.Logic.Battle
                 return false;
             }
 
-            AilmentData ailmentToApply = null;
+            AilmentData? ailmentToApply = null;
             foreach (var ailment in Database.Ailments.Values)
             {
                 if (skillEffect.Contains(ailment.Name, StringComparison.OrdinalIgnoreCase))
