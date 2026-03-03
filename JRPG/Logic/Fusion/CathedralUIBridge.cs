@@ -192,7 +192,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <param name="playerLevel">Current player level for level check.</param>
         /// <param name="operationType">The type of fusion operation.</param>
         /// <returns>True if player confirms, false if cancels.</returns>
-        public int ConfirmRitual(Combatant stagedDemon, Combatant originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
+        public int ConfirmRitual(Combatant stagedDemon, Combatant? originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
         {
             // Level constraint check for ALL new demon/ranked demon results
             if (stagedDemon.Level > playerLevel)
@@ -228,17 +228,20 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                         _io.WriteLine($"Result: {stagedDemon.Name} (Lv.{stagedDemon.Level})", ConsoleColor.Yellow);
                         _io.WriteLine("------------------------");
                         _io.WriteLine("Stat Changes:", ConsoleColor.Yellow);
-                        foreach (StatType st in Enum.GetValues(typeof(StatType)))
+                        if (originalParent != null)
                         {
-                            int originalVal = originalParent.GetStat(st);
-                            int stagedVal = stagedDemon.GetStat(st);
-                            if (stagedVal != originalVal)
+                            foreach (StatType st in Enum.GetValues(typeof(StatType)))
                             {
-                                _io.WriteLine($" {st}: {originalVal} -> {stagedVal} ({(stagedVal > originalVal ? "+" : "")}{stagedVal - originalVal})", ConsoleColor.Green);
-                            }
-                            else
-                            {
-                                _io.WriteLine($" {st}: {originalVal}", ConsoleColor.DarkGray);
+                                int originalVal = originalParent.GetStat(st);
+                                int stagedVal = stagedDemon.GetStat(st);
+                                if (stagedVal != originalVal)
+                                {
+                                    _io.WriteLine($" {st}: {originalVal} -> {stagedVal} ({(stagedVal > originalVal ? "+" : "")}{stagedVal - originalVal})", ConsoleColor.Green);
+                                }
+                                else
+                                {
+                                    _io.WriteLine($" {st}: {originalVal}", ConsoleColor.DarkGray);
+                                }
                             }
                         }
                         break;
@@ -318,7 +321,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             string header = "=== DEMONIC COMPENDIUM ===\nRecall the data of a previously registered demon.\n";
             List<string> labels = new List<string>();
 
-            foreach (var entry in entries)  
+            foreach (var entry in entries)
             {
                 int cost = _compendium.CalculateRecallCost(entry.SourceId);
                 labels.Add($"{entry.Name,-15} (Lv.{entry.Level}) {entry.ActivePersona?.Race} (Rk.{entry.ActivePersona?.Rank}) | {cost} M");

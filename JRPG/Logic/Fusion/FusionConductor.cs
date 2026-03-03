@@ -133,12 +133,12 @@ namespace JRPGPrototype.Logic.Fusion
                 List<object> parents = new List<object>();
 
                 // Select Parent 1
-                object p1 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
+                object? p1 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
                 if (p1 == null) return;
                 parents.Add(p1);
 
                 // Select Parent 2
-                object p2 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
+                object? p2 = _uiBridge.SelectRitualParticipant(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
                 if (p2 == null) continue; // Go back to start of parent selection
                 parents.Add(p2);
 
@@ -232,7 +232,7 @@ namespace JRPGPrototype.Logic.Fusion
                     if (isSacrificial) maxInheritSlots = Math.Min(8, maxInheritSlots + 2);
 
                     // Pass inherentSkills to the UI so it can gray them out
-                    List<string> selectedSkills = _uiBridge.SelectInheritedSkills(inheritablePool, maxInheritSlots, inherentSkills);
+                    List<string>? selectedSkills = _uiBridge.SelectInheritedSkills(inheritablePool, maxInheritSlots, inherentSkills);
 
                     if (selectedSkills == null) break; // User aborted skills -> break inner loop to go back to participant selection
 
@@ -438,6 +438,7 @@ namespace JRPGPrototype.Logic.Fusion
 
             Combatant c = new Combatant(p.Name, ClassType.Demon)
             {
+                SourceId = p.Name,
                 Level = p.Level,
                 ActivePersona = transientPersona
             };
