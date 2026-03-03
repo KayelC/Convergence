@@ -167,6 +167,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <summary>
         /// Final confirmation screen displaying the results of the planned fusion.
         /// This method is now adapted to show previews for all fusion operation types.
+        /// Shows both inherent Base Skills and Inherited Skills for full transparency.
         /// </summary>
         /// <param name="stagedDemon">The Combatant representing the FINAL state of the demon AFTER fusion.</param>
         /// <param name="originalParent">The original parent demon (for Rank/Stat boost "Before" comparison).</param>
@@ -198,23 +199,16 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                 switch (operationType)
                 {
                     case FusionOperationType.CreateNewDemon:
-                        _io.WriteLine($"Form   : {stagedDemon.Name}", ConsoleColor.Yellow);
-                        _io.WriteLine($"Race   : {stagedDemon.ActivePersona.Race}", ConsoleColor.Yellow);
-                        _io.WriteLine($"Rank   : {stagedDemon.ActivePersona.Rank}", ConsoleColor.Yellow);
-                        _io.WriteLine($"Level  : {stagedDemon.Level}", ConsoleColor.Yellow);
-                        _io.WriteLine("------------------------");
-                        _io.WriteLine("Inherited Skill Pool:", ConsoleColor.Yellow);
-                        foreach (var s in inheritedSkills)
-                        {
-                            _io.WriteLine($" > {s}", ConsoleColor.Yellow);
-                        }
-                        _io.WriteLine("------------------------");
+                        _io.WriteLine($"Form  : {stagedDemon.Name}", ConsoleColor.Yellow);
+                        _io.WriteLine($"Race  : {stagedDemon.ActivePersona.Race}", ConsoleColor.Yellow);
+                        _io.WriteLine($"Rank  : {stagedDemon.ActivePersona.Rank}", ConsoleColor.Yellow);
+                        _io.WriteLine($"Level : {stagedDemon.Level}", ConsoleColor.Yellow);
                         break;
 
                     case FusionOperationType.RankUpParent:
                     case FusionOperationType.RankDownParent:
-                        _io.WriteLine($"Original: {originalParent.Name} (Lv.{originalParent.Level}) {originalParent.ActivePersona.Race} (Rk.{originalParent.ActivePersona.Rank})", ConsoleColor.Yellow);
-                        _io.WriteLine($"Result  : {stagedDemon.Name} (Lv.{stagedDemon.Level}) {stagedDemon.ActivePersona.Race} (Rk.{stagedDemon.ActivePersona.Rank})", ConsoleColor.Yellow);
+                    case FusionOperationType.StatBoostFusion:
+                        _io.WriteLine($"Result: {stagedDemon.Name} (Lv.{stagedDemon.Level})", ConsoleColor.Yellow);
                         _io.WriteLine("------------------------");
                         _io.WriteLine("Stat Changes:", ConsoleColor.Yellow);
                         foreach (StatType st in Enum.GetValues(typeof(StatType)))
@@ -227,42 +221,38 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                             }
                             else
                             {
-                                _io.WriteLine($" {st}: {originalVal}", ConsoleColor.Yellow);
+                                _io.WriteLine($" {st}: {originalVal}", ConsoleColor.DarkGray);
                             }
                         }
-                        _io.WriteLine("------------------------");
-                        _io.WriteLine("Inherited Skill Pool:", ConsoleColor.Yellow);
-                        foreach (var s in inheritedSkills) // Skills from stagedDemon (after elemental has added theirs)
-                        {
-                            _io.WriteLine($" > {s}", ConsoleColor.Yellow);
-                        }
-                        _io.WriteLine("------------------------");
-                        break;
-
-                    case FusionOperationType.StatBoostFusion:
-                        _io.WriteLine($"Demon: {originalParent.Name} (Lv.{originalParent.Level})", ConsoleColor.Yellow);
-                        _io.WriteLine("------------------------");
-                        _io.WriteLine("Stat Boosts:", ConsoleColor.Yellow);
-                        foreach (StatType st in Enum.GetValues(typeof(StatType)))
-                        {
-                            int originalVal = originalParent.GetStat(st);
-                            int stagedVal = stagedDemon.GetStat(st);
-                            if (stagedVal != originalVal)
-                            {
-                                _io.WriteLine($" {st}: {originalVal} -> {stagedVal} (+{stagedVal - originalVal})", ConsoleColor.Green);
-                            }
-                            else if (originalVal == 40)
-                            {
-                                _io.WriteLine($" {st}: {originalVal} (Maxed - no boost)", ConsoleColor.Yellow);
-                            }
-                            else
-                            {
-                                _io.WriteLine($" {st}: {originalVal} (No change)", ConsoleColor.Gray); // Clarify no change for other stats
-                            }
-                        }
-                        _io.WriteLine("------------------------");
                         break;
                 }
+
+                _io.WriteLine("------------------------");
+
+                // --- Skill Preview Section (Updated) ---
+
+                // 1. Show Inherent Base Skills
+                var baseSkills = stagedDemon.ActivePersona.SkillSet;
+                if (baseSkills.Any())
+                {
+                    _io.WriteLine("Inherent Base Skills:", ConsoleColor.Cyan);
+                    foreach (var s in baseSkills)
+                    {
+                        _io.WriteLine($" * {s}", ConsoleColor.Cyan);
+                    }
+                }
+
+                // 2. Show Chosen Inherited Skills
+                if (inheritedSkills != null && inheritedSkills.Any())
+                {
+                    _io.WriteLine("Inherited Skills:", ConsoleColor.Green);
+                    foreach (var s in inheritedSkills)
+                    {
+                        _io.WriteLine($" + {s}", ConsoleColor.Green);
+                    }
+                }
+
+                _io.WriteLine("------------------------");
             });
 
             return choice == 0;
@@ -295,9 +285,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         #region Compendium UI
 
-        /// <summary>
-        /// Renders the scrollable Compendium registry.
-        /// </summary>
+        // Renders the scrollable Compendium registry.
         public Combatant ShowCompendiumRecallMenu()
         {
             var entries = _compendium.GetAllRegisteredDemons();
@@ -325,9 +313,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             return entries[choice];
         }
 
-        /// <summary>
-        /// Prompts the player to choose a demon from their party to save to the Compendium.
-        /// </summary>
+        // Prompts the player to choose a demon from their party to save to the Compendium.
         public Combatant SelectDemonToRegister(List<Combatant> party)
         {
             var demonsOnly = party.Where(c => c.Class == ClassType.Demon).ToList();
