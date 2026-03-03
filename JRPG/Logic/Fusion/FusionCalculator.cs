@@ -10,7 +10,7 @@ namespace JRPGPrototype.Logic.Fusion
 {
     /// <summary>
     /// The mathematical kernel for the Fusion Sub-System.
-    /// Manages Race-based lookups and tier-matching logic based on SMT III: Nocturne formulas.
+    /// Manages Race-based lookups and tier-matching logic based on recipe formulas.
     /// Handles deterministic skill inheritance calculations and accident probabilities.
     /// </summary>
     public class FusionCalculator
@@ -18,7 +18,7 @@ namespace JRPGPrototype.Logic.Fusion
         private readonly IGameIO _io;
         private readonly Random _rnd = new Random();
 
-        // Lookup dictionary: Dictionary<RaceA, Dictionary<RaceB, ResultRace>>
+        // Lookup dictionary: Dictionary<RaceA, Dictionary<RaceB, ResultString>>
         private readonly Dictionary<string, Dictionary<string, string>> _raceTable;
 
         public FusionCalculator(IGameIO io)
@@ -47,7 +47,7 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else
                 {
-                    _io.WriteLine("[FusionCalculator] Warning: Fusion recipes not found in Database. Fusion will be unavailable.", ConsoleColor.Yellow);
+                    _io.WriteLine("[FusionCalculator] Warning: Fusion recipes not found in Database.", ConsoleColor.Yellow);
                 }
             }
             catch (Exception ex)
@@ -56,9 +56,7 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
-        /// <summary>
         /// Internal helper to populate the 2D lookup table.
-        /// </summary>
         private void RegisterMapping(string a, string b, string res)
         {
             if (!_raceTable.ContainsKey(a))
@@ -81,69 +79,55 @@ namespace JRPGPrototype.Logic.Fusion
             string raceA = a.ActivePersona?.Race ?? "Unknown";
             string raceB = b.ActivePersona?.Race ?? "Unknown";
 
-            // 1. Accident Logic (calculated upfront)
+            // 1. Accident Logic (Calculated upfront)
             int accidentThreshold = (moonPhase == 8) ? 12 : 1;
             bool isAccident = _rnd.Next(0, 100) < accidentThreshold;
 
-            // 2. Mitama Fusion Check (Highest Priority)
-            if (raceA == "Mitama" || raceB == "Mitama")
-            {
-                Combatant parentToBoost = (raceA == "Mitama") ? b : a;
-                // Ensure Mitama fusion is only with a non-Mitama demon
-                if (parentToBoost == null || parentToBoost.ActivePersona?.Race == "Mitama")
-                {
-                    return (FusionOperationType.NoFusionPossible, null, false);
-                }
-                return (FusionOperationType.StatBoostFusion, parentToBoost.SourceId.ToLower(), isAccident);
-            }
-
-            // 3. Identify Resulting string from the lookup table
+            // 2. Table Lookup
             if (!_raceTable.TryGetValue(raceA, out var branch) || !branch.TryGetValue(raceB, out string resultString))
             {
+                // Trace for debugging failed lookups
+                // Console.WriteLine($"[DEBUG] No table entry for {raceA} + {raceB}");
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
-            // 4. Handle Special Cases: Rank Up/Down
+            // 3. PRIORITY 1: Literal ID Search (Mitamas and Specific Element Results)
+            // If the table result (e.g., "ara_mitama" or "Aeros") is a literal Entity ID, use it.
+            if (Database.Personas.ContainsKey(resultString))
+            {
+                return (FusionOperationType.CreateNewDemon, resultString, isAccident);
+            }
+
+            // 4. PRIORITY 2: Handle Special Cases (Rank Up/Down)
             if (resultString == "1" || resultString == "-1")
             {
                 Combatant parentToRank = null;
-                // The parent to modify is the one that is NOT an Elemental
-                if (a.ActivePersona?.Race != "Element") { parentToRank = a; }
-                else if (b.ActivePersona?.Race != "Element") { parentToRank = b; }
+                // Identify the non-Element parent
+                if (raceA != "Element") parentToRank = a;
+                else if (raceB != "Element") parentToRank = b;
 
                 if (parentToRank != null)
                 {
                     var operation = (resultString == "1") ? FusionOperationType.RankUpParent : FusionOperationType.RankDownParent;
                     return (operation, parentToRank.SourceId.ToLower(), isAccident);
                 }
-                else
-                {
-                    // Invalid if fusion table is correct (e.g., Element + Element can't rank up)
-                    return (FusionOperationType.NoFusionPossible, null, false);
-                }
+                return (FusionOperationType.NoFusionPossible, null, false);
             }
 
-            // 5. Handle Special Cases: Direct ID results (Elementals & Mitamas)
-            // FIX: Normalizes shorthand identifiers from the fusion matrix to actual Database IDs
-            string mappedResult = resultString.ToLower();
-            if (mappedResult == "ara") mappedResult = "ara-mitama";
-            else if (mappedResult == "nigi") mappedResult = "nigi-mitama";
-            else if (mappedResult == "kusi") mappedResult = "kusi-mitama";
-            else if (mappedResult == "saki") mappedResult = "saki-mitama";
+            // 5. PRIORITY 3: Normal Race Fusion (Level-Based)
+            // At this point, resultString is assumed to be a Race Name (e.g., "Fury")
 
-            // If the result string directly matches a key in the Entity Database, it's a direct creation.
-            if (Database.Personas.ContainsKey(mappedResult))
+            // Get templates to find Base Levels
+            if (!Database.Personas.TryGetValue(a.SourceId.ToLower(), out var templateA) ||
+                !Database.Personas.TryGetValue(b.SourceId.ToLower(), out var templateB))
             {
-                return (FusionOperationType.CreateNewDemon, mappedResult, isAccident);
+                return (FusionOperationType.NoFusionPossible, null, false);
             }
 
-            // 6. Normal Race Fusion (Level-Based)
-            // Use Base Level from PersonaData for fusion result level, plus a random nudge.
-            PersonaData templateA = Database.Personas[a.SourceId.ToLower()];
-            PersonaData templateB = Database.Personas[b.SourceId.ToLower()];
             int avgBaseLevel = (templateA.Level + templateB.Level) / 2;
             int targetLevel = avgBaseLevel + _rnd.Next(1, 6); // Add 1 to 5 to the average base level.
 
+            // Fetch all demons of the resulting race
             var racePool = Database.Personas.Values
                 .Where(p => p.Race.Equals(resultString, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p.Level)
@@ -157,12 +141,20 @@ namespace JRPGPrototype.Logic.Fusion
             PersonaData resultData;
             if (isAccident)
             {
-                resultData = racePool.First(); // Accident results in the lowest rank of the target race
+                resultData = racePool.First(); // Accident yields lowest rank of target race
             }
             else
             {
-                // Find nearest match where p.Level >= targetLevel, or default to highest available.
+                // Find nearest match where p.Level >= targetLevel, or default to the highest in that race
                 resultData = racePool.FirstOrDefault(p => p.Level >= targetLevel) ?? racePool.Last();
+
+                // Rule: If the result is one of the parents, move to the next tier in the pool
+                if (resultData.Id == templateA.Id || resultData.Id == templateB.Id)
+                {
+                    int currentIndex = racePool.IndexOf(resultData);
+                    if (currentIndex + 1 < racePool.Count)
+                        resultData = racePool[currentIndex + 1];
+                }
             }
 
             return (FusionOperationType.CreateNewDemon, resultData.Id, isAccident);
