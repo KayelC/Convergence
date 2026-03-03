@@ -9,21 +9,24 @@ using JRPGPrototype.Services;
 namespace JRPGPrototype.Logic.Fusion
 {
     /// <summary>
-    /// The mathematical kernel for the Fusion Sub-System.
+    /// The mathematical kernel for the Fusion Sub-System. 
     /// Manages Race-based lookups and tier-matching logic based on recipe formulas.
     /// Handles deterministic skill inheritance calculations and accident probabilities.
+    /// Fully decoupled diagnostic tracing via IFusionMessenger.
     /// </summary>
     public class FusionCalculator
     {
         private readonly IGameIO _io;
+        private readonly IFusionMessenger _messenger;
         private readonly Random _rnd = new Random();
 
         // Lookup dictionary: Dictionary<RaceA, Dictionary<RaceB, ResultString>>
         private readonly Dictionary<string, Dictionary<string, string>> _raceTable;
 
-        public FusionCalculator(IGameIO io)
+        public FusionCalculator(IGameIO io, IFusionMessenger messenger)
         {
             _io = io;
+            _messenger = messenger;
             _raceTable = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             LoadFusionTable();
         }
@@ -47,12 +50,12 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else
                 {
-                    _io.WriteLine("[FusionCalculator] Warning: Fusion recipes not found in Database.", ConsoleColor.Yellow);
+                    _messenger.Publish("[FusionCalculator] Warning: Fusion recipes not found in Database.", ConsoleColor.Yellow);
             }
             }
             catch (Exception ex)
             {
-                _io.WriteLine($"[FusionCalculator] Critical Error loading fusion data: {ex.Message}", ConsoleColor.Red);
+                _messenger.Publish($"[FusionCalculator] Critical Error loading fusion data: {ex.Message}", ConsoleColor.Red);
             }
         }
 
@@ -99,7 +102,7 @@ namespace JRPGPrototype.Logic.Fusion
                 // If both are Mitamas, typically no result
                 if (aIsMitama && bIsMitama)
                 {
-                    _io.WriteLine($"[Fusion Trace] Mitama + Mitama fusion is not supported.", ConsoleColor.DarkGray);
+                    _messenger.Publish("[Fusion Trace] Mitama + Mitama fusion is not supported.", ConsoleColor.DarkGray);
                     return (FusionOperationType.NoFusionPossible, null, false);
                 }
 
@@ -109,11 +112,11 @@ namespace JRPGPrototype.Logic.Fusion
                 // Check: Non-Mitama parent cannot be an Element (Elements only Rank Up/Down)
                 if (target.ActivePersona.Race.Equals("Element", StringComparison.OrdinalIgnoreCase))
                 {
-                    _io.WriteLine($"[Fusion Trace] Elements cannot receive Mitama stat boosts.", ConsoleColor.DarkGray);
+                    _messenger.Publish("[Fusion Trace] Elements cannot receive Mitama stat boosts.", ConsoleColor.DarkGray);
                     return (FusionOperationType.NoFusionPossible, null, false);
                 }
 
-                _io.WriteLine($"[Fusion Trace] Mitama Global Override: Stat boosting {target.Name}", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] Mitama Global Override: Stat boosting {target.Name}", ConsoleColor.DarkGray);
                 return (FusionOperationType.StatBoostFusion, target.SourceId.ToLower(), isAccident);
             }
 
@@ -123,17 +126,17 @@ namespace JRPGPrototype.Logic.Fusion
             // Search by Specific IDs
             if (_raceTable.TryGetValue(idA, out var idBranch) && idBranch.TryGetValue(idB, out resultString))
             {
-                _io.WriteLine($"[Fusion Trace] Match found via Specific IDs: {idA} + {idB}", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] Match found via Specific IDs: {idA} + {idB}", ConsoleColor.DarkGray);
             }
             // Search by Races
             else if (_raceTable.TryGetValue(raceA, out var raceBranch) && raceBranch.TryGetValue(raceB, out resultString))
             {
-                _io.WriteLine($"[Fusion Trace] Match found via Races: {raceA} + {raceB}", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] Match found via Races: {raceA} + {raceB}", ConsoleColor.DarkGray);
             }
 
             if (resultString == null)
             {
-                _io.WriteLine($"[Fusion Trace] No combination found for {idA}({raceA}) + {idB}({raceB})", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] No combination found for {idA}({raceA}) + {idB}({raceB})", ConsoleColor.DarkGray);
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
@@ -141,7 +144,7 @@ namespace JRPGPrototype.Logic.Fusion
             string lookupId = resultString.ToLower();
             if (Database.Personas.ContainsKey(lookupId))
             {
-                _io.WriteLine($"[Fusion Trace] Result identified as Entity ID: {lookupId}", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] Result identified as Entity ID: {lookupId}", ConsoleColor.DarkGray);
                 return (FusionOperationType.CreateNewDemon, lookupId, isAccident);
             }
 
@@ -154,14 +157,15 @@ namespace JRPGPrototype.Logic.Fusion
 
                 if (parentToRank != null)
                 {
-                    var operation = (resultString == "1") ? FusionOperationType.RankUpParent : FusionOperationType.RankDownParent;
-                    return (operation, parentToRank.SourceId.ToLower(), isAccident);
+                    var op = (resultString == "1") ? FusionOperationType.RankUpParent : FusionOperationType.RankDownParent;
+                    _messenger.Publish($"[Fusion Trace] Rank Mutation: Target {parentToRank.Name} identified.", ConsoleColor.DarkGray);
+                    return (op, parentToRank.SourceId.ToLower(), isAccident);
                 }
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
             // PRIORITY 3: Normal Race Fusion (Level-Based)
-            // At this point, resultString is assumed to be a Race Name (e.g., "Fury")
+            // resultString is assumed to be a Race Name (e.g., "Fury")
 
             // Get templates to find Base Levels
             if (!Database.Personas.TryGetValue(a.SourceId.ToLower(), out var templateA) ||
@@ -176,19 +180,19 @@ namespace JRPGPrototype.Logic.Fusion
             // Fetch all demons of the resulting race
             var racePool = Database.Personas.Values
                 .Where(p => p.Race.Equals(resultString, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p.Level)
-                .ToList();
+                .OrderBy(p => p.Level).ToList();
 
             if (!racePool.Any())
             {
-                _io.WriteLine($"[Fusion Trace] Resulting Race '{resultString}' has no members in database.", ConsoleColor.DarkGray);
+                _messenger.Publish($"[Fusion Trace] Resulting Race '{resultString}' has no members in database.", ConsoleColor.DarkGray);
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
             PersonaData resultData;
             if (isAccident)
             {
-                resultData = racePool.First(); // Accident yields lowest rank of target race
+                resultData = racePool.First();
+                _messenger.Publish("[Fusion Trace] Fusion Accident! Result shifted to lowest tier.", ConsoleColor.DarkGray);
             }
             else
             {
@@ -198,11 +202,13 @@ namespace JRPGPrototype.Logic.Fusion
                 // Rule: If the result is one of the parents, move to the next tier in the pool
                 if (resultData.Id == templateA.Id || resultData.Id == templateB.Id)
                 {
-                    int currentIndex = racePool.IndexOf(resultData);
-                    if (currentIndex + 1 < racePool.Count) resultData = racePool[currentIndex + 1];
+                    int idx = racePool.IndexOf(resultData);
+                    if (idx + 1 < racePool.Count) resultData = racePool[idx + 1];
+                    _messenger.Publish("[Fusion Trace] Result matches parent; shifting to next tier.", ConsoleColor.DarkGray);
                 }
             }
 
+            _messenger.Publish($"[Fusion Trace] Normal Fusion: Predicted Result -> {resultData.Name}", ConsoleColor.DarkGray);
             return (FusionOperationType.CreateNewDemon, resultData.Id, isAccident);
         }
 
