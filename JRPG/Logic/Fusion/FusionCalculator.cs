@@ -48,7 +48,7 @@ namespace JRPGPrototype.Logic.Fusion
                 else
                 {
                     _io.WriteLine("[FusionCalculator] Warning: Fusion recipes not found in Database.", ConsoleColor.Yellow);
-                }
+            }
             }
             catch (Exception ex)
             {
@@ -74,37 +74,56 @@ namespace JRPGPrototype.Logic.Fusion
         /// <param name="b">The second parent participant.</param>
         /// <param name="moonPhase">The current phase from the MoonPhaseSystem.</param>
         /// <returns>A tuple containing the fusion operation type, a target ID, and an accident flag.</returns>
-        public (FusionOperationType operation, string targetEntityId, bool isAccident) CalculateResult(Combatant a, Combatant b, int moonPhase)
+        public (FusionOperationType operation, string? targetEntityId, bool isAccident) CalculateResult(Combatant a, Combatant b, int moonPhase)
         {
-            string raceA = a.ActivePersona?.Race ?? "Unknown";
-            string raceB = b.ActivePersona?.Race ?? "Unknown";
+            if (a.ActivePersona == null || b.ActivePersona == null)
+                return (FusionOperationType.NoFusionPossible, null, false);
 
-            // 1. Accident Logic (Calculated upfront)
-            int accidentThreshold = (moonPhase == 8) ? 12 : 1;
-            bool isAccident = _rnd.Next(0, 100) < accidentThreshold;
+            // 1. Establish Identifiers
+            string idA = a.SourceId;
+            string idB = b.SourceId;
+            string raceA = a.ActivePersona.Race;
+            string raceB = b.ActivePersona.Race;
 
-            // 2. Table Lookup
-            if (!_raceTable.TryGetValue(raceA, out var branch) || !branch.TryGetValue(raceB, out string resultString))
+            // 2. Multi-Tier Table Lookup
+            string? resultString = null;
+
+            // Tier 1: Try searching by Specific IDs (Required for Mitama fusions)
+            if (_raceTable.TryGetValue(idA, out var idBranch) && idBranch.TryGetValue(idB, out resultString))
             {
-                // Trace for debugging failed lookups
-                // Console.WriteLine($"[DEBUG] No table entry for {raceA} + {raceB}");
+                _io.WriteLine($"[Fusion Trace] Match found via Specific IDs: {idA} + {idB}", ConsoleColor.DarkGray);
+            }
+            // Tier 2: Try searching by Races (Required for Standard/Element creation)
+            else if (_raceTable.TryGetValue(raceA, out var raceBranch) && raceBranch.TryGetValue(raceB, out resultString))
+            {
+                _io.WriteLine($"[Fusion Trace] Match found via Races: {raceA} + {raceB}", ConsoleColor.DarkGray);
+            }
+
+            if (resultString == null)
+            {
+                _io.WriteLine($"[Fusion Trace] No combination found for {idA}({raceA}) + {idB}({raceB})", ConsoleColor.DarkGray);
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
-            // 3. PRIORITY 1: Literal ID Search (Mitamas and Specific Element Results)
-            // If the table result (e.g., "ara_mitama" or "Aeros") is a literal Entity ID, use it.
-            if (Database.Personas.ContainsKey(resultString))
+            // 3. Logic: Accident Roll
+            int accidentThreshold = (moonPhase == 8) ? 12 : 1;
+            bool isAccident = _rnd.Next(0, 100) < accidentThreshold;
+
+            // 4. PRIORITY 1: Literal ID Search (Normalization Fix)
+            // We check the lowercase version of the result against the database
+            string lookupId = resultString.ToLower();
+            if (Database.Personas.ContainsKey(lookupId))
             {
-                return (FusionOperationType.CreateNewDemon, resultString, isAccident);
+                _io.WriteLine($"[Fusion Trace] Result identified as Entity ID: {lookupId}", ConsoleColor.DarkGray);
+                return (FusionOperationType.CreateNewDemon, lookupId, isAccident);
             }
 
-            // 4. PRIORITY 2: Handle Special Cases (Rank Up/Down)
+            // 5. PRIORITY 2: Rank Up/Down Logic
             if (resultString == "1" || resultString == "-1")
             {
-                Combatant parentToRank = null;
-                // Identify the non-Element parent
-                if (raceA != "Element") parentToRank = a;
-                else if (raceB != "Element") parentToRank = b;
+                Combatant? parentToRank = null;
+                if (!raceA.Equals("Element", StringComparison.OrdinalIgnoreCase)) parentToRank = a;
+                else if (!raceB.Equals("Element", StringComparison.OrdinalIgnoreCase)) parentToRank = b;
 
                 if (parentToRank != null)
                 {
@@ -135,6 +154,7 @@ namespace JRPGPrototype.Logic.Fusion
 
             if (!racePool.Any())
             {
+                _io.WriteLine($"[Fusion Trace] Resulting Race '{resultString}' has no members in database.", ConsoleColor.DarkGray);
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
@@ -152,17 +172,14 @@ namespace JRPGPrototype.Logic.Fusion
                 if (resultData.Id == templateA.Id || resultData.Id == templateB.Id)
                 {
                     int currentIndex = racePool.IndexOf(resultData);
-                    if (currentIndex + 1 < racePool.Count)
-                        resultData = racePool[currentIndex + 1];
+                    if (currentIndex + 1 < racePool.Count) resultData = racePool[currentIndex + 1];
                 }
             }
 
             return (FusionOperationType.CreateNewDemon, resultData.Id, isAccident);
         }
 
-        /// <summary>
-        /// Aggregates all unique skills from parents to determine the total inheritable pool.
-        /// </summary>
+        // Aggregates all unique skills from parents to determine the total inheritable pool.
         public List<string> GetInheritableSkills(params Combatant[] parents)
         {
             List<string> pool = new List<string>();
@@ -177,9 +194,7 @@ namespace JRPGPrototype.Logic.Fusion
             return pool.Distinct().ToList();
         }
 
-        /// <summary>
-        /// Calculates the number of skill slots available for inheritance based on total unique parent skills.
-        /// </summary>
+        // Calculates the number of skill slots available for inheritance based on total unique parent skills.
         public int GetInheritanceSlotCount(params Combatant[] parents)
         {
             int uniqueSkillCount = GetInheritableSkills(parents).Count;
