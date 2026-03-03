@@ -91,6 +91,12 @@ namespace JRPGPrototype
 
             economy.AddMacca(5000);
 
+            for (int i = 0; i < 8; i++)
+            {
+                MoonPhaseSystem.Advance();
+            }
+
+
             FieldConductor field = new FieldConductor(
                 player,
                 inventory,
