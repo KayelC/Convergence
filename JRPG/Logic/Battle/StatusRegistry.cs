@@ -8,9 +8,7 @@ using JRPGPrototype.Entities;
 
 namespace JRPGPrototype.Logic.Battle
 {
-    /// <summary>
-    /// Defines the possible states an actor can be in at the start of their turn.
-    /// </summary>
+    // Defines the possible states an actor can be in at the start of their turn.
     public enum TurnStartResult
     {
         CanAct,         // Normal turn
@@ -68,7 +66,12 @@ namespace JRPGPrototype.Logic.Battle
 
             if (_rnd.Next(0, 100) < Math.Clamp(finalChance, 5, 95))
             {
-                return target.InflictAilment(ailmentToApply, 3);
+                bool success = target.InflictAilment(ailmentToApply, 3);
+                if (success && _messenger != null)
+                {
+                    _messenger.Publish($"{target.Name} was inflicted with {ailmentToApply.Name}!", ConsoleColor.Magenta);
+                }
+                return success;
             }
 
             return false;

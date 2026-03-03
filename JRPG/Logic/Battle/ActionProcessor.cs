@@ -10,8 +10,8 @@ namespace JRPGPrototype.Logic.Battle
 {
     /// <summary>
     /// The authoritative coordinator of battle actions.
-    /// This class no longer contains specific damage/heal math.
-    /// It manages Costs, Charges, and delegates behavior to the Strategy Registry.
+    /// Manages Costs, Charges, and delegates behavior to the Strategy Registry.
+    /// This class serves as the 'Brain' that connects Data, Logic, and UI.
     /// </summary>
     public class ActionProcessor
     {
@@ -26,28 +26,30 @@ namespace JRPGPrototype.Logic.Battle
             _knowledge = knowledge;
             _messenger = messenger;
 
-            // This registry acts as the "Toolbox" containing all logic strategies.
+            // The Registry is our centralized toolbox of the logic patterns.
             _registry = new BattleEffectRegistry();
         }
 
         /// <summary>
-        /// Orchestrates a standard weapon attack.
-        /// Reuses DamageEffect to ensure weapon elemental affinities are respected.
+        /// Orchestrates a standard physical weapon attack.
+        /// Reuses DamageEffect to ensure melee affinities (Slash/Strike/Pierce) are discovered.
         /// </summary>
         public CombatResult ExecuteAttack(Combatant attacker, Combatant target)
         {
             if (target.IsDead) return new CombatResult { Type = HitType.Miss, DamageDealt = 0 };
 
+            // 1. UI: Report the attempt
             _messenger.Publish($"{attacker.Name} attacks {target.Name}!");
 
-            // Standard attacks are just 'Slash/Strike/Pierce' DamageEffects with a base power of 15.
+            // 2. STRATEGY: Get the damage logic for the specific weapon element
             IBattleEffect strategy = _registry.GetEffect(attacker.WeaponElement.ToString());
 
             if (strategy == null) return new CombatResult { Type = HitType.Miss };
 
+            // 3. EXECUTION: Melee attacks have a standard power of 15
             var results = strategy.Apply(attacker, new List<Combatant> { target }, 15, "", _messenger, _status, _knowledge);
 
-            // Fulfills the "Missing/Attacking consumes physical charge" requirement
+            // 4. CHARGE: Rule - Any physical offensive action consumes the charge
             attacker.IsCharged = false;
 
             return results.FirstOrDefault() ?? new CombatResult { Type = HitType.Miss };
@@ -56,17 +58,17 @@ namespace JRPGPrototype.Logic.Battle
         // Handles Skill execution: Deducts costs and delegates to the correct strategy.
         public List<CombatResult> ExecuteSkill(Combatant attacker, List<Combatant> targets, SkillData skill)
         {
-            // --- 1. LEGACY LOGIC: Resource Cost Calculation ---
+            // --- 1. ENGINE LOGIC: Cost Calculation & Resource Deduction ---
             var cost = skill.ParseCost();
             int costValue = cost.value;
             var passives = attacker.GetConsolidatedSkills();
 
             // Determine if it's physical for cost and charge logic
-            bool isPhys = skill.Category == "Slash" || skill.Category == "Strike" || skill.Category == "Pierce";
+            bool isPhysElement = skill.Category == "Slash" || skill.Category == "Strike" || skill.Category == "Pierce";
 
-            // Arms Master / Spell Master logic
-            if (cost.isHP && isPhys && passives.Contains("Arms Master")) costValue /= 2;
-            else if (!cost.isHP && !isPhys && passives.Contains("Spell Master")) costValue /= 2;
+            // Arms Master / Spell Master Logic
+            if (cost.isHP && isPhysElement && passives.Contains("Arms Master")) costValue /= 2;
+            else if (!cost.isHP && !isPhysElement && passives.Contains("Spell Master")) costValue /= 2;
 
             if (cost.isHP)
             {
@@ -80,24 +82,25 @@ namespace JRPGPrototype.Logic.Battle
 
             _messenger.Publish($"{attacker.Name} uses {skill.Name}!", ConsoleColor.White, 200);
 
-            // --- 2. DELEGATION: Get the Strategy from the Toolbox ---
+            // --- 2. STRATEGY LOGIC: Behavior Delegation ---
             IBattleEffect strategy = _registry.GetEffect(skill.Category);
             List<CombatResult> results;
 
             if (strategy != null)
             {
-                // Logic is in the specific Effect class (e.g., DamageEffect, HealEffect)
+                // Delegation: The 'How' is handled by the specialized Strategy class
                 results = strategy.Apply(attacker, targets, skill.GetPowerVal(), skill.Effect, _messenger, _status, _knowledge);
             }
             else
             {
-                _messenger.Publish($"[Error] No logic found for {skill.Category}", ConsoleColor.Yellow);
+                _messenger.Publish($"[Error] No logic found for Category: {skill.Category}", ConsoleColor.Yellow);
                 results = new List<CombatResult>();
             }
 
-            // --- 3. LEGACY LOGIC: Charge Management ---
+            // --- 3. ENGINE LOGIC: Charge Management ---
+            // Charges are cleared regardless of hit/miss once the action is spent
             // Physical skills consume Physical Charge, Magic consumes Mind Charge
-            if (isPhys) attacker.IsCharged = false;
+            if (isPhysElement) attacker.IsCharged = false;
             else attacker.IsMindCharged = false;
 
             return results;
@@ -108,14 +111,14 @@ namespace JRPGPrototype.Logic.Battle
         {
             _messenger.Publish($"{user.Name} used {item.Name}!", ConsoleColor.White, 200);
 
-            // Logic branch for Traesto preserved
+            // Logic branch for Traesto
             if (item.Name == "Traesto Gem")
             {
                 _messenger.Publish("A blinding light creates a path to safety!", ConsoleColor.White, 800);
                 return true;
             }
 
-            // Get the Strategy (e.g. Type "Healing" maps to HealEffect)
+            // Route standard items (Healing, Cure, Revive) to their corresponding strategies
             IBattleEffect strategy = _registry.GetEffect(item.Type);
 
             if (strategy != null)
@@ -130,7 +133,7 @@ namespace JRPGPrototype.Logic.Battle
         // Orchestrates the Analysis logic and records knowledge discovery.
         public void ExecuteAnalyze(Combatant target)
         {
-            // 1. LOGIC: Force the recording of all current affinities into player knowledge
+            // 1. LOGIC: Force record all affinities into player memory (Discover All)
             foreach (Element elem in Enum.GetValues(typeof(Element)))
             {
                 if (elem == Element.None) continue;
@@ -138,9 +141,24 @@ namespace JRPGPrototype.Logic.Battle
                 _knowledge.Learn(target.SourceId, elem, aff);
             }
 
-            // 2. BROADCAST: Request that the Observer renders the Analysis Target
-            // The BattleLogger sees 'analysisTarget' is not null and triggers its HandleAnalysisDisplay
+            // 2. BROADCAST: Send the analysis signal to the Messenger. 
+            // The BattleLogger sees that 'analysisTarget' is not null and renders the stat sheet.
             _messenger.Publish(message: null, analysisTarget: target);
+        }
+
+        // Utility check for the Conductor/AI to determine if a skill targets multiple people.
+        public bool IsMultiTarget(SkillData skill)
+        {
+            string name = skill.Name.ToLower();
+            string effect = skill.Effect.ToLower();
+
+            return name.StartsWith("ma") ||
+                   name.StartsWith("me") ||
+                   effect.Contains("all foes") ||
+                   effect.Contains("all allies") ||
+                   effect.Contains("party") ||
+                   name == "amrita" ||
+                   name == "salvation";
         }
     }
 }

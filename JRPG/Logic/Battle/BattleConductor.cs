@@ -69,6 +69,7 @@ namespace JRPGPrototype.Logic.Battle
             // 2. Initialize Sub-Systems
             _turnEngine = new PressTurnEngine();
             _statusRegistry = new StatusRegistry();
+            _statusRegistry.SetMessenger(_messenger);
 
             // Pass the messenger into the logic processor
             _processor = new ActionProcessor(_statusRegistry, _playerKnowledge, _messenger);
