@@ -95,7 +95,7 @@ namespace JRPGPrototype.Logic.Fusion
             while (true) // OUTER LOOP: Participant Selection
             {
                 // 1. Establish the pool of participants based on Character Class
-                // Logic: Source pools are class-dependent to ensure stock integrity.List<object> participantPool = new();
+                // Logic: Source pools are class-dependent to ensure stock integrity.
                 if (_player.Class == ClassType.Operator)
                 {
                     // Operators draw from Active Party and DemonStock
@@ -135,8 +135,10 @@ namespace JRPGPrototype.Logic.Fusion
                 object? sacrifice = null;
                 if (isSacrificial)
                 {
+                    // Filter from participantPool as object so WildCards can sacrifice Personas
                     List<object> sacrificePool = participantPool.Where(x => !parents.Contains(x)).ToList();
-                    sacrifice = _uiBridge.SelectRitualParticipant(sacrificePool.Cast<Combatant>().ToList(), "CHOOSE THE SACRIFICIAL OFFERING:", parents);
+                    sacrifice = _uiBridge.SelectRitualParticipant<object>(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
+
                     if (sacrifice == null) continue;
                 }
 
