@@ -143,7 +143,7 @@ namespace JRPGPrototype.Logic.Fusion
                 parents.Add(p2);
 
                 // Select Sacrifice (Full Moon only)
-                object sacrifice = null;
+                object? sacrifice = null;
                 if (isSacrificial)
                 {
                     // Re-calculate sacrifice pool based on class to ensure proper type filtering
@@ -184,7 +184,7 @@ namespace JRPGPrototype.Logic.Fusion
 
                 // --- Identify Result and Inherent Skills early for UI duplicate-checking ---
                 List<string> inherentSkills = new List<string>();
-                PersonaData resultTemplate = null;
+                PersonaData? resultTemplate = null;
 
                 if (operation == FusionOperationType.CreateNewDemon)
                 {
@@ -222,7 +222,7 @@ namespace JRPGPrototype.Logic.Fusion
                     if (sacrifice != null)
                     {
                         if (sacrifice is Combatant sacrificialCom) parentList.Add(sacrificialCom);
-                        else if (sacrifice is Persona sacrificialPer) parentList.Add(CreateTransientCombatant(sacrilficialPer));
+                        else if (sacrifice is Persona sacrificialPer) parentList.Add(CreateTransientCombatant(sacrificialPer));
                     }
 
                     var inheritablePool = _calculator.GetInheritableSkills(parentList.ToArray());
@@ -237,14 +237,14 @@ namespace JRPGPrototype.Logic.Fusion
                     if (selectedSkills == null) break; // User aborted skills -> break inner loop to go back to participant selection
 
                     // --- Verification and Staging ---
-                    Combatant stagedDemon = null;
-                    Combatant originalParent = null;
+                    Combatant? stagedDemon = null;
+                    Combatant? originalParent = null;
 
-                    if (operation == FusionOperationType.CreateNewDemon)
+                    if (operation == FusionOperationType.CreateNewDemon && resultTemplate != null)
                     {
                         stagedDemon = Combatant.CreatePlayerDemon(resultTemplate.Id, resultTemplate.Level);
                     }
-                    else if (operation == FusionOperationType.RankUpParent || operation == FusionOperationType.RankDownParent)
+                    else if ((operation == FusionOperationType.RankUpParent || operation == FusionOperationType.RankDownParent) && resultTemplate != null)
                     {
                         originalParent = (parentA.ActivePersona.Race != "Element") ? parentA : parentB;
                         stagedDemon = Combatant.CreatePlayerDemon(resultTemplate.Id, resultTemplate.Level);
@@ -258,6 +258,12 @@ namespace JRPGPrototype.Logic.Fusion
                         foreach (var mod in originalParent.ActivePersona.StatModifiers) stagedDemon.ActivePersona.StatModifiers[mod.Key] = mod.Value;
                         ApplyMitamaStatBoost(stagedDemon, mitamaCom.ActivePersona.Name);
                         stagedDemon.RecalculateResources();
+                    }
+
+                    if (stagedDemon == null)
+                    {
+                        _io.WriteLine("Error staging fusion result.", ConsoleColor.Red);
+                        break;
                     }
 
                     // Universal Confirmation - Handles "Commence", "Wait/Back", or "Cancel"
@@ -353,7 +359,7 @@ namespace JRPGPrototype.Logic.Fusion
             }
 
             // Transaction commitment
-            Combatant snapshot = _compendium.GetRecallEntry(entry.SourceId);
+            Combatant? snapshot = _compendium.GetRecallEntry(entry.SourceId);
             if (snapshot != null)
             {
                 if (_mutator.FinalizeRecall(_player, snapshot, cost))
