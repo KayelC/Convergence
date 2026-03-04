@@ -189,11 +189,15 @@ namespace JRPGPrototype.Logic.Fusion
                     List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(pool, Math.Min(8, maxSlots), inherentSkills);
                     if (chosenSkills == null) break;
 
-                    // Stage Result for UI Preview
-                    Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, chosenSkills);
+                    // 5. Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
+                    Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
-                    int confirm = _uiBridge.ConfirmRitual(staged, (parentA.ActivePersona.Race != "Element") ? parentA : parentB, chosenSkills, _player.Level, operation);
+                    // Confirmation Logic
+                    int confirm = _uiBridge.ConfirmRitual(staged,
+                        (parentA.ActivePersona.Race != "Element") ? parentA : parentB, chosenSkills,
+                        _player.Level, operation);
+
                     if (confirm == 1) continue; // Back to Skills
                     if (confirm == 2) break;    // Back to Selection
 
@@ -217,7 +221,7 @@ namespace JRPGPrototype.Logic.Fusion
         /// Creates a high-fidelity dummy combatant for the UI confirmation screen.
         /// Simulates the exact results of the fusion strategy before it is executed.
         /// </summary>
-        private Combatant? CreateStagedDemon(FusionOperationType op, string id, object p1, object p2, List<string> skills)
+        private Combatant? CreateStagedDemon(FusionOperationType op, string id, object p1, object p2, object? sacrifice, List<string> skills)
         {
             if (!Database.Personas.TryGetValue(id.ToLower(), out var template)) return null;
 
@@ -253,6 +257,14 @@ namespace JRPGPrototype.Logic.Fusion
                 foreach (var mod in original.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
 
                 staged.RecalculateResources();
+            }
+
+            // Apply sacrificial XP breakthrough math to the preview dummy for honest UI feedback
+            if (sacrifice != null)
+            {
+                int earnedXP = (sacrifice is Combatant com) ? com.LifetimeEarnedExp : ((Persona)sacrifice).LifetimeEarnedExp;
+                int transferXP = (int)(earnedXP / 1.5);
+                staged.GainExp(transferXP);
             }
 
             return staged;
@@ -316,6 +328,7 @@ namespace JRPGPrototype.Logic.Fusion
         {
             if (_player.Class == ClassType.Operator)
             {
+                // Operators pool all demons at their disposal (Active Party + DemonStock)
                 var pool = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
                 pool.AddRange(_player.DemonStock);
                 Combatant? selected = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
@@ -339,10 +352,24 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         private Combatant CreateTransientCombatant(Persona p)
         {
-            var transient = new Persona { Name = p.Name, Level = p.Level, Race = p.Race, Rank = p.Rank, Exp = p.Exp };
+            var transient = new Persona
+            {
+                Name = p.Name,
+                Level = p.Level,
+                Race = p.Race,
+                Rank = p.Rank,
+                Exp = p.Exp,
+                LifetimeEarnedExp = p.LifetimeEarnedExp
+            };
             transient.SkillSet.AddRange(p.SkillSet);
             foreach (var stat in p.StatModifiers) transient.StatModifiers[stat.Key] = stat.Value;
-            return new Combatant(p.Name, ClassType.Demon) { Level = p.Level, ActivePersona = transient, SourceId = p.Name };
+            return new Combatant(p.Name, ClassType.Demon)
+            {
+                Level = p.Level,
+                ActivePersona = transient,
+                SourceId = p.Name,
+                LifetimeEarnedExp = p.LifetimeEarnedExp
+            };
         }
 
         #endregion

@@ -36,7 +36,10 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         public string ShowCathedralMainMenu(int moonPhase)
         {
             _io.Clear();
-            string header = $"=== CATHEDRAL OF SHADOWS === [LUNAR PHASE: {MoonPhaseSystem.GetPhaseName()}]\n\"The convergence of souls begins here.\"\n";
+            string phaseName = MoonPhaseSystem.GetPhaseName();
+            string header = $"=== CATHEDRAL OF SHADOWS === [LUNAR PHASE: {phaseName}]\n" +
+                "\"Welcome to the Cathedral of Shadows where Demons Gather.\"\n";
+
             List<string> options = new List<string> { "Binary Fusion" };
 
             // Sacrificial Fusion is unlocked strictly on Full Moon (Phase 8)
@@ -115,7 +118,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.Clear();
                 string header = $"=== SKILL INHERITANCE ===\nChoose skills to pass down to the new creation.\n" +
-                                $"Selected: {selected.Count} / {maxSlots} slots filled.\n";
+                    $"Selected: {selected.Count} / {maxSlots} slots filled.\n";
 
                 List<string> labels = new List<string>();
                 List<bool> disabledList = new List<bool>();
@@ -194,12 +197,20 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <returns>True if player confirms, false if cancels.</returns>
         public int ConfirmRitual(Combatant stagedDemon, Combatant? originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
         {
-            // Level constraint check for ALL new demon/ranked demon results
-            if (stagedDemon.Level > playerLevel)
+            // 1. Identify the starting tier of the result to enforce the base authority cap.
+            // We fetch the base template for the ResultId to determine the 'Natural' level of this creation.
+            int baseTemplateLevel = 0;
+            if (Database.Personas.TryGetValue(stagedDemon.SourceId.ToLower(), out var template))
+            {
+                baseTemplateLevel = template.Level;
+            }
+
+            // A. Standard Authority Check: Is the BASE creation too high for the player?
+            if (baseTemplateLevel > playerLevel)
             {
                 _io.Clear();
                 _io.WriteLine("=== RITUAL FORBIDDEN ===", ConsoleColor.Red);
-                _io.WriteLine($"The resulting being, {stagedDemon.Name} (Lv.{stagedDemon.Level}), exceeds your authority.");
+                _io.WriteLine($"The resulting being, {stagedDemon.Name} (Lv.{baseTemplateLevel}) exceeds your authority.");
                 _io.WriteLine($"Your current level: {playerLevel}", ConsoleColor.Gray);
                 _io.WriteLine("\nThe spirits refuse to stabilize.", ConsoleColor.Red);
                 _io.Wait(2000);
@@ -213,19 +224,26 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.WriteLine("\n--- PROJECTED RESULT ---", ConsoleColor.Yellow);
 
+                // B. Feedback Check: Highlight if the result is a breakthrough (exceeding player level via sacrifice)
+                if (stagedDemon.Level > playerLevel)
+                {
+                    _io.WriteLine($"!!! BREAKTHROUGH !!!", ConsoleColor.DarkYellow);
+                    _io.WriteLine($"Sacrificial energy has pushed this soul beyond your standard limits!", ConsoleColor.Green);
+                }
+
                 switch (operationType)
                 {
                     case FusionOperationType.CreateNewDemon:
                         _io.WriteLine($"Form  : {stagedDemon.Name}", ConsoleColor.Yellow);
                         _io.WriteLine($"Race  : {stagedDemon.ActivePersona.Race}", ConsoleColor.Yellow);
                         _io.WriteLine($"Rank  : {stagedDemon.ActivePersona.Rank}", ConsoleColor.Yellow);
-                        _io.WriteLine($"Level : {stagedDemon.Level}", ConsoleColor.Yellow);
+                        _io.WriteLine($"Level : {stagedDemon.Level}", stagedDemon.Level > playerLevel ? ConsoleColor.Green : ConsoleColor.Yellow);
                         break;
 
                     case FusionOperationType.RankUpParent:
                     case FusionOperationType.RankDownParent:
                     case FusionOperationType.StatBoostFusion:
-                        _io.WriteLine($"Result: {stagedDemon.Name} (Lv.{stagedDemon.Level})", ConsoleColor.Yellow);
+                        _io.WriteLine($"Result: {stagedDemon.Name} (Lv.{stagedDemon.Level})", stagedDemon.Level > playerLevel ? ConsoleColor.Green : ConsoleColor.Yellow);
                         _io.WriteLine("------------------------");
                         _io.WriteLine("Stat Changes:", ConsoleColor.Yellow);
                         if (originalParent != null)
@@ -236,11 +254,11 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                                 int stagedVal = stagedDemon.GetStat(st);
                                 if (stagedVal != originalVal)
                                 {
-                                    _io.WriteLine($" {st}: {originalVal} -> {stagedVal} ({(stagedVal > originalVal ? "+" : "")}{stagedVal - originalVal})", ConsoleColor.Green);
+                                    _io.WriteLine($"  {st}: {originalVal} -> {stagedVal} ({(stagedVal > originalVal ? "+" : "")}{stagedVal - originalVal})", ConsoleColor.Green);
                                 }
                                 else
                                 {
-                                    _io.WriteLine($" {st}: {originalVal}", ConsoleColor.DarkGray);
+                                    _io.WriteLine($"  {st}: {originalVal}", ConsoleColor.DarkGray);
                                 }
                             }
                         }
@@ -258,7 +276,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                     _io.WriteLine("Inherent Base Skills:", ConsoleColor.Cyan);
                     foreach (var s in baseSkills)
                     {
-                        _io.WriteLine($" * {s}", ConsoleColor.Cyan);
+                        _io.WriteLine($"  * {s}", ConsoleColor.Cyan);
                     }
                 }
 
@@ -268,7 +286,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                     _io.WriteLine("Inherited Skills:", ConsoleColor.Green);
                     foreach (var s in inheritedSkills)
                     {
-                        _io.WriteLine($" + {s}", ConsoleColor.Green);
+                        _io.WriteLine($"  + {s}", ConsoleColor.Green);
                     }
                 }
 

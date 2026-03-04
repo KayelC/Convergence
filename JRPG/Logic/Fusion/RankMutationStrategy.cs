@@ -46,11 +46,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                     newD.ActivePersona.StatModifiers[mod.Key] = mod.Value;
                 }
 
-                // Apply Operator-class Sacrifice EXP bonus if an offer was made
+                // Apply Transfer formula (Earned XP / 1.5)
                 if (context.Sacrifice is Combatant offer)
                 {
-                    int expBonus = (int)(offer.Level * 250);
-                    newD.GainExp(expBonus);
+                    int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                    newD.GainExp(transferXP);
                 }
 
                 context.Messenger.Publish($"{original.Name} has transformed into {newD.Name}!", ConsoleColor.Magenta);
@@ -80,11 +80,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 // Carry over modifiers
                 foreach (var mod in original.StatModifiers) newP.StatModifiers[mod.Key] = mod.Value;
 
-                // Apply Sacrificial EXP bonus for WildCards
+                // Apply Transfer formula (Earned XP / 1.5)
                 if (context.Sacrifice is Persona offer)
                 {
-                    int expBonus = (int)(offer.Level * 250);
-                    newP.GainExp(expBonus);
+                    int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                    newP.GainExp(transferXP);
                 }
 
                 context.Messenger.Publish($"{original.Name} has transformed into {newP.Name}!", ConsoleColor.Magenta);

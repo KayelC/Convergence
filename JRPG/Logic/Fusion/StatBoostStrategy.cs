@@ -44,11 +44,15 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
 
                 // Apply Mitama math
                 ApplyBoosts(boosted.ActivePersona, mitamaName, context.Messenger);
+
+                // Apply Transfer formula (Earned XP / 1.5)
+                if (context.Sacrifice is Combatant offer)
+                {
+                    int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                    boosted.GainExp(transferXP);
+                }
+
                 boosted.RecalculateResources();
-
-                // Apply Operator-class Sacrifice EXP bonus
-                if (context.Sacrifice is Combatant offer) boosted.GainExp((int)(offer.Level * 250));
-
                 context.Messenger.Publish($"{target.Name}'s stats have been enhanced!", ConsoleColor.Magenta);
                 ReplaceDemon(context, target, boosted);
             }
@@ -78,11 +82,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 // Apply Mitama math
                 ApplyBoosts(newP, mitamaName, context.Messenger);
 
-                // Apply Sacrificial EXP bonus for WildCards
+                // Apply Transfer formula (Earned XP / 1.5)
                 if (context.Sacrifice is Persona offer)
                 {
-                    int expBonus = (int)(offer.Level * 250);
-                    newP.GainExp(expBonus);
+                    int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                    newP.GainExp(transferXP);
                 }
 
                 context.Messenger.Publish($"{target.Name}'s stats have been enhanced!", ConsoleColor.Magenta);

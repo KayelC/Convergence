@@ -24,6 +24,9 @@ namespace JRPGPrototype.Entities
         public int Exp { get; set; }
         public int ExpRequired => (int)(1.5 * Math.Pow(Level, 3));
 
+        // Tracks strictly experience points gained through gameplay since acquisition.
+        public int LifetimeEarnedExp { get; set; } = 0;
+
         public Affinity GetAffinity(Element elem)
         {
             return AffinityMap.ContainsKey(elem) ? AffinityMap[elem] : Affinity.Normal;
@@ -31,6 +34,9 @@ namespace JRPGPrototype.Entities
 
         public void GainExp(int amount, IGameIO? io = null)
         {
+            // Update the earned tally before processing levels
+            LifetimeEarnedExp += amount;
+
             Exp += amount;
             while (Exp >= ExpRequired)
             {
@@ -39,7 +45,7 @@ namespace JRPGPrototype.Entities
             }
         }
 
-        private void LevelUp(IGameIO io)
+        private void LevelUp(IGameIO? io)
         {
             Level++;
 

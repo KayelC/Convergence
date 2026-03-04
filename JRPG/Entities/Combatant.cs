@@ -27,6 +27,9 @@ namespace JRPGPrototype.Entities
         public int BaseHP { get; set; }
         public int BaseSP { get; set; }
 
+        // Tracks strictly experience points gained through gameplay since acquisition.
+        public int LifetimeEarnedExp { get; set; } = 0;
+
         // Resource Pools
         public int MaxHP { get; private set; }
         public int CurrentHP { get; set; }
@@ -355,6 +358,9 @@ namespace JRPGPrototype.Entities
 
         public void GainExp(int amount)
         {
+            // Update the earned tally before processing levels
+            LifetimeEarnedExp += amount;
+
             Exp += amount;
             while (Exp >= ExpRequired)
             {

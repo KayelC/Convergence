@@ -39,7 +39,12 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
             child.ExtraSkills.Clear();
             child.ExtraSkills.AddRange(context.ChosenSkills);
 
-            if (context.Sacrifice is Combatant offer) child.GainExp((int)(offer.Level * 250));
+            // Transfer formula (Earned XP / 1.5)
+            if (context.Sacrifice is Combatant offer)
+            {
+                int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                child.GainExp(transferXP);
+            }
 
             child.RecalculateResources();
             child.CurrentHP = child.MaxHP;
@@ -70,10 +75,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
             child.SkillSet.Clear();
             child.SkillSet.AddRange(context.ChosenSkills);
 
+            // Transfer formula (Earned XP / 1.5)
             if (context.Sacrifice is Persona offer)
             {
-                int expBonus = (int)(offer.Level * 250);
-                child.GainExp(expBonus);
+                int transferXP = (int)(offer.LifetimeEarnedExp / 1.5);
+                child.GainExp(transferXP);
             }
 
             context.Owner.PersonaStock.Add(child);
