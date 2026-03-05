@@ -177,23 +177,30 @@ namespace JRPGPrototype.Logic.Battle
         {
             // Basic attacks are always "effective" as a baseline.
             if (skill == null) return true;
-
             string name = skill.Name.ToLower();
+            string effect = skill.Effect.ToLower();
 
             // 1. Healing check: Don't heal if targets are > 70% HP
-            if (skill.Category.Contains("Recovery") && !skill.Effect.Contains("Revive"))
+            if (skill.Category.Contains("Recovery") && !effect.Contains("Revive") && !effect.Contains("Cure"))
             {
                 return allies.Any(a => !a.IsDead && (double)a.CurrentHP / a.MaxHP < 0.70);
             }
 
-            // 2. Buff/Debuff check: Don't buff if at +3, don't debuff if at -3.
+            // 2. FIX: Cure check: Don't use cures (like Parlardi) if no allies have ailments
+            if (effect.Contains("cure"))
+            {
+                // Is effective if at least one ally has a removable ailment
+                return allies.Any(a => !a.IsDead && a.CurrentAilment != null);
+            }
+
+            // 3. Buff/Debuff check: Don't buff if at +3, don't debuff if at -3.
             bool isBuff = name.EndsWith("kaja") || name == "heat riser";
             bool isDebuff = name.EndsWith("nda") || name == "debilitate";
 
             if (isBuff) return allies.Any(a => !a.IsDead && a.Buffs.Values.Any(v => v < 3));
             if (isDebuff) return opponents.Any(o => !o.IsDead && o.Buffs.Values.Any(v => v > -3));
 
-            // 3. Risk check: Don't use elements known to be Null/Repel/Absorb
+            // 4. Risk check: Don't use elements known to be Null/Repel/Absorb
             if (IsOffensive(skill))
             {
                 Element element = ElementHelper.FromCategory(skill.Category);
