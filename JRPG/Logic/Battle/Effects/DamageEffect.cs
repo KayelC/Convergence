@@ -94,17 +94,19 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 }
 
                 // 3. Logic: Execute Standard Damage Math
-                // Returns the final damage value and whether it was a critical hit.
-                int damage = CombatMath.CalculateDamage(user, target, power, _element, out bool isCritical);
-                CombatResult result = target.ReceiveDamage(damage, _element, isCritical);
+                // FIX: CalculateDamage now returns RAW potency. Affinities are handled by ReceiveDamage below.
+                int rawDamage = CombatMath.CalculateDamage(user, target, power, _element, out bool isCritical);
 
-                // 4. Knowledge: Record the discovery for the Player's UI/AI memory
+                // 4. Body Logic: Target's body applies multipliers (Weak/Resist/Absorb) to the raw potency.
+                CombatResult result = target.ReceiveDamage(rawDamage, _element, isCritical);
+
+                // 5. Knowledge: Record the discovery for the Player's UI/AI memory
                 knowledge.Learn(target.SourceId, _element, aff);
 
-                // 5. UI: Report the result (Damage, Weakness, Block, etc.)
+                // 6. UI: Report the result (Damage, Weakness, Block, etc.)
                 ReportDamageResult(result, target.Name, messenger);
 
-                // 6. Logic: Secondary Ailment Infliction
+                // 7. Logic: Secondary Ailment Infliction
                 // Only try to infect if the attack actually landed (not Nulled or Absorbed)
                 if (result.Type != HitType.Null && result.Type != HitType.Absorb)
                 {

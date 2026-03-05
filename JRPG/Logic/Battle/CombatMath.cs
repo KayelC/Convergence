@@ -98,12 +98,10 @@ namespace JRPGPrototype.Logic.Battle
             bool isPhysical = (element == Element.Slash || element == Element.Strike || element == Element.Pierce);
 
             // Select the correct Attack Stat (SMT Standard: Phys = St, Magic = Ma)
-            // UPDATED: Use new StatType enum names
             StatType atkStatType = isPhysical ? StatType.St : StatType.Ma;
             double atkPower = attacker.GetStat(atkStatType);
 
             // Determine the Defensive Stat (Vi + Armor Defense)
-            // UPDATED: Use new StatType enum name
             double defPower = target.GetStat(StatType.Vi) + target.GetDefense();
 
             // Apply Stacking Multipliers (Kaja/Nda)
@@ -111,8 +109,8 @@ namespace JRPGPrototype.Logic.Battle
             atkPower *= GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Attack", 0));
             defPower *= GetStatMultiplier(target.Buffs.GetValueOrDefault("Defense", 0));
 
-            // Apply Passive Skills (Amps/Boosts/Drivers)
-            atkPower *= GetPassiveDamageMultiplier(attacker, element);
+            // Apply Passive Skills (Amps/Boosts/Drivers) handled via GetStat calls if implemented there, 
+            //atkPower *= GetPassiveDamageMultiplier(attacker, element);
 
             // Apply Charges (Power Charge / Mind Charge)
             if (isPhysical && attacker.IsCharged)
@@ -152,27 +150,6 @@ namespace JRPGPrototype.Logic.Battle
                     isCritical = true;
                     dmgBase *= 1.5; // Critical Multiplier
                 }
-            }
-
-            // Elemental Affinity Multipliers
-            Affinity effectiveAff = GetEffectiveAffinity(target, element);
-            switch (effectiveAff)
-            {
-                case Affinity.Weak:
-                    dmgBase *= 1.5;
-                    break;
-                case Affinity.Resist:
-                    dmgBase *= 0.5;
-                    break;
-                case Affinity.Null:
-                case Affinity.Repel:
-                    return 0;
-                // Return 0. The ActionProcessor will see the 'Repel' affinity 
-                // and then call CalculateReflectedDamage.
-                case Affinity.Absorb:
-                    return (int)Math.Floor(dmgBase) * -1; // Absorb deals negative damage (heals)
-                default:
-                    break;
             }
 
             // Damage Variance (95% to 105%)
@@ -281,7 +258,7 @@ namespace JRPGPrototype.Logic.Battle
             if (target.IsGuarding && baseAff == Affinity.Weak) return Affinity.Normal;
 
             // 6. Rigid Body (Freeze/Shocked) negates physical resistances but keeps weaknesses.
-            // SMT III Rule: If rigid, physical Null/Resist/Repel becomes Normal, Absorb becomes Normal.
+            //Rule: If rigid, physical Null/Resist/Repel becomes Normal, Absorb becomes Normal.
             // Weakness remains.
             if (target.IsRigidBody && isPhysical)
             {
@@ -304,50 +281,6 @@ namespace JRPGPrototype.Logic.Battle
             double eRoll = enemyAvgAg * (0.9 + _rnd.NextDouble() * 0.2);
 
             return pRoll >= eRoll;
-        }
-
-        /// <summary>
-        /// Hit/Evasion check.
-        /// Formula: SkillAccuracy + (AttackerAg - TargetAg) * 2 + (AttackerLu - TargetLu)
-        /// </summary>
-        public static bool CheckHit(Combatant attacker, Combatant target, Element element, string skillAccuracy)
-        {
-            // If target is Rigid (Frozen/Shocked), all attacks hit
-            if (target.IsRigidBody) return true;
-
-            // 1. Data-Driven Accuracy: Use value from JSON.
-            int baseAccuracy = 90; // Default for basic attacks if skillAccuracy is empty
-            if (!string.IsNullOrEmpty(skillAccuracy) && int.TryParse(skillAccuracy.Replace("%", ""), out int parsed))
-            {
-                baseAccuracy = parsed;
-            }
-
-            // 2. Passive Accuracy/Evasion skills (Vidyaraja's Blessing, Dodge/Evade)
-            double hitMult = 1.0;
-            var attackerSkills = attacker.GetConsolidatedSkills();
-            if (attackerSkills.Contains("Vidyaraja's Blessing")) hitMult *= 1.15; // 15% hit bonus
-
-            double evadeMult = 1.0;
-            var targetSkills = target.GetConsolidatedSkills();
-            string elName = element.ToString();
-            // Dodge/Evade apply to specific element types
-            if (targetSkills.Any(s => s.Contains("Dodge") && s.Contains(elName))) evadeMult *= 0.85; // 15% evade bonus
-            if (targetSkills.Any(s => s.Contains("Evade") && s.Contains(elName))) evadeMult *= 0.60; // 40% evade bonus
-
-            // 3. Agility & Luck Influence
-            // UPDATED: Use new StatType enum names
-            int attackerAg = attacker.GetStat(StatType.Ag);
-            int targetAg = target.GetStat(StatType.Ag);
-            int attackerLu = attacker.GetStat(StatType.Lu);
-            int targetLu = target.GetStat(StatType.Lu);
-
-            double atkValue = (attackerAg * GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Agility", 0))) * hitMult;
-            double defValue = (targetAg * GetStatMultiplier(target.Buffs.GetValueOrDefault("Agility", 0))) * evadeMult;
-
-            // Final Chance Calculation: Clamped between 5% and 99%
-            double finalChance = baseAccuracy + ((atkValue - defValue) * 2) + (attackerLu - targetLu);
-
-            return _rnd.Next(0, 100) < Math.Clamp(finalChance, 5, 99);
         }
     }
 }
