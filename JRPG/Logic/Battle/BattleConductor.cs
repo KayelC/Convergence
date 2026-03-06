@@ -124,7 +124,7 @@ namespace JRPGPrototype.Logic.Battle
 
             // Show HUD update for turn 1 buffs
             _ui.ForceRefreshHUD();
-            _messenger.Publish(message: null, delay: 800);
+            _messenger.Publish(string.Empty, delay: 800);
 
             // 2. Main Phase Loop
             while (!BattleEnded)
@@ -426,7 +426,7 @@ namespace JRPGPrototype.Logic.Battle
                     else _turnEngine.ConsumeAction(HitType.Normal, false);
                 }
 
-                _messenger.Publish(message: null, delay: 1000);
+                _messenger.Publish(string.Empty, delay: 1000);
             }
         }
 
