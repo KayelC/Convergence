@@ -11,16 +11,10 @@ namespace JRPGPrototype.Logic.Battle.Effects
     /// </summary>
     public class ChargeEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
+            string combinedData = $"{actionName} {actionEffect}";
 
             foreach (var target in targets)
             {
@@ -28,12 +22,12 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 if (target.IsDead) continue;
 
                 // 1. Logic: Identify if it's a Physical (Power) or Magical (Mind) charge
-                if (metadata.Contains("Power", StringComparison.OrdinalIgnoreCase))
+                if (combinedData.Contains("Power", StringComparison.OrdinalIgnoreCase))
                 {
                     target.IsCharged = true;
                     messenger.Publish($"{target.Name} is focusing physical power!", ConsoleColor.Gray);
                 }
-                else if (metadata.Contains("Mind", StringComparison.OrdinalIgnoreCase))
+                else if (combinedData.Contains("Mind", StringComparison.OrdinalIgnoreCase))
                 {
                     target.IsMindCharged = true;
                     messenger.Publish($"{target.Name} is focusing spiritual energy!", ConsoleColor.Gray);

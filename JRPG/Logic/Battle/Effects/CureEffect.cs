@@ -5,21 +5,15 @@ using System.Collections.Generic;
 
 namespace JRPGPrototype.Logic.Battle.Effects
 {
-    /// <summary>
-    /// Strategy for handling status ailment removal (Skills like Patra, Items like Dis-Poison).
-    /// </summary>
+    // Strategy for handling status ailment removal (Skills like Patra, Items like Dis-Poison).
     public class CureEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
+
+            // Combine both to ensure items ("Dis-Poison") and skills ("Cures Poison") are both caught
+            string cureData = $"{actionName} {actionEffect}";
 
             foreach (var target in targets)
             {
@@ -34,16 +28,13 @@ namespace JRPGPrototype.Logic.Battle.Effects
                     continue;
                 }
 
-                // 2. State Mutation: Delegate the removal logic to the StatusRegistry
-                // 'metadata' represents the skill name or item name used to search for cure keywords
-                if (status.CheckAndExecuteCure(target, metadata))
+                if (status.CheckAndExecuteCure(target, cureData))
                 {
                     messenger.Publish($"{target.Name} was cured of their ailment!", ConsoleColor.White);
                 }
                 else
                 {
-                    // This happens if you use a Poison-cure item on a target that is Sleeping
-                    messenger.Publish($"The {metadata} had no effect on {target.Name}.");
+                    messenger.Publish($"The action had no effect on {target.Name}.");
                 }
 
                 // 3. Press Turn Logic: Successful use of a utility action

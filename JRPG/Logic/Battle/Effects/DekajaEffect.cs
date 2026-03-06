@@ -6,19 +6,10 @@ using System.Linq;
 
 namespace JRPGPrototype.Logic.Battle.Effects
 {
-    /// <summary>
-    /// Strategy for handling the Dekaja effect: Nullifying all positive stat buffs on targets.
-    /// </summary>
+    // Strategy for handling the Dekaja effect: Nullifying all positive stat buffs on targets.
     public class DekajaEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
 

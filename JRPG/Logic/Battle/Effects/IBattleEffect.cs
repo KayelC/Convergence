@@ -13,10 +13,11 @@ namespace JRPGPrototype.Logic.Battle.Effects
         /// <param name="user">The user of the action.</param>
         /// <param name="targets">The targets of the action.</param>
         /// <param name="power">Numerical value (Power/EffectValue).</param>
-        /// <param name="metadata">String value (Effect/AilmentName).</param>
+        /// <param name="actionName">The name of the Skill or Item (e.g. "Tarukaja", "Fire Break").</param>
+        /// <param name="actionEffect">The effect description string (e.g. "50%", "instant kill").</param>
         /// <param name="messenger">The mediator for logs.</param>
         /// <param name="status">Authority for ailments/buffs.</param>
         /// <param name="knowledge">Authority for affinities.</param>
-        List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string metadata, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge);
+        List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge);
     }
 }

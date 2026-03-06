@@ -8,25 +8,16 @@ namespace JRPGPrototype.Logic.Battle.Effects
     /// <summary>
     /// Strategy for handling "Elemental Break" effects.
     /// Temporarily removes elemental immunities (Null, Repel, Absorb) from a target.
-    /// Logic is derived from the legacy monolithic if(skillName.Contains("Break")) block.
     /// </summary>
     public class BreakEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
 
-            // 1. Logic: Identify which element we are breaking from the metadata (Skill Name)
-            // Convention: Skill names are like "Fire Break", "Ice Break", etc.
+            // 1. Logic: Identify which element we are breaking from the Action Name
             Element elementToBreak = Element.None;
-            string skillName = metadata.ToLower();
+            string skillName = actionName.ToLower();
 
             if (skillName.Contains("fire")) elementToBreak = Element.Fire;
             else if (skillName.Contains("ice")) elementToBreak = Element.Ice;
@@ -49,7 +40,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 if (target.IsDead) continue;
 
                 // 2. State Mutation: Apply the break to the target's persistent dictionary.
-                // Standard SMT rule: Break lasts for 3 active turns.
+                // Rule: Break lasts for 3 active turns.
                 if (target.BrokenAffinities.ContainsKey(elementToBreak))
                 {
                     target.BrokenAffinities[elementToBreak] = 3;

@@ -5,35 +5,22 @@ using System.Collections.Generic;
 
 namespace JRPGPrototype.Logic.Battle.Effects
 {
-    /// <summary>
-    /// Strategy for handling revival logic (e.g., Recarm, Samarecarm, Balm of Life).
-    /// </summary>
+    // Strategy for handling revival logic (e.g., Recarm, Samarecarm, Balm of Life).
     public class ReviveEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
 
             foreach (var target in targets)
             {
-                // Logic: Revival effects only work on targets that are currently dead.
-                if (!target.IsDead)
-                {
-                    // Optionally skip reporting for multi-target revives where some are alive
-                    continue;
-                }
+                // Revival effects only work on targets that are currently dead.
+                if (!target.IsDead) continue;
 
                 // 1. Calculate HP restoration amount
                 // Samarecarm/Samarecarmdra uses "fully" or power 100
                 int hpToRestore = power;
-                if (metadata.Contains("full") || metadata.Contains("fully") || power >= 100)
+                if (actionEffect.Contains("full") || actionEffect.Contains("fully") || power >= 100)
                 {
                     hpToRestore = target.MaxHP;
                 }

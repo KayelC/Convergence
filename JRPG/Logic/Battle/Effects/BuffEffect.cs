@@ -11,14 +11,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
     /// </summary>
     public class BuffEffect : IBattleEffect
     {
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
 
@@ -30,7 +23,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 // 1. Logic: Use the StatusRegistry to apply the change.
                 // The 'metadata' passed here is the Name of the skill (e.g., "Tarukaja", "Rakunda").
                 // The StatusRegistry handles the stacking limits [-4 to +4] and specific stat routing.
-                status.ApplyStatChange(metadata, target);
+                status.ApplyStatChange(actionName, target);
 
                 // 2. UI Feedback: Standard notification of the modification
                 messenger.Publish($"{target.Name}'s stats were modified!");

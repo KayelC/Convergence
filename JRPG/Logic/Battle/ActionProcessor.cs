@@ -47,10 +47,8 @@ namespace JRPGPrototype.Logic.Battle
             if (strategy == null) return new CombatResult { Type = HitType.Miss };
 
             // 3. Unarmed / Base Demon Melee attacks have a standard power of 15
-            var results = strategy.Apply(attacker, new List<Combatant> { target }, 15, "", _messenger, _status, _knowledge);
-
-            // 4. Rule - Any physical offensive action consumes the charge
-            attacker.IsCharged = false;
+            // Note: Charge consumption is now handled entirely within DamageEffect.
+            var results = strategy.Apply(attacker, new List<Combatant> { target }, 15, "Attack", "", _messenger, _status, _knowledge);
 
             return results.FirstOrDefault() ?? new CombatResult { Type = HitType.Miss };
         }
@@ -90,19 +88,13 @@ namespace JRPGPrototype.Logic.Battle
             if (strategy != null)
             {
                 // Delegation: The 'How' is handled by the specialized Strategy class
-                results = strategy.Apply(attacker, targets, skill.GetPowerVal(), skill.Effect, _messenger, _status, _knowledge);
+                results = strategy.Apply(attacker, targets, skill.GetPowerVal(), skill.Name, skill.Effect, _messenger, _status, _knowledge);
             }
             else
             {
                 _messenger.Publish($"[Error] No logic found for Category: {skill.Category}", ConsoleColor.Yellow);
                 results = new List<CombatResult>();
             }
-
-            // --- 3. ENGINE LOGIC: Charge Management ---
-            // Charges are cleared regardless of hit/miss once the action is spent
-            // Physical skills consume Physical Charge, Magic consumes Mind Charge
-            if (isPhys) attacker.IsCharged = false;
-            else attacker.IsMindCharged = false;
 
             return results;
         }
@@ -124,7 +116,7 @@ namespace JRPGPrototype.Logic.Battle
 
             if (strategy != null)
             {
-                var results = strategy.Apply(user, targets, item.EffectValue, item.Name, _messenger, _status, _knowledge);
+                var results = strategy.Apply(user, targets, item.EffectValue, item.Name, item.Description ?? "", _messenger, _status, _knowledge);
                 return results.Any();
             }
 

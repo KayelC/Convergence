@@ -17,24 +17,24 @@ namespace JRPGPrototype.Logic.Battle.Effects
         private readonly CureEffect _curer = new CureEffect();
         private readonly ReviveEffect _reviver = new ReviveEffect();
 
-        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string metadata, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             // 1. Route to Revive logic if the skill contains the keyword
-            if (metadata.Contains("Revive", StringComparison.OrdinalIgnoreCase))
+            if (actionEffect.Contains("Revive", StringComparison.OrdinalIgnoreCase))
             {
-                return _reviver.Apply(user, targets, power, metadata, messenger, status, knowledge);
+                return _reviver.Apply(user, targets, power, actionName, actionEffect, messenger, status, knowledge);
             }
 
             // 2. Route to Cure logic if the skill contains the keyword
-            if (metadata.Contains("Cure", StringComparison.OrdinalIgnoreCase))
+            if (actionEffect.Contains("Cure", StringComparison.OrdinalIgnoreCase))
             {
                 // We perform the cure first, then optionally fall through to healing
-                _curer.Apply(user, targets, power, metadata, messenger, status, knowledge);
+                _curer.Apply(user, targets, power, actionName, actionEffect, messenger, status, knowledge);
             }
 
-            // 3. Default route: Healing logic
+            // Default route: Healing logic
             // Most recovery skills (Dia, Media) are just healing
-            return _healer.Apply(user, targets, power, metadata, messenger, status, knowledge);
+            return _healer.Apply(user, targets, power, actionName, actionEffect, messenger, status, knowledge);
         }
     }
 }

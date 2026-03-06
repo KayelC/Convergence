@@ -11,6 +11,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
     /// <summary>
     /// The primary strategy for all offensive actions (Physical and Magical).
     /// Handles Accuracy, Affinities, Critical Hits, Reflection, Instant Kills, and Knowledge discovery.
+    /// Includes bugfixes for correct Evasion UI tracking and centralized Charge consumption.
     /// </summary>
     public class DamageEffect : IBattleEffect
     {
@@ -22,19 +23,12 @@ namespace JRPGPrototype.Logic.Battle.Effects
             _element = element;
         }
 
-        public List<CombatResult> Apply(
-            Combatant user,
-            List<Combatant> targets,
-            int power,
-            string metadata,
-            IBattleMessenger messenger,
-            StatusRegistry status,
-            BattleKnowledge knowledge)
+        public List<CombatResult> Apply(Combatant user, List<Combatant> targets, int power, string actionName, string actionEffect, IBattleMessenger messenger, StatusRegistry status, BattleKnowledge knowledge)
         {
             var results = new List<CombatResult>();
 
             // Determine if this is an Instant Kill skill (e.g., Hama, Mudo)
-            bool isInstantKill = metadata.ToLower().Contains("instant kill");
+            bool isInstantKill = actionEffect.ToLower().Contains("instant kill");
 
             // Determine if the element is physical for charge consumption rules
             bool isPhysical = (_element == Element.Slash || _element == Element.Strike || _element == Element.Pierce);
@@ -43,20 +37,18 @@ namespace JRPGPrototype.Logic.Battle.Effects
             {
                 if (target.IsDead) continue;
 
-                // 1. Logic: Accuracy Gate (FIX: Restored Evasion Mechanics)
+                // 1. Logic: Accuracy Gate
                 // Extract accuracy percentage from metadata (e.g. "Agilao (90%)") or default to 95%
-                string accStr = "95%";
-                Match accMatch = Regex.Match(metadata, @"(\d+%)");
+                string accStr = "95%"; // Default
+                Match accMatch = Regex.Match(actionEffect, @"(\d+)%");
                 if (accMatch.Success) accStr = accMatch.Value;
 
                 if (!CombatMath.CheckHit(user, target, _element, accStr))
                 {
                     results.Add(new CombatResult { Type = HitType.Miss });
 
-                    // Rule: Missing an attack still consumes the Charge
-                    if (isPhysical) user.IsCharged = false;
-                    else user.IsMindCharged = false;
 
+                    messenger.Publish("MISS!", ConsoleColor.Gray, 400);
                     continue;
                 }
 
@@ -75,7 +67,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
                     messenger.Publish($"{user.Name} is hit by the reflection!", ConsoleColor.Red);
                     ReportDamageResult(repResult, user.Name, messenger);
 
-                    // Rule: A repelled attack immediately ends the phase (Repel is worst-case HitType)
+                    // Rule: A repelled attack immediately ends the phase (Repel is worst case HitType)
                     repResult.Type = HitType.Repel;
                     results.Add(repResult);
 
@@ -95,9 +87,9 @@ namespace JRPGPrototype.Logic.Battle.Effects
                         continue;
                     }
 
-                    // Extract the percentage accuracy from the metadata (e.g., "Hama (40%)")
+                    // Extract the percentage accuracy from the metadata
                     string ikAccuracy = "25%"; // Default
-                    Match match = Regex.Match(metadata, @"(\d+%)");
+                    Match match = Regex.Match(actionEffect, @"(\d+)%");
                     if (match.Success) ikAccuracy = match.Value;
 
                     if (CombatMath.CalculateInstantKill(user, target, ikAccuracy))
@@ -114,7 +106,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 }
 
                 // 4. Logic: Execute Standard Damage Math
-                // FIX: CalculateDamage now returns RAW potency. Affinities are handled by ReceiveDamage below.
+                // CalculateDamage now returns RAW potency. Affinities are handled by ReceiveDamage.
                 int rawDamage = CombatMath.CalculateDamage(user, target, power, _element, out bool isCritical);
 
                 // 5. Body Logic: Target's body applies multipliers (Weak/Resist/Absorb) to the raw potency.
@@ -131,7 +123,7 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 if (result.Type != HitType.Null && result.Type != HitType.Absorb)
                 {
                     // metadata usually contains the skill effect string (e.g., "Poison 40%")
-                    if (status.TryInflict(user, target, metadata))
+                    if (status.TryInflict(user, target, actionEffect))
                     {
                         // Note: TryInflict handles its own messenger publishing for success
                     }
@@ -139,6 +131,12 @@ namespace JRPGPrototype.Logic.Battle.Effects
 
                 results.Add(result);
             }
+
+            // 9. ENGINE LOGIC: Centralized Charge Management
+            // Charges are cleared regardless of hit/miss once an offensive action finishes executing.
+            // Placed outside the loop so AoE attacks properly benefit all targets before consumption.
+            if (isPhysical) user.IsCharged = false;
+            else user.IsMindCharged = false;
 
             return results;
         }
@@ -161,10 +159,6 @@ namespace JRPGPrototype.Logic.Battle.Effects
             else if (result.Type == HitType.Null)
             {
                 messenger.Publish($"{targetName} blocked the attack!");
-            }
-            else if (result.Type == HitType.Miss)
-            {
-                messenger.Publish("MISS!", ConsoleColor.Gray, 400);
             }
         }
     }
