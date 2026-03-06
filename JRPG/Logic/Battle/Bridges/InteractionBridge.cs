@@ -5,8 +5,10 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Data;
 using JRPGPrototype.Services;
+using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Bridges
 {
     /// <summary>
     /// The UI Flow Orchestrator for the Battle Sub-System.

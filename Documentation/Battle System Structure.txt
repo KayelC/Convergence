@@ -1,0 +1,37 @@
+Logic\Battle\
+│
+├── BattleConductor.cs               <-- The Entry Point / Game Loop remains in the root
+├── ActionProcessor.cs               <-- Core Executor remains in the root
+├── CombatMath.cs                    <-- Core Math remains in the root
+│
+├── Effects\                         [The Strategy Pattern Sub-module]
+│   ├── BattleEffectRegistry.cs      <-- MOVED (It manages the effects, so it belongs here)
+│   ├── IBattleEffect.cs
+│   ├── BreakEffect.cs
+│   ├── BuffEffect.cs
+│   ├── ChargeEffect.cs
+│   ├── CureEffect.cs
+│   ├── DamageEffect.cs
+│   ├── DekajaEffect.cs
+│   ├── DekundaEffect.cs
+│   ├── HealEffect.cs
+│   ├── RecoveryEffect.cs
+│   ├── ReviveEffect.cs
+│   ├── ShieldEffect.cs
+│   └── SpiritEffect.cs
+│
+├── Engines\                         [Sub-systems, Mechanics & AI]
+│   ├── PressTurnEngine.cs           (Turn Rules)
+│   ├── StatusRegistry.cs            (Ailment/Buff Rules)
+│   ├── NegotiationEngine.cs         (Conversation Rules)
+│   ├── BehaviorEngine.cs            (AI Logic)
+│   └── BattleKnowledge.cs           (AI/UI Memory State)
+│
+├── Messaging\                       [The Mediator & Observer Sub-module]
+│   ├── IBattleMessenger.cs          
+│   ├── BattleMessenger.cs           
+│   ├── BattleEvents.cs              (Contains BattleMessageArgs)
+│   └── BattleLogger.cs              
+│
+└── Bridges\                         [UI / IO Adapters]
+    └── InteractionBridge.cs         (Matches CathedralUIBridge naming convention)

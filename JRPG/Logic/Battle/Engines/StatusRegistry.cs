@@ -5,8 +5,10 @@ using System.Text.RegularExpressions;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Logic.Battle;           // For CombatMath
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Engines
 {
     // Defines the possible states an actor can be in at the start of their turn.
     public enum TurnStartResult

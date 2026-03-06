@@ -3,7 +3,7 @@ using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using System;
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Messaging
 {
     /// <summary>
     /// The Subscriber (Observer) for the Battle System.

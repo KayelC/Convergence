@@ -1,7 +1,7 @@
 ﻿using System;
 using JRPGPrototype.Entities;
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Messaging
 {
     /// <summary>
     /// Represents the payload data sent when a battle event occurs.

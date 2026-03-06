@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using JRPGPrototype.Core;
-using JRPGPrototype.Logic.Battle.Effects;
+using JRPGPrototype.Logic.Battle;           // For CombatMath and CombatResult
+using JRPGPrototype.Logic.Battle.Engines;   // For StatusRegistry and BattleKnowledge
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Effects
 {
     /// <summary>
     /// The Central Strategy Hub.

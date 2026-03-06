@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Data;
+using JRPGPrototype.Logic.Battle;           // For CombatMath and CombatResult
+using JRPGPrototype.Logic.Battle.Engines;   // For StatusRegistry and BattleKnowledge
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger
 
 namespace JRPGPrototype.Logic.Battle.Effects
 {

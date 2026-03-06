@@ -4,8 +4,10 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Data;
+using JRPGPrototype.Logic.Battle;           // For CombatMath
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Engines
 {
     /// <summary>
     /// The Cognitive Layer of the Battle Sub-System.

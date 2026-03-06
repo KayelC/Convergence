@@ -5,8 +5,10 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
+using JRPGPrototype.Logic.Battle;           // For CombatMath
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Engines
 {
     /// <summary>
     /// Represents the possible outcomes of a negotiation attempt.

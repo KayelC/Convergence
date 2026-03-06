@@ -5,6 +5,10 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Data;
 using JRPGPrototype.Services;
+using JRPGPrototype.Logic.Battle.Effects;
+using JRPGPrototype.Logic.Battle.Engines;
+using JRPGPrototype.Logic.Battle.Messaging;
+using JRPGPrototype.Logic.Battle.Bridges;
 
 namespace JRPGPrototype.Logic.Battle
 {

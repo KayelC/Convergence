@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using JRPGPrototype.Core;
+using JRPGPrototype.Logic.Battle;           // For CombatMath
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Engines
 {
     /// <summary>
     /// The Resource State Engine for the Press Turn System.

@@ -1,7 +1,7 @@
 ﻿using System;
 using JRPGPrototype.Entities;
 
-namespace JRPGPrototype.Logic.Battle
+namespace JRPGPrototype.Logic.Battle.Messaging
 {
     /// <summary>
     /// Defines a centralized contract for broadcasting battle events.
