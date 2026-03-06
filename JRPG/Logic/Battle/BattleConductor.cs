@@ -295,7 +295,7 @@ namespace JRPGPrototype.Logic.Battle
                         if (comp.action == "Summon")
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (_party.SummonDemon(actor, comp.target))
+                            if (comp.target != null && _party.SummonDemon(actor, comp.target))
                             {
                                 _messenger.Publish($"{actor.Name} summoned {comp.target.Name}!");
                                 _turnEngine.ConsumeAction(HitType.Normal, false);
@@ -306,7 +306,7 @@ namespace JRPGPrototype.Logic.Battle
                         else if (comp.action == "Return")
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (_party.ReturnDemon(actor, comp.target))
+                            if (comp.target != null && _party.ReturnDemon(actor, comp.target))
                             {
                                 _messenger.Publish($"{actor.Name} returned {comp.target.Name} to stock.");
                                 _turnEngine.ConsumeAction(HitType.Normal, false);
@@ -316,7 +316,7 @@ namespace JRPGPrototype.Logic.Battle
                         }
                         else if (comp.action == "Analyze")
                         {
-                            _processor.ExecuteAnalyze(comp.target);
+                            if (comp.target != null) _processor.ExecuteAnalyze(comp.target);
                             _turnEngine.ConsumeAction(HitType.Normal, false);
                             actionCommitted = true;
                             return;
@@ -349,7 +349,7 @@ namespace JRPGPrototype.Logic.Battle
                     else if (choice == "Talk")
                     {
                         targets = _ui.SelectTarget(actor, null, null, true);
-                        if (targets != null) HandleNegotiation(actor, targets[0]);
+                        if (targets != null && targets.Count > 0) HandleNegotiation(actor, targets[0]);
                         return;
                     }
                     else if (choice == "Tactics")
@@ -388,7 +388,7 @@ namespace JRPGPrototype.Logic.Battle
                     return;
                 }
 
-                if (item != null)
+                if (item != null && targets != null)
                 {
                     // Defensive check: Only consume and use icon if the item actually worked
                     if (_processor.ExecuteItem(actor, targets, item))
@@ -410,12 +410,12 @@ namespace JRPGPrototype.Logic.Battle
                         ExecuteAction(actor, isPlayerSide, turnState);
                 }
                 }
-                else if (skill == null)
+                else if (skill == null && targets != null && targets.Count > 0)
                 {
                     var res = _processor.ExecuteAttack(actor, targets[0]);
                     _turnEngine.ConsumeAction(res.Type, res.IsCritical);
                 }
-                else
+                else if (skill != null && targets != null)
                 {
                     var results = _processor.ExecuteSkill(actor, targets, skill);
                     if (results.Any())
