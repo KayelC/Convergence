@@ -2,6 +2,7 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Services;
 using System;
 using System.Collections.Generic;
@@ -26,18 +27,20 @@ namespace JRPGPrototype.Logic.Field
 
         public FieldServiceEngine(
             IFieldMessenger messenger,
+            IGameIO io,
             EconomyManager economy,
             InventoryManager inventory,
             PartyManager party,
             DungeonState dungeonState)
         {
             _messenger = messenger;
+            _io = io;
             _economy = economy;
             _inventory = inventory;
             _party = party;
             _dungeonState = dungeonState;
 
-             _shopManager = new ShopManager(_inventory, _economy, _messenger);
+            _shopManager = new ShopManager(_inventory, _economy, _messenger, _io);
         }
 
         #region Shop and Equipment

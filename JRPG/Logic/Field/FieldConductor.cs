@@ -6,6 +6,7 @@ using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Fusion;
 
@@ -14,7 +15,7 @@ namespace JRPGPrototype.Logic.Field
     /// <summary>
     /// The Root Orchestrator for the Field Sub-System.
     /// Manages the high-level state transitions between City, Dungeon, and Menus.
-    /// Coordinates the specialized Bridges and Logic Engines.
+    /// Coordinates the specialized Bridges, Logic Engines, and Messaging Infrastructure.
     /// </summary>
     public class FieldConductor
     {
@@ -28,6 +29,10 @@ namespace JRPGPrototype.Logic.Field
         private readonly PartyManager _partyManager;
         private readonly BattleKnowledge _playerKnowledge;
 
+        // Messaging and Observation
+        private readonly IFieldMessenger _messenger;
+        private readonly FieldLogger _logger;
+
         // Sub-Sub-System Components
         private readonly FieldUIState _uiState;
         private readonly ServiceUIBridge _serviceUI;
@@ -37,7 +42,7 @@ namespace JRPGPrototype.Logic.Field
         private readonly FieldServiceEngine _logicEngine;
         private readonly ExplorationProcessor _explorationProcessor;
 
-        // New Sub-System Integration: Fusion (Cathedral of Shadows)
+        // Specialized Sub-Systems
         private readonly FusionConductor _fusionConductor;
 
         public FieldConductor(
@@ -55,26 +60,40 @@ namespace JRPGPrototype.Logic.Field
             _io = io;
             _playerKnowledge = playerKnowledge;
 
-            // Initialize Shared UI State
+            // 1. Initialize Shared UI State
             _uiState = new FieldUIState();
 
-            // Initialize Core Logic Managers
+            // 2. Initialize Messaging Infrastructure (Mediator/Observer)
+            _messenger = new FieldMessenger();
+            _logger = new FieldLogger(_io, _messenger);
+
+            // 3. Initialize Core Logic Managers
             _partyManager = new PartyManager(_player);
             _dungeonManager = new DungeonManager(_dungeonState);
 
-            // Initialize Logic Engines
-            _logicEngine = new FieldServiceEngine(_io, _economy, _inventory, _partyManager, _dungeonState);
+            // 4. Initialize Logic Engines (Injecting Messenger instead of IO)
+            _logicEngine = new FieldServiceEngine(
+                _messenger,
+                _economy,
+                _inventory,
+                _partyManager,
+                _dungeonState);
 
-            // Initialize Specialized Bridges
+            // 5. Initialize Specialized Bridges (Interactive UI)
             _serviceUI = new ServiceUIBridge(_io, _uiState, _economy, _partyManager);
             _dungeonUI = new DungeonUIBridge(_io, _uiState);
             _statusUI = new StatusUIBridge(_io, _uiState, _partyManager);
             _inventoryUI = new InventoryUIBridge(_io, _uiState, _inventory, _partyManager);
 
-            // Initialize Exploration Processor
-            _explorationProcessor = new ExplorationProcessor(_io, _dungeonManager, _dungeonState, _dungeonUI, _logicEngine);
+            // 6. Initialize Exploration Processor
+            _explorationProcessor = new ExplorationProcessor(
+                _messenger,
+                _dungeonManager,
+                _dungeonState,
+                _dungeonUI,
+                _logicEngine);
 
-            // Initialize the Fusion Sub-System Conductor
+            // 7. Initialize Fusion Sub-System
             _fusionConductor = new FusionConductor(_io, _player, _partyManager, _economy, _uiState);
         }
 
@@ -113,11 +132,12 @@ namespace JRPGPrototype.Logic.Field
                         break;
 
                     case "Exit Game":
+                        _logger.Deactivate(); // Cleanup event subscriptions
                         return;
                 }
 
                 // If the player somehow dies in the field (future-proofing for traps/DOT)
-                if (_player.CurrentHP <= 0) return;
+                if (_player.CurrentHP <= 0) break;
             }
         }
 
@@ -181,8 +201,8 @@ namespace JRPGPrototype.Logic.Field
                         break;
 
                     case "Inventory":
-                        // Check if inventory usage requested an exit (Goho-M)
-                        if (OpenInventoryMenu(inDungeon: true) == ItemUsageResult.RequestDungeonExit) exitLoop = true;
+                        if (OpenInventoryMenu(inDungeon: true) == ItemUsageResult.RequestDungeonExit)
+                            exitLoop = true;
                         break;
 
                     case "Status":
@@ -293,13 +313,11 @@ namespace JRPGPrototype.Logic.Field
 
                 if (!_logicEngine.TryRestoreCombatant(patient))
                 {
-                    _io.WriteLine("Could not complete treatment.", ConsoleColor.Red);
-                    _io.Wait(1000);
+                    _messenger.Publish("Could not complete treatment.", ConsoleColor.Red, 1000);
                 }
                 else
                 {
-                    _io.WriteLine($"{patient.Name} has been fully restored!", ConsoleColor.Green);
-                    _io.Wait(800);
+                    _messenger.Publish($"{patient.Name} has been fully restored!", ConsoleColor.Green, 800);
                 }
             }
         }
@@ -388,17 +406,17 @@ namespace JRPGPrototype.Logic.Field
         }
 
         /// <summary>
-        /// FIX: Implemented Transactional Stat Allocation with Rollback support.
         /// Now passes initialStats to the confirmation bridge to show change visualization.
         /// </summary>
         private void OpenStatAllocation()
         {
+            // Transactional Stat Allocation with Rollback support.
             // 1. Take snapshot of initial state
             int initialPoints = _player.StatPoints;
             var initialStats = new Dictionary<StatType, int>();
             foreach (StatType st in Enum.GetValues(typeof(StatType)))
             {
-                initialStats[st] = _player.CharacterStats[st];
+                initialStats[st] = _player.CharacterStats.GetValueOrDefault(st, 0);
             }
 
             // 2. Allocation Loop
@@ -419,13 +437,11 @@ namespace JRPGPrototype.Logic.Field
                 {
                     // Perform Rollback
                     _logicEngine.RollbackStats(_player, initialStats, initialPoints);
-                    _io.WriteLine("Changes discarded.", ConsoleColor.Yellow);
-                    _io.Wait(800);
+                    _messenger.Publish("Changes discarded.", ConsoleColor.Yellow, 800);
                 }
                 else
                 {
-                    _io.WriteLine("Stats permanently increased.", ConsoleColor.Green);
-                    _io.Wait(800);
+                    _messenger.Publish("Stats permanently increased.", ConsoleColor.Green, 800);
                 }
             }
         }
@@ -504,8 +520,7 @@ namespace JRPGPrototype.Logic.Field
                     {
                         if (_partyManager.ReturnDemon(_player, member))
                         {
-                            _io.WriteLine($"{member.Name} returned to stock.");
-                            _io.Wait(600);
+                            _messenger.Publish($"{member.Name} returned to stock.", ConsoleColor.Gray, 600);
                         }
                     }
                 }
@@ -516,8 +531,7 @@ namespace JRPGPrototype.Logic.Field
                     {
                         if (_partyManager.SummonDemon(_player, target))
                         {
-                            _io.WriteLine($"{target.Name} joined the party!");
-                            _io.Wait(800);
+                            _messenger.Publish($"{target.Name} joined the party!", ConsoleColor.Gray, 800);
                         }
                     }
                 }

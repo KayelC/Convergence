@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using JRPGPrototype.Services;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Data;
 using JRPGPrototype.Core;
+using JRPGPrototype.Logic.Field;
 
 namespace JRPGPrototype.Logic
 {
@@ -13,16 +13,27 @@ namespace JRPGPrototype.Logic
 
     public class ShopManager
     {
-        private InventoryManager _inventory;
-        private EconomyManager _economy;
-        private IGameIO _io;
+        private readonly InventoryManager _inventory;
+        private readonly EconomyManager _economy;
+        private readonly IFieldMessenger _messenger;
+        private readonly IGameIO _io;
 
-        public ShopManager(InventoryManager inventory, EconomyManager economy, IGameIO io)
+        /// <summary>
+        /// Initializes a new instance of the ShopManager.
+        /// </summary>
+        /// <param name="inventory">Reference to the player's inventory.</param>
+        /// <param name="economy">Reference to the global economy manager.</param>
+        /// <param name="messenger">The mediator for narrative/log output.</param>
+        /// <param name="io">The driver for interactive menu input.</param>
+        public ShopManager(InventoryManager inventory, EconomyManager economy, IFieldMessenger messenger, IGameIO io)
         {
             _inventory = inventory;
             _economy = economy;
+            _messenger = messenger;
             _io = io;
         }
+
+
 
         public void OpenShop(Combatant player, ShopType shopType)
         {
@@ -56,8 +67,7 @@ namespace JRPGPrototype.Logic
 
             if (filteredInventory.Count == 0)
             {
-                _io.WriteLine("This shop has no stock.");
-                _io.Wait(800);
+                _messenger.Publish("This shop has no stock.", ConsoleColor.Gray, 800);
                 return;
             }
 
@@ -95,13 +105,11 @@ namespace JRPGPrototype.Logic
                             case ShopCategory.Accessory: _inventory.AddEquipment(selected.Id, ShopCategory.Accessory); break;
                             case ShopCategory.Item: _inventory.AddItem(selected.Id, 1); break;
                         }
-                        _io.WriteLine("\nBought!");
-                        _io.Wait(500);
+                        _messenger.Publish("\nBought!", ConsoleColor.Gray, 500);
                     }
                     else
                     {
-                        _io.WriteLine("\nNot enough Macca!");
-                        _io.Wait(800);
+                        _messenger.Publish("\nNot enough Macca!", ConsoleColor.Gray, 800);
                     }
                 }
             }
@@ -187,8 +195,7 @@ namespace JRPGPrototype.Logic
 
                 if (sellables.Count == 0)
                 {
-                    _io.WriteLine("Nothing to sell in this category.");
-                    _io.Wait(1000);
+                    _messenger.Publish("Nothing to sell in this category.", ConsoleColor.Gray, 1000);
                     return;
                 }
 
@@ -198,7 +205,7 @@ namespace JRPGPrototype.Logic
 
                 int idx = _io.RenderMenu(header, options, listIndex, disabled, (index) =>
                 {
-                    _io.WriteLine("Selling gives 50% value + Luck Bonus.");
+                    _messenger.Publish("Selling gives 50% value + Luck Bonus.");
                 });
 
                 if (idx == -1) return;
@@ -224,8 +231,7 @@ namespace JRPGPrototype.Logic
                 }
 
                 _economy.AddMacca(GetSellPrice(sellId, targetCategory, player));
-                _io.WriteLine("\nSold!");
-                _io.Wait(500);
+                _messenger.Publish("\nSold!", ConsoleColor.Gray, 500);
             }
         }
 
@@ -244,14 +250,13 @@ namespace JRPGPrototype.Logic
 
         private bool ConfirmPurchase(string name, int price)
         {
-            _io.WriteLine($"\nBuy {name} for {price} M?");
+            _messenger.Publish($"\nBuy {name} for {price} M?");
             int choice = _io.RenderMenu("Confirm?", new List<string> { "Yes", "No" }, 0);
             return choice == 0;
         }
 
         private int GetBuyPrice(ShopEntry entry, Combatant player)
         {
-            // Now uses Lu (Luck) instead of LUK
             int luk = player.GetStat(StatType.Lu);
             double discountMult = Math.Max(0.5, 1.0 - (luk * 0.01));
             return (int)(entry.BasePrice * discountMult);
@@ -302,9 +307,9 @@ namespace JRPGPrototype.Logic
             }
 
             int price = isBuying ? GetBuyPrice(entry, player) : 0;
-            _io.WriteLine($"Info: {desc}");
-            _io.WriteLine($"Stats: {stats}");
-            if (isBuying) _io.WriteLine($"Price: {price} M (Base: {entry.BasePrice})");
+            _messenger.Publish($"Info: {desc}");
+            _messenger.Publish($"Stats: {stats}");
+            if (isBuying) _messenger.Publish($"Price: {price} M (Base: {entry.BasePrice})");
         }
     }
 }

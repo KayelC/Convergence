@@ -1,6 +1,7 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Logic.Fusion.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;

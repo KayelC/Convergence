@@ -2,7 +2,6 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Field;
-using JRPGPrototype.Logic.Fusion.Bridges;
 using JRPGPrototype.Services;
 using System;
 using System.Collections.Generic;

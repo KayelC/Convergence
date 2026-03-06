@@ -3,6 +3,7 @@ using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Services;
 using System;
