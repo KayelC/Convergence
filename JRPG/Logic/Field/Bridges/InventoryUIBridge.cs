@@ -11,6 +11,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
     /// <summary>
     /// Specialized UI Bridge for Inventory management and Field-based utility usage.
     /// Handles the selection of items, skills, performers, and targets.
+    /// Includes metadata repair logic to handle unhydrated equipment names.
     /// </summary>
     public class InventoryUIBridge
     {
@@ -121,7 +122,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         /// <summary>
         /// Renders the specific list of equipment available for the player to equip.
-        /// Includes Robust Name Resolver to fix blank name bugs.
+        /// Includes a metadata fallback to ensure names appear even if Database objects are unhydrated.
         /// </summary>
         public string SelectEquipmentFromInventory(Combatant player, List<string> ids, ShopCategory category)
         {
@@ -137,15 +138,8 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             foreach (var id in ids)
             {
-                // ROBUST NAME RESOLVER: 
-                // We fetch the name from the metadata if the database object is missing it.
-                string resolvedName = category switch
-                {
-                    ShopCategory.Weapon => Database.Weapons[id].Name,
-                    ShopCategory.Armor => Database.Armors[id].Name,
-                    ShopCategory.Boots => GetRobustEquipmentName(id, Database.Boots[id].Name),
-                    _ => GetRobustEquipmentName(id, Database.Accessories[id].Name)
-                };
+                // REPAIR LOGIC: Ensure the name is resolved from the Shop Registry if the object is blank.
+                string displayName = GetRobustName(id, category);
 
                 bool equipped = category switch
                 {
@@ -155,12 +149,14 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     _ => player.EquippedAccessory?.Id == id
                 };
 
-                names.Add($"{resolvedName}{(equipped ? " [E]" : "")}");
+                names.Add($"{displayName}{(equipped ? " [E]" : "")}");
                 disabled.Add(equipped);
             }
 
             names.Add("Back");
             disabled.Add(false);
+
+            if (_uiState.EquipListIndex >= names.Count) _uiState.EquipListIndex = 0;
 
             int choice = _io.RenderMenu($"=== EQUIP {category.ToString().ToUpper()} ===", names, _uiState.EquipListIndex, disabled, (index) =>
             {
@@ -176,11 +172,21 @@ namespace JRPGPrototype.Logic.Field.Bridges
             return ids[choice];
         }
 
-        private string GetRobustEquipmentName(string id, string existingName)
+        // Attempts to get the item name from the Database, falls back to Shop Registry if blank.
+        private string GetRobustName(string id, ShopCategory category)
         {
-            if (!string.IsNullOrEmpty(existingName)) return existingName;
+            string internalName = category switch
+            {
+                ShopCategory.Weapon => Database.Weapons.TryGetValue(id, out var w) ? w.Name : "",
+                ShopCategory.Armor => Database.Armors.TryGetValue(id, out var a) ? a.Name : "",
+                ShopCategory.Boots => Database.Boots.TryGetValue(id, out var b) ? b.Name : "",
+                ShopCategory.Accessory => Database.Accessories.TryGetValue(id, out var acc) ? acc.Name : "",
+                _ => ""
+            };
 
-            // Search the Shop Inventory for the correct name
+            if (!string.IsNullOrEmpty(internalName)) return internalName;
+
+            // Absolute Source of Truth: The Shop Registry
             var meta = Database.ShopInventory.FirstOrDefault(x => x.Id == id);
             return meta?.Name ?? id;
         }
@@ -277,10 +283,17 @@ namespace JRPGPrototype.Logic.Field.Bridges
         public Combatant SelectFieldTarget(Combatant player, string actionName)
         {
             var targetPool = _party.ActiveParty.ToList();
-            List<string> targetLabels = targetPool.Select(c => $"{c.Name,-15} (HP: {c.CurrentHP,3}/{c.MaxHP,3} SP: {c.CurrentSP,3}/{c.MaxSP,3})").ToList();
+
+            List<string> targetLabels = targetPool.Select(c =>
+                $"{c.Name,-15} (HP: {c.CurrentHP,3}/{c.MaxHP,3} SP: {c.CurrentSP,3}/" +
+                $"{c.MaxSP,3})").ToList();
+
             targetLabels.Add("Back");
 
-            string prompt = !string.IsNullOrEmpty(actionName) ? $"Using {actionName}. Select Target:" : "Select Target:";
+            string prompt = !string.IsNullOrEmpty(actionName)
+                ? $"Using {actionName}. Select Target:"
+                : "Select Target:";
+
             int choice = _io.RenderMenu(prompt, targetLabels, 0);
 
             if (choice == -1 || choice == targetLabels.Count - 1) return null;

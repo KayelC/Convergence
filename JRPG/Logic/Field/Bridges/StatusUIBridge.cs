@@ -57,18 +57,16 @@ namespace JRPGPrototype.Logic.Field.Bridges
             return options[choice];
         }
 
-        /// <summary>
-        /// Renders the equipment slot selection menu.
-        /// </summary>
+        // Renders the equipment slot selection menu.
         public string ShowEquipSlotMenu(Combatant player)
         {
             string header = "=== EQUIPMENT SLOTS ===";
             List<string> options = new List<string>
             {
-                $"Weapon: {player.EquippedWeapon?.Name ?? "None"}",
-                $"Armor: {player.EquippedArmor?.Name ?? "None"}",
-                $"Boots: {player.EquippedBoots?.Name ?? "None"}",
-                $"Accessory:{player.EquippedAccessory?.Name ?? "None"}",
+                $"Weapon:    {ResolveName(player.EquippedWeapon?.Id, player.EquippedWeapon?.Name)}",
+                $"Armor:     {ResolveName(player.EquippedArmor?.Id, player.EquippedArmor?.Name)}",
+                $"Boots:     {ResolveName(player.EquippedBoots?.Id, player.EquippedBoots?.Name)}",
+                $"Accessory: {ResolveName(player.EquippedAccessory?.Id, player.EquippedAccessory?.Name)}",
                 "Back"
             };
 
@@ -77,6 +75,17 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             _uiState.EquipSlotIndex = choice;
             return options[choice];
+        }
+
+        // Attempts to get the name from the object, falls back to the Shop Registry if blank.
+        private string ResolveName(string? id, string? existingName)
+        {
+            if (string.IsNullOrEmpty(id)) return "None";
+            if (!string.IsNullOrEmpty(existingName)) return existingName;
+
+            // Absolute Source of Truth Fallback
+            var metadata = Database.ShopInventory.FirstOrDefault(x => x.Id == id);
+            return metadata?.Name ?? id;
         }
 
         #endregion
