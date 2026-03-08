@@ -4,6 +4,7 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.Dungeon;
@@ -131,7 +132,7 @@ namespace JRPGPrototype.Logic.Field.Engines
             // 1. Hydrate the combatants using the programmatic factory method in Combatant.cs
             foreach (string id in enemyIds)
             {
-                enemies.Add(Combatant.CreateEnemy(id));
+                enemies.Add(CombatantFactory.CreateEnemy(id));
             }
 
             // 2. High-Fidelity Naming Logic (Grouping)

@@ -1,6 +1,7 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 context.Owner.DemonStock.Remove(participant);
             }
 
-            Combatant child = Combatant.CreatePlayerDemon(context.ResultId,
+            Combatant child = CombatantFactory.CreatePlayerDemon(context.ResultId,
                 Database.Personas[context.ResultId.ToLower()].Level);
             child.ExtraSkills.Clear();
             child.ExtraSkills.AddRange(context.ChosenSkills);

@@ -1,6 +1,7 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Services;
 using System;
@@ -230,7 +231,7 @@ namespace JRPGPrototype.Logic.Fusion
             if (!Database.Personas.TryGetValue(id.ToLower(), out var template)) return null;
 
             // 1. Initialize the base result from the template
-            Combatant staged = Combatant.CreatePlayerDemon(id, template.Level);
+            Combatant staged = CombatantFactory.CreatePlayerDemon(id, template.Level);
 
             // 2. Apply the manually selected inherited skills
             staged.ExtraSkills.Clear();

@@ -137,9 +137,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             return options[choice];
         }
 
-        /// <summary>
         /// Renders the specific list of equipment available for the player to equip.
-        /// </summary>
         public string SelectEquipmentFromInventory(Combatant player, List<string> ids, ShopCategory category)
         {
             if (ids == null || ids.Count == 0)
@@ -191,9 +189,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             return ids[choice];
         }
 
-        /// <summary>
-        /// Helper to display item stats during selection in the Equip menu.
-        /// </summary>
+        // Helper to display item stats during selection in the Equip menu.
         private void DisplayEquipmentStats(string id, ShopCategory category)
         {
             switch (category)

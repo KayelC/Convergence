@@ -1,6 +1,7 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Fusion.Messaging;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 }
 
                 // Create the boosted instance
-                Combatant boosted = Combatant.CreatePlayerDemon(target.SourceId, target.Level);
+                Combatant boosted = CombatantFactory.CreatePlayerDemon(target.SourceId, target.Level);
                 boosted.Exp = target.Exp;
                 boosted.ExtraSkills.Clear();
                 boosted.ExtraSkills.AddRange(context.ChosenSkills);

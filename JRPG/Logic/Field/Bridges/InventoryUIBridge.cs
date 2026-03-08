@@ -32,9 +32,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         #region Main Inventory Navigation
 
-        /// <summary>
-        /// Renders the primary Inventory sub-menu.
-        /// </summary>
+        // Renders the primary Inventory sub-menu.
         public string ShowInventorySubMenu(Combatant player)
         {
             string header = "=== INVENTORY ===";
@@ -59,9 +57,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         #region Item Selection UI
 
-        /// <summary>
-        /// Logic for selecting an item from the player's stock.
-        /// </summary>
+        // Logic for selecting an item from the player's stock.
         public ItemData SelectItem(Combatant user, bool inDungeon)
         {
             var ownedItems = Database.Items.Values

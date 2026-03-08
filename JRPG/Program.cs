@@ -1,6 +1,7 @@
 ﻿using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Battle;
@@ -60,18 +61,18 @@ namespace JRPGPrototype
                 case '4':
                     player.Class = ClassType.Operator;
                     // UPDATED: Use CreateDemon to ensure proper skill progression
-                    //player.DemonStock.Add(Combatant.CreatePlayerDemon("pixie", 1));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("michael", 99));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("pixie", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("high_pixie", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("orpheus", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("io", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("hermes", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("medea", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("mou_ryo", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("flaemis", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("aquans", 50));
-                    player.DemonStock.Add(Combatant.CreatePlayerDemon("erthrys", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 1));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("michael", 99));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("io", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("hermes", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("medea", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("mou_ryo", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("flaemis", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("aquans", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("erthrys", 50));
                     break;
             }
 

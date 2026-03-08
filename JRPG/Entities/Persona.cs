@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JRPGPrototype.Core;
 using JRPGPrototype.Services;
+using JRPGPrototype.Entities.Components;
 
 namespace JRPGPrototype.Entities
 {

@@ -1,6 +1,7 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using System;
 using System.Linq;
 
@@ -32,7 +33,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 }
 
                 // Create the new higher/lower tier demon combatant
-                Combatant newD = Combatant.CreatePlayerDemon(context.ResultId,
+                Combatant newD = CombatantFactory.CreatePlayerDemon(context.ResultId,
                     Database.Personas[context.ResultId.ToLower()].Level);
 
                 // Rule - Inherit the exact chosen skill set from the sequence

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Data;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
@@ -483,7 +484,7 @@ namespace JRPGPrototype.Logic.Battle
                     _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
                     // Use the Factory to create the demon to ensure correct stats
                     // We can use the target.SourceId directly as CreateEnemy handles ID resolution
-                    var newDemon = Combatant.CreateEnemy(target.SourceId);
+                    var newDemon = CombatantFactory.CreateEnemy(target.SourceId);
 
                     // Add to player's stock
                     actor.DemonStock.Add(newDemon);
