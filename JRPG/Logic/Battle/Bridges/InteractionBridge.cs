@@ -39,9 +39,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             _knowledge = knowledge;
         }
 
-        /// <summary>
-        /// Public access for the Conductor to force a HUD update during AI/DOT sequences.
-        /// </summary>
+        // Public access for the Conductor to force a HUD update during AI/DOT sequences.
         public void ForceRefreshHUD()
         {
             _io.Clear();
@@ -81,6 +79,9 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             options.Add("Pass");
 
             bool isPanicked = actor.CurrentAilment != null && actor.CurrentAilment.Name == "Panic";
+            bool isBound = actor.CurrentAilment != null && actor.CurrentAilment.ActionRestriction == "LimitedAction";
+
+
             List<bool> disabledStates = new List<bool>();
 
             foreach (var opt in options)
@@ -90,6 +91,12 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 {
                     isDisabled = true;
                 }
+
+                if (isBound && (opt == "Persona" || opt == "Skill" || opt == "Command" || opt == "COMP" || opt == "Item" || opt == "Talk"))
+                {
+                    isDisabled = true;
+                }
+
                 disabledStates.Add(isDisabled);
             }
 

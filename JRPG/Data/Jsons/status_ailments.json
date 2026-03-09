@@ -88,6 +88,39 @@
       "removal_triggers": ["NaturalRoll", "CureSkill"],
       "cure_keyword": "Distress",
       "description": "0 Evasion. +50% Crit chance. 1.5x damage taken."
+    },
+    {
+      "name": "Sleep",
+      "action_restriction": "SkipTurn",
+      "evasion_mult": 0.0,
+      "crit_bonus_chance": 0.5,
+      "damage_taken_mult": 1.0,
+      "dot_percent": 0.0,
+      "removal_triggers": ["NaturalRoll", "OnHit", "CureSkill"],
+      "cure_keyword": "Sleep",
+      "description": "Cannot move. Restores HP/SP each turn. Wakes up when hit."
+    }, 
+    {
+      "name": "Bind",
+      "action_restriction": "LimitedAction",
+      "evasion_mult": 0.0,
+      "crit_bonus_chance": 0.2,
+      "damage_taken_mult": 1.0,
+      "dot_percent": 0.0,
+      "removal_triggers": ["NaturalRoll", "CureSkill"],
+      "cure_keyword": "Bind",
+      "description": "Limbs restricted. Cannot use Skills, Items. 0 Evasion."
+    },
+    {
+      "name": "Stun",
+      "action_restriction": "SkipTurn",
+      "evasion_mult": 0.0,
+      "crit_bonus_chance": 0.0,
+      "damage_taken_mult": 1.0,
+      "dot_percent": 0.0,
+      "removal_triggers": ["OneTurn", "CureSkill"],
+      "cure_keyword": "Stun",
+      "description": "Temporarily incapacitated. Ends after 1 turn."
     }
   ]
 }

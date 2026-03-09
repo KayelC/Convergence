@@ -10,17 +10,6 @@ using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in Sta
 
 namespace JRPGPrototype.Logic.Battle.Engines
 {
-    // Defines the possible states an actor can be in at the start of their turn.
-    public enum TurnStartResult
-    {
-        CanAct,         // Normal turn
-        Skip,           // Turn lost (Freeze, Shock)
-        ForcedPhysical, // Must perform a basic attack on a random enemy (Rage)
-        ForcedConfusion,// Must perform a random skill on an ally or heal an enemy (Charm)
-        FleeBattle,     // Protagonist flees (Battle Ends via Escape)
-        ReturnToCOMP    // Demon flees (Combatant returns to stock)
-    }
-
     /// <summary>
     /// The authoritative logic engine for status ailments and stat modifications.
     /// Manages application, turn-start restrictions, and turn-end recovery/damage.
@@ -69,7 +58,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
             if (ailmentToApply == null) return false;
 
             int baseChance = 100;
-            Match match = Regex.Match(skillEffect, @"(\d+)%");
+            Match match = Regex.Match(skillEffect, @"\((\d+)\)%");
             if (match.Success) baseChance = int.Parse(match.Groups[1].Value);
 
             int finalChance = baseChance + (attacker.GetStat(StatType.Lu) - target.GetStat(StatType.Lu));
@@ -155,6 +144,9 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 case "SkipTurn":
                     return TurnStartResult.Skip;
 
+                case "LimitedAction":
+                    return TurnStartResult.LimitedAction;
+
                 case "ChanceSkip":
                     // Panic: 50% chance to lose turn.
                     return _rnd.Next(0, 100) < 50 ? TurnStartResult.Skip : TurnStartResult.CanAct;
@@ -164,7 +156,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
                     int fearRoll = _rnd.Next(0, 100);
                     if (fearRoll < 15) // 15% chance to flee
                     {
-                        if (actor.Class == ClassType.Human || actor.Class == ClassType.WildCard || actor.Class == ClassType.PersonaUser || actor.Class == ClassType.Operator || actor.Class == ClassType.Avatar)
+                        if (actor.Class != ClassType.Demon)
                             return TurnStartResult.FleeBattle;
 
                         if (actor.Class == ClassType.Demon)
@@ -201,10 +193,16 @@ namespace JRPGPrototype.Logic.Battle.Engines
             else if (skills.Contains("Regenerate 2")) hpRecovery += (int)(actor.MaxHP * 0.04);
             else if (skills.Contains("Regenerate 1")) hpRecovery += (int)(actor.MaxHP * 0.02);
 
+            // Sleep restores 10% HP/SP per turn
+            if (actor.CurrentAilment?.Name == "Sleep")
+            {
+                hpRecovery += (int)(actor.MaxHP * 0.10);
+            }
+
             if (hpRecovery > 0 && actor.CurrentHP < actor.MaxHP)
             {
                 actor.CurrentHP = Math.Min(actor.MaxHP, actor.CurrentHP + hpRecovery);
-                _messenger?.Publish($"{actor.Name} restored {hpRecovery} HP via passives.");
+                _messenger?.Publish($"{actor.Name} restored {hpRecovery} HP.");
             }
 
             // 2. SP Restoration (Invigorate)
@@ -212,6 +210,11 @@ namespace JRPGPrototype.Logic.Battle.Engines
             if (skills.Contains("Invigorate 3")) spRecovery += 7;
             else if (skills.Contains("Invigorate 2")) spRecovery += 5;
             else if (skills.Contains("Invigorate 1")) spRecovery += 3;
+
+            if (actor.CurrentAilment?.Name == "Sleep")
+            {
+                spRecovery += (int)(actor.MaxSP * 0.10);
+            }
 
             if (spRecovery > 0 && actor.CurrentSP < actor.MaxSP)
             {

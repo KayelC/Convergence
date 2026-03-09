@@ -107,6 +107,16 @@ namespace JRPGPrototype.Entities.Components
             // Deduct HP based on the result, ensuring HP never drops below 0.
             target.CurrentHP = Math.Max(0, target.CurrentHP - result.DamageDealt);
 
+            // 7. Ailment Trigger: Wake on Hit (Sleep)
+            if (result.DamageDealt > 0 && target.CurrentAilment != null)
+            {
+                if (target.CurrentAilment.RemovalTriggers.Contains("OnHit"))
+                {
+                    target.RemoveAilment();
+                    // result.Message += $" {target.Name} woke up!";
+                }
+            }
+
             return result;
         }
     }

@@ -117,4 +117,16 @@ namespace JRPGPrototype.Core
         StatBoostFusion, // Signal that Mitama fusion for stat boosting should occur
         NoFusionPossible // The combination yields nothing.
     }
+
+    // Defines the possible states an actor can be in at the start of their turn.
+    public enum TurnStartResult
+    {
+        CanAct,          // Normal turn
+        Skip,            // Turn lost (Freeze, Shock, Stun, Sleep)
+        LimitedAction,   // Can only Attack, Guard, or Pass (Bind)
+        ForcedPhysical,  // Must perform a basic attack on a random enemy (Rage)
+        ForcedConfusion, // Must perform a random skill on an ally or heal an enemy (Charm)
+        FleeBattle,      // Protagonist flees (Battle Ends via Escape)
+        ReturnToCOMP     // Demon flees (Combatant returns to stock)
+    }
 }
