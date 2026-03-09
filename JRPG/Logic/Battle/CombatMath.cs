@@ -2,7 +2,7 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
 using System;
 using System.Linq;
-using System.Text.RegularExpressions; // Added for skill parsing
+using System.Text.RegularExpressions;
 
 namespace JRPGPrototype.Logic.Battle
 {
@@ -73,8 +73,7 @@ namespace JRPGPrototype.Logic.Battle
         // --- SMT III Damage Formula: 5.0 * sqrt(Power * (Atk/Def)) ---
         /// <summary>
         /// Calculates the raw potency an attacker deals to a target.
-        /// Removed affinity multipliers to prevent double-calculation and Absorb bugs.
-        /// 
+        /// Also handles Critical multipliers and status-based modifiers.
         /// </summary>
         /// <param name="attacker">The entity performing the action.</param>
         /// <param name="target">The entity receiving the action.</param>
@@ -88,7 +87,7 @@ namespace JRPGPrototype.Logic.Battle
         /// </returns>
 
         /// <summary>
-        /// SMT Square-root Damage Formula: 5.0 * sqrt(Power * (Atk/Def))
+        /// Square-root Damage Formula: 5.0 * sqrt(Power * (Atk/Def))
         /// Also handles Critical multipliers and status-based modifiers.
         /// </summary>
         public static int CalculateDamage(Combatant attacker, Combatant target, int skillPower, Element element, out bool isCritical)
@@ -110,9 +109,8 @@ namespace JRPGPrototype.Logic.Battle
             atkPower *= GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Attack", 0));
             defPower *= GetStatMultiplier(target.Buffs.GetValueOrDefault("Defense", 0));
 
-            // Apply Passive Skills (Amps/Boosts/Drivers handled via GetStat calls
-            // if implemented there, otherwise would be here. Preserving current stat-access structure.
-            //atkPower *= GetPassiveDamageMultiplier(attacker, element);
+            // Apply Passive Skill Multipliers (Boost/Amp/Driver)
+            atkPower *= GetPassiveDamageMultiplier(attacker, element);
 
             // Apply Charges (Power Charge / Mind Charge)
             if (isPhysical && attacker.IsCharged)
@@ -124,7 +122,7 @@ namespace JRPGPrototype.Logic.Battle
                 atkPower *= 1.9;
             }
 
-            // Apply Ailment Penalties
+            // Apply Attacker Ailment Penalties
             if (attacker.CurrentAilment != null)
             {
                 atkPower *= attacker.CurrentAilment.DamageDealMult;
@@ -157,9 +155,6 @@ namespace JRPGPrototype.Logic.Battle
             // Damage Variance (95% to 105%)
             double variance = 0.95 + (_rnd.NextDouble() * 0.1);
 
-            // FIX: Removed the Elemental Affinity Multiplier switch from this class.
-            // Affinities are now handled exclusively by Combatant.ReceiveDamage to prevent Absorb sign-flip bugs.
-
             return (int)Math.Floor(dmgBase * variance);
         }
 
@@ -172,12 +167,17 @@ namespace JRPGPrototype.Logic.Battle
             // If target is Rigid (Frozen/Shocked), all attacks hit
             if (target.IsRigidBody) return true;
 
-            // 1. Data-Driven Accuracy: Use value from JSON.
-            int baseAccuracy = 90; // Default for basic attacks if skillAccuracy is empty
-            if (!string.IsNullOrEmpty(skillAccuracy) &&
-                int.TryParse(skillAccuracy.Replace("%", ""), out int parsed))
+            // 1. Data-Driven Accuracy Fix: Handle "-" or empty as default
+            int baseAccuracy = 95; // Default for basic attacks
+
+            if (!string.IsNullOrEmpty(skillAccuracy) && skillAccuracy != "-" && skillAccuracy != "NaN")
             {
-                baseAccuracy = parsed;
+                // Remove non-numeric characters (like %) to extract the integer
+                string cleanAccuracy = new string(skillAccuracy.Where(char.IsDigit).ToArray());
+                if (int.TryParse(cleanAccuracy, out int parsed))
+                {
+                    baseAccuracy = parsed;
+                }
             }
 
             // 2. Passive Accuracy/Evasion skills (Vidyaraja's Blessing, Dodge/Evade)
@@ -202,6 +202,7 @@ namespace JRPGPrototype.Logic.Battle
             double defValue = (targetAg * GetStatMultiplier(target.Buffs.GetValueOrDefault("Agility", 0))) * evadeMult;
 
             // Final Chance Calculation: Clamped between 5% and 99%
+            // Formula: baseAccuracy + Agility Delta * 2 + Luck Delta
             double finalChance = baseAccuracy + ((atkValue - defValue) * 2) + (attackerLu - targetLu);
 
             return _rnd.Next(0, 100) < Math.Clamp(finalChance, 5, 99);
@@ -244,9 +245,13 @@ namespace JRPGPrototype.Logic.Battle
         public static bool CalculateInstantKill(Combatant attacker, Combatant target, string skillAccuracy)
         {
             int baseAccuracy = 40; // Default for instant kill skills
-            if (!string.IsNullOrEmpty(skillAccuracy) && int.TryParse(skillAccuracy.Replace("%", ""), out int parsed))
+            if (!string.IsNullOrEmpty(skillAccuracy) && skillAccuracy != "-" && skillAccuracy != "NaN")
             {
-                baseAccuracy = parsed;
+                string cleanAcc = new string(skillAccuracy.Where(char.IsDigit).ToArray());
+                if (int.TryParse(cleanAcc, out int parsed))
+                {
+                    baseAccuracy = parsed;
+                }
             }
 
             int lukDiff = attacker.GetStat(StatType.Lu) - target.GetStat(StatType.Lu);
@@ -258,15 +263,12 @@ namespace JRPGPrototype.Logic.Battle
 
         public static int CalculateReflectedDamage(Combatant originalAttacker, int skillPower, Element element)
         {
-            // Reflected damage is calculated against the original attacker's
-            // stats and affinities. 
+            // Reflected damage is calculated against the original attacker's stats and affinities. 
             // We pass false for isCritical because reflected hits cannot crit the attacker.
             return CalculateDamage(originalAttacker, originalAttacker, skillPower, element, out _);
         }
 
-        /// <summary>
-        /// Calculates the probability of a physical critical hit based on Luck.
-        /// </summary>
+        // Calculates the probability of a physical critical hit based on Luck.
         public static int CalculateCritChance(Combatant attacker, Combatant target)
         {
             int attackerLuck = attacker.GetStat(StatType.Lu);

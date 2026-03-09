@@ -5,8 +5,8 @@ using System.Text.RegularExpressions;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
-using JRPGPrototype.Logic.Battle;           // For CombatMath
-using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
+using JRPGPrototype.Logic.Battle; // For CombatMath
+using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger
 
 namespace JRPGPrototype.Logic.Battle.Engines
 {
@@ -20,11 +20,59 @@ namespace JRPGPrototype.Logic.Battle.Engines
         private readonly Random _rnd = new Random();
         private IBattleMessenger? _messenger;
 
-
         // Allows the conductor to inject the shared communication mediator.
         public void SetMessenger(IBattleMessenger messenger)
         {
             _messenger = messenger;
+        }
+
+        /// <summary>
+        /// Centralized "Effectiveness Gate" logic.
+        /// Returns true if the action would result in zero change to the targets.
+        /// </summary>
+        public bool IsActionRedundant(Combatant actor, SkillData skill, List<Combatant> targets)
+        {
+            if (skill == null) return false;
+
+            string effect = skill.Effect.ToLower();
+            string category = skill.Category.ToLower();
+
+            // 1. Ailment Redundancy
+            // Search if we are trying to inflict an ailment the target already has
+            foreach (var ailment in Database.Ailments.Values)
+            {
+                if (effect.Contains(ailment.Name.ToLower()))
+                {
+                    // If ALL targets already have this specific ailment, it's redundant.
+                    if (targets.All(t => t.CurrentAilment?.Name == ailment.Name))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Recovery Redundancy (HP/SP)
+            if (category.Contains("recovery") && !effect.Contains("revive") && !effect.Contains("cure"))
+            {
+                bool isSpHeal = effect.Contains("sp") || effect.Contains("spirit");
+                if (isSpHeal)
+                {
+                    if (targets.All(t => t.CurrentSP >= t.MaxSP)) return true;
+                }
+                else
+                {
+                    if (targets.All(t => t.CurrentHP >= t.MaxHP)) return true;
+                }
+            }
+
+            // 3. Cure Redundancy
+            if (effect.Contains("cure") || effect.Contains("dispel") || effect.Contains("patra"))
+            {
+                // Redundant if none of the targets have an ailment to remove
+                if (targets.All(t => t.CurrentAilment == null)) return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -40,8 +88,6 @@ namespace JRPGPrototype.Logic.Battle.Engines
             var targetPassives = target.GetConsolidatedSkills();
             if (targetPassives.Contains("Unshaken Will"))
             {
-                // In a full implementation, we'd check if the ailment is mental. 
-                // For now, assuming Unshaken Will blocks most status effects as a safeguard.
                 return false;
             }
 
@@ -57,9 +103,13 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
             if (ailmentToApply == null) return false;
 
+            // FIX: Match the pattern "(XX% chance)" as seen in skills_database.json
             int baseChance = 100;
-            Match match = Regex.Match(skillEffect, @"\((\d+)\)%");
-            if (match.Success) baseChance = int.Parse(match.Groups[1].Value);
+            Match match = Regex.Match(skillEffect, @"\((\d+)%");
+            if (match.Success)
+            {
+                baseChance = int.Parse(match.Groups[1].Value);
+            }
 
             int finalChance = baseChance + (attacker.GetStat(StatType.Lu) - target.GetStat(StatType.Lu));
 
@@ -84,10 +134,14 @@ namespace JRPGPrototype.Logic.Battle.Engines
         {
             if (target.CurrentAilment == null) return false;
 
-            bool curesAll = skillEffect.Contains("Cure all", StringComparison.OrdinalIgnoreCase) ||
-                            skillEffect.Contains("Cures all", StringComparison.OrdinalIgnoreCase);
+            string effectLower = skillEffect.ToLower();
+            bool curesAll = effectLower.Contains("cure all") ||
+                           effectLower.Contains("cures all") ||
+                           effectLower.Contains("amrita") ||
+                           effectLower.Contains("salvation");
 
-            if (curesAll || skillEffect.Contains(target.CurrentAilment.Name, StringComparison.OrdinalIgnoreCase))
+            if (curesAll || effectLower.Contains(target.CurrentAilment.Name.ToLower()) ||
+                effectLower.Contains("dispel") || effectLower.Contains("dispels"))
             {
                 target.RemoveAilment();
                 return true;
@@ -181,7 +235,6 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// </summary>
         public void ProcessTurnEnd(Combatant actor)
         {
-
             // --- PASSIVE TRIGGER: Turn-End Restoration ---
             var skills = actor.GetConsolidatedSkills();
 
@@ -233,6 +286,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 if (damage < 1) damage = 1;
 
                 actor.CurrentHP -= damage;
+
                 // Poison cannot kill a combatant, it leaves them at 1 HP.
                 // if (actor.CurrentHP < 1) actor.CurrentHP = 1;
                 // I decided to make Poison Lethal by commenting it out, I can always add it back by Uncommenting if needed.
