@@ -45,10 +45,20 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 if (target.IsDead) continue;
 
                 // 1. Logic: Accuracy Gate
-                // Extract accuracy percentage from metadata (e.g. "Agilao (90%)") or default to 95%
+                // FIX: Refined Regex to ensure we don't grab "XX% chance" as accuracy.
+                // We look for a percentage that is NOT followed by the word "chance".
                 string accStr = "95%"; // Default
-                Match accMatch = Regex.Match(actionEffect, @"(\d+)%");
-                if (accMatch.Success) accStr = accMatch.Value;
+                MatchCollection matches = Regex.Matches(actionEffect, @"(\d+)%");
+                foreach (Match m in matches)
+                {
+                    // Check the text immediately following the match
+                    string remainder = actionEffect.Substring(m.Index + m.Length).Trim().ToLower();
+                    if (!remainder.StartsWith("chance"))
+                    {
+                        accStr = m.Value;
+                        break;
+                    }
+                }
 
                 if (!CombatMath.CheckHit(user, target, _element, accStr))
                 {
@@ -134,43 +144,43 @@ namespace JRPGPrototype.Logic.Battle.Effects
                     // 6. Knowledge: Record the discovery for the Player's UI/AI memory
                     knowledge.Learn(target.SourceId, _element, aff);
 
-                // 7. UI: Report the result (Damage, Weakness, Block, etc.)
+                    // 7. UI: Report the result (Damage, Weakness, Block, etc.)
                     ReportDamageResult(result, target.Name, messenger);
                 }
 
-                // 6. Secondary Ailment Infliction
+                // 8. Secondary Ailment Infliction
+                // Only attempt if the hit wasn't blocked/absorbed/repelled
                 if (result.Type != HitType.Null && result.Type != HitType.Absorb && result.Type != HitType.Repel)
                 {
                     // Execute the infliction check (it handles its own UI publishing if successful)
                     _ = status.TryInflict(user, target, actionEffect);
+                }
 
-
-                    // --- 7. VAMPIRIC RESTORATION LOGIC ---
-                    if ((drainsHP || drainsSP) && result.DamageDealt > 0)
+                // --- 9. VAMPIRIC RESTORATION LOGIC ---
+                if ((drainsHP || drainsSP) && result.DamageDealt > 0)
+                {
+                    if (drainsHP)
                     {
-                        if (drainsHP)
-                        {
-                            int oldHP = user.CurrentHP;
-                            user.CurrentHP = Math.Min(user.MaxHP, user.CurrentHP + result.DamageDealt);
-                            int recovered = user.CurrentHP - oldHP;
-                            if (recovered > 0) messenger.Publish($"{user.Name} drained {recovered} HP!", ConsoleColor.Green);
-                        }
+                        int oldHP = user.CurrentHP;
+                        user.CurrentHP = Math.Min(user.MaxHP, user.CurrentHP + result.DamageDealt);
+                        int recovered = user.CurrentHP - oldHP;
+                        if (recovered > 0) messenger.Publish($"{user.Name} drained {recovered} HP!", ConsoleColor.Green);
+                    }
 
-                        if (drainsSP)
-                        {
-                            int oldSP = user.CurrentSP;
-                            // Note: Kyuketsu yields 1:1 SP based on HP damage dealt.
-                            user.CurrentSP = Math.Min(user.MaxSP, user.CurrentSP + result.DamageDealt);
-                            int recovered = user.CurrentSP - oldSP;
-                            if (recovered > 0) messenger.Publish($"{user.Name} drained {recovered} SP!", ConsoleColor.Cyan);
-                        }
+                    if (drainsSP)
+                    {
+                        int oldSP = user.CurrentSP;
+                        // Note: Kyuketsu yields 1:1 SP based on HP damage dealt.
+                        user.CurrentSP = Math.Min(user.MaxSP, user.CurrentSP + result.DamageDealt);
+                        int recovered = user.CurrentSP - oldSP;
+                        if (recovered > 0) messenger.Publish($"{user.Name} drained {recovered} SP!", ConsoleColor.Cyan);
                     }
                 }
 
                 results.Add(result);
             }
 
-            // 9. ENGINE LOGIC: Centralized Charge Management
+            // 10. ENGINE LOGIC: Centralized Charge Management
             // Charges are cleared regardless of hit/miss once an offensive action finishes executing.
             // Placed outside the loop so AoE attacks properly benefit all targets before consumption.
             if (isPhysical) user.IsCharged = false;
@@ -185,8 +195,17 @@ namespace JRPGPrototype.Logic.Battle.Effects
             if (result.DamageDealt > 0)
             {
                 string msg = $"{targetName} took {result.DamageDealt} damage";
-                if (result.IsCritical) msg += " (CRITICAL)";
-                if (result.Type == HitType.Weakness) msg += " (WEAKNESS)";
+
+                // Prioritize the Message already in the result (like TECHNICAL!)
+                if (!string.IsNullOrEmpty(result.Message))
+                {
+                    msg += $" ({result.Message})";
+                }
+                else
+                {
+                    if (result.IsCritical) msg += " (CRITICAL)";
+                    if (result.Type == HitType.Weakness) msg += " (WEAKNESS)";
+                }
 
                 messenger.Publish(msg);
             }

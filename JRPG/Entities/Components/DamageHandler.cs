@@ -29,7 +29,7 @@ namespace JRPGPrototype.Entities.Components
             Affinity aff = target.ActivePersona?.GetAffinity(element) ?? Affinity.Normal;
             var result = new CombatResult();
 
-            // Check if the current element is Physical for Technical logic
+            // Check if the current element is Physical for Technical/Critical logic
             bool isPhysical = (element == Element.Slash || element == Element.Strike || element == Element.Pierce);
 
             // 2. Guarding State Logic
@@ -63,7 +63,10 @@ namespace JRPGPrototype.Entities.Components
             if (target.CurrentAilment != null && isPhysical)
             {
                 string ailmentName = target.CurrentAilment.Name;
-                if (ailmentName == "Bind" || ailmentName == "Stun")
+
+                // FIX: Use case-insensitive comparison to ensure Technical procs correctly regardless of JSON casing.
+                if (ailmentName.Equals("Bind", StringComparison.OrdinalIgnoreCase) ||
+                    ailmentName.Equals("Stun", StringComparison.OrdinalIgnoreCase))
                 {
                     damage = (int)(damage * 1.5);
                     result.Message = "TECHNICAL!";
@@ -111,6 +114,7 @@ namespace JRPGPrototype.Entities.Components
                 default: // Affinity.Normal
                     result.Type = HitType.Normal;
                     result.DamageDealt = damage;
+                    // Only set "CRITICAL HIT!" if a higher priority message (like TECHNICAL!) isn't already set.
                     if (result.IsCritical && string.IsNullOrEmpty(result.Message))
                     {
                         result.Message = "CRITICAL HIT!";
@@ -133,9 +137,13 @@ namespace JRPGPrototype.Entities.Components
 
                     // Append feedback to the message so the player knows why the state changed
                     if (string.IsNullOrEmpty(result.Message))
+                    {
                         result.Message = $"{target.Name} recovered from {oldAilment}!";
+                    }
                     else
+                    {
                         result.Message += $" {target.Name} woke up!";
+                    }
                 }
             }
 
