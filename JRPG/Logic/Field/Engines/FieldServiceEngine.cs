@@ -33,6 +33,9 @@ namespace JRPGPrototype.Logic.Field.Engines
         private readonly ShopEngine _shopEngine;
         private readonly ShopUIBridge _shopUI;
 
+        // Logic Components
+        private readonly StatusRegistry _statusRegistry;
+
         public FieldServiceEngine(
             IFieldMessenger messenger,
             IGameIO io,
@@ -51,6 +54,9 @@ namespace JRPGPrototype.Logic.Field.Engines
             // Initialize Shop Components
             _shopEngine = new ShopEngine(_inventory, _economy, _messenger);
             _shopUI = new ShopUIBridge(_io, _messenger, _shopEngine, _economy, _inventory);
+
+            // Initialize Logic Components
+            _statusRegistry = new StatusRegistry();
         }
 
         #region Shop and Equipment
@@ -317,39 +323,51 @@ namespace JRPGPrototype.Logic.Field.Engines
                 return false;
             }
 
-            bool applied = false;
-            StatusRegistry sr = new StatusRegistry();
-
-            // Field-usable skills are restricted to Recovery and Cure
-            if (skill.Category.Contains("Recovery") || skill.Effect.Contains("Cure"))
+            // --- EFFECTIVENESS GATE ---
+            // If the action is redundant (e.g. curing a healthy person or healing a full HP person), block execution.
+            if (_statusRegistry.IsActionRedundant(user, skill, new List<Combatant> { target }))
             {
-                if (skill.Effect.Contains("Cure"))
+                _messenger.Publish("This action would have no effect.");
+                return false;
+            }
+
+            bool applied = false;
+            string effectLower = skill.Effect.ToLower();
+
+            // Decoupled Logic: Priority is Ailment Removal
+            if (effectLower.Contains("cure") || effectLower.Contains("dispel") || effectLower.Contains("patra"))
+            {
+                applied = _statusRegistry.CheckAndExecuteCure(target, skill.Effect);
+            }
+
+            // Secondary Logic: Recovery (Only if it wasn't a dedicated Cure that already finished)
+            if (!applied && skill.Category.Contains("Recovery"))
+            {
+                int heal = 0;
+                // Parse the power from the skill effect string if numerical
+                Match m = Regex.Match(skill.Effect, @"\((\d+)\)");
+                if (m.Success) heal = int.Parse(m.Groups[1].Value);
+
+                // Handle percentage-based field heals
+                if (skill.Effect.Contains("50%")) heal = target.MaxHP / 2;
+                if (skill.Effect.Contains("full")) heal = target.MaxHP;
+
+                // Apply standard power if neither percentage nor specific value found
+                if (heal == 0) heal = skill.GetPowerVal();
+
+                if (target.CurrentHP < target.MaxHP)
                 {
-                    applied = sr.CheckAndExecuteCure(target, skill.Effect);
+                    target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + heal);
+                    _messenger.Publish($"{target.Name} was healed.");
+                    applied = true;
                 }
-                else
+                else if (effectLower.Contains("sp") || effectLower.Contains("spirit"))
                 {
-                    int heal = 0;
-                    // Parse the power from the skill effect string if numerical
-                    Match m = Regex.Match(skill.Effect, @"\((\d+)\)");
-                    if (m.Success) heal = int.Parse(m.Groups[1].Value);
-
-                    // Handle percentage-based field heals
-                    if (skill.Effect.Contains("50%")) heal = target.MaxHP / 2;
-                    if (skill.Effect.Contains("full")) heal = target.MaxHP;
-
-                    // Apply standard power if neither percentage nor specific value found
-                    if (heal == 0) heal = skill.GetPowerVal();
-
-                    if (target.CurrentHP < target.MaxHP)
+                    if (target.CurrentSP < target.MaxSP)
                     {
-                        target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + heal);
-                        _messenger.Publish($"{target.Name} was healed.");
+                        target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + heal);
+                        _messenger.Publish($"{target.Name}'s SP was restored.");
                         applied = true;
-                    }
-                    else
-                    {
-                        _messenger.Publish($"{target.Name} is already at full health.");
                     }
                 }
             }
@@ -359,6 +377,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                 user.CurrentSP -= cost.value;
                 _messenger.Publish(null, ConsoleColor.Gray, 800);
             }
+
             return applied;
         }
 

@@ -322,9 +322,7 @@ namespace JRPGPrototype.Logic.Battle
             return baseAff;
         }
 
-        /// <summary>
-        /// SMT III Initiative Roll: Weighted Agility variance.
-        /// </summary>
+        // Initiative Roll: Weighted Agility variance.
         public static bool RollInitiative(double playerAvgAg, double enemyAvgAg)
         {
             // Rolls are 90%-110% of average agility

@@ -24,6 +24,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
         private readonly List<Combatant> _enemies;
         private readonly PressTurnEngine _turnEngine;
         private readonly BattleKnowledge _knowledge;
+        private readonly StatusRegistry _statusRegistry;
 
         private static int _mainMenuIndex = 0;
         private static int _skillMenuIndex = 0;
@@ -37,6 +38,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             _enemies = enemies;
             _turnEngine = turnEngine;
             _knowledge = knowledge;
+            _statusRegistry = new StatusRegistry(); // Initialized to provide redundancy checks
         }
 
         // Public access for the Conductor to force a HUD update during AI/DOT sequences.
@@ -81,13 +83,13 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             bool isPanicked = actor.CurrentAilment != null && actor.CurrentAilment.Name == "Panic";
             bool isBound = actor.CurrentAilment != null && actor.CurrentAilment.ActionRestriction == "LimitedAction";
 
-
             List<bool> disabledStates = new List<bool>();
 
             foreach (var opt in options)
             {
                 bool isDisabled = false;
-                if (isPanicked && (opt == "Persona" || opt == "Skill" || opt == "Command" || opt == "COMP" || opt == "Item" || opt == "Talk"))
+                if (isPanicked && (opt == "Persona" || opt == "Skill" || opt == "Command"
+                || opt == "COMP" || opt == "Item" || opt == "Talk"))
                 {
                     isDisabled = true;
                 }
@@ -130,20 +132,20 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 bool isBuff = nameLower.EndsWith("kaja") || nameLower == "heat riser";
 
                 targetsAllies = skill.Category.Contains("Recovery") ||
-                                isBuff ||
-                                effect.Contains("ally") ||
-                                effect.Contains("allies") ||
-                                effect.Contains("party");
+                isBuff ||
+                effect.Contains("ally") ||
+                effect.Contains("allies") ||
+                effect.Contains("party");
 
                 // Debuff logic overrides all: always target opponents
                 if (isDebuff) targetsAllies = false;
 
                 targetsAll = nameLower.StartsWith("ma") ||
-                             nameLower.StartsWith("me") ||
-                             effect.Contains("all foes") ||
-                             effect.Contains("all allies") ||
-                             effect.Contains("party") ||
-                             nameLower == "debilitate";
+                nameLower.StartsWith("me") ||
+                effect.Contains("all foes") ||
+                effect.Contains("all allies") ||
+                effect.Contains("party") ||
+                nameLower == "debilitate";
                 element = ElementHelper.FromCategory(skill.Category);
             }
             else if (item != null)
@@ -159,9 +161,19 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             var selectionPool = targetsAllies
                 ? (item?.Type == "Revive" || (skill != null && skill.Effect.Contains("Revive")) ? _party.ActiveParty : _party.GetAliveMembers())
-                : _enemies.Where(e => !e.IsDead).ToList();
+            : _enemies.Where(e => !e.IsDead).ToList();
 
-            if (targetsAll) return selectionPool;
+            if (targetsAll)
+            {
+                // EFFECTIVENESS GATE (Multi-Target)
+                if (skill != null && _statusRegistry.IsActionRedundant(actor, skill, selectionPool))
+                {
+                    _io.WriteLine("This action would have no effect on any targets.", ConsoleColor.Yellow);
+                    _io.Wait(1200);
+                    return null;
+                }
+                return selectionPool;
+            }
 
             List<string> targetLabels = new List<string>();
             foreach (var t in selectionPool)
@@ -179,7 +191,17 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             int choice = _io.RenderMenu($"{context}\nSelect Target:", targetLabels, 0);
             if (choice == -1 || choice == targetLabels.Count - 1) return null;
 
-            return new List<Combatant> { selectionPool[choice] };
+            Combatant selectedTarget = selectionPool[choice];
+
+            // EFFECTIVENESS GATE (Single-Target)
+            if (skill != null && _statusRegistry.IsActionRedundant(actor, skill, new List<Combatant> { selectedTarget }))
+            {
+                _io.WriteLine($"{selectedTarget.Name} is already afflicted with {selectedTarget.CurrentAilment}", ConsoleColor.Yellow);
+                _io.Wait(1200);
+                return null; // Return null to go back to previous menu and preserve turn icons
+            }
+
+            return new List<Combatant> { selectedTarget };
         }
 
         public string GetTacticsChoice(bool isBossBattle, bool isOperator)
@@ -250,8 +272,13 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         public ItemData SelectItem(Combatant actor)
         {
-            var ownedItems = Database.Items.Values.Where(i => _inv.GetQuantity(i.Id) > 0).ToList();
-            if (!ownedItems.Any()) { _io.WriteLine("Inventory is empty."); _io.Wait(800); return null; }
+            var ownedItems = Database.Items.Values.Where(i => _inv.GetQuantity(i.Id) >
+            0).ToList();
+            if (!ownedItems.Any())
+            {
+                _io.WriteLine("Inventory is empty."); _io.Wait(800);
+                return null;
+            }
 
             List<string> labels = new List<string>();
             List<bool> disabled = new List<bool>();
@@ -293,34 +320,39 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 var names = summonableDemons.Select(d => $"{d.Name} (Lv.{d.Level})").ToList();
                 names.Add("Back");
 
-                // Disable dead demons in the selection list.
+                    // Disable dead demons in the selection list.
                 List<bool> disabledSummons = summonableDemons.Select(d => d.IsDead).ToList();
-                disabledSummons.Add(false); // Back button always enabled
+                    disabledSummons.Add(false); // Back button always enabled
 
-                int sub = _io.RenderMenu("Summon Demon:", names, 0, disabledSummons);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null);
-                return ("Summon", summonableDemons[sub]);
-            }
+                    int sub = _io.RenderMenu("Summon Demon:", names, 0, disabledSummons);
+                    if (sub == -1 || sub == names.Count - 1) return ("None", null);
+                    return ("Summon", summonableDemons[sub]);
+                }
 
-            if (choice == 1) // Return
-            {
-                var activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
-                if (!activeDemons.Any()) { _io.WriteLine("No active demons to return."); _io.Wait(800); return ("None", null); }
-                var names = activeDemons.Select(d => d.Name).ToList();
-                names.Add("Back");
-                int sub = _io.RenderMenu("Return Demon:", names, 0);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null);
-                return ("Return", activeDemons[sub]);
-            }
+                if (choice == 1) // Return
+                {
+                    var activeDemons = _party.ActiveParty.Where(c => c.Class ==
+                    ClassType.Demon).ToList();
+                    if (!activeDemons.Any())
+                    {
+                        _io.WriteLine("No active demons to return.");
+                        _io.Wait(800); return ("None", null);
+                    }
+                    var names = activeDemons.Select(d => d.Name).ToList();
+                    names.Add("Back");
+                    int sub = _io.RenderMenu("Return Demon:", names, 0);
+                    if (sub == -1 || sub == names.Count - 1) return ("None", null);
+                    return ("Return", activeDemons[sub]);
+                }
 
-            if (choice == 2) // Analyze
-            {
-                var targetList = SelectTarget(actor);
-                if (targetList == null) return ("None", null);
-                return ("Analyze", targetList[0]);
+                if (choice == 2) // Analyze
+                {
+                    var targetList = SelectTarget(actor);
+                    if (targetList == null) return ("None", null);
+                    return ("Analyze", targetList[0]);
+                }
+                return ("None", null);
             }
-            return ("None", null);
-        }
 
         public string GetBattleContext(Combatant actor)
         {
