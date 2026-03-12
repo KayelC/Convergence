@@ -37,6 +37,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
             int blinkingIcons)
         {
             // --- Step 1: Ailment Hijack Logic (Highest Priority) ---
+            // We check the registry to see if the actor's turn is being dictated by an ailment.
             TurnStartResult turnState = _statusRegistry.ProcessTurnStart(actor);
 
             if (turnState == TurnStartResult.ForcedPhysical)
@@ -64,6 +65,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
             actionPool.Add(null);
 
             // Perform the "Effectiveness Gate" check to prune redundant moves.
+            // Uses the centralized logic from StatusRegistry to prevent turn wastage.
             var validSkills = actionPool.Where(s =>
             {
                 if (s == null) return true;
@@ -96,6 +98,8 @@ namespace JRPGPrototype.Logic.Battle.Engines
             }
 
             // TIER 2: PRESS TURN & RIGID EXPLOITATION
+            // Hunt for known weaknesses OR Rigid targets (Frozen/Shocked/Bound/Stunned) 
+            // to gain extra actions and deal massive damage.
             foreach (var skill in validSkills)
             {
                 if (IsOffensive(skill))
@@ -158,6 +162,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
             }
 
             // TIER 6: STANDARD PRESSURE
+            // Use highest power offensive skill that isn't a known risk.
             var offensiveOptions = validSkills.Where(s => IsOffensive(s))
                 .OrderByDescending(s => s?.GetPowerVal() ?? 15).ToList();
 
@@ -230,12 +235,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 targets.Add(primaryTarget ?? opponents[_rnd.Next(opponents.Count)]);
                 return targets;
             }
-            // Determine side and target type
-            bool targetsAllies = false;
-            bool isMulti = false;
 
-            if (skill != null)
-            {
             string nameLower = skill.Name.ToLower();
             string effectLower = skill.Effect.ToLower();
 
@@ -246,29 +246,28 @@ namespace JRPGPrototype.Logic.Battle.Engines
             }
 
             // --- REFINED MULTI-TARGET LOGIC ---
-                // Checks for Maha (Ma-) or Media (Me-) prefixes, or explicit group keywords.
-                // Avoids the "Heal 1 ally" greedy bug by checking for "all allies" or "party".
-                isMulti = nameLower.StartsWith("ma") ||
+            // Checks for Maha (Ma-) or Media (Me-) prefixes, or explicit group keywords.
+            // Avoids the "Heal 1 ally" greedy bug by checking for "all allies" or "party".
+            bool isMulti = nameLower.StartsWith("ma") ||
                            nameLower.StartsWith("me") ||
                            effectLower.Contains("all foes") ||
                            effectLower.Contains("all allies") ||
                            effectLower.Contains("party") ||
-                               nameLower == "debilitate"; // Debilitate is always Multi-Target
+                           nameLower == "debilitate"; // Debilitate is always Multi Target
 
             // --- REFINED SIDE IDENTIFICATION ---
-                // Buffs (kaja/Heat Riser) -> Allies. Debuffs (nda/Debilitate) -> Opponents.
-                bool isBuff = nameLower.EndsWith("kaja") || nameLower == "heat riser";
+            // Buffs (kaja/Heat Riser) -> Allies. Debuffs (nda/Debilitate) -> Opponents.
+            bool isBuff = nameLower.EndsWith("kaja") || nameLower == "heat riser";
             bool isDebuff = nameLower.EndsWith("nda") || nameLower == "debilitate";
 
-                // Identify which side the skill is intended for
-                targetsAllies = skill.Category.Contains("Recovery") ||
+            // Identify which side the skill is intended for
+            bool targetsAllies = skill.Category.Contains("Recovery") ||
                                  isBuff ||
                                  effectLower.Contains("ally") ||
                                  effectLower.Contains("party");
 
-                // If it's explicitly a debuff, ensure it targets opponents regardless of category.
+            // If it's explicitly a debuff, ensure it targets opponents regardless of category.
             if (isDebuff) targetsAllies = false;
-            }
 
             var side = targetsAllies ? allies : opponents;
 
@@ -278,15 +277,16 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 targets.AddRange(side.Where(s => skill.Effect.Contains("Revive") ? s.IsDead : !s.IsDead));
                 return targets;
             }
-            else
-            {
-                // Single-target skills: use the tactically chosen target or random from side
-                targets.Add(primaryTarget ?? side[_rnd.Next(side.Count)]);
-            }
 
-            // AI: Smart Targeting
-            if (!targetsAllies)
+            // --- SINGLE TARGET LOGIC ---
+            // Fixed the "Double Damage" bug by ensuring only one target is added.
+            if (primaryTarget != null)
             {
+                targets.Add(primaryTarget);
+            }
+            else if (!targetsAllies)
+            {
+                // AI: Smart Targeting
                 // 1. Rigid Exploitation: Prioritize Rigid targets for Physical hits
                 if (IsPhysical(skill))
                 {
