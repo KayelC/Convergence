@@ -1325,8 +1325,8 @@
             "Critical": "-",
             "Cost": "6 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_IK",
+            "Rank": "1"
         },
         {
             "Skill": "Mahama",
@@ -1336,8 +1336,8 @@
             "Critical": "-",
             "Cost": "12 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_IK",
+            "Rank": "2"
         },
         {
             "Skill": "Hamaon",
@@ -1347,8 +1347,8 @@
             "Critical": "-",
             "Cost": "12 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_IK",
+            "Rank": "3"
         },
         {
             "Skill": "Mahamaon",
@@ -1358,8 +1358,8 @@
             "Critical": "-",
             "Cost": "24 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_IK",
+            "Rank": "4"
         },
         {
             "Skill": "Samsara",
@@ -1391,8 +1391,8 @@
             "Critical": "-",
             "Cost": "4 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_ST",
+            "Rank": "1"
         },
         {
             "Skill": "Makouha",
@@ -1402,8 +1402,8 @@
             "Critical": "-",
             "Cost": "10 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_MT",
+            "Rank": "1"
         },
         {
             "Skill": "Kouga",
@@ -1413,8 +1413,8 @@
             "Critical": "-",
             "Cost": "8 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_ST",
+            "Rank": "2"
         },
         {
             "Skill": "Makouga",
@@ -1424,8 +1424,8 @@
             "Critical": "-",
             "Cost": "16 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_MT",
+            "Rank": "2"
         },
         {
             "Skill": "Kougaon",
@@ -1435,8 +1435,8 @@
             "Critical": "-",
             "Cost": "15 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_ST",
+            "Rank": "3"
         },
         {
             "Skill": "Makougaon",
@@ -1446,8 +1446,8 @@
             "Critical": "-",
             "Cost": "25 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_MT",
+            "Rank": "3"
         },
         {
             "Skill": "Radiance",
@@ -1479,8 +1479,8 @@
             "Critical": "-",
             "Cost": "38 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Half",
+            "Rank": "1"
         },
         {
             "Skill": "Holy Wrath",
@@ -1490,8 +1490,8 @@
             "Critical": "-",
             "Cost": "46 SP",
             "Category": "Light Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Half",
+            "Rank": "2"
         }
     ],
     "Navigator Skills": [
