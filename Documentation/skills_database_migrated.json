@@ -3487,8 +3487,8 @@
             "Critical": "5%",
             "Cost": "8% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "1"
         },
         {
             "Skill": "Venom Bite",
@@ -3509,8 +3509,8 @@
             "Critical": "24%",
             "Cost": "18% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Charm",
+            "Rank": "1"
         },
         {
             "Skill": "Double Fangs",
@@ -3520,8 +3520,8 @@
             "Critical": "1%",
             "Cost": "9% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "3"
         },
         {
             "Skill": "Feral Claw",
@@ -3531,19 +3531,19 @@
             "Critical": "1%",
             "Cost": "6% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "2"
         },
         {
             "Skill": "Holy Arrow",
-            "Effect": "Deals light Pierce damage / Charms one foe. (25% chance)",
+            "Effect": "Deals light Pierce damage and chance to Charm 1 foe. (20% chance)",
             "Power": "60",
             "Accuracy": "92%",
             "Critical": "5%",
             "Cost": "9% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Charm",
+            "Rank": "2"
         },
         {
             "Skill": "Needle Rush",
@@ -3553,8 +3553,8 @@
             "Critical": "24%",
             "Cost": "10% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "4"
         },
         {
             "Skill": "Twin Shot",
@@ -3564,8 +3564,8 @@
             "Critical": "5%",
             "Cost": "10% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "6"
         },
         {
             "Skill": "Torrent Shot",
@@ -3575,8 +3575,8 @@
             "Critical": "5%",
             "Cost": "10% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "5"
         },
         {
             "Skill": "Stun Needle",
@@ -3613,14 +3613,14 @@
         },
         {
             "Skill": "Cruel Attack",
-            "Effect": "Deals medium Pierce damage to one foe. (2x to Downed foes)",
+            "Effect": "Deals medium Pierce damage to one foe.",
             "Power": "225",
             "Accuracy": "99%",
             "Critical": "1%",
             "Cost": "10% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "7"
         },
         {
             "Skill": "Poison Arrow",
@@ -3635,14 +3635,14 @@
         },
         {
             "Skill": "Vile Assault",
-            "Effect": "Deals heavy Pierce damage to one foe. (2x to Downed foes)",
+            "Effect": "Deals heavy Pierce damage to one foe.",
             "Power": "295",
             "Accuracy": "99%",
             "Critical": "1%",
             "Cost": "12% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "8"
         },
         {
             "Skill": "Arrow Rain",
@@ -3652,8 +3652,8 @@
             "Critical": "5%",
             "Cost": "19% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_MT",
+            "Rank": "2"
         },
         {
             "Skill": "Myriad Arrows",
@@ -3663,8 +3663,8 @@
             "Critical": "5%",
             "Cost": "19% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_MT",
+            "Rank": "1"
         },
         {
             "Skill": "Grand Tack",
@@ -3696,8 +3696,8 @@
             "Critical": "5%",
             "Cost": "21% HP",
             "Category": "Pierce Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_ST",
+            "Rank": "9"
         },
         {
             "Skill": "Pralaya",
