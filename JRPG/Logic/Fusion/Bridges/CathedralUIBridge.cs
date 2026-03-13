@@ -40,7 +40,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             _io.Clear();
             string phaseName = MoonPhaseSystem.GetPhaseName();
             string header = $"=== CATHEDRAL OF SHADOWS === [LUNAR PHASE: {phaseName}]\n" +
-                "\"Welcome to the Cathedral of Shadows where Demons Gather.\"\n";
+                            "\"Welcome to the Cathedral of Shadows where Demons Gather.\"\n";
 
             List<string> options = new List<string> { "Binary Fusion" };
 
@@ -109,10 +109,10 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <summary>
         /// Deterministic Skill Selection.
         /// Allows the player to manually select exactly which skills pass to the child.
-        /// Now "Grays Out" skills that the target already possesses in its base kit.
-        /// Allows confirming 0 skills to avoid soft-locks when all are known.
+        /// "Grays Out" skills that the target already possesses (Already Known) or skills that are parent-locked (Exclusive).
+        /// Allows confirming 0 skills to avoid soft-locks when all are unavailable. 
         /// </summary>
-        public List<string> SelectInheritedSkills(List<string> pool, int maxSlots, List<string> inherentSkills)
+        public List<string>? SelectInheritedSkills(List<string> pool, int maxSlots, List<string> inherentSkills, List<string> exclusivePool)
         {
             List<string> selected = new List<string>();
 
@@ -120,7 +120,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.Clear();
                 string header = $"=== SKILL INHERITANCE ===\nChoose skills to pass down to the new creation.\n" +
-                    $"Selected: {selected.Count} / {maxSlots} slots filled.\n";
+                                $"Selected: {selected.Count} / {maxSlots} slots filled.\n";
 
                 List<string> labels = new List<string>();
                 List<bool> disabledList = new List<bool>();
@@ -128,21 +128,26 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                 foreach (var skillName in pool)
                 {
                     bool isPicked = selected.Contains(skillName);
-                    bool isAlreadyKnown = inherentSkills.Contains(skillName); // NEW Check
+                    bool isAlreadyKnown = inherentSkills.Contains(skillName, StringComparer.OrdinalIgnoreCase);
+                    bool isExclusive = exclusivePool.Contains(skillName, StringComparer.OrdinalIgnoreCase);
 
-                    // Visual Feedback: Show [-] and a tag for duplicate skills
-                    string prefix = isPicked ? "[X]" : (isAlreadyKnown ? "[-]" : "[ ]");
+                    // Visual Feedback: Show [-] for disabled items
+                    string prefix = isPicked ? "[X]" : ((isAlreadyKnown || isExclusive) ? "[-]" : "[ ]");
                     string label = $"{prefix} {skillName}";
 
                     if (isAlreadyKnown)
                     {
                         label += " (Already Known)";
                     }
+                    else if (isExclusive)
+                    {
+                        label += " (Exclusive)";
+                    }
 
                     labels.Add(label);
 
-                    // Disable if already picked OR if it's already in the base kit
-                    disabledList.Add(isPicked || isAlreadyKnown);
+                    // Disable if already picked, already known by child, or exclusive to parent
+                    disabledList.Add(isPicked || isAlreadyKnown || isExclusive);
                 }
 
                 // Always provide both options separately to allow Zero-Inheritance paths

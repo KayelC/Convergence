@@ -198,17 +198,20 @@ namespace JRPGPrototype.Logic.Fusion
                     // 3. Combine both for the UI display
                     var displayPool = pickablePool.Union(exclusivePool).ToList();
 
-                    // 4. Combine "Inherent" and "Exclusive" for the UI's gray-out list
-                    var unavailablePool = inherentSkills.Union(exclusivePool).ToList();
-
+                    // 4. Calculate total slots available based on pickable skills
                     int maxSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray()) + (isSacrificial ? 2 : 0);
 
-                    // Pass the combined pools to the UI
-                    List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(displayPool, Math.Min(8, maxSlots), unavailablePool);
+                    // 5. Pass display list and both restricted lists to the Bridge for labeling
+                    List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(
+                        displayPool,
+                        Math.Min(8, maxSlots),
+                        inherentSkills, // Will be labeled "Already Known"
+                        exclusivePool   // Will be labeled "Exclusive"
+                    );
 
                     if (chosenSkills == null) break;
 
-                    // 5. Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
+                    // 6. Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
                     Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
