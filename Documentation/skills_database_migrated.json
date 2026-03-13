@@ -4096,8 +4096,8 @@
             "Critical": "25%",
             "Cost": "6% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "2"
         },
         {
             "Skill": "Stun Claw",
@@ -4129,8 +4129,8 @@
             "Critical": "10%",
             "Cost": "7% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "1"
         },
         {
             "Skill": "Power Slash",
@@ -4140,8 +4140,8 @@
             "Critical": "5%",
             "Cost": "10% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "3"
         },
         {
             "Skill": "Hassou Tobi",
@@ -4206,8 +4206,8 @@
             "Critical": "45%",
             "Cost": "15% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "4"
         },
         {
             "Skill": "Hell Fang",
@@ -4217,8 +4217,8 @@
             "Critical": "45%",
             "Cost": "15% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "5"
         },
         {
             "Skill": "Slithering Slash",
@@ -4228,8 +4228,8 @@
             "Critical": "30%",
             "Cost": "25% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "1"
         },
         {
             "Skill": "Mighty Swing",
@@ -4239,8 +4239,8 @@
             "Critical": "5%",
             "Cost": "10% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "6"
         },
         {
             "Skill": "Fatal End",
@@ -4250,8 +4250,8 @@
             "Critical": "10%",
             "Cost": "13% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_ST",
+            "Rank": "7"
         },
         {
             "Skill": "Blade of Fury",
@@ -4261,8 +4261,8 @@
             "Critical": "5%",
             "Cost": "16% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "2"
         },
         {
             "Skill": "Deathbound",
@@ -4272,8 +4272,8 @@
             "Critical": "20%",
             "Cost": "19% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "3"
         },
         {
             "Skill": "Tempest Slash",
@@ -4283,8 +4283,8 @@
             "Critical": "10%",
             "Cost": "13% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "4"
         },
         {
             "Skill": "Guillotine",
@@ -4316,8 +4316,8 @@
             "Critical": "30%",
             "Cost": "25% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "5"
         },
         {
             "Skill": "Heaven's Blade",
@@ -4371,8 +4371,8 @@
             "Critical": "5%",
             "Cost": "21% HP",
             "Category": "Slash Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_MT",
+            "Rank": "6"
         }
     ],
     "Special Skills": [
