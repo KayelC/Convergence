@@ -1648,8 +1648,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Mana_Max",
+            "Rank": "1"
         },
         {
             "Skill": "Life Gain",
@@ -1659,8 +1659,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Life_Max",
+            "Rank": "1"
         },
         {
             "Skill": "Mana Surge",
@@ -1670,8 +1670,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Mana_Max",
+            "Rank": "2"
         },
         {
             "Skill": "Life Surge",
@@ -1681,8 +1681,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Life_Max",
+            "Rank": "2"
         },
         {
             "Skill": "Attack All",
@@ -1703,8 +1703,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Strike Boost",
@@ -1714,8 +1714,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Pierce Amp",
@@ -1725,8 +1725,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Pierce Boost",
@@ -1736,8 +1736,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Slash Amp",
@@ -1747,8 +1747,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Slash Boost",
@@ -1758,8 +1758,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Multi-Target Boost",
@@ -1769,8 +1769,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Target_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Single-Target Boost",
@@ -1780,8 +1780,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Target_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Magic Ability",
@@ -1802,8 +1802,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Slash Driver",
@@ -1813,8 +1813,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Pierce Driver",
@@ -1824,8 +1824,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Fire Driver",
@@ -1835,8 +1835,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Ice Driver",
@@ -1846,8 +1846,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Elec Driver",
@@ -1857,8 +1857,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Wind Driver",
@@ -1868,8 +1868,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Light Driver",
@@ -1879,8 +1879,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Dark Driver",
@@ -1890,8 +1890,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Passive",
+            "Rank": "3"
         },
         {
             "Skill": "Drain Attack",
@@ -1923,8 +1923,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ailment_Heal",
+            "Rank": "2"
         },
         {
             "Skill": "Fast Heal",
@@ -1934,8 +1934,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ailment_Heal",
+            "Rank": "1"
         },
         {
             "Skill": "Life Aid",
@@ -1956,8 +1956,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Mind_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Resist Curse",
@@ -1967,8 +1967,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Curse_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Resist Nerve",
@@ -1978,8 +1978,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Nerve_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Mind",
@@ -1989,8 +1989,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Mind_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Null Curse",
@@ -2000,8 +2000,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Curse_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Null Nerve",
@@ -2011,8 +2011,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Nerve_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Dodge Slash",
@@ -2022,8 +2022,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Slash",
@@ -2033,8 +2033,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Phys",
@@ -2044,8 +2044,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Phys_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Resist Slash",
@@ -2055,8 +2055,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Slash",
@@ -2066,8 +2066,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Slash",
@@ -2077,8 +2077,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Slash",
@@ -2088,8 +2088,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Slash_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Dodge Strike",
@@ -2099,8 +2099,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Strike",
@@ -2110,8 +2110,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Strike",
@@ -2121,8 +2121,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Strike",
@@ -2132,8 +2132,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Strike",
@@ -2143,8 +2143,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Strike",
@@ -2154,8 +2154,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Strike_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Dodge Pierce",
@@ -2165,8 +2165,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Pierce",
@@ -2176,8 +2176,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Pierce",
@@ -2187,8 +2187,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Pierce",
@@ -2198,8 +2198,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Pierce",
@@ -2209,8 +2209,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Pierce",
@@ -2220,8 +2220,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Pierce_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Repel Phys",
@@ -2231,8 +2231,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Phys_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Absorb Phys",
@@ -2242,8 +2242,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Phys_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Dodge Fire",
@@ -2253,8 +2253,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Fire",
@@ -2264,8 +2264,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Fire",
@@ -2275,8 +2275,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Fire",
@@ -2286,8 +2286,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Fire",
@@ -2297,8 +2297,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Fire",
@@ -2308,8 +2308,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Dodge Ice",
@@ -2319,8 +2319,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Ice",
@@ -2330,8 +2330,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Ice",
@@ -2341,8 +2341,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Ice",
@@ -2352,8 +2352,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Ice",
@@ -2363,8 +2363,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Ice",
@@ -2374,8 +2374,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Dodge Elec",
@@ -2385,8 +2385,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Elec",
@@ -2396,8 +2396,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Elec",
@@ -2407,8 +2407,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Elec",
@@ -2418,8 +2418,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Elec",
@@ -2429,8 +2429,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Elec",
@@ -2440,8 +2440,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Dodge Wind",
@@ -2451,8 +2451,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Evade Wind",
@@ -2462,8 +2462,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Wind",
@@ -2473,8 +2473,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Null Wind",
@@ -2484,8 +2484,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "4"
         },
         {
             "Skill": "Repel Wind",
@@ -2495,8 +2495,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "5"
         },
         {
             "Skill": "Absorb Wind",
@@ -2506,8 +2506,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Affinity",
+            "Rank": "6"
         },
         {
             "Skill": "Survive Light",
@@ -2517,8 +2517,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Survival",
+            "Rank": "1"
         },
         {
             "Skill": "Endure Light",
@@ -2528,19 +2528,19 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Survival",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Light",
-            "Effect": "Halves chance of death via a Light attack.",
+            "Effect": "Resistance to Light attacks.",
             "Power": "-",
             "Accuracy": "-",
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Light",
@@ -2550,8 +2550,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Repel Light",
@@ -2561,8 +2561,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Light_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Survive Dark",
@@ -2572,8 +2572,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Survival",
+            "Rank": "1"
         },
         {
             "Skill": "Endure Dark",
@@ -2583,8 +2583,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Survival",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Dark",
@@ -2594,8 +2594,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Dark",
@@ -2605,8 +2605,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Repel Dark",
@@ -2616,8 +2616,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Dark_Affinity",
+            "Rank": "3"
         },
         {
             "Skill": "Almighty Boost",
@@ -2649,8 +2649,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Fire Amp",
@@ -2660,8 +2660,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Ice Boost",
@@ -2671,8 +2671,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Ice Amp",
@@ -2682,8 +2682,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Ice_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Elec Boost",
@@ -2693,8 +2693,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Elec Amp",
@@ -2704,8 +2704,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Elec_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Wind Boost",
@@ -2715,8 +2715,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Passive",
+            "Rank": "1"
         },
         {
             "Skill": "Wind Amp",
@@ -2726,8 +2726,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Wind_Passive",
+            "Rank": "2"
         },
         {
             "Skill": "Hama Boost",
@@ -2818,8 +2818,30 @@
             "Rank": "-"
         },
         {
-            "Skill": "Ailment Boost",
-            "Effect": "Increases odds of inflicting ailments by 25%. Stacks with other individual ailment booster skills.",
+            "Skill": "Nerve Boost",
+            "Effect": "Increases odds of inflicting Nerve Skills by 25%. Stacks with other individual Nerve booster skills.",
+            "Power": "-",
+            "Accuracy": "-",
+            "Critical": "-",
+            "Cost": "-",
+            "Category": "Passive Skills",
+            "Family": "-",
+            "Rank": "-"
+        },
+        {
+            "Skill": "Mind Boost",
+            "Effect": "Increases odds of inflicting Mind Skills by 25%. Stacks with other individual Mind booster skills.",
+            "Power": "-",
+            "Accuracy": "-",
+            "Critical": "-",
+            "Cost": "-",
+            "Category": "Passive Skills",
+            "Family": "-",
+            "Rank": "-"
+        },
+        {
+            "Skill": "Curse Boost",
+            "Effect": "Increases odds of inflicting Curse Skills by 25%. Stacks with other individual Curse booster skills.",
             "Power": "-",
             "Accuracy": "-",
             "Critical": "-",
@@ -2836,8 +2858,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fear_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Fear",
@@ -2847,8 +2869,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fear_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Panic",
@@ -2858,8 +2880,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Panic_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Panic",
@@ -2869,8 +2891,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Panic_Affniity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Distress",
@@ -2880,8 +2902,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Distress_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Distress",
@@ -2891,8 +2913,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Distress_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Poison",
@@ -2902,8 +2924,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Poison_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Poison",
@@ -2913,8 +2935,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Poison_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Charm",
@@ -2924,8 +2946,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Charm_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Charm",
@@ -2935,8 +2957,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Charm_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Rage",
@@ -2946,8 +2968,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Rage_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Rage",
@@ -2957,8 +2979,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Rage_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Shock",
@@ -2968,8 +2990,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Shock_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Shock",
@@ -2979,8 +3001,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Shock_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Null Freeze",
@@ -2990,8 +3012,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Freeze_Affinity",
+            "Rank": "2"
         },
         {
             "Skill": "Resist Freeze",
@@ -3001,8 +3023,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Freeze_Affinity",
+            "Rank": "1"
         },
         {
             "Skill": "Auto-Tarukaja",
@@ -3210,8 +3232,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Growth",
+            "Rank": "1"
         },
         {
             "Skill": "Growth 2",
@@ -3221,8 +3243,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Growth",
+            "Rank": "2"
         },
         {
             "Skill": "Growth 3",
@@ -3232,8 +3254,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Growth",
+            "Rank": "3"
         },
         {
             "Skill": "Endure",
@@ -3243,8 +3265,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Endure",
+            "Rank": "1"
         },
         {
             "Skill": "Enduring Soul",
@@ -3254,8 +3276,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Endure",
+            "Rank": "2"
         },
         {
             "Skill": "Counter",
@@ -3265,8 +3287,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Counter",
+            "Rank": "1"
         },
         {
             "Skill": "Counterstrike",
@@ -3276,8 +3298,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Counter",
+            "Rank": "2"
         },
         {
             "Skill": "High Counter",
@@ -3287,8 +3309,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Counter",
+            "Rank": "3"
         },
         {
             "Skill": "Retaliate",
@@ -3298,8 +3320,8 @@
             "Critical": "-",
             "Cost": "-",
             "Category": "Passive Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Counter",
+            "Rank": "4"
         },
         {
             "Skill": "Alertness",
@@ -3446,7 +3468,7 @@
         },
         {
             "Skill": "Magic Skill Up",
-            "Effect": "Strengthens all magical attacks, including Almighty, by 25%. Messiah exclusive (Portable only).",
+            "Effect": "Strengthens all magical attacks, including Almighty, by 25%. Messiah exclusive.",
             "Power": "-",
             "Accuracy": "-",
             "Critical": "-",
