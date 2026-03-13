@@ -1123,8 +1123,8 @@
             "Critical": "-",
             "Cost": "3 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_ST",
+            "Rank": "1"
         },
         {
             "Skill": "Maragi",
@@ -1134,8 +1134,8 @@
             "Critical": "-",
             "Cost": "6 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_MT",
+            "Rank": "1"
         },
         {
             "Skill": "Agilao",
@@ -1145,8 +1145,8 @@
             "Critical": "-",
             "Cost": "6 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_ST",
+            "Rank": "2"
         },
         {
             "Skill": "Maragion",
@@ -1156,8 +1156,8 @@
             "Critical": "-",
             "Cost": "12 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_MT",
+            "Rank": "2"
         },
         {
             "Skill": "Agidyne",
@@ -1167,8 +1167,8 @@
             "Critical": "-",
             "Cost": "12 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_ST",
+            "Rank": "3"
         },
         {
             "Skill": "Maragidyne",
@@ -1178,8 +1178,8 @@
             "Critical": "-",
             "Cost": "24 SP",
             "Category": "Fire Skills",
-            "Family": "-",
-            "Rank": "-"
+            "Family": "Fire_MT",
+            "Rank": "3"
         },
         {
             "Skill": "Ragnarok",
