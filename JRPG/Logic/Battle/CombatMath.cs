@@ -244,6 +244,12 @@ namespace JRPGPrototype.Logic.Battle
 
         public static bool CalculateInstantKill(Combatant attacker, Combatant target, string skillAccuracy)
         {
+            // THE CURSE GATE: Bosses with Null Curse bypass the calculation entirely
+            if (GetEffectiveAffinity(target, Element.Curse) == Affinity.Null)
+            {
+                return false;
+            }
+
             int baseAccuracy = 40; // Default for instant kill skills
             if (!string.IsNullOrEmpty(skillAccuracy) && skillAccuracy != "-" && skillAccuracy != "NaN")
             {

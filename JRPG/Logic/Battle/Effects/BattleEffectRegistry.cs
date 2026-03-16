@@ -36,7 +36,13 @@ namespace JRPGPrototype.Logic.Battle.Effects
             _effects["Charge"] = new ChargeEffect();
             _effects["Shield"] = new ShieldEffect();
             _effects["Break"] = new BreakEffect();
+
+
+            // Status Categories
             _effects["Ailment"] = new AilmentEffect();
+            _effects["Mind Skills"] = new AilmentEffect();
+            _effects["Nerve Skills"] = new AilmentEffect();
+            _effects["Curse Skills"] = new AilmentEffect();
 
             // 2. Damage Elements (Mapping Skill 'Category' to specific DamageEffect instances)
             // We pass the Element into the constructor so one class can handle all types.

@@ -8,9 +8,12 @@ using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Dungeon;
+using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Fusion.Messaging;
 using JRPGPrototype.Services;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace JRPGPrototype
 {
@@ -42,6 +45,7 @@ namespace JRPGPrototype
             io.WriteLine("3. Wild Card (Orpheus + Stock)");
             io.WriteLine("4. Operator (Demons + COMP)");
             io.WriteLine("5. DEBUG: Ailment & Technical Test Suite");
+            io.WriteLine("6. MONTE CARLO: Fusion & Curse Gate Stress Test");
 
             var key = io.ReadKey();
             bool jumpToBattle = false; // Flag to skip field menus for debugging
@@ -68,9 +72,6 @@ namespace JRPGPrototype
                 case '4':
                     player.Class = ClassType.Operator;
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("michael", 99));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("alice", 99));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pale_rider", 99));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("messiah", 99));
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
@@ -110,6 +111,10 @@ namespace JRPGPrototype
                     }
                     jumpToBattle = true; // Signal to jump straight to combat
                     break;
+
+                case '6':
+                    RunMonteCarloSimulation(io);
+                    return;
             }
 
             // stat debug :
@@ -215,6 +220,92 @@ namespace JRPGPrototype
             io.Clear();
             io.WriteLine("\n[GAME SESSION ENDED]", ConsoleColor.Red);
             io.WriteLine("Press any key to exit...");
+            io.ReadKey();
+        }
+
+        static void RunMonteCarloSimulation(IGameIO io)
+        {
+            io.Clear();
+            io.WriteLine("=== STARTING MONTE CARLO SIMULATION (10,000 TRIALS) ===", ConsoleColor.Cyan);
+
+            IFusionMessenger messenger = new FusionMessenger();
+            FusionCalculator calculator = new FusionCalculator(io, messenger);
+            Random rnd = new Random();
+
+            int totalTrials = 10000;
+
+            int accidents = 0;
+            int mutationsAttempted = 0;
+            int mutationsSucceeded = 0;
+            int rankUps = 0;
+            int rankDowns = 0;
+            int curseGateTrials = 0;
+            int curseGateSuccesses = 0;
+
+            // Using Angel + Pixie (Valid recipe for Fallen result)
+            //Combatant parentA = CombatantFactory.CreatePlayerDemon("angel", 10);
+            Combatant parentB = CombatantFactory.CreatePlayerDemon("pixie", 10);
+            Combatant parentA = CombatantFactory.CreatePlayerDemon("michael", 10);
+
+            Combatant boss = CombatantFactory.CreateEnemy("E_slime");
+            if (boss.ActivePersona != null)
+                boss.ActivePersona.AffinityMap[Element.Curse] = Affinity.Null;
+
+            io.WriteLine("Running Simulation...");
+
+            for (int i = 0; i < totalTrials; i++)
+            {
+                var result = calculator.CalculateResult(parentA, parentB, 8);
+                if (result.isAccident) accidents++;
+
+                if (result.isAccident)
+                {
+                    var pickable = calculator.GetInheritableSkills(parentA, parentB);
+                    int maxSlots = calculator.GetInheritanceSlotCount(parentA, parentB);
+                    var sample = pickable.Take(maxSlots).ToList();
+
+                    foreach (var skill in sample)
+                    {
+                        mutationsAttempted++;
+                        if (rnd.Next(0, 100) < 20)
+                        {
+                            mutationsSucceeded++;
+                            string mutated = calculator.GetMutatedSkill(skill);
+
+                            Database.Skills.TryGetValue(skill, out var oldData);
+                            Database.Skills.TryGetValue(mutated, out var newData);
+
+                            if (oldData != null && newData != null)
+                            {
+                                // FIX: Use TryParse to handle non-numeric ranks like "-"
+                                if (int.TryParse(oldData.Rank, out int oldR) && int.TryParse(newData.Rank, out int newR))
+                                {
+                                    if (newR > oldR) rankUps++;
+                                    else if (newR < oldR) rankDowns++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                curseGateTrials++;
+                if (CombatMath.CalculateInstantKill(parentA, boss, "100%"))
+                {
+                    curseGateSuccesses++;
+                }
+            }
+
+            io.WriteLine("\n=== SIMULATION RESULTS ===", ConsoleColor.Yellow);
+            io.WriteLine($"Total Trials: {totalTrials}");
+            io.WriteLine($"Accident Rate (Full Moon): {(double)accidents / totalTrials:P2} (Expected ~12%)");
+            io.WriteLine($"Mutation Chance: {(double)mutationsSucceeded / mutationsAttempted:P2} (Expected ~20%)");
+            io.WriteLine($"Mutation Balance: Ups: {rankUps} | Downs: {rankDowns}");
+            io.WriteLine($"Curse Gate Breaches: {curseGateSuccesses} / {curseGateTrials} (Expected: 0)");
+
+            if (curseGateSuccesses == 0) io.WriteLine("CURSE GATE: VERIFIED", ConsoleColor.Green);
+            else io.WriteLine("CURSE GATE: FAILED", ConsoleColor.Red);
+
+            io.WriteLine("\nPress any key to return to menu.");
             io.ReadKey();
         }
     }

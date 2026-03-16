@@ -1,0 +1,27 @@
+Design Notes
+
+1. The Data Layer (Metadata & Ailments)
+
+    Skill Metadata: Added Family and Rank properties. We established that "-" is the universal null-value for skills that do not evolve or belong to a family (distinct from the "Exclusive" tag in descriptions).
+
+    The Trinity: We defined three new categories—Mind, Nerve, and Curse—to house all status ailments.
+
+    Mapping: Updated the logic to ensure the engine routes these categories to their corresponding elemental affinities for resistance/weakness checks.
+
+2. The Combat Layer (The Curse Gate)
+
+    Boss Balancing: Implemented the "Curse Gate" in the instant-kill calculation. If a target (like a Boss) has Null: Curse, the success rate of Hama/Mudo is hard-coded to 0%, regardless of their Light/Darkness affinities or damage taken.
+
+3. The Fusion Layer (Option A Accidents)
+
+    The Flow: The player plans their fusion and picks inheritance skills normally. The accident is only revealed after confirmation.
+
+    The Result: On an accident, the demon is forced to Rank 1 of its race. The player's manual skill selection is discarded.
+
+    Randomization & Mutation: The engine randomly pulls skills from the parents' legal pool. Each skill then has a 20% roll to mutate (Rank Up or Rank Down based on its Family).
+
+    Mutation Rules: Rank 1 skills only roll Up; Max Rank or "-" Rank skills are ignored for mutation.
+
+4. The UI Bridge (Label Differentiating)
+
+    Clarification: We updated the inheritance menu to explicitly show if a skill is unavailable because the child Already Knows it or because it is a parent-locked Exclusive.

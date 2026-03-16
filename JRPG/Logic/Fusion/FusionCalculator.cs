@@ -12,7 +12,7 @@ using JRPGPrototype.Logic.Fusion.Bridges;
 namespace JRPGPrototype.Logic.Fusion
 {
     /// <summary>
-    /// The mathematical kernel for the Fusion Sub-System. 
+    /// The mathematical kernel for the Fusion Sub-System.
     /// Manages Race-based lookups and tier-matching logic based on recipe formulas.
     /// Handles deterministic skill inheritance calculations and accident probabilities.
     /// Fully decoupled diagnostic tracing via IFusionMessenger.
@@ -62,7 +62,7 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
-        /// Internal helper to populate the 2D lookup table.
+        // Internal helper to populate the 2D lookup table.
         private void RegisterMapping(string a, string b, string res)
         {
             if (!_raceTable.ContainsKey(a))
@@ -242,7 +242,7 @@ namespace JRPGPrototype.Logic.Fusion
                     if (Database.Skills.TryGetValue(skillName, out var skillData))
                     {
                         // Filter out skills marked as exclusive in their effect description
-                        bool isExclusive = skillData.Effect.Contains("exclusive", StringComparison.OrdinalIgnoreCase);
+                        bool isExclusive = skillData.IsExclusive();
 
                         if (!isExclusive)
                         {
@@ -269,7 +269,7 @@ namespace JRPGPrototype.Logic.Fusion
                 {
                     if (Database.Skills.TryGetValue(skillName, out var skillData))
                     {
-                        if (skillData.Effect.Contains("exclusive", StringComparison.OrdinalIgnoreCase))
+                        if (skillData.IsExclusive())
                         {
                             pool.Add(skillName);
                         }
@@ -278,6 +278,36 @@ namespace JRPGPrototype.Logic.Fusion
             }
             // Use Union or Distinct to prevent duplicates in the pool
             return pool.Distinct().ToList();
+        }
+
+        /// <summary>
+        /// Attempts to mutate a skill into a higher or lower rank version within the same family.
+        /// Used during Fusion Accidents.
+        /// </summary>
+        public string GetMutatedSkill(string originalSkillName)
+        {
+            if (!Database.Skills.TryGetValue(originalSkillName, out var current)) return originalSkillName;
+
+            // Skills with Rank "-" or Family "-" cannot evolve/mutate
+            if (!current.CanEvolve()) return originalSkillName;
+
+            if (!int.TryParse(current.Rank, out int currentRankInt)) return originalSkillName;
+
+            // Mutation Roll: 50% Rank Up, 50% Rank Down
+            int direction = _rnd.Next(0, 2) == 0 ? 1 : -1;
+
+            // Rule: If Rank 1 and rolling down, it must go Up.
+            if (currentRankInt == 1 && direction == -1) direction = 1;
+
+            int targetRank = currentRankInt + direction;
+
+            // Search for the skill in the same family with the target rank
+            var mutation = Database.Skills.Values.FirstOrDefault(s =>
+                s.Family.Equals(current.Family, StringComparison.OrdinalIgnoreCase) &&
+                s.Rank == targetRank.ToString());
+
+            // If no higher or lower rank exists in the database, return the original (Ignore Mutation)
+            return mutation?.Name ?? originalSkillName;
         }
 
         // Calculates the number of skill slots available for inheritance based on total unique parent skills.

@@ -188,20 +188,19 @@ namespace JRPGPrototype.Logic.Fusion
                     var parentList = new List<Combatant> { parentA, parentB };
                     if (sacrifice != null) parentList.Add((sacrifice is Combatant sc) ? sc : CreateTransientCombatant((Persona)sacrifice));
 
-                    // --- POOL LOGIC ---
-                    // 1. Get the list of pickable skills for the slot logic
+                    // Get the list of pickable skills for the slot logic
                     var pickablePool = _calculator.GetInheritableSkills(parentList.ToArray());
 
-                    // 2. Get the list of exclusive skills to show them in gray
+                    // Get the list of exclusive skills 
                     var exclusivePool = _calculator.GetExclusiveSkills(parentList.ToArray());
 
-                    // 3. Combine both for the UI display
+                    // Combine both for the full display pool
                     var displayPool = pickablePool.Union(exclusivePool).ToList();
 
-                    // 4. Calculate total slots available based on pickable skills
+                    // Calculate total slots available based on pickable skills
                     int maxSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray()) + (isSacrificial ? 2 : 0);
 
-                    // 5. Pass display list and both restricted lists to the Bridge for labeling
+                    // Pass display list and both restricted lists to the Bridge for labeling
                     List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(
                         displayPool,
                         Math.Min(8, maxSlots),
@@ -211,7 +210,7 @@ namespace JRPGPrototype.Logic.Fusion
 
                     if (chosenSkills == null) break;
 
-                    // 6. Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
+                    // Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
                     Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
@@ -224,13 +223,35 @@ namespace JRPGPrototype.Logic.Fusion
                     if (confirm == 1) continue; // Back to Skills
                     if (confirm == 2) break;    // Back to Selection
 
+                    // --- ACCIDENT OVERRIDE ---
+                    // The accident is revealed only after the player has confirmed their plan.
+                    if (isAccident)
+                    {
+                        // A. Discard player's chosen skills
+                        chosenSkills.Clear();
+
+                        // B. Scramble kit: Pick random skills from the pickable pool
+                        Random rnd = new Random();
+                        var accidentPool = pickablePool.OrderBy(x => rnd.Next()).Take(maxSlots).ToList();
+
+                        // C. Mutation: 20% roll for each skill to Rank Up or Rank Down
+                        for (int i = 0; i < accidentPool.Count; i++)
+                        {
+                            if (rnd.Next(0, 100) < 20)
+                            {
+                                // Logic for Rank Up/Down handled inside the Calculator method
+                                accidentPool[i] = _calculator.GetMutatedSkill(accidentPool[i]);
+                            }
+                        }
+
+                        // D. Finalize the warped kit
+                        chosenSkills = accidentPool;
+                    }
+
                     // --- EXECUTION ---
-                    _messenger.Publish("The sacrificial circle glows with a cold, blue light...", delay: 1200, clearScreen: true);
-                    _messenger.Publish("The participants are reduced to pure spiritual data...", delay: 1200);
-                    _messenger.Publish("The streams of energy collide and begin to merge...", delay: 1200);
+                    _uiBridge.DisplayRitualSequence(isAccident);
 
-                    if (isAccident) _messenger.Publish("!!! WARNING: LUNAR INTERFERENCE DETECTED !!!", ConsoleColor.Red, 2000);
-
+                    // Re-instantiate context with the potentially warped chosenSkills
                     var context = new FusionContext(_player, parents, sacrifice, chosenSkills, targetId, _messenger, _partyManager);
                     _mutator.ExecuteFusionTransaction(context, operation);
 
