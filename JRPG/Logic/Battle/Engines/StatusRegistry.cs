@@ -89,12 +89,14 @@ namespace JRPGPrototype.Logic.Battle.Engines
             if (isBuff)
             {
                 // Redundant if all targets are already at +3 or higher in the relevant stats
-                bool taru = name.Contains("taru") || name == "heat riser";
+                bool pAtk = name.Contains("taru") || name == "heat riser";
+                bool mAtk = name.Contains("maka") || name == "heat riser";
                 bool raku = name.Contains("raku") || name == "heat riser";
                 bool suku = name.Contains("suku") || name == "heat riser";
 
                 return targets.All(t =>
-                    (!taru || t.Buffs.GetValueOrDefault("Attack", 0) >= 3) &&
+                    (!pAtk || t.Buffs.GetValueOrDefault("PhysAtk", 0) >= 3) &&
+                    (!mAtk || t.Buffs.GetValueOrDefault("MagAtk", 0) >= 3) &&
                     (!raku || t.Buffs.GetValueOrDefault("Defense", 0) >= 3) &&
                     (!suku || t.Buffs.GetValueOrDefault("Agility", 0) >= 3)
                 );
@@ -103,12 +105,14 @@ namespace JRPGPrototype.Logic.Battle.Engines
             if (isDebuff)
             {
                 // Redundant if all targets are already at -3 or lower
-                bool taru = name.Contains("taru") || name == "debilitate";
+                bool pAtk = name.Contains("taru") || name == "debilitate";
+                bool mAtk = name.Contains("maka") || name == "debilitate";
                 bool raku = name.Contains("raku") || name == "debilitate";
                 bool suku = name.Contains("suku") || name == "debilitate";
 
                 return targets.All(t =>
-                    (!taru || t.Buffs.GetValueOrDefault("Attack", 0) <= -3) &&
+                    (!pAtk || t.Buffs.GetValueOrDefault("PhysAtk", 0) <= -3) &&
+                    (!mAtk || t.Buffs.GetValueOrDefault("MagAtk", 0) <= -3) &&
                     (!raku || t.Buffs.GetValueOrDefault("Defense", 0) <= -3) &&
                     (!suku || t.Buffs.GetValueOrDefault("Agility", 0) <= -3)
                 );
@@ -204,17 +208,19 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
             // 1. Single-Target Auto-Skills (User Only)
             if (skills.Contains("Auto-Tarukaja")) ApplyStatChange("Tarukaja", actor);
+            if (skills.Contains("Auto-Makakaja")) ApplyStatChange("Makakaja", actor);
             if (skills.Contains("Auto-Rakukaja")) ApplyStatChange("Rakukaja", actor);
             if (skills.Contains("Auto-Sukukaja")) ApplyStatChange("Sukukaja", actor);
 
-            // 2. Party-Wide Auto-Skills (Maha Variants)
+            // 2. Party-Wide Auto-Skills (Maha Variants
             // We iterate through the provided ally list to apply the buff to everyone.
-            if (skills.Contains("Auto-Mataru") || skills.Contains("Auto-Maraku") || skills.Contains("Auto-Masuku"))
+            if (skills.Contains("Auto-Mataru") || skills.Contains("Auto-Maka") || skills.Contains("Auto-Maraku") || skills.Contains("Auto-Masuku"))
             {
                 foreach (var ally in allies)
                 {
                     if (ally.IsDead) continue;
                     if (skills.Contains("Auto-Mataru")) ApplyStatChange("Matarukaja", ally);
+                    if (skills.Contains("Auto-Maka")) ApplyStatChange("Mamakakaja", ally);
                     if (skills.Contains("Auto-Maraku")) ApplyStatChange("Marakukaja", ally);
                     if (skills.Contains("Auto-Masuku")) ApplyStatChange("Masukukaja", ally);
                 }
@@ -376,13 +382,34 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
             int delta = isBuff ? 1 : -1;
 
-            // Omni-Modifiers
-            if (skill == "heat riser") { ChangeBuff(target, "Attack", 1); ChangeBuff(target, "Defense", 1); ChangeBuff(target, "Agility", 1); return; }
-            if (skill == "debilitate") { ChangeBuff(target, "Attack", -1); ChangeBuff(target, "Defense", -1); ChangeBuff(target, "Agility", -1); return; }
+            // Omni-Modifiers: Affect all 4 tracks
+            if (skill == "heat riser")
+            {
+                ChangeBuff(target, "PhysAtk", 1);
+                ChangeBuff(target, "MagAtk", 1);
+                ChangeBuff(target, "Defense", 1);
+                ChangeBuff(target, "Agility", 1);
+                return;
+            }
+            if (skill == "debilitate")
+            {
+                ChangeBuff(target, "PhysAtk", -1);
+                ChangeBuff(target, "MagAtk", -1);
+                ChangeBuff(target, "Defense", -1);
+                ChangeBuff(target, "Agility", -1);
+                return;
+            }
 
-            // Root Parsing
-            if (skill.Contains("taru")) ChangeBuff(target, "Attack", delta);
+            // Physical Track Parsing
+            if (skill.Contains("taru")) ChangeBuff(target, "PhysAtk", delta);
+
+            // Magical Track Parsing
+            if (skill.Contains("maka")) ChangeBuff(target, "MagAtk", delta);
+
+            // Defense Track Parsing
             if (skill.Contains("raku")) ChangeBuff(target, "Defense", delta);
+
+            // Agility Track Parsing
             if (skill.Contains("suku")) ChangeBuff(target, "Agility", delta);
         }
 
