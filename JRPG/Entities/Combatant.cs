@@ -81,6 +81,7 @@ namespace JRPGPrototype.Entities
         public Dictionary<Element, int> BrokenAffinities { get; set; } = new Dictionary<Element, int>();
 
         // Tracks Kaja/Nda stat modifications [-4 to +4].
+        // Now utilizes "PhysAtk", "MagAtk", "Defense", and "Agility" keys.
         public Dictionary<string, int> Buffs { get; set; } = new Dictionary<string, int>();
 
         #endregion
@@ -240,7 +241,19 @@ namespace JRPGPrototype.Entities
                 if (Buffs.ContainsKey(k) && Buffs[k] > 0)
                 {
                     Buffs[k]--;
-                    if (Buffs[k] == 0) messages.Add($"{Name}'s {k} effect wore off.");
+                    if (Buffs[k] == 0)
+                    {
+                        // Map internal keys to friendly names for notifications
+                        string friendlyName = k switch
+                        {
+                            "PhysAtk" => "Physical Attack",
+                            "MagAtk" => "Magic Attack",
+                            "Defense" => "Defense",
+                            "Agility" => "Agility",
+                            _ => k
+                        };
+                        messages.Add($"{Name}'s {friendlyName} effect wore off.");
+                    }
                 }
             }
 
