@@ -360,9 +360,31 @@ namespace JRPGPrototype.Logic.Battle
                     }
                     else if (choice == "Tactics")
                     {
+                        // Record the current icon count to detect if a tactic consumes a turn
+                        int iconsBefore = _turnEngine.GetTotalIconCount();
+
                         HandleTactics(actor);
-                        if (BattleEnded) { actionCommitted = true; return; }
-                        continue;
+
+                        // If the escape was successful, HandleTactics sets BattleEnded to true
+                        if (BattleEnded)
+                        {
+                            actionCommitted = true;
+                            return;
+                        }
+
+                        // Check if an icon was consumed (indicates a failed escape attempt)
+                        if (_turnEngine.GetTotalIconCount() < iconsBefore)
+                        {
+                            // Turn is consumed. Setting this to true exits the selection loop 
+                            // and concludes this actor's phase.
+                            actionCommitted = true;
+                        }
+                        else
+                        {
+                            // No icons consumed. This means the player pressed "Back" 
+                            // or used a non-turn-consuming tactic like "Strategy".
+                            continue;
+                        }
                     }
                 }
                 // 3. Heuristic AI
