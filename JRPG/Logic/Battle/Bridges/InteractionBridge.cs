@@ -89,7 +89,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             {
                 bool isDisabled = false;
                 if (isPanicked && (opt == "Persona" || opt == "Skill" || opt == "Command"
-                || opt == "COMP" || opt == "Item" || opt == "Talk"))
+                    || opt == "COMP" || opt == "Item" || opt == "Talk"))
                 {
                     isDisabled = true;
                 }
@@ -132,20 +132,20 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 bool isBuff = nameLower.EndsWith("kaja") || nameLower == "heat riser";
 
                 targetsAllies = skill.Category.Contains("Recovery") ||
-                isBuff ||
-                effect.Contains("ally") ||
-                effect.Contains("allies") ||
-                effect.Contains("party");
+                    isBuff ||
+                    effect.Contains("ally") ||
+                    effect.Contains("allies") ||
+                    effect.Contains("party");
 
                 // Debuff logic overrides all: always target opponents
                 if (isDebuff) targetsAllies = false;
 
                 targetsAll = nameLower.StartsWith("ma") ||
-                nameLower.StartsWith("me") ||
-                effect.Contains("all foes") ||
-                effect.Contains("all allies") ||
-                effect.Contains("party") ||
-                nameLower == "debilitate";
+                    nameLower.StartsWith("me") ||
+                    effect.Contains("all foes") ||
+                    effect.Contains("all allies") ||
+                    effect.Contains("party") ||
+                    nameLower == "debilitate";
                 element = ElementHelper.FromCategory(skill.Category);
             }
             else if (item != null)
@@ -161,7 +161,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             var selectionPool = targetsAllies
                 ? (item?.Type == "Revive" || (skill != null && skill.Effect.Contains("Revive")) ? _party.ActiveParty : _party.GetAliveMembers())
-            : _enemies.Where(e => !e.IsDead).ToList();
+                : _enemies.Where(e => !e.IsDead).ToList();
 
             if (targetsAll)
             {
@@ -275,8 +275,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         public ItemData SelectItem(Combatant actor)
         {
-            var ownedItems = Database.Items.Values.Where(i => _inv.GetQuantity(i.Id) >
-            0).ToList();
+            var ownedItems = Database.Items.Values.Where(i => _inv.GetQuantity(i.Id) > 0).ToList();
             if (!ownedItems.Any())
             {
                 _io.WriteLine("Inventory is empty."); _io.Wait(800);
@@ -334,13 +333,12 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             if (choice == 1) // Return
             {
-                    var activeDemons = _party.ActiveParty.Where(c => c.Class ==
-                    ClassType.Demon).ToList();
-                    if (!activeDemons.Any())
-                    {
-                        _io.WriteLine("No active demons to return.");
-                        _io.Wait(800); return ("None", null);
-                    }
+                var activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
+                if (!activeDemons.Any())
+                {
+                    _io.WriteLine("No active demons to return.");
+                    _io.Wait(800); return ("None", null);
+                }
                 var names = activeDemons.Select(d => d.Name).ToList();
                 names.Add("Back");
                 int sub = _io.RenderMenu("Return Demon:", names, 0);
@@ -386,17 +384,30 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             foreach (var buff in c.Buffs)
             {
                 if (buff.Value == 0) continue;
-                string key = buff.Key == "Attack" ? "ATK" : buff.Key == "Defense" ? "DEF" : "EVA";
+
+                // Routing to specific UI labels for the independent tracks
+                string key = buff.Key switch
+                {
+                    "PhysAtk" => "P-ATK",
+                    "MagAtk" => "M-ATK",
+                    "Defense" => "DEF",
+                    "Agility" => "EVA",
+                    _ => buff.Key.ToUpper()
+                };
+
                 string sign = buff.Value > 0 ? "+" : "-";
-                // Formatting: [ATK+2], [DEF-1], [EVA+3]
+                // Formatting: [P-ATK+2], [M-ATK-1], [DEF-1], [EVA+3]
                 statusStr += $"[{key}{sign}{Math.Abs(buff.Value)}]";
             }
+
             // Render Ailments/Guard
             if (c.CurrentAilment != null) statusStr += $"[{c.CurrentAilment.Name}]";
             if (c.IsGuarding) statusStr += "[Guard]";
+
             // Render Special States
             if (c.IsCharged) statusStr += "[Phys Charged]";
             if (c.IsMindCharged) statusStr += "[Mag Charged]";
+
             return statusStr;
         }
     }

@@ -44,7 +44,7 @@ namespace JRPGPrototype
             io.WriteLine("2. Persona User (Orpheus)");
             io.WriteLine("3. Wild Card (Orpheus + Stock)");
             io.WriteLine("4. Operator (Demons + COMP)");
-            io.WriteLine("5. DEBUG: Ailment & Technical Test Suite");
+            io.WriteLine("5. DEBUG: Battle Simulator");
             io.WriteLine("6. MONTE CARLO: Fusion & Curse Gate Stress Test");
 
             var key = io.ReadKey();
@@ -106,6 +106,11 @@ namespace JRPGPrototype
                         pInstance.SkillSet.Add("Toxic Sting");
                         pInstance.SkillSet.Add("Venom Bite");
                         pInstance.SkillSet.Add("Patra");
+                        pInstance.SkillSet.Add("Tarukaja");
+                        pInstance.SkillSet.Add("Makakaja");
+                        pInstance.SkillSet.Add("Sukukaja");
+                        pInstance.SkillSet.Add("Rakukaja");
+                        pInstance.SkillSet.Add("Sukunda");
 
 
                         player.ActivePersona = pInstance;
