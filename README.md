@@ -5,7 +5,7 @@ Full development and design notes are available in the [Doc.ipynb](/Documentatio
 
 IMPORTANT: Copyright and License
 
-This project is a fan-made Engine + Games created as a homage to the Shin Megami Tensei series. Some things to note include:
+This project is a Framework created as a homage to the Shin Megami Tensei series, containing Logic to produce Fan-Made SMT Titles. Some things to note include:
 
     Not for Sale: The Engine and Games do not, and will never, go up for sale. It’s just fans making something for fellow fans out of pure love for the Series, and its developers. Nothing monetary is being sought from it.
 
