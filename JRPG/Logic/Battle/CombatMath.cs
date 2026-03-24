@@ -104,11 +104,6 @@ namespace JRPGPrototype.Logic.Battle
             // Determine the Defensive Stat (Vi + Armor Defense)
             double defPower = target.GetStat(StatType.Vi) + target.GetDefense();
 
-            // Apply Stacking Multipliers (Kaja/Nda)
-            // Linear 25% logic: +4 = 200%, 0 = 100%, -4 = 50%
-            atkPower *= GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Attack", 0));
-            defPower *= GetStatMultiplier(target.Buffs.GetValueOrDefault("Defense", 0));
-
             // Apply Passive Skill Multipliers (Boost/Amp/Driver)
             atkPower *= GetPassiveDamageMultiplier(attacker, element);
 
@@ -198,27 +193,14 @@ namespace JRPGPrototype.Logic.Battle
             int attackerLu = attacker.GetStat(StatType.Lu);
             int targetLu = target.GetStat(StatType.Lu);
 
-            double atkValue = (attackerAg * GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Agility", 0))) * hitMult;
-            double defValue = (targetAg * GetStatMultiplier(target.Buffs.GetValueOrDefault("Agility", 0))) * evadeMult;
+            double atkValue = attackerAg * hitMult;
+            double defValue = targetAg * evadeMult;
 
             // Final Chance Calculation: Clamped between 5% and 99%
             // Formula: baseAccuracy + Agility Delta * 2 + Luck Delta
             double finalChance = baseAccuracy + ((atkValue - defValue) * 2) + (attackerLu - targetLu);
 
             return _rnd.Next(0, 100) < Math.Clamp(finalChance, 5, 99);
-        }
-
-        /// <summary>
-        /// Calculates the linear multiplier for a stat based on its stack count.
-        /// Scaling: +4 = 2.0x (25% per stack), -4 = 0.5x (12.5% per stack reduction)
-        /// to ensure -4 is exactly half.
-        /// </summary>
-        private static double GetStatMultiplier(int stacks)
-        {
-            if (stacks == 0) return 1.0;
-            if (stacks > 0) return 1.0 + (stacks * 0.25);
-            // For negative stacks, we use 0.125 to reach 0.5 at -4 linearly
-            return 1.0 + (stacks * 0.125);
         }
 
         /// <summary>
@@ -261,10 +243,8 @@ namespace JRPGPrototype.Logic.Battle
             }
 
             int lukDiff = attacker.GetStat(StatType.Lu) - target.GetStat(StatType.Lu);
-            double multi = GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Agility", 0));
-
             // Clamp the final chance
-            return _rnd.Next(0, 100) < Math.Clamp((baseAccuracy + lukDiff) * multi, 5, 95);
+            return _rnd.Next(0, 100) < Math.Clamp((baseAccuracy + lukDiff), 5, 95);
         }
 
         public static int CalculateReflectedDamage(Combatant originalAttacker, int skillPower, Element element)
@@ -281,16 +261,13 @@ namespace JRPGPrototype.Logic.Battle
             int targetLuck = target.GetStat(StatType.Lu);
             int chance = ((attackerLuck - targetLuck) / 2) + 5;
 
-            // Apply Agility/Luck buff influence on crit
-            double multi = GetStatMultiplier(attacker.Buffs.GetValueOrDefault("Agility", 0));
-
             // Passive Boosts
             var skills = attacker.GetConsolidatedSkills();
-            if (skills.Contains("Apt Pupil")) multi *= 2.0;
-            if (skills.Contains("Rebellion")) multi *= 1.2;
+            double multiplier = 1.0;
+            if (skills.Contains("Apt Pupil")) multiplier *= 2.0;
+            if (skills.Contains("Rebellion")) multiplier *= 1.2;
 
-            // Clamp the final chance
-            return (int)Math.Clamp(chance * multi, 2, 40);
+            return (int)Math.Clamp(chance * multiplier, 2, 40);
         }
 
         /// <summary>
