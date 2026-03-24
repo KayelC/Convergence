@@ -1,5 +1,5 @@
 # Shin Megami Tensei: Convergence
-JRPG Game Inspired by the Shin Megami Tensei series, developed by ATLUS.
+This Framework Inspired by the Shin Megami Tensei series, developed by ATLUS.
 
 Full development and design notes are available in the [Doc.ipynb](/Documentation/Doc.ipynb) Jupyter Notebook.
 
