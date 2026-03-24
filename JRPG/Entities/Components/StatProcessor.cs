@@ -95,22 +95,35 @@ namespace JRPGPrototype.Entities.Components
             switch (type)
             {
                 case StatType.St:
+                    // Strength is now governed strictly by "PhysAtk" tracks
+                    if (c.Buffs.TryGetValue("PhysAtk", out int pAtk) && pAtk > 0)
+                        finalValue *= 1.4;
+                    if (c.Buffs.TryGetValue("PhysAtkDown", out int pAtkDebuff) && pAtkDebuff > 0)
+                        finalValue *= 0.6;
+                    break;
+
                 case StatType.Ma:
-                    // Attacks are governed by "Attack" / "AttackDown"
-                    if (c.Buffs.TryGetValue("Attack", out int atkBuff) && atkBuff > 0) finalValue *= 1.4;
-                    if (c.Buffs.TryGetValue("AttackDown", out int atkDebuff) && atkDebuff > 0) finalValue *= 0.6;
+                    // Magic is now governed strictly by "MagAtk" tracks
+                    if (c.Buffs.TryGetValue("MagAtk", out int mAtk) && mAtk > 0)
+                        finalValue *= 1.4;
+                    if (c.Buffs.TryGetValue("MagAtkDown", out int mAtkDebuff) && mAtkDebuff > 0)
+                        finalValue *= 0.6;
                     break;
 
                 case StatType.Vi:
                     // Vitality is governed by "Defense" / "DefenseDown"
-                    if (c.Buffs.TryGetValue("Defense", out int defBuff) && defBuff > 0) finalValue *= 1.4;
-                    if (c.Buffs.TryGetValue("DefenseDown", out int defDebuff) && defDebuff > 0) finalValue *= 0.6;
+                    if (c.Buffs.TryGetValue("Defense", out int defBuff) && defBuff > 0)
+                        finalValue *= 1.4;
+                    if (c.Buffs.TryGetValue("DefenseDown", out int defDebuff) && defDebuff > 0)
+                        finalValue *= 0.6;
                     break;
 
                 case StatType.Ag:
                     // Agility is governed by "Agility" / "AgilityDown"
-                    if (c.Buffs.TryGetValue("Agility", out int agiBuff) && agiBuff > 0) finalValue *= 1.4;
-                    if (c.Buffs.TryGetValue("AgilityDown", out int agiDebuff) && agiDebuff > 0) finalValue *= 0.6;
+                    if (c.Buffs.TryGetValue("Agility", out int agiBuff) && agiBuff > 0)
+                        finalValue *= 1.4;
+                    if (c.Buffs.TryGetValue("AgilityDown", out int agiDebuff) && agiDebuff > 0)
+                        finalValue *= 0.6;
                     break;
             }
 
