@@ -11,6 +11,14 @@ using JRPGPrototype.Logic.Battle.Engines;
 
 namespace JRPGPrototype.Logic.Battle.Bridges
 {
+    // Helper class to handle the seamless return from the integrated Persona menu.
+    public class PersonaMenuResult
+    {
+        public SkillData? SelectedSkill { get; set; }
+        public bool RequestSwap { get; set; }
+        public bool Cancelled { get; set; }
+    }
+
     /// <summary>
     /// The UI Flow Orchestrator for the Battle Sub-System.
     /// Manages menu navigation, target selection, and renders battle context to IGameIO.
@@ -110,9 +118,77 @@ namespace JRPGPrototype.Logic.Battle.Bridges
         }
 
         /// <summary>
-        /// Provides the Persona sub-menu for Wild Cards.
-        /// Regular PersonaUsers bypass this and go straight to Skills.
+        /// Provides the seamless Persona sub-menu for Wild Cards.
+        /// Integrates Skills and Change Persona into a single unified list.
         /// </summary>
+        public PersonaMenuResult SelectPersonaAction(Combatant actor)
+        {
+            var result = new PersonaMenuResult();
+            var skillNames = actor.GetConsolidatedSkills();
+
+            List<string> labels = new List<string>();
+            List<bool> disabled = new List<bool>();
+            List<SkillData?> skillMapping = new List<SkillData?>();
+
+            // 1. Map Skills
+            foreach (var sName in skillNames)
+            {
+                if (Database.Skills.TryGetValue(sName, out var data))
+                {
+                    if (data.Category == "Passive Skills") continue;
+
+                    var cost = data.ParseCost();
+                    bool canAfford = cost.isHP ? actor.CurrentHP > (int)(actor.MaxHP * (cost.value / 100.0)) : actor.CurrentSP >= cost.value;
+
+                    labels.Add($"{sName} ({data.Cost})");
+                    disabled.Add(!canAfford);
+                    skillMapping.Add(data);
+                }
+            }
+
+            // 2. Inject Change Persona Option if Wild Card
+            bool hasChangeOption = false;
+            if (actor.Class == ClassType.WildCard)
+            {
+                labels.Add("[-- CHANGE PERSONA --]");
+                disabled.Add(actor.HasSwappedThisTurn);
+                skillMapping.Add(null); // Placeholder
+                hasChangeOption = true;
+            }
+
+            labels.Add("Back");
+            disabled.Add(false);
+
+            int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nPERSONA ({actor.ActivePersona?.Name})", labels, _skillMenuIndex, disabled, (idx) =>
+            {
+                if (idx >= 0 && idx < skillMapping.Count && skillMapping[idx] != null)
+                {
+                    var d = skillMapping[idx];
+                    _io.WriteLine($"Effect: {d.Effect}\nPower: {d.Power}");
+                }
+            });
+
+            if (choice == -1 || choice == labels.Count - 1)
+            {
+                result.Cancelled = true;
+                return result;
+            }
+
+            _skillMenuIndex = choice;
+
+            // Check if user picked "Change Persona"
+            if (hasChangeOption && choice == labels.Count - 2)
+            {
+                result.RequestSwap = true;
+            }
+            else
+            {
+                result.SelectedSkill = skillMapping[choice];
+            }
+
+            return result;
+        }
+
         public string GetWildCardPersonaChoice(Combatant actor)
         {
             List<string> options = new List<string> { "Skills", "Change Persona", "Back" };

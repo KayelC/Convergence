@@ -292,41 +292,42 @@ namespace JRPGPrototype.Logic.Battle
                     }
                     else if (choice == "Persona")
                     {
-                        if (actor.Class == ClassType.WildCard)
+                        bool selectingPersonaAction = true;
+                        while (selectingPersonaAction)
                         {
-                            string wcSubChoice = _ui.GetWildCardPersonaChoice(actor);
-                            if (wcSubChoice == "Back") continue;
+                            var menuResult = _ui.SelectPersonaAction(actor);
 
-                            if (wcSubChoice == "Change Persona")
+                            if (menuResult.Cancelled)
+                            {
+                                selectingPersonaAction = false;
+                                // Loop will restart Main Menu
+                            }
+                            else if (menuResult.RequestSwap)
                             {
                                 Persona? newP = _ui.SelectPersona(actor);
-                                if (newP == null) continue;
-
-                                _processor.ExecutePersonaSwap(actor, newP);
-                                actor.HasSwappedThisTurn = true;
-
-                                // Reset the UI context so we see new skills, then loop to let them take an action.
-                                continue;
+                                if (newP != null)
+                                {
+                                    _processor.ExecutePersonaSwap(actor, newP);
+                                    actor.HasSwappedThisTurn = true;
+                                    // FREE ACTION: Logic remains in this inner loop
+                                    // Player can now see NEW skills for the swapped Persona
+                                }
                             }
-                            else // User chose "Skills"
+                            else if (menuResult.SelectedSkill != null)
                             {
-                                skill = _ui.SelectSkill(actor, "");
-                                if (skill == null) continue;
-
+                                skill = menuResult.SelectedSkill;
                                 targets = _ui.SelectTarget(actor, skill);
-                                if (targets == null) continue;
-                                actionCommitted = true;
+
+                                if (targets != null)
+                                {
+                                    actionCommitted = true;
+                                    selectingPersonaAction = false;
+                                }
+                                // If targets == null (Back), we loop back to Persona Action list
                             }
                         }
-                        else // Regular Persona User
-                        {
-                            skill = _ui.SelectSkill(actor, "");
-                            if (skill == null) continue;
 
-                            targets = _ui.SelectTarget(actor, skill);
-                            if (targets == null) continue;
-                            actionCommitted = true;
-                        }
+                        if (!actionCommitted && !BattleEnded) continue;
                     }
                     else if (choice == "Skill" || choice == "Command")
                     {
