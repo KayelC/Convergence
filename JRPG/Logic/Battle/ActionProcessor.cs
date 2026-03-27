@@ -24,7 +24,7 @@ namespace JRPGPrototype.Logic.Battle
         private readonly BattleEffectRegistry _registry;
 
         public ActionProcessor(StatusRegistry status, BattleKnowledge knowledge,
-        IBattleMessenger messenger)
+            IBattleMessenger messenger)
         {
             _status = status;
             _knowledge = knowledge;
@@ -53,7 +53,7 @@ namespace JRPGPrototype.Logic.Battle
             // 3. Unarmed / Base Demon Melee attacks have a standard power of 15.
             // We pass "Attack" as the action name so the strategy can handle specific narration.
             var results = strategy.Apply(attacker, new List<Combatant> { target }, 15,
-            "Attack", "", _messenger, _status, _knowledge);
+                "Attack", "", _messenger, _status, _knowledge);
 
             return results.FirstOrDefault() ?? new CombatResult { Type = HitType.Miss };
         }
@@ -141,13 +141,41 @@ namespace JRPGPrototype.Logic.Battle
             {
                 // Note: Items use EffectValue instead of Power.
                 var results = strategy.Apply(user, targets, item.EffectValue, item.Name,
-                item.Description ?? "", _messenger, _status, _knowledge);
+                    item.Description ?? "", _messenger, _status, _knowledge);
 
                 return results.Any();
             }
 
             _messenger.Publish($"[Error] No logic found for Item Type: {item.Type}", ConsoleColor.Red);
             return false;
+        }
+
+        /// <summary>
+        /// Task 3 Implementation: Swaps the Active Persona and updates combatant state.
+        /// Follows "Flat Preservation" rule: HP/SP values stay constant but are capped to new Max limits.
+        /// </summary>
+        public void ExecutePersonaSwap(Combatant actor, Persona newPersona)
+        {
+            if (actor.ActivePersona == null) return;
+
+            // 1. Transactional Swap
+            Persona oldPersona = actor.ActivePersona;
+            int stockIdx = actor.PersonaStock.IndexOf(newPersona);
+
+            if (stockIdx != -1)
+            {
+                actor.ActivePersona = newPersona;
+                actor.PersonaStock[stockIdx] = oldPersona;
+
+                // 2. Refresh Max Pools based on new stats (Vi/Ma influence)
+                actor.RecalculateResources();
+
+                // 3. Apply Edge-Case Capping (Absolute Values remain, but cannot exceed new limits)
+                actor.CurrentHP = Math.Min(actor.CurrentHP, actor.MaxHP);
+                actor.CurrentSP = Math.Min(actor.CurrentSP, actor.MaxSP);
+
+                _messenger.Publish($"{actor.Name} switched to {newPersona.Name}!", ConsoleColor.Cyan, 600);
+            }
         }
 
         // Orchestrates the Analysis logic and records knowledge discovery.

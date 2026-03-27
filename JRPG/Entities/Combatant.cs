@@ -25,6 +25,7 @@ namespace JRPGPrototype.Entities
         public ControlState BattleControl { get; set; } = ControlState.ActFreely;
         public int PartySlot { get; set; } = -1;
         public string OwnerId { get; set; } = string.Empty;
+        public bool HasSwappedThisTurn { get; set; } = false;
 
         #endregion
 
@@ -227,6 +228,7 @@ namespace JRPGPrototype.Entities
             Buffs.Clear();
             CurrentAilment = null;
             AilmentDuration = 0;
+            HasSwappedThisTurn = false;
         }
 
         // Handles turn-based decay for Buffs, Elemental Breaks, and Karn Shields.

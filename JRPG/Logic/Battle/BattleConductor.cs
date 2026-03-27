@@ -156,6 +156,12 @@ namespace JRPGPrototype.Logic.Battle
             var activeSide = isPlayerSide ? _party.GetAliveMembers() : _enemies.Where(e => !e.IsDead).ToList();
             if (activeSide.Count == 0) return;
 
+            // Clear the swap state for everyone acting this phase
+            foreach (var member in activeSide)
+            {
+                member.HasSwappedThisTurn = false;
+            }
+
             // Initialize Icons for the phase
             _turnEngine.StartPhase(activeSide.Count);
             int actorIndex = 0;
@@ -284,7 +290,45 @@ namespace JRPGPrototype.Logic.Battle
                         actionCommitted = true;
                         return; // Turn finished
                     }
-                    else if (choice == "Persona" || choice == "Skill" || choice == "Command")
+                    else if (choice == "Persona")
+                    {
+                        if (actor.Class == ClassType.WildCard)
+                        {
+                            string wcSubChoice = _ui.GetWildCardPersonaChoice(actor);
+                            if (wcSubChoice == "Back") continue;
+
+                            if (wcSubChoice == "Change Persona")
+                            {
+                                Persona? newP = _ui.SelectPersona(actor);
+                                if (newP == null) continue;
+
+                                _processor.ExecutePersonaSwap(actor, newP);
+                                actor.HasSwappedThisTurn = true;
+
+                                // Reset the UI context so we see new skills, then loop to let them take an action.
+                                continue;
+                            }
+                            else // User chose "Skills"
+                            {
+                                skill = _ui.SelectSkill(actor, "");
+                                if (skill == null) continue;
+
+                                targets = _ui.SelectTarget(actor, skill);
+                                if (targets == null) continue;
+                                actionCommitted = true;
+                            }
+                        }
+                        else // Regular Persona User
+                        {
+                            skill = _ui.SelectSkill(actor, "");
+                            if (skill == null) continue;
+
+                            targets = _ui.SelectTarget(actor, skill);
+                            if (targets == null) continue;
+                            actionCommitted = true;
+                        }
+                    }
+                    else if (choice == "Skill" || choice == "Command")
                     {
                         skill = _ui.SelectSkill(actor, "");
                         if (skill == null) continue; // Back to Menu
@@ -436,7 +480,7 @@ namespace JRPGPrototype.Logic.Battle
                     {
                         // Reprompt if the item had no effect
                         ExecuteAction(actor, isPlayerSide, turnState);
-                }
+                    }
                 }
                 else if (skill == null && targets != null && targets.Count > 0)
                 {
