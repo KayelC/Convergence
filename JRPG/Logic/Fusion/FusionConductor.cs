@@ -44,13 +44,15 @@ namespace JRPGPrototype.Logic.Fusion
             Combatant player,
             PartyManager partyManager,
             EconomyManager economy,
-            FieldUIState uiState)
+            FieldUIState uiState,
+            CompendiumRegistry compendium)
         {
             _io = io;
             _player = player;
             _partyManager = partyManager;
             _economy = economy;
             _uiState = uiState;
+            _compendium = compendium;
 
             // 1. Initialize Communication Tower
             _messenger = new FusionMessenger();
@@ -60,7 +62,6 @@ namespace JRPGPrototype.Logic.Fusion
             // 2. Initialize Logic & Bridges
             _calculator = new FusionCalculator(_io, _messenger);
             _mutator = new FusionMutator(_partyManager, _economy, _messenger);
-            _compendium = new CompendiumRegistry(_io);
             _uiBridge = new CathedralUIBridge(_io, _uiState, _compendium);
         }
 
@@ -299,7 +300,6 @@ namespace JRPGPrototype.Logic.Fusion
 
                 // Carry over modifiers to the higher/lower tier version
                 foreach (var mod in original.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
-
                 staged.RecalculateResources();
             }
 
@@ -407,6 +407,7 @@ namespace JRPGPrototype.Logic.Fusion
             };
             transient.SkillSet.AddRange(p.SkillSet);
             foreach (var stat in p.StatModifiers) transient.StatModifiers[stat.Key] = stat.Value;
+
             return new Combatant(p.Name, ClassType.Demon)
             {
                 Level = p.Level,

@@ -11,6 +11,7 @@ using JRPGPrototype.Logic.Battle.Effects;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Messaging;
 using JRPGPrototype.Logic.Battle.Bridges;
+using JRPGPrototype.Logic.Fusion;
 
 namespace JRPGPrototype.Logic.Battle
 {
@@ -40,6 +41,7 @@ namespace JRPGPrototype.Logic.Battle
         private readonly InteractionBridge _ui;
         private readonly NegotiationEngine _negotiationEngine;
         private readonly BattleKnowledge _playerKnowledge;
+        private readonly CompendiumRegistry _compendium;
 
         // Added session-specific list to prevent re-recruiting in same battle
         private readonly HashSet<string> _sessionRecruitedIds = new HashSet<string>();
@@ -59,6 +61,7 @@ namespace JRPGPrototype.Logic.Battle
             EconomyManager eco,
             IGameIO io,
             BattleKnowledge playerKnowledge,
+            CompendiumRegistry compendium,
             bool isBoss = false)
         {
             _io = io;
@@ -67,6 +70,7 @@ namespace JRPGPrototype.Logic.Battle
             _inv = inv;
             _eco = eco;
             _playerKnowledge = playerKnowledge;
+            _compendium = compendium;
             _isBossBattle = isBoss;
 
             // 1. Initialize the Mediator (The Transmission Tower)
@@ -552,6 +556,12 @@ namespace JRPGPrototype.Logic.Battle
                     // Use the Factory to create the demon to ensure correct stats
                     // We can use the target.SourceId directly as CreateEnemy handles ID resolution
                     var newDemon = CombatantFactory.CreateEnemy(target.SourceId);
+
+                    // Auto-Registration in Compendium
+                    if (!_compendium.HasEntry(newDemon.SourceId))
+                    {
+                        _compendium.RegisterDemon(newDemon);
+                    }
 
                     // Add to player's stock
                     actor.DemonStock.Add(newDemon);

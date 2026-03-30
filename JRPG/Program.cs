@@ -29,6 +29,7 @@ namespace JRPGPrototype
             InventoryManager inventory = new InventoryManager();
             EconomyManager economy = new EconomyManager();
             DungeonState dungeonState = new DungeonState();
+            CompendiumRegistry compendium = new CompendiumRegistry(io);
 
             Combatant player = new Combatant("Hero");
 
@@ -72,17 +73,17 @@ namespace JRPGPrototype
                 case '4':
                     player.Class = ClassType.Operator;
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("michael", 99));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("io", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("hermes", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("medea", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("mou_ryo", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("flaemis", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("aquans", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("erthrys", 50));
-                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("yurlungur", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("io", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("hermes", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("medea", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("mou_ryo", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("flaemis", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("aquans", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("erthrys", 50));
+                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("yurlungur", 50));
                     break;
 
                 case '5':
@@ -181,7 +182,8 @@ namespace JRPGPrototype
                 }
 
                 PartyManager pm = new PartyManager(player);
-                BattleConductor debugBattle = new BattleConductor(pm, enemies, inventory, economy, io, playerKnowledge, false);
+                // Pass the master compendium to the battle conductor
+                BattleConductor debugBattle = new BattleConductor(pm, enemies, inventory, economy, io, playerKnowledge, compendium, false);
                 debugBattle.StartBattle();
 
                 io.WriteLine("\nDebug Battle Concluded. Press any key to exit.");
@@ -189,13 +191,15 @@ namespace JRPGPrototype
                 return; // End the program after the debug battle
             }
 
+            // Pass the master compendium to the field conductor
             FieldConductor field = new FieldConductor(
                 player,
                 inventory,
                 economy,
                 dungeonState,
                 io,
-                playerKnowledge
+                playerKnowledge,
+                compendium
             );
 
             bool appRunning = true;
@@ -283,7 +287,7 @@ namespace JRPGPrototype
 
                             if (oldData != null && newData != null)
                             {
-                                // FIX: Use TryParse to handle non-numeric ranks like "-"
+                                // Using TryParse to handle non-numeric ranks like "-"
                                 if (int.TryParse(oldData.Rank, out int oldR) && int.TryParse(newData.Rank, out int newR))
                                 {
                                     if (newR > oldR) rankUps++;

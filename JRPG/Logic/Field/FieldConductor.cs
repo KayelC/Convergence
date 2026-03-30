@@ -33,6 +33,7 @@ namespace JRPGPrototype.Logic.Field
         private readonly DungeonManager _dungeonManager;
         private readonly PartyManager _partyManager;
         private readonly BattleKnowledge _playerKnowledge;
+        private readonly CompendiumRegistry _compendium;
 
         // Messaging and Observation
         private readonly IFieldMessenger _messenger;
@@ -56,7 +57,8 @@ namespace JRPGPrototype.Logic.Field
             EconomyManager economy,
             DungeonState dungeonState,
             IGameIO io,
-            BattleKnowledge playerKnowledge)
+            BattleKnowledge playerKnowledge,
+            CompendiumRegistry compendium)
         {
             _player = player;
             _inventory = inventory;
@@ -64,6 +66,7 @@ namespace JRPGPrototype.Logic.Field
             _dungeonState = dungeonState;
             _io = io;
             _playerKnowledge = playerKnowledge;
+            _compendium = compendium;
 
             // 1. Initialize Shared UI State
             _uiState = new FieldUIState();
@@ -100,7 +103,7 @@ namespace JRPGPrototype.Logic.Field
                 _logicEngine);
 
             // 7. Initialize Fusion Sub-System
-            _fusionConductor = new FusionConductor(_io, _player, _partyManager, _economy, _uiState);
+            _fusionConductor = new FusionConductor(_io, _player, _partyManager, _economy, _uiState, _compendium);
         }
 
         /// <summary>
@@ -250,6 +253,7 @@ namespace JRPGPrototype.Logic.Field
                     _economy,
                     _io,
                     _playerKnowledge,
+                    _compendium,
                     isBoss);
 
                 battle.StartBattle();
