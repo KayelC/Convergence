@@ -152,7 +152,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             {
                 labels.Add("[-- CHANGE PERSONA --]");
                 disabled.Add(actor.HasSwappedThisTurn);
-                skillMapping.Add(null); // Placeholder
+                skillMapping.Add(null); // Placeholder for non-skill action
                 hasChangeOption = true;
             }
 
@@ -176,7 +176,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             _skillMenuIndex = choice;
 
-            // Check if user picked "Change Persona"
+            // Check if user picked "Change Persona" (the second to last entry)
             if (hasChangeOption && choice == labels.Count - 2)
             {
                 result.RequestSwap = true;
@@ -421,6 +421,10 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return ownedItems[choice];
         }
 
+        /// <summary>
+        /// Provides access to the COMP system for Operators.
+        /// Updated for the Unified 12-Slot Stock Model.
+        /// </summary>
         public (string action, Combatant target) OpenCOMPMenu(Combatant actor)
         {
             List<string> options = new List<string> { "Summon", "Return", "Analyze", "Back" };
@@ -428,21 +432,36 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             if (choice == 0) // Summon
             {
-                // Filter out demons already on the field to prevent duplicates.
-                var summonableDemons = actor.DemonStock.Where(d => !_party.ActiveParty.Contains(d)).ToList();
+                // Under the Unified Model, we show the actor's entire Master Stock
+                var allOwnedDemons = actor.DemonStock;
 
-                if (!summonableDemons.Any()) { _io.WriteLine("No valid demons in stock to summon."); _io.Wait(800); return ("None", null); }
+                if (!allOwnedDemons.Any())
+                {
+                    _io.WriteLine("No demons in COMP storage.");
+                    _io.Wait(800);
+                    return ("None", null);
+                }
 
-                var names = summonableDemons.Select(d => $"{d.Name} (Lv.{d.Level})").ToList();
+                List<string> names = new List<string>();
+                List<bool> disabledSummons = new List<bool>();
+
+                foreach (var d in allOwnedDemons)
+                {
+                    bool inParty = _party.ActiveParty.Contains(d);
+                    string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
+
+                    names.Add($"{d.Name,-15} Lv.{d.Level} {status}");
+                    // Cannot summon if already in party OR if dead
+                    disabledSummons.Add(inParty || d.IsDead);
+                }
+
                 names.Add("Back");
-
-                // Disable dead demons in the selection list.
-                List<bool> disabledSummons = summonableDemons.Select(d => d.IsDead).ToList();
-                disabledSummons.Add(false); // Back button always enabled
+                disabledSummons.Add(false);
 
                 int sub = _io.RenderMenu("Summon Demon:", names, 0, disabledSummons);
                 if (sub == -1 || sub == names.Count - 1) return ("None", null);
-                return ("Summon", summonableDemons[sub]);
+
+                return ("Summon", allOwnedDemons[sub]);
             }
 
             if (choice == 1) // Return
