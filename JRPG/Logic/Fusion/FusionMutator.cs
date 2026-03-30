@@ -38,26 +38,12 @@ namespace JRPGPrototype.Logic.Fusion
 
         /// <summary>
         /// Retrieves the list of fusible entities for an Operator.
-        /// Sources: Active Party (Demons only) and the digital DemonStock.
+        /// Updated for the Unified 12-Slot Model: Returns the master DemonStock.
         /// </summary>
         public List<Combatant> GetFusibleDemonPool(Combatant owner)
         {
-            List<Combatant> pool = new List<Combatant>();
-
-            // 1. Add demons currently active in the battle party
-            var activeDemons = _partyManager.ActiveParty
-                .Where(c => c.Class == ClassType.Demon)
-                .ToList();
-
-            pool.AddRange(activeDemons);
-
-            // 2. Add demons stored in the owner's stock
-            if (owner.DemonStock != null)
-            {
-                pool.AddRange(owner.DemonStock);
-            }
-
-            return pool.Distinct().ToList();
+            // Under the Unified model, all owned demons (Field + Reserve) are stored in the Master Stock list.
+            return owner.DemonStock.ToList();
         }
 
         /// <summary>
@@ -105,11 +91,14 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
+        #endregion
+
         #region Compendium Recall Logic
 
         /// <summary>
         /// Finalizes the recall transaction from the Compendium.
         /// Uses Messenger for all feedback.
+        /// Updated for Unified 12-Slot Model: Recalls enter the master stock first.
         /// </summary>
         public bool FinalizeRecall(Combatant owner, Combatant snapshot, int cost)
         {
@@ -123,10 +112,13 @@ namespace JRPGPrototype.Logic.Fusion
             {
                 if (owner.Class == ClassType.Operator)
                 {
-                    // Operators receive the Demon entity
+                    // 1. Recalled entity enters the Master Stock
+                    owner.DemonStock.Add(snapshot);
+
+                    // 2. Attempt to automatically deploy to the Active Party if room exists
                     if (!_partyManager.SummonDemon(owner, snapshot))
                     {
-                        owner.DemonStock.Add(snapshot);
+                        _messenger.Publish($"{snapshot.Name} was sent to the COMP.", ConsoleColor.Gray, 600);
                     }
                 }
                 else
@@ -152,5 +144,4 @@ namespace JRPGPrototype.Logic.Fusion
 
         #endregion
     }
-        #endregion
 }
