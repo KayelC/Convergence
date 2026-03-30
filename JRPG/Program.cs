@@ -47,6 +47,8 @@ namespace JRPGPrototype
             io.WriteLine("4. Operator (Demons + COMP)");
             io.WriteLine("5. DEBUG: Battle Simulator");
             io.WriteLine("6. MONTE CARLO: Fusion & Curse Gate Stress Test");
+            io.WriteLine("7. TEST: Compendium Auto-Registration");
+            io.WriteLine("8. TEST: Unified 12-Slot Stock Model");
 
             var key = io.ReadKey();
             bool jumpToBattle = false; // Flag to skip field menus for debugging
@@ -73,17 +75,17 @@ namespace JRPGPrototype
                 case '4':
                     player.Class = ClassType.Operator;
                     player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("michael", 99));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("io", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("hermes", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("medea", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("mou_ryo", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("flaemis", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("aquans", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("erthrys", 50));
-                    //player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("yurlungur", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("pixie", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("high_pixie", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("orpheus", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("io", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("hermes", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("medea", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("mou_ryo", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("flaemis", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("aquans", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("erthrys", 50));
+                    player.DemonStock.Add(CombatantFactory.CreatePlayerDemon("yurlungur", 50));
                     break;
 
                 case '5':
@@ -122,9 +124,98 @@ namespace JRPGPrototype
                 case '6':
                     RunMonteCarloSimulation(io);
                     return;
+
+                case '7':
+                    // --- TASK 4 TEST CASE SETUP ---
+                    player.Class = ClassType.Operator;
+                    player.Level = 10;
+                    economy.AddMacca(5000);
+
+                    io.Clear();
+                    io.WriteLine("=== SCENARIO 7: COMPENDIUM AUTO-SAVE TEST ===", ConsoleColor.Yellow);
+                    io.WriteLine("1. Start battle with a Pixie.");
+                    io.WriteLine("2. Use 'Talk' to recruit her.");
+                    io.WriteLine("3. After battle, the code will check if she is in the Compendium.");
+                    io.WriteLine("Press any key to begin encounter...");
+                    io.ReadKey();
+
+                    List<Combatant> testEnemies7 = new List<Combatant> {
+                        CombatantFactory.CreateEnemy("pixie")
+                    };
+
+                    PartyManager testPm7 = new PartyManager(player);
+                    BattleConductor autoRegBattle = new BattleConductor(testPm7, testEnemies7, inventory, economy, io, playerKnowledge, compendium, false);
+                    autoRegBattle.StartBattle();
+
+                    io.Clear();
+                    io.WriteLine("=== POST-BATTLE REGISTRY CHECK ===", ConsoleColor.Yellow);
+                    var registered = compendium.GetAllRegisteredDemons();
+                    if (registered.Count > 0)
+                    {
+                        foreach (var entry in registered)
+                        {
+                            io.WriteLine($"[FOUND] {entry.Name} (Lv.{entry.Level}) was automatically snapshotted!", ConsoleColor.Green);
+                        }
+                    }
+                    else
+                    {
+                        io.WriteLine("[FAILED] No demons were registered in the Compendium.", ConsoleColor.Red);
+                    }
+                    io.WriteLine("\nPress any key to exit test.");
+                    io.ReadKey();
+                    return;
+
+                case '8':
+                    // --- TASK 4 UNIFIED STOCK TEST ---
+                    player.Class = ClassType.Operator;
+                    player.Level = 25; // At Lv 25, CalculateMaxStock returns 12 slots
+                    player.CurrentHP = 5000;
+                    player.CurrentSP = 5000;
+                    PartyManager testPm8 = new PartyManager(player);
+
+                    // Add 5 demons to the Master Stock (DemonStock)
+                    var d1 = CombatantFactory.CreatePlayerDemon("michael", 25);
+                    var d2 = CombatantFactory.CreatePlayerDemon("pixie", 25);
+                    var d3 = CombatantFactory.CreatePlayerDemon("high_pixie", 25);
+                    var d4 = CombatantFactory.CreatePlayerDemon("orpheus", 25);
+                    var d5 = CombatantFactory.CreatePlayerDemon("angel", 25);
+
+                    player.DemonStock.Add(d1);
+                    player.DemonStock.Add(d2);
+                    player.DemonStock.Add(d3);
+                    player.DemonStock.Add(d4);
+                    player.DemonStock.Add(d5);
+
+                    // Deploy 3 to the Active Party.
+                    // Under the Unified Model, they stay in player.DemonStock but appear in testPm8.ActiveParty.
+                    testPm8.SummonDemon(player, d1);
+                    testPm8.SummonDemon(player, d2);
+                    testPm8.SummonDemon(player, d3);
+
+                    io.Clear();
+                    io.WriteLine("=== SCENARIO 8: UNIFIED 12-SLOT MODEL TEST ===", ConsoleColor.Yellow);
+                    io.WriteLine($"Total COMP Ownership: {player.DemonStock.Count} / 12");
+                    io.WriteLine($"Active Party Count (incl. Leader): {testPm8.ActiveParty.Count}");
+
+                    io.WriteLine("\n[LOGIC CHECK]");
+                    io.WriteLine("The 3 active demons MUST still exist in the master DemonStock list.");
+                    int overlapping = player.DemonStock.Count(d => testPm8.ActiveParty.Contains(d));
+                    io.WriteLine($"Overlap Count: {overlapping} (Expected: 3)", overlapping == 3 ? ConsoleColor.Green : ConsoleColor.Red);
+
+                    io.WriteLine("\n[UI CHECK]");
+                    io.WriteLine("Entering battle. Open 'COMP' -> 'Summon'.");
+                    io.WriteLine("Michael, Pixie, and High Pixie should be grayed out as [IN PARTY].");
+                    io.WriteLine("Orpheus and Angel should be summonable.");
+                    io.WriteLine("Press any key to enter battle...");
+                    io.ReadKey();
+
+                    List<Combatant> testEnemies8 = new List<Combatant> { CombatantFactory.CreateEnemy("E_slime") };
+                    BattleConductor stockTestBattle = new BattleConductor(testPm8, testEnemies8, inventory, economy, io, playerKnowledge, compendium, false);
+                    stockTestBattle.StartBattle();
+                    return;
             }
 
-            // stat debug :
+            // Default Setup Logic for standard scenarios
             player.Level = 80;
             player.StatPoints = 5;
 
@@ -182,7 +273,6 @@ namespace JRPGPrototype
                 }
 
                 PartyManager pm = new PartyManager(player);
-                // Pass the master compendium to the battle conductor
                 BattleConductor debugBattle = new BattleConductor(pm, enemies, inventory, economy, io, playerKnowledge, compendium, false);
                 debugBattle.StartBattle();
 
@@ -191,7 +281,6 @@ namespace JRPGPrototype
                 return; // End the program after the debug battle
             }
 
-            // Pass the master compendium to the field conductor
             FieldConductor field = new FieldConductor(
                 player,
                 inventory,
