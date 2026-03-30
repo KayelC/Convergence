@@ -31,14 +31,16 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         private int CalculateMaxStock(int level)
         {
-            if (level < 10) return 2;
-            if (level < 20) return 4;
-            if (level < 30) return 6;
-            return 8;
+            if (level < 10) return 3;
+            if (level < 20) return 5;
+            if (level < 30) return 7;
+            if (level < 40) return 10;
+            return 12;
         }
 
         /// <summary>
         /// Checks if a specific actor has an open slot in their Demon Stock.
+        /// Note: In the unified model, active party demons occupy a stock slot.
         /// </summary>
         public bool HasOpenDemonStockSlot(Combatant actor)
         {
@@ -61,10 +63,10 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool IsDemonOwned(Combatant owner, string sourceId)
         {
-            // Check the specific owner's demon stock
+            // In the unified model, checking the Master Stock covers both field and reserve.
             if (owner.DemonStock.Any(d => d.SourceId == sourceId)) return true;
 
-            // Check if the demon is in the active party under anyone's control
+            // Fallback check for active party in case of non-owner controlled demons
             if (ActiveParty.Any(c => c.SourceId == sourceId && c.Class == ClassType.Demon)) return true;
 
             return false;
@@ -114,30 +116,30 @@ namespace JRPGPrototype.Logic.Core
         }
 
         /// <summary>
-        /// Robust Summoning Logic: Moves a demon from the owner's stock to the active party.
+        /// Robust Summoning Logic: Moves a demon from the owner's standby stock to the active party.
         /// This is an atomic transaction to prevent duplication.
+        /// Demon is NOT removed from DemonStock; its reference is simply added to ActiveParty.
         /// </summary>
         public bool SummonDemon(Combatant owner, Combatant demon)
         {
             if (ActiveParty.Count < MAX_PARTY_SIZE)
             {
-                // 1. Remove from owner stock first to ensure atomicity
-                if (owner.DemonStock.Contains(demon))
+                // Ensure the demon is actually owned by the actor and not already on the field
+                if (owner.DemonStock.Contains(demon) && !ActiveParty.Contains(demon))
                 {
-                    owner.DemonStock.Remove(demon);
+                    demon.PartySlot = ActiveParty.Count;
+                    demon.BattleControl = ControlState.DirectControl; // Should default to Direct Control upon summon
+                    ActiveParty.Add(demon);
+                    return true; // Party Full
                 }
-
-                // 2. Add to active battlefield
-                demon.PartySlot = ActiveParty.Count;
-                demon.BattleControl = ControlState.DirectControl; // Should default to Direct Control upon summon
-                ActiveParty.Add(demon);
-                return true; // Party full
             }
-            return false; // Party full
+            return false; // Party full or not owned
         }
 
         /// <summary>
-        /// Robust Return Logic: Moves a demon from the battlefield back to the owner's stock.
+        /// Robust Return Logic: Moves a demon from the battlefield back to the owner's standby stock.
+        /// Updated: In the Unified model, the demon already exists in the DemonStock. 
+        /// This simply removes the reference from the battlefield.
         /// </summary>
         public bool ReturnDemon(Combatant owner, Combatant demon)
         {
@@ -146,12 +148,23 @@ namespace JRPGPrototype.Logic.Core
                 // 1. Remove from battlefield
                 demon.PartySlot = -1;
                 ActiveParty.Remove(demon);
+                return true;
+            }
+            return false;
+        }
 
-                // 2. Return to owner's stock
-                if (!owner.DemonStock.Contains(demon))
-                {
-                    owner.DemonStock.Add(demon);
-                }
+        /// Permanently removes a demon from the Master Stock and the Party.
+        public bool DismissDemon(Combatant owner, Combatant demon)
+        {
+            if (ActiveParty.Contains(demon))
+            {
+                demon.PartySlot = -1;
+                ActiveParty.Remove(demon);
+            }
+
+            if (owner.DemonStock.Contains(demon))
+            {
+                owner.DemonStock.Remove(demon);
                 return true;
             }
             return false;
@@ -171,32 +184,33 @@ namespace JRPGPrototype.Logic.Core
 
         /// <summary>
         /// Replaces the oldDemon with the newDemon in the player's active party or stock.
+        /// Updated for the Unified model to maintain slot indexing.
         /// </summary>
         /// <param name="owner">Combatant performing the action</param>
         /// <param name="oldDemon">The demon to be replaced.</param>
         /// <param name="newDemon">The new demon replacing the old one</param>
         public void ReplaceDemon(Combatant owner, Combatant oldDemon, Combatant newDemon)
         {
-            // Check if the demon was in the active party and, if so, replace it
+            // 1. Handle Active Party replacement
             if (ActiveParty.Contains(oldDemon))
             {
+                int partyIdx = ActiveParty.IndexOf(oldDemon);
                 int slot = oldDemon.PartySlot;
-                ActiveParty[slot] = newDemon;
+                ActiveParty[partyIdx] = newDemon;
                 newDemon.PartySlot = slot; // Assign the new demon to that spot
             }
 
-            // Ensure that the old demon is removed from the stock
-            if (owner.DemonStock.Contains(oldDemon))
+            // 2. Handle Master Stock replacement
+            int stockIdx = owner.DemonStock.IndexOf(oldDemon);
+            if (stockIdx != -1)
             {
-                owner.DemonStock.Remove(oldDemon);
+                owner.DemonStock[stockIdx] = newDemon;
             }
-
-            // Add to Demon Stock now and update it
-            if (!owner.DemonStock.Contains(newDemon))
+            else if (owner.DemonStock.Count < CalculateMaxStock(owner.Level))
             {
+                // Fallback for edge cases where the old demon wasn't in stock for some reason
                 owner.DemonStock.Add(newDemon);
             }
-
         }
     }
 }
