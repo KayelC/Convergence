@@ -423,14 +423,14 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         /// <summary>
         /// Provides access to the COMP system for Operators.
-        /// Updated for the Unified 12-Slot Stock Model.
+        /// Updated for the Unified 12-Slot Model and Battle-Swapping.
         /// </summary>
-        public (string action, Combatant target) OpenCOMPMenu(Combatant actor)
+        public (string action, Combatant? standby, Combatant? active) OpenCOMPMenu(Combatant actor)
         {
             List<string> options = new List<string> { "Summon", "Return", "Analyze", "Back" };
             int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCOMP SYSTEM", options, 0);
 
-            if (choice == 0) // Summon
+            if (choice == 0) // Summon or Swap
             {
                 // Under the Unified Model, we show the actor's entire Master Stock
                 var allOwnedDemons = actor.DemonStock;
@@ -439,7 +439,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 {
                     _io.WriteLine("No demons in COMP storage.");
                     _io.Wait(800);
-                    return ("None", null);
+                    return ("None", null, null);
                 }
 
                 List<string> names = new List<string>();
@@ -458,10 +458,26 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 names.Add("Back");
                 disabledSummons.Add(false);
 
-                int sub = _io.RenderMenu("Summon Demon:", names, 0, disabledSummons);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null);
+                int sub = _io.RenderMenu("Summon/Swap Demon:", names, 0, disabledSummons);
+                if (sub == -1 || sub == names.Count - 1) return ("None", null, null);
 
-                return ("Summon", allOwnedDemons[sub]);
+                Combatant standbyTarget = allOwnedDemons[sub];
+
+                // Check if we have room for a simple summon
+                if (_party.ActiveParty.Count < 4)
+                {
+                    return ("Summon", standbyTarget, null);
+                }
+
+                // Party is full (4/4): Trigger the Atomic Swap Flow
+                List<Combatant> activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
+                List<string> activeNames = activeDemons.Select(d => $"{d.Name,-15} (HP: {d.CurrentHP}/{d.MaxHP})").ToList();
+                activeNames.Add("Cancel");
+
+                int repIdx = _io.RenderMenu($"Replace who with {standbyTarget.Name}?", activeNames, 0);
+                if (repIdx == -1 || repIdx == activeNames.Count - 1) return ("None", null, null);
+
+                return ("Swap", standbyTarget, activeDemons[repIdx]);
             }
 
             if (choice == 1) // Return
@@ -470,22 +486,22 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 if (!activeDemons.Any())
                 {
                     _io.WriteLine("No active demons to return.");
-                    _io.Wait(800); return ("None", null);
+                    _io.Wait(800); return ("None", null, null);
                 }
                 var names = activeDemons.Select(d => d.Name).ToList();
                 names.Add("Back");
                 int sub = _io.RenderMenu("Return Demon:", names, 0);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null);
-                return ("Return", activeDemons[sub]);
+                if (sub == -1 || sub == names.Count - 1) return ("None", null, null);
+                return ("Return", null, activeDemons[sub]);
             }
 
             if (choice == 2) // Analyze
             {
                 var targetList = SelectTarget(actor);
-                if (targetList == null) return ("None", null);
-                return ("Analyze", targetList[0]);
+                if (targetList == null) return ("None", null, null);
+                return ("Analyze", null, targetList[0]);
             }
-            return ("None", null);
+            return ("None", null, null);
         }
 
         public string GetBattleContext(Combatant actor)
