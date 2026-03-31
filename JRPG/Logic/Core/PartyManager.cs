@@ -28,6 +28,7 @@ namespace JRPGPrototype.Logic.Core
         /// <summary>
         /// Calculates max stock size based on character level.
         /// Unlocks slots at specific level thresholds.
+        /// Updated: Max capacity now reaches 12.
         /// </summary>
         private int CalculateMaxStock(int level)
         {
@@ -134,6 +135,33 @@ namespace JRPGPrototype.Logic.Core
                 }
             }
             return false; // Party full or not owned
+        }
+
+        /// <summary>
+        /// Replaces an active demon with a standby demon in one turn.
+        /// Essential for maintaining turn economy when the party is full.
+        /// </summary>
+        public bool SwapActiveDemon(Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
+        {
+            if (!ActiveParty.Contains(activeToRemove) || !owner.DemonStock.Contains(standbyToAdd))
+                return false;
+
+            // Ensure the standby demon isn't already active (redundancy check)
+            if (ActiveParty.Contains(standbyToAdd)) return false;
+
+            int slot = activeToRemove.PartySlot;
+            int listIdx = ActiveParty.IndexOf(activeToRemove);
+
+            // Deactivate old
+            activeToRemove.PartySlot = -1;
+
+            // Activate new at the same position/index
+            standbyToAdd.PartySlot = slot;
+            standbyToAdd.BattleControl = ControlState.DirectControl;
+
+            ActiveParty[listIdx] = standbyToAdd;
+
+            return true;
         }
 
         /// <summary>
