@@ -171,6 +171,41 @@ namespace JRPGPrototype.Entities
 
         #region State Management
 
+        /// <summary>
+        /// Tier 1: Transient Stance Cleanup.
+        /// Executed whenever a demon leaves the active battlefield (Swap/Return/End).
+        /// These represent immediate combat stances or temporary barriers.
+        /// </summary>
+        public void ClearTransientBattleState()
+        {
+            IsGuarding = false;
+            IsCharged = false;
+            IsMindCharged = false;
+            PhysKarnActive = false;
+            MagicKarnActive = false;
+        }
+
+        /// <summary>
+        /// Tier 2: Encounter Cleanup.
+        /// Executed ONLY when the entire battle ends. Clears Kaja/Nda buffs and temporary breaks.
+        /// </summary>
+        public void ClearEncounterPersistence()
+        {
+            Buffs.Clear();
+            BrokenAffinities.Clear();
+            HasSwappedThisTurn = false;
+        }
+
+        /// <summary>
+        /// Orchestrates the cleanup of battle-only states at the end of an encounter.
+        /// Note: Persistent ailments (Poison, etc.) are NOT cleared here.
+        /// </summary>
+        public void CleanupBattleState()
+        {
+            ClearTransientBattleState();
+            ClearEncounterPersistence();
+        }
+
         public List<string> GetConsolidatedSkills()
         {
             List<string> skills = new List<string>();
@@ -215,20 +250,6 @@ namespace JRPGPrototype.Entities
                 return true;
             }
             return false;
-        }
-
-        public void CleanupBattleState()
-        {
-            IsGuarding = false;
-            IsCharged = false;
-            IsMindCharged = false;
-            PhysKarnActive = false;
-            MagicKarnActive = false;
-            BrokenAffinities.Clear();
-            Buffs.Clear();
-            CurrentAilment = null;
-            AilmentDuration = 0;
-            HasSwappedThisTurn = false;
         }
 
         // Handles turn-based decay for Buffs, Elemental Breaks, and Karn Shields.
