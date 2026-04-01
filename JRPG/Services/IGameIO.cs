@@ -21,13 +21,16 @@ namespace JRPGPrototype.Services
         string ReadLine();
         ConsoleKeyInfo ReadKey(bool intercept = true);
 
-        // State Management (New requirements to prevent direct Console calls)
+        // State Management
         void SetForegroundColor(ConsoleColor color);
         void SetBackgroundColor(ConsoleColor color);
         void ResetColor();
         void SetCursorVisible(bool visible);
 
-        // Abstracting the Menu System
-        int RenderMenu(string header, List<string> options, int initialIndex, List<bool>? disabledOptions = null, Action<int>? onHighlight = null);
+        /// <summary>
+        /// Abstracting the Menu System.
+        /// supportStatusInspect toggles whether the 'S' key triggers a Status Peek signal.
+        /// </summary>
+        int RenderMenu(string header, List<string> options, int initialIndex, List<bool>? disabledOptions = null, Action<int>? onHighlight = null, bool supportStatusInspect = false);
     }
 }

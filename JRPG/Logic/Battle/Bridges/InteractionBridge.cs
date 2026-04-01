@@ -559,7 +559,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             _io.WriteLine($"Race: {race,-15} | Level: {level}");
             _io.WriteLine("--------------------------------------------------");
 
-            _io.WriteLine("PARAMETERS:");
+            _io.WriteLine("STATS:");
             foreach (var stat in stats)
             {
                 _io.WriteLine($" {stat.Key,-5}: {stat.Value}");

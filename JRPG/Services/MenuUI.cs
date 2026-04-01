@@ -6,11 +6,14 @@ namespace JRPGPrototype.Services
     /// <summary>
     /// Static utility for rendering high-fidelity interactive menus.
     /// Refactored to utilize IGameIO instead of direct System.Console calls.
-    /// Now supports a secondary "Inspect" key (S) to signal status viewing.
     /// </summary>
     public static class MenuUI
     {
-        public static int RenderMenu(IGameIO io, string header, List<string> options, int initialIndex = 0, List<bool>? disabledOptions = null, Action<int>? onHighlight = null)
+        /// <summary>
+        /// Master menu rendering logic.
+        /// Signature now accepts 'supportStatusInspect' to handle the [S] key safely.
+        /// </summary>
+        public static int RenderMenu(IGameIO io, string header, List<string> options, int initialIndex = 0, List<bool>? disabledOptions = null, Action<int>? onHighlight = null, bool supportStatusInspect = false)
         {
             int selectedIndex = initialIndex;
             if (selectedIndex < 0) selectedIndex = 0;
@@ -50,12 +53,17 @@ namespace JRPGPrototype.Services
                     }
                 }
 
-                // Handle live-reactive highlights (e.g., stat differentials)
+                // Handle live-reactive highlights (e.g., skill descriptions or stat differentials)
                 if (onHighlight != null && options.Count > 0)
                 {
                     io.WriteLine("\n------------------------------");
-                    // Feedback for the Status Peek feature
-                    io.WriteLine("[S] View Status | [Enter] Confirm", ConsoleColor.Cyan);
+
+                    // Only show the Inspect hint if the menu context allows it
+                    if (supportStatusInspect)
+                    {
+                        io.WriteLine("[S] View Status | [Enter] Confirm", ConsoleColor.Cyan);
+                    }
+
                     onHighlight(selectedIndex);
                 }
 
@@ -80,10 +88,10 @@ namespace JRPGPrototype.Services
                         return selectedIndex;
                     }
                 }
-                else if (keyInfo.Key == ConsoleKey.S)
+                else if (keyInfo.Key == ConsoleKey.S && supportStatusInspect)
                 {
-                    // "S" Key used for Status Peek. 
-                    // Returns a signal value: -(index + 10) to avoid conflict with -1 (Cancel).
+                    // Return signal for status peek: -(index + 10)
+                    // This is only triggered if explicitly enabled by the caller (InteractionBridge)
                     io.SetCursorVisible(true);
                     return -(selectedIndex + 10);
                 }
