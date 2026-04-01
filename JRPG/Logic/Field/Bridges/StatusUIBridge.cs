@@ -31,7 +31,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         /// <summary>
         /// Renders the primary Status Hub. 
-        /// Logic: Displays current human stats and provides access to specialized stocks based on class.
+        /// Displays current human stats and provides access to specialized stocks based on class.
         /// </summary>
         public string ShowStatusHub(Combatant player)
         {
@@ -198,14 +198,28 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 return null;
             }
 
-            List<string> options = allPersonas.Select(p =>
-                $"{p.Name,-15} (Lv.{p.Level}) {p.Race,-10} {(p == player.ActivePersona ? "[E]" : "")}").ToList();
-            options.Add("Back");
+            int lastIdx = 0;
+            while (true)
+            {
+                List<string> options = allPersonas.Select(p =>
+                    $"{p.Name,-15} (Lv.{p.Level}) {p.Race,-10} {(p == player.ActivePersona ? "[E]" : "")}").ToList();
+                options.Add("Back");
 
-            int idx = _io.RenderMenu("=== PERSONA STOCK ===", options, 0);
-            if (idx == -1 || idx == options.Count - 1) return null;
+                int idx = _io.RenderMenu("=== PERSONA STOCK ===", options, lastIdx, null, null, true);
 
-            return allPersonas[idx];
+                if (idx == -1 || idx == options.Count - 1) return null;
+
+                // Handle Status Peek
+                if (idx <= -10)
+                {
+                    int inspectIdx = Math.Abs(idx) - 10;
+                    ShowEntityStatus(allPersonas[inspectIdx]);
+                    lastIdx = inspectIdx;
+                    continue;
+                }
+
+                return allPersonas[idx];
+            }
         }
 
         /// <summary>
@@ -245,80 +259,170 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 return null;
             }
 
-            List<string> options = allDemons.Select(d =>
-                $"{d.Name,-15} (Lv.{d.Level}) {(_party.ActiveParty.Contains(d) ? "[PARTY]" : "[STOCK]")}").ToList();
-            options.Add("Back");
+            int lastIdx = 0;
+            while (true)
+            {
+                List<string> options = allDemons.Select(d =>
+                    $"{d.Name,-15} (Lv.{d.Level}) {(_party.ActiveParty.Contains(d) ? "[PARTY]" : "[STOCK]")}").ToList();
+                options.Add("Back");
 
-            int idx = _io.RenderMenu("=== DEMON OVERVIEW ===", options, 0);
-            if (idx == -1 || idx == options.Count - 1) return null;
+                int idx = _io.RenderMenu("=== DEMON OVERVIEW ===", options, lastIdx, null, null, true);
 
-            return allDemons[idx];
+                if (idx == -1 || idx == options.Count - 1) return null;
+
+                // Handle Status Peek
+                if (idx <= -10)
+                {
+                    int inspectIdx = Math.Abs(idx) - 10;
+                    ShowEntityStatus(allDemons[inspectIdx]);
+                    lastIdx = inspectIdx;
+                    continue;
+                }
+
+                return allDemons[idx];
+            }
         }
 
         /// <summary>
         /// Renders the Organize Party screen with 4 fixed slots.
+        /// Hero Guardrail - Selecting Slot 1 triggers Status Peek.
+        /// Status Screens available to view in Organize Party Menu.
         /// </summary>
         public int ShowOrganizationSlots()
         {
-            string header = "=== ORGANIZE PARTY ===\nSelect a slot to manage:";
-            List<string> options = new List<string>();
-
-            for (int i = 0; i < 4; i++)
+            int lastIdx = 0;
+            while (true)
             {
-                if (i < _party.ActiveParty.Count)
+                string header = "=== ORGANIZE PARTY ===\nSelect a slot to manage:";
+                List<string> options = new List<string>();
+
+                for (int i = 0; i < 4; i++)
                 {
-                    var member = _party.ActiveParty[i];
-                    options.Add($"Slot {i + 1}: {member.Name,-15} (Lv.{member.Level})");
+                    if (i < _party.ActiveParty.Count)
+                    {
+                        var member = _party.ActiveParty[i];
+                        string label = i == 0 ? "Leader: " : $"Slot {i + 1}: ";
+                        options.Add($"{label}{member.Name,-15} (Lv.{member.Level})");
+                    }
+                    else
+                    {
+                        options.Add($"Slot {i + 1}: [EMPTY]");
+                    }
                 }
-                else
+                options.Add("Back");
+
+                // supportStatusInspect: true
+                int choice = _io.RenderMenu(header, options, lastIdx, null, null, true);
+
+                if (choice == -1 || choice == options.Count - 1) return -1;
+
+                // Handle Peek Logic
+                if (choice <= -10)
                 {
-                    options.Add($"Slot {i + 1}: [EMPTY]");
+                    int inspectIdx = Math.Abs(choice) - 10;
+                    if (inspectIdx < _party.ActiveParty.Count)
+                    {
+                        ShowEntityStatus(_party.ActiveParty[inspectIdx]);
+                    }
+                    lastIdx = inspectIdx;
+                    continue;
                 }
+
+                // Hero Guardrail - Selection triggers status instead of management
+                if (choice == 0)
+                {
+                    ShowEntityStatus(_party.ActiveParty[0]);
+                    lastIdx = 0;
+                    continue;
+                }
+
+                return choice;
             }
-            options.Add("Back");
-
-            int choice = _io.RenderMenu(header, options, 0);
-            if (choice == -1 || choice == options.Count - 1) return -1;
-
-            return choice;
         }
 
         /// <summary>
-        /// UI for managing a specific party member (Return to COMP logic).
+        /// UI for summoning a demon from the Master Stock into a specific party slot.
+        /// Status Screens available in Summon Menu.
         /// </summary>
-        public string ShowMemberManagementMenu(Combatant member)
+        public object SelectSummonTarget(Combatant player, Combatant? occupantBeingReplaced)
         {
-            List<string> options = new List<string> { "Return to COMP", "Back" };
-            int choice = _io.RenderMenu($"Manage {member.Name}", options, 0);
+            var masterStock = player.DemonStock;
 
-            if (choice == -1 || choice == options.Count - 1) return "Back";
-            return options[choice];
-        }
-
-        /// <summary>
-        /// UI for summoning a demon from stock into an empty slot.
-        /// </summary>
-        public Combatant SelectSummonTarget(Combatant player)
-        {
-            if (!player.DemonStock.Any())
+            if (!masterStock.Any())
             {
                 _io.WriteLine("No demons in stock.", ConsoleColor.Red);
                 _io.Wait(800);
                 return null;
             }
 
-            var names = player.DemonStock.Select(d => $"{d.Name,-15} (Lv.{d.Level})").ToList();
-            names.Add("Cancel");
+            int lastIdx = 0;
+            while (true)
+            {
+                List<string> options = new List<string>();
+                List<bool> disabledList = new List<bool>();
+                List<object> mapping = new List<object>();
 
-            int idx = _io.RenderMenu("SUMMON DEMON", names, 0);
-            if (idx == -1 || idx == names.Count - 1) return null;
+                // 1. Optional Return Entry
+                if (occupantBeingReplaced != null)
+                {
+                    options.Add($"[ RETURN {occupantBeingReplaced.Name.ToUpper()} TO COMP ]");
+                    disabledList.Add(false);
+                    mapping.Add("RETURN_SIGNAL");
+                }
 
-            return player.DemonStock[idx];
+                // 2. Master Stock List
+                foreach (var d in masterStock)
+                {
+                    bool inParty = _party.ActiveParty.Contains(d);
+                    string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
+
+                    options.Add($"{d.Name,-15} (Lv.{d.Level}) {status}");
+                    disabledList.Add(inParty || d.IsDead);
+                    mapping.Add(d);
+                }
+
+                options.Add("Cancel");
+                disabledList.Add(false);
+
+                // supportStatusInspect: true
+                int choice = _io.RenderMenu("=== SUMMON / REPLACE ===", options, lastIdx, disabledList, null, true);
+
+                if (choice == -1 || choice == options.Count - 1) return null;
+
+                // Handle Peek Logic
+                if (choice <= -10)
+                {
+                    int inspectIdx = Math.Abs(choice) - 10;
+                    if (mapping[inspectIdx] is Combatant d)
+                    {
+                        ShowEntityStatus(d);
+                    }
+                    lastIdx = inspectIdx;
+                    continue;
+                }
+
+                return mapping[choice];
+            }
         }
 
         #endregion
 
         #region Helper Renderers
+
+        /// <summary>
+        /// Unified Entity Inspector
+        /// Re-used for both Persona masks and Demon combatants.
+        /// </summary>
+        private void ShowEntityStatus(object entity)
+        {
+            _io.Clear();
+            string statusString = entity is Combatant c ? GetDemonDetailString(c) : GetPersonaDetailString((Persona)entity, false);
+
+            _io.WriteLine(statusString);
+            _io.WriteLine("\n--------------------------------------------------");
+            _io.WriteLine("Press any key to return...", ConsoleColor.Gray);
+            _io.ReadKey();
+        }
 
         /// <summary>
         /// Displays detailed stat sheet for a demon Combatant.
@@ -365,6 +469,18 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 int val = p.StatModifiers.ContainsKey(stat) ? p.StatModifiers[stat] : 0;
                 output += $" {stat,-4}: {val,3}\n";
             }
+
+            output += "\nRESISTANCES:\n";
+            foreach (Element elem in Enum.GetValues(typeof(Element)))
+            {
+                if (elem == Element.None) continue;
+                Affinity aff = p.GetAffinity(elem);
+                if (aff != Affinity.Normal)
+                {
+                    output += $" {elem,-10}: {aff}\n";
+                }
+            }
+
             output += "-----------------------------\nSkills:\n";
             foreach (var s in p.SkillSet) output += $" - {s}\n";
 
@@ -396,6 +512,19 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 int total = demon.GetStat(stat);
                 output += $"{stat,-4}: {total,3}\n";
             }
+
+            output += "\nRESISTANCES:\n";
+            var activeP = demon.ActivePersona;
+            foreach (Element elem in Enum.GetValues(typeof(Element)))
+            {
+                if (elem == Element.None) continue;
+                Affinity aff = activeP?.GetAffinity(elem) ?? Affinity.Normal;
+                if (aff != Affinity.Normal)
+                {
+                    output += $" {elem,-10}: {aff}\n";
+                }
+            }
+
             output += "-----------------------------\nSkills:\n";
             foreach (var s in demon.GetConsolidatedSkills()) output += $" - {s}\n";
 

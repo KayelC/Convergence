@@ -513,33 +513,54 @@ namespace JRPGPrototype.Logic.Field
             }
         }
 
+        /// <summary>
+        /// Refactored Organization Menu logic.
+        /// Immediately opts for Summon/Replace target.
+        /// Hero Guardrail - Handled by the bridge (peek-only).
+        /// </summary>
         private void OpenOrganizeMenu()
         {
             while (true)
             {
+                // Bridge returns -1 for Back, or 1, 2, 3 for demon slots.
+                // Slot 0 (Hero) peeks status and loops internally in the bridge.
                 int slotIndex = _statusUI.ShowOrganizationSlots();
                 if (slotIndex == -1) return;
 
+                // Identify if the slot is currently occupied
+                Combatant? occupant = null;
                 if (slotIndex < _partyManager.ActiveParty.Count)
                 {
-                    Combatant member = _partyManager.ActiveParty[slotIndex];
-                    string action = _statusUI.ShowMemberManagementMenu(member);
-                    if (action == "Return to COMP")
+                    occupant = _partyManager.ActiveParty[slotIndex];
+                }
+
+                // Immediately open Summon/Replace target menu
+                object result = _statusUI.SelectSummonTarget(_player, occupant);
+
+                if (result == null) continue; // User backed out
+
+                // Logic Branching based on selection
+                if (result is string s && s == "RETURN_SIGNAL")
+                {
+                    if (occupant != null && _partyManager.ReturnDemon(_player, occupant))
                     {
-                        if (_partyManager.ReturnDemon(_player, member))
-                        {
-                            _messenger.Publish($"{member.Name} returned to stock.", ConsoleColor.Gray, 600);
-                        }
+                        _messenger.Publish($"{occupant.Name} returned to stock.", ConsoleColor.Gray, 600);
                     }
                 }
-                else
+                else if (result is Combatant newDemon)
                 {
-                    Combatant target = _statusUI.SelectSummonTarget(_player);
-                    if (target != null)
+                    if (occupant != null)
                     {
-                        if (_partyManager.SummonDemon(_player, target))
+                        // Atomic Replace
+                        _partyManager.ReplaceDemon(_player, occupant, newDemon);
+                        _messenger.Publish($"{occupant.Name} swapped for {newDemon.Name}!", ConsoleColor.Gray, 600);
+                    }
+                    else
+                    {
+                        // Empty slot Summon
+                        if (_partyManager.SummonDemon(_player, newDemon))
                         {
-                            _messenger.Publish($"{target.Name} joined the party!", ConsoleColor.Gray, 800);
+                            _messenger.Publish($"{newDemon.Name} joined the party!", ConsoleColor.Gray, 800);
                         }
                     }
                 }

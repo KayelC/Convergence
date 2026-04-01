@@ -426,6 +426,10 @@ namespace JRPGPrototype.Logic.Field.Engines
 
         #region Persona Logic
 
+        /// <summary>
+        /// Executes a Persona swap in the field.
+        /// Uses "Flat Preservation" (Current HP remains same but capped at new MaxHP).
+        /// </summary>
         public void PerformPersonaSwap(Combatant player, Persona newPersona)
         {
             int stockIndex = player.PersonaStock.IndexOf(newPersona);
@@ -435,7 +439,13 @@ namespace JRPGPrototype.Logic.Field.Engines
                 player.ActivePersona = newPersona;
                 player.PersonaStock[stockIndex] = oldActive;
                 _messenger.Publish($"Equipped {newPersona.Name}!", ConsoleColor.Gray, 800);
+
+                // Refresh Max Pools based on new stats (Vi/Ma influence)
                 player.RecalculateResources();
+
+                // Apply Edge-Case Capping (Absolute values preserved, but capped at new maximums)
+                player.CurrentHP = Math.Min(player.CurrentHP, player.MaxHP);
+                player.CurrentSP = Math.Min(player.CurrentSP, player.MaxSP);
             }
         }
 
