@@ -208,12 +208,14 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// <summary>
         /// Logic for processing a Hospital treatment.
         /// Validates funds and applies the state change.
+        /// Now handles persistent ailment removal (Task Implementation).
         /// </summary>
         public bool TryRestoreCombatant(Combatant patient)
         {
             int cost = CalculateRestorationCost(patient);
 
-            if (cost <= 0) return false;
+            // Allow treatment if HP/SP are missing OR if an ailment is present.
+            if (cost <= 0 && patient.CurrentAilment == null) return false;
 
             if (_economy.Macca >= cost)
             {
@@ -221,6 +223,12 @@ namespace JRPGPrototype.Logic.Field.Engines
                 {
                     patient.CurrentHP = patient.MaxHP;
                     patient.CurrentSP = patient.MaxSP;
+
+                    // Implement Status Persistence Clearing:
+                    // Hospital treatment clears persistent field ailments and battle-leftover buffs.
+                    patient.RemoveAilment();
+                    patient.ClearEncounterPersistence();
+
                     return true;
                 }
             }
