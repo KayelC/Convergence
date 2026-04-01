@@ -294,6 +294,7 @@ namespace JRPGPrototype.Logic.Battle
                         actionCommitted = true;
                         return; // Turn finished
                     }
+                    // Task 3: Seamless Integrated Persona Logic (P3R Style)
                     else if (choice == "Persona")
                     {
                         bool selectingPersonaAction = true;
@@ -361,23 +362,35 @@ namespace JRPGPrototype.Logic.Battle
                         else if (comp.action == "Swap")
                         {
                             // ATOMIC TRANSACTION: Exchange an active member for a standby member
-                            if (comp.standby != null && comp.active != null && _party.SwapActiveDemon(actor, comp.active, comp.standby))
+                            if (comp.standby != null && comp.active != null)
                             {
-                                _messenger.Publish($"{actor.Name} swapped {comp.active.Name} for {comp.standby.Name}!");
-                                _turnEngine.ConsumeAction(HitType.Normal, false);
-                                actionCommitted = true;
-                                return;
+                                // Clear Transient state (Guard/Shields/Charge) for the demon leaving
+                                comp.active.ClearTransientBattleState();
+
+                                if (_party.SwapActiveDemon(actor, comp.active, comp.standby))
+                                {
+                                    _messenger.Publish($"{actor.Name} swapped {comp.active.Name} for {comp.standby.Name}!");
+                                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                                    actionCommitted = true;
+                                    return;
+                                }
                             }
                         }
                         else if (comp.action == "Return")
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.active != null && _party.ReturnDemon(actor, comp.active))
+                            if (comp.active != null)
                             {
-                                _messenger.Publish($"{actor.Name} returned {comp.active.Name} to stock.");
-                                _turnEngine.ConsumeAction(HitType.Normal, false);
-                                actionCommitted = true;
-                                return;
+                                // Clear Transient state for the demon leaving
+                                comp.active.ClearTransientBattleState();
+
+                                if (_party.ReturnDemon(actor, comp.active))
+                                {
+                                    _messenger.Publish($"{actor.Name} returned {comp.active.Name} to stock.");
+                                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                                    actionCommitted = true;
+                                    return;
+                                }
                             }
                         }
                         else if (comp.action == "Analyze")
@@ -649,9 +662,17 @@ namespace JRPGPrototype.Logic.Battle
                 _messenger.Publish("\nDEFEAT...", ConsoleColor.Red, 1000);
             }
 
-            foreach (var member in _party.ActiveParty.Concat(_party.ReserveMembers))
+            // Tiered Cleanup: Loop through active party and everyone in the master stock.
+            // This ensures all owned demons have their buffs cleared but keep their ailments.
+            foreach (var member in _party.ActiveParty)
             {
                 member.CleanupBattleState();
+            }
+
+            // Process all demons currently in standby stock
+            foreach (var demon in _party.ActiveParty.First().DemonStock)
+            {
+                demon.CleanupBattleState();
             }
 
             _messenger.Publish("Press any key to exit battle...", ConsoleColor.Gray, waitForInput: true);
