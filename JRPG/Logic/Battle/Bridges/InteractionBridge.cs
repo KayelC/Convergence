@@ -201,7 +201,10 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return options[choice];
         }
 
-        // Lists the Persona stock for the Wild Card to choose from.
+        /// <summary>
+        /// Lists the Persona stock for the Wild Card to choose from.
+        /// Implements Inspect-Peek loop.
+        /// </summary>
         public Persona? SelectPersona(Combatant actor)
         {
             if (actor.PersonaStock == null || actor.PersonaStock.Count == 0)
@@ -211,16 +214,29 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 return null;
             }
 
-            List<string> options = actor.PersonaStock
-                .Select(p => $"{p.Name,-15} (Lv.{p.Level})")
-                .ToList();
-            options.Add("Back");
+            int lastIdx = 0;
+            while (true)
+            {
+                List<string> options = actor.PersonaStock
+                    .Select(p => $"{p.Name,-15} (Lv.{p.Level})")
+                    .ToList();
+                options.Add("Back");
 
-            int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCHOOSE PERSONA TO MANIFEST", options, 0);
+                int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCHOOSE PERSONA TO MANIFEST", options, lastIdx);
 
-            if (choice == -1 || choice == options.Count - 1) return null;
+                if (choice == -1 || choice == options.Count - 1) return null;
 
-            return actor.PersonaStock[choice];
+                // Handle Inspect Signal (S key)
+                if (choice <= -10)
+                {
+                    int inspectIdx = Math.Abs(choice) - 10;
+                    ShowEntityStatus(actor.PersonaStock[inspectIdx]);
+                    lastIdx = inspectIdx;
+                    continue; // Loop back to selection
+                }
+
+                return actor.PersonaStock[choice];
+            }
         }
 
         public List<Combatant>? SelectTarget(Combatant actor, SkillData? skill = null, ItemData? item = null, bool isTalk = false)
@@ -330,7 +346,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return options[choice];
         }
 
-        public Combatant SelectStrategyTarget()
+        public Combatant? SelectStrategyTarget()
         {
             var targets = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
             if (!targets.Any())
@@ -346,7 +362,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return targets[choice];
         }
 
-        public SkillData SelectSkill(Combatant actor, string uiContext)
+        public SkillData? SelectSkill(Combatant actor, string uiContext)
         {
             var skillNames = actor.GetConsolidatedSkills();
             if (skillNames.Count == 0) return null;
@@ -423,85 +439,153 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         /// <summary>
         /// Provides access to the COMP system for Operators.
-        /// Updated for the Unified 12-Slot Model and Battle-Swapping.
+        /// Implements Inspect-Peek loop for Summoning and Swapping.
         /// </summary>
         public (string action, Combatant? standby, Combatant? active) OpenCOMPMenu(Combatant actor)
         {
-            List<string> options = new List<string> { "Summon", "Return", "Analyze", "Back" };
-            int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCOMP SYSTEM", options, 0);
-
-            if (choice == 0) // Summon or Swap
+            int lastIdx = 0;
+            while (true)
             {
-                // Under the Unified Model, we show the actor's entire Master Stock
-                var allOwnedDemons = actor.DemonStock;
+                List<string> options = new List<string> { "Summon", "Return", "Analyze", "Back" };
+                int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCOMP SYSTEM", options, lastIdx);
 
-                if (!allOwnedDemons.Any())
+                if (choice == -1 || choice == options.Count - 1) return ("None", null, null);
+
+                if (choice == 0) // Summon / Swap
                 {
-                    _io.WriteLine("No demons in COMP storage.");
-                    _io.Wait(800);
-                    return ("None", null, null);
-                }
+                    var allOwnedDemons = actor.DemonStock;
 
-                List<string> names = new List<string>();
-                List<bool> disabledSummons = new List<bool>();
+                    if (!allOwnedDemons.Any())
+                    {
+                        _io.WriteLine("No demons in COMP storage.");
+                        _io.Wait(800);
+                        lastIdx = 0; continue;
+                    }
 
-                foreach (var d in allOwnedDemons)
-                {
-                    bool inParty = _party.ActiveParty.Contains(d);
-                    string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
+                    int stockIdx = 0;
+                    while (true)
+                    {
+                        List<string> names = new List<string>();
+                        List<bool> disabledSummons = new List<bool>();
 
-                    names.Add($"{d.Name,-15} Lv.{d.Level} {status}");
+                        foreach (var d in allOwnedDemons)
+                        {
+                            bool inParty = _party.ActiveParty.Contains(d);
+                            string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
+                            names.Add($"{d.Name,-15} Lv.{d.Level} {status}");
                     // Cannot summon if already in party OR if dead
-                    disabledSummons.Add(inParty || d.IsDead);
+                            disabledSummons.Add(inParty || d.IsDead);
+                        }
+                        names.Add("Back");
+                        disabledSummons.Add(false);
+
+                        int sub = _io.RenderMenu("Summon/Swap Demon:", names, stockIdx, disabledSummons);
+
+                        if (sub == -1 || sub == names.Count - 1) break; // Back to COMP Root
+
+                        // Handle Inspect Signal
+                        if (sub <= -10)
+                        {
+                            int inspectIdx = Math.Abs(sub) - 10;
+                            ShowEntityStatus(allOwnedDemons[inspectIdx]);
+                            stockIdx = inspectIdx;
+                            continue;
+                        }
+
+                        Combatant standbyTarget = allOwnedDemons[sub];
+                        if (_party.ActiveParty.Count < 4) return ("Summon", standbyTarget, null);
+
+                        List<Combatant> activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
+                        List<string> activeNames = activeDemons.Select(d => $"{d.Name,-15} (HP: {d.CurrentHP}/{d.MaxHP})").ToList();
+                        activeNames.Add("Cancel");
+
+                        int repIdx = _io.RenderMenu($"Replace who with {standbyTarget.Name}?", activeNames, 0);
+                        if (repIdx == -1 || repIdx == activeNames.Count - 1) { stockIdx = sub; continue; }
+
+                        return ("Swap", standbyTarget, activeDemons[repIdx]);
+                    }
+                    lastIdx = 0; continue;
                 }
 
-                names.Add("Back");
-                disabledSummons.Add(false);
-
-                int sub = _io.RenderMenu("Summon/Swap Demon:", names, 0, disabledSummons);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null, null);
-
-                Combatant standbyTarget = allOwnedDemons[sub];
-
-                // Check if we have room for a simple summon
-                if (_party.ActiveParty.Count < 4)
+                if (choice == 1) // Return
                 {
-                    return ("Summon", standbyTarget, null);
+                    var activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
+                    if (!activeDemons.Any()) { _io.WriteLine("No active demons to return."); _io.Wait(800); lastIdx = 1; continue; }
+
+                    List<string> names = activeDemons.Select(d => d.Name).ToList();
+                    names.Add("Back");
+                    int sub = _io.RenderMenu("Return Demon:", names, 0);
+                    if (sub == -1 || sub == names.Count - 1) { lastIdx = 1; continue; }
+                    return ("Return", null, activeDemons[sub]);
                 }
 
-                // Party is full (4/4): Trigger the Atomic Swap Flow
-                List<Combatant> activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
-                List<string> activeNames = activeDemons.Select(d => $"{d.Name,-15} (HP: {d.CurrentHP}/{d.MaxHP})").ToList();
-                activeNames.Add("Cancel");
-
-                int repIdx = _io.RenderMenu($"Replace who with {standbyTarget.Name}?", activeNames, 0);
-                if (repIdx == -1 || repIdx == activeNames.Count - 1) return ("None", null, null);
-
-                return ("Swap", standbyTarget, activeDemons[repIdx]);
-            }
-
-            if (choice == 1) // Return
-            {
-                var activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
-                if (!activeDemons.Any())
+                if (choice == 2) // Analyze
                 {
-                    _io.WriteLine("No active demons to return.");
-                    _io.Wait(800); return ("None", null, null);
+                    var targetList = SelectTarget(actor);
+                    if (targetList == null) { lastIdx = 2; continue; }
+                    return ("Analyze", null, targetList[0]);
                 }
-                var names = activeDemons.Select(d => d.Name).ToList();
-                names.Add("Back");
-                int sub = _io.RenderMenu("Return Demon:", names, 0);
-                if (sub == -1 || sub == names.Count - 1) return ("None", null, null);
-                return ("Return", null, activeDemons[sub]);
+            }
+        }
+
+        /// <summary>
+        /// Status Screen Renderer.
+        /// Displays Level, Race, Parameters, Affinities, and Skill Set.
+        /// </summary>
+        private void ShowEntityStatus(object entity)
+        {
+            _io.Clear();
+            string name = "Unknown";
+            int level = 0;
+            Dictionary<StatType, int> stats = new Dictionary<StatType, int>();
+            List<string> skills = new List<string>();
+            string race = "";
+
+            if (entity is Combatant c)
+            {
+                name = c.Name; level = c.Level;
+                race = c.ActivePersona?.Race ?? "Demon";
+                foreach (StatType s in Enum.GetValues(typeof(StatType))) stats[s] = c.GetStat(s);
+                skills = c.GetConsolidatedSkills();
+            }
+            else if (entity is Persona p)
+            {
+                name = p.Name; level = p.Level; race = p.Race;
+                foreach (StatType s in Enum.GetValues(typeof(StatType))) stats[s] = p.StatModifiers.GetValueOrDefault(s, 0);
+                skills = p.SkillSet;
             }
 
-            if (choice == 2) // Analyze
+            _io.WriteLine($"=== STATUS: {name.ToUpper()} ===", ConsoleColor.Yellow);
+            _io.WriteLine($"Race: {race,-15} | Level: {level}");
+            _io.WriteLine("--------------------------------------------------");
+
+            _io.WriteLine("PARAMETERS:");
+            foreach (var stat in stats)
             {
-                var targetList = SelectTarget(actor);
-                if (targetList == null) return ("None", null, null);
-                return ("Analyze", null, targetList[0]);
+                _io.WriteLine($" {stat.Key,-5}: {stat.Value}");
             }
-            return ("None", null, null);
+
+            _io.WriteLine("\nRESISTANCES:");
+            // Resolve Affinities from the Active Persona
+            var activeP = (entity is Combatant com) ? com.ActivePersona : (Persona)entity;
+            foreach (Element elem in Enum.GetValues(typeof(Element)))
+            {
+                if (elem == Element.None) continue;
+                Affinity aff = activeP?.GetAffinity(elem) ?? Affinity.Normal;
+                if (aff != Affinity.Normal)
+                {
+                    ConsoleColor color = aff == Affinity.Weak ? ConsoleColor.Red : ConsoleColor.Green;
+                    _io.Write($" {elem,-10}: ");
+                    _io.WriteLine($"{aff}", color);
+                }
+            }
+
+            _io.WriteLine("\nSKILLS:");
+            foreach (var s in skills) _io.WriteLine($" - {s}");
+
+            _io.WriteLine("\n--------------------------------------------------");
+            _io.WriteLine("Press any key to return...", ConsoleColor.Gray);
+            _io.ReadKey();
         }
 
         public string GetBattleContext(Combatant actor)
