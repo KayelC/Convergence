@@ -182,9 +182,9 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
             string effectLower = skillEffect.ToLower();
             bool curesAll = effectLower.Contains("cure all") ||
-                            effectLower.Contains("cures all") ||
-                            effectLower.Contains("amrita") ||
-                            effectLower.Contains("salvation");
+                           effectLower.Contains("cures all") ||
+                           effectLower.Contains("amrita") ||
+                           effectLower.Contains("salvation");
 
             if (curesAll || effectLower.Contains(target.CurrentAilment.Name.ToLower()) ||
                 effectLower.Contains("dispel") || effectLower.Contains("dispels"))
@@ -212,8 +212,8 @@ namespace JRPGPrototype.Logic.Battle.Engines
             if (skills.Contains("Auto-Rakukaja")) ApplyStatChange("Rakukaja", actor);
             if (skills.Contains("Auto-Sukukaja")) ApplyStatChange("Sukukaja", actor);
 
-            // 2. Party-Wide Auto-Skills (Maha Variants
-            // We iterate through the provided ally list to apply the buff to everyone.
+            // 2. Party-Wide Auto-Skills (Maha Variants)
+            // Iterate through the provided ally list to apply the buff to everyone.
             if (skills.Contains("Auto-Mataru") || skills.Contains("Auto-Maka") || skills.Contains("Auto-Maraku") || skills.Contains("Auto-Masuku"))
             {
                 foreach (var ally in allies)
@@ -276,9 +276,15 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// <summary>
         /// Handles turn-end logic including Poison damage, Recovery rolls, and Passive Restoration.
         /// Distressed, Weak, etc., are handled by CombatMath, but this manages their duration.
+        /// Ailment decay and DOT only trigger if the combatant is in the ActiveParty (on the field).
         /// </summary>
         public void ProcessTurnEnd(Combatant actor)
         {
+            // --- DEPLOYMENT GATE ---
+            // If the demon is in the COMP (standby), all turn-based changes are suspended.
+            // This prevents DOT deaths in the COMP and freezes ailment durations.
+            if (actor.PartySlot == -1) return;
+
             // --- PASSIVE TRIGGER: Turn-End Restoration ---
             var skills = actor.GetConsolidatedSkills();
 
@@ -364,8 +370,6 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 actor.RemoveAilment();
                 _messenger?.Publish($"{actor.Name}'s {ailment.Name} wore off.");
             }
-
-            return;
         }
 
         /// <summary>
