@@ -110,7 +110,8 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 disabledStates.Add(isDisabled);
             }
 
-            int choice = _io.RenderMenu($"{context}\nCommand: {actor.Name}", options, _mainMenuIndex, disabledStates);
+            // Normal menu: Status Inspect is FALSE
+            int choice = _io.RenderMenu($"{context}\nCommand: {actor.Name}", options, _mainMenuIndex, disabledStates, null, false);
             if (choice == -1) return "Cancel";
 
             _mainMenuIndex = choice;
@@ -166,7 +167,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                     var d = skillMapping[idx];
                     _io.WriteLine($"Effect: {d.Effect}\nPower: {d.Power}");
                 }
-            });
+            }, false);
 
             if (choice == -1 || choice == labels.Count - 1)
             {
@@ -203,7 +204,6 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         /// <summary>
         /// Lists the Persona stock for the Wild Card to choose from.
-        /// Implements Inspect-Peek loop.
         /// </summary>
         public Persona? SelectPersona(Combatant actor)
         {
@@ -222,11 +222,12 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                     .ToList();
                 options.Add("Back");
 
-                int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCHOOSE PERSONA TO MANIFEST", options, lastIdx);
+                // supportStatusInspect: true
+                int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCHOOSE PERSONA TO MANIFEST", options, lastIdx, null, null, true);
 
                 if (choice == -1 || choice == options.Count - 1) return null;
 
-                // Handle Inspect Signal (S key)
+                // Handle Inspect Signal
                 if (choice <= -10)
                 {
                     int inspectIdx = Math.Abs(choice) - 10;
@@ -362,6 +363,10 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return targets[choice];
         }
 
+        /// <summary>
+        /// Select Skill Menu. 
+        /// Uses string-parsing lookup and disabled affordance list.
+        /// </summary>
         public SkillData? SelectSkill(Combatant actor, string uiContext)
         {
             var skillNames = actor.GetConsolidatedSkills();
@@ -394,7 +399,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                     if (Database.Skills.TryGetValue(targetName, out var d))
                         _io.WriteLine($"Effect: {d.Effect}\nPower: {d.Power}");
                 }
-            });
+            }, false);
 
             if (choice == -1 || choice == labels.Count - 1) return null;
             _skillMenuIndex = choice;
@@ -439,7 +444,8 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         /// <summary>
         /// Provides access to the COMP system for Operators.
-        /// Implements Inspect-Peek loop for Summoning and Swapping.
+        /// Updated for the Unified 12-Slot Model and Atomic Battle-Swapping.
+        /// Handles the Inspect key loop safely in both standby and replacement selections.
         /// </summary>
         public (string action, Combatant? standby, Combatant? active) OpenCOMPMenu(Combatant actor)
         {
@@ -472,16 +478,19 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                         {
                             bool inParty = _party.ActiveParty.Contains(d);
                             string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
+
                             names.Add($"{d.Name,-15} Lv.{d.Level} {status}");
                     // Cannot summon if already in party OR if dead
                             disabledSummons.Add(inParty || d.IsDead);
                         }
+
                         names.Add("Back");
                         disabledSummons.Add(false);
 
-                        int sub = _io.RenderMenu("Summon/Swap Demon:", names, stockIdx, disabledSummons);
+                        // supportStatusInspect: true
+                        int sub = _io.RenderMenu("Summon/Swap Demon:", names, stockIdx, disabledSummons, null, true);
 
-                        if (sub == -1 || sub == names.Count - 1) break; // Back to COMP Root
+                        if (sub == -1 || sub == names.Count - 1) break;
 
                         // Handle Inspect Signal
                         if (sub <= -10)
@@ -493,16 +502,33 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                         }
 
                         Combatant standbyTarget = allOwnedDemons[sub];
+
                         if (_party.ActiveParty.Count < 4) return ("Summon", standbyTarget, null);
 
+                        // Party is full: Selection to Replace with Peek Loop
                         List<Combatant> activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
-                        List<string> activeNames = activeDemons.Select(d => $"{d.Name,-15} (HP: {d.CurrentHP}/{d.MaxHP})").ToList();
-                        activeNames.Add("Cancel");
+                        int activeIdx = 0;
+                        while (true)
+                        {
+                            List<string> activeNames = activeDemons.Select(d => $"{d.Name,-15} (HP: {d.CurrentHP}/{d.MaxHP})").ToList();
+                            activeNames.Add("Cancel");
 
-                        int repIdx = _io.RenderMenu($"Replace who with {standbyTarget.Name}?", activeNames, 0);
-                        if (repIdx == -1 || repIdx == activeNames.Count - 1) { stockIdx = sub; continue; }
+                            // supportStatusInspect: true
+                            int repIdx = _io.RenderMenu($"Replace who with {standbyTarget.Name}?", activeNames, activeIdx, null, null, true);
 
-                        return ("Swap", standbyTarget, activeDemons[repIdx]);
+                            if (repIdx == -1 || repIdx == activeNames.Count - 1) { stockIdx = sub; break; }
+
+                            if (repIdx <= -10)
+                            {
+                                int inspectActiveIdx = Math.Abs(repIdx) - 10;
+                                ShowEntityStatus(activeDemons[inspectActiveIdx]);
+                                activeIdx = inspectActiveIdx;
+                                continue;
+                            }
+
+                            return ("Swap", standbyTarget, activeDemons[repIdx]);
+                        }
+                        continue;
                     }
                     lastIdx = 0; continue;
                 }
@@ -510,13 +536,32 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 if (choice == 1) // Return
                 {
                     var activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
-                    if (!activeDemons.Any()) { _io.WriteLine("No active demons to return."); _io.Wait(800); lastIdx = 1; continue; }
+                    if (!activeDemons.Any())
+                    {
+                        _io.WriteLine("No active demons to return.");
+                        _io.Wait(800); lastIdx = 1; continue;
+                    }
+                    int retIdx = 0;
+                    while (true)
+                    {
+                        List<string> names = activeDemons.Select(d => d.Name).ToList();
+                        names.Add("Back");
 
-                    List<string> names = activeDemons.Select(d => d.Name).ToList();
-                    names.Add("Back");
-                    int sub = _io.RenderMenu("Return Demon:", names, 0);
-                    if (sub == -1 || sub == names.Count - 1) { lastIdx = 1; continue; }
-                    return ("Return", null, activeDemons[sub]);
+                        // supportStatusInspect: true
+                        int sub = _io.RenderMenu("Return Demon:", names, retIdx, null, null, true);
+                        if (sub == -1 || sub == names.Count - 1) break;
+
+                        if (sub <= -10)
+                        {
+                            int inspectRetIdx = Math.Abs(sub) - 10;
+                            ShowEntityStatus(activeDemons[inspectRetIdx]);
+                            retIdx = inspectRetIdx;
+                            continue;
+                        }
+
+                        return ("Return", null, activeDemons[sub]);
+                    }
+                    lastIdx = 1; continue;
                 }
 
                 if (choice == 2) // Analyze

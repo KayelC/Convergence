@@ -69,9 +69,9 @@ namespace JRPGPrototype.Services
         /// Renders a dynamic menu via the MenuUI utility.
         /// Now passes 'this' as the IGameIO provider to MenuUI.
         /// </summary>
-        public int RenderMenu(string header, List<string> options, int initialIndex, List<bool>? disabledOptions = null, Action<int>? onHighlight = null)
+        public int RenderMenu(string header, List<string> options, int initialIndex, List<bool>? disabledOptions = null, Action<int>? onHighlight = null, bool supportStatusInspect = false)
         {
-            return MenuUI.RenderMenu(this, header, options, initialIndex, disabledOptions, onHighlight);
+            return MenuUI.RenderMenu(this, header, options, initialIndex, disabledOptions, onHighlight, supportStatusInspect);
         }
 
         #endregion
