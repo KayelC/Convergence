@@ -6,6 +6,7 @@ namespace JRPGPrototype.Services
     /// <summary>
     /// Static utility for rendering high-fidelity interactive menus.
     /// Refactored to utilize IGameIO instead of direct System.Console calls.
+    /// Now supports a secondary "Inspect" key (S) to signal status viewing.
     /// </summary>
     public static class MenuUI
     {
@@ -53,6 +54,8 @@ namespace JRPGPrototype.Services
                 if (onHighlight != null && options.Count > 0)
                 {
                     io.WriteLine("\n------------------------------");
+                    // Feedback for the Status Peek feature
+                    io.WriteLine("[S] View Status | [Enter] Confirm", ConsoleColor.Cyan);
                     onHighlight(selectedIndex);
                 }
 
@@ -76,6 +79,13 @@ namespace JRPGPrototype.Services
                         io.SetCursorVisible(true);
                         return selectedIndex;
                     }
+                }
+                else if (keyInfo.Key == ConsoleKey.S)
+                {
+                    // "S" Key used for Status Peek. 
+                    // Returns a signal value: -(index + 10) to avoid conflict with -1 (Cancel).
+                    io.SetCursorVisible(true);
+                    return -(selectedIndex + 10);
                 }
                 else if (keyInfo.Key == ConsoleKey.Escape || keyInfo.Key == ConsoleKey.Backspace)
                 {
