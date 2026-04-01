@@ -415,7 +415,15 @@ namespace JRPGPrototype.Logic.Battle
                     else if (choice == "Talk")
                     {
                         targets = _ui.SelectTarget(actor, null, null, true);
-                        if (targets != null && targets.Count > 0) HandleNegotiation(actor, targets[0]);
+
+                        // FIX: If the user cancels out of the target selection for Talk, 
+                        // continue the loop to allow them to pick a different action.
+                        if (targets == null) continue;
+
+                        if (targets.Count > 0) HandleNegotiation(actor, targets[0]);
+
+                        // Proceed to end the turn after negotiation attempt
+                        actionCommitted = true;
                         return;
                     }
                     else if (choice == "Tactics")
