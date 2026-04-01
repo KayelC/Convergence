@@ -160,7 +160,7 @@ namespace JRPGPrototype.Logic.Battle
             var activeSide = isPlayerSide ? _party.GetAliveMembers() : _enemies.Where(e => !e.IsDead).ToList();
             if (activeSide.Count == 0) return;
 
-            // Clear the swap state for everyone acting this phase
+            // Clear the swap state for everyone acting this phase (Once per Turn Rule)
             foreach (var member in activeSide)
             {
                 member.HasSwappedThisTurn = false;
@@ -313,8 +313,8 @@ namespace JRPGPrototype.Logic.Battle
                                 {
                                     _processor.ExecutePersonaSwap(actor, newP);
                                     actor.HasSwappedThisTurn = true;
-                                    // FREE ACTION: Logic remains in this inner loop
-                                    // Player can now see NEW skills for the swapped Persona
+                                    // FREE ACTION: Logic remains in this inner loop.
+                                    // Player can now see NEW skills for the swapped Persona immediately.
                                 }
                             }
                             else if (menuResult.SelectedSkill != null)
@@ -327,7 +327,7 @@ namespace JRPGPrototype.Logic.Battle
                                     actionCommitted = true;
                                     selectingPersonaAction = false;
                                 }
-                                // If targets == null (Back), we loop back to Persona Action list
+                                // If targets == null (Back), we loop back to Persona Action list (Integrated skills)
                             }
                         }
 
@@ -350,9 +350,20 @@ namespace JRPGPrototype.Logic.Battle
                         if (comp.action == "Summon")
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.target != null && _party.SummonDemon(actor, comp.target))
+                            if (comp.standby != null && _party.SummonDemon(actor, comp.standby))
                             {
-                                _messenger.Publish($"{actor.Name} summoned {comp.target.Name}!");
+                                _messenger.Publish($"{actor.Name} summoned {comp.standby.Name}!");
+                                _turnEngine.ConsumeAction(HitType.Normal, false);
+                                actionCommitted = true;
+                                return;
+                            }
+                        }
+                        else if (comp.action == "Swap")
+                        {
+                            // ATOMIC TRANSACTION: Exchange an active member for a standby member
+                            if (comp.standby != null && comp.active != null && _party.SwapActiveDemon(actor, comp.active, comp.standby))
+                            {
+                                _messenger.Publish($"{actor.Name} swapped {comp.active.Name} for {comp.standby.Name}!");
                                 _turnEngine.ConsumeAction(HitType.Normal, false);
                                 actionCommitted = true;
                                 return;
@@ -361,9 +372,9 @@ namespace JRPGPrototype.Logic.Battle
                         else if (comp.action == "Return")
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.target != null && _party.ReturnDemon(actor, comp.target))
+                            if (comp.active != null && _party.ReturnDemon(actor, comp.active))
                             {
-                                _messenger.Publish($"{actor.Name} returned {comp.target.Name} to stock.");
+                                _messenger.Publish($"{actor.Name} returned {comp.active.Name} to stock.");
                                 _turnEngine.ConsumeAction(HitType.Normal, false);
                                 actionCommitted = true;
                                 return;
@@ -371,7 +382,7 @@ namespace JRPGPrototype.Logic.Battle
                         }
                         else if (comp.action == "Analyze")
                         {
-                            if (comp.target != null) _processor.ExecuteAnalyze(comp.target);
+                            if (comp.active != null) _processor.ExecuteAnalyze(comp.active);
                             _turnEngine.ConsumeAction(HitType.Normal, false);
                             actionCommitted = true;
                             return;
@@ -414,7 +425,6 @@ namespace JRPGPrototype.Logic.Battle
 
                         HandleTactics(actor);
 
-                        // If the escape was successful, HandleTactics sets BattleEnded to true
                         if (BattleEnded)
                         {
                             actionCommitted = true;
@@ -424,14 +434,13 @@ namespace JRPGPrototype.Logic.Battle
                         // Check if an icon was consumed (indicates a failed escape attempt)
                         if (_turnEngine.GetTotalIconCount() < iconsBefore)
                         {
-                            // Turn is consumed. Setting this to true exits the selection loop 
-                            // and concludes this actor's phase.
+                            // Turn is consumed. Setting this to true exits the selection loop and concludes this actor's phase.
                             actionCommitted = true;
                         }
                         else
                         {
-                            // No icons consumed. This means the player pressed "Back" 
-                            // or used a non-turn-consuming tactic like "Strategy".
+                            // No icons consumed.
+                            // This means the player pressed "Back" or used a non-turn-consuming tactic like "Strategy".
                             continue;
                         }
                     }
