@@ -544,6 +544,8 @@ namespace JRPGPrototype.Logic.Field
                 {
                     if (occupant != null && _partyManager.ReturnDemon(_player, occupant))
                     {
+                        // Clean up transient flags (Guard/Charge) when returning on field
+                        occupant.ClearTransientBattleState();
                         _messenger.Publish($"{occupant.Name} returned to stock.", ConsoleColor.Gray, 600);
                     }
                 }
@@ -551,9 +553,11 @@ namespace JRPGPrototype.Logic.Field
                 {
                     if (occupant != null)
                     {
-                        // Atomic Replace
-                        _partyManager.ReplaceDemon(_player, occupant, newDemon);
-                        _messenger.Publish($"{occupant.Name} swapped for {newDemon.Name}!", ConsoleColor.Gray, 600);
+                        if (_partyManager.SwapActiveDemon(_player, occupant, newDemon))
+                        {
+                            occupant.ClearTransientBattleState();
+                            _messenger.Publish($"{occupant.Name} swapped for {newDemon.Name}!", ConsoleColor.Gray, 600);
+                        }
                     }
                     else
                     {
