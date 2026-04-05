@@ -1,21 +1,66 @@
-# IDE-specific files
-.vs/
-.idea/
-
-# Visual Studio user specific files
+# ============================================================
+# C# / .NET
+# ============================================================
+bin/
+obj/
 *.suo
 *.user
 *.userosscache
-
-# Visual Studio Code specific files
-.vscode/
-
-# Build artifacts
-bin/
-obj/
-
-# Package directories
+*.sln.docstates
+*.userprefs
+.vs/
 packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
 
-# Other common generated files
+# ============================================================
+# IDEs
+# ============================================================
+.idea/
+.vscode/
+*.rsuser
+*.DotSettings.user
+
+# ============================================================
+# Gemini CLI
+# ============================================================
+.gemini/tmp/
+.gemini/*.log
+GEMINI.md
+
+# ============================================================
+# Python (Documentation scripts)
+# ============================================================
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ============================================================
+# OS Generated
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================
+# Secrets — never commit these
+# ============================================================
+.env
+*.env
+*.env.local
+
+# ============================================================
+# Logs & Temp
+# ============================================================
 *.log
+*.tmp
+*.temp
+*.bak
+*.swp
