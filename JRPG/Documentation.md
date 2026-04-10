@@ -140,6 +140,49 @@ Outside of battle, the player interacts with the `FieldServiceEngine` to manage 
 *   **Terminal System:** Unlocks warp points on fixed floors (e.g., Floor 10, 20) allowing for persistent shortcuts between the Lobby and the depths.
 *   **Metadata Validation:** To prevent JSON-related crashes, the engine performs a "Repair" on unhydrated items/equipment, ensuring names and IDs are valid before possession.
 
+### **3.13. Party & Stock Management (The Unified Model)**
+The `PartyManager` coordinates the transition of entities between active combat and standby storage.
+*   **Active Party vs. Master Stock:**
+    *   **Active Party:** Up to 4 combatants currently on the battlefield.
+    *   **Master Stock (`DemonStock`/`PersonaStock`):** The total collection of entities owned by the player. In this model, the Active Party holds references to objects already present in the Master Stock.
+*   **Tiered Capacity Scaling:** Stock size is level-gated to encourage progression:
+    *   **Level 1-9:** 3 slots
+    *   **Level 10-19:** 5 slots
+    *   **Level 20-29:** 7 slots
+    *   **Level 30-39:** 10 slots
+    *   **Level 40+:** 12 slots (Maximum)
+*   **Atomic Transactions:** All party transitions (`Summon`, `Return`, `Swap`) are handled as atomic transactions to prevent entity duplication or loss.
+    *   **Summon:** Moves a reference from Standby to Active.
+    *   **Swap:** Replaces an active reference with a standby one in a single turn (Essential for turn economy).
+    *   **Return:** Removes a reference from Active, cleaning up transient battle states (Guard/Shields).
+
+### **3.14. The Demonic Compendium (Registry & Recall)**
+The `CompendiumRegistry` acts as the persistent storage authority for discovered and fused demons.
+*   **Deep-Cloning Snapshots:** The registry does not store live object references; it stores immutable deep-copy snapshots. This allows the player to "record" a demon's current progress (level/stats/skills) and recall it later even if the original is fused away.
+*   **Species Normalization:** Uses canonical IDs from the `entity_database.json` to ensure species-level uniqueness, preventing duplicate entries for the same demon type.
+*   **Dynamic Recall Pricing:** The cost to materialize a demon from the registry scales with its power:
+    *   **Formula:** `BasePrice + (Level * 100) + (TotalStats * 50) + (SkillCount * 200)`
+    *   This ensures that end-game, high-stat demons remain a significant investment even if their base species is low-level.
+
+### **3.15. Negotiation Engine (Personality & Demands)**
+The `NegotiationEngine` manages the recruitment mini-game through a race-driven personality model.
+*   **Personality Mapping:** All 32 demon races are mapped to 8 distinct `PersonalityTypes` (e.g., Childlike, Arrogant, Sultry, Upbeat). This dictates the question pools and response weights.
+*   **The Mood Score Loop:** 
+    *   Negotiation lasts for 3 rounds of questions.
+    *   Each answer adds a hidden value (-1 to +2) to the `Mood Score`.
+    *   **Success Threshold:** A score of 4 or higher is required to enter the Demands phase.
+*   **Demand Logic:**
+    *   **Macca Formula:** `(Level^2 * 10) - (Luck * 5)`. 
+    *   **Level Gate:** Demons will refuse to join if their level is higher than the player's.
+    *   **Trick Outcome:** A demon may take Macca/Items and then flee without joining (controlled by a luck-based roll).
+*   **Familiar Demons:** If the player already owns the demon species, the negotiation is bypassed. The demon provides a gift (Medicine, Macca, or a small party heal) and departs peacefully.
+
+### **3.16. Battle Knowledge (The Memory Layer)**
+The `BattleKnowledge` engine tracks elemental affinities discovered during combat to simulate species-level learning.
+*   **Species Persistence:** Discoveries are tied to the `SourceId`. Once a player hits a "Pixie" with Ice and discovers it is a Weakness, all future Pixies in that session will display the "WEAK" label.
+*   **AI Anti-Cheat:** To maintain challenge, the `BehaviorEngine` for enemies is initialized with a blank `BattleKnowledge` object every encounter, forcing enemies to "probe" for player weaknesses rather than having omniscient knowledge.
+*   **Risk Aversion:** The AI uses this layer to avoid using elements known to be Nullified, Repelled, or Absorbed by the target, preserving Press Turn icons.
+
 ---
 
 ## **4. Technical Implementation (The Code Aspect)**
@@ -147,12 +190,14 @@ Outside of battle, the player interacts with the `FieldServiceEngine` to manage 
 ### **4.1. Entity Composition (`Entities/`)**
 *   **`Combatant.cs`:** The root container. It uses **Proxy/Facade** patterns, delegating complex math to `StatProcessor` (stat calculation with modifiers) and `DamageHandler` (affinity-based damage processing).
 *   **`Persona.cs`:** A lightweight data container for skills and affinities. It allows for "hot-swapping" stats and resistances on a `Combatant`.
-*   **`CombatantFactory.cs`:** A specialized factory that hydrates combatants from JSON. It handles level-scaling for enemies and ensures that player demons inherit the correct state from their fusion parents.
+*   **`CombatantFactory.cs`:** A specialized factory that hydrates combatants from JSON. 
+    *   **Level Scaling:** For enemies, it uses a linear growth model to scale base stats to the target level.
+    *   **State Inheritance:** For player demons (Fusion), it ensures that experience and extra skills are preserved across the transformation.
 
 ### **4.2. Combat Orchestration (`Logic/Battle/`)**
 *   **`BattleConductor.cs`:** Manages the `while(!BattleEnded)` loop. It uses the `IBattleMessenger` to broadcast "Narration" without knowing *how* that narration is displayed.
 *   **`ActionProcessor.cs`:** The authoritative coordinator of battle actions. 
-    *   **Effectiveness Gate:** Before executing, it verifies if an action is redundant (e.g., curing a healthy ally) to prevent turn wastage.
+    *   **The Effectiveness Gate:** A critical logic layer that prevents turn wastage. It cross-references `StatusRegistry.IsActionRedundant()` to block actions that would result in zero change (e.g., curing a healthy ally, or inflicting a duplicate ailment).
     *   **Strategy Delegation:** Instead of large `switch` blocks, it uses the `BattleEffectRegistry` to fetch an `IBattleEffect` strategy based on the skill's category.
     *   **Persona Swapping:** Orchestrates the mid-battle swap for Wild Cards, ensuring resource pools are recalculated based on new stat weights without losing current HP/SP values.
 *   **`PressTurnEngine.cs`:** A state machine that tracks `_fullIcons` and `_blinkingIcons`. It contains the "Laws of SMT" (e.g., `TerminatePhase()` on Repel).
@@ -221,6 +266,39 @@ The `StatusRegistry` manages stat modifications through four independent tracks,
 ### **4.9. Core Helpers & Utilities (`Core/`)**
 *   **`ElementHelper.cs`:** Centralized logic for element parsing and category mapping. It handles non-standard mappings like "Electric -> Elec" and "Block -> Null" during data hydration.
 *   **`Enums.cs`:** Defines the system's core vocabulary, including `Element`, `Affinity`, `ClassType`, and `StatType`.
+
+### **4.10. The Messenger System (Mediator & Observer Pattern)**
+To maintain strict decoupling between game logic and visual presentation, the framework utilizes a specialized messaging infrastructure.
+*   **The Mediator (`IBattleMessenger`, `IFusionMessenger`):** A centralized "Transmission Tower" that allows engines and conductors to broadcast events without knowing who is listening.
+    *   **`Publish()` Logic:** Engines call `messenger.Publish(message, metadata)` which creates a Data Transfer Object (DTO).
+*   **The DTOs (`BattleMessageArgs`, `FusionMessageArgs`):** These carry critical metadata for the UI, including:
+    *   `Color`: Suggested console color for the text.
+    *   `Delay`: Milliseconds to pause after displaying (pacing).
+    *   `WaitForInput`: Flag to force a user acknowledgement (e.g., "Press any key...").
+    *   `AnalysisTarget`: A combatant reference for rendering full stat sheets.
+    *   `ClearScreen`: Signal to wipe the terminal before rendering.
+*   **The Observer (`BattleLogger`, `FusionLogger`):** These classes subscribe to the messenger's events. They are the only modules allowed to interact with the `IGameIO` for narration purposes, translating DTOs into physical output.
+
+### **4.11. Conductor State Machines**
+Conductors act as the "Heart" of each sub-system, managing high-level state transitions through nested loops and conditional forks.
+*   **`BattleConductor` Lifecycle:**
+    1.  **`StartBattle()`:** Handles encounter narration -> Initiative Roll (weighted Agility) -> Turn 1 Passive processing (Auto-Kaja).
+    2.  **Phase Loop:** Iterates between Player and Enemy phases until `BattleEnded` is true.
+    3.  **`ExecutePhase()`:** Reactive iteration through combatants. It checks `ProcessTurnStart` for ailments (skipping turns or forcing behavior) and calls `ProcessTurnEnd` for DOT/recovery.
+    4.  **`ExecuteAction()`:** The primary fork. It delegates to the `InteractionBridge` for player input or the `BehaviorEngine` for AI decisions.
+*   **`FusionConductor` Ritual Flow:**
+    1.  **Participant Selection:** Dynamic filtering based on `ClassType` (Operators use Stock; Wild Cards use spiritual masks).
+    2.  **Result Prediction:** Calls `FusionCalculator` to determine the operation type and target ID.
+    3.  **Skill Inheritance:** A sub-loop where players select from a filtered pool of inheritable skills based on deterministic slot counts.
+    4.  **The Accident reveal:** Accident probabilities are checked early but revealed only after player confirmation, potentially scrambling the result and mutating skills.
+
+### **4.12. The Bridge Pattern & UI Orchestration**
+Bridges serve as specialized UI managers, encapsulating the complexity of menu generation and input interpretation.
+*   **Specialization:** 
+    *   **`InteractionBridge`:** Manages the battle HUD, target selection, and complex sub-menus like the Integrated Persona Menu.
+    *   **`DungeonUIBridge`:** Translates exploration state (floor type, block name) into navigation options.
+    *   **`CathedralUIBridge`:** Handles the multi-step ritual UI, providing visual feedback for stat boosts and skill inheritance.
+*   **Simplified Returns:** Instead of returning raw input (strings/ints), bridges return high-level result objects (e.g., `PersonaMenuResult`, `NegotiationResult`) or signals (e.g., `ItemUsageResult.RequestDungeonExit`), keeping the Conductors clean of UI logic.
 
 ---
 
