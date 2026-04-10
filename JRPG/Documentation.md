@@ -83,6 +83,63 @@ The exploration logic is built for verticality and persistence, modeled after *P
 *   **Encounter Generation:** The `ExplorationProcessor` generates mixed enemy groups (1 to 3 enemies).
 *   **Grouping Logic:** To maintain SMT fidelity, identical enemies are grouped and labeled alphabetically (e.g., "Pixie A", "Pixie B").
 
+### **3.8. Game Loop, Economy & Inventory**
+The framework manages player resources through a centralized economy and a structured inventory system.
+*   **The Macca Economy:** Currency (Macca) is tracked by the `EconomyManager`. 
+    *   **Buy/Sell Scaling:** Transaction prices are heavily influenced by the `Luck` (Lu) stat.
+        *   `Buy Price = BasePrice * Max(0.5, 1.0 - (Luck * 0.01))` (Up to 50% discount).
+        *   `Sell Price = BasePrice * (0.50 + (Luck * 0.01))` (Up to 100% value at 50 Luck).
+*   **Inventory Structure:** The `InventoryManager` separates items into a quantitative dictionary and equipment into categorized lists (`OwnedWeapons`, `OwnedArmor`, etc.). 
+*   **Shop Engine:** Offers are populated via `shop_inventory.json`, supporting categorized tabs (Items, Weapons, Armor, Boots, Accessories).
+
+### **3.9. Enemy AI & Tactical Logic (Unified Tactical Model)**
+Enemy behavior is governed by the `BehaviorEngine`, which simulates high-level player strategy through a **Tiered Priority Ladder**.
+*   **The Priority Ladder:**
+    1.  **Kill-Shot:** If a valid attack can reduce an opponent to 0 HP.
+    2.  **Weakness/Rigid Exploitation:** Hunting for known elemental weaknesses or "Rigid" targets (Frozen/Shocked) to gain icons.
+    3.  **Crisis Recovery:** Healing allies below 35% HP.
+    4.  **Critical Fishing:** Using physical attacks on Rigid targets for 100% critical rate.
+    5.  **Informed Pass:** Strategically passing a turn if a powerful ally behind can exploit a known weakness.
+    6.  **Standard Pressure:** Using the highest-power offensive skill.
+*   **Ailment Hijack:** AI logic is bypassed if the actor is under certain mental ailments:
+    *   **Rage:** Forced to use basic physical attacks.
+    *   **Confusion/Charm:** May heal opponents or attack allies randomly.
+*   **Risk Aversion:** The AI cross-references `BattleKnowledge` to avoid using skills against targets known to Null, Repel, or Absorb that element.
+
+### **3.10. The Lunar Cycle (Moon Phase System)**
+The `MoonPhaseSystem` is a 9-step progression cycle [0-8] that serves as a global state modifier.
+*   **Phase Progression:** The moon advances one step (`Advance()`) upon floor transitions in a dungeon or during specific field events (resting/healing).
+*   **Phases:** New Moon [0] -> Waxing [1-3] -> Half Moon [4] -> Waxing [5-7] -> Full Moon [8].
+*   **Systemic Impacts:**
+    *   **Negotiation:** Blocked during Full Moon (Phase 8); demons are "frenzied."
+    *   **Fusion:** Accident rates spike from 1% to 12% during Full Moon.
+    *   **Sacrificial Fusion:** Unique rituals are unlocked during the Full Moon phase.
+
+### **3.11. Detailed Ailment Taxonomy**
+The framework supports 11 distinct status ailments, each with specific combat modifiers and removal triggers.
+
+| Ailment | Action Restriction | Combat Effect | Removal Trigger |
+| :--- | :--- | :--- | :--- |
+| **Poison** | None | 13% Max HP damage/turn | NaturalRoll (Luck) |
+| **Freeze** | SkipTurn | 0 Evasion, 100% Crit Taken | OneTurn / OnHit |
+| **Shock** | SkipTurn | 0 Evasion, 100% Crit Taken | OneTurn / OnHit |
+| **Sleep** | SkipTurn | 0 Evasion, 50% Crit Taken, HP/SP Regen | NaturalRoll / OnHit |
+| **Charm** | ConfusedAction | May attack allies / heal enemies | NaturalRoll |
+| **Rage** | ForceAttack | 1.5x Dmg Dealt, 3x Dmg Taken | NaturalRoll |
+| **Fear** | ChanceSkip/Flee | 15% flee chance, 40% skip turn | NaturalRoll |
+| **Panic** | ChanceSkip | 50% skip turn, cannot use skills | NaturalRoll |
+| **Distress** | None | 0 Evasion, 1.5x Dmg Taken | NaturalRoll |
+| **Bind** | LimitedAction | Cannot use Skills or Items | NaturalRoll |
+| **Stun** | SkipTurn | Forced turn skip | OneTurn |
+
+### **3.12. Field Services & Restoration**
+Outside of battle, the player interacts with the `FieldServiceEngine` to manage party health and logistics.
+*   **Hospital (Restoration):**
+    *   **Cost Formula:** 1 Macca per 1 HP missing + 5 Macca per 1 SP missing.
+    *   **Full Restore:** Clears all HP/SP damage, persistent field ailments, and encounter-leftover buffs.
+*   **Terminal System:** Unlocks warp points on fixed floors (e.g., Floor 10, 20) allowing for persistent shortcuts between the Lobby and the depths.
+*   **Metadata Validation:** To prevent JSON-related crashes, the engine performs a "Repair" on unhydrated items/equipment, ensuring names and IDs are valid before possession.
+
 ---
 
 ## **4. Technical Implementation (The Code Aspect)**
@@ -94,11 +151,18 @@ The exploration logic is built for verticality and persistence, modeled after *P
 
 ### **4.2. Combat Orchestration (`Logic/Battle/`)**
 *   **`BattleConductor.cs`:** Manages the `while(!BattleEnded)` loop. It uses the `IBattleMessenger` to broadcast "Narration" without knowing *how* that narration is displayed.
-*   **`ActionProcessor.cs`:** The executioner. It handles the logic for Skills, Items, and basic Attacks, calculating results via `CombatMath`.
+*   **`ActionProcessor.cs`:** The authoritative coordinator of battle actions. 
+    *   **Effectiveness Gate:** Before executing, it verifies if an action is redundant (e.g., curing a healthy ally) to prevent turn wastage.
+    *   **Strategy Delegation:** Instead of large `switch` blocks, it uses the `BattleEffectRegistry` to fetch an `IBattleEffect` strategy based on the skill's category.
+    *   **Persona Swapping:** Orchestrates the mid-battle swap for Wild Cards, ensuring resource pools are recalculated based on new stat weights without losing current HP/SP values.
 *   **`PressTurnEngine.cs`:** A state machine that tracks `_fullIcons` and `_blinkingIcons`. It contains the "Laws of SMT" (e.g., `TerminatePhase()` on Repel).
 
-### **4.3. UI Decoupling (`Logic/Battle/Bridges/`)**
-*   **`InteractionBridge.cs`:** This is where the menu logic lives. It uses the `IGameIO` abstraction to render menus. It handles complex sub-menus like the **Integrated Persona Menu**, where skills and swapping are presented in a unified list.
+### **4.3. UI Bridging & Interaction Design**
+The `InteractionBridge` handles the high-level UI flow, ensuring that game logic remains decoupled from terminal rendering.
+*   **Menu Affordances:** Menus support "Disabled" states (grayed out) when a player lacks resources or is restricted by an ailment (e.g., Panic blocking Skills).
+*   **Integrated Persona Menu:** For Wild Cards, Skills and the "Change Persona" action are unified into a single list to streamline combat flow.
+*   **COMP Interaction:** A hierarchical menu system for Operators to Summon, Return, or Swap demons mid-battle.
+*   **HUD Rendering:** The `GetBattleContext` method produces a unified string containing the Press Turn icons, Enemy groups, and Party status (including Buff/Debuff track icons).
 
 ### **4.4. Fusion Logic (`Logic/Fusion/`)**
 *   **`FusionCalculator.cs`:** Uses `Database.jsons` to predict outcomes. It calculates accidents, skill mutations, and inheritance slots.
@@ -119,13 +183,53 @@ All game math is centralized in a pure, stateless kernel to ensure consistency a
 *   **Critical Chance (Physical Only):** $((\text{AttackerLuck} - \text{TargetLuck}) / 2) + 5$, modified by passives like *Apt Pupil*.
 *   **EXP Yield (Cubic):** $1.5 \times \text{Level}^3 / 50.0$, adjusted by a "Stat Density Bonus" for stronger/boss enemies.
 *   **Macca Yield (Quadratic):** $0.25 \times \text{Level}^2 + (\text{Luck} \times 5)$, plus a 10% variance.
+*   **CombatResult DTO:** Communication between engines and conductors is handled via the `CombatResult` object, which encapsulates `DamageDealt`, `HitType` (Normal, Weak, Crit, Miss, etc.), and `IsCritical` flags.
+
+### **4.6. Progression & Stat Engineering**
+The framework implements a tiered stat influence model to distinguish between Humanoids and Demons.
+*   **`GrowthProcessor.cs` (The Progression Engine):**
+    *   **Cubic EXP Curve:** $1.5 \times \text{Level}^3$.
+    *   **Randomized Growth:** Level ups grant randomized base HP/SP increases and 1 manual stat point.
+    *   **Resource Recalculation:** `MaxHP` and `MaxSP` are dynamically synchronized with `Vitality` (Vi) and `Magic` (Ma) stats, capped at the SMT III limits (666 HP / 333 SP).
+*   **`StatProcessor.cs` (The Math Engine):**
+    *   **Weighted Influence:** Persona stats do not replace base stats; they influence them by weight:
+        *   **St/Ma:** 40% Influence.
+        *   **Vi/Ag:** 25% Influence.
+        *   **Lu:** 50% Influence.
+    *   **Global Hard Cap:** Base stats (before buffs) are capped at 40 to maintain game balance.
+    *   **Battle Buffs (Kaja/Nda):** Buffs apply a 1.4x multiplier; Debuffs apply a 0.6x multiplier to the capped value.
+
+### **4.7. Battle Effects Strategy Pattern (`Logic/Battle/Effects/`)**
+The `IBattleEffect` interface decouples action logic from the `ActionProcessor`.
+*   **`BuffEffect`:** Manages stat modifications via the `StatusRegistry`, ensuring stacks are capped at ±4.
+*   **`DamageEffect`:** The primary executioner for offensive actions, handling affinity lookups, critical hits, and damage calculation.
+*   **`AilmentEffect`:** Handles the chance-based infliction of status effects, cross-referencing target resistances.
+*   **`Cure/RecoveryEffect`:** Manages healing and ailment removal, including specialized logic for reviving fallen allies.
+*   **`ShieldEffect` (Karns/Walls):** Implements temporary affinity overrides, allowing for reflection or nullification of specific elements.
+
+### **4.8. Buff/Debuff Management (The 4-Track System)**
+The `StatusRegistry` manages stat modifications through four independent tracks, each with a stack depth of [-4, +4].
+*   **Stat Tracks:**
+    *   **PhysAtk (Tarukaja):** Multiplier for physical damage.
+    *   **MagAtk (Makakaja):** Multiplier for magical damage.
+    *   **Defense (Rakukaja):** Multiplier for damage reduction (Vitality).
+    *   **Agility (Sukukaja):** Multiplier for hit and evasion rates.
+*   **Stacking Rules:** Each Kaja/Nda application shifts the track by 1. Stacks are capped strictly to ensure combat remains within predictable bounds.
+*   **Omni-Modifiers:** High-level skills like *Heat Riser* (Buff) and *Debilitate* (Debuff) apply their effects to all four tracks simultaneously.
+*   **Auto-Kaja Passives:** Combatants with Auto-Skills automatically trigger these buffs at the start of battle, supporting both single-target and party-wide (Maha) variants.
+
+### **4.9. Core Helpers & Utilities (`Core/`)**
+*   **`ElementHelper.cs`:** Centralized logic for element parsing and category mapping. It handles non-standard mappings like "Electric -> Elec" and "Block -> Null" during data hydration.
+*   **`Enums.cs`:** Defines the system's core vocabulary, including `Element`, `Affinity`, `ClassType`, and `StatType`.
 
 ---
 
 ## **5. Data Layer & Hydration**
 *   **`Database.cs`:** A static registry that loads all game data from `Data/Jsons/` using `Newtonsoft.Json`. 
-*   **Normalization:** All IDs and keys are normalized to **lowercase** during hydration, preventing the classic "Case-Mismatch" bug during lookups.
+*   **Normalization:** All IDs and keys are normalized to **lowercase** during hydration (`p.Id.ToLower()`), preventing the classic "Case-Mismatch" bug during lookups.
+*   **Categorized Hydration:** The database uses specialized loaders for Equipment (`weapons.json`, `armor.json`, etc.) and a generic loader for Items and Skills, mapping them into strongly-typed Dictionaries.
 *   **Schema:** The framework uses POCOs (Plain Old C# Objects) like `SkillData.cs` and `PersonaData.cs` to mirror the JSON structure.
+*   **Dynamic Repair:** The `FieldServiceEngine` performs on-the-fly metadata repair for unhydrated items, ensuring consistency between the raw JSON and the player's inventory.
 
 ---
 
