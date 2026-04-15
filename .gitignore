@@ -30,6 +30,7 @@ artifacts/
 .gemini/tmp/
 .gemini/*.log
 GEMINI.md
+documentation-plan.md
 
 # ============================================================
 # Python (Documentation scripts)
