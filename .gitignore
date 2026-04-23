@@ -27,10 +27,13 @@ artifacts/
 # ============================================================
 # Gemini CLI
 # ============================================================
+/JRPG/.gemini/
 .gemini/tmp/
 .gemini/*.log
 GEMINI.md
 documentation-plan.md
+documentation.md
+/JRPG/Prototype
 
 # ============================================================
 # Python (Documentation scripts)
