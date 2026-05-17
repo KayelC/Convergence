@@ -469,6 +469,7 @@ This gives Convergence a stable foundation before larger architectural changes.
 - The current solution has one executable project targeting `net9.0`.
 - The current docs and roadmap assume the console app remains the working prototype host for now.
 - Phase 0 has started with a first xUnit regression test project focused on pure framework-candidate systems.
+- Phase 1 boundary mapping has started in [Host/Core Boundary](host-core-boundary.md).
 - `dotnet build --no-restore --no-incremental` has previously surfaced nullable warning debt; quick non-restore builds may show fewer warnings because outputs are already current.
 - Commands that restore packages may attempt to read user-level NuGet config depending on environment permissions.
 - Update this roadmap whenever a refactor issue lands, is split, or changes direction.
