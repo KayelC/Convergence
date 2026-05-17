@@ -16,8 +16,9 @@ This documentation describes the JRPG console prototype as both a gameplay syste
 2. [Gameplay Systems](gameplay-systems.md) explains the player-facing systems in implementation terms.
 3. [Project Vision](project-vision.md) records the long-term direction for Convergence as a reusable RPG systems framework.
 4. [Host/Core Boundary](host-core-boundary.md) maps current code into future framework, host, adapter, and transitional responsibilities.
-5. [Refactor Roadmap](refactor-roadmap.md) lays out the migration path from console prototype to reusable framework.
-6. Subsystem chapters:
+5. [Bridge Contracts](bridge-contracts.md) defines the shared command/result/cancel pattern for future bridge and adapter refactors.
+6. [Refactor Roadmap](refactor-roadmap.md) lays out the migration path from console prototype to reusable framework.
+7. Subsystem chapters:
    - [Core](subsystems/core.md)
    - [Data](subsystems/data.md)
    - [Entities](subsystems/entities.md)

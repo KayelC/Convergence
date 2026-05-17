@@ -74,16 +74,16 @@ namespace JRPGPrototype.Logic.Fusion
             while (true)
             {
                 // UI displays context-sensitive options based on Moon Phase
-                string choice = _uiBridge.ShowCathedralMainMenu(MoonPhaseSystem.CurrentPhase);
+                FusionMainMenuResult choice = _uiBridge.ShowCathedralMainMenu(MoonPhaseSystem.CurrentPhase);
 
-                if (choice == "Back") return;
+                if (choice.Kind == FusionMenuResultKind.Back) return;
 
-                switch (choice)
+                switch (choice.Action)
                 {
-                    case "Binary Fusion": PerformFusionRitual(isSacrificial: false); break;
-                    case "Sacrificial Fusion": PerformFusionRitual(isSacrificial: true); break;
-                    case "Browse Compendium": HandleCompendiumRecall(); break;
-                    case "Register Demon": HandleRegistration(); break;
+                    case FusionMainMenuAction.BinaryFusion: PerformFusionRitual(isSacrificial: false); break;
+                    case FusionMainMenuAction.SacrificialFusion: PerformFusionRitual(isSacrificial: true); break;
+                    case FusionMainMenuAction.BrowseCompendium: HandleCompendiumRecall(); break;
+                    case FusionMainMenuAction.RegisterDemon: HandleRegistration(); break;
                 }
             }
         }
@@ -217,12 +217,13 @@ namespace JRPGPrototype.Logic.Fusion
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
                     // Confirmation Logic
-                    int confirm = _uiBridge.ConfirmRitual(staged,
+                    RitualConfirmationResult confirm = _uiBridge.ConfirmRitual(staged,
                         (parentA.ActivePersona.Race != "Element") ? parentA : parentB, chosenSkills,
                         _player.Level, operation);
 
-                    if (confirm == 1) continue; // Back to Skills
-                    if (confirm == 2) break;    // Back to Selection
+                    if (confirm.Kind == RitualConfirmationKind.Wait) continue; // Back to Skills
+                    if (confirm.Kind == RitualConfirmationKind.Cancel ||
+                        confirm.Kind == RitualConfirmationKind.Forbidden) break; // Back to Selection
 
                     // --- ACCIDENT OVERRIDE ---
                     // The accident is revealed only after the player has confirmed their plan.

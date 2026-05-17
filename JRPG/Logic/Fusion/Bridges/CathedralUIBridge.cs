@@ -35,7 +35,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// Renders the main portal to the Cathedral.
         /// Logic: Contextually displays "Sacrificial Fusion" only during the Full Moon.
         /// </summary>
-        public string ShowCathedralMainMenu(int moonPhase)
+        public FusionMainMenuResult ShowCathedralMainMenu(int moonPhase)
         {
             _io.Clear();
             string phaseName = MoonPhaseSystem.GetPhaseName();
@@ -43,21 +43,27 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                             "\"Welcome to the Cathedral of Shadows where Demons Gather.\"\n";
 
             List<string> options = new List<string> { "Binary Fusion" };
+            List<FusionMainMenuAction> actions = new List<FusionMainMenuAction> { FusionMainMenuAction.BinaryFusion };
 
             // Sacrificial Fusion is unlocked strictly on Full Moon (Phase 8)
             if (moonPhase == 8)
             {
                 options.Add("Sacrificial Fusion");
+                actions.Add(FusionMainMenuAction.SacrificialFusion);
             }
 
             options.Add("Browse Compendium");
+            actions.Add(FusionMainMenuAction.BrowseCompendium);
+
             options.Add("Register Demon");
+            actions.Add(FusionMainMenuAction.RegisterDemon);
+
             options.Add("Back");
 
             int choice = _io.RenderMenu(header, options, 0);
 
-            if (choice == -1 || choice == options.Count - 1) return "Back";
-            return options[choice];
+            if (choice == -1 || choice == options.Count - 1) return FusionMainMenuResult.Back;
+            return FusionMainMenuResult.Selected(actions[choice]);
         }
 
         #endregion
@@ -201,8 +207,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <param name="inheritedSkills">Skills to be inherited (only relevant for CreateNewDemon/RankUp/Down).</param>
         /// <param name="playerLevel">Current player level for level check.</param>
         /// <param name="operationType">The type of fusion operation.</param>
-        /// <returns>True if player confirms, false if cancels.</returns>
-        public int ConfirmRitual(Combatant stagedDemon, Combatant? originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
+        public RitualConfirmationResult ConfirmRitual(Combatant stagedDemon, Combatant? originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
         {
             // 1. Identify the starting tier of the result to enforce the base authority cap.
             // We fetch the base template for the ResultId to determine the 'Natural' level of this creation.
@@ -221,7 +226,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                 _io.WriteLine($"Your current level: {playerLevel}", ConsoleColor.Gray);
                 _io.WriteLine("\nThe spirits refuse to stabilize.", ConsoleColor.Red);
                 _io.Wait(2000);
-                return 2;
+                return RitualConfirmationResult.Forbidden;
             }
 
             List<string> options = new List<string> { "Commence Ritual", "Wait", "Cancel Fusion" };
@@ -300,8 +305,12 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                 _io.WriteLine("------------------------");
             });
 
-            if (choice == -1) return 2; // Abort
-            return choice;
+            return choice switch
+            {
+                0 => RitualConfirmationResult.Commence,
+                1 => RitualConfirmationResult.Wait,
+                _ => RitualConfirmationResult.Cancel
+            };
         }
 
         /// <summary>
