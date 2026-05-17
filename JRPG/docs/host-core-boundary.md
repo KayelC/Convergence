@@ -36,7 +36,8 @@ The goal is not to move code yet. The goal is to classify the current codebase s
 | `Logic/Fusion` | Mixed | Calculator, mutator, context, strategies, and compendium are core; conductor and bridge are transitional/host-facing. |
 | `Logic/Fusion/Messaging` | Adapter Boundary | Event stream pattern is reusable, but output details should be host-controlled later. |
 | `Services` | Console Host / Adapter | `IGameIO` is the current console abstraction; `ConsoleIO` and `MenuUI` are host-specific. |
-| `Program.cs` | Console Host | Startup, scenario selection, debug routes, and executable flow belong to the sample app. |
+| `Program.cs` | Console Host | Thin executable entry point for the sample app. Startup, scenario selection, debug routes, and executable flow now live in `Host`. |
+| `Host` | Console Host | Owns the current console app startup sequence, prototype scenario setup, and debug/test scenario runners. |
 
 ## Core Candidates
 
@@ -71,6 +72,9 @@ These should eventually avoid:
 These areas should remain with the current console sample app or a future `Convergence.ConsoleSample` project:
 
 - `Program.cs`
+- `Host/ConsoleGameHost.cs`
+- `Host/ScenarioFactory.cs`
+- `Host/DebugScenarioRunner.cs`
 - scenario/debug setup and Monte Carlo simulation entrypoints
 - `Services/ConsoleIO.cs`
 - `Services/MenuUI.cs`
@@ -137,6 +141,8 @@ The safest next production refactor is:
 
 **Extract startup and scenario setup out of `Program.cs` into console-host helper classes.**
 
+Status: completed as the first host cleanup refactor. `Program.cs` now delegates to `Host/ConsoleGameHost.cs`, while scenario setup and debug flows live in `Host/ScenarioFactory.cs` and `Host/DebugScenarioRunner.cs`.
+
 Why this next:
 
 - It is host-side, not core-side.
@@ -144,13 +150,14 @@ Why this next:
 - It clarifies what a host must configure before entering framework systems.
 - It keeps the current console app working while moving toward the future sample-host shape.
 
-Suggested future files:
+Created files:
 
-- `Host/ScenarioDefinition.cs`
+- `Host/ConsoleGameHost.cs`
 - `Host/ScenarioFactory.cs`
 - `Host/DebugScenarioRunner.cs`
+- `Host/ScenarioSetupResult.cs`
 
-These names are provisional and should be confirmed during the implementation plan for that issue.
+`Host/ScenarioDefinition.cs` remains a possible future refinement if scenario metadata becomes richer than the current numbered prototype menu.
 
 ## Acceptance Checklist For Future Boundaries
 
