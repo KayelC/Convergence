@@ -4,6 +4,8 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JRPG", "JRPG.csproj", "{523FF8EA-AD98-B7D5-EA54-C11A07B6ED99}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convergence.Tests", "Convergence.Tests\Convergence.Tests.csproj", "{AC3C7D19-6AC1-4A45-83D5-85939830B24F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +16,10 @@ Global
 		{523FF8EA-AD98-B7D5-EA54-C11A07B6ED99}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{523FF8EA-AD98-B7D5-EA54-C11A07B6ED99}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{523FF8EA-AD98-B7D5-EA54-C11A07B6ED99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC3C7D19-6AC1-4A45-83D5-85939830B24F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC3C7D19-6AC1-4A45-83D5-85939830B24F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC3C7D19-6AC1-4A45-83D5-85939830B24F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC3C7D19-6AC1-4A45-83D5-85939830B24F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

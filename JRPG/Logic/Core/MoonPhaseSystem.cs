@@ -49,5 +49,11 @@ namespace JRPGPrototype.Logic.Core
         {
             return _currentPhase == 8;
         }
+
+        // Test seam for deterministic assertions around this static system.
+        internal static void ResetForTests()
+        {
+            _currentPhase = 0;
+        }
     }
 }

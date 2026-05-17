@@ -14,7 +14,9 @@ This documentation describes the JRPG console prototype as both a gameplay syste
 
 1. [Architecture](architecture.md) explains the codebase shape and recurring patterns.
 2. [Gameplay Systems](gameplay-systems.md) explains the player-facing systems in implementation terms.
-3. Subsystem chapters:
+3. [Project Vision](project-vision.md) records the long-term direction for Convergence as a reusable RPG systems framework.
+4. [Refactor Roadmap](refactor-roadmap.md) lays out the migration path from console prototype to reusable framework.
+5. Subsystem chapters:
    - [Core](subsystems/core.md)
    - [Data](subsystems/data.md)
    - [Entities](subsystems/entities.md)
