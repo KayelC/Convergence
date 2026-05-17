@@ -29,13 +29,13 @@ namespace JRPGPrototype.Logic.Fusion
         private readonly EconomyManager _economy;
         private readonly FieldUIState _uiState;
 
-        // Internal Logic Components
+        // Rule collaborators: calculator predicts outcomes, mutator applies confirmed transactions.
         private readonly FusionCalculator _calculator;
         private readonly FusionMutator _mutator;
         private readonly CompendiumRegistry _compendium;
         private readonly CathedralUIBridge _uiBridge;
 
-        // Decoupled Components
+        // Fusion messages are published as domain events and rendered by the subscribed logger.
         private readonly IFusionMessenger _messenger;
         private readonly FusionLogger _logger;
 
@@ -54,12 +54,12 @@ namespace JRPGPrototype.Logic.Fusion
             _uiState = uiState;
             _compendium = compendium;
 
-            // 1. Initialize Communication Tower
+            // Keep fusion narration behind the messenger so future hosts can subscribe their own presentation layer.
             _messenger = new FusionMessenger();
             _logger = new FusionLogger(_io);
             _logger.Subscribe(_messenger);
 
-            // 2. Initialize Logic & Bridges
+            // The conductor wires the current console bridge to reusable fusion rules; later adapters should replace the bridge, not the rules.
             _calculator = new FusionCalculator(_io, _messenger);
             _mutator = new FusionMutator(_partyManager, _economy, _messenger);
             _uiBridge = new CathedralUIBridge(_io, _uiState, _compendium);
@@ -73,7 +73,7 @@ namespace JRPGPrototype.Logic.Fusion
         {
             while (true)
             {
-                // UI displays context-sensitive options based on Moon Phase
+                // Dispatch from typed Cathedral intent so menu labels remain presentation-only.
                 FusionMainMenuResult choice = _uiBridge.ShowCathedralMainMenu(MoonPhaseSystem.CurrentPhase);
 
                 if (choice.Kind == FusionMenuResultKind.Back) return;
@@ -91,27 +91,27 @@ namespace JRPGPrototype.Logic.Fusion
         #region Fusion Ritual Sequence
 
         /// <summary>
-        /// Manages the multi-step workflow of creating a new entity or modifying an existing one via fusion.
-        /// Logic: Handles participant selection, result prediction, and deterministic skill inheritance.
+        /// Coordinates a fusion attempt from participant selection through preview and final transaction.
+        /// The method is intentionally conservative: every cancel path exits before the mutator can touch
+        /// party, stock, economy, or Compendium state.
         /// </summary>
         private void PerformFusionRitual(bool isSacrificial)
         {
             List<object> participantPool = new List<object>();
 
-            while (true) // OUTER LOOP: Participant Selection
+            while (true) // Participant-selection loop; canceled previews return here with no transaction committed.
             {
-                // 1. Establish the pool of participants based on Character Class
-                // Logic: Source pools are class-dependent to ensure stock integrity.
+                // Rebuild the candidate pool each pass so retries reflect current active party, stock, and Persona state.
                 if (_player.Class == ClassType.Operator)
                 {
-                    // Operators draw from Active Party and DemonStock
+                    // Operators can fuse demons currently active in battle formation plus owned demons in stock.
                     var demons = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
                     demons.AddRange(_player.DemonStock);
                     participantPool = demons.Distinct().Cast<object>().ToList();
                 }
                 else if (_player.Class == ClassType.WildCard)
                 {
-                    // WildCards draw from ActivePersona and PersonaStock
+                    // Wild Cards fuse Persona masks, including the equipped Persona if one exists.
                     var personas = new List<Persona>();
                     if (_player.ActivePersona != null) personas.Add(_player.ActivePersona);
                     personas.AddRange(_player.PersonaStock);
@@ -124,45 +124,50 @@ namespace JRPGPrototype.Logic.Fusion
                     return;
                 }
 
-                // 2. Participant Selection
                 List<object> parents = new List<object>();
 
-                // Select Parent 1
-                object? p1 = _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
-                if (p1 == null) return;
+                // Backing out on the first parent leaves this ritual attempt and returns to the Cathedral menu.
+                RitualParticipantSelectionResult<object> p1Result =
+                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
+                if (p1Result.Kind != RitualParticipantSelectionKind.Selected || p1Result.Participant == null) return;
+                object p1 = p1Result.Participant;
                 parents.Add(p1);
 
-                // Select Parent 2
-                object? p2 = _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
-                if (p2 == null) continue; // Go back to start of parent selection
+                // Backing out on the second parent restarts the parent pair, because parent one may be the mistake.
+                RitualParticipantSelectionResult<object> p2Result =
+                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
+                if (p2Result.Kind != RitualParticipantSelectionKind.Selected || p2Result.Participant == null) continue; // Go back to start of parent selection
+                object p2 = p2Result.Participant;
                 parents.Add(p2);
 
-                // Select Sacrifice (Full Moon only)
                 object? sacrifice = null;
                 if (isSacrificial)
                 {
-                    // Filter from participantPool as object so WildCards can sacrifice Personas
+                    // Sacrificial fusion consumes a third eligible participant, drawn from the same class-specific pool.
                     List<object> sacrificePool = participantPool.Where(x => !parents.Contains(x)).ToList();
-                    sacrifice = _uiBridge.SelectRitualParticipant<object>(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
+                    RitualParticipantSelectionResult<object> sacrificeResult =
+                        _uiBridge.SelectRitualParticipant<object>(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
 
-                    if (sacrifice == null) continue;
+                    // Sacrifice is part of the staged recipe, so canceling it discards the current parent pair.
+                    if (sacrificeResult.Kind != RitualParticipantSelectionKind.Selected || sacrificeResult.Participant == null) continue;
+                    sacrifice = sacrificeResult.Participant;
                 }
 
-                // 3. Result Calculation (now returns operation type and target ID)
-                // We create transient Combatants for Persona participants so the Calculator can remain type-pure.
+                // Personas are wrapped as transient combatants because the current calculator is demon-shaped.
+                // This is a framework boundary candidate: future rules should accept a common fusion participant model.
                 Combatant parentA = (p1 is Combatant c1) ? c1 : CreateTransientCombatant((Persona)p1);
                 Combatant parentB = (p2 is Combatant c2) ? c2 : CreateTransientCombatant((Persona)p2);
 
                 var (operation, targetId, isAccident) = _calculator.CalculateResult(parentA, parentB, MoonPhaseSystem.CurrentPhase);
 
-                // If NoFusionPossible, immediately return.
+                // No result is a recoverable recipe failure; keep the player inside participant selection.
                 if (operation == FusionOperationType.NoFusionPossible || string.IsNullOrEmpty(targetId))
                 {
                     _messenger.Publish("The spirits remain silent. This combination yields no result.", ConsoleColor.Red, 1000);
                     continue;
                 }
 
-                // --- 4. Identify Result and Inherent Skills early ---
+                // Inherent skills are computed before inheritance so the bridge can label blocked choices accurately.
                 List<string> inherentSkills = new List<string>();
                 PersonaData? resultTemplate = null;
 
@@ -173,35 +178,35 @@ namespace JRPGPrototype.Logic.Fusion
                 }
                 else if (operation == FusionOperationType.StatBoostFusion)
                 {
-                    // In Stat Boost, the "Inherent Skills" are the skills the target already has
+                    // Stat-boost fusion modifies an existing demon, so its current kit blocks duplicate inheritance.
                     Combatant boostTarget = (parentA.ActivePersona.Race == "Mitama") ? parentB : parentA;
                     inherentSkills = boostTarget.GetConsolidatedSkills();
                 }
                 else if (operation == FusionOperationType.RankUpParent || operation == FusionOperationType.RankDownParent)
                 {
-                    // For Rank mutations, inherent skills are the base kit of the result tier
+                    // Rank mutations inherit the base kit of the destination tier, not the source parent's kit.
                     Database.Personas.TryGetValue(targetId.ToLower(), out resultTemplate);
                     inherentSkills = resultTemplate?.BaseSkills ?? new List<string>();
                 }
 
-                while (true) // INNER LOOP: Skill Selection <-> Preview
+                while (true) // Skill-selection/preview loop; Wait returns here without changing selected parents.
                 {
                     var parentList = new List<Combatant> { parentA, parentB };
                     if (sacrifice != null) parentList.Add((sacrifice is Combatant sc) ? sc : CreateTransientCombatant((Persona)sacrifice));
 
-                    // Get the list of pickable skills for the slot logic
+                    // Pickable skills are legal inheritance candidates and determine the normal slot count.
                     var pickablePool = _calculator.GetInheritableSkills(parentList.ToArray());
 
-                    // Get the list of exclusive skills 
+                    // Exclusive skills are displayed for transparency but disabled by the bridge.
                     var exclusivePool = _calculator.GetExclusiveSkills(parentList.ToArray());
 
-                    // Combine both for the full display pool
+                    // The display pool intentionally includes blocked exclusive skills so the player can see the rule reason.
                     var displayPool = pickablePool.Union(exclusivePool).ToList();
 
-                    // Calculate total slots available based on pickable skills
+                    // Sacrificial fusion grants two extra inheritance opportunities on top of the calculator's base slots.
                     int maxSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray()) + (isSacrificial ? 2 : 0);
 
-                    // Pass display list and both restricted lists to the Bridge for labeling
+                    // The bridge owns labeling, but the conductor supplies the rule sets that make entries unavailable.
                     List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(
                         displayPool,
                         Math.Min(8, maxSlots),
@@ -211,54 +216,50 @@ namespace JRPGPrototype.Logic.Fusion
 
                     if (chosenSkills == null) break;
 
-                    // Stage Result for UI Preview (Incorporating Sacrificial XP Transfer)
+                    // The staged demon is a preview clone: it must match execution math without mutating party or stock.
                     Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
-                    // Confirmation Logic
                     RitualConfirmationResult confirm = _uiBridge.ConfirmRitual(staged,
                         (parentA.ActivePersona.Race != "Element") ? parentA : parentB, chosenSkills,
                         _player.Level, operation);
 
+                    // Wait preserves the chosen participants and loops back to inheritance.
+                    // Cancel and Forbidden both abandon the staged preview; Forbidden is produced by the level gate.
                     if (confirm.Kind == RitualConfirmationKind.Wait) continue; // Back to Skills
                     if (confirm.Kind == RitualConfirmationKind.Cancel ||
                         confirm.Kind == RitualConfirmationKind.Forbidden) break; // Back to Selection
 
-                    // --- ACCIDENT OVERRIDE ---
                     // The accident is revealed only after the player has confirmed their plan.
                     if (isAccident)
                     {
-                        // A. Discard player's chosen skills
+                        // An accident invalidates deliberate inheritance, replacing it with a randomized legal kit.
                         chosenSkills.Clear();
 
-                        // B. Scramble kit: Pick random skills from the pickable pool
                         Random rnd = new Random();
                         var accidentPool = pickablePool.OrderBy(x => rnd.Next()).Take(maxSlots).ToList();
 
-                        // C. Mutation: 20% roll for each skill to Rank Up or Rank Down
+                        // Each inherited skill has a small chance to mutate up or down before the transaction executes.
                         for (int i = 0; i < accidentPool.Count; i++)
                         {
                             if (rnd.Next(0, 100) < 20)
                             {
-                                // Logic for Rank Up/Down handled inside the Calculator method
                                 accidentPool[i] = _calculator.GetMutatedSkill(accidentPool[i]);
                             }
                         }
 
-                        // D. Finalize the warped kit
                         chosenSkills = accidentPool;
                     }
 
-                    // --- EXECUTION ---
                     _uiBridge.DisplayRitualSequence(isAccident);
 
-                    // Re-instantiate context with the potentially warped chosenSkills
+                    // Build the transaction context after accidents so the mutator receives the final inherited kit.
                     var context = new FusionContext(_player, parents, sacrifice, chosenSkills, targetId, _messenger, _partyManager);
                     _mutator.ExecuteFusionTransaction(context, operation);
 
                     _messenger.Publish(null, delay: 1500, waitForInput: true);
-                    return; // Fusion complete
+                    return; // Exit to Cathedral menu after a successful fusion; return to participant selection on any cancel or retry path.
                 }
             }
         }
@@ -339,8 +340,8 @@ namespace JRPGPrototype.Logic.Fusion
         #region Compendium and Helpers
 
         /// <summary>
-        /// Handles the UI flow and logic for Compendium recruitment.
-        /// Logic: Forks slot-checking based on player class and stock type.
+        /// Handles Compendium recall and validates that the current player class has somewhere to place the soul.
+        /// Operators may use active party or demon stock capacity; Wild Cards recall into Persona stock.
         /// </summary>
         private void HandleCompendiumRecall()
         {
@@ -366,8 +367,9 @@ namespace JRPGPrototype.Logic.Fusion
         }
 
         /// <summary>
-        /// Handles the UI flow for recording current progress to the Compendium.
-        /// Logic: Operators register all Demons (Party + Stock); WildCards register spiritual masks.
+        /// Records the player's current demon or Persona state into the Compendium.
+        /// Operators register demon combatants directly; Wild Cards register Persona masks through
+        /// transient combatants so the registry can keep one snapshot shape.
         /// </summary>
         private void HandleRegistration()
         {
@@ -382,8 +384,13 @@ namespace JRPGPrototype.Logic.Fusion
             else if (_player.Class == ClassType.WildCard)
             {
                 // Registration source for WildCards is their PersonaStock
-                Persona? p = _uiBridge.SelectRitualParticipant<Persona>(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
-                if (p != null) _compendium.RegisterDemon(CreateTransientCombatant(p));
+                RitualParticipantSelectionResult<Persona> result =
+                    _uiBridge.SelectRitualParticipant<Persona>(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
+                // Registration is optional. Canceled and Unavailable both mean no compendium write occurs.
+                if (result.Kind == RitualParticipantSelectionKind.Selected && result.Participant != null)
+                {
+                    _compendium.RegisterDemon(CreateTransientCombatant(result.Participant));
+                }
             }
         }
 

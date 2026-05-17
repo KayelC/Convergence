@@ -45,5 +45,32 @@ namespace Convergence.Tests
 
             Assert.Equal(kind, result.Kind);
         }
+
+        [Fact]
+        public void ParticipantSelectionSelected_CarriesTypedParticipant()
+        {
+            object participant = new object();
+
+            var result = RitualParticipantSelectionResult<object>.Selected(participant);
+
+            Assert.Equal(RitualParticipantSelectionKind.Selected, result.Kind);
+            Assert.Same(participant, result.Participant);
+        }
+
+        [Theory]
+        [InlineData(RitualParticipantSelectionKind.Canceled)]
+        [InlineData(RitualParticipantSelectionKind.Unavailable)]
+        public void ParticipantSelection_NonSelectedResultsHaveNoParticipant(RitualParticipantSelectionKind kind)
+        {
+            RitualParticipantSelectionResult<object> result = kind switch
+            {
+                RitualParticipantSelectionKind.Canceled => RitualParticipantSelectionResult<object>.Canceled,
+                RitualParticipantSelectionKind.Unavailable => RitualParticipantSelectionResult<object>.Unavailable,
+                _ => throw new Xunit.Sdk.XunitException("Unhandled non-selected participant kind.")
+            };
+
+            Assert.Equal(kind, result.Kind);
+            Assert.Null(result.Participant);
+        }
     }
 }

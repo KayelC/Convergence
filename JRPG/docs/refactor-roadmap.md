@@ -472,6 +472,7 @@ This gives Convergence a stable foundation before larger architectural changes.
 - Phase 1 boundary mapping has started in [Host/Core Boundary](host-core-boundary.md).
 - Bridge contract planning has started in [Bridge Contracts](bridge-contracts.md), with fusion identified as the first migration target.
 - The first fusion bridge contract migration replaced display-string menu commands and integer ritual confirmation outcomes with typed result states.
+- Fusion participant selection now uses typed selected/canceled/unavailable result states.
 - The first Phase 1 host cleanup has extracted startup, scenario setup, and debug runners out of `Program.cs` into `Host`.
 - `dotnet build --no-restore --no-incremental` has previously surfaced nullable warning debt; quick non-restore builds may show fewer warnings because outputs are already current.
 - Commands that restore packages may attempt to read user-level NuGet config depending on environment permissions.

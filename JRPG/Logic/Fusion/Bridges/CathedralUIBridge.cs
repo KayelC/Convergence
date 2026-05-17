@@ -32,8 +32,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         #region Navigation and Ritual Selection
 
         /// <summary>
-        /// Renders the main portal to the Cathedral.
-        /// Logic: Contextually displays "Sacrificial Fusion" only during the Full Moon.
+        /// Renders the main Cathedral service list.
+        /// The visible labels stay paired with typed actions so conditional entries, such as Full Moon
+        /// sacrificial fusion, do not force the conductor to compare against display strings.
         /// </summary>
         public FusionMainMenuResult ShowCathedralMainMenu(int moonPhase)
         {
@@ -45,7 +46,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             List<string> options = new List<string> { "Binary Fusion" };
             List<FusionMainMenuAction> actions = new List<FusionMainMenuAction> { FusionMainMenuAction.BinaryFusion };
 
-            // Sacrificial Fusion is unlocked strictly on Full Moon (Phase 8)
+            // Phase 8 is the current Full Moon gate for sacrifice; the option is absent at all other phases.
             if (moonPhase == 8)
             {
                 options.Add("Sacrificial Fusion");
@@ -71,18 +72,21 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         #region Ritual Participant Selection
 
         /// <summary>
-        /// Renders a list of participants for the ritual.
-        /// Excludes entities already selected (exclusions) to prevent self-fusion.
+        /// Renders a participant picker for demons, personas, or transient fusion candidates.
+        /// Exclusions are compared by object identity so the exact instance already chosen for this
+        /// ritual cannot be selected again.
         /// </summary>
-        public T SelectRitualParticipant<T>(List<T> pool, string prompt, List<T> exclusions) where T : class
+        public RitualParticipantSelectionResult<T> SelectRitualParticipant<T>(List<T> pool, string prompt, List<T> exclusions) where T : class
         {
             var validChoices = pool.Where(x => !exclusions.Contains(x)).ToList();
 
             if (!validChoices.Any())
             {
+                // Unavailable means the caller has no legal next step from this pool; it is distinct
+                // from the player pressing Cancel on a populated list.
                 _io.WriteLine("No further candidates available for this ritual.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return RitualParticipantSelectionResult<T>.Unavailable;
             }
 
             List<string> labels = new List<string>();
@@ -104,8 +108,8 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
             int choice = _io.RenderMenu(prompt, labels, 0);
 
-            if (choice == -1 || choice == labels.Count - 1) return null;
-            return validChoices[choice];
+            if (choice == -1 || choice == labels.Count - 1) return RitualParticipantSelectionResult<T>.Canceled;
+            return RitualParticipantSelectionResult<T>.Selected(validChoices[choice]);
         }
 
         #endregion
@@ -137,7 +141,8 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                     bool isAlreadyKnown = inherentSkills.Contains(skillName, StringComparer.OrdinalIgnoreCase);
                     bool isExclusive = exclusivePool.Contains(skillName, StringComparer.OrdinalIgnoreCase);
 
-                    // Visual Feedback: Show [-] for disabled items
+                    // Disabled entries remain visible so players can understand why a parent skill
+                    // cannot be inherited instead of wondering whether it vanished from the pool.
                     string prefix = isPicked ? "[X]" : ((isAlreadyKnown || isExclusive) ? "[-]" : "[ ]");
                     string label = $"{prefix} {skillName}";
 
@@ -152,18 +157,19 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
                     labels.Add(label);
 
-                    // Disable if already picked, already known by child, or exclusive to parent
+                    // The menu prevents duplicate picks and rule-illegal inheritance, while still
+                    // letting the confirmation path accept zero inherited skills when all picks are blocked.
                     disabledList.Add(isPicked || isAlreadyKnown || isExclusive);
                 }
 
-                // Always provide both options separately to allow Zero-Inheritance paths
+                // Confirm and Abort are separate choices so "inherit nothing" is a valid ritual decision.
                 labels.Add("Confirm Selection");
                 disabledList.Add(false);
 
                 labels.Add("Abort Fusion");
                 disabledList.Add(false);
 
-                // Render with secondary info callback to show skill effect descriptions
+                // Highlight text is bridge-owned presentation data; the conductor only receives final skill names.
                 int choice = _io.RenderMenu(header, labels, 0, disabledList, (idx) =>
                 {
                     if (idx >= 0 && idx < pool.Count)
@@ -175,13 +181,13 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
                 if (choice == -1) return null;
 
-                // Handle the Abort option
+                // Abort abandons this fusion attempt and returns null to the current conductor contract.
                 if (choice == labels.Count - 1)
                 {
                     return null;
                 }
 
-                // Handle Confirm
+                // Confirm may return an empty list, which is different from Abort.
                 if (choice == labels.Count - 2)
                 {
                     break;
@@ -198,9 +204,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         #region Ritual Presentation
 
         /// <summary>
-        /// Final confirmation screen displaying the results of the planned fusion.
-        /// This method is now adapted to show previews for all fusion operation types.
-        /// Shows both inherent Base Skills and Inherited Skills for full transparency.
+        /// Final confirmation screen for the staged fusion result.
+        /// It previews create, rank mutation, and stat-boost operations with enough detail for the
+        /// player to decide whether to commit, revisit inheritance, or abandon the staged ritual.
         /// </summary>
         /// <param name="stagedDemon">The Combatant representing the FINAL state of the demon AFTER fusion.</param>
         /// <param name="originalParent">The original parent demon (for Rank/Stat boost "Before" comparison).</param>
@@ -209,15 +215,17 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// <param name="operationType">The type of fusion operation.</param>
         public RitualConfirmationResult ConfirmRitual(Combatant stagedDemon, Combatant? originalParent, List<string> inheritedSkills, int playerLevel, FusionOperationType operationType)
         {
-            // 1. Identify the starting tier of the result to enforce the base authority cap.
-            // We fetch the base template for the ResultId to determine the 'Natural' level of this creation.
+            // Authority is checked against the result's natural template level.
+            // Sacrificial XP can create a breakthrough after this point, but it does not let the
+            // player create a base demon whose template is already above their level.
             int baseTemplateLevel = 0;
             if (Database.Personas.TryGetValue(stagedDemon.SourceId.ToLower(), out var template))
             {
                 baseTemplateLevel = template.Level;
             }
 
-            // A. Standard Authority Check: Is the BASE creation too high for the player?
+            // Forbidden returns before the confirmation menu is shown; the player never gets a
+            // "Commence Ritual" option for a base result they are not allowed to create.
             if (baseTemplateLevel > playerLevel)
             {
                 _io.Clear();
@@ -231,12 +239,14 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
             List<string> options = new List<string> { "Commence Ritual", "Wait", "Cancel Fusion" };
 
-            // We use onHighlight to render the preview data consistently beneath the menu
+            // The menu callback redraws the staged preview below every highlighted option, keeping
+            // all comparison data in the same screen as the final decision.
             int choice = _io.RenderMenu("Is this creation acceptable?", options, 0, null, (idx) =>
             {
                 _io.WriteLine("\n--- PROJECTED RESULT ---", ConsoleColor.Yellow);
 
-                // B. Feedback Check: Highlight if the result is a breakthrough (exceeding player level via sacrifice)
+                // A breakthrough is allowed only after the base authority gate succeeds; this callout
+                // explains why the preview can show a final level above the player's current level.
                 if (stagedDemon.Level > playerLevel)
                 {
                     _io.WriteLine($"!!! BREAKTHROUGH !!!", ConsoleColor.DarkYellow);
@@ -279,9 +289,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
                 _io.WriteLine("------------------------");
 
-                // --- Skill Preview Section ---
-
-                // 1. Show Inherent Base Skills
+                // Show inherent skills first so inherited picks read as additions, not replacements.
                 var baseSkills = stagedDemon.ActivePersona.SkillSet;
                 if (baseSkills.Any())
                 {
@@ -292,7 +300,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                     }
                 }
 
-                // 2. Show Chosen Inherited Skills
+                // Inherited skills are the exact list the mutator will attempt to apply if confirmed.
                 if (inheritedSkills != null && inheritedSkills.Any())
                 {
                     _io.WriteLine("Inherited Skills:", ConsoleColor.Green);
@@ -340,7 +348,10 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         #region Compendium UI
 
-        // Renders the scrollable Compendium registry.
+        /// <summary>
+        /// Renders the current Compendium snapshots and returns the chosen recall entry.
+        /// This method still uses null for Back or empty registry; it has not been migrated to an explicit result contract yet.
+        /// </summary>
         public Combatant ShowCompendiumRecallMenu()
         {
             var entries = _compendium.GetAllRegisteredDemons();
@@ -368,7 +379,10 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             return entries[choice];
         }
 
-        // Prompts the player to choose a demon from their party to save to the Compendium.
+        /// <summary>
+        /// Prompts the Operator to choose a demon snapshot source for Compendium registration.
+        /// Null still means Cancel or no available demon until the Compendium bridge flow is migrated.
+        /// </summary>
         public Combatant SelectDemonToRegister(List<Combatant> party)
         {
             var demonsOnly = party.Where(c => c.Class == ClassType.Demon).ToList();

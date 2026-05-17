@@ -199,4 +199,5 @@ This keeps the first contract refactor meaningful but small. It should prove the
 - The first fusion bridge contract migration introduced typed results for the Cathedral main menu and ritual confirmation flow.
 - `ShowCathedralMainMenu` no longer returns display strings as commands.
 - `ConfirmRitual` no longer returns magic integers for commence, wait, cancel, or forbidden outcomes.
-- Participant selection, inherited skill selection, compendium recall, and registration still use the older nullable-return pattern and remain the next fusion bridge candidates.
+- `SelectRitualParticipant` now distinguishes selected participants from canceled and unavailable states.
+- Inherited skill selection, compendium recall, and demon registration still use the older nullable-return pattern and remain the next fusion bridge candidates.
