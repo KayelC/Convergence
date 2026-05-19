@@ -138,4 +138,38 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         public static CompendiumRecallResult Selected(Combatant entry)
             => new CompendiumRecallResult(CompendiumRecallResultKind.Selected, entry);
     }
+
+    /// <summary>
+    /// Outcome of selecting an owned demon to register into the Compendium.
+    /// No demons available and player cancel are separate because only the former means the host
+    /// could not offer a valid registration source.
+    /// </summary>
+    public enum CompendiumRegistrationSelectionKind
+    {
+        /// <summary>An owned demon was selected and is available in the result payload.</summary>
+        Selected,
+
+        /// <summary>The player left the registration picker without selecting a demon.</summary>
+        Canceled,
+
+        /// <summary>The supplied ownership pool did not contain any demons that can be registered.</summary>
+        Unavailable
+    }
+
+    /// <summary>
+    /// Registration-picker result returned by the Cathedral bridge for Operator demon registration.
+    /// The demon payload is present only for <see cref="CompendiumRegistrationSelectionKind.Selected"/>;
+    /// Canceled and Unavailable both avoid writing a Compendium snapshot.
+    /// </summary>
+    public sealed record CompendiumRegistrationSelectionResult(CompendiumRegistrationSelectionKind Kind, Combatant? Demon = null)
+    {
+        public static CompendiumRegistrationSelectionResult Canceled { get; } =
+            new CompendiumRegistrationSelectionResult(CompendiumRegistrationSelectionKind.Canceled);
+
+        public static CompendiumRegistrationSelectionResult Unavailable { get; } =
+            new CompendiumRegistrationSelectionResult(CompendiumRegistrationSelectionKind.Unavailable);
+
+        public static CompendiumRegistrationSelectionResult Selected(Combatant demon)
+            => new CompendiumRegistrationSelectionResult(CompendiumRegistrationSelectionKind.Selected, demon);
+    }
 }

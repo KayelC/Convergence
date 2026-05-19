@@ -381,9 +381,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         /// <summary>
         /// Prompts the Operator to choose a demon snapshot source for Compendium registration.
-        /// Null still means Cancel or no available demon until the Compendium bridge flow is migrated.
+        /// Unavailable means the Operator owns no registerable demons; Canceled means they left a populated picker.
         /// </summary>
-        public Combatant SelectDemonToRegister(List<Combatant> party)
+        public CompendiumRegistrationSelectionResult SelectDemonToRegister(List<Combatant> party)
         {
             var demonsOnly = party.Where(c => c.Class == ClassType.Demon).ToList();
 
@@ -391,7 +391,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.WriteLine("You have no demons in your party to register.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return CompendiumRegistrationSelectionResult.Unavailable;
             }
 
             string header = "=== REGISTER DEMON ===\nSelect a demon to overwrite its current snapshot in the registry.\n";
@@ -399,9 +399,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             labels.Add("Cancel");
 
             int choice = _io.RenderMenu(header, labels, 0);
-            if (choice == -1 || choice == labels.Count - 1) return null;
+            if (choice == -1 || choice == labels.Count - 1) return CompendiumRegistrationSelectionResult.Canceled;
 
-            return demonsOnly[choice];
+            return CompendiumRegistrationSelectionResult.Selected(demonsOnly[choice]);
         }
 
         #endregion

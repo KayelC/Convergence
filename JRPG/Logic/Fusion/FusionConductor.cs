@@ -380,8 +380,11 @@ namespace JRPGPrototype.Logic.Fusion
                 // Operators pool all demons at their disposal (Active Party + DemonStock)
                 var pool = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
                 pool.AddRange(_player.DemonStock);
-                Combatant? selected = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
-                if (selected != null) _compendium.RegisterDemon(selected);
+                CompendiumRegistrationSelectionResult result = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
+                if (result.Kind == CompendiumRegistrationSelectionKind.Selected && result.Demon != null)
+                {
+                    _compendium.RegisterDemon(result.Demon);
+                }
             }
             else if (_player.Class == ClassType.WildCard)
             {

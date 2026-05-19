@@ -101,5 +101,32 @@ namespace Convergence.Tests
             Assert.Equal(kind, result.Kind);
             Assert.Null(result.Entry);
         }
+
+        [Fact]
+        public void CompendiumRegistrationSelected_CarriesSelectedDemon()
+        {
+            var demon = new Combatant("Pixie", ClassType.Demon);
+
+            var result = CompendiumRegistrationSelectionResult.Selected(demon);
+
+            Assert.Equal(CompendiumRegistrationSelectionKind.Selected, result.Kind);
+            Assert.Same(demon, result.Demon);
+        }
+
+        [Theory]
+        [InlineData(CompendiumRegistrationSelectionKind.Canceled)]
+        [InlineData(CompendiumRegistrationSelectionKind.Unavailable)]
+        public void CompendiumRegistration_NonSelectedResultsHaveNoDemon(CompendiumRegistrationSelectionKind kind)
+        {
+            CompendiumRegistrationSelectionResult result = kind switch
+            {
+                CompendiumRegistrationSelectionKind.Canceled => CompendiumRegistrationSelectionResult.Canceled,
+                CompendiumRegistrationSelectionKind.Unavailable => CompendiumRegistrationSelectionResult.Unavailable,
+                _ => throw new Xunit.Sdk.XunitException("Unhandled non-selected Compendium registration kind.")
+            };
+
+            Assert.Equal(kind, result.Kind);
+            Assert.Null(result.Demon);
+        }
     }
 }

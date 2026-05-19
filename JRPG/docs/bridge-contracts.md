@@ -145,10 +145,10 @@ Recommended migration order:
    - Replace nullable participant returns with selected/back/unavailable states.
 4. `ShowCompendiumRecallMenu` - completed
    - Separate selected recall target from back and empty compendium.
-5. `SelectInheritedSkills`
-   - Separate confirmed empty selection from aborted fusion.
-6. `SelectDemonToRegister`
+5. `SelectDemonToRegister` - completed
    - Separate selected demon from cancel and no valid demons.
+6. `SelectInheritedSkills`
+   - Separate confirmed empty selection from aborted fusion.
 
 `FusionConductor` should only change as needed to consume the new result states. Fusion rules, ritual outcomes, costs, inheritance, compendium behavior, and menu text should remain unchanged.
 
