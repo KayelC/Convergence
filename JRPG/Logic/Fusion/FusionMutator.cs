@@ -80,6 +80,11 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         public void ExecuteFusionTransaction(FusionContext context, FusionOperationType type)
         {
+            if (type == FusionOperationType.CreateNewDemon && IsDuplicateFusionResult(context))
+            {
+                return;
+            }
+
             var strategy = _registry.GetStrategy(type);
             if (strategy != null)
             {
@@ -89,6 +94,28 @@ namespace JRPGPrototype.Logic.Fusion
             {
                 _messenger.Publish($"[System Error] No strategy found for {type}", ConsoleColor.Red);
             }
+        }
+
+        private bool IsDuplicateFusionResult(FusionContext context)
+        {
+            string resultId = context.ResultId.ToLower();
+
+            if (context.Owner.Class == ClassType.Operator &&
+                _partyManager.IsDemonOwned(context.Owner, resultId))
+            {
+                context.Messenger.Publish("Fusion aborted: that demon is already in your party or COMP.", ConsoleColor.Red, 1000);
+                return true;
+            }
+
+            if (context.Owner.Class == ClassType.WildCard &&
+                Database.Personas.TryGetValue(resultId, out var template) &&
+                _partyManager.IsPersonaOwned(context.Owner, template.Name))
+            {
+                context.Messenger.Publish("Fusion aborted: that Persona is already in your stock.", ConsoleColor.Red, 1000);
+                return true;
+            }
+
+            return false;
         }
 
         #endregion

@@ -37,6 +37,77 @@ public sealed class FusionBugRegressionTests
         Assert.DoesNotContain(snapshot, party.ActiveParty);
     }
 
+    [Fact]
+    public void ExecuteFusionTransaction_DoesNotCreateDuplicateOperatorFusionResult()
+    {
+        const string resultId = "test_duplicate_aquans";
+        EnsurePersonaTemplate(resultId, "Aquans", "Element", 10);
+
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var existing = new Combatant("Aquans", ClassType.Demon) { SourceId = resultId };
+        var parentA = CreateManualDemon("Parent A", "test_parent_a", "Fairy", level: 10);
+        var parentB = CreateManualDemon("Parent B", "test_parent_b", "Jirae", level: 10);
+        owner.DemonStock.Add(existing);
+        owner.DemonStock.Add(parentA);
+        owner.DemonStock.Add(parentB);
+
+        var party = new PartyManager(owner);
+        var mutator = new FusionMutator(party, new EconomyManager(), new CapturingFusionMessenger());
+        var context = new FusionContext(
+            owner,
+            new List<object> { parentA, parentB },
+            sacrifice: null,
+            chosenSkills: new List<string>(),
+            resultId: resultId,
+            messenger: new CapturingFusionMessenger(),
+            party: party);
+
+        mutator.ExecuteFusionTransaction(context, FusionOperationType.CreateNewDemon);
+
+        Assert.Equal(3, owner.DemonStock.Count);
+        Assert.Single(owner.DemonStock, d => d.SourceId.Equals(resultId, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(parentA, owner.DemonStock);
+        Assert.Contains(parentB, owner.DemonStock);
+    }
+
+    [Fact]
+    public void ExecuteFusionTransaction_StatBoostConsumesMitamaCatalyst()
+    {
+        const string pixieId = "test_mitama_consume_pixie";
+        const string mitamaId = "test_mitama_consume_kusi";
+        EnsurePersonaTemplate(pixieId, "Preview Pixie", "Fairy", 2);
+        EnsurePersonaTemplate(mitamaId, "Kusi Mitama", "Mitama", 10);
+
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var target = CreateManualDemon("Preview Pixie", pixieId, "Fairy", level: 50);
+        var mitama = CreateManualDemon("Kusi Mitama", mitamaId, "Mitama", level: 10);
+        owner.DemonStock.Add(target);
+        owner.DemonStock.Add(mitama);
+
+        var party = new PartyManager(owner);
+        Assert.True(party.SummonDemon(owner, target));
+        Assert.True(party.SummonDemon(owner, mitama));
+
+        var mutator = new FusionMutator(party, new EconomyManager(), new CapturingFusionMessenger());
+        var context = new FusionContext(
+            owner,
+            new List<object> { mitama, target },
+            sacrifice: null,
+            chosenSkills: new List<string>(),
+            resultId: pixieId,
+            messenger: new CapturingFusionMessenger(),
+            party: party);
+
+        mutator.ExecuteFusionTransaction(context, FusionOperationType.StatBoostFusion);
+
+        Assert.DoesNotContain(mitama, owner.DemonStock);
+        Assert.DoesNotContain(mitama, party.ActiveParty);
+        Assert.DoesNotContain(target, owner.DemonStock);
+        Assert.DoesNotContain(target, party.ActiveParty);
+        Assert.Single(owner.DemonStock, d => d.SourceId.Equals(pixieId, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(party.ActiveParty, d => d.SourceId.Equals(pixieId, StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

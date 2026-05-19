@@ -26,6 +26,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 Combatant mitama = (Combatant)context.Materials.First(m => ((Combatant)m).ActivePersona.Race == "Mitama");
                 mitamaName = mitama.ActivePersona.Name;
 
+                // Mitama is the consumed catalyst for this operation, separate from optional sacrifice.
+                if (context.Party.ActiveParty.Contains(mitama))
+                    context.Party.ReturnDemon(context.Owner, mitama);
+                context.Owner.DemonStock.Remove(mitama);
+
                 // Handle sacrifice consumption
                 if (context.Sacrifice is Combatant sacrificialCom)
                 {
@@ -128,8 +133,24 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
         private void ReplaceDemon(FusionContext context, Combatant oldD, Combatant newD)
         {
             newD.OwnerId = oldD.OwnerId; newD.Controller = oldD.Controller; newD.BattleControl = oldD.BattleControl;
-            if (context.Party.ActiveParty.Contains(oldD)) { int s = oldD.PartySlot; context.Party.ActiveParty[s] = newD; newD.PartySlot = s; }
-            else { context.Owner.DemonStock.Remove(oldD); context.Owner.DemonStock.Add(newD); }
+            int activeIndex = context.Party.ActiveParty.IndexOf(oldD);
+            if (activeIndex != -1)
+            {
+                context.Party.ActiveParty[activeIndex] = newD;
+                newD.PartySlot = activeIndex;
+                oldD.PartySlot = -1;
+            }
+
+            int stockIndex = context.Owner.DemonStock.IndexOf(oldD);
+            if (stockIndex != -1)
+            {
+                context.Owner.DemonStock[stockIndex] = newD;
+            }
+            else if (activeIndex == -1)
+            {
+                context.Owner.DemonStock.Add(newD);
+            }
+
             context.Owner.RecalculateResources();
         }
 
