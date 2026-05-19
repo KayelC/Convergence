@@ -1,5 +1,4 @@
 using JRPGPrototype.Core;
-using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Field;
@@ -25,6 +24,7 @@ namespace JRPGPrototype.Logic.Fusion
         private readonly EconomyManager _economy;
         private readonly IFusionMessenger _messenger;
         private readonly FusionStrategyRegistry _registry;
+        private readonly FusionOwnershipRules _ownershipRules;
 
         public FusionMutator(PartyManager partyManager, EconomyManager economy, IFusionMessenger messenger)
         {
@@ -32,6 +32,7 @@ namespace JRPGPrototype.Logic.Fusion
             _economy = economy;
             _messenger = messenger;
             _registry = new FusionStrategyRegistry();
+            _ownershipRules = new FusionOwnershipRules(partyManager);
         }
 
         #region Stock Access Management (Preserved for Conductor usage)
@@ -98,20 +99,9 @@ namespace JRPGPrototype.Logic.Fusion
 
         private bool IsDuplicateFusionResult(FusionContext context)
         {
-            string resultId = context.ResultId.ToLower();
-
-            if (context.Owner.Class == ClassType.Operator &&
-                _partyManager.IsDemonOwned(context.Owner, resultId))
+            if (_ownershipRules.TryGetOwnedCreateResult(context.Owner, context.ResultId, out FusionOwnedResult ownedResult))
             {
-                context.Messenger.Publish("Fusion aborted: that demon is already in your party or COMP.", ConsoleColor.Red, 1000);
-                return true;
-            }
-
-            if (context.Owner.Class == ClassType.WildCard &&
-                Database.Personas.TryGetValue(resultId, out var template) &&
-                _partyManager.IsPersonaOwned(context.Owner, template.Name))
-            {
-                context.Messenger.Publish("Fusion aborted: that Persona is already in your stock.", ConsoleColor.Red, 1000);
+                context.Messenger.Publish(ownedResult.TransactionAbortMessage, ConsoleColor.Red, 1000);
                 return true;
             }
 

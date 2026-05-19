@@ -1,7 +1,5 @@
 using JRPGPrototype.Core;
-using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
-using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Services;
 using System;
@@ -34,6 +32,9 @@ namespace JRPGPrototype.Logic.Fusion
         private readonly FusionMutator _mutator;
         private readonly CompendiumRegistry _compendium;
         private readonly CathedralUIBridge _uiBridge;
+        private readonly FusionPlanFactory _planFactory;
+        private readonly FusionPreviewFactory _previewFactory;
+        private readonly FusionOwnershipRules _ownershipRules;
 
         // Fusion messages are published as domain events and rendered by the subscribed logger.
         private readonly IFusionMessenger _messenger;
@@ -63,6 +64,9 @@ namespace JRPGPrototype.Logic.Fusion
             _calculator = new FusionCalculator(_io, _messenger);
             _mutator = new FusionMutator(_partyManager, _economy, _messenger);
             _uiBridge = new CathedralUIBridge(_io, _uiState, _compendium);
+            _planFactory = new FusionPlanFactory(_calculator);
+            _previewFactory = new FusionPreviewFactory();
+            _ownershipRules = new FusionOwnershipRules(_partyManager);
         }
 
         /// <summary>
@@ -155,82 +159,37 @@ namespace JRPGPrototype.Logic.Fusion
                     sacrifice = sacrificeResult.Participant;
                 }
 
-                // Personas are wrapped as transient combatants because the current calculator is demon-shaped.
-                // This is a framework boundary candidate: future rules should accept a common fusion participant model.
-                Combatant parentA = (p1 is Combatant c1) ? c1 : CreateTransientCombatant((Persona)p1);
-                Combatant parentB = (p2 is Combatant c2) ? c2 : CreateTransientCombatant((Persona)p2);
+                FusionParticipant parentA = FusionParticipant.From(p1);
+                FusionParticipant parentB = FusionParticipant.From(p2);
+                FusionParticipant? sacrificeParticipant = sacrifice != null ? FusionParticipant.From(sacrifice) : null;
 
-                var (operation, targetId, isAccident) = _calculator.CalculateResult(parentA, parentB, MoonPhaseSystem.CurrentPhase);
-
-                // No result is a recoverable recipe failure; keep the player inside participant selection.
-                if (operation == FusionOperationType.NoFusionPossible || string.IsNullOrEmpty(targetId))
+                if (!_planFactory.TryCreate(parentA, parentB, sacrificeParticipant, isSacrificial, MoonPhaseSystem.CurrentPhase, out FusionPlan? plan) || plan == null)
                 {
                     _messenger.Publish("The spirits remain silent. This combination yields no result.", ConsoleColor.Red, 1000);
                     continue;
                 }
 
-                // Inherent skills are computed before inheritance so the bridge can label blocked choices accurately.
-                List<string> inherentSkills = new List<string>();
-                PersonaData? resultTemplate = null;
-
-                if (operation == FusionOperationType.CreateNewDemon)
-                {
-                    Database.Personas.TryGetValue(targetId.ToLower(), out resultTemplate);
-                    inherentSkills = resultTemplate?.BaseSkills ?? new List<string>();
-                }
-                else if (operation == FusionOperationType.StatBoostFusion)
-                {
-                    // Stat-boost fusion modifies an existing demon, so its current kit blocks duplicate inheritance.
-                    Combatant boostTarget = (parentA.ActivePersona.Race == "Mitama") ? parentB : parentA;
-                    inherentSkills = boostTarget.GetConsolidatedSkills();
-                }
-                else if (operation == FusionOperationType.RankUpParent || operation == FusionOperationType.RankDownParent)
-                {
-                    // Rank mutations inherit the base kit of the destination tier, not the source parent's kit.
-                    Database.Personas.TryGetValue(targetId.ToLower(), out resultTemplate);
-                    inherentSkills = resultTemplate?.BaseSkills ?? new List<string>();
-                }
-
                 while (true) // Skill-selection/preview loop; Wait returns here without changing selected parents.
                 {
-                    var parentList = new List<Combatant> { parentA, parentB };
-                    if (sacrifice != null) parentList.Add((sacrifice is Combatant sc) ? sc : CreateTransientCombatant((Persona)sacrifice));
-
-                    // Pickable skills are legal inheritance candidates and determine the normal slot count.
-                    var pickablePool = _calculator.GetInheritableSkills(parentList.ToArray());
-
-                    // Exclusive skills are displayed for transparency but disabled by the bridge.
-                    var exclusivePool = _calculator.GetExclusiveSkills(parentList.ToArray());
-
-                    // The display pool intentionally includes blocked exclusive skills so the player can see the rule reason.
-                    var displayPool = pickablePool.Union(exclusivePool).ToList();
-
-                    // Sacrificial fusion grants two extra inheritance opportunities on top of the calculator's base slots.
-                    int maxSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray()) + (isSacrificial ? 2 : 0);
-
                     // The bridge owns labeling, but the conductor supplies the rule sets that make entries unavailable.
                     SkillInheritanceSelectionResult inheritanceResult = _uiBridge.SelectInheritedSkills(
-                        displayPool,
-                        Math.Min(8, maxSlots),
-                        inherentSkills, // Will be labeled "Already Known"
-                        exclusivePool   // Will be labeled "Exclusive"
+                        plan.DisplaySkills.ToList(),
+                        plan.MaxInheritanceSlots,
+                        plan.InherentSkills.ToList(), // Will be labeled "Already Known"
+                        plan.ExclusiveSkills.ToList()  // Will be labeled "Exclusive"
                     );
 
                     if (inheritanceResult.Kind == SkillInheritanceSelectionKind.Aborted) break;
                     List<string> chosenSkills = inheritanceResult.Skills.ToList();
 
                     // The staged demon is a preview clone: it must match execution math without mutating party or stock.
-                    Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
+                    Combatant? staged = _previewFactory.CreatePreview(plan, chosenSkills);
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
-                    Combatant previewBaseline = operation == FusionOperationType.StatBoostFusion
-                        ? GetStatBoostTarget(parentA, parentB)
-                        : (parentA.ActivePersona.Race != "Element") ? parentA : parentB;
-
                     RitualConfirmationResult confirm = _uiBridge.ConfirmRitual(staged,
-                        previewBaseline, chosenSkills,
-                        _player.Level, operation);
+                        plan.PreviewBaseline, chosenSkills,
+                        _player.Level, plan.Operation);
 
                     // Wait preserves the chosen participants and loops back to inheritance.
                     // Cancel and Forbidden both abandon the staged preview; Forbidden is produced by the level gate.
@@ -239,13 +198,13 @@ namespace JRPGPrototype.Logic.Fusion
                         confirm.Kind == RitualConfirmationKind.Forbidden) break; // Back to Selection
 
                     // The accident is revealed only after the player has confirmed their plan.
-                    if (isAccident)
+                    if (plan.IsAccident)
                     {
                         // An accident invalidates deliberate inheritance, replacing it with a randomized legal kit.
                         chosenSkills.Clear();
 
                         Random rnd = new Random();
-                        var accidentPool = pickablePool.OrderBy(x => rnd.Next()).Take(maxSlots).ToList();
+                        var accidentPool = plan.PickableSkills.OrderBy(x => rnd.Next()).Take(plan.MaxInheritanceSlots).ToList();
 
                         // Each inherited skill has a small chance to mutate up or down before the transaction executes.
                         for (int i = 0; i < accidentPool.Count; i++)
@@ -259,11 +218,11 @@ namespace JRPGPrototype.Logic.Fusion
                         chosenSkills = accidentPool;
                     }
 
-                    _uiBridge.DisplayRitualSequence(isAccident);
+                    _uiBridge.DisplayRitualSequence(plan.IsAccident);
 
                     // Build the transaction context after accidents so the mutator receives the final inherited kit.
-                    var context = new FusionContext(_player, parents, sacrifice, chosenSkills, targetId, _messenger, _partyManager);
-                    _mutator.ExecuteFusionTransaction(context, operation);
+                    var context = new FusionContext(_player, parents, sacrifice, chosenSkills, plan.TargetId, _messenger, _partyManager);
+                    _mutator.ExecuteFusionTransaction(context, plan.Operation);
 
                     _messenger.Publish(null, delay: 1500, waitForInput: true);
                     return; // Exit to Cathedral menu after a successful fusion; return to participant selection on any cancel or retry path.
@@ -271,178 +230,9 @@ namespace JRPGPrototype.Logic.Fusion
             }
         }
 
-        /// <summary>
-        /// Creates a high-fidelity dummy combatant for the UI confirmation screen.
-        /// Simulates the exact results of the fusion strategy before it is executed.
-        /// </summary>
-        private Combatant? CreateStagedDemon(FusionOperationType op, string id, object p1, object p2, object? sacrifice, List<string> skills)
-        {
-            if (!Database.Personas.TryGetValue(id.ToLower(), out var template)) return null;
-
-            Combatant parentA = p1 as Combatant ?? CreateTransientCombatant((Persona)p1);
-            Combatant parentB = p2 as Combatant ?? CreateTransientCombatant((Persona)p2);
-
-            int previewLevel = template.Level;
-            if (op == FusionOperationType.StatBoostFusion)
-            {
-                previewLevel = GetStatBoostTarget(parentA, parentB).Level;
-            }
-
-            // 1. Initialize the base result from the template
-            Combatant staged = CombatantFactory.CreatePlayerDemon(id, previewLevel);
-
-            // 2. Apply the manually selected inherited skills
-            staged.ExtraSkills.Clear();
-            staged.ExtraSkills.AddRange(skills);
-
-            // 3. Logic Branching: Match the Strategy math exactly
-            if (op == FusionOperationType.StatBoostFusion)
-            {
-                // Identify which parent is the 'Target' and which is the 'Mitama'
-                Combatant targetCom = GetStatBoostTarget(parentA, parentB);
-                Combatant mitamaCom = GetStatBoostMitama(parentA, parentB);
-
-                // Copy the target's actual current state to the dummy
-                staged.Exp = targetCom.Exp;
-                staged.LifetimeEarnedExp = targetCom.LifetimeEarnedExp;
-                foreach (var st in targetCom.CharacterStats) staged.CharacterStats[st.Key] = st.Value;
-                foreach (var mod in targetCom.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
-
-                // Simulate the Mitama boost on the dummy
-                ApplyPreviewBoost(staged, mitamaCom.ActivePersona!.Name);
-                staged.RecalculateResources();
-            }
-            else if (op == FusionOperationType.RankUpParent || op == FusionOperationType.RankDownParent)
-            {
-                // Identify the target undergoing the rank change
-                Combatant original = (parentA.ActivePersona.Race != "Element") ? parentA : parentB;
-
-                // Carry over modifiers to the higher/lower tier version
-                foreach (var mod in original.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
-                staged.RecalculateResources();
-            }
-
-            // Apply sacrificial XP breakthrough math to the preview dummy for honest UI feedback
-            if (sacrifice != null)
-            {
-                int earnedXP = (sacrifice is Combatant com) ? com.LifetimeEarnedExp : ((Persona)sacrifice).LifetimeEarnedExp;
-                int transferXP = (int)(earnedXP / 1.5);
-                staged.GainExp(transferXP);
-            }
-
-            return staged;
-        }
-
-        private static Combatant GetStatBoostTarget(Combatant parentA, Combatant parentB)
-        {
-            return parentA.ActivePersona?.Race == "Mitama" ? parentB : parentA;
-        }
-
-        private static Combatant GetStatBoostMitama(Combatant parentA, Combatant parentB)
-        {
-            return parentA.ActivePersona?.Race == "Mitama" ? parentA : parentB;
-        }
-
         private Dictionary<object, string> BuildOwnedDuplicateResultReasons(List<object> pool, object firstParent, List<object> exclusions)
         {
-            var disabledReasons = new Dictionary<object, string>();
-            Combatant parentA = firstParent as Combatant ?? CreateTransientCombatant((Persona)firstParent);
-
-            foreach (object candidate in pool)
-            {
-                if (exclusions.Contains(candidate)) continue;
-
-                Combatant parentB = candidate as Combatant ?? CreateTransientCombatant((Persona)candidate);
-                // This preview pass only blocks guaranteed direct recipe results. The full calculator
-                // can trigger accidents, so calling it here would make menu navigation mutate probability.
-                if (!TryGetDirectFusionResultId(parentA, parentB, out string? resultId)) continue;
-                if (resultId == null) continue;
-                if (!IsCreateResultAlreadyOwned(resultId, out string resultName)) continue;
-
-                disabledReasons[candidate] = $"Owned Result: {resultName}";
-            }
-
-            return disabledReasons;
-        }
-
-        private bool IsCreateResultAlreadyOwned(string resultId, out string resultName)
-        {
-            resultName = resultId;
-
-            if (!Database.Personas.TryGetValue(resultId.ToLower(), out PersonaData? template))
-            {
-                return false;
-            }
-
-            resultName = template.Name;
-
-            return _player.Class switch
-            {
-                ClassType.Operator => _partyManager.IsDemonOwned(_player, resultId),
-                ClassType.WildCard => _partyManager.IsPersonaOwned(_player, template.Name),
-                _ => false
-            };
-        }
-
-        private static bool TryGetDirectFusionResultId(Combatant parentA, Combatant parentB, out string? resultId)
-        {
-            resultId = null;
-
-            if (parentA.ActivePersona == null || parentB.ActivePersona == null)
-            {
-                return false;
-            }
-
-            // Direct pair recipes may be authored either against exact source ids or against races.
-            // Special fusion rules such as Mitama boosts and Element rank shifts are intentionally left
-            // to the transaction guard because they are not ordinary "create a new demon" results.
-            string? resultString =
-                FindFusionRecipeResult(parentA.SourceId, parentB.SourceId) ??
-                FindFusionRecipeResult(parentA.ActivePersona.Race, parentB.ActivePersona.Race);
-
-            if (string.IsNullOrEmpty(resultString))
-            {
-                return false;
-            }
-
-            string lookupId = resultString.ToLower();
-            if (!Database.Personas.ContainsKey(lookupId))
-            {
-                return false;
-            }
-
-            resultId = lookupId;
-            return true;
-        }
-
-        private static string? FindFusionRecipeResult(string parentA, string parentB)
-        {
-            var recipe = Database.FusionRecipes.FirstOrDefault(r =>
-                (r.ParentA.Equals(parentA, StringComparison.OrdinalIgnoreCase) &&
-                 r.ParentB.Equals(parentB, StringComparison.OrdinalIgnoreCase)) ||
-                (r.ParentA.Equals(parentB, StringComparison.OrdinalIgnoreCase) &&
-                 r.ParentB.Equals(parentA, StringComparison.OrdinalIgnoreCase)));
-
-            return recipe?.Result;
-        }
-
-        private void ApplyPreviewBoost(Combatant demon, string mitamaName)
-        {
-            Dictionary<StatType, int> boosts = new Dictionary<StatType, int>();
-            switch (mitamaName)
-            {
-                case "Ara Mitama": boosts.Add(StatType.St, 2); boosts.Add(StatType.Ag, 1); break;
-                case "Nigi Mitama": boosts.Add(StatType.Ma, 2); boosts.Add(StatType.Lu, 1); break;
-                case "Kusi Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Ag, 1); break;
-                case "Saki Mitama": boosts.Add(StatType.Vi, 2); boosts.Add(StatType.Lu, 1); break;
-            }
-
-            foreach (var entry in boosts)
-            {
-                var mods = demon.ActivePersona!.StatModifiers;
-                int current = mods.GetValueOrDefault(entry.Key, 0);
-                mods[entry.Key] = Math.Min(40, current + entry.Value);
-            }
+            return _ownershipRules.BuildOwnedDuplicateResultReasons(_player, pool, firstParent, exclusions);
         }
 
         #endregion
@@ -504,40 +294,9 @@ namespace JRPGPrototype.Logic.Fusion
                 // Registration is optional. Canceled and Unavailable both mean no compendium write occurs.
                 if (result.Kind == RitualParticipantSelectionKind.Selected && result.Participant != null)
                 {
-                    _compendium.RegisterDemon(CreateTransientCombatant(result.Participant));
+                    _compendium.RegisterDemon(FusionParticipant.CreateTransientCombatant(result.Participant));
                 }
             }
-        }
-
-        #endregion
-
-        #region Internal Helpers
-
-        /// <summary>
-        /// Converts a Persona into a transient Combatant object.
-        /// This allows spiritual masks to be processed by the Demon-centric logic of the Calculator and Registry.
-        /// </summary>
-        private Combatant CreateTransientCombatant(Persona p)
-        {
-            var transient = new Persona
-            {
-                Name = p.Name,
-                Level = p.Level,
-                Race = p.Race,
-                Rank = p.Rank,
-                Exp = p.Exp,
-                LifetimeEarnedExp = p.LifetimeEarnedExp
-            };
-            transient.SkillSet.AddRange(p.SkillSet);
-            foreach (var stat in p.StatModifiers) transient.StatModifiers[stat.Key] = stat.Value;
-
-            return new Combatant(p.Name, ClassType.Demon)
-            {
-                Level = p.Level,
-                ActivePersona = transient,
-                SourceId = p.Name,
-                LifetimeEarnedExp = p.LifetimeEarnedExp
-            };
         }
 
         #endregion

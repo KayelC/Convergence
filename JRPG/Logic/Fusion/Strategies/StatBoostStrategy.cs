@@ -27,16 +27,12 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 mitamaName = mitama.ActivePersona.Name;
 
                 // Mitama is the consumed catalyst for this operation, separate from optional sacrifice.
-                if (context.Party.ActiveParty.Contains(mitama))
-                    context.Party.ReturnDemon(context.Owner, mitama);
-                context.Owner.DemonStock.Remove(mitama);
+                FusionInventoryTransaction.ConsumeDemon(context, mitama);
 
                 // Handle sacrifice consumption
                 if (context.Sacrifice is Combatant sacrificialCom)
                 {
-                    if (context.Party.ActiveParty.Contains(sacrificialCom))
-                        context.Party.ReturnDemon(context.Owner, sacrificialCom);
-                    context.Owner.DemonStock.Remove(sacrificialCom);
+                    FusionInventoryTransaction.ConsumeDemon(context, sacrificialCom);
                 }
 
                 // Create the boosted instance
@@ -70,11 +66,11 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 mitamaName = mitama.Name;
 
                 // Remove Mitama mask from stock
-                context.Owner.PersonaStock.Remove(mitama);
+                FusionInventoryTransaction.ConsumePersona(context.Owner, mitama);
 
                 // Handle sacrifice consumption
                 if (context.Sacrifice is Persona sacrificialPer)
-                    context.Owner.PersonaStock.Remove(sacrificialPer);
+                    FusionInventoryTransaction.ConsumePersona(context.Owner, sacrificialPer);
 
                 // Clone base template and restore state
                 var template = Database.Personas.Values.First(p => p.Name == target.Name);
@@ -132,33 +128,12 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
 
         private void ReplaceDemon(FusionContext context, Combatant oldD, Combatant newD)
         {
-            newD.OwnerId = oldD.OwnerId; newD.Controller = oldD.Controller; newD.BattleControl = oldD.BattleControl;
-            int activeIndex = context.Party.ActiveParty.IndexOf(oldD);
-            if (activeIndex != -1)
-            {
-                context.Party.ActiveParty[activeIndex] = newD;
-                newD.PartySlot = activeIndex;
-                oldD.PartySlot = -1;
-            }
-
-            int stockIndex = context.Owner.DemonStock.IndexOf(oldD);
-            if (stockIndex != -1)
-            {
-                context.Owner.DemonStock[stockIndex] = newD;
-            }
-            else if (activeIndex == -1)
-            {
-                context.Owner.DemonStock.Add(newD);
-            }
-
-            context.Owner.RecalculateResources();
+            FusionInventoryTransaction.ReplaceDemon(context, oldD, newD);
         }
 
         private void ReplacePersona(FusionContext context, Persona oldP, Persona newP)
         {
-            if (context.Owner.ActivePersona == oldP) context.Owner.ActivePersona = newP;
-            else { context.Owner.PersonaStock.Remove(oldP); context.Owner.PersonaStock.Add(newP); }
-            context.Owner.RecalculateResources();
+            FusionInventoryTransaction.ReplacePersona(context.Owner, oldP, newP);
         }
     }
 }

@@ -24,12 +24,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 // Handle Operator-class Sacrifice (Combatant)
                 if (context.Sacrifice is Combatant sacrificialCom)
                 {
-                    // 1. Transaction Start: Remove from battlefield if present
-                    if (context.Party.ActiveParty.Contains(sacrificialCom))
-                        context.Party.ReturnDemon(context.Owner, sacrificialCom);
-
-                    // 2. Remove from owner stock to ensure atomicity
-                    context.Owner.DemonStock.Remove(sacrificialCom);
+                    FusionInventoryTransaction.ConsumeDemon(context, sacrificialCom);
                 }
 
                 // Create the new higher/lower tier demon combatant
@@ -67,8 +62,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
                 // Handle WildCard-class Sacrifice (Persona mask)
                 if (context.Sacrifice is Persona sacrificialPersona)
                 {
-                    if (context.Owner.ActivePersona == sacrificialPersona) context.Owner.ActivePersona = null;
-                    context.Owner.PersonaStock.Remove(sacrificialPersona);
+                    FusionInventoryTransaction.ConsumePersona(context.Owner, sacrificialPersona);
                 }
 
                 Persona newP = Database.Personas[context.ResultId.ToLower()].ToPersona();
@@ -95,32 +89,12 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
 
         private void ReplaceDemon(FusionContext context, Combatant oldD, Combatant newD)
         {
-            // Transfer essential live state from old to new.
-            newD.OwnerId = oldD.OwnerId;
-            newD.Controller = oldD.Controller;
-            newD.BattleControl = oldD.BattleControl;
-
-            // If the demon was in the active party, replace it directly in its slot
-            if (context.Party.ActiveParty.Contains(oldD))
-            {
-                int s = oldD.PartySlot;
-                context.Party.ActiveParty[s] = newD;
-                newD.PartySlot = s;
-            }
-            else
-            {
-                // It was in the stock
-                context.Owner.DemonStock.Remove(oldD);
-                context.Owner.DemonStock.Add(newD);
-            }
-            context.Owner.RecalculateResources();
+            FusionInventoryTransaction.ReplaceDemon(context, oldD, newD);
         }
 
         private void ReplacePersona(FusionContext context, Persona oldP, Persona newP)
         {
-            if (context.Owner.ActivePersona == oldP) context.Owner.ActivePersona = newP;
-            else { context.Owner.PersonaStock.Remove(oldP); context.Owner.PersonaStock.Add(newP); }
-            context.Owner.RecalculateResources();
+            FusionInventoryTransaction.ReplacePersona(context.Owner, oldP, newP);
         }
     }
 }

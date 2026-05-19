@@ -30,9 +30,7 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
 
             foreach (var participant in allParticipants)
             {
-                if (context.Party.ActiveParty.Contains(participant))
-                    context.Party.ReturnDemon(context.Owner, participant);
-                context.Owner.DemonStock.Remove(participant);
+                FusionInventoryTransaction.ConsumeDemon(context, participant);
             }
 
             Combatant child = CombatantFactory.CreatePlayerDemon(context.ResultId,
@@ -61,15 +59,12 @@ namespace JRPGPrototype.Logic.Fusion.Strategies
             List<Persona> materials = context.Materials.Cast<Persona>().ToList();
             foreach (var persona in materials)
             {
-                if (context.Owner.ActivePersona == persona) context.Owner.ActivePersona = null;
-                context.Owner.PersonaStock.Remove(persona);
+                FusionInventoryTransaction.ConsumePersona(context.Owner, persona);
             }
 
             if (context.Sacrifice is Persona sacrificialPer)
             {
-                if (context.Owner.ActivePersona == sacrificialPer)
-                    context.Owner.ActivePersona = null;
-                context.Owner.PersonaStock.Remove(sacrificialPer);
+                FusionInventoryTransaction.ConsumePersona(context.Owner, sacrificialPer);
             }
 
             Persona child = Database.Personas[context.ResultId.ToLower()].ToPersona();

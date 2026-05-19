@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Core;
-using JRPGPrototype.Logic.Field.State;
 using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Fusion.Messaging;
 using JRPGPrototype.Services;
@@ -79,7 +77,6 @@ public sealed class FusionBugRegressionTests
         EnsurePersonaTemplate(resultId, "Owned Result", "Element", 10);
         EnsureFusionRecipe(raceA, raceB, resultId);
 
-        var io = new FakeGameIO();
         var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
         var firstParent = CreateManualDemon("First Parent", "test_ux_first", raceA, level: 10);
         var duplicateCandidate = CreateManualDemon("Duplicate Candidate", "test_ux_second", raceB, level: 10);
@@ -88,27 +85,50 @@ public sealed class FusionBugRegressionTests
         owner.DemonStock.Add(duplicateCandidate);
         owner.DemonStock.Add(existingResult);
 
-        var conductor = new FusionConductor(
-            io,
+        var rules = new FusionOwnershipRules(new PartyManager(owner));
+        Dictionary<object, string> result = rules.BuildOwnedDuplicateResultReasons(
             owner,
-            new PartyManager(owner),
-            new EconomyManager(),
-            new FieldUIState(),
-            new CompendiumRegistry(io));
-
-        MethodInfo method = typeof(FusionConductor).GetMethod(
-            "BuildOwnedDuplicateResultReasons",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-        var result = Assert.IsType<Dictionary<object, string>>(method.Invoke(conductor, new object[]
-        {
             new List<object> { firstParent, duplicateCandidate },
             firstParent,
-            new List<object> { firstParent }
-        }));
+            new List<object> { firstParent });
 
         Assert.True(result.ContainsKey(duplicateCandidate));
         Assert.Contains("Owned Result", result[duplicateCandidate]);
+    }
+
+    [Fact]
+    public void OwnershipRules_DetectOperatorOwnedResultFromActiveParty()
+    {
+        const string resultId = "test_active_owned_result";
+        EnsurePersonaTemplate(resultId, "Active Owned", "Fairy", 10);
+
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var activeOwned = CreateManualDemon("Active Owned", resultId, "Fairy", level: 10);
+        owner.DemonStock.Add(activeOwned);
+
+        var party = new PartyManager(owner);
+        Assert.True(party.SummonDemon(owner, activeOwned));
+        var rules = new FusionOwnershipRules(party);
+
+        Assert.True(rules.TryGetOwnedCreateResult(owner, resultId, out FusionOwnedResult ownedResult));
+        Assert.Equal("Owned Result: Active Owned", ownedResult.DisabledReason);
+        Assert.Equal("Fusion aborted: that demon is already in your party or COMP.", ownedResult.TransactionAbortMessage);
+    }
+
+    [Fact]
+    public void OwnershipRules_DetectWildCardOwnedPersonaResultFromStock()
+    {
+        const string resultId = "test_wildcard_owned_result";
+        EnsurePersonaTemplate(resultId, "Owned Mask", "Magician", 10);
+
+        var owner = new Combatant("Hero", ClassType.WildCard) { Level = 50 };
+        owner.PersonaStock.Add(new Persona { Name = "Owned Mask", Race = "Magician", Level = 10 });
+
+        var rules = new FusionOwnershipRules(new PartyManager(owner));
+
+        Assert.True(rules.TryGetOwnedCreateResult(owner, resultId, out FusionOwnedResult ownedResult));
+        Assert.Equal("Owned Result: Owned Mask", ownedResult.DisabledReason);
+        Assert.Equal("Fusion aborted: that Persona is already in your stock.", ownedResult.TransactionAbortMessage);
     }
 
     [Fact]
@@ -170,11 +190,13 @@ public sealed class FusionBugRegressionTests
         object first = mitamaFirst ? mitama : target;
         object second = mitamaFirst ? target : mitama;
 
-        Combatant staged = InvokeCreateStagedDemon(
+        Combatant staged = CreatePreview(
             FusionOperationType.StatBoostFusion,
             pixieId,
             first,
-            second);
+            second,
+            sacrifice: null,
+            chosenSkills: new List<string>());
 
         Assert.Equal(target.Level, staged.Level);
         Assert.Equal(13, staged.GetStat(StatType.St));
@@ -184,33 +206,152 @@ public sealed class FusionBugRegressionTests
         Assert.Equal(16, staged.GetStat(StatType.Lu));
     }
 
-    private static Combatant InvokeCreateStagedDemon(FusionOperationType operation, string targetId, object p1, object p2)
+    [Fact]
+    public void PreviewFactory_RankMutationCarriesStatModifiers()
     {
-        var io = new FakeGameIO();
-        var player = new Combatant("Hero", ClassType.Operator) { Level = 50 };
-        var conductor = new FusionConductor(
-            io,
-            player,
-            new PartyManager(player),
-            new EconomyManager(),
-            new FieldUIState(),
-            new CompendiumRegistry(io));
+        const string targetId = "test_rank_preview_high_pixie";
+        EnsurePersonaTemplate(targetId, "High Pixie", "Fairy", 12);
 
-        MethodInfo method = typeof(FusionConductor).GetMethod(
-            "CreateStagedDemon",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        Combatant original = CreateManualDemon("Pixie", "test_rank_preview_pixie", "Fairy", level: 10);
+        original.ActivePersona!.StatModifiers[StatType.Ma] = 7;
+        Combatant element = CreateManualDemon("Aeros", "test_rank_preview_aeros", "Element", level: 10);
 
-        var result = method.Invoke(conductor, new object?[]
-        {
+        Combatant staged = CreatePreview(
+            FusionOperationType.RankUpParent,
+            targetId,
+            original,
+            element,
+            sacrifice: null,
+            chosenSkills: new List<string>());
+
+        Assert.Equal(7, staged.ActivePersona!.StatModifiers[StatType.Ma]);
+    }
+
+    [Fact]
+    public void PreviewFactory_SacrificialPreviewAppliesTransferWithoutMutatingSacrifice()
+    {
+        const string resultId = "test_sacrifice_preview_child";
+        EnsurePersonaTemplate(resultId, "Preview Child", "Fairy", 2);
+
+        Combatant parentA = CreateManualDemon("Parent A", "test_sacrifice_parent_a", "Fairy", level: 2);
+        Combatant parentB = CreateManualDemon("Parent B", "test_sacrifice_parent_b", "Jirae", level: 2);
+        Combatant sacrifice = CreateManualDemon("Sacrifice", "test_sacrifice_offer", "Beast", level: 2);
+        sacrifice.LifetimeEarnedExp = 1500;
+
+        Combatant staged = CreatePreview(
+            FusionOperationType.CreateNewDemon,
+            resultId,
+            parentA,
+            parentB,
+            sacrifice,
+            chosenSkills: new List<string>());
+
+        Assert.Equal(1500, sacrifice.LifetimeEarnedExp);
+        Assert.Equal(1000, staged.LifetimeEarnedExp);
+    }
+
+    [Fact]
+    public void PreviewFactory_SelectedInheritedSkillsAppearOnStagedResult()
+    {
+        const string resultId = "test_skill_preview_child";
+        EnsurePersonaTemplate(resultId, "Skill Child", "Fairy", 2);
+
+        Combatant parentA = CreateManualDemon("Parent A", "test_skill_parent_a", "Fairy", level: 2);
+        Combatant parentB = CreateManualDemon("Parent B", "test_skill_parent_b", "Jirae", level: 2);
+
+        Combatant staged = CreatePreview(
+            FusionOperationType.CreateNewDemon,
+            resultId,
+            parentA,
+            parentB,
+            sacrifice: null,
+            chosenSkills: new List<string> { "Agi", "Dia" });
+
+        Assert.Contains("Agi", staged.ExtraSkills);
+        Assert.Contains("Dia", staged.ExtraSkills);
+    }
+
+    [Fact]
+    public void ExecuteFusionTransaction_StandardFusionConsumesParentsWhenAllowed()
+    {
+        const string resultId = "test_standard_child";
+        EnsurePersonaTemplate(resultId, "Standard Child", "Fairy", 2);
+
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var parentA = CreateManualDemon("Parent A", "test_standard_parent_a", "Fairy", level: 10);
+        var parentB = CreateManualDemon("Parent B", "test_standard_parent_b", "Jirae", level: 10);
+        owner.DemonStock.Add(parentA);
+        owner.DemonStock.Add(parentB);
+
+        var party = new PartyManager(owner);
+        var context = new FusionContext(
+            owner,
+            new List<object> { parentA, parentB },
+            sacrifice: null,
+            chosenSkills: new List<string>(),
+            resultId: resultId,
+            messenger: new CapturingFusionMessenger(),
+            party: party);
+
+        var mutator = new FusionMutator(party, new EconomyManager(), new CapturingFusionMessenger());
+        mutator.ExecuteFusionTransaction(context, FusionOperationType.CreateNewDemon);
+
+        Assert.DoesNotContain(parentA, owner.DemonStock);
+        Assert.DoesNotContain(parentB, owner.DemonStock);
+        Assert.Contains(owner.DemonStock, d => d.SourceId.Equals(resultId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExecuteFusionTransaction_RankMutationReplacesActiveAndStockReferences()
+    {
+        const string resultId = "test_rank_child";
+        EnsurePersonaTemplate(resultId, "Rank Child", "Fairy", 12);
+
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var original = CreateManualDemon("Rank Parent", "test_rank_parent", "Fairy", level: 10);
+        var element = CreateManualDemon("Element", "test_rank_element", "Element", level: 10);
+        owner.DemonStock.Add(original);
+        owner.DemonStock.Add(element);
+
+        var party = new PartyManager(owner);
+        Assert.True(party.SummonDemon(owner, original));
+
+        var context = new FusionContext(
+            owner,
+            new List<object> { original, element },
+            sacrifice: null,
+            chosenSkills: new List<string>(),
+            resultId: resultId,
+            messenger: new CapturingFusionMessenger(),
+            party: party);
+
+        var mutator = new FusionMutator(party, new EconomyManager(), new CapturingFusionMessenger());
+        mutator.ExecuteFusionTransaction(context, FusionOperationType.RankUpParent);
+
+        Assert.DoesNotContain(original, owner.DemonStock);
+        Assert.DoesNotContain(original, party.ActiveParty);
+        Assert.Contains(owner.DemonStock, d => d.SourceId.Equals(resultId, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(party.ActiveParty, d => d.SourceId.Equals(resultId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static Combatant CreatePreview(
+        FusionOperationType operation,
+        string targetId,
+        object p1,
+        object p2,
+        object? sacrifice,
+        List<string> chosenSkills)
+    {
+        var factory = new FusionPreviewFactory();
+        Combatant? staged = factory.CreatePreview(
             operation,
             targetId,
-            p1,
-            p2,
-            null,
-            new List<string>()
-        });
+            FusionParticipant.From(p1),
+            FusionParticipant.From(p2),
+            sacrifice != null ? FusionParticipant.From(sacrifice) : null,
+            chosenSkills);
 
-        return Assert.IsType<Combatant>(result);
+        return Assert.IsType<Combatant>(staged);
     }
 
     private static Combatant CreateManualDemon(string name, string sourceId, string race, int level)
