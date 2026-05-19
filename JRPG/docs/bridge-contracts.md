@@ -147,7 +147,7 @@ Recommended migration order:
    - Separate selected recall target from back and empty compendium.
 5. `SelectDemonToRegister` - completed
    - Separate selected demon from cancel and no valid demons.
-6. `SelectInheritedSkills`
+6. `SelectInheritedSkills` - completed
    - Separate confirmed empty selection from aborted fusion.
 
 `FusionConductor` should only change as needed to consume the new result states. Fusion rules, ritual outcomes, costs, inheritance, compendium behavior, and menu text should remain unchanged.

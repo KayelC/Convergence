@@ -1,3 +1,4 @@
+using System;
 using JRPGPrototype.Logic.Fusion.Bridges;
 using JRPGPrototype.Core;
 using JRPGPrototype.Entities;
@@ -127,6 +128,35 @@ namespace Convergence.Tests
 
             Assert.Equal(kind, result.Kind);
             Assert.Null(result.Demon);
+        }
+
+        [Fact]
+        public void SkillInheritanceConfirmed_CarriesSelectedSkills()
+        {
+            var skills = new[] { "Agi", "Dia" };
+
+            var result = SkillInheritanceSelectionResult.Confirmed(skills);
+
+            Assert.Equal(SkillInheritanceSelectionKind.Confirmed, result.Kind);
+            Assert.Equal(skills, result.Skills);
+        }
+
+        [Fact]
+        public void SkillInheritanceConfirmed_AllowsEmptySkillList()
+        {
+            var result = SkillInheritanceSelectionResult.Confirmed(Array.Empty<string>());
+
+            Assert.Equal(SkillInheritanceSelectionKind.Confirmed, result.Kind);
+            Assert.Empty(result.Skills);
+        }
+
+        [Fact]
+        public void SkillInheritanceAborted_HasNoSkills()
+        {
+            var result = SkillInheritanceSelectionResult.Aborted;
+
+            Assert.Equal(SkillInheritanceSelectionKind.Aborted, result.Kind);
+            Assert.Empty(result.Skills);
         }
     }
 }

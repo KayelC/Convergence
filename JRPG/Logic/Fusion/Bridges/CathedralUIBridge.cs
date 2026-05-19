@@ -122,7 +122,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// "Grays Out" skills that the target already possesses (Already Known) or skills that are parent-locked (Exclusive).
         /// Allows confirming 0 skills to avoid soft-locks when all are unavailable. 
         /// </summary>
-        public List<string>? SelectInheritedSkills(List<string> pool, int maxSlots, List<string> inherentSkills, List<string> exclusivePool)
+        public SkillInheritanceSelectionResult SelectInheritedSkills(List<string> pool, int maxSlots, List<string> inherentSkills, List<string> exclusivePool)
         {
             List<string> selected = new List<string>();
 
@@ -179,12 +179,12 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                     }
                 });
 
-                if (choice == -1) return null;
+                if (choice == -1) return SkillInheritanceSelectionResult.Aborted;
 
-                // Abort abandons this fusion attempt and returns null to the current conductor contract.
+                // Abort is distinct from confirming an empty skill list.
                 if (choice == labels.Count - 1)
                 {
-                    return null;
+                    return SkillInheritanceSelectionResult.Aborted;
                 }
 
                 // Confirm may return an empty list, which is different from Abort.
@@ -196,7 +196,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
                 selected.Add(pool[choice]);
             }
 
-            return selected;
+            return SkillInheritanceSelectionResult.Confirmed(selected);
         }
 
         #endregion

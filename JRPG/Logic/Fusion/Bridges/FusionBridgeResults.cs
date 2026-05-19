@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using JRPGPrototype.Entities;
 
 namespace JRPGPrototype.Logic.Fusion.Bridges
@@ -171,5 +173,33 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         public static CompendiumRegistrationSelectionResult Selected(Combatant demon)
             => new CompendiumRegistrationSelectionResult(CompendiumRegistrationSelectionKind.Selected, demon);
+    }
+
+    /// <summary>
+    /// Outcome of the skill inheritance picker.
+    /// Confirmed with zero skills is a valid ritual choice; Aborted means the player intentionally
+    /// left the fusion attempt before staging or committing a result.
+    /// </summary>
+    public enum SkillInheritanceSelectionKind
+    {
+        /// <summary>The player confirmed the inheritance list, which may be empty.</summary>
+        Confirmed,
+
+        /// <summary>The player aborted the fusion from the inheritance picker.</summary>
+        Aborted
+    }
+
+    /// <summary>
+    /// Skill inheritance result returned by the Cathedral bridge.
+    /// The skill payload is meaningful only for <see cref="SkillInheritanceSelectionKind.Confirmed"/>;
+    /// an empty confirmed list represents deliberate zero-inheritance, not cancellation.
+    /// </summary>
+    public sealed record SkillInheritanceSelectionResult(SkillInheritanceSelectionKind Kind, IReadOnlyList<string> Skills)
+    {
+        public static SkillInheritanceSelectionResult Aborted { get; } =
+            new SkillInheritanceSelectionResult(SkillInheritanceSelectionKind.Aborted, Array.Empty<string>());
+
+        public static SkillInheritanceSelectionResult Confirmed(IReadOnlyList<string> skills)
+            => new SkillInheritanceSelectionResult(SkillInheritanceSelectionKind.Confirmed, skills);
     }
 }

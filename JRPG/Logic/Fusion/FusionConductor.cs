@@ -207,14 +207,15 @@ namespace JRPGPrototype.Logic.Fusion
                     int maxSlots = _calculator.GetInheritanceSlotCount(parentList.ToArray()) + (isSacrificial ? 2 : 0);
 
                     // The bridge owns labeling, but the conductor supplies the rule sets that make entries unavailable.
-                    List<string>? chosenSkills = _uiBridge.SelectInheritedSkills(
+                    SkillInheritanceSelectionResult inheritanceResult = _uiBridge.SelectInheritedSkills(
                         displayPool,
                         Math.Min(8, maxSlots),
                         inherentSkills, // Will be labeled "Already Known"
                         exclusivePool   // Will be labeled "Exclusive"
                     );
 
-                    if (chosenSkills == null) break;
+                    if (inheritanceResult.Kind == SkillInheritanceSelectionKind.Aborted) break;
+                    List<string> chosenSkills = inheritanceResult.Skills.ToList();
 
                     // The staged demon is a preview clone: it must match execution math without mutating party or stock.
                     Combatant? staged = CreateStagedDemon(operation, targetId, p1, p2, sacrifice, chosenSkills);
