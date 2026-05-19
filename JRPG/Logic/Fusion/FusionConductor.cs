@@ -134,8 +134,10 @@ namespace JRPGPrototype.Logic.Fusion
                 parents.Add(p1);
 
                 // Backing out on the second parent restarts the parent pair, because parent one may be the mistake.
+                Dictionary<object, string> p2DisabledReasons =
+                    BuildOwnedDuplicateResultReasons(participantPool, p1, parents);
                 RitualParticipantSelectionResult<object> p2Result =
-                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents);
+                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents, p2DisabledReasons);
                 if (p2Result.Kind != RitualParticipantSelectionKind.Selected || p2Result.Participant == null) continue; // Go back to start of parent selection
                 object p2 = p2Result.Participant;
                 parents.Add(p2);
@@ -339,6 +341,89 @@ namespace JRPGPrototype.Logic.Fusion
         private static Combatant GetStatBoostMitama(Combatant parentA, Combatant parentB)
         {
             return parentA.ActivePersona?.Race == "Mitama" ? parentA : parentB;
+        }
+
+        private Dictionary<object, string> BuildOwnedDuplicateResultReasons(List<object> pool, object firstParent, List<object> exclusions)
+        {
+            var disabledReasons = new Dictionary<object, string>();
+            Combatant parentA = firstParent as Combatant ?? CreateTransientCombatant((Persona)firstParent);
+
+            foreach (object candidate in pool)
+            {
+                if (exclusions.Contains(candidate)) continue;
+
+                Combatant parentB = candidate as Combatant ?? CreateTransientCombatant((Persona)candidate);
+                // This preview pass only blocks guaranteed direct recipe results. The full calculator
+                // can trigger accidents, so calling it here would make menu navigation mutate probability.
+                if (!TryGetDirectFusionResultId(parentA, parentB, out string? resultId)) continue;
+                if (resultId == null) continue;
+                if (!IsCreateResultAlreadyOwned(resultId, out string resultName)) continue;
+
+                disabledReasons[candidate] = $"Owned Result: {resultName}";
+            }
+
+            return disabledReasons;
+        }
+
+        private bool IsCreateResultAlreadyOwned(string resultId, out string resultName)
+        {
+            resultName = resultId;
+
+            if (!Database.Personas.TryGetValue(resultId.ToLower(), out PersonaData? template))
+            {
+                return false;
+            }
+
+            resultName = template.Name;
+
+            return _player.Class switch
+            {
+                ClassType.Operator => _partyManager.IsDemonOwned(_player, resultId),
+                ClassType.WildCard => _partyManager.IsPersonaOwned(_player, template.Name),
+                _ => false
+            };
+        }
+
+        private static bool TryGetDirectFusionResultId(Combatant parentA, Combatant parentB, out string? resultId)
+        {
+            resultId = null;
+
+            if (parentA.ActivePersona == null || parentB.ActivePersona == null)
+            {
+                return false;
+            }
+
+            // Direct pair recipes may be authored either against exact source ids or against races.
+            // Special fusion rules such as Mitama boosts and Element rank shifts are intentionally left
+            // to the transaction guard because they are not ordinary "create a new demon" results.
+            string? resultString =
+                FindFusionRecipeResult(parentA.SourceId, parentB.SourceId) ??
+                FindFusionRecipeResult(parentA.ActivePersona.Race, parentB.ActivePersona.Race);
+
+            if (string.IsNullOrEmpty(resultString))
+            {
+                return false;
+            }
+
+            string lookupId = resultString.ToLower();
+            if (!Database.Personas.ContainsKey(lookupId))
+            {
+                return false;
+            }
+
+            resultId = lookupId;
+            return true;
+        }
+
+        private static string? FindFusionRecipeResult(string parentA, string parentB)
+        {
+            var recipe = Database.FusionRecipes.FirstOrDefault(r =>
+                (r.ParentA.Equals(parentA, StringComparison.OrdinalIgnoreCase) &&
+                 r.ParentB.Equals(parentB, StringComparison.OrdinalIgnoreCase)) ||
+                (r.ParentA.Equals(parentB, StringComparison.OrdinalIgnoreCase) &&
+                 r.ParentB.Equals(parentA, StringComparison.OrdinalIgnoreCase)));
+
+            return recipe?.Result;
         }
 
         private void ApplyPreviewBoost(Combatant demon, string mitamaName)

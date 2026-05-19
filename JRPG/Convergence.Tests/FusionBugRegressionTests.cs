@@ -71,6 +71,47 @@ public sealed class FusionBugRegressionTests
     }
 
     [Fact]
+    public void BuildOwnedDuplicateResultReasons_DisablesSecondParentWhenDirectResultIsAlreadyOwned()
+    {
+        const string resultId = "test_owned_result_aquans";
+        const string raceA = "TestUxRaceA";
+        const string raceB = "TestUxRaceB";
+        EnsurePersonaTemplate(resultId, "Owned Result", "Element", 10);
+        EnsureFusionRecipe(raceA, raceB, resultId);
+
+        var io = new FakeGameIO();
+        var owner = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var firstParent = CreateManualDemon("First Parent", "test_ux_first", raceA, level: 10);
+        var duplicateCandidate = CreateManualDemon("Duplicate Candidate", "test_ux_second", raceB, level: 10);
+        var existingResult = new Combatant("Owned Result", ClassType.Demon) { SourceId = resultId };
+        owner.DemonStock.Add(firstParent);
+        owner.DemonStock.Add(duplicateCandidate);
+        owner.DemonStock.Add(existingResult);
+
+        var conductor = new FusionConductor(
+            io,
+            owner,
+            new PartyManager(owner),
+            new EconomyManager(),
+            new FieldUIState(),
+            new CompendiumRegistry(io));
+
+        MethodInfo method = typeof(FusionConductor).GetMethod(
+            "BuildOwnedDuplicateResultReasons",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        var result = Assert.IsType<Dictionary<object, string>>(method.Invoke(conductor, new object[]
+        {
+            new List<object> { firstParent, duplicateCandidate },
+            firstParent,
+            new List<object> { firstParent }
+        }));
+
+        Assert.True(result.ContainsKey(duplicateCandidate));
+        Assert.Contains("Owned Result", result[duplicateCandidate]);
+    }
+
+    [Fact]
     public void ExecuteFusionTransaction_StatBoostConsumesMitamaCatalyst()
     {
         const string pixieId = "test_mitama_consume_pixie";
@@ -217,6 +258,24 @@ public sealed class FusionBugRegressionTests
             LearnedSkillsRaw = new Dictionary<string, string>(),
             FamiliarDialogue = string.Empty
         };
+    }
+
+    private static void EnsureFusionRecipe(string parentA, string parentB, string result)
+    {
+        if (Database.FusionRecipes.Exists(r =>
+            r.ParentA.Equals(parentA, StringComparison.OrdinalIgnoreCase) &&
+            r.ParentB.Equals(parentB, StringComparison.OrdinalIgnoreCase) &&
+            r.Result.Equals(result, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        Database.FusionRecipes.Add(new FusionRecipe
+        {
+            ParentA = parentA,
+            ParentB = parentB,
+            Result = result
+        });
     }
 
     private sealed class CapturingFusionMessenger : IFusionMessenger

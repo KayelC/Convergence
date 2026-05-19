@@ -76,7 +76,11 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
         /// Exclusions are compared by object identity so the exact instance already chosen for this
         /// ritual cannot be selected again.
         /// </summary>
-        public RitualParticipantSelectionResult<T> SelectRitualParticipant<T>(List<T> pool, string prompt, List<T> exclusions) where T : class
+        public RitualParticipantSelectionResult<T> SelectRitualParticipant<T>(
+            List<T> pool,
+            string prompt,
+            List<T> exclusions,
+            IReadOnlyDictionary<T, string>? disabledReasons = null) where T : class
         {
             var validChoices = pool.Where(x => !exclusions.Contains(x)).ToList();
 
@@ -90,23 +94,30 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             }
 
             List<string> labels = new List<string>();
+            List<bool> disabledList = new List<bool>();
             foreach (var item in validChoices)
             {
+                bool isDisabled = disabledReasons != null && disabledReasons.ContainsKey(item);
+                string disabledSuffix = isDisabled ? $" ({disabledReasons![item]})" : "";
+
                 if (item is Combatant c)
                 {
                     string race = c.ActivePersona?.Race ?? "Unknown";
                     string rank = c.ActivePersona?.Rank > 0 ? $"(Rk.{c.ActivePersona.Rank})" : "";
-                    labels.Add($"{c.Name,-15} (Lv.{c.Level}) {race} {rank}");
+                    labels.Add($"{c.Name,-15} (Lv.{c.Level}) {race} {rank}{disabledSuffix}");
                 }
                 else if (item is Persona p)
                 {
                     string rank = p.Rank > 0 ? $"(Rk.{p.Rank})" : "";
-                    labels.Add($"{p.Name,-15} (Lv.{p.Level}) {p.Race} {rank}");
+                    labels.Add($"{p.Name,-15} (Lv.{p.Level}) {p.Race} {rank}{disabledSuffix}");
                 }
+
+                disabledList.Add(isDisabled);
             }
             labels.Add("Cancel");
+            disabledList.Add(false);
 
-            int choice = _io.RenderMenu(prompt, labels, 0);
+            int choice = _io.RenderMenu(prompt, labels, 0, disabledList);
 
             if (choice == -1 || choice == labels.Count - 1) return RitualParticipantSelectionResult<T>.Canceled;
             return RitualParticipantSelectionResult<T>.Selected(validChoices[choice]);
