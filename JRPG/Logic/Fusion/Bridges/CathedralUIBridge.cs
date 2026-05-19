@@ -350,9 +350,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         /// <summary>
         /// Renders the current Compendium snapshots and returns the chosen recall entry.
-        /// This method still uses null for Back or empty registry; it has not been migrated to an explicit result contract yet.
+        /// Empty registry is Unavailable; Back means the player left a populated recall list.
         /// </summary>
-        public Combatant ShowCompendiumRecallMenu()
+        public CompendiumRecallResult ShowCompendiumRecallMenu()
         {
             var entries = _compendium.GetAllRegisteredDemons();
 
@@ -360,7 +360,7 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             {
                 _io.WriteLine("The Compendium is empty. You must register a demon first.", ConsoleColor.Gray);
                 _io.Wait(1000);
-                return null;
+                return CompendiumRecallResult.Unavailable;
             }
 
             string header = "=== DEMONIC COMPENDIUM ===\nRecall the data of a previously registered demon.\n";
@@ -374,9 +374,9 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
             labels.Add("Back");
 
             int choice = _io.RenderMenu(header, labels, 0);
-            if (choice == -1 || choice == labels.Count - 1) return null;
+            if (choice == -1 || choice == labels.Count - 1) return CompendiumRecallResult.Back;
 
-            return entries[choice];
+            return CompendiumRecallResult.Selected(entries[choice]);
         }
 
         /// <summary>

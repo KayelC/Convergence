@@ -135,18 +135,18 @@ Why fusion first:
 
 Recommended migration order:
 
-1. `ShowCathedralMainMenu`
+1. `ShowCathedralMainMenu` - completed
    - Replace string command results with a typed action/result.
    - Preserve current labels and menu order.
-2. `ConfirmRitual`
+2. `ConfirmRitual` - completed
    - Replace integer outcomes with named confirmation results.
    - Preserve current meanings: commence, wait, cancel, forbidden.
-3. `SelectRitualParticipant`
+3. `SelectRitualParticipant` - completed
    - Replace nullable participant returns with selected/back/unavailable states.
-4. `SelectInheritedSkills`
-   - Separate confirmed empty selection from aborted fusion.
-5. `ShowCompendiumRecallMenu`
+4. `ShowCompendiumRecallMenu` - completed
    - Separate selected recall target from back and empty compendium.
+5. `SelectInheritedSkills`
+   - Separate confirmed empty selection from aborted fusion.
 6. `SelectDemonToRegister`
    - Separate selected demon from cancel and no valid demons.
 

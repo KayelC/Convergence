@@ -345,8 +345,10 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         private void HandleCompendiumRecall()
         {
-            Combatant? entry = _uiBridge.ShowCompendiumRecallMenu();
-            if (entry == null) return;
+            CompendiumRecallResult recall = _uiBridge.ShowCompendiumRecallMenu();
+            if (recall.Kind != CompendiumRecallResultKind.Selected || recall.Entry == null) return;
+
+            Combatant entry = recall.Entry;
 
             int cost = _compendium.CalculateRecallCost(entry.SourceId);
 

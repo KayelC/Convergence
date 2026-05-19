@@ -1,3 +1,5 @@
+using JRPGPrototype.Entities;
+
 namespace JRPGPrototype.Logic.Fusion.Bridges
 {
     /// <summary>
@@ -101,5 +103,39 @@ namespace JRPGPrototype.Logic.Fusion.Bridges
 
         public static RitualParticipantSelectionResult<T> Selected(T participant)
             => new RitualParticipantSelectionResult<T>(RitualParticipantSelectionKind.Selected, participant);
+    }
+
+    /// <summary>
+    /// Outcome of browsing the Compendium recall list.
+    /// Empty registry and player navigation are separate states because only a selected entry should
+    /// advance into economy checks and recall materialization.
+    /// </summary>
+    public enum CompendiumRecallResultKind
+    {
+        /// <summary>A Compendium snapshot was selected and is available in the result payload.</summary>
+        Selected,
+
+        /// <summary>The player left the recall screen without choosing an entry.</summary>
+        Back,
+
+        /// <summary>The Compendium contains no registered entries to recall.</summary>
+        Unavailable
+    }
+
+    /// <summary>
+    /// Recall-list result returned by the Cathedral bridge.
+    /// The entry payload is present only for <see cref="CompendiumRecallResultKind.Selected"/>;
+    /// Back and Unavailable both leave gameplay state untouched.
+    /// </summary>
+    public sealed record CompendiumRecallResult(CompendiumRecallResultKind Kind, Combatant? Entry = null)
+    {
+        public static CompendiumRecallResult Back { get; } =
+            new CompendiumRecallResult(CompendiumRecallResultKind.Back);
+
+        public static CompendiumRecallResult Unavailable { get; } =
+            new CompendiumRecallResult(CompendiumRecallResultKind.Unavailable);
+
+        public static CompendiumRecallResult Selected(Combatant entry)
+            => new CompendiumRecallResult(CompendiumRecallResultKind.Selected, entry);
     }
 }

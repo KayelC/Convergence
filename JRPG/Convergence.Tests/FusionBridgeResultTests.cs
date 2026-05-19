@@ -1,4 +1,6 @@
 using JRPGPrototype.Logic.Fusion.Bridges;
+using JRPGPrototype.Core;
+using JRPGPrototype.Entities;
 using Xunit;
 
 namespace Convergence.Tests
@@ -71,6 +73,33 @@ namespace Convergence.Tests
 
             Assert.Equal(kind, result.Kind);
             Assert.Null(result.Participant);
+        }
+
+        [Fact]
+        public void CompendiumRecallSelected_CarriesSelectedEntry()
+        {
+            var entry = new Combatant("Pixie", ClassType.Demon);
+
+            var result = CompendiumRecallResult.Selected(entry);
+
+            Assert.Equal(CompendiumRecallResultKind.Selected, result.Kind);
+            Assert.Same(entry, result.Entry);
+        }
+
+        [Theory]
+        [InlineData(CompendiumRecallResultKind.Back)]
+        [InlineData(CompendiumRecallResultKind.Unavailable)]
+        public void CompendiumRecall_NonSelectedResultsHaveNoEntry(CompendiumRecallResultKind kind)
+        {
+            CompendiumRecallResult result = kind switch
+            {
+                CompendiumRecallResultKind.Back => CompendiumRecallResult.Back,
+                CompendiumRecallResultKind.Unavailable => CompendiumRecallResult.Unavailable,
+                _ => throw new Xunit.Sdk.XunitException("Unhandled non-selected Compendium recall kind.")
+            };
+
+            Assert.Equal(kind, result.Kind);
+            Assert.Null(result.Entry);
         }
     }
 }
