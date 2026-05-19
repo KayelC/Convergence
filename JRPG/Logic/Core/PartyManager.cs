@@ -65,10 +65,10 @@ namespace JRPGPrototype.Logic.Core
         public bool IsDemonOwned(Combatant owner, string sourceId)
         {
             // In the unified model, checking the Master Stock covers both field and reserve.
-            if (owner.DemonStock.Any(d => d.SourceId == sourceId)) return true;
+            if (owner.DemonStock.Any(d => d.SourceId.Equals(sourceId, StringComparison.OrdinalIgnoreCase))) return true;
 
             // Fallback check for active party in case of non-owner controlled demons
-            if (ActiveParty.Any(c => c.SourceId == sourceId && c.Class == ClassType.Demon)) return true;
+            if (ActiveParty.Any(c => c.SourceId.Equals(sourceId, StringComparison.OrdinalIgnoreCase) && c.Class == ClassType.Demon)) return true;
 
             return false;
         }
@@ -78,8 +78,8 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool IsPersonaOwned(Combatant owner, string personaId)
         {
-            if (owner.ActivePersona?.Name == personaId) return true;
-            if (owner.PersonaStock.Any(p => p.Name == personaId)) return true;
+            if (owner.ActivePersona?.Name.Equals(personaId, StringComparison.OrdinalIgnoreCase) == true) return true;
+            if (owner.PersonaStock.Any(p => p.Name.Equals(personaId, StringComparison.OrdinalIgnoreCase))) return true;
             return false;
         }
 

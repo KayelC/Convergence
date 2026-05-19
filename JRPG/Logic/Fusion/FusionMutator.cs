@@ -108,6 +108,19 @@ namespace JRPGPrototype.Logic.Fusion
                 return false;
             }
 
+            if (owner.Class == ClassType.Operator && _partyManager.IsDemonOwned(owner, snapshot.SourceId))
+            {
+                _messenger.Publish($"{snapshot.Name} is already in your party or COMP.", ConsoleColor.Red, 1000);
+                return false;
+            }
+
+            if (owner.Class == ClassType.WildCard && snapshot.ActivePersona != null &&
+                _partyManager.IsPersonaOwned(owner, snapshot.ActivePersona.Name))
+            {
+                _messenger.Publish($"{snapshot.ActivePersona.Name} is already in your Persona stock.", ConsoleColor.Red, 1000);
+                return false;
+            }
+
             if (_economy.SpendMacca(cost))
             {
                 if (owner.Class == ClassType.Operator)

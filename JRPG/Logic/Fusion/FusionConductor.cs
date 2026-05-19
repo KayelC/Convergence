@@ -222,8 +222,12 @@ namespace JRPGPrototype.Logic.Fusion
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
+                    Combatant previewBaseline = operation == FusionOperationType.StatBoostFusion
+                        ? GetStatBoostTarget(parentA, parentB)
+                        : (parentA.ActivePersona.Race != "Element") ? parentA : parentB;
+
                     RitualConfirmationResult confirm = _uiBridge.ConfirmRitual(staged,
-                        (parentA.ActivePersona.Race != "Element") ? parentA : parentB, chosenSkills,
+                        previewBaseline, chosenSkills,
                         _player.Level, operation);
 
                     // Wait preserves the chosen participants and loops back to inheritance.
@@ -273,8 +277,17 @@ namespace JRPGPrototype.Logic.Fusion
         {
             if (!Database.Personas.TryGetValue(id.ToLower(), out var template)) return null;
 
+            Combatant parentA = p1 as Combatant ?? CreateTransientCombatant((Persona)p1);
+            Combatant parentB = p2 as Combatant ?? CreateTransientCombatant((Persona)p2);
+
+            int previewLevel = template.Level;
+            if (op == FusionOperationType.StatBoostFusion)
+            {
+                previewLevel = GetStatBoostTarget(parentA, parentB).Level;
+            }
+
             // 1. Initialize the base result from the template
-            Combatant staged = CombatantFactory.CreatePlayerDemon(id, template.Level);
+            Combatant staged = CombatantFactory.CreatePlayerDemon(id, previewLevel);
 
             // 2. Apply the manually selected inherited skills
             staged.ExtraSkills.Clear();
@@ -284,11 +297,12 @@ namespace JRPGPrototype.Logic.Fusion
             if (op == FusionOperationType.StatBoostFusion)
             {
                 // Identify which parent is the 'Target' and which is the 'Mitama'
-                Combatant targetCom = (p1 is Combatant c1 && c1.ActivePersona.Race != "Mitama") ? c1 : (Combatant)p2;
-                Combatant mitamaCom = (p1 is Combatant m1 && m1.ActivePersona.Race == "Mitama") ? m1 : (Combatant)p2;
+                Combatant targetCom = GetStatBoostTarget(parentA, parentB);
+                Combatant mitamaCom = GetStatBoostMitama(parentA, parentB);
 
                 // Copy the target's actual current state to the dummy
                 staged.Exp = targetCom.Exp;
+                staged.LifetimeEarnedExp = targetCom.LifetimeEarnedExp;
                 foreach (var st in targetCom.CharacterStats) staged.CharacterStats[st.Key] = st.Value;
                 foreach (var mod in targetCom.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
 
@@ -299,7 +313,7 @@ namespace JRPGPrototype.Logic.Fusion
             else if (op == FusionOperationType.RankUpParent || op == FusionOperationType.RankDownParent)
             {
                 // Identify the target undergoing the rank change
-                Combatant original = (p1 is Combatant c1 && c1.ActivePersona.Race != "Element") ? c1 : (Combatant)p2;
+                Combatant original = (parentA.ActivePersona.Race != "Element") ? parentA : parentB;
 
                 // Carry over modifiers to the higher/lower tier version
                 foreach (var mod in original.ActivePersona.StatModifiers) staged.ActivePersona.StatModifiers[mod.Key] = mod.Value;
@@ -315,6 +329,16 @@ namespace JRPGPrototype.Logic.Fusion
             }
 
             return staged;
+        }
+
+        private static Combatant GetStatBoostTarget(Combatant parentA, Combatant parentB)
+        {
+            return parentA.ActivePersona?.Race == "Mitama" ? parentB : parentA;
+        }
+
+        private static Combatant GetStatBoostMitama(Combatant parentA, Combatant parentB)
+        {
+            return parentA.ActivePersona?.Race == "Mitama" ? parentA : parentB;
         }
 
         private void ApplyPreviewBoost(Combatant demon, string mitamaName)
