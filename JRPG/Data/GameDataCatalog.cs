@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace JRPGPrototype.Data
 {
@@ -50,7 +52,7 @@ namespace JRPGPrototype.Data
             _ailments = ailments.ToList();
             _ailmentsByIdOrName = _ailments
                 .Where(a => !string.IsNullOrWhiteSpace(a.Name))
-                .ToDictionary(a => SkillDefinitionMapper.CreateId(a.Name), a => a);
+                .ToDictionary(a => CreateStableId(a.Name), a => a);
 
             foreach (AilmentData ailment in _ailments.Where(a => !string.IsNullOrWhiteSpace(a.Name)))
             {
@@ -58,14 +60,17 @@ namespace JRPGPrototype.Data
             }
         }
 
+        [Obsolete("Legacy Database bridge. Prefer constructing GameDataCatalog from Data.Schemas v2 definitions.")]
         public static GameDataCatalog FromDatabase()
         {
             AilmentData[] ailments = Database.Ailments.Values.ToArray();
+#pragma warning disable CS0618
             SkillDefinition[] skills = Database.Skills.Values
                 .Select(s => SkillDefinitionMapper.MapLegacySkill(s, ailments))
                 .Where(r => r.IsValid && r.Definition != null)
                 .Select(r => r.Definition!)
                 .ToArray();
+#pragma warning restore CS0618
 
             return new GameDataCatalog(skills, Database.Personas.Values, ailments);
         }
@@ -110,6 +115,28 @@ namespace JRPGPrototype.Data
         IReadOnlyList<AilmentData> IAilmentRepository.GetAll()
         {
             return _ailments;
+        }
+
+        private static string CreateStableId(string displayName)
+        {
+            var builder = new StringBuilder();
+            bool previousWasSeparator = false;
+
+            foreach (char c in displayName.Trim().ToLowerInvariant())
+            {
+                if (char.IsLetterOrDigit(c))
+                {
+                    builder.Append(c);
+                    previousWasSeparator = false;
+                }
+                else if (!previousWasSeparator)
+                {
+                    builder.Append('_');
+                    previousWasSeparator = true;
+                }
+            }
+
+            return builder.ToString().Trim('_');
         }
     }
 }

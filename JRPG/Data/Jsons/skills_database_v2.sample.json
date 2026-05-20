@@ -1,0 +1,110 @@
+{
+  "skills": [
+    {
+      "id": "ember_flicker",
+      "displayName": "Ember Flicker",
+      "description": "A small flame strikes one foe.",
+      "kind": "Damage",
+      "cost": { "resource": "SP", "amount": 3 },
+      "targeting": "SingleEnemy",
+      "inheritance": { "isInheritable": true, "family": "Fire_ST", "rank": 1 },
+      "damage": { "element": "Fire", "power": 50, "accuracy": 95 }
+    },
+    {
+      "id": "venom_needle",
+      "displayName": "Venom Needle",
+      "description": "A piercing strike that may poison the target.",
+      "kind": "Damage",
+      "cost": { "resource": "HP", "amount": 7, "isPercent": true },
+      "targeting": "SingleEnemy",
+      "inheritance": { "isInheritable": true },
+      "damage": {
+        "element": "Pierce",
+        "power": 62,
+        "accuracy": 76,
+        "criticalChance": 24,
+        "secondaryAilment": { "ailmentId": "poison", "chance": 40 }
+      }
+    },
+    {
+      "id": "mend",
+      "displayName": "Mend",
+      "description": "Restores a small amount of HP to one ally.",
+      "kind": "Healing",
+      "cost": { "resource": "SP", "amount": 4 },
+      "targeting": "SingleAlly",
+      "inheritance": { "isInheritable": true, "family": "Heal_ST", "rank": 1 },
+      "healing": { "resource": "HP", "amountKind": "Flat", "amount": 50 }
+    },
+    {
+      "id": "kindle_soul",
+      "displayName": "Kindle Soul",
+      "description": "Revives one fallen ally with half HP.",
+      "kind": "Revive",
+      "cost": { "resource": "SP", "amount": 20 },
+      "targeting": "DeadAlly",
+      "inheritance": { "isInheritable": true, "family": "Revive", "rank": 1 },
+      "revive": { "amountKind": "Percent", "amount": 50 }
+    },
+    {
+      "id": "war_cry",
+      "displayName": "War Cry",
+      "description": "Raises one ally's physical attack.",
+      "kind": "BuffDebuff",
+      "cost": { "resource": "SP", "amount": 6 },
+      "targeting": "SingleAlly",
+      "inheritance": { "isInheritable": true, "family": "PhysAtkBuff", "rank": 1 },
+      "buffDebuff": { "tracks": [ "PhysAtk" ], "stageDelta": 1 }
+    },
+    {
+      "id": "astral_focus",
+      "displayName": "Astral Focus",
+      "description": "Focuses the user's next magical attack.",
+      "kind": "Charge",
+      "cost": { "resource": "SP", "amount": 15 },
+      "targeting": "Self",
+      "inheritance": { "isInheritable": true },
+      "charge": { "kind": "Magical", "multiplier": 1.9 }
+    },
+    {
+      "id": "flame_breach",
+      "displayName": "Flame Breach",
+      "description": "Temporarily removes Fire resistance from one foe.",
+      "kind": "Break",
+      "cost": { "resource": "SP", "amount": 40 },
+      "targeting": "SingleEnemy",
+      "inheritance": { "isInheritable": true },
+      "break": { "element": "Fire", "duration": 3 }
+    },
+    {
+      "id": "iron_mirror",
+      "displayName": "Iron Mirror",
+      "description": "Places a physical reflection shield on one ally.",
+      "kind": "Shield",
+      "cost": { "resource": "SP", "amount": 55 },
+      "targeting": "SingleAlly",
+      "inheritance": { "isInheritable": true },
+      "shield": { "kind": "Physical" }
+    },
+    {
+      "id": "toxin_hex",
+      "displayName": "Toxin Hex",
+      "description": "Attempts to poison one foe.",
+      "kind": "Ailment",
+      "cost": { "resource": "SP", "amount": 5 },
+      "targeting": "SingleEnemy",
+      "inheritance": { "isInheritable": true, "family": "Poison", "rank": 1 },
+      "ailment": { "ailmentId": "poison", "chance": 40 }
+    },
+    {
+      "id": "flame_instinct",
+      "displayName": "Flame Instinct",
+      "description": "Strengthens Fire attacks.",
+      "kind": "Passive",
+      "cost": { "resource": "None", "amount": 0 },
+      "targeting": "Self",
+      "inheritance": { "isInheritable": true, "family": "FireBoost", "rank": 1 },
+      "passive": { "passiveKind": "ElementBoost" }
+    }
+  ]
+}

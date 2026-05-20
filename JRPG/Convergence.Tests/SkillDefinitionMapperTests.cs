@@ -2,6 +2,8 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using Xunit;
 
+#pragma warning disable CS0618 // Legacy adapter tests are intentionally retained as compatibility coverage.
+
 namespace Convergence.Tests;
 
 public sealed class SkillDefinitionMapperTests
@@ -250,3 +252,5 @@ public sealed class SkillDefinitionMapperTests
         };
     }
 }
+
+#pragma warning restore CS0618

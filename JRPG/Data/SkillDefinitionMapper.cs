@@ -7,6 +7,7 @@ using JRPGPrototype.Core;
 
 namespace JRPGPrototype.Data
 {
+    [Obsolete("Legacy compatibility result for SkillData conversion. Prefer Data.Schemas v2 DTOs as the source of truth.")]
     public sealed record SkillDefinitionMappingResult(
         SkillDefinition? Definition,
         IReadOnlyList<string> Warnings,
@@ -15,6 +16,7 @@ namespace JRPGPrototype.Data
         public bool IsValid => Definition != null && Errors.Count == 0;
     }
 
+    [Obsolete("Legacy compatibility adapter for current skills_database.json only. Do not build new systems on this parser.")]
     public static class SkillDefinitionMapper
     {
         public static SkillDefinitionMappingResult MapLegacySkill(
