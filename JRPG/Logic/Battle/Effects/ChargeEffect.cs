@@ -25,15 +25,15 @@ namespace JRPGPrototype.Logic.Battle.Effects
                 if (target.IsDead) continue;
 
                 // 1. Logic: Identify if it's a Physical (Power) or Magical (Mind) charge
-                if (combinedData.Contains("Power", StringComparison.OrdinalIgnoreCase))
-                {
-                    target.IsCharged = true;
-                    messenger.Publish($"{target.Name} is focusing physical power!", ConsoleColor.Gray);
-                }
-                else if (combinedData.Contains("Mind", StringComparison.OrdinalIgnoreCase))
+                if (combinedData.Contains("Mind", StringComparison.OrdinalIgnoreCase))
                 {
                     target.IsMindCharged = true;
                     messenger.Publish($"{target.Name} is focusing spiritual energy!", ConsoleColor.Gray);
+                }
+                else if (combinedData.Contains("Power", StringComparison.OrdinalIgnoreCase))
+                {
+                    target.IsCharged = true;
+                    messenger.Publish($"{target.Name} is focusing physical power!", ConsoleColor.Gray);
                 }
                 else
                 {
