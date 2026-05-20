@@ -18,6 +18,8 @@ namespace JRPGPrototype.Data
         [JsonProperty("Rank")]
         public int Rank { get; set; }
 
+        public string? InheritanceType { get; set; }
+
         [JsonProperty("Stats")]
         public Dictionary<string, int> RawStats { get; set; }
 
@@ -43,6 +45,7 @@ namespace JRPGPrototype.Data
                 Level = this.Level,
                 Race = this.Race,
                 Rank = this.Rank,
+                InheritanceType = this.InheritanceType,
                 SkillSet = new List<string>(this.BaseSkills ?? new List<string>())
             };
 

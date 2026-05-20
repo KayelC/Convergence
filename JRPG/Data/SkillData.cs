@@ -10,6 +10,7 @@ namespace JRPGPrototype.Data
         public string Effect { get; set; }
         public string Power { get; set; }
         public string Accuracy { get; set; }
+        public string Critical { get; set; }
         public string Cost { get; set; }
         public string Category { get; set; }
 
