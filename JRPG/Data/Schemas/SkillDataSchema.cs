@@ -3,28 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using JRPGPrototype.Core;
 
-namespace JRPGPrototype.Data.Schemas
+namespace JRPGPrototype.Data.Definitions.Schemas
 {
-    public sealed record SkillDatabaseV2(IReadOnlyList<SkillDefinitionDto> Skills);
+    public sealed record SkillDataSchema(IReadOnlyList<SkillSchemaEntry> Skills);
 
-    public sealed record SkillDefinitionDto(
+    public sealed record SkillSchemaEntry(
         string Id,
         string DisplayName,
         string Description,
         SkillKind Kind,
-        SkillCostDto Cost,
+        SkillCostSchema Cost,
         SkillTargeting Targeting,
-        SkillInheritanceDto Inheritance,
-        DamagePayloadDto? Damage = null,
-        HealingPayloadDto? Healing = null,
-        RevivePayloadDto? Revive = null,
-        AilmentPayloadDto? Ailment = null,
-        BuffDebuffPayloadDto? BuffDebuff = null,
-        ChargePayloadDto? Charge = null,
-        BreakPayloadDto? Break = null,
-        ShieldPayloadDto? Shield = null,
-        PassivePayloadDto? Passive = null,
-        SpecialPayloadDto? Special = null)
+        SkillInheritanceSchema Inheritance,
+        DamagePayloadSchema? Damage = null,
+        HealingPayloadSchema? Healing = null,
+        RevivePayloadSchema? Revive = null,
+        AilmentPayloadSchema? Ailment = null,
+        BuffDebuffPayloadSchema? BuffDebuff = null,
+        ChargePayloadSchema? Charge = null,
+        BreakPayloadSchema? Break = null,
+        ShieldPayloadSchema? Shield = null,
+        PassivePayloadSchema? Passive = null,
+        SpecialPayloadSchema? Special = null)
     {
         public SkillDefinition ToDefinition()
         {
@@ -61,7 +61,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record SkillCostDto(
+    public sealed record SkillCostSchema(
         SkillCostResource Resource,
         int Amount,
         bool IsPercent = false)
@@ -72,21 +72,19 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record SkillInheritanceDto(
+    public sealed record SkillInheritanceSchema(
         bool IsInheritable,
         string? Family = null,
         int? Rank = null,
-        bool IsExclusive = false);
-
-    public static class SkillInheritanceDtoExtensions
+        bool IsExclusive = false)
     {
-        public static SkillInheritanceDefinition ToDefinition(this SkillInheritanceDto dto)
+        public SkillInheritanceDefinition ToDefinition()
         {
-            return new SkillInheritanceDefinition(dto.IsInheritable, dto.Family, dto.Rank, dto.IsExclusive);
+            return new SkillInheritanceDefinition(IsInheritable, Family, Rank, IsExclusive);
         }
     }
 
-    public sealed record DamagePayloadDto(
+    public sealed record DamagePayloadSchema(
         Element Element,
         int Power,
         int Accuracy,
@@ -94,7 +92,7 @@ namespace JRPGPrototype.Data.Schemas
         bool DrainsHp = false,
         bool DrainsSp = false,
         bool IsInstantKill = false,
-        SecondaryAilmentDto? SecondaryAilment = null)
+        SecondaryAilmentSchema? SecondaryAilment = null)
     {
         public DamageSkillPayload ToPayload()
         {
@@ -110,7 +108,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record SecondaryAilmentDto(string AilmentId, int Chance)
+    public sealed record SecondaryAilmentSchema(string AilmentId, int Chance)
     {
         public SecondaryAilmentDefinition ToDefinition()
         {
@@ -118,7 +116,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record HealingPayloadDto(
+    public sealed record HealingPayloadSchema(
         RecoveryResource Resource,
         RecoveryAmountKind AmountKind,
         int Amount)
@@ -129,7 +127,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record RevivePayloadDto(RecoveryAmountKind AmountKind, int Amount)
+    public sealed record RevivePayloadSchema(RecoveryAmountKind AmountKind, int Amount)
     {
         public ReviveSkillPayload ToPayload()
         {
@@ -137,7 +135,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record AilmentPayloadDto(string AilmentId, int Chance)
+    public sealed record AilmentPayloadSchema(string AilmentId, int Chance)
     {
         public AilmentSkillPayload ToPayload()
         {
@@ -145,7 +143,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record BuffDebuffPayloadDto(IReadOnlyList<StatModifierTrack> Tracks, int StageDelta)
+    public sealed record BuffDebuffPayloadSchema(IReadOnlyList<StatModifierTrack> Tracks, int StageDelta)
     {
         public BuffDebuffSkillPayload ToPayload()
         {
@@ -153,7 +151,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record ChargePayloadDto(ChargeKind Kind, double Multiplier)
+    public sealed record ChargePayloadSchema(ChargeKind Kind, double Multiplier)
     {
         public ChargeSkillPayload ToPayload()
         {
@@ -161,7 +159,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record BreakPayloadDto(Element Element, int Duration)
+    public sealed record BreakPayloadSchema(Element Element, int Duration)
     {
         public BreakSkillPayload ToPayload()
         {
@@ -169,7 +167,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record ShieldPayloadDto(ShieldKind Kind)
+    public sealed record ShieldPayloadSchema(ShieldKind Kind)
     {
         public ShieldSkillPayload ToPayload()
         {
@@ -177,7 +175,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record PassivePayloadDto(string PassiveKind)
+    public sealed record PassivePayloadSchema(string PassiveKind)
     {
         public PassiveSkillPayload ToPayload()
         {
@@ -185,7 +183,7 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public sealed record SpecialPayloadDto(string SpecialKind)
+    public sealed record SpecialPayloadSchema(string SpecialKind)
     {
         public SpecialSkillPayload ToPayload()
         {
@@ -193,25 +191,24 @@ namespace JRPGPrototype.Data.Schemas
         }
     }
 
-    public static class SkillSchemaV2Validator
+    public static class SkillDataSchemaValidator
     {
-        public static DataValidationResult Validate(SkillDatabaseV2 database)
+        public static SchemaValidationResult Validate(SkillDataSchema schema)
         {
-            var warnings = new List<string>();
             var errors = new List<string>();
 
-            foreach (SkillDefinitionDto skill in database.Skills)
+            foreach (SkillSchemaEntry skill in schema.Skills)
             {
                 ValidateSkill(skill, errors);
             }
 
-            AddDuplicateErrors(database.Skills.Select(s => s.Id), "skill id", errors);
-            AddDuplicateErrors(database.Skills.Select(s => s.DisplayName), "skill display name", errors, StringComparer.OrdinalIgnoreCase);
+            AddDuplicateErrors(schema.Skills.Select(s => s.Id), "skill id", errors);
+            AddDuplicateErrors(schema.Skills.Select(s => s.DisplayName), "skill display name", errors, StringComparer.OrdinalIgnoreCase);
 
-            return new DataValidationResult(warnings, errors);
+            return new SchemaValidationResult(Array.Empty<string>(), errors);
         }
 
-        private static void ValidateSkill(SkillDefinitionDto skill, List<string> errors)
+        private static void ValidateSkill(SkillSchemaEntry skill, List<string> errors)
         {
             if (string.IsNullOrWhiteSpace(skill.Id)) errors.Add("Skill is missing Id.");
             if (string.IsNullOrWhiteSpace(skill.DisplayName)) errors.Add($"Skill '{skill.Id}' is missing DisplayName.");
