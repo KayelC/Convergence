@@ -8,6 +8,7 @@ using JRPGPrototype.Logic.Battle.Effects;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Messaging;
 using JRPGPrototype.Logic.Battle.Bridges;
+using JRPGPrototype.Logic.Battle.Results;
 
 namespace JRPGPrototype.Logic.Battle
 {
@@ -62,7 +63,7 @@ namespace JRPGPrototype.Logic.Battle
         /// Handles Skill execution: Deducts costs and delegates to the correct strategy.
         /// Includes the Effectiveness Gate to prevent turn wastage.
         /// </summary>
-        public List<CombatResult> ExecuteSkill(Combatant attacker, List<Combatant> targets, SkillData skill)
+        public BattleActionExecutionResult ExecuteSkill(Combatant attacker, List<Combatant> targets, SkillData skill)
         {
             // --- 1. Effectiveness Gate ---
             // Verify if the action is redundant (e.g. Poisoning an already poisoned foe).
@@ -70,8 +71,14 @@ namespace JRPGPrototype.Logic.Battle
             if (_status.IsActionRedundant(attacker, skill, targets))
             {
                 _messenger.Publish("That action would have no effect!", ConsoleColor.Yellow);
-                // Returning an empty list signals the Conductor that the turn should be preserved/re-picked.
-                return new List<CombatResult>();
+                return BattleActionExecutionResult.Rejected();
+            }
+
+            IBattleEffect? strategy = _registry.GetEffect(skill.Category);
+            if (strategy == null)
+            {
+                _messenger.Publish($"[Error] No logic found for Category: {skill.Category}", ConsoleColor.Yellow);
+                return BattleActionExecutionResult.Rejected();
             }
 
             // --- 2. Resource Cost Calculation ---
@@ -100,29 +107,22 @@ namespace JRPGPrototype.Logic.Battle
             _messenger.Publish($"{attacker.Name} uses {skill.Name}!", ConsoleColor.White, 200);
 
             // --- 3. Strategy Execution ---
-            IBattleEffect? strategy = _registry.GetEffect(skill.Category);
             List<CombatResult> results;
 
-            if (strategy != null)
-            {
-                // Delegation: The 'How' is handled by the specialized Strategy class.
-                // We pass the Skill Name as the ActionName.
-                results = strategy.Apply(attacker, targets, skill.GetPowerVal(), skill.Name, skill.Effect, _messenger, _status, _knowledge);
-            }
-            else
-            {
-                _messenger.Publish($"[Error] No logic found for Category: {skill.Category}", ConsoleColor.Yellow);
-                results = new List<CombatResult>();
-            }
+            // Delegation: The 'How' is handled by the specialized Strategy class.
+            // We pass the Skill Name as the ActionName.
+            results = strategy.Apply(attacker, targets, skill.GetPowerVal(), skill.Name, skill.Effect, _messenger, _status, _knowledge);
 
-            return results;
+            return results.Any()
+                ? BattleActionExecutionResult.Executed(results)
+                : BattleActionExecutionResult.Rejected();
         }
 
         /// <summary>
         /// Handles Item execution: Delegates behavior to the Registry.
         /// Includes the Effectiveness Gate to prevent turn wastage.
         /// </summary>
-        public bool ExecuteItem(Combatant user, List<Combatant> targets, ItemData item)
+        public BattleActionExecutionResult ExecuteItem(Combatant user, List<Combatant> targets, ItemData item)
         {
             _messenger.Publish($"{user.Name} used {item.Name}!", ConsoleColor.White, 200);
 
@@ -130,7 +130,7 @@ namespace JRPGPrototype.Logic.Battle
             if (item.Name == "Traesto Gem")
             {
                 _messenger.Publish("A blinding light creates a path to safety!", ConsoleColor.White, 800);
-                return true;
+                return BattleActionExecutionResult.Escaped();
             }
 
             // --- Strategy Execution ---
@@ -143,11 +143,13 @@ namespace JRPGPrototype.Logic.Battle
                 var results = strategy.Apply(user, targets, item.EffectValue, item.Name,
                     item.Description ?? "", _messenger, _status, _knowledge);
 
-                return results.Any();
+                return results.Any()
+                    ? BattleActionExecutionResult.Executed(results)
+                    : BattleActionExecutionResult.Rejected();
             }
 
             _messenger.Publish($"[Error] No logic found for Item Type: {item.Type}", ConsoleColor.Red);
-            return false;
+            return BattleActionExecutionResult.Rejected();
         }
 
         /// <summary>

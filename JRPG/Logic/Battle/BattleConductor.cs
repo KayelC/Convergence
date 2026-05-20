@@ -11,6 +11,7 @@ using JRPGPrototype.Logic.Battle.Effects;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Messaging;
 using JRPGPrototype.Logic.Battle.Bridges;
+using JRPGPrototype.Logic.Battle.Results;
 using JRPGPrototype.Logic.Fusion;
 
 namespace JRPGPrototype.Logic.Battle
@@ -495,20 +496,22 @@ namespace JRPGPrototype.Logic.Battle
                     return;
                 }
 
-                if (item != null && targets != null)
+                if (item != null)
                 {
-                    // Defensive check: Only consume and use icon if the item actually worked
-                    if (_processor.ExecuteItem(actor, targets, item))
+                    BattleActionExecutionResult itemResult = _processor.ExecuteItem(actor, targets ?? new List<Combatant>(), item);
+
+                    if (itemResult.Kind == BattleActionExecutionKind.Escaped)
                     {
                         _inv.RemoveItem(item.Id, 1);
+                        Escaped = true;
+                        BattleEnded = true;
+                        return;
+                    }
 
-                        if (item.Name == "Traesto Gem")
-                        {
-                            Escaped = true;
-                            BattleEnded = true;
-                            return;
-                        }
-
+                    // Defensive check: Only consume and use icon if the item actually worked.
+                    if (itemResult.Kind == BattleActionExecutionKind.Executed)
+                    {
+                        _inv.RemoveItem(item.Id, 1);
                         _turnEngine.ConsumeAction(HitType.Normal, false);
                     }
                     else
@@ -524,13 +527,18 @@ namespace JRPGPrototype.Logic.Battle
                 }
                 else if (skill != null && targets != null)
                 {
-                    var results = _processor.ExecuteSkill(actor, targets, skill);
-                    if (results.Any())
+                    BattleActionExecutionResult skillResult = _processor.ExecuteSkill(actor, targets, skill);
+                    if (skillResult.Kind == BattleActionExecutionKind.Executed)
                     {
+                        IReadOnlyList<CombatResult> results = skillResult.CombatResults;
                         HitType worst = results.Max(r => r.Type);
                         _turnEngine.ConsumeAction(worst, results.Any(r => r.IsCritical));
                     }
-                    else _turnEngine.ConsumeAction(HitType.Normal, false);
+                    else
+                    {
+                        // Rejected actions preserve the turn and return to action selection.
+                        ExecuteAction(actor, isPlayerSide, turnState);
+                    }
                 }
 
                 _messenger.Publish(string.Empty, delay: 1000);
