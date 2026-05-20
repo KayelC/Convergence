@@ -86,6 +86,209 @@ public sealed class BattleBridgeResultTests
     }
 
     [Fact]
+    public void SelectPersona_ReturnsUnavailableWhenStockIsEmpty()
+    {
+        var actor = CreateCombatant("Hero", ClassType.WildCard);
+        var bridge = CreateBridge(new QueuedGameIO(), actor, out _);
+
+        BattlePersonaSelectionResult result = bridge.SelectPersona(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Unavailable, result.Kind);
+        Assert.Null(result.Persona);
+    }
+
+    [Fact]
+    public void SelectPersona_ReturnsBackWhenMenuIsCanceled()
+    {
+        var actor = CreateCombatant("Hero", ClassType.WildCard);
+        actor.PersonaStock.Add(new Persona { Name = "Orpheus", Level = 1 });
+        var bridge = CreateBridge(new QueuedGameIO(-1), actor, out _);
+
+        BattlePersonaSelectionResult result = bridge.SelectPersona(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Back, result.Kind);
+        Assert.Null(result.Persona);
+    }
+
+    [Fact]
+    public void SelectPersona_ReturnsSelectedPersona()
+    {
+        var actor = CreateCombatant("Hero", ClassType.WildCard);
+        var persona = new Persona { Name = "Orpheus", Level = 1 };
+        actor.PersonaStock.Add(persona);
+        var bridge = CreateBridge(new QueuedGameIO(0), actor, out _);
+
+        BattlePersonaSelectionResult result = bridge.SelectPersona(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(persona, result.Persona);
+    }
+
+    [Fact]
+    public void SelectTarget_ReturnsBackWhenMenuIsCanceled()
+    {
+        var actor = CreateCombatant("Hero");
+        var enemy = CreateCombatant("Enemy", ClassType.Demon);
+        var bridge = CreateBridge(new QueuedGameIO(-1), actor, out _, enemies: new List<Combatant> { enemy });
+
+        BattleTargetSelectionResult result = bridge.SelectTarget(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Back, result.Kind);
+        Assert.Empty(result.Targets);
+    }
+
+    [Fact]
+    public void SelectTarget_ReturnsSelectedTarget()
+    {
+        var actor = CreateCombatant("Hero");
+        var enemy = CreateCombatant("Enemy", ClassType.Demon);
+        var bridge = CreateBridge(new QueuedGameIO(0), actor, out _, enemies: new List<Combatant> { enemy });
+
+        BattleTargetSelectionResult result = bridge.SelectTarget(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(enemy, Assert.Single(result.Targets));
+    }
+
+    [Fact]
+    public void SelectTarget_ReturnsActorForChargeSkillWithoutPrompting()
+    {
+        var actor = CreateCombatant("Hero");
+        var charge = new SkillData
+        {
+            Name = "Charge",
+            Effect = "Greatly increases the power of the next physical attack.",
+            Power = "-",
+            Accuracy = "-",
+            Cost = "0 SP",
+            Category = "Enhance"
+        };
+        var bridge = CreateBridge(new QueuedGameIO(), actor, out _);
+
+        BattleTargetSelectionResult result = bridge.SelectTarget(actor, charge);
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(actor, Assert.Single(result.Targets));
+    }
+
+    [Fact]
+    public void SelectSkill_ReturnsUnavailableWhenActorHasNoSkills()
+    {
+        var actor = CreateCombatant("Hero");
+        var bridge = CreateBridge(new QueuedGameIO(), actor, out _);
+
+        BattleSkillSelectionResult result = bridge.SelectSkill(actor, "");
+
+        Assert.Equal(BattleSelectionResultKind.Unavailable, result.Kind);
+        Assert.Null(result.Skill);
+    }
+
+    [Fact]
+    public void SelectSkill_ReturnsBackWhenMenuIsCanceled()
+    {
+        var actor = CreateCombatant("Hero");
+        AddBridgeTestSkill(actor);
+        var bridge = CreateBridge(new QueuedGameIO(-1), actor, out _);
+
+        BattleSkillSelectionResult result = bridge.SelectSkill(actor, "");
+
+        Assert.Equal(BattleSelectionResultKind.Back, result.Kind);
+        Assert.Null(result.Skill);
+    }
+
+    [Fact]
+    public void SelectSkill_ReturnsSelectedSkill()
+    {
+        var actor = CreateCombatant("Hero");
+        SkillData skill = AddBridgeTestSkill(actor);
+        var bridge = CreateBridge(new QueuedGameIO(0), actor, out _);
+
+        BattleSkillSelectionResult result = bridge.SelectSkill(actor, "");
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(skill, result.Skill);
+    }
+
+    [Fact]
+    public void SelectItem_ReturnsUnavailableWhenInventoryIsEmpty()
+    {
+        var actor = CreateCombatant("Hero");
+        var bridge = CreateBridge(new QueuedGameIO(), actor, out _);
+
+        BattleItemSelectionResult result = bridge.SelectItem(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Unavailable, result.Kind);
+        Assert.Null(result.Item);
+    }
+
+    [Fact]
+    public void SelectItem_ReturnsBackWhenMenuIsCanceled()
+    {
+        var actor = CreateCombatant("Hero");
+        ItemData item = AddBridgeTestItem();
+        var bridge = CreateBridge(new QueuedGameIO(-1), actor, out _, out _, out InventoryManager inventory);
+        inventory.AddItem(item.Id, 1);
+
+        BattleItemSelectionResult result = bridge.SelectItem(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Back, result.Kind);
+        Assert.Null(result.Item);
+    }
+
+    [Fact]
+    public void SelectItem_ReturnsSelectedItem()
+    {
+        var actor = CreateCombatant("Hero");
+        ItemData item = AddBridgeTestItem();
+        var bridge = CreateBridge(new QueuedGameIO(0), actor, out _, out _, out InventoryManager inventory);
+        inventory.AddItem(item.Id, 1);
+
+        BattleItemSelectionResult result = bridge.SelectItem(actor);
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(item, result.Item);
+    }
+
+    [Fact]
+    public void SelectStrategyTarget_ReturnsUnavailableWhenNoDemonsAreActive()
+    {
+        var actor = CreateCombatant("Hero", ClassType.Operator);
+        var bridge = CreateBridge(new QueuedGameIO(), actor, out _);
+
+        BattleStrategyTargetSelectionResult result = bridge.SelectStrategyTarget();
+
+        Assert.Equal(BattleSelectionResultKind.Unavailable, result.Kind);
+        Assert.Null(result.Target);
+    }
+
+    [Fact]
+    public void SelectStrategyTarget_ReturnsBackWhenMenuIsCanceled()
+    {
+        var actor = CreateCombatant("Hero", ClassType.Operator);
+        var bridge = CreateBridge(new QueuedGameIO(-1), actor, out _, out PartyManager party);
+        party.AddMember(CreateCombatant("Pixie", ClassType.Demon));
+
+        BattleStrategyTargetSelectionResult result = bridge.SelectStrategyTarget();
+
+        Assert.Equal(BattleSelectionResultKind.Back, result.Kind);
+        Assert.Null(result.Target);
+    }
+
+    [Fact]
+    public void SelectStrategyTarget_ReturnsSelectedDemon()
+    {
+        var actor = CreateCombatant("Hero", ClassType.Operator);
+        var demon = CreateCombatant("Pixie", ClassType.Demon);
+        var bridge = CreateBridge(new QueuedGameIO(0), actor, out _, out PartyManager party);
+        party.AddMember(demon);
+
+        BattleStrategyTargetSelectionResult result = bridge.SelectStrategyTarget();
+
+        Assert.Equal(BattleSelectionResultKind.Selected, result.Kind);
+        Assert.Same(demon, result.Target);
+    }
+
+    [Fact]
     public void OpenCOMPMenu_ReturnsBackWhenMenuIsCanceled()
     {
         var actor = CreateCombatant("Hero", ClassType.Operator);
@@ -193,18 +396,30 @@ public sealed class BattleBridgeResultTests
         Combatant actor,
         out Combatant createdActor,
         out PartyManager party,
+        out InventoryManager inventory,
         List<Combatant>? enemies = null)
     {
         createdActor = actor;
         party = new PartyManager(actor);
+        inventory = new InventoryManager();
 
         return new InteractionBridge(
             io,
             party,
-            new InventoryManager(),
+            inventory,
             enemies ?? new List<Combatant>(),
             new PressTurnEngine(),
             new BattleKnowledge());
+    }
+
+    private static InteractionBridge CreateBridge(
+        QueuedGameIO io,
+        Combatant actor,
+        out Combatant createdActor,
+        out PartyManager party,
+        List<Combatant>? enemies = null)
+    {
+        return CreateBridge(io, actor, out createdActor, out party, out _, enemies);
     }
 
     private static Combatant CreateCombatant(string name, ClassType classType = ClassType.Human)
@@ -236,6 +451,23 @@ public sealed class BattleBridgeResultTests
         actor.ExtraSkills.Add(skillName);
 
         return skill;
+    }
+
+    private static ItemData AddBridgeTestItem()
+    {
+        const string itemId = "bridge-test-item";
+        var item = new ItemData
+        {
+            Id = itemId,
+            Name = "Bridge Test Medicine",
+            Type = "Healing",
+            EffectValue = 50,
+            Description = "Bridge result test item."
+        };
+
+        Database.Items[itemId] = item;
+
+        return item;
     }
 
     private sealed class QueuedGameIO : IGameIO

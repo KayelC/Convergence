@@ -213,13 +213,13 @@ namespace JRPGPrototype.Logic.Battle.Bridges
         /// <summary>
         /// Lists the Persona stock for the Wild Card to choose from.
         /// </summary>
-        public Persona? SelectPersona(Combatant actor)
+        public BattlePersonaSelectionResult SelectPersona(Combatant actor)
         {
             if (actor.PersonaStock == null || actor.PersonaStock.Count == 0)
             {
                 _io.WriteLine("No other Personas available!");
                 _io.Wait(800);
-                return null;
+                return BattlePersonaSelectionResult.Unavailable;
             }
 
             int lastIdx = 0;
@@ -233,7 +233,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 // supportStatusInspect: true
                 int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCHOOSE PERSONA TO MANIFEST", options, lastIdx, null, null, true);
 
-                if (choice == -1 || choice == options.Count - 1) return null;
+                if (choice == -1 || choice == options.Count - 1) return BattlePersonaSelectionResult.Back;
 
                 // Handle Inspect Signal
                 if (choice <= -10)
@@ -244,11 +244,11 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                     continue; // Loop back to selection
                 }
 
-                return actor.PersonaStock[choice];
+                return BattlePersonaSelectionResult.Selected(actor.PersonaStock[choice]);
             }
         }
 
-        public List<Combatant>? SelectTarget(Combatant actor, SkillData? skill = null, ItemData? item = null, bool isTalk = false)
+        public BattleTargetSelectionResult SelectTarget(Combatant actor, SkillData? skill = null, ItemData? item = null, bool isTalk = false)
         {
             string context = GetBattleContext(actor);
             bool targetsAllies = false;
@@ -263,7 +263,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 // FIX: Self-Targeting logic for Charge skills
                 if (nameLower.Contains("charge"))
                 {
-                    return new List<Combatant> { actor };
+                    return BattleTargetSelectionResult.Selected(new List<Combatant> { actor });
                 }
 
                 // FIX: Debuff Check for correct targeting side (Nda/Debilitate)
@@ -310,9 +310,9 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 {
                     _io.WriteLine("This action would have no effect on any targets.", ConsoleColor.Yellow);
                     _io.Wait(1200);
-                    return null;
+                    return BattleTargetSelectionResult.Unavailable;
                 }
-                return selectionPool;
+                return BattleTargetSelectionResult.Selected(selectionPool);
             }
 
             List<string> targetLabels = new List<string>();
@@ -329,7 +329,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             targetLabels.Add("Back");
 
             int choice = _io.RenderMenu($"{context}\nSelect Target:", targetLabels, 0);
-            if (choice == -1 || choice == targetLabels.Count - 1) return null;
+            if (choice == -1 || choice == targetLabels.Count - 1) return BattleTargetSelectionResult.Back;
 
             Combatant selectedTarget = selectionPool[choice];
 
@@ -340,10 +340,10 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 string reason = selectedTarget.CurrentHP >= selectedTarget.MaxHP ? "is healthy" : "already has that status";
                 _io.WriteLine($"{selectedTarget.Name} {reason}.", ConsoleColor.Yellow);
                 _io.Wait(1200);
-                return null; // Return null to go back to previous menu and preserve turn icons
+                return BattleTargetSelectionResult.Unavailable;
             }
 
-            return new List<Combatant> { selectedTarget };
+            return BattleTargetSelectionResult.Selected(new List<Combatant> { selectedTarget });
         }
 
         public BattleTacticsResult GetTacticsChoice(bool isBossBattle, bool isOperator)
@@ -358,30 +358,30 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 : BattleTacticsAction.Strategy);
         }
 
-        public Combatant? SelectStrategyTarget()
+        public BattleStrategyTargetSelectionResult SelectStrategyTarget()
         {
             var targets = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
             if (!targets.Any())
             {
                 _io.WriteLine("No party members to command.");
                 _io.Wait(800);
-                return null;
+                return BattleStrategyTargetSelectionResult.Unavailable;
             }
             var names = targets.Select(t => $"{t.Name} [{t.BattleControl}]").ToList();
             names.Add("Back");
             int choice = _io.RenderMenu($"{GetBattleContext(null)}\nSELECT DEMON TO COMMAND", names, 0);
-            if (choice == -1 || choice == names.Count - 1) return null;
-            return targets[choice];
+            if (choice == -1 || choice == names.Count - 1) return BattleStrategyTargetSelectionResult.Back;
+            return BattleStrategyTargetSelectionResult.Selected(targets[choice]);
         }
 
         /// <summary>
         /// Select Skill Menu. 
         /// Uses string-parsing lookup and disabled affordance list.
         /// </summary>
-        public SkillData? SelectSkill(Combatant actor, string uiContext)
+        public BattleSkillSelectionResult SelectSkill(Combatant actor, string uiContext)
         {
             var skillNames = actor.GetConsolidatedSkills();
-            if (skillNames.Count == 0) return null;
+            if (skillNames.Count == 0) return BattleSkillSelectionResult.Unavailable;
 
             List<string> labels = new List<string>();
             List<bool> disabled = new List<bool>();
@@ -412,20 +412,20 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 }
             }, false);
 
-            if (choice == -1 || choice == labels.Count - 1) return null;
+            if (choice == -1 || choice == labels.Count - 1) return BattleSkillSelectionResult.Back;
             _skillMenuIndex = choice;
 
             string selectedName = labels[choice].Split('(')[0].Trim();
-            return Database.Skills[selectedName];
+            return BattleSkillSelectionResult.Selected(Database.Skills[selectedName]);
         }
 
-        public ItemData SelectItem(Combatant actor)
+        public BattleItemSelectionResult SelectItem(Combatant actor)
         {
             var ownedItems = Database.Items.Values.Where(i => _inv.GetQuantity(i.Id) > 0).ToList();
             if (!ownedItems.Any())
             {
                 _io.WriteLine("Inventory is empty."); _io.Wait(800);
-                return null;
+                return BattleItemSelectionResult.Unavailable;
             }
 
             List<string> labels = new List<string>();
@@ -448,9 +448,9 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                     _io.WriteLine(ownedItems[idx].Description);
             });
 
-            if (choice == -1 || choice == labels.Count - 1) return null;
+            if (choice == -1 || choice == labels.Count - 1) return BattleItemSelectionResult.Back;
             _itemMenuIndex = choice;
-            return ownedItems[choice];
+            return BattleItemSelectionResult.Selected(ownedItems[choice]);
         }
 
         /// <summary>
@@ -577,9 +577,9 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
                 if (choice == 2) // Analyze
                 {
-                    var targetList = SelectTarget(actor);
-                    if (targetList == null) { lastIdx = 2; continue; }
-                    return BattleCompActionResult.Analyze(targetList[0]);
+                    BattleTargetSelectionResult targetList = SelectTarget(actor);
+                    if (targetList.Kind != BattleSelectionResultKind.Selected) { lastIdx = 2; continue; }
+                    return BattleCompActionResult.Analyze(targetList.Targets[0]);
                 }
             }
         }

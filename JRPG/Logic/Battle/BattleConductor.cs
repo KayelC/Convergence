@@ -283,8 +283,9 @@ namespace JRPGPrototype.Logic.Battle
 
                     if (menuResult.Action == BattleMainMenuAction.Attack)
                     {
-                        targets = _ui.SelectTarget(actor);
-                        if (targets == null) continue; // Back to Menu
+                        BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor);
+                        if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
+                        targets = targetResult.Targets.ToList();
                         actionCommitted = true;
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Guard)
@@ -310,10 +311,11 @@ namespace JRPGPrototype.Logic.Battle
                             }
                             else if (personaResult.Kind == BattlePersonaActionKind.RequestSwap)
                             {
-                                Persona? newP = _ui.SelectPersona(actor);
-                                if (newP != null)
+                                BattlePersonaSelectionResult personaSelection = _ui.SelectPersona(actor);
+                                if (personaSelection.Kind == BattleSelectionResultKind.Selected &&
+                                    personaSelection.Persona != null)
                                 {
-                                    _processor.ExecutePersonaSwap(actor, newP);
+                                    _processor.ExecutePersonaSwap(actor, personaSelection.Persona);
                                     actor.HasSwappedThisTurn = true;
                                     // FREE ACTION: Logic remains in this inner loop.
                                     // Player can now see NEW skills for the swapped Persona immediately.
@@ -323,14 +325,15 @@ namespace JRPGPrototype.Logic.Battle
                                 personaResult.SelectedSkill != null)
                             {
                                 skill = personaResult.SelectedSkill;
-                                targets = _ui.SelectTarget(actor, skill);
+                                BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, skill);
 
-                                if (targets != null)
+                                if (targetResult.Kind == BattleSelectionResultKind.Selected)
                                 {
+                                    targets = targetResult.Targets.ToList();
                                     actionCommitted = true;
                                     selectingPersonaAction = false;
                                 }
-                                // If targets == null (Back), we loop back to Persona Action list (Integrated skills)
+                                // If target selection does not complete, loop back to Persona Action list.
                             }
                         }
 
@@ -338,11 +341,13 @@ namespace JRPGPrototype.Logic.Battle
                     }
                     else if (menuResult.Action == BattleMainMenuAction.UseSkill)
                     {
-                        skill = _ui.SelectSkill(actor, "");
-                        if (skill == null) continue; // Back to Menu
+                        BattleSkillSelectionResult skillResult = _ui.SelectSkill(actor, "");
+                        if (skillResult.Kind != BattleSelectionResultKind.Selected || skillResult.Skill == null) continue; // Back to Menu
+                        skill = skillResult.Skill;
 
-                        targets = _ui.SelectTarget(actor, skill);
-                        if (targets == null) continue; // Back to Menu
+                        BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, skill);
+                        if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
+                        targets = targetResult.Targets.ToList();
                         actionCommitted = true;
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Comp)
@@ -412,8 +417,9 @@ namespace JRPGPrototype.Logic.Battle
                     }
                     else if (menuResult.Action == BattleMainMenuAction.UseItem)
                     {
-                        item = _ui.SelectItem(actor);
-                        if (item == null) continue; // Back to Menu
+                        BattleItemSelectionResult itemResult = _ui.SelectItem(actor);
+                        if (itemResult.Kind != BattleSelectionResultKind.Selected || itemResult.Item == null) continue; // Back to Menu
+                        item = itemResult.Item;
 
                         // Traesto Gem should not prompt for targets
                         if (item.Name == "Traesto Gem")
@@ -422,18 +428,20 @@ namespace JRPGPrototype.Logic.Battle
                         }
                         else
                         {
-                            targets = _ui.SelectTarget(actor, null, item);
-                            if (targets == null) continue; // Back to Menu
+                            BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, null, item);
+                            if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
+                            targets = targetResult.Targets.ToList();
                             actionCommitted = true;
                         }
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Talk)
                     {
-                        targets = _ui.SelectTarget(actor, null, null, true);
+                        BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, null, null, true);
 
-                        // FIX: If the user cancels out of the target selection for Talk, 
+                        // FIX: If the user cancels out of the target selection for Talk,
                         // continue the loop to allow them to pick a different action.
-                        if (targets == null) continue;
+                        if (targetResult.Kind != BattleSelectionResultKind.Selected) continue;
+                        targets = targetResult.Targets.ToList();
 
                         if (targets.Count > 0) HandleNegotiation(actor, targets[0]);
 
@@ -570,11 +578,12 @@ namespace JRPGPrototype.Logic.Battle
             }
             else if (tactic.Action == BattleTacticsAction.Strategy)
             {
-                var stratTarget = _ui.SelectStrategyTarget();
-                if (stratTarget != null)
+                BattleStrategyTargetSelectionResult stratTarget = _ui.SelectStrategyTarget();
+                if (stratTarget.Kind == BattleSelectionResultKind.Selected &&
+                    stratTarget.Target != null)
                 {
-                    stratTarget.BattleControl = (stratTarget.BattleControl == ControlState.ActFreely) ? ControlState.DirectControl : ControlState.ActFreely;
-                    _messenger.Publish($"{stratTarget.Name} is now set to {stratTarget.BattleControl}.", ConsoleColor.Gray, 800);
+                    stratTarget.Target.BattleControl = (stratTarget.Target.BattleControl == ControlState.ActFreely) ? ControlState.DirectControl : ControlState.ActFreely;
+                    _messenger.Publish($"{stratTarget.Target.Name} is now set to {stratTarget.Target.BattleControl}.", ConsoleColor.Gray, 800);
                 }
             }
         }

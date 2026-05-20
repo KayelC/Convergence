@@ -1,3 +1,4 @@
+using System;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 
@@ -93,5 +94,74 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         public static BattleTacticsResult Selected(BattleTacticsAction action)
             => new BattleTacticsResult(BattleMenuResultKind.Selected, action);
+    }
+
+    public enum BattleSelectionResultKind
+    {
+        Selected,
+        Back,
+        Unavailable
+    }
+
+    public sealed record BattlePersonaSelectionResult(BattleSelectionResultKind Kind, Persona? Persona = null)
+    {
+        public static BattlePersonaSelectionResult Back { get; } =
+            new BattlePersonaSelectionResult(BattleSelectionResultKind.Back);
+
+        public static BattlePersonaSelectionResult Unavailable { get; } =
+            new BattlePersonaSelectionResult(BattleSelectionResultKind.Unavailable);
+
+        public static BattlePersonaSelectionResult Selected(Persona persona)
+            => new BattlePersonaSelectionResult(BattleSelectionResultKind.Selected, persona);
+    }
+
+    public sealed record BattleTargetSelectionResult(
+        BattleSelectionResultKind Kind,
+        IReadOnlyList<Combatant> Targets)
+    {
+        public static BattleTargetSelectionResult Back { get; } =
+            new BattleTargetSelectionResult(BattleSelectionResultKind.Back, Array.Empty<Combatant>());
+
+        public static BattleTargetSelectionResult Unavailable { get; } =
+            new BattleTargetSelectionResult(BattleSelectionResultKind.Unavailable, Array.Empty<Combatant>());
+
+        public static BattleTargetSelectionResult Selected(IReadOnlyList<Combatant> targets)
+            => new BattleTargetSelectionResult(BattleSelectionResultKind.Selected, targets);
+    }
+
+    public sealed record BattleStrategyTargetSelectionResult(BattleSelectionResultKind Kind, Combatant? Target = null)
+    {
+        public static BattleStrategyTargetSelectionResult Back { get; } =
+            new BattleStrategyTargetSelectionResult(BattleSelectionResultKind.Back);
+
+        public static BattleStrategyTargetSelectionResult Unavailable { get; } =
+            new BattleStrategyTargetSelectionResult(BattleSelectionResultKind.Unavailable);
+
+        public static BattleStrategyTargetSelectionResult Selected(Combatant target)
+            => new BattleStrategyTargetSelectionResult(BattleSelectionResultKind.Selected, target);
+    }
+
+    public sealed record BattleSkillSelectionResult(BattleSelectionResultKind Kind, SkillData? Skill = null)
+    {
+        public static BattleSkillSelectionResult Back { get; } =
+            new BattleSkillSelectionResult(BattleSelectionResultKind.Back);
+
+        public static BattleSkillSelectionResult Unavailable { get; } =
+            new BattleSkillSelectionResult(BattleSelectionResultKind.Unavailable);
+
+        public static BattleSkillSelectionResult Selected(SkillData skill)
+            => new BattleSkillSelectionResult(BattleSelectionResultKind.Selected, skill);
+    }
+
+    public sealed record BattleItemSelectionResult(BattleSelectionResultKind Kind, ItemData? Item = null)
+    {
+        public static BattleItemSelectionResult Back { get; } =
+            new BattleItemSelectionResult(BattleSelectionResultKind.Back);
+
+        public static BattleItemSelectionResult Unavailable { get; } =
+            new BattleItemSelectionResult(BattleSelectionResultKind.Unavailable);
+
+        public static BattleItemSelectionResult Selected(ItemData item)
+            => new BattleItemSelectionResult(BattleSelectionResultKind.Selected, item);
     }
 }
