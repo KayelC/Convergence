@@ -8,8 +8,10 @@ namespace Convergence.Tests;
 
 public sealed class CombatMathTests
 {
+    // Some tests below are characterization tests: they pin current formulas before refactor.
+    // Rule-priority tests, such as affinity overrides, are closer to gameplay specifications.
     [Fact]
-    public void CalculateExpYield_ReturnsAtLeastOneForLowLevelEnemy()
+    public void Characterization_CalculateExpYield_ReturnsAtLeastOneForLowLevelEnemy()
     {
         var enemy = CreateCombatant("Slime", level: 1, statValue: 2);
 
@@ -19,7 +21,7 @@ public sealed class CombatMathTests
     }
 
     [Fact]
-    public void CalculateExpYield_AppliesStatDensityBonus()
+    public void Characterization_CalculateExpYield_AppliesStatDensityBonus()
     {
         var enemy = CreateCombatant("Powerful Enemy", level: 10, statValue: 20);
 
@@ -29,7 +31,7 @@ public sealed class CombatMathTests
     }
 
     [Fact]
-    public void CalculateExpYield_CapsStatDensityBonusAtDoubleBaseYield()
+    public void Characterization_CalculateExpYield_CapsStatDensityBonusAtDoubleBaseYield()
     {
         var enemy = CreateCombatant("Boss", level: 10, statValue: 100);
 
@@ -171,7 +173,7 @@ public sealed class CombatMathTests
     [InlineData(2, 40, 2)]
     [InlineData(20, 20, 5)]
     [InlineData(40, 2, 23)]
-    public void CalculateCritChance_UsesLuckDeltaAndClampsToMinimum(
+    public void Characterization_CalculateCritChance_UsesLuckDeltaAndClampsToMinimum(
         int attackerLuck,
         int targetLuck,
         int expectedChance)
@@ -185,7 +187,7 @@ public sealed class CombatMathTests
     }
 
     [Fact]
-    public void CalculateCritChance_AptPupilMultiplierIsCappedAtForty()
+    public void Characterization_CalculateCritChance_AptPupilMultiplierIsCappedAtForty()
     {
         var attacker = CreateCombatant("Attacker", luck: 40);
         attacker.ExtraSkills.Add("Apt Pupil");
@@ -220,7 +222,7 @@ public sealed class CombatMathTests
     }
 
     [Fact]
-    public void RollInitiative_ReturnsTrueWhenPlayerRollCannotLose()
+    public void Characterization_RollInitiative_ReturnsTrueWhenPlayerRollCannotLose()
     {
         bool result = CombatMath.RollInitiative(playerAvgAg: 100, enemyAvgAg: 1);
 
@@ -228,7 +230,7 @@ public sealed class CombatMathTests
     }
 
     [Fact]
-    public void RollInitiative_ReturnsFalseWhenPlayerRollCannotWin()
+    public void Characterization_RollInitiative_ReturnsFalseWhenPlayerRollCannotWin()
     {
         bool result = CombatMath.RollInitiative(playerAvgAg: 1, enemyAvgAg: 100);
 

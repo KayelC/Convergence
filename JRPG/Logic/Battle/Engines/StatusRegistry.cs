@@ -46,7 +46,15 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 return false;
             }
 
-            // 1. Ailment Redundancy
+            // 1. Cure Redundancy
+            if (effect.Contains("cure") || effect.Contains("dispel") || effect.Contains("patra"))
+            {
+                // Redundant if none of the targets have an ailment to remove
+                if (targets.All(t => t.CurrentAilment == null)) return true;
+                return false;
+            }
+
+            // 2. Ailment Redundancy
             // Search if we are trying to inflict an ailment the target already has
             foreach (var ailment in Database.Ailments.Values)
             {
@@ -60,7 +68,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 }
             }
 
-            // 2. Recovery Redundancy (HP/SP)
+            // 3. Recovery Redundancy (HP/SP)
             // AI Logic: Redundant if targets are already above 70% HP (unless it's a Revive/Cure/Dispel)
             if (category.Contains("recovery") && !effect.Contains("revive") && !effect.Contains("cure") && !effect.Contains("dispel"))
             {
@@ -73,13 +81,6 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 {
                     if (targets.All(t => (double)t.CurrentHP / t.MaxHP >= 0.70)) return true;
                 }
-            }
-
-            // 3. Cure Redundancy
-            if (effect.Contains("cure") || effect.Contains("dispel") || effect.Contains("patra"))
-            {
-                // Redundant if none of the targets have an ailment to remove
-                if (targets.All(t => t.CurrentAilment == null)) return true;
             }
 
             // 4. Stat Change Redundancy (Buff/Debuff Caps)
