@@ -11,14 +11,6 @@ using JRPGPrototype.Logic.Battle.Engines;
 
 namespace JRPGPrototype.Logic.Battle.Bridges
 {
-    // Helper class to handle the seamless return from the integrated Persona menu.
-    public class PersonaMenuResult
-    {
-        public SkillData? SelectedSkill { get; set; }
-        public bool RequestSwap { get; set; }
-        public bool Cancelled { get; set; }
-    }
-
     /// <summary>
     /// The UI Flow Orchestrator for the Battle Sub-System.
     /// Manages menu navigation, target selection, and renders battle context to IGameIO.
@@ -56,7 +48,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             _io.WriteLine(GetBattleContext(null));
         }
 
-        public string ShowMainMenu(Combatant actor)
+        public BattleMainMenuResult ShowMainMenu(Combatant actor)
         {
             string context = GetBattleContext(actor);
             List<string> options = new List<string> { "Attack", "Guard" };
@@ -112,19 +104,36 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             // Normal menu: Status Inspect is FALSE
             int choice = _io.RenderMenu($"{context}\nCommand: {actor.Name}", options, _mainMenuIndex, disabledStates, null, false);
-            if (choice == -1) return "Cancel";
+            if (choice == -1) return BattleMainMenuResult.Back;
 
             _mainMenuIndex = choice;
-            return options[choice];
+            return BattleMainMenuResult.Selected(MapMainMenuAction(options[choice]));
+        }
+
+        private static BattleMainMenuAction MapMainMenuAction(string label)
+        {
+            return label switch
+            {
+                "Attack" => BattleMainMenuAction.Attack,
+                "Guard" => BattleMainMenuAction.Guard,
+                "Persona" => BattleMainMenuAction.Persona,
+                "Skill" => BattleMainMenuAction.UseSkill,
+                "Command" => BattleMainMenuAction.UseSkill,
+                "COMP" => BattleMainMenuAction.Comp,
+                "Pass" => BattleMainMenuAction.Pass,
+                "Item" => BattleMainMenuAction.UseItem,
+                "Talk" => BattleMainMenuAction.Talk,
+                "Tactics" => BattleMainMenuAction.Tactics,
+                _ => throw new InvalidOperationException($"Unknown battle menu action label: {label}")
+            };
         }
 
         /// <summary>
         /// Provides the seamless Persona sub-menu for Wild Cards.
         /// Integrates Skills and Change Persona into a single unified list.
         /// </summary>
-        public PersonaMenuResult SelectPersonaAction(Combatant actor)
+        public BattlePersonaActionResult SelectPersonaAction(Combatant actor)
         {
-            var result = new PersonaMenuResult();
             var skillNames = actor.GetConsolidatedSkills();
 
             List<string> labels = new List<string>();
@@ -171,8 +180,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
             if (choice == -1 || choice == labels.Count - 1)
             {
-                result.Cancelled = true;
-                return result;
+                return BattlePersonaActionResult.Back;
             }
 
             _skillMenuIndex = choice;
@@ -180,14 +188,14 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             // Check if user picked "Change Persona" (the second to last entry)
             if (hasChangeOption && choice == labels.Count - 2)
             {
-                result.RequestSwap = true;
+                return BattlePersonaActionResult.RequestSwap;
             }
             else
             {
-                result.SelectedSkill = skillMapping[choice];
+                return skillMapping[choice] != null
+                    ? BattlePersonaActionResult.Skill(skillMapping[choice]!)
+                    : BattlePersonaActionResult.Back;
             }
-
-            return result;
         }
 
         public string GetWildCardPersonaChoice(Combatant actor)
@@ -338,13 +346,16 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return new List<Combatant> { selectedTarget };
         }
 
-        public string GetTacticsChoice(bool isBossBattle, bool isOperator)
+        public BattleTacticsResult GetTacticsChoice(bool isBossBattle, bool isOperator)
         {
             List<string> options = new List<string> { "Escape", "Strategy", "Back" };
             List<bool> disabled = new List<bool> { isBossBattle, !isOperator, false };
             int choice = _io.RenderMenu($"{GetBattleContext(null)}\nTACTICS", options, 0, disabled);
-            if (choice == -1 || choice == 2) return "Back";
-            return options[choice];
+            if (choice == -1 || choice == 2) return BattleTacticsResult.Back;
+
+            return BattleTacticsResult.Selected(choice == 0
+                ? BattleTacticsAction.Escape
+                : BattleTacticsAction.Strategy);
         }
 
         public Combatant? SelectStrategyTarget()
@@ -447,7 +458,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
         /// Updated for the Unified 12-Slot Model and Atomic Battle-Swapping.
         /// Handles the Inspect key loop safely in both standby and replacement selections.
         /// </summary>
-        public (string action, Combatant? standby, Combatant? active) OpenCOMPMenu(Combatant actor)
+        public BattleCompActionResult OpenCOMPMenu(Combatant actor)
         {
             int lastIdx = 0;
             while (true)
@@ -455,7 +466,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 List<string> options = new List<string> { "Summon", "Return", "Analyze", "Back" };
                 int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nCOMP SYSTEM", options, lastIdx);
 
-                if (choice == -1 || choice == options.Count - 1) return ("None", null, null);
+                if (choice == -1 || choice == options.Count - 1) return BattleCompActionResult.Back;
 
                 if (choice == 0) // Summon / Swap
                 {
@@ -503,7 +514,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
                         Combatant standbyTarget = allOwnedDemons[sub];
 
-                        if (_party.ActiveParty.Count < 4) return ("Summon", standbyTarget, null);
+                        if (_party.ActiveParty.Count < 4) return BattleCompActionResult.Summon(standbyTarget);
 
                         // Party is full: Selection to Replace with Peek Loop
                         List<Combatant> activeDemons = _party.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
@@ -526,7 +537,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                                 continue;
                             }
 
-                            return ("Swap", standbyTarget, activeDemons[repIdx]);
+                            return BattleCompActionResult.Swap(standbyTarget, activeDemons[repIdx]);
                         }
                         continue;
                     }
@@ -559,7 +570,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                             continue;
                         }
 
-                        return ("Return", null, activeDemons[sub]);
+                        return BattleCompActionResult.Return(activeDemons[sub]);
                     }
                     lastIdx = 1; continue;
                 }
@@ -568,7 +579,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 {
                     var targetList = SelectTarget(actor);
                     if (targetList == null) { lastIdx = 2; continue; }
-                    return ("Analyze", null, targetList[0]);
+                    return BattleCompActionResult.Analyze(targetList[0]);
                 }
             }
         }

@@ -278,16 +278,16 @@ namespace JRPGPrototype.Logic.Battle
                 // 2. Manual Control
                 else if (isPlayerSide && (actor.Controller == ControllerType.LocalPlayer || actor.BattleControl == ControlState.DirectControl))
                 {
-                    string choice = _ui.ShowMainMenu(actor);
-                    if (choice == "Cancel") continue; // Re-render main menu
+                    BattleMainMenuResult menuResult = _ui.ShowMainMenu(actor);
+                    if (menuResult.Kind == BattleMenuResultKind.Back) continue; // Re-render main menu
 
-                    if (choice == "Attack")
+                    if (menuResult.Action == BattleMainMenuAction.Attack)
                     {
                         targets = _ui.SelectTarget(actor);
                         if (targets == null) continue; // Back to Menu
                         actionCommitted = true;
                     }
-                    else if (choice == "Guard")
+                    else if (menuResult.Action == BattleMainMenuAction.Guard)
                     {
                         actor.IsGuarding = true;
                         _messenger.Publish($"{actor.Name} is guarding.");
@@ -296,19 +296,19 @@ namespace JRPGPrototype.Logic.Battle
                         return; // Turn finished
                     }
                     // Task 3: Seamless Integrated Persona Logic (P3R Style)
-                    else if (choice == "Persona")
+                    else if (menuResult.Action == BattleMainMenuAction.Persona)
                     {
                         bool selectingPersonaAction = true;
                         while (selectingPersonaAction)
                         {
-                            var menuResult = _ui.SelectPersonaAction(actor);
+                            BattlePersonaActionResult personaResult = _ui.SelectPersonaAction(actor);
 
-                            if (menuResult.Cancelled)
+                            if (personaResult.Kind == BattlePersonaActionKind.Back)
                             {
                                 selectingPersonaAction = false;
                                 // Loop will restart Main Menu
                             }
-                            else if (menuResult.RequestSwap)
+                            else if (personaResult.Kind == BattlePersonaActionKind.RequestSwap)
                             {
                                 Persona? newP = _ui.SelectPersona(actor);
                                 if (newP != null)
@@ -319,9 +319,10 @@ namespace JRPGPrototype.Logic.Battle
                                     // Player can now see NEW skills for the swapped Persona immediately.
                                 }
                             }
-                            else if (menuResult.SelectedSkill != null)
+                            else if (personaResult.Kind == BattlePersonaActionKind.SelectedSkill &&
+                                personaResult.SelectedSkill != null)
                             {
-                                skill = menuResult.SelectedSkill;
+                                skill = personaResult.SelectedSkill;
                                 targets = _ui.SelectTarget(actor, skill);
 
                                 if (targets != null)
@@ -335,7 +336,7 @@ namespace JRPGPrototype.Logic.Battle
 
                         if (!actionCommitted && !BattleEnded) continue;
                     }
-                    else if (choice == "Skill" || choice == "Command")
+                    else if (menuResult.Action == BattleMainMenuAction.UseSkill)
                     {
                         skill = _ui.SelectSkill(actor, "");
                         if (skill == null) continue; // Back to Menu
@@ -344,72 +345,72 @@ namespace JRPGPrototype.Logic.Battle
                         if (targets == null) continue; // Back to Menu
                         actionCommitted = true;
                     }
-                    else if (choice == "COMP")
+                    else if (menuResult.Action == BattleMainMenuAction.Comp)
                     {
-                        var comp = _ui.OpenCOMPMenu(actor);
-                        if (comp.action == "None") continue; // Back to Menu
+                        BattleCompActionResult comp = _ui.OpenCOMPMenu(actor);
+                        if (comp.Kind == BattleCompActionKind.Back) continue; // Back to Menu
 
-                        if (comp.action == "Summon")
+                        if (comp.Kind == BattleCompActionKind.Summon)
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.standby != null && _party.SummonDemon(actor, comp.standby))
+                            if (comp.Standby != null && _party.SummonDemon(actor, comp.Standby))
                             {
-                                _messenger.Publish($"{actor.Name} summoned {comp.standby.Name}!");
+                                _messenger.Publish($"{actor.Name} summoned {comp.Standby.Name}!");
                                 _turnEngine.ConsumeAction(HitType.Normal, false);
                                 actionCommitted = true;
                                 return;
                             }
                         }
-                        else if (comp.action == "Swap")
+                        else if (comp.Kind == BattleCompActionKind.Swap)
                         {
                             // ATOMIC TRANSACTION: Exchange an active member for a standby member
-                            if (comp.standby != null && comp.active != null)
+                            if (comp.Standby != null && comp.Active != null)
                             {
                                 // Clear Transient state (Guard/Shields/Charge) for the demon leaving
-                                comp.active.ClearTransientBattleState();
+                                comp.Active.ClearTransientBattleState();
 
-                                if (_party.SwapActiveDemon(actor, comp.active, comp.standby))
+                                if (_party.SwapActiveDemon(actor, comp.Active, comp.Standby))
                                 {
-                                    _messenger.Publish($"{actor.Name} swapped {comp.active.Name} for {comp.standby.Name}!");
+                                    _messenger.Publish($"{actor.Name} swapped {comp.Active.Name} for {comp.Standby.Name}!");
                                     _turnEngine.ConsumeAction(HitType.Normal, false);
                                     actionCommitted = true;
                                     return;
                                 }
                             }
                         }
-                        else if (comp.action == "Return")
+                        else if (comp.Kind == BattleCompActionKind.Return)
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.active != null)
+                            if (comp.Active != null)
                             {
                                 // Clear Transient state for the demon leaving
-                                comp.active.ClearTransientBattleState();
+                                comp.Active.ClearTransientBattleState();
 
-                                if (_party.ReturnDemon(actor, comp.active))
+                                if (_party.ReturnDemon(actor, comp.Active))
                                 {
-                                    _messenger.Publish($"{actor.Name} returned {comp.active.Name} to stock.");
+                                    _messenger.Publish($"{actor.Name} returned {comp.Active.Name} to stock.");
                                     _turnEngine.ConsumeAction(HitType.Normal, false);
                                     actionCommitted = true;
                                     return;
                                 }
                             }
                         }
-                        else if (comp.action == "Analyze")
+                        else if (comp.Kind == BattleCompActionKind.Analyze)
                         {
-                            if (comp.active != null) _processor.ExecuteAnalyze(comp.active);
+                            if (comp.Active != null) _processor.ExecuteAnalyze(comp.Active);
                             _turnEngine.ConsumeAction(HitType.Normal, false);
                             actionCommitted = true;
                             return;
                         }
                     }
-                    else if (choice == "Pass")
+                    else if (menuResult.Action == BattleMainMenuAction.Pass)
                     {
                         _turnEngine.Pass();
                         _messenger.Publish($"{actor.Name} passes.");
                         actionCommitted = true;
                         return;
                     }
-                    else if (choice == "Item")
+                    else if (menuResult.Action == BattleMainMenuAction.UseItem)
                     {
                         item = _ui.SelectItem(actor);
                         if (item == null) continue; // Back to Menu
@@ -426,7 +427,7 @@ namespace JRPGPrototype.Logic.Battle
                             actionCommitted = true;
                         }
                     }
-                    else if (choice == "Talk")
+                    else if (menuResult.Action == BattleMainMenuAction.Talk)
                     {
                         targets = _ui.SelectTarget(actor, null, null, true);
 
@@ -440,7 +441,7 @@ namespace JRPGPrototype.Logic.Battle
                         actionCommitted = true;
                         return;
                     }
-                    else if (choice == "Tactics")
+                    else if (menuResult.Action == BattleMainMenuAction.Tactics)
                     {
                         // Record the current icon count to detect if a tactic consumes a turn
                         int iconsBefore = _turnEngine.GetTotalIconCount();
@@ -547,8 +548,10 @@ namespace JRPGPrototype.Logic.Battle
 
         private void HandleTactics(Combatant actor)
         {
-            string tactic = _ui.GetTacticsChoice(_isBossBattle, actor.Class == ClassType.Operator);
-            if (tactic == "Escape")
+            BattleTacticsResult tactic = _ui.GetTacticsChoice(_isBossBattle, actor.Class == ClassType.Operator);
+            if (tactic.Kind == BattleMenuResultKind.Back) return;
+
+            if (tactic.Action == BattleTacticsAction.Escape)
             {
                 int pAgi = actor.GetStat(StatType.Ag);
                 double eAvgAgi = _enemies.Any() ? _enemies.Average(e => e.GetStat(StatType.Ag)) : 1;
@@ -565,7 +568,7 @@ namespace JRPGPrototype.Logic.Battle
                     _turnEngine.ConsumeAction(HitType.Normal, false);
                 }
             }
-            else if (tactic == "Strategy")
+            else if (tactic.Action == BattleTacticsAction.Strategy)
             {
                 var stratTarget = _ui.SelectStrategyTarget();
                 if (stratTarget != null)
