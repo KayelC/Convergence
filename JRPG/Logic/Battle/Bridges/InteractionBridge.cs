@@ -198,18 +198,6 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             }
         }
 
-        public string GetWildCardPersonaChoice(Combatant actor)
-        {
-            List<string> options = new List<string> { "Skills", "Change Persona", "Back" };
-
-            // Disable "Change Persona" if the limit has been reached this turn
-            List<bool> disabled = new List<bool> { false, actor.HasSwappedThisTurn, false };
-
-            int choice = _io.RenderMenu($"{GetBattleContext(actor)}\nPERSONA COMMAND", options, 0, disabled);
-            if (choice == -1 || choice == 2) return "Back";
-            return options[choice];
-        }
-
         /// <summary>
         /// Lists the Persona stock for the Wild Card to choose from.
         /// </summary>

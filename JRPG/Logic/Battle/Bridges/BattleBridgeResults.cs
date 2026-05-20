@@ -63,7 +63,8 @@ namespace JRPGPrototype.Logic.Battle.Bridges
     public sealed record BattleCompActionResult(
         BattleCompActionKind Kind,
         Combatant? Standby = null,
-        Combatant? Active = null)
+        Combatant? Active = null,
+        Combatant? AnalyzeTarget = null)
     {
         public static BattleCompActionResult Back { get; } =
             new BattleCompActionResult(BattleCompActionKind.Back);
@@ -78,7 +79,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             => new BattleCompActionResult(BattleCompActionKind.Return, Active: active);
 
         public static BattleCompActionResult Analyze(Combatant target)
-            => new BattleCompActionResult(BattleCompActionKind.Analyze, Active: target);
+            => new BattleCompActionResult(BattleCompActionKind.Analyze, AnalyzeTarget: target);
     }
 
     public enum BattleTacticsAction

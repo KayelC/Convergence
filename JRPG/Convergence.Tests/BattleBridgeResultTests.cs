@@ -312,6 +312,7 @@ public sealed class BattleBridgeResultTests
         Assert.Equal(BattleCompActionKind.Summon, result.Kind);
         Assert.Same(standby, result.Standby);
         Assert.Null(result.Active);
+        Assert.Null(result.AnalyzeTarget);
     }
 
     [Fact]
@@ -334,6 +335,7 @@ public sealed class BattleBridgeResultTests
         Assert.Equal(BattleCompActionKind.Swap, result.Kind);
         Assert.Same(standby, result.Standby);
         Assert.Same(activeA, result.Active);
+        Assert.Null(result.AnalyzeTarget);
     }
 
     [Fact]
@@ -349,6 +351,7 @@ public sealed class BattleBridgeResultTests
         Assert.Equal(BattleCompActionKind.Return, result.Kind);
         Assert.Null(result.Standby);
         Assert.Same(active, result.Active);
+        Assert.Null(result.AnalyzeTarget);
     }
 
     [Fact]
@@ -361,7 +364,9 @@ public sealed class BattleBridgeResultTests
         BattleCompActionResult result = bridge.OpenCOMPMenu(actor);
 
         Assert.Equal(BattleCompActionKind.Analyze, result.Kind);
-        Assert.Same(enemy, result.Active);
+        Assert.Null(result.Standby);
+        Assert.Null(result.Active);
+        Assert.Same(enemy, result.AnalyzeTarget);
     }
 
     [Theory]

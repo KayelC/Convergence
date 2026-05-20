@@ -402,7 +402,7 @@ namespace JRPGPrototype.Logic.Battle
                         }
                         else if (comp.Kind == BattleCompActionKind.Analyze)
                         {
-                            if (comp.Active != null) _processor.ExecuteAnalyze(comp.Active);
+                            if (comp.AnalyzeTarget != null) _processor.ExecuteAnalyze(comp.AnalyzeTarget);
                             _turnEngine.ConsumeAction(HitType.Normal, false);
                             actionCommitted = true;
                             return;
