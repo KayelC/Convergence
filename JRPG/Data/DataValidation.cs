@@ -13,7 +13,7 @@ namespace JRPGPrototype.Data
 
     public static class DataValidation
     {
-        [Obsolete("Legacy validation for current SkillData/PersonaData JSON only. Prefer schema-specific v2 validators.")]
+        [Obsolete("Legacy validation for current SkillData/PersonaData JSON only. Prefer Data.Definitions clean schema validators.")]
         public static DataValidationResult ValidateLegacyData(
             IEnumerable<SkillData> skills,
             IEnumerable<PersonaData> entities,

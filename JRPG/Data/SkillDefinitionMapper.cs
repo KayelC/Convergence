@@ -7,7 +7,7 @@ using JRPGPrototype.Core;
 
 namespace JRPGPrototype.Data
 {
-    [Obsolete("Legacy compatibility result for SkillData conversion. Prefer Data.Schemas v2 DTOs as the source of truth.")]
+    [Obsolete("Legacy compatibility result for SkillData conversion. Prefer Data.Definitions clean schemas as the source of truth.")]
     public sealed record SkillDefinitionMappingResult(
         SkillDefinition? Definition,
         IReadOnlyList<string> Warnings,

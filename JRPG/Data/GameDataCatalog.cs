@@ -60,7 +60,7 @@ namespace JRPGPrototype.Data
             }
         }
 
-        [Obsolete("Legacy Database bridge. Prefer constructing GameDataCatalog from Data.Schemas v2 definitions.")]
+        [Obsolete("Legacy Database bridge. Prefer JRPGPrototype.Data.Definitions.Catalogs.GameDataCatalog with clean schemas.")]
         public static GameDataCatalog FromDatabase()
         {
             AilmentData[] ailments = Database.Ailments.Values.ToArray();
