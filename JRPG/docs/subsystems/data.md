@@ -1,5 +1,7 @@
 # Data Subsystem
 
+> **Status: Current implementation reference.** This chapter documents the static legacy data path being replaced incrementally.
+
 ## Purpose
 
 `Data` defines the JSON-backed content model and the static runtime registry. It is the bridge between editable game content and live gameplay objects.

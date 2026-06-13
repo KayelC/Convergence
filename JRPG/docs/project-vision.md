@@ -1,5 +1,7 @@
 # Project Vision: Convergence
 
+> **Status: Strategic direction.** This document records long-term goals rather than an implementation or schema contract.
+
 ## Purpose
 
 Convergence began as a hobby Persona-like JRPG prototype and evolved into a broader C# framework for complex turn-based RPG systems. The long-term goal is not only to build a single game, but to create a reusable, engine-agnostic library that developers can plug into Unity, Godot, or any C#-capable runtime.

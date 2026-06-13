@@ -1,5 +1,7 @@
 # Entities Subsystem
 
+> **Status: Current implementation reference.** This chapter describes live prototype entities and may differ from future immutable content contracts.
+
 ## Purpose
 
 `Entities` defines live gameplay actors and their attached progression, stats, combat state, equipment, persona/demon stock, and skill state. It also contains component-style processors that keep heavy calculations out of the entity data shells.

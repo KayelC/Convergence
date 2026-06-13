@@ -1,5 +1,7 @@
 # Fusion Subsystem
 
+> **Status: Current implementation reference.** Existing fusion and skill-mutation behavior is migration evidence; approved redesign contracts define future data shape.
+
 ## Purpose
 
 `Logic/Fusion` implements Cathedral-style fusion, sacrificial fusion, fusion accidents, skill inheritance, rank mutation, Mitama stat boosts, compendium registration, and recall.

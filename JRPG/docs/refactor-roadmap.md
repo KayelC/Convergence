@@ -1,5 +1,7 @@
 # Refactor Roadmap: Prototype To Framework
 
+> **Status: Historical roadmap.** This document predates the skill-system redesign plan. Keep it for broader refactor context, but use `skill-system-redesign-plan.md` for all skill, entity-content, and legacy-data replacement work.
+
 ## Purpose
 
 This document is the phased migration plan for Convergence. It is not only a technical debt list for the current console prototype; it is a roadmap for turning JRPGPrototype into an engine-agnostic C# RPG systems framework.

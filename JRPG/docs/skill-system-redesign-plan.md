@@ -159,8 +159,8 @@ Protect the stable prototype and give the redesign a reviewable history.
 - Baseline command: `dotnet test JRPG.sln --no-restore --filter "FullyQualifiedName!~SkillSystemRedesignFixtureTests"`.
 - Baseline result: 237 passed, 0 failed, 0 skipped.
 - The repository retains its pre-existing nullable-reference and DTO-initialization warnings; warning remediation is outside Track 0.
-- Track 0 changes documentation only. No runtime or gameplay code was modified.
-- The redesign fixture JSON and `SkillSystemRedesignFixtureTests.cs` remain uncommitted for the dedicated reference-fixture track.
+- The intended Track 0 scope was documentation-only, but the actual commit `e890843` also included the reference fixture JSON and `SkillSystemRedesignFixtureTests.cs` as Track 2 prework.
+- No runtime or gameplay code was modified, and the tracked fixtures do not affect runtime loading.
 
 ## Track 1: Contract Reconciliation
 
@@ -183,23 +183,30 @@ Turn the GDD decisions into an exact schema contract before writing DTOs. This p
 - Active skills have ordered `effects`; passive skills have `triggers`, `modifiers`, or both.
 - `special` is removed. Exceptional mechanics use registered `custom` effects.
 - Entity inheritance uses one group allow/deny policy plus explicit skill exceptions.
+- Skill mutation preserves the existing fusion-accident family/rank behavior through a separate nested `mutation` object with `familyId` and `tier`.
+- Ailment resistance is keyed directly by ailment ID; ailment groups may support cures and modifiers but never select resistance.
+- Eternal Rest uses the `ailment` inheritance group because Sleep is its defining prerequisite.
+- Oracle and other Navigator abilities are outside the demon/Persona stock skill contract and are deferred to a dedicated future system.
+- Basic weapon damage uses `physical`; Slash, Strike, and Pierce are not affinities.
 
 ### Schema Questions That Must Be Closed
 
 1. Whether `inheritanceGroupId` is a top-level skill field or nested under an `inheritance` object.
 2. Whether `allowedSkillIds` overrides a denied group. Recommended answer: yes, as an explicit exception after owner/exclusivity checks.
-3. Whether active skills may omit `menuGroup`. Recommended answer: no.
-4. Whether passive skills must omit `menuGroup`. Recommended answer: yes.
-5. How effect failure is represented when a multi-effect skill partially succeeds.
-6. Whether effect conditions are evaluated once per action, once per target, or explicitly declare their scope.
-7. How modifier stacking keys and priorities are declared.
-8. Whether instant death has one resistance channel or Light/Dark-specific channels. Recommended v1 answer: one `instant_death` channel.
-9. Whether affinity-changing passives replace or layer over base affinities. Recommended answer: deterministic priority with one effective result.
+3. Whether the schema formally forbids `menuGroup` on passive skills or simply omits and ignores it.
+4. How effect failure is represented when a multi-effect skill partially succeeds.
+5. Whether effect conditions are evaluated once per action, once per target, or explicitly declare their scope.
+6. How modifier stacking keys and priorities are declared.
+7. Whether instant death has one resistance channel, Light/Dark-specific channels, or a distinct rule for conditional skills such as Eternal Rest.
+8. Whether affinity-changing passives replace or layer over base affinities.
+
+Active skills require one `menuGroup`; this is no longer an open question because the GDD defines it as an active-skill axis.
 
 ### Files
 
 - Revise `docs/content-schema-v1-proposal.md`.
 - Keep `docs/skill-system-gdd.md` as the normative behavior document.
+- Keep `docs/README.md` explicit about document authority and status.
 - Add the eventual JSON Schema files under `Data/Schemas/SkillSystem/` rather than reusing ambiguous legacy filenames.
 
 Proposed schema files:
@@ -219,14 +226,25 @@ Data/Schemas/SkillSystem/
 - No schema example uses element-based inheritance for a passive.
 - Recovery and curing are effects, not elements.
 - Elemental affinity and ailment resistance are represented separately.
+- Mutation metadata is separate from inheritance metadata.
+- Navigator-only abilities do not appear as ordinary skills.
 - All JSON examples parse.
 - The open schema questions above have explicit answers.
+
+### Documentation Reconciliation Record
+
+- Reconciled on June 13, 2026 as the first Track 1 pass.
+- Added explicit documentation authority and status labels.
+- Corrected obsolete skill examples and resistance vocabulary in the schema proposal.
+- Preserved current runtime and technical documents as labeled migration references rather than deleting them.
+- Marked the older refactor roadmap as historical for skill-system work.
+- No runtime or gameplay code is changed by this pass.
 
 ## Track 2: Reference Fixtures
 
 ### Purpose
 
-Provide tiny original datasets that become executable examples of the target contract. These fixtures are not migrated legacy content and must remain easy to inspect in code review.
+Provide tiny original datasets that become executable examples of the target contract. These fixtures are not migrated legacy content and must remain easy to inspect in code review. Until Track 1 closes every wire-shape question, they are candidate fixtures that assert approved invariants rather than a final DTO contract.
 
 ### Initial One-Entry Fixtures
 

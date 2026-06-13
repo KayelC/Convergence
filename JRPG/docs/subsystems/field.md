@@ -1,5 +1,7 @@
 # Field Subsystem
 
+> **Status: Current implementation reference.** This chapter describes the current console field and dungeon flows.
+
 ## Purpose
 
 `Logic/Field` implements non-combat gameplay: city menus, dungeon traversal, shops, hospital restoration, inventory usage, field skill usage, status menus, equipment, stat allocation, party organization, and entry into fusion.

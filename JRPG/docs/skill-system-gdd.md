@@ -4,6 +4,8 @@
 
 This document is the design target for the skill system. Runtime code and content schemas may temporarily differ during refactoring, but new design decisions should conform to this model unless this document is deliberately revised.
 
+This document is normative for the redesign. The schema proposal, fixtures, implementation plan, runtime code, and legacy datasets must not contradict it.
+
 ## Design Goal
 
 Skills should be composable, understandable without reading code, and classifiable without a miscellaneous `special` category. A skill is described through independent axes rather than one overloaded behavior type.
@@ -46,7 +48,10 @@ almighty
 - `resist` is one affinity value, not a separate competing elemental system.
 - Almighty always resolves with a normal affinity response and cannot be weak, resisted, nulled, repelled, or absorbed.
 - Recovery, curing, buffs, debuffs, ailments, and passives are not elements.
-- Ailments and instant death use their own resistance values: `vulnerable`, `normal`, `resistant`, or `immune`.
+- Every ailment uses its own resistance entry, such as `poison`, `sleep`, or `fear`, with one of: `vulnerable`, `normal`, `resistant`, or `immune`.
+- Ailment groups may support broad cures or passive modifiers, but they never replace the target's ailment-specific resistance entry.
+- Instant death is separate from both elemental affinity and ailment resistance and uses the same four-value resistance vocabulary. Its final channel model remains a Track 1 contract decision.
+- Basic weapon attacks deal `physical` damage. Slash, Strike, and Pierce may survive as descriptive weapon or animation metadata, but they are not damage elements or affinities.
 
 ## Activation
 
@@ -182,6 +187,29 @@ Passive inheritance may still be restricted through explicit skill blocks, owner
 | Tarukaja | Active | Buff | Support |
 | Tarunda | Active | Debuff | Support |
 | Analyze | Active | Utility | Utility |
+| Eternal Rest | Active | Offense | Ailment |
+
+Eternal Rest belongs to the `ailment` inheritance group because its defining prerequisite is an existing Sleep ailment. Its effect remains a conditional `instant_kill`; the inheritance classification does not turn instant death into elemental damage or an ailment application.
+
+## Skill Mutation
+
+The existing fusion-accident skill mutation mechanic is preserved. Mutation metadata is independent from activation, menu group, effects, and inheritance group.
+
+```json
+{
+  "mutation": {
+    "familyId": "agi",
+    "tier": 1
+  }
+}
+```
+
+- `familyId` identifies skills that may mutate into one another.
+- `tier` gives the skill's ordered position within that family.
+- A mutation may move only to a valid adjacent tier in the same family.
+- A skill without mutation metadata does not participate in skill mutation.
+- Mutation eligibility does not make a skill inheritable; normal inheritance and exclusivity checks still apply.
+- Mutation probability and direction belong to fusion rules, not the skill's inheritance classification.
 
 ## Composition Examples
 
@@ -243,6 +271,10 @@ Passive inheritance may still be restricted through explicit skill blocks, owner
 
 Only a mechanic that cannot be expressed clearly through the shared vocabulary may use `custom`. Every custom effect requires a named registered handler, validated parameters, and dedicated tests. It must not become a general-purpose substitute for extending the common effect model.
 
+## Navigator Boundary
+
+Oracle and other Navigator abilities are not skills available to the player's demon or Persona stock. They belong to a separate Navigator support mechanic comparable to a dedicated support character system. They are excluded from this skill schema, inheritance rules, mutation rules, and ordinary skill menus. A future Navigator contract may reuse shared effects where useful, but it must remain a separate system.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -253,3 +285,6 @@ Only a mechanic that cannot be expressed clearly through the shared vocabulary m
 6. Every gameplay-relevant behavior uses a declared effect, trigger, modifier, or registered custom handler.
 7. `special` and generic behavior-driving tags are not part of the model.
 8. A passive's inheritance group is always `passive`; the mechanic or element it modifies is separate metadata.
+9. Skill mutation metadata is explicit and separate from inheritance metadata.
+10. Ailment resistance is keyed by ailment ID, never by a damage element or broad affinity family.
+11. Navigator abilities are outside the demon and Persona stock skill contract.

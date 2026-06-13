@@ -1,5 +1,7 @@
 # Architecture
 
+> **Status: Current implementation reference.** This document describes the console prototype. Approved redesign documents override it when defining target behavior.
+
 JRPGPrototype is organized around gameplay subsystems rather than a generic application framework. The important architectural rule is separation of orchestration, rules, interaction, and output.
 
 ## Layers And Patterns

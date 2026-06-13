@@ -1,5 +1,7 @@
 # Services Subsystem
 
+> **Status: Current implementation reference.** This chapter describes the console-oriented service layer.
+
 ## Purpose
 
 `Services` abstracts console I/O and shared menu rendering so gameplay logic does not call `Console` directly. This makes the prototype easier to test, redirect, or eventually port to another UI.

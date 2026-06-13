@@ -1,5 +1,7 @@
 # Convergence Technical Documentation
 
+> **Status: Current implementation reference.** Files in this tree explain the source code as it exists. They do not override approved GDD or schema decisions and must be refreshed as consumers migrate.
+
 This tree is the code-level documentation layer for Convergence. The existing
 `docs/` folder explains project vision, architecture, and subsystem concepts.
 `TechnicalDocs/` explains how the source files implement those concepts.

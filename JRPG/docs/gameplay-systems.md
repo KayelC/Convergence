@@ -1,5 +1,7 @@
 # Gameplay Systems
 
+> **Status: Current implementation reference.** This document describes the console prototype and may include systems scheduled for migration.
+
 This document explains the main player-facing systems and the code that implements them.
 
 ## Boot And Scenario Selection

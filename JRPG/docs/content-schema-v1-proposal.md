@@ -8,6 +8,8 @@ The existing legacy and v2 datasets should not constrain this design. They may b
 
 The skill portions of this proposal must conform to the normative [Skill System GDD](skill-system-gdd.md). Where the two documents currently differ, the GDD records the newer design decision and this proposal still requires revision.
 
+Reconciled examples in this document may be used as Track 1 candidates, but unresolved fields remain proposals until the redesign plan records an explicit decision. Navigator abilities, dungeon presentation, and host asset mappings are outside this skill-contract pass.
+
 ## Goal
 
 Define a stable, validated content model for Convergence before migrating data or rewriting gameplay consumers.
@@ -190,20 +192,14 @@ The ruleset document declares the vocabulary available to other content document
     { "id": "agility", "minimumStage": -4, "maximumStage": 4 }
   ],
   "elements": [
-    { "id": "slash", "category": "physical" },
-    { "id": "strike", "category": "physical" },
-    { "id": "pierce", "category": "physical" },
+    { "id": "physical", "category": "physical" },
     { "id": "fire", "category": "magical" },
     { "id": "ice", "category": "magical" },
     { "id": "electric", "category": "magical" },
     { "id": "wind", "category": "magical" },
-    { "id": "earth", "category": "magical" },
-    { "id": "light", "category": "special" },
-    { "id": "dark", "category": "special" },
-    { "id": "almighty", "category": "special" },
-    { "id": "mind", "category": "ailment" },
-    { "id": "nerve", "category": "ailment" },
-    { "id": "curse", "category": "ailment" }
+    { "id": "light", "category": "magical" },
+    { "id": "dark", "category": "magical" },
+    { "id": "almighty", "category": "unresistable" }
   ],
   "affinities": [
     { "id": "normal", "damageMultiplier": 1.0, "turnOutcome": "normal" },
@@ -213,8 +209,15 @@ The ruleset document declares the vocabulary available to other content document
     { "id": "repel", "damageMultiplier": 1.0, "turnOutcome": "repel" },
     { "id": "absorb", "damageMultiplier": -1.0, "turnOutcome": "absorb" }
   ],
+  "resistanceLevels": [
+    { "id": "vulnerable" },
+    { "id": "normal" },
+    { "id": "resistant" },
+    { "id": "immune" }
+  ],
   "defaults": {
     "affinityId": "normal",
+    "ailmentResistanceId": "normal",
     "buffDurationTurns": 3,
     "ailmentDurationTurns": 3,
     "maximumActivePartySize": 4
@@ -320,12 +323,12 @@ Unusual conditions use a registered custom condition handler.
 
 Active skills and consumable items contain an ordered `effects` list. Effects execute in order unless the action is rejected before execution.
 
-Core effect types proposed for v1:
+The skill effect vocabulary must match the GDD:
 
 | Effect type | Purpose |
 | --- | --- |
 | `damage` | Typed elemental damage, hit count, accuracy, critical and drain behavior |
-| `instant_kill` | Chance-based instant death with an element or resistance family |
+| `instant_kill` | Chance-based or conditional instant death using the separate instant-death resistance system |
 | `restore_resource` | Restore HP, SP, or another resource |
 | `reduce_resource` | Flat, percent, or formula-based nonstandard resource reduction |
 | `set_resource` | Set a resource to an exact or bounded value |
@@ -336,15 +339,14 @@ Core effect types proposed for v1:
 | `grant_charge` | Grant a physical or magical charge state |
 | `grant_shield` | Grant a physical or magical reflection shield |
 | `override_affinity` | Temporarily replace one or more affinities, including Break effects |
-| `escape_battle` | Request escape with explicit eligibility and chance behavior |
+| `escape` | Request escape with explicit eligibility and chance behavior |
 | `analyze` | Reveal one or more knowledge layers |
-| `grant_skill` | Temporarily or permanently grant a skill |
-| `remove_effect` | Remove buffs, debuffs, shields, or other tagged runtime effects |
+| `remove_status_effect` | Remove buffs, debuffs, shields, charges, or other declared runtime effects |
 | `custom` | Invoke a registered, validated handler for exceptional mechanics |
-| `grant_item` | Add an item to inventory in an allowed reward or field context |
-| `grant_currency` | Add a currency resource in an allowed reward or field context |
 
-Effects may include an optional `when` condition. Failure behavior must be explicit where relevant:
+Inventory rewards, currency rewards, and permanent skill grants are wider gameplay operations, not ordinary skill effects. Their contracts belong to the owning reward, field, or progression subsystem.
+
+Effects may include a condition and may need explicit partial-failure behavior. The exact condition scope and multi-effect failure shape remain open Track 1 decisions; the following illustrates the requirement without approving the final field names:
 
 ```json
 {
@@ -362,7 +364,9 @@ Skills have one of two activation models:
 - `active`: selected and executed as an action.
 - `passive`: responds to registered runtime events.
 
-`category` is presentation and filtering metadata. It does not select the execution implementation. Generic tags are deliberately excluded from Schema v1: behavior that matters to rules should use an explicit field, effect, group ID, or capability flag.
+Active skills use the GDD's bounded `menuGroup` for presentation and AI filtering. Passive skills do not require `menuGroup` and are displayed through `activation: passive`; Track 1 must still decide whether the final schema merely ignores or formally forbids that field on passives. Menu placement does not select the execution implementation. Generic tags are deliberately excluded from Schema v1: behavior that matters to rules should use an explicit field, effect, group ID, or capability flag.
+
+Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional metadata under `mutation`; it is not part of the inheritance object. The current examples use a top-level inheritance-group field to match the reference fixture, but Track 1 must still formally close that placement decision before DTO implementation.
 
 ### Active Skill Example
 
@@ -370,9 +374,10 @@ Skills have one of two activation models:
 {
   "id": "venom_needle",
   "displayName": "Venom Needle",
-  "description": "Piercing damage with a chance to poison one enemy.",
+  "description": "Physical damage with a chance to poison one enemy.",
   "activation": "active",
-  "category": "offense",
+  "menuGroup": "offense",
+  "inheritanceGroupId": "physical",
   "costs": [
     {
       "resourceId": "hp",
@@ -390,7 +395,7 @@ Skills have one of two activation models:
   "effects": [
     {
       "type": "damage",
-      "elementId": "pierce",
+      "elementId": "physical",
       "power": 62,
       "accuracy": 76,
       "critical": { "mode": "chance", "chance": 24 },
@@ -407,10 +412,11 @@ Skills have one of two activation models:
   },
   "inheritance": {
     "isInheritable": true,
-    "elementIds": ["pierce"],
-    "familyId": "poison",
-    "mutationTier": 2,
     "exclusiveOwnerEntityIds": []
+  },
+  "mutation": {
+    "familyId": "poison",
+    "tier": 2
   }
 }
 ```
@@ -423,7 +429,8 @@ Skills have one of two activation models:
   "displayName": "Shining Arrows",
   "description": "Deals several hits of light damage to all enemies.",
   "activation": "active",
-  "category": "offense",
+  "menuGroup": "offense",
+  "inheritanceGroupId": "light",
   "costs": [
     { "resourceId": "sp", "amount": { "type": "flat", "value": 24 } }
   ],
@@ -445,10 +452,11 @@ Skills have one of two activation models:
   ],
   "availability": { "contexts": ["battle"] },
   "inheritance": {
-    "isInheritable": true,
-    "elementIds": ["light"],
+    "isInheritable": true
+  },
+  "mutation": {
     "familyId": "light_multi_hit",
-    "mutationTier": 3
+    "tier": 3
   }
 }
 ```
@@ -461,7 +469,8 @@ Skills have one of two activation models:
   "displayName": "Patra",
   "description": "Removes mental ailments from one ally.",
   "activation": "active",
-  "category": "support",
+  "menuGroup": "recovery",
+  "inheritanceGroupId": "recovery",
   "costs": [
     { "resourceId": "sp", "amount": { "type": "flat", "value": 3 } }
   ],
@@ -480,10 +489,11 @@ Skills have one of two activation models:
   ],
   "availability": { "contexts": ["battle", "field"] },
   "inheritance": {
-    "isInheritable": true,
-    "elementIds": [],
+    "isInheritable": true
+  },
+  "mutation": {
     "familyId": "mental_cure",
-    "mutationTier": 1
+    "tier": 1
   }
 }
 ```
@@ -496,7 +506,8 @@ Skills have one of two activation models:
   "displayName": "Eternal Rest",
   "description": "Instantly kills sleeping enemies.",
   "activation": "active",
-  "category": "offense",
+  "menuGroup": "offense",
+  "inheritanceGroupId": "ailment",
   "targeting": {
     "relation": "enemy",
     "selection": "all",
@@ -506,7 +517,6 @@ Skills have one of two activation models:
   "effects": [
     {
       "type": "instant_kill",
-      "elementId": "curse",
       "chance": 100,
       "when": {
         "type": "target_has_ailment",
@@ -516,10 +526,11 @@ Skills have one of two activation models:
   ],
   "availability": { "contexts": ["battle"] },
   "inheritance": {
-    "isInheritable": true,
-    "elementIds": ["curse"],
+    "isInheritable": true
+  },
+  "mutation": {
     "familyId": "conditional_death",
-    "mutationTier": 3
+    "tier": 3
   }
 }
 ```
@@ -532,7 +543,7 @@ Skills have one of two activation models:
   "displayName": "Regenerate 1",
   "description": "Restores a small amount of HP at the end of the owner's turn.",
   "activation": "passive",
-  "category": "passive",
+  "inheritanceGroupId": "passive",
   "triggers": [
     {
       "event": "owner_turn_end",
@@ -546,42 +557,18 @@ Skills have one of two activation models:
     }
   ],
   "inheritance": {
-    "isInheritable": true,
-    "elementIds": [],
+    "isInheritable": true
+  },
+  "mutation": {
     "familyId": "regenerate",
-    "mutationTier": 1
+    "tier": 1
   }
 }
 ```
 
-### Exceptional Skill Example
+### Navigator Abilities
 
-```json
-{
-  "id": "oracle",
-  "displayName": "Oracle",
-  "description": "Invokes one of several context-sensitive support outcomes.",
-  "activation": "active",
-  "category": "support",
-  "costs": [],
-  "targeting": { "relation": "none", "selection": "none", "lifeState": "any" },
-  "effects": [
-    {
-      "type": "custom",
-      "handlerId": "oracle_support_roll",
-      "parameters": { "profileId": "portable_style" }
-    }
-  ],
-  "availability": { "contexts": ["battle"] },
-  "inheritance": {
-    "isInheritable": false,
-    "elementIds": [],
-    "familyId": null,
-    "mutationTier": null,
-    "exclusiveOwnerEntityIds": []
-  }
-}
-```
+Oracle and related Navigator abilities are not demon or Persona stock skills. They are excluded from this schema, its inheritance groups, and its mutation rules. A future Navigator-system contract may reuse shared effects, but it must not model those mechanics as ordinary selectable skills.
 
 Every `handlerId`, `formulaId`, trigger event, effect type, and condition type must be registered by code and validated at startup.
 
@@ -592,8 +579,7 @@ Every `handlerId`, `formulaId`, trigger event, effect type, and condition type m
   "id": "poison",
   "displayName": "Poison",
   "description": "Deals damage at the end of the afflicted combatant's turn.",
-  "resistanceElementId": "curse",
-  "groupIds": ["physical", "poison"],
+  "groupIds": [],
   "exclusivityGroupId": "major_ailment",
   "defaultDuration": {
     "type": "turns",
@@ -632,6 +618,8 @@ Every `handlerId`, `formulaId`, trigger event, effect type, and condition type m
   }
 }
 ```
+
+Ailment definitions describe behavior, duration, grouping, and recovery. They do not select an elemental or family resistance channel. Each entity stores resistance by ailment ID, for example `"poison": "resistant"`. Optional `groupIds` support broad cures and passive modifiers only.
 
 Turn behavior is a finite union for common restrictions:
 
@@ -735,9 +723,13 @@ An entity definition is an immutable species or character template. A summoned d
     "agility": 5,
     "luck": 4
   },
-  "affinities": {
+  "elementalAffinities": {
     "fire": "resist",
     "ice": "weak"
+  },
+  "ailmentResistances": {
+    "poison": "resistant",
+    "sleep": "vulnerable"
   },
   "baseSkillIds": ["ember_flicker"],
   "skillUnlocks": [
@@ -750,7 +742,9 @@ An entity definition is an immutable species or character template. A summoned d
 Important decisions:
 
 - Multiple records may share the same display name.
-- Missing affinities use the ruleset default.
+- Missing elemental affinities use the ruleset default.
+- Missing ailment-resistance entries use the ruleset's normal resistance default.
+- Ailment resistance is keyed by ailment ID and accepts only `vulnerable`, `normal`, `resistant`, or `immune`.
 - `skillUnlocks` is a list so multiple skills may unlock at one level.
 - Explicit capability fields determine system eligibility instead of generic tags or name/race checks.
 - Negotiation personality defaults from the race. Entity-specific negotiation overrides are deferred until a concrete use case requires them.
@@ -789,7 +783,7 @@ Schema v1 therefore does not use a generic `tags` field for rules. It uses named
 - inheritance uses explicit inheritance groups and allow/deny rules,
 - ailments use declared group IDs,
 - equipment restrictions use entity kinds or entity IDs,
-- UI grouping uses bounded fields such as skill `category`.
+- UI grouping uses bounded fields such as skill `menuGroup`.
 
 Non-gameplay labels can be added later for editor search or presentation without affecting runtime behavior.
 
@@ -846,7 +840,7 @@ Other item kinds include `key`, `material`, and `valuable`. Items without `usage
   },
   "grantedSkillIds": [],
   "weapon": {
-    "elementId": "slash",
+    "elementId": "physical",
     "power": 34,
     "accuracy": 92,
     "range": "melee"
@@ -1141,7 +1135,7 @@ Validation happens in two stages.
 - every entity in an encounter exists,
 - every fusion race/entity/profile reference exists,
 - all handler, formula, strategy, condition, trigger, and effect IDs are registered,
-- inheritance families and mutation tiers are coherent,
+- mutation families and tiers are coherent,
 - duplicate unordered fusion parent pairs are rejected,
 - content-pack dependency versions are satisfied.
 
@@ -1194,27 +1188,29 @@ Action request
   -> commit costs and consumable use according to policy
 ```
 
-## Decisions To Approve Before Coding
+## Wider Schema Decisions To Approve Before Coding
 
-1. Use ordered compositional effects rather than one behavior payload per skill.
-2. Keep formulas and exceptional mechanics behind registered code strategy IDs.
-3. Treat display text as presentation only.
-4. Use local IDs plus content-pack namespaces.
-5. Store entity skill unlocks as a list.
-6. Model races and negotiation personalities as records, but keep entity inheritance restrictions explicit and local.
-7. Unify equipment under one definition with slot-specific payloads.
-8. Reuse targeting and effects for skills and consumable items.
-9. Store complete weighted encounters separately from dungeons.
-10. Make fusion operations explicit discriminated results.
-11. Validate the entire content graph before exposing a catalog.
-12. Keep mutable game/save state outside content definitions.
-13. Keep growth, HP/SP formulas, and AI code-owned until concrete configurable variants exist.
-14. Defer dungeon and presentation schemas to the Godot integration design.
+The Skill System GDD has already settled ordered effects, presentation-only display text, explicit inheritance groups, passive structure, and the separation between elemental affinities and ailment resistance. The remaining list concerns the wider content-pack architecture:
+
+1. Use local IDs plus content-pack namespaces.
+2. Model races and negotiation personalities as records, while keeping entity inheritance restrictions explicit and local.
+3. Unify equipment under one definition with slot-specific payloads.
+4. Reuse targeting and effects for skills and consumable items.
+5. Store complete weighted encounters separately from dungeons.
+6. Make fusion operations explicit discriminated results.
+7. Validate the entire content graph before exposing a catalog.
+8. Keep mutable game/save state outside content definitions.
+9. Keep growth, HP/SP formulas, and AI code-owned until concrete configurable variants exist.
+10. Defer dungeon and presentation schemas to the Godot integration design.
 
 ## Resolved Design Choices
 
 - Buffs should use stages for the normal battle rules. Direct percentage modifiers should be a separate effect type for exceptional mechanics and should not share the stage stack.
-- Ailments should have both a resistance-family element and optional ailment-specific modifiers. Family affinities handle broad resistance; passive skills can modify an individual ailment or ailment group.
+- Ailment behavior and ailment resistance are separate. Entities store one resistance value per ailment ID; ailment groups may support broad cures or passive modifiers but never act as elemental affinities or substitute resistance channels.
+- Skill mutation preserves the existing family-and-tier mechanic through an optional nested `mutation` object, separate from inheritance metadata.
+- Eternal Rest is an active Offense skill in the `ailment` inheritance group because Sleep is its defining prerequisite.
+- Oracle and other Navigator abilities are excluded from the demon/Persona stock skill contract and deferred to a dedicated future system.
+- Basic weapon damage uses the `physical` element.
 - Active definitions should support a list of costs. Most skills will have zero or one, but the schema should not need revision for a dual-resource action.
 - Passive mechanics should use passive skill definitions in v1. Entities and equipment grant passive skill IDs instead of embedding a second trigger format.
 - Equipment should grant skill IDs and stat modifiers. It should not embed anonymous passive behavior in v1.

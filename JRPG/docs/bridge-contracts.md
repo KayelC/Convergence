@@ -1,5 +1,7 @@
 # Bridge Contract Design Charter
 
+> **Status: Design guidance.** This charter governs bridge and adapter direction; it is not a gameplay or content-schema authority.
+
 ## Purpose
 
 This document defines the bridge contract direction for Convergence. It is a design charter for all bridge and adapter refactors, not a one-off cleanup of a single menu.

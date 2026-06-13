@@ -1,5 +1,7 @@
 # Battle Subsystem
 
+> **Status: Current implementation reference.** This chapter describes legacy battle execution; the Skill System GDD defines the redesign target.
+
 ## Purpose
 
 `Logic/Battle` implements encounters: action choice, enemy AI, skill and item execution, Press Turn icon economy, damage, affinities, ailments, passives, negotiation, rewards, and knowledge discovery.

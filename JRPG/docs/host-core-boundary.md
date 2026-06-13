@@ -1,5 +1,7 @@
 # Host/Core Boundary Map
 
+> **Status: Strategic planning reference.** This boundary map guides future extraction but does not override subsystem GDDs or approved schema contracts.
+
 ## Purpose
 
 This document maps the current console prototype into future Convergence framework responsibilities. It is a planning aid for the eventual split between reusable core logic and host-specific presentation.

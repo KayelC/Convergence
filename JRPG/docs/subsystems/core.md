@@ -1,5 +1,7 @@
 # Core Subsystem
 
+> **Status: Current implementation reference.** This chapter describes the legacy console runtime, not the approved redesign vocabulary.
+
 ## Purpose
 
 `Core` defines shared gameplay vocabulary and small value helpers used by every major subsystem. It is the lowest-level gameplay module: battle, field, fusion, entities, data, and services all rely on these enums and result types.

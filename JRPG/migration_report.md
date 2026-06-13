@@ -1,5 +1,7 @@
 # Migration Report
 
+> **Status: Historical discarded-data report.** This report describes the abandoned legacy-to-v2 dataset conversion. It is retained only as migration evidence and must not define the redesign schema, vocabulary, or content requirements.
+
 ## Summary
 - Total skills converted successfully: 410
 - Total entities converted successfully: 304
