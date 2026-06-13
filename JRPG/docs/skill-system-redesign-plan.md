@@ -282,7 +282,7 @@ After schema code exists, expand the reference pack in small commits to cover:
 
 ### Test Usage
 
-`Convergence.Tests/CleanDataMigrationTests.cs` should be replaced or renamed because the work is no longer a data migration. Recommended replacement:
+`Convergence.Tests/CleanDataMigrationTests.cs` remains in place while the older experimental schema still exists. Replace or rename it when that implementation is removed in the later domain, schema, and legacy-removal tracks. The target test organization is:
 
 ```text
 Convergence.Tests/SkillSystem/
@@ -302,6 +302,19 @@ Tests should locate fixtures from `AppContext.BaseDirectory/Data/Jsons` until a 
 - The entity denies `ice` but references the passive Ice Boost skill.
 - Loading fixtures does not affect `Database.LoadData` or the console prototype.
 - Fixture JSON parses before schema implementation begins.
+
+### Track 2 Completion Record
+
+- Completed on June 13, 2026 on branch `skill-system-redesign`.
+- The original one-entry reference pack and fixture test were introduced in commit `e890843` (`Added Samples and Update Plan`).
+- Track 1 aligned Ice Boost with the finalized `when` condition contract in commit `687c66d` (`testdata: align redesign fixture with skill contract`).
+- The completed pack retains exactly one skill, one entity, and one race; the manifest contains exactly the three corresponding document mappings.
+- The fixture test now verifies schema versions, unique manifest types and paths, manifest file resolution and parsing, cross-document references, passive inheritance metadata, and the Ice-denying fusion-fodder invariant.
+- Targeted fixture verification passed: 1 passed, 0 failed, 0 skipped.
+- Full verification passed: 238 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore`.
+- The existing nullable-reference and DTO-initialization warnings remain outside Track 2.
+- The fixture JSON, runtime APIs, DTOs, schema validators, and `Database.LoadData` were not changed by the completion pass.
+- Broader active-skill and invalid-content fixtures remain deferred until the schema and validation tracks exist.
 
 ## Track 3: Domain Definitions
 
