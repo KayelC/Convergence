@@ -19,8 +19,9 @@ This documentation describes the JRPG console prototype as both a gameplay syste
 5. [Bridge Contracts](bridge-contracts.md) defines the shared command/result/cancel pattern for future bridge and adapter refactors.
 6. [Refactor Roadmap](refactor-roadmap.md) lays out the migration path from console prototype to reusable framework.
 7. [Skill System GDD](skill-system-gdd.md) defines the target elements, skill taxonomy, effects, passives, and inheritance groups.
-8. [Content Schema v1 Proposal](content-schema-v1-proposal.md) proposes the replacement content model to approve before further data migration.
-9. Subsystem chapters:
+8. [Skill System Redesign Plan](skill-system-redesign-plan.md) defines the implementation tracks, test gates, compatibility strategy, and cleanup criteria.
+9. [Content Schema v1 Proposal](content-schema-v1-proposal.md) proposes the replacement content model to approve before further data migration.
+10. Subsystem chapters:
    - [Core](subsystems/core.md)
    - [Data](subsystems/data.md)
    - [Entities](subsystems/entities.md)
