@@ -73,13 +73,14 @@ This redesign does not require:
 
 ## Baseline Facts
 
-The current repository has three parallel representations:
+After Track 3, the branch has two intentional representations during migration:
 
 | Representation | Current role | Key files |
 | --- | --- | --- |
 | Legacy runtime data | Actual source used by the console prototype | `Data/Jsons/skills_database.json`, `Data/Jsons/entity_database.json`, `Data/Database.cs`, `Data/SkillData.cs`, `Data/PersonaData.cs` |
-| Legacy typed adapter | Maps string-driven runtime DTOs into experimental typed definitions | `Data/SkillDefinitionMapper.cs`, `Data/GameDataCatalog.cs`, `Data/DataValidation.cs` |
-| Experimental clean schema | Test-only, not connected to runtime | `Data/Definitions/`, `Data/Schemas/`, `Data/Catalogs/GameDataCatalog.cs`, `Convergence.Tests/CleanDataMigrationTests.cs` |
+| Redesign domain | Immutable definitions that implement the approved GDD vocabulary but are not yet loaded by runtime | `Data/Definitions/`, `Convergence.Tests/SkillSystem/` |
+
+The discarded typed adapter and one-payload clean-schema experiment were removed in Track 3. They had no console runtime consumers.
 
 The generated `skills_database_v2.json` and `entity_database_v2.json` are not loaded by `Database.LoadData`. They are obsolete source material once the redesign fixtures and contracts are established.
 
@@ -282,7 +283,7 @@ After schema code exists, expand the reference pack in small commits to cover:
 
 ### Test Usage
 
-`Convergence.Tests/CleanDataMigrationTests.cs` remains in place while the older experimental schema still exists. Replace or rename it when that implementation is removed in the later domain, schema, and legacy-removal tracks. The target test organization is:
+Track 3 removes `Convergence.Tests/CleanDataMigrationTests.cs` with the older experimental schema. Redesign tests use this target organization:
 
 ```text
 Convergence.Tests/SkillSystem/
@@ -405,17 +406,36 @@ Passive records should use ordinary effects for triggers and bounded modifier de
 - A definition can represent Ice Boost as a passive `damage_dealt` modifier filtered to Ice.
 - Definitions do not reference legacy `SkillData` or `PersonaData`.
 
+### Track 3 Implementation Scope
+
+- Replace the definition namespace in place with immutable skill, entity, race, and ailment records.
+- Add canonical `ContentId` values, closed GDD enums, typed conditions, ordered effects, passive triggers, and bounded modifiers.
+- Remove the unused mapper/schema/catalog experiment and its two sample files and test classes.
+- Preserve `Database`, `SkillData`, `PersonaData`, the generated v2 datasets, and all console runtime consumers.
+
+### Track 3 Completion Record
+
+- Completed on June 13, 2026 on branch `skill-system-redesign`.
+- Added canonical `ContentId`, closed GDD vocabularies, typed targeting/amount/duration/condition primitives, the complete approved effect hierarchy, passive triggers and modifiers, and immutable skill definitions.
+- Replaced the entity definition and added race and ailment definitions with separate elemental affinities, ailment resistances, instant-death resistances, inheritance policy, turn behavior, and recovery data.
+- Every supplied collection is copied into a read-only snapshot; only registered custom handlers and formulas expose copied parameter dictionaries.
+- Removed the unused mapper, validation, schema, and catalog experiment, its duplicate definitions, its two old sample files, and its two dedicated test classes.
+- `Database`, `SkillData`, `PersonaData`, `Database.LoadData`, the generated v2 datasets, and all four redesign reference fixtures remain unchanged.
+- Targeted domain verification passed: 22 passed, 0 failed, 0 skipped.
+- Full verification passed: 243 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore`.
+- `dotnet build JRPG.sln --no-restore` completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- All four redesign fixture documents parsed successfully, `git diff --check` passed, and source searches found no obsolete payload/mapper/schema symbols or legacy runtime types referenced by the new definition namespace.
+- Completion commit: `data: replace experimental skill schema contracts`.
+
 ## Track 4: Schema DTOs And Deserialization
 
 ### Purpose
 
 Deserialize JSON into structural DTOs without executing rules or inferring behavior from text.
 
-### Current Code To Replace
+### Starting Point
 
-- `Data/Schemas/SkillDataSchema.cs`
-- `Data/Schemas/EntityDataSchema.cs`
-- `Data/Schemas/SchemaValidationResult.cs` may be retained and expanded if its shape remains useful.
+Track 3 removed the obsolete `Data/Schemas` experiment. This track creates new structural DTOs for the approved domain definitions without carrying forward the one-payload schema or its validator.
 
 ### Proposed Location
 
@@ -535,9 +555,8 @@ Expose validated immutable content through one repository surface and remove amb
 
 ### Current Code To Consolidate
 
-- `Data/GameDataCatalog.cs`
-- `Data/Catalogs/GameDataCatalog.cs`
-- `Data/Database.cs`
+- `Data/Database.cs` remains the legacy runtime source during consumer migration.
+- No redesign catalog exists yet; the two unused experimental catalog classes were removed in Track 3.
 
 ### Proposed Code Shape
 
@@ -868,12 +887,8 @@ Generated and experimental migration artifacts:
 - `Data/Jsons/skills_database_v2.json`
 - `Data/Jsons/entity_database_v2.json`
 - `migration_report.md`
-- `Data/SkillDefinitionMapper.cs`
-- `Convergence.Tests/SkillDefinitionMapperTests.cs`
-- superseded files under `Data/Definitions/` and `Data/Schemas/`
-- duplicate `Data/SkillDefinitions.cs`
-- obsolete `Data/GameDataCatalog.cs`
-- outdated `Convergence.Tests/CleanDataMigrationTests.cs`
+
+The mapper, duplicate definitions, experimental schemas/catalogs, old sample files, and their tests were already removed in Track 3 because they were not used by the console runtime.
 
 Legacy runtime artifacts, removed only after all consumers migrate:
 
