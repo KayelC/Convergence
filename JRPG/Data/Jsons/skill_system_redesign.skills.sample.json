@@ -16,12 +16,10 @@
           "type": "damage_dealt",
           "operation": "multiply",
           "value": 1.25,
-          "conditions": [
-            {
-              "type": "effect_element_is",
-              "elementId": "ice"
-            }
-          ]
+          "when": {
+            "type": "effect_element_is",
+            "elementId": "ice"
+          }
         }
       ]
     }

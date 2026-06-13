@@ -20,10 +20,13 @@ public sealed class SkillSystemRedesignFixtureTests
         string skillId = RequireString(skill, "id");
         Assert.Equal("passive", RequireString(skill, "activation"));
         Assert.Equal("passive", RequireString(skill, "inheritanceGroupId"));
+        Assert.Null(skill["menuGroup"]);
 
         JObject modifier = Assert.IsType<JObject>(Assert.Single(RequireArray(skill, "modifiers")));
-        JObject condition = Assert.IsType<JObject>(Assert.Single(RequireArray(modifier, "conditions")));
+        JObject condition = modifier["when"] as JObject
+            ?? throw new InvalidOperationException("Sample modifier is missing its when condition.");
         Assert.Equal("ice", RequireString(condition, "elementId"));
+        Assert.Null(modifier["conditions"]);
 
         JObject groupPolicy = entity["inheritanceRules"]?["groupPolicy"] as JObject
             ?? throw new InvalidOperationException("Sample entity is missing inheritanceRules.groupPolicy.");

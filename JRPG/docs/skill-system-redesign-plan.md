@@ -231,15 +231,20 @@ Data/Schemas/SkillSystem/
 - All JSON examples parse.
 - Every Track 1 contract decision is explicit in the GDD, proposal, and this plan.
 
-### Documentation Reconciliation Record
+### Track 1 Completion Record
 
-- Reconciled on June 13, 2026 as the first Track 1 pass.
+- Completed on June 13, 2026 on branch `skill-system-redesign`, starting from commit `98bd805` (`Docs update`).
 - Added explicit documentation authority and status labels.
 - Corrected obsolete skill examples and resistance vocabulary in the schema proposal.
 - Preserved current runtime and technical documents as labeled migration references rather than deleting them.
 - Marked the older refactor roadmap as historical for skill-system work.
 - Finalized inheritance placement and precedence, passive menu validation, effect failure semantics, condition shape, modifier stacking, instant-death channels, affinity precedence, and mutation constraints.
-- Starting commit for the final contract pass: `98bd805` (`Docs update`).
+- Contract commit: `26a05f2` (`docs: finalize skill system contract`).
+- Parsed 34 embedded JSON examples and all 4 redesign fixture documents successfully.
+- `dotnet test JRPG.sln --no-restore`: 238 passed, 0 failed, 0 skipped.
+- `git diff --check` passed.
+- Targeted searches found no rejected element fields, `resistanceElementId`, `mutationTier`, Oracle handler example, or obsolete JSON `conditions` property in the target contract and fixture.
+- The repository retains its pre-existing nullable-reference and DTO-initialization warnings; warning remediation remains outside Track 1.
 - No runtime or gameplay code is changed by this pass.
 
 ## Track 2: Reference Fixtures
