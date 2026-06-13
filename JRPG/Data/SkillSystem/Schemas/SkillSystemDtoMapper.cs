@@ -1,0 +1,445 @@
+using System.Collections.ObjectModel;
+using System.Text.Json;
+using JRPGPrototype.Data.Definitions;
+
+namespace JRPGPrototype.Data.SkillSystem.Schemas;
+
+internal sealed class SchemaMappingException(string path, string message, string? discriminator = null)
+    : Exception(message)
+{
+    public string Path { get; } = path;
+    public string? Discriminator { get; } = discriminator;
+}
+
+internal static class SkillSystemDtoMapper
+{
+    public static ContentPackManifest Map(ManifestDto dto)
+    {
+        return new ContentPackManifest(
+            dto.SchemaVersion,
+            NormalizePackId(dto.Id),
+            dto.Version,
+            dto.DisplayName,
+            dto.Description,
+            (dto.Dependencies ?? []).Select(NormalizePackId),
+            dto.Documents.Select(document => new ContentPackDocumentReference(document.Type, document.Path)));
+    }
+
+    public static DeserializedContentDocument<SkillDefinition> Map(SkillDocumentDto dto)
+    {
+        return new DeserializedContentDocument<SkillDefinition>(
+            dto.SchemaVersion,
+            dto.Skills.Select((record, index) => MapSkill(record, $"$.skills[{index}]")));
+    }
+
+    public static DeserializedContentDocument<EntityDefinition> Map(EntityDocumentDto dto)
+    {
+        return new DeserializedContentDocument<EntityDefinition>(dto.SchemaVersion, dto.Entities.Select(MapEntity));
+    }
+
+    public static DeserializedContentDocument<RaceDefinition> Map(RaceDocumentDto dto)
+    {
+        return new DeserializedContentDocument<RaceDefinition>(dto.SchemaVersion, dto.Races.Select(MapRace));
+    }
+
+    public static DeserializedContentDocument<AilmentDefinition> Map(AilmentDocumentDto dto)
+    {
+        return new DeserializedContentDocument<AilmentDefinition>(dto.SchemaVersion, dto.Ailments.Select(MapAilment));
+    }
+
+    private static SkillDefinition MapSkill(SkillDto dto, string path)
+    {
+        List<PassiveTriggerDto> triggers = dto.Triggers ?? [];
+        List<RuleModifierDto> modifiers = dto.Modifiers ?? [];
+        List<EffectDto> effects = dto.Effects ?? [];
+        List<SkillCostDto> costs = dto.Costs ?? [];
+
+        if (dto.Activation == SkillActivation.Active && (triggers.Count > 0 || modifiers.Count > 0))
+        {
+            throw new SchemaMappingException(path, "Active skills cannot declare passive triggers or modifiers.");
+        }
+
+        if (dto.Activation == SkillActivation.Passive && (dto.Targeting is not null || effects.Count > 0))
+        {
+            throw new SchemaMappingException(path, "Passive skills cannot declare active targeting or effects.");
+        }
+
+        if (dto.Activation == SkillActivation.Passive && dto.Availability is not null)
+        {
+            throw new SchemaMappingException(path + ".availability", "Passive skills omit availability; their triggers define runtime context.");
+        }
+
+        return new SkillDefinition(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.Activation,
+            dto.MenuGroup,
+            dto.InheritanceGroupId,
+            new SkillInheritanceDefinition(
+                dto.Inheritance.IsInheritable,
+                (dto.Inheritance.ExclusiveOwnerEntityIds ?? []).Select(Id)),
+            dto.Mutation is null ? null : new SkillMutationDefinition(Id(dto.Mutation.FamilyId), dto.Mutation.Tier),
+            costs.Select(MapCost),
+            dto.Targeting is null ? null : MapTargeting(dto.Targeting),
+            effects.Select(MapEffect),
+            triggers.Select(MapTrigger),
+            modifiers.Select(MapModifier),
+            dto.Availability is null
+                ? null
+                : new SkillAvailabilityDefinition(dto.Availability.Contexts.Select(Id)));
+    }
+
+    private static SkillCostDefinition MapCost(SkillCostDto dto) =>
+        new(Id(dto.ResourceId), MapAmount(dto.Amount), dto.CanReduceToZero);
+
+    private static TargetingDefinition MapTargeting(TargetingDto dto) =>
+        new(
+            dto.Relation,
+            dto.Selection,
+            dto.LifeState,
+            dto.AllowSelf,
+            dto.Count is null ? null : new TargetCountDefinition(dto.Count.Minimum, dto.Count.Maximum));
+
+    private static AmountDefinition MapAmount(AmountDto dto) => dto.Type switch
+    {
+        "flat" => new FlatAmountDefinition(((ValueAmountDto)dto).Value),
+        "percent_max" => new PercentMaximumAmountDefinition(((ValueAmountDto)dto).Value),
+        "percent_current" => new PercentCurrentAmountDefinition(((ValueAmountDto)dto).Value),
+        "full" => new FullAmountDefinition(),
+        "power" => new PowerAmountDefinition(((PowerAmountDto)dto).Power),
+        "formula" => new FormulaAmountDefinition(
+            Id(((FormulaAmountDto)dto).FormulaId),
+            MapParameters(((FormulaAmountDto)dto).Parameters)),
+        _ => throw new InvalidOperationException($"Unsupported amount type '{dto.Type}'.")
+    };
+
+    private static DurationDefinition MapDuration(DurationDto dto) => dto.Type switch
+    {
+        "instant" => new InstantDurationDefinition(),
+        "turns" => new TurnDurationDefinition(
+            ((TurnDurationDto)dto).Value,
+            Id(((TurnDurationDto)dto).Tick),
+            ((TurnDurationDto)dto).SuspendWhileReserve),
+        "phase" => new PhaseDurationDefinition(Id(((PhaseDurationDto)dto).PhaseId)),
+        "battle" => new BattleDurationDefinition(),
+        "permanent" => new PermanentDurationDefinition(),
+        _ => throw new InvalidOperationException($"Unsupported duration type '{dto.Type}'.")
+    };
+
+    private static CriticalDefinition MapCritical(CriticalDto dto) => dto.Mode switch
+    {
+        "never" => new NeverCriticalDefinition(),
+        "chance" => new ChanceCriticalDefinition(((ChanceCriticalDto)dto).Chance),
+        _ => throw new InvalidOperationException($"Unsupported critical mode '{dto.Mode}'.")
+    };
+
+    private static InstantDeathResistanceCheckDefinition MapResistanceCheck(InstantDeathResistanceCheckDto dto) =>
+        dto.Mode switch
+        {
+            "channel" => new ChannelInstantDeathResistanceCheckDefinition(
+                ((ChannelInstantDeathResistanceCheckDto)dto).ChannelId),
+            "none" => new NoInstantDeathResistanceCheckDefinition(),
+            _ => throw new InvalidOperationException($"Unsupported instant-death mode '{dto.Mode}'.")
+        };
+
+    private static ConditionDefinition MapCondition(ConditionDto dto)
+    {
+        if (dto is AllConditionDto all)
+        {
+            return new AllConditionDefinition(all.All.Select(MapCondition));
+        }
+
+        if (dto is AnyConditionDto any)
+        {
+            return new AnyConditionDefinition(any.Any.Select(MapCondition));
+        }
+
+        if (dto is NotConditionDto not)
+        {
+            return new NotConditionDefinition(MapCondition(not.Not));
+        }
+
+        string type = dto.Type ?? throw new InvalidOperationException("Leaf condition has no type.");
+        ConditionSubject subject = type.StartsWith("actor_", StringComparison.Ordinal)
+            ? ConditionSubject.Actor
+            : ConditionSubject.Target;
+
+        return dto switch
+        {
+            ResourcePercentageConditionDto resource => new ResourcePercentageConditionDefinition(
+                subject, Id(resource.ResourceId), resource.Comparison, resource.Value),
+            HasAilmentConditionDto ailment => new HasAilmentConditionDefinition(
+                subject, ailment.AilmentIds.Select(Id)),
+            HasSkillConditionDto skill => new HasSkillConditionDefinition(subject, Id(skill.SkillId)),
+            HasBuffConditionDto buff => new HasBuffConditionDefinition(subject, Id(buff.ModifierTrackId)),
+            HasAffinityConditionDto affinity => new HasAffinityConditionDefinition(
+                subject, affinity.ElementId, affinity.AffinityId),
+            HasCapabilityConditionDto capability => new HasCapabilityConditionDefinition(
+                subject, Id(capability.CapabilityId)),
+            LifeStateConditionDto life => new LifeStateConditionDefinition(subject, life.LifeState),
+            AllowedIdsConditionDto allowed when type == "battle_kind" =>
+                new BattleKindConditionDefinition(allowed.Allowed.Select(Id)),
+            AllowedIdsConditionDto allowed when type == "moon_phase" =>
+                new MoonPhaseConditionDefinition(allowed.Allowed.Select(Id)),
+            PartySizeConditionDto party => new PartySizeConditionDefinition(party.Comparison, party.Value),
+            ChanceConditionDto chance => new ChanceConditionDefinition(chance.Chance),
+            EffectElementConditionDto element => new EffectElementConditionDefinition(element.ElementId),
+            CustomConditionDto custom => new CustomConditionDefinition(
+                Id(custom.HandlerId), MapParameters(custom.Parameters)),
+            _ => throw new InvalidOperationException($"Unsupported condition type '{type}'.")
+        };
+    }
+
+    private static EffectDefinition MapEffect(EffectDto dto)
+    {
+        ConditionDefinition? when = dto.When is null ? null : MapCondition(dto.When);
+        return dto.Type switch
+        {
+            "damage" => MapDamage((DamageEffectDto)dto, when),
+            "instant_kill" => new InstantKillEffectDefinition(
+                ((InstantKillEffectDto)dto).Chance,
+                MapResistanceCheck(((InstantKillEffectDto)dto).ResistanceCheck),
+                when,
+                dto.OnFailure),
+            "apply_ailment" => new ApplyAilmentEffectDefinition(
+                Id(((ApplyAilmentEffectDto)dto).AilmentId),
+                ((ApplyAilmentEffectDto)dto).Chance,
+                ((ApplyAilmentEffectDto)dto).Duration is null
+                    ? null
+                    : MapDuration(((ApplyAilmentEffectDto)dto).Duration!),
+                when,
+                dto.OnFailure),
+            "restore_resource" => MapRestore((ResourceAmountEffectDto)dto, when),
+            "remove_ailment" => MapRemoveAilment((RemoveAilmentEffectDto)dto, when),
+            "revive" => MapRevive((ResourceAmountEffectDto)dto, when),
+            "modify_stat_stage" => MapStatStage((ModifyStatStageEffectDto)dto, when),
+            "grant_charge" => MapCharge((GrantChargeEffectDto)dto, when),
+            "grant_shield" => MapShield((GrantShieldEffectDto)dto, when),
+            "override_affinity" => MapAffinity((OverrideAffinityEffectDto)dto, when),
+            "remove_status_effect" => MapRemoveStatus((RemoveStatusEffectDto)dto, when),
+            "reduce_resource" => MapReduce((ResourceAmountEffectDto)dto, when),
+            "set_resource" => MapSet((ResourceAmountEffectDto)dto, when),
+            "analyze" => new AnalyzeEffectDefinition(((AnalyzeEffectDto)dto).Layers, when, dto.OnFailure),
+            "escape" => new EscapeEffectDefinition(
+                Id(((EscapeEffectDto)dto).EligibilityRuleId), ((EscapeEffectDto)dto).Chance, when, dto.OnFailure),
+            "custom" => new CustomEffectDefinition(
+                Id(((CustomEffectDto)dto).HandlerId),
+                MapParameters(((CustomEffectDto)dto).Parameters),
+                when,
+                dto.OnFailure),
+            _ => throw new InvalidOperationException($"Unsupported effect type '{dto.Type}'.")
+        };
+    }
+
+    private static DamageEffectDefinition MapDamage(DamageEffectDto dto, ConditionDefinition? when) =>
+        new(dto.ElementId, dto.Power, dto.Accuracy, MapCritical(dto.Critical),
+            new HitCountDefinition(dto.Hits.Minimum, dto.Hits.Maximum, dto.Hits.Distribution),
+            dto.Drain, when, dto.OnFailure);
+
+    private static RestoreResourceEffectDefinition MapRestore(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
+        new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);
+
+    private static RemoveAilmentEffectDefinition MapRemoveAilment(RemoveAilmentEffectDto dto, ConditionDefinition? when) =>
+        new(dto.Scope, dto.AilmentIds.Select(Id), dto.AilmentGroupIds.Select(Id), when, dto.OnFailure);
+
+    private static ReviveEffectDefinition MapRevive(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
+        new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);
+
+    private static ModifyStatStageEffectDefinition MapStatStage(
+        ModifyStatStageEffectDto dto, ConditionDefinition? when) =>
+        new(dto.ModifierTrackIds.Select(Id), dto.StageDelta,
+            dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+
+    private static GrantChargeEffectDefinition MapCharge(GrantChargeEffectDto dto, ConditionDefinition? when) =>
+        new(dto.Charge, dto.Multiplier, dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+
+    private static GrantShieldEffectDefinition MapShield(GrantShieldEffectDto dto, ConditionDefinition? when) =>
+        new(dto.Shield, dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+
+    private static OverrideAffinityEffectDefinition MapAffinity(
+        OverrideAffinityEffectDto dto, ConditionDefinition? when) =>
+        new(dto.ElementIds, dto.AffinityId, MapDuration(dto.Duration), when, dto.OnFailure);
+
+    private static RemoveStatusEffectDefinition MapRemoveStatus(
+        RemoveStatusEffectDto dto, ConditionDefinition? when) =>
+        new(dto.StatusKinds, dto.StatusIds.Select(Id), when, dto.OnFailure);
+
+    private static ReduceResourceEffectDefinition MapReduce(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
+        new(Id(dto.ResourceId), MapAmount(dto.Amount), dto.CanReduceToZero, when, dto.OnFailure);
+
+    private static SetResourceEffectDefinition MapSet(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
+        new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);
+
+    private static PassiveTriggerDefinition MapTrigger(PassiveTriggerDto dto) =>
+        new(Id(dto.EventId), dto.Effects.Select(MapEffect), dto.When is null ? null : MapCondition(dto.When));
+
+    private static RuleModifierDefinition MapModifier(RuleModifierDto dto)
+    {
+        ConditionDefinition? when = dto.When is null ? null : MapCondition(dto.When);
+        return dto switch
+        {
+            NumericRuleModifierDto numeric => new NumericRuleModifierDefinition(
+                ParseNumericModifierType(numeric.Type), numeric.Operation, numeric.Value, when),
+            ElementalAffinityRuleModifierDto affinity => new ElementalAffinityRuleModifierDefinition(
+                affinity.ElementId, affinity.AffinityId, when),
+            BasicAttackRuleModifierDto attack => new BasicAttackRuleModifierDefinition(
+                attack.ElementId,
+                attack.Targeting is null ? null : MapTargeting(attack.Targeting),
+                attack.Drain,
+                when),
+            _ => throw new InvalidOperationException($"Unsupported modifier type '{dto.Type}'.")
+        };
+    }
+
+    private static NumericRuleModifierType ParseNumericModifierType(string type) => type switch
+    {
+        "damage_dealt" => NumericRuleModifierType.DamageDealt,
+        "damage_taken" => NumericRuleModifierType.DamageTaken,
+        "accuracy" => NumericRuleModifierType.Accuracy,
+        "evasion" => NumericRuleModifierType.Evasion,
+        "critical_chance" => NumericRuleModifierType.CriticalChance,
+        "ailment_infliction" => NumericRuleModifierType.AilmentInfliction,
+        "ailment_resistance" => NumericRuleModifierType.AilmentResistance,
+        "healing_received" => NumericRuleModifierType.HealingReceived,
+        "healing_given" => NumericRuleModifierType.HealingGiven,
+        "resource_cost" => NumericRuleModifierType.ResourceCost,
+        "maximum_resource" => NumericRuleModifierType.MaximumResource,
+        "experience_gain" => NumericRuleModifierType.ExperienceGain,
+        _ => throw new InvalidOperationException($"Unsupported numeric modifier type '{type}'.")
+    };
+
+    private static EntityDefinition MapEntity(EntityDto dto) =>
+        new(
+            Id(dto.Id), dto.DisplayName, dto.Description, Id(dto.EntityKind), Id(dto.RaceId), dto.Rank, dto.BaseLevel,
+            new EntityCapabilitiesDefinition(
+                dto.Capabilities.Recruitable, dto.Capabilities.FusionEligible, dto.Capabilities.CompendiumEligible),
+            new EntityInheritanceRulesDefinition(
+                new InheritanceGroupPolicyDefinition(
+                    dto.InheritanceRules.GroupPolicy.Mode, dto.InheritanceRules.GroupPolicy.GroupIds),
+                (dto.InheritanceRules.BlockedSkillIds ?? []).Select(Id),
+                (dto.InheritanceRules.AllowedSkillIds ?? []).Select(Id)),
+            dto.Stats.Select(pair => KeyValuePair.Create(Id(pair.Key), pair.Value)),
+            (dto.ElementalAffinities ?? []).Select(pair => KeyValuePair.Create(ParseElement(pair.Key), pair.Value)),
+            (dto.AilmentResistances ?? []).Select(pair => KeyValuePair.Create(Id(pair.Key), pair.Value)),
+            (dto.InstantDeathResistances ?? []).Select(
+                pair => KeyValuePair.Create(ParseInstantDeathChannel(pair.Key), pair.Value)),
+            (dto.BaseSkillIds ?? []).Select(Id),
+            (dto.SkillUnlocks ?? []).Select(unlock => new SkillUnlockDefinition(unlock.Level, Id(unlock.SkillId))));
+
+    private static RaceDefinition MapRace(RaceDto dto) =>
+        new(Id(dto.Id), dto.DisplayName, (dto.AlignmentIds ?? []).Select(Id),
+            dto.NegotiationPersonalityId is null ? null : Id(dto.NegotiationPersonalityId));
+
+    private static AilmentDefinition MapAilment(AilmentDto dto) =>
+        new(
+            Id(dto.Id), dto.DisplayName, dto.Description, MapDuration(dto.DefaultDuration),
+            MapTurnBehavior(dto.TurnBehavior),
+            new AilmentModifiersDefinition(
+                dto.Modifiers.EvasionMultiplier,
+                dto.Modifiers.CriticalChanceTakenBonus,
+                dto.Modifiers.DamageTakenMultiplier,
+                dto.Modifiers.DamageDealtMultiplier,
+                dto.Modifiers.IsRigidBody),
+            new AilmentRecoveryDefinition(
+                dto.Recovery.Natural is null
+                    ? null
+                    : new NaturalAilmentRecoveryDefinition(
+                        dto.Recovery.Natural.BaseChance,
+                        Id(dto.Recovery.Natural.StatId),
+                        dto.Recovery.Natural.StatMultiplier),
+                (dto.Recovery.RemoveOnEvents ?? []).Select(Id)),
+            (dto.GroupIds ?? []).Select(Id),
+            dto.ExclusivityGroupId is null ? null : Id(dto.ExclusivityGroupId),
+            (dto.Triggers ?? []).Select(MapTrigger));
+
+    private static AilmentTurnBehaviorDefinition MapTurnBehavior(AilmentTurnBehaviorDto dto) => dto.Type switch
+    {
+        "normal" => new NormalAilmentTurnBehaviorDefinition(),
+        "skip" => new SkipAilmentTurnBehaviorDefinition(),
+        "limited_actions" => new LimitedActionsAilmentTurnBehaviorDefinition(
+            (((LimitedActionsAilmentTurnBehaviorDto)dto).AllowedActionIds ?? []).Select(Id)),
+        "chance_skip" => new ChanceSkipAilmentTurnBehaviorDefinition(
+            ((ChanceSkipAilmentTurnBehaviorDto)dto).SkipChance),
+        "chance_skip_or_flee" => new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
+            ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).SkipChance,
+            ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).FleeChance,
+            ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).DemonFleeOutcome),
+        "forced_basic_attack" => new ForcedBasicAttackAilmentTurnBehaviorDefinition(),
+        "confused_action" => new ConfusedActionAilmentTurnBehaviorDefinition(),
+        "custom" => new CustomAilmentTurnBehaviorDefinition(
+            Id(((CustomAilmentTurnBehaviorDto)dto).HandlerId),
+            MapParameters(((CustomAilmentTurnBehaviorDto)dto).Parameters)),
+        _ => throw new InvalidOperationException($"Unsupported ailment turn behaviour '{dto.Type}'.")
+    };
+
+    private static IEnumerable<KeyValuePair<string, object?>> MapParameters(
+        IReadOnlyDictionary<string, JsonElement>? parameters) =>
+        (parameters ?? new Dictionary<string, JsonElement>(StringComparer.Ordinal))
+            .Select(pair => KeyValuePair.Create(pair.Key, MapJsonValue(pair.Value)));
+
+    private static object? MapJsonValue(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Null => null,
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.String => value.GetString(),
+        JsonValueKind.Number when value.TryGetInt64(out long integer) => integer,
+        JsonValueKind.Number => MapJsonNumber(value),
+        JsonValueKind.Array => Array.AsReadOnly(value.EnumerateArray().Select(MapJsonValue).ToArray()),
+        JsonValueKind.Object => new ReadOnlyDictionary<string, object?>(
+            value.EnumerateObject().ToDictionary(
+                property => property.Name,
+                property => MapJsonValue(property.Value),
+                StringComparer.Ordinal)),
+        _ => throw new InvalidOperationException($"Unsupported custom parameter token '{value.ValueKind}'.")
+    };
+
+    private static decimal MapJsonNumber(JsonElement value)
+    {
+        if (value.TryGetDecimal(out decimal number))
+        {
+            return number;
+        }
+
+        throw new ArgumentException("Custom parameter numbers must fit in a signed 64-bit integer or decimal value.");
+    }
+
+    private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static string NormalizePackId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Content pack ID cannot be empty.", nameof(value));
+        }
+
+        string normalized = value.Trim().ToLowerInvariant();
+        foreach (string segment in normalized.Split('.'))
+        {
+            _ = ContentId.Parse(segment);
+        }
+
+        return normalized;
+    }
+
+    private static DamageElement ParseElement(string value) => value switch
+    {
+        "physical" => DamageElement.Physical,
+        "fire" => DamageElement.Fire,
+        "ice" => DamageElement.Ice,
+        "electric" => DamageElement.Electric,
+        "wind" => DamageElement.Wind,
+        "light" => DamageElement.Light,
+        "dark" => DamageElement.Dark,
+        "almighty" => DamageElement.Almighty,
+        _ => throw new ArgumentException($"Unknown damage element '{value}'.", nameof(value))
+    };
+
+    private static InstantDeathChannel ParseInstantDeathChannel(string value) => value switch
+    {
+        "light" => InstantDeathChannel.Light,
+        "dark" => InstantDeathChannel.Dark,
+        _ => throw new ArgumentException($"Unknown instant-death channel '{value}'.", nameof(value))
+    };
+}

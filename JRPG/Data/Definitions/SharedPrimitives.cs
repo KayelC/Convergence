@@ -121,3 +121,13 @@ public sealed record SkillInheritanceDefinition : IEquatable<SkillInheritanceDef
 }
 
 public sealed record SkillMutationDefinition(ContentId FamilyId, int Tier);
+
+public sealed record SkillAvailabilityDefinition
+{
+    public SkillAvailabilityDefinition(IEnumerable<ContentId> contextIds)
+    {
+        ContextIds = DefinitionCollections.Snapshot(contextIds);
+    }
+
+    public IReadOnlyList<ContentId> ContextIds { get; }
+}

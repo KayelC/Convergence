@@ -15,7 +15,8 @@ public sealed record SkillDefinition
         TargetingDefinition? targeting = null,
         IEnumerable<EffectDefinition>? effects = null,
         IEnumerable<PassiveTriggerDefinition>? triggers = null,
-        IEnumerable<RuleModifierDefinition>? modifiers = null)
+        IEnumerable<RuleModifierDefinition>? modifiers = null,
+        SkillAvailabilityDefinition? availability = null)
     {
         Id = id;
         DisplayName = displayName;
@@ -30,6 +31,7 @@ public sealed record SkillDefinition
         Effects = DefinitionCollections.Snapshot(effects);
         Triggers = DefinitionCollections.Snapshot(triggers);
         Modifiers = DefinitionCollections.Snapshot(modifiers);
+        Availability = availability;
     }
 
     public ContentId Id { get; }
@@ -45,4 +47,5 @@ public sealed record SkillDefinition
     public IReadOnlyList<EffectDefinition> Effects { get; }
     public IReadOnlyList<PassiveTriggerDefinition> Triggers { get; }
     public IReadOnlyList<RuleModifierDefinition> Modifiers { get; }
+    public SkillAvailabilityDefinition? Availability { get; }
 }

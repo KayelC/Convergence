@@ -369,6 +369,34 @@ Only a mechanic that cannot be expressed clearly through the shared vocabulary m
 
 Oracle and other Navigator abilities are not skills available to the player's demon or Persona stock. They belong to a separate Navigator support mechanic comparable to a dedicated support character system. They are excluded from this skill schema, inheritance rules, mutation rules, and ordinary skill menus. A future Navigator contract may reuse shared effects where useful, but it must remain a separate system.
 
+## Content Loading And Host Portability
+
+JSON is an authoring and import format, not the runtime contract presented to a game host. The reusable framework exposes immutable definitions and serializer-neutral loading interfaces. Schema DTOs, JSON converters, `JsonElement`, serializer options, filesystem paths, and engine types must not appear in domain or host-facing APIs.
+
+The redesigned content path uses `System.Text.Json`. Newtonsoft.Json remains temporarily for the legacy `Database` loader only and must not be introduced into redesigned content types. This keeps the new framework on the .NET built-in serializer, reduces its dependency surface, and supports trimming and future ahead-of-time exports more directly. Godot can consume NuGet packages, but that capability does not require the framework to retain a second JSON library. See the [Godot C# documentation on NuGet packages](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#using-nuget-packages-in-godot).
+
+All redesigned JSON metadata is source-generated. Reflection fallback is not part of the supported content path. This requirement protects trimming and AOT compatibility and makes every concrete schema DTO an explicit part of the import contract.
+
+Hosts provide JSON text and a diagnostic source name to the framework. The host owns how that text is obtained, including ordinary files, Godot `res://` resources, archives, editor imports, remote content, or tests. Godot resources, scenes, portraits, models, animations, and presentation asset paths remain host-owned and are not embedded into the portable content-loading API.
+
+### Skill Availability
+
+Active skills declare the execution contexts in which a host may offer them:
+
+```json
+{
+  "availability": {
+    "contexts": ["battle", "field"]
+  }
+}
+```
+
+- Contexts are extensible content IDs, not a closed Godot-specific enum.
+- `battle` and `field` are the initial registered contexts, but another host may register additional framework-compatible contexts.
+- Availability controls whether an active skill can be selected in a context; it does not change the skill's effects, menu group, or inheritance group.
+- Passive skills omit availability because their registered triggers determine where they operate.
+- Structural deserialization preserves authored context order. Validation requires active availability to be present and nonempty, rejects availability on passives, and checks every context against the runtime registry.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -385,3 +413,5 @@ Oracle and other Navigator abilities are not skills available to the player's de
 12. Effect conditions use one per-target `when` tree; false conditions skip rather than fail.
 13. Authored failure policy controls ordinary effect failures but never overrides battle interruptions.
 14. Passive modifier stacking and affinity precedence are fixed subsystem rules, not authored priorities.
+15. JSON and engine-specific types remain behind the content-loading boundary; hosts consume immutable definitions.
+16. Active availability uses registered context IDs, while passive operation is determined by triggers.

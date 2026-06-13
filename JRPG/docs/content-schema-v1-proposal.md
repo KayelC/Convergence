@@ -131,15 +131,17 @@ A content pack may split a content type across multiple files. The manifest dete
 }
 ```
 
-Each content document uses the same envelope:
+Each content document uses the same metadata envelope and a type-named record array. The named array makes the document type visible without inspecting the manifest and matches the initial redesign fixtures:
 
 ```json
 {
   "$schema": "../../../Schemas/skills.schema.json",
   "schemaVersion": 1,
-  "records": []
+  "skills": []
 }
 ```
+
+The equivalent arrays are `entities`, `races`, and `ailments` for those document types. `$schema` is optional authoring metadata; `schemaVersion` and the type-named array are part of the imported document shape.
 
 ## Identity Rules
 
@@ -376,6 +378,22 @@ Skills have one of two activation models:
 Active skills require one of the GDD's bounded `menuGroup` values for presentation and AI filtering. Passive skills are displayed through `activation: passive` and validation rejects `menuGroup` on them. Menu placement does not select the execution implementation. Generic tags are deliberately excluded from Schema v1: behavior that matters to rules should use an explicit field, effect, group ID, or capability flag.
 
 Every skill has one top-level `inheritanceGroupId`. The nested `inheritance` object contains `isInheritable` and owner-exclusivity data. Mutation is separate optional metadata under `mutation`; it is not part of inheritance.
+
+### Availability
+
+Active skills declare supported execution contexts with this wire shape:
+
+```json
+{
+  "availability": {
+    "contexts": ["battle", "field"]
+  }
+}
+```
+
+Context values are extensible `ContentId` references rather than a closed engine enum. `battle` and `field` are the initial framework contexts. A host may register additional contexts without placing Godot, filesystem, or presentation concepts in the domain model.
+
+Passive skills omit `availability`; their triggers declare when they operate. Track 4 preserves availability structurally. Track 5 validation requires every active skill to provide at least one context, rejects availability on passive skills, and rejects context IDs that are not registered by the active ruleset or host.
 
 ### Active Skill Example
 
@@ -1213,7 +1231,7 @@ Example:
 
 ```text
 [convergence.core] skills/core.json
-Skill 'venom_needle' at $.records[12].effects[1].ailmentId:
+Skill 'venom_needle' at $.skills[12].effects[1].ailmentId:
 Unknown ailment ID 'poisn'. Did you mean 'poison'?
 ```
 

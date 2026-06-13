@@ -441,26 +441,22 @@ Track 3 removed the obsolete `Data/Schemas` experiment. This track creates new s
 
 ```text
 Data/SkillSystem/Schemas/
-  SkillDocumentDto.cs
-  SkillDto.cs
-  EffectDtos.cs
-  PassiveDtos.cs
-  EntityDocumentDto.cs
-  EntityDto.cs
-  RaceDocumentDto.cs
-  AilmentDocumentDto.cs
+  SchemaDtos.cs
+  SchemaConverters.cs
+  SkillSystemDtoMapper.cs
+  SkillSystemJsonContext.cs
+Data/SkillSystem/
+  ContentDeserializationContracts.cs
+  SkillSystemJsonDeserializer.cs
 ```
 
 ### JSON Technology
 
-The project currently uses Newtonsoft.Json. Either continue with it during the redesign or adopt `System.Text.Json` deliberately in one isolated decision. Do not mix serializers across content types without a documented reason.
+The redesigned content path uses `System.Text.Json` with source-generated metadata. Newtonsoft.Json remains only in the unchanged legacy `Database` loader until legacy removal.
 
-If Newtonsoft.Json remains:
+This is a framework-boundary decision rather than a Godot integration decision. Hosts provide JSON text and receive immutable definitions through serializer-neutral interfaces. DTOs, converters, serializer options, `JsonElement`, filesystem access, `res://`, and Godot types remain internal or host-owned. Source generation is required so the import path remains compatible with trimming and future AOT exports.
 
-- use a custom converter for effect and condition discriminators,
-- reject unknown `type` values,
-- preserve JSON paths for diagnostics,
-- configure missing-member handling for strict content validation.
+Structural parsing is strict and case-sensitive. It rejects unknown properties, enum values, discriminators, ambiguous union shapes, comments, trailing commas, and wrong JSON token types while preserving diagnostic source names and JSON paths.
 
 ### Mapping Rules
 
@@ -468,6 +464,7 @@ If Newtonsoft.Json remains:
 - Mapping must not inspect `displayName` or `description` to choose behavior.
 - Mapping must not derive passive inheritance from modifier filters.
 - Mapping must reject an active skill with triggers/modifiers and a passive skill with active targeting/effects unless the final contract explicitly permits that shape.
+- Active skill availability maps to immutable context IDs; passive skills omit it. Presence, nonempty contexts, and context registration are Track 5 validation rules.
 
 ### Exit Criteria
 
@@ -475,6 +472,22 @@ If Newtonsoft.Json remains:
 - Unknown discriminators fail with actionable errors.
 - Display text changes do not alter the resulting definition.
 - No legacy parser is called during clean-schema deserialization.
+- Public framework APIs expose no serializer, legacy DTO, filesystem, or Godot types.
+- Every concrete schema DTO resolves through source-generated metadata.
+
+### Completion Record
+
+- Added serializer-neutral manifest and document-loading contracts plus `SkillSystemJsonDeserializer`; public signatures expose immutable definitions and diagnostic values only.
+- Added internal source-generated DTO metadata, strict converters, and DTO-to-domain mapping for skills, entities, races, ailments, all approved effects, conditions, amounts, durations, passive modifiers, and ailment turn behaviours.
+- Added immutable active-skill availability using extensible context IDs. Presence, nonempty contexts, and context registration remain Track 5 validation responsibilities.
+- The redesigned path uses `System.Text.Json`; Newtonsoft.Json and `Database.LoadData` remain unchanged for legacy content only.
+- Schema-focused verification passed: 25 passed, 0 failed, 0 skipped.
+- Combined fixture, domain-definition, and schema verification passed: 48 passed, 0 failed, 0 skipped.
+- Full verification passed: 268 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo`.
+- `dotnet build JRPG.sln --no-restore --nologo -t:Rebuild` completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- Strict-reader tests cover unknown properties and discriminators, exact property and enum casing, wrong token types, explicit nulls, comments, trailing commas, and ambiguous condition nodes with source-aware diagnostics.
+- Public-boundary and metadata tests confirm that serializer/Godot/legacy types do not leak and that every concrete schema DTO resolves without reflection fallback.
+- Completion commit: `data: add portable skill schema deserialization`.
 
 ## Track 5: Validation And Diagnostics
 
