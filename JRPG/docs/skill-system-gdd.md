@@ -50,7 +50,8 @@ almighty
 - Recovery, curing, buffs, debuffs, ailments, and passives are not elements.
 - Every ailment uses its own resistance entry, such as `poison`, `sleep`, or `fear`, with one of: `vulnerable`, `normal`, `resistant`, or `immune`.
 - Ailment groups may support broad cures or passive modifiers, but they never replace the target's ailment-specific resistance entry.
-- Instant death is separate from both elemental affinity and ailment resistance and uses the same four-value resistance vocabulary. Its final channel model remains a Track 1 contract decision.
+- Instant death is separate from both elemental affinity and ailment resistance. Hama-line skills check the `light` instant-death channel and Mudo-line skills check the `dark` instant-death channel. Each channel uses `vulnerable`, `normal`, `resistant`, or `immune`.
+- Conditional instant death may explicitly bypass those channels. Eternal Rest uses no resistance channel: each sleeping eligible target is defeated, while a target that is not sleeping is skipped.
 - Basic weapon attacks deal `physical` damage. Slash, Strike, and Pierce may survive as descriptive weapon or animation metadata, but they are not damage elements or affinities.
 
 ## Activation
@@ -77,7 +78,7 @@ Active skills use one primary menu group for presentation and AI filtering:
 | `debuff` | Harmful stat-stage changes and similar penalties. |
 | `utility` | Analysis, escape, shields, affinity breaks, and other tactical tools. |
 
-Mixed skills use the group that best describes their primary purpose. A physical attack with a poison chance remains `offense`. Passive skills are displayed separately through `activation: passive` and do not require a passive menu group.
+Mixed skills use the group that best describes their primary purpose. A physical attack with a poison chance remains `offense`. Every active skill declares exactly one `menuGroup`. Passive skills are displayed separately through `activation: passive`, and must not declare `menuGroup`.
 
 Menu groups organize skills; they do not choose runtime implementations.
 
@@ -109,6 +110,38 @@ Buff and debuff are two directions of the same effect. A positive `stageDelta` i
 Recovery, curing, and revival remain distinct effects even though they share the `recovery` menu and inheritance groups. This permits composition such as Salvation restoring HP and curing ailments in one action.
 
 Damage drain, conditional execution, multiple hits, critical behavior, and secondary ailments are properties or additional effects, not new behavior categories.
+
+## Effect Conditions And Failure
+
+Every effect may declare one optional `when` condition tree. Conditions compose through `all`, `any`, and `not` nodes rather than a separate conditions-array format. An effect condition is evaluated independently for each target immediately before that effect executes.
+
+```json
+{
+  "when": {
+    "all": [
+      { "type": "target_has_ailment", "ailmentIds": ["sleep"] },
+      { "not": { "type": "target_has_skill", "skillId": "sleep_immunity" } }
+    ]
+  }
+}
+```
+
+Each effect may declare `onFailure` with one of these values:
+
+| Policy | Result |
+| --- | --- |
+| `continue` | Continue with the next effect for the same target. This is the default when omitted. |
+| `stop_target` | Skip remaining effects for this target, but continue processing other targets. |
+| `stop_action` | Stop all remaining effects and targets for the action. |
+
+Effect outcomes are distinguished deliberately:
+
+- `success`: the effect resolved validly, including a heal capped by maximum HP or another valid operation that produces no net state change.
+- `failure`: a miss, failed chance roll, or resistance result that prevents the intended effect. The effect's `onFailure` policy applies.
+- `skipped`: the effect's `when` condition is false. A skipped effect does not activate `onFailure`; execution continues.
+- `interrupted`: a battle rule such as Repel ends or redirects execution. Interruptions override authored failure policy.
+
+This permits a damage-plus-ailment skill to use `stop_target` on its damage effect so Poison is not attempted after a miss, while Salvation can continue from a full-HP restore into ailment removal.
 
 ## Passive Vocabulary
 
@@ -148,7 +181,17 @@ A rule modifier continuously changes a bounded calculation or rule:
 | `basic_attack` | Change attack element, targeting, or drain behavior. |
 | `experience_gain` | Reserve or personal EXP modifiers. |
 
-Modifier stacking rules must be defined by the affected subsystem. They must not be inferred from skill names.
+Modifier stacking rules are defined by the affected subsystem and must not be inferred from skill names. JSON modifiers declare only their modifier type, operation, value, and optional `when` condition tree; they do not author arbitrary stacking groups or numeric priorities.
+
+Applicable damage multipliers such as Boost and Amp compose multiplicatively. Other modifier types use their subsystem's fixed policy, documented and tested alongside that subsystem.
+
+Elemental-affinity passives use one deterministic effective response. After collecting the base affinity and applicable passive replacements, the strongest response wins in this order:
+
+```text
+absorb > repel > null > resist > normal > weak
+```
+
+Active reflection/protection shields take priority over that result. When no shield applies, an active Break effect temporarily normalizes the affected affinity. Almighty remains normal regardless of base affinities or passives.
 
 ## Inheritance Groups
 
@@ -175,6 +218,18 @@ There is a dedicated `passive` inheritance group. Every skill with `activation: 
 This separation is deliberate. An Ice Boost passive may contain `affectedElementId: ice`, but its inheritance group remains `passive`. A demon that cannot inherit active Ice skills may therefore inherit Ice Boost and pass it to a child demon. This supports intentionally building fusion-fodder demons without weakening elemental inheritance restrictions.
 
 Passive inheritance may still be restricted through explicit skill blocks, owner exclusivity, or a rule that denies the entire `passive` group. The element or ailment referenced by a passive modifier does not implicitly restrict its inheritance.
+
+Every skill declares its single `inheritanceGroupId` as a top-level field beside `activation` and, for active skills, `menuGroup`. The nested `inheritance` object contains eligibility and owner-exclusivity data rather than classification.
+
+Entity inheritance checks use this fixed precedence:
+
+1. Reject a skill with `isInheritable: false`.
+2. Reject an owner-exclusive skill when the child is not an allowed owner.
+3. Reject a skill listed by `blockedSkillIds`.
+4. Permit a skill listed by `allowedSkillIds`, even when its group is denied.
+5. Apply the entity's group allow-list or deny-list policy.
+
+An explicit allow entry never overrides non-inheritable or owner-exclusive restrictions. Validation rejects a skill ID that appears in both explicit lists.
 
 | Skill | Activation | Menu group | Inheritance group |
 | --- | --- | --- | --- |
@@ -206,6 +261,7 @@ The existing fusion-accident skill mutation mechanic is preserved. Mutation meta
 
 - `familyId` identifies skills that may mutate into one another.
 - `tier` gives the skill's ordered position within that family.
+- Tiers are positive integers starting at one, and each `(familyId, tier)` pair must be unique.
 - A mutation may move only to a valid adjacent tier in the same family.
 - A skill without mutation metadata does not participate in skill mutation.
 - Mutation eligibility does not make a skill inheritable; normal inheritance and exclusivity checks still apply.
@@ -220,8 +276,46 @@ The existing fusion-accident skill mutation mechanic is preserved. Mutation meta
   "menuGroup": "offense",
   "inheritanceGroupId": "physical",
   "effects": [
-    { "type": "damage", "elementId": "physical", "power": 60 },
+    {
+      "type": "damage",
+      "elementId": "physical",
+      "power": 60,
+      "onFailure": "stop_target"
+    },
     { "type": "apply_ailment", "ailmentId": "poison", "chance": 40 }
+  ]
+}
+```
+
+```json
+{
+  "id": "hama",
+  "activation": "active",
+  "menuGroup": "offense",
+  "inheritanceGroupId": "light",
+  "effects": [
+    {
+      "type": "instant_kill",
+      "chance": 30,
+      "resistanceCheck": { "mode": "channel", "channelId": "light" }
+    }
+  ]
+}
+```
+
+```json
+{
+  "id": "eternal_rest",
+  "activation": "active",
+  "menuGroup": "offense",
+  "inheritanceGroupId": "ailment",
+  "effects": [
+    {
+      "type": "instant_kill",
+      "chance": 100,
+      "resistanceCheck": { "mode": "none" },
+      "when": { "type": "target_has_ailment", "ailmentIds": ["sleep"] }
+    }
   ]
 }
 ```
@@ -288,3 +382,6 @@ Oracle and other Navigator abilities are not skills available to the player's de
 9. Skill mutation metadata is explicit and separate from inheritance metadata.
 10. Ailment resistance is keyed by ailment ID, never by a damage element or broad affinity family.
 11. Navigator abilities are outside the demon and Persona stock skill contract.
+12. Effect conditions use one per-target `when` tree; false conditions skip rather than fail.
+13. Authored failure policy controls ordinary effect failures but never overrides battle interruptions.
+14. Passive modifier stacking and affinity precedence are fixed subsystem rules, not authored priorities.

@@ -218,6 +218,7 @@ The ruleset document declares the vocabulary available to other content document
   "defaults": {
     "affinityId": "normal",
     "ailmentResistanceId": "normal",
+    "instantDeathResistanceId": "normal",
     "buffDurationTurns": 3,
     "ailmentDurationTurns": 3,
     "maximumActivePartySize": 4
@@ -317,7 +318,7 @@ Supported v1 conditions should be limited to mechanics the engine already unders
 - chance roll,
 - `all`, `any`, and `not` composition.
 
-Unusual conditions use a registered custom condition handler.
+Unusual conditions use a registered custom condition handler. Effects and rule modifiers expose one optional `when` property containing this tree. Arrays named `conditions` are not part of the contract. An effect's `when` tree is evaluated once per target immediately before that effect executes.
 
 ## Effect Model
 
@@ -346,7 +347,7 @@ The skill effect vocabulary must match the GDD:
 
 Inventory rewards, currency rewards, and permanent skill grants are wider gameplay operations, not ordinary skill effects. Their contracts belong to the owning reward, field, or progression subsystem.
 
-Effects may include a condition and may need explicit partial-failure behavior. The exact condition scope and multi-effect failure shape remain open Track 1 decisions; the following illustrates the requirement without approving the final field names:
+Effects may include an optional `when` tree and an optional `onFailure` policy:
 
 ```json
 {
@@ -357,6 +358,14 @@ Effects may include a condition and may need explicit partial-failure behavior. 
 }
 ```
 
+`onFailure` accepts:
+
+- `continue`: continue with the next effect for this target; this is the default when omitted,
+- `stop_target`: skip later effects for this target while continuing other targets,
+- `stop_action`: stop the remaining effects and targets for the action.
+
+Misses, failed chance rolls, and resistance outcomes that prevent the intended effect are failures. A false `when` condition is skipped and does not activate `onFailure`. A valid effect that produces no net state change, such as healing a target already at maximum HP, is still successful. Battle interruptions such as Repel override authored failure policy.
+
 ## Skill Schema
 
 Skills have one of two activation models:
@@ -364,9 +373,9 @@ Skills have one of two activation models:
 - `active`: selected and executed as an action.
 - `passive`: responds to registered runtime events.
 
-Active skills use the GDD's bounded `menuGroup` for presentation and AI filtering. Passive skills do not require `menuGroup` and are displayed through `activation: passive`; Track 1 must still decide whether the final schema merely ignores or formally forbids that field on passives. Menu placement does not select the execution implementation. Generic tags are deliberately excluded from Schema v1: behavior that matters to rules should use an explicit field, effect, group ID, or capability flag.
+Active skills require one of the GDD's bounded `menuGroup` values for presentation and AI filtering. Passive skills are displayed through `activation: passive` and validation rejects `menuGroup` on them. Menu placement does not select the execution implementation. Generic tags are deliberately excluded from Schema v1: behavior that matters to rules should use an explicit field, effect, group ID, or capability flag.
 
-Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional metadata under `mutation`; it is not part of the inheritance object. The current examples use a top-level inheritance-group field to match the reference fixture, but Track 1 must still formally close that placement decision before DTO implementation.
+Every skill has one top-level `inheritanceGroupId`. The nested `inheritance` object contains `isInheritable` and owner-exclusivity data. Mutation is separate optional metadata under `mutation`; it is not part of inheritance.
 
 ### Active Skill Example
 
@@ -399,7 +408,8 @@ Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional
       "power": 62,
       "accuracy": 76,
       "critical": { "mode": "chance", "chance": 24 },
-      "hits": { "minimum": 1, "maximum": 1 }
+      "hits": { "minimum": 1, "maximum": 1 },
+      "onFailure": "stop_target"
     },
     {
       "type": "apply_ailment",
@@ -518,6 +528,7 @@ Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional
     {
       "type": "instant_kill",
       "chance": 100,
+      "resistanceCheck": { "mode": "none" },
       "when": {
         "type": "target_has_ailment",
         "ailmentIds": ["sleep"]
@@ -534,6 +545,21 @@ Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional
   }
 }
 ```
+
+Hama- and Mudo-line effects use an explicit channel check rather than a damage element:
+
+```json
+{
+  "type": "instant_kill",
+  "chance": 30,
+  "resistanceCheck": {
+    "mode": "channel",
+    "channelId": "light"
+  }
+}
+```
+
+`channelId` accepts `light` or `dark`. `mode: none` is explicit and is used by Eternal Rest after its Sleep condition passes; omission is invalid rather than silently bypassing resistance.
 
 ### Passive Skill Example
 
@@ -565,6 +591,37 @@ Every skill has one explicit `inheritanceGroupId`. Mutation is separate optional
   }
 }
 ```
+
+### Rule Modifier Passive Example
+
+```json
+{
+  "id": "ice_boost",
+  "displayName": "Ice Boost",
+  "description": "Increases Ice damage by 25 percent.",
+  "activation": "passive",
+  "inheritanceGroupId": "passive",
+  "inheritance": { "isInheritable": true },
+  "modifiers": [
+    {
+      "type": "damage_dealt",
+      "operation": "multiply",
+      "value": 1.25,
+      "when": { "type": "effect_element_is", "elementId": "ice" }
+    }
+  ]
+}
+```
+
+Rule modifiers declare their type, operation, value, and optional `when` tree. Stacking groups and numeric priorities are not authored. Applicable Boost/Amp-style damage multipliers compose multiplicatively; every other modifier type follows a fixed code-owned subsystem policy.
+
+Elemental-affinity passives choose the strongest applicable response from the base affinity and passive replacements:
+
+```text
+absorb > repel > null > resist > normal > weak
+```
+
+An active shield overrides that result. If no shield applies, an active Break effect temporarily normalizes it. Almighty always resolves as normal.
 
 ### Navigator Abilities
 
@@ -688,7 +745,7 @@ Inheritance checks use this precedence:
 4. `allowedSkillIds` permits an explicit exception to the group policy.
 5. All other skills follow `groupPolicy`.
 
-Validation rejects the same skill ID appearing in both explicit lists.
+An explicit allow never overrides `isInheritable: false` or owner exclusivity. Validation rejects the same skill ID appearing in both explicit lists.
 
 ## Entity Schema
 
@@ -731,6 +788,10 @@ An entity definition is an immutable species or character template. A summoned d
     "poison": "resistant",
     "sleep": "vulnerable"
   },
+  "instantDeathResistances": {
+    "light": "normal",
+    "dark": "immune"
+  },
   "baseSkillIds": ["ember_flicker"],
   "skillUnlocks": [
     { "level": 6, "skillId": "flame_instinct" },
@@ -745,6 +806,7 @@ Important decisions:
 - Missing elemental affinities use the ruleset default.
 - Missing ailment-resistance entries use the ruleset's normal resistance default.
 - Ailment resistance is keyed by ailment ID and accepts only `vulnerable`, `normal`, `resistant`, or `immune`.
+- Instant-death resistance is keyed by the fixed `light` and `dark` channels and uses the same four resistance values.
 - `skillUnlocks` is a list so multiple skills may unlock at one level.
 - Explicit capability fields determine system eligibility instead of generic tags or name/race checks.
 - Negotiation personality defaults from the race. Entity-specific negotiation overrides are deferred until a concrete use case requires them.
@@ -1135,7 +1197,7 @@ Validation happens in two stages.
 - every entity in an encounter exists,
 - every fusion race/entity/profile reference exists,
 - all handler, formula, strategy, condition, trigger, and effect IDs are registered,
-- mutation families and tiers are coherent,
+- mutation tiers are positive integers starting at one, each family/tier pair is unique, and mutations target only an adjacent tier in the same family,
 - duplicate unordered fusion parent pairs are rejected,
 - content-pack dependency versions are satisfied.
 
@@ -1211,6 +1273,11 @@ The Skill System GDD has already settled ordered effects, presentation-only disp
 - Eternal Rest is an active Offense skill in the `ailment` inheritance group because Sleep is its defining prerequisite.
 - Oracle and other Navigator abilities are excluded from the demon/Persona stock skill contract and deferred to a dedicated future system.
 - Basic weapon damage uses the `physical` element.
+- `inheritanceGroupId` is top-level; explicit allowed skill IDs override group policy but not non-inheritable or owner-exclusive restrictions.
+- Active skills require `menuGroup`; passive skills forbid it.
+- Effects use one per-target `when` tree and optional `onFailure`, which defaults to `continue`.
+- Hama and Mudo use explicit Light/Dark instant-death resistance channels; Eternal Rest explicitly bypasses them after its Sleep condition passes.
+- Modifier stacking is code-owned, Boost/Amp-style damage multipliers compose multiplicatively, and affinity passives use the fixed strongest-response precedence.
 - Active definitions should support a list of costs. Most skills will have zero or one, but the schema should not need revision for a dual-resource action.
 - Passive mechanics should use passive skill definitions in v1. Entities and equipment grant passive skill IDs instead of embedding a second trigger format.
 - Equipment should grant skill IDs and stat modifiers. It should not embed anonymous passive behavior in v1.
@@ -1264,7 +1331,6 @@ This fixture becomes the executable definition of Schema v1. Full content should
 
 The broad architecture is now narrow enough to implement, but these content-policy choices still merit explicit approval:
 
-- Should `allowedSkillIds` override the inheritance-group policy as proposed, or should it only narrow an `allow_list` further?
 - Should every race have a negotiation personality, or should non-negotiable races omit it?
 - Are the three capability booleans sufficient for Schema v1, or is another concrete eligibility rule already required?
 - Should shops and negotiation remain in the first implementation pass, or follow battle, entities, encounters, and fusion in a second pass?

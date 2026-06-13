@@ -189,25 +189,25 @@ Turn the GDD decisions into an exact schema contract before writing DTOs. This p
 - Oracle and other Navigator abilities are outside the demon/Persona stock skill contract and are deferred to a dedicated future system.
 - Basic weapon damage uses `physical`; Slash, Strike, and Pierce are not affinities.
 
-### Schema Questions That Must Be Closed
+### Finalized Schema Contract
 
-1. Whether `inheritanceGroupId` is a top-level skill field or nested under an `inheritance` object.
-2. Whether `allowedSkillIds` overrides a denied group. Recommended answer: yes, as an explicit exception after owner/exclusivity checks.
-3. Whether the schema formally forbids `menuGroup` on passive skills or simply omits and ignores it.
-4. How effect failure is represented when a multi-effect skill partially succeeds.
-5. Whether effect conditions are evaluated once per action, once per target, or explicitly declare their scope.
-6. How modifier stacking keys and priorities are declared.
-7. Whether instant death has one resistance channel, Light/Dark-specific channels, or a distinct rule for conditional skills such as Eternal Rest.
-8. Whether affinity-changing passives replace or layer over base affinities.
-
-Active skills require one `menuGroup`; this is no longer an open question because the GDD defines it as an active-skill axis.
+- `inheritanceGroupId` is a top-level skill field. The nested `inheritance` object contains `isInheritable` and owner-exclusivity data.
+- `allowedSkillIds` overrides group policy after non-inheritable, owner-exclusive, and explicit-block checks.
+- Active skills require `menuGroup`; validation rejects `menuGroup` on passive skills.
+- Effects use optional `onFailure`: `continue`, `stop_target`, or `stop_action`. Omission defaults to `continue`.
+- Misses, failed chance rolls, and resistance prevention are failures. False `when` conditions are skipped, valid no-change effects are successful, and battle interruptions override failure policy.
+- Effects and modifiers use one optional `when` expression tree. Effect conditions evaluate independently for each target.
+- Modifier stacking is code-owned. JSON does not author stacking keys or priorities; applicable Boost/Amp-style damage multipliers compose multiplicatively.
+- Hama and Mudo check separate `light` and `dark` instant-death resistance channels. Eternal Rest uses an explicit no-resistance mode after its Sleep condition passes.
+- Elemental-affinity passives use the strongest response from base and passive replacements: `absorb > repel > null > resist > normal > weak`. Shields override it; when no shield applies, Break temporarily normalizes it.
+- Mutation uses optional nested `mutation` metadata. Tiers start at one, family/tier pairs are unique, and only adjacent tiers in the same family are mutation targets.
 
 ### Files
 
 - Revise `docs/content-schema-v1-proposal.md`.
 - Keep `docs/skill-system-gdd.md` as the normative behavior document.
 - Keep `docs/README.md` explicit about document authority and status.
-- Add the eventual JSON Schema files under `Data/Schemas/SkillSystem/` rather than reusing ambiguous legacy filenames.
+- Reserve `Data/Schemas/SkillSystem/` for the eventual JSON Schema files; creating them belongs to the schema/validation tracks, not Track 1.
 
 Proposed schema files:
 
@@ -229,7 +229,7 @@ Data/Schemas/SkillSystem/
 - Mutation metadata is separate from inheritance metadata.
 - Navigator-only abilities do not appear as ordinary skills.
 - All JSON examples parse.
-- The open schema questions above have explicit answers.
+- Every Track 1 contract decision is explicit in the GDD, proposal, and this plan.
 
 ### Documentation Reconciliation Record
 
@@ -238,13 +238,15 @@ Data/Schemas/SkillSystem/
 - Corrected obsolete skill examples and resistance vocabulary in the schema proposal.
 - Preserved current runtime and technical documents as labeled migration references rather than deleting them.
 - Marked the older refactor roadmap as historical for skill-system work.
+- Finalized inheritance placement and precedence, passive menu validation, effect failure semantics, condition shape, modifier stacking, instant-death channels, affinity precedence, and mutation constraints.
+- Starting commit for the final contract pass: `98bd805` (`Docs update`).
 - No runtime or gameplay code is changed by this pass.
 
 ## Track 2: Reference Fixtures
 
 ### Purpose
 
-Provide tiny original datasets that become executable examples of the target contract. These fixtures are not migrated legacy content and must remain easy to inspect in code review. Until Track 1 closes every wire-shape question, they are candidate fixtures that assert approved invariants rather than a final DTO contract.
+Provide tiny original datasets that become executable examples of the target contract. These fixtures are not migrated legacy content and must remain easy to inspect in code review. Track 1 fixes their wire vocabulary; later tracks add DTO and schema validation.
 
 ### Initial One-Entry Fixtures
 
@@ -321,7 +323,9 @@ SkillDefinition
   string Description
   SkillActivation Activation
   SkillMenuGroup? MenuGroup
+  InheritanceGroup InheritanceGroup
   SkillInheritanceDefinition Inheritance
+  SkillMutationDefinition? Mutation
   IReadOnlyList<SkillCostDefinition> Costs
   TargetingDefinition? Targeting
   IReadOnlyList<EffectDefinition> Effects
@@ -339,7 +343,8 @@ SkillActivation
 SkillMenuGroup
 InheritanceGroup
 EffectFailurePolicy
-ConditionEvaluationScope
+InstantDeathResistanceMode
+InstantDeathChannel
 ```
 
 Effect records should derive from `EffectDefinition`, for example:
@@ -451,15 +456,22 @@ Reject invalid content before any runtime service can obtain a catalog.
 - IDs are normalized and case-insensitively unique.
 - Active skills require a menu group and active effect list.
 - Passive skills use inheritance group `passive`.
+- Passive skills reject `menuGroup`; active skills require it.
 - Passive skills define at least one trigger or modifier.
 - Almighty is rejected from entity affinity maps.
 - Entity affinity maps accept only the seven resistible damage elements.
 - Ailment resistance maps cannot use `repel` or `absorb`.
+- Instant-death resistance maps accept only the fixed `light` and `dark` channels and the four resistance levels.
+- `instant_kill` requires a discriminated resistance check using a Light/Dark channel or explicit `none` mode.
+- Effects accept only `continue`, `stop_target`, or `stop_action`; omission means `continue`.
+- Effects and modifiers use one `when` tree and reject the obsolete `conditions` array.
 - Effect chances and accuracy values stay within defined ranges.
 - Costs cannot reduce the actor below allowed bounds.
 - Entity skill references resolve.
 - Entity allow and deny skill lists cannot contain the same ID.
+- Explicit skill allowance cannot override non-inheritable or owner-exclusive restrictions.
 - Fusion inheritance policies refer only to declared inheritance groups.
+- Mutation tiers are positive, family/tier pairs are unique, and mutation families contain no ambiguous duplicate tier.
 - Custom handler IDs must be registered with parameter validators.
 
 ### Diagnostics Shape
@@ -568,10 +580,10 @@ Make the core combat vocabulary match the GDD before active effects depend on it
 - Introduce the eight-element `DamageElement` vocabulary.
 - Collapse legacy Slash, Strike, and Pierce damage into `physical` for new content.
 - Separate `ElementalAffinity` from `ResistanceLevel`.
-- Move instant-death checks away from Curse affinity.
+- Move instant-death checks away from Curse affinity into Light/Dark `ResistanceLevel` channels, with explicit bypass support for conditional mechanics such as Eternal Rest.
 - Ensure Almighty bypasses authored affinity lookup.
 - Update battle knowledge to record elemental affinities separately from ailment knowledge.
-- Decide how legacy basic-attack weapon types map into new `physical` damage during transition.
+- Map legacy basic-attack weapon types into new `physical` damage during transition while retaining weapon-type metadata only where presentation or equipment rules need it.
 
 ### Compatibility Risk
 
@@ -582,6 +594,7 @@ Changing `Core.Element` directly will break broad legacy code. Prefer introducin
 - New skill definitions cannot express removed elements.
 - New entity definitions cannot author Almighty affinity.
 - Instant death uses `ResistanceLevel`, not elemental affinity.
+- Hama/Mudo channel selection and Eternal Rest bypass behavior are covered independently.
 - Damage tests cover all six affinity outcomes and Almighty behavior.
 
 ## Track 8: Active Skill Execution
@@ -637,6 +650,8 @@ The executor should:
 - Add composition tests such as damage plus ailment and heal plus cure.
 - Add result-order tests.
 - Add partial-failure tests.
+- Verify `continue`, `stop_target`, and `stop_action`, including skipped conditions and valid no-change effects.
+- Verify Repel-style interruptions override authored failure policy.
 - Preserve Press Turn tests for weak, critical, miss, null, repel, and absorb outcomes.
 
 ### Exit Criteria
@@ -669,6 +684,8 @@ StackingPolicyRegistry
 ```
 
 The dispatcher subscribes to typed gameplay events. The modifier resolver gathers applicable modifiers for one calculation and applies deterministic stacking rules.
+
+Stacking policies are registered by modifier type in code. Content does not provide stacking groups or numeric priority. Damage multipliers compose multiplicatively. Elemental-affinity resolution uses `absorb > repel > null > resist > normal > weak`, after which shields take priority and Break normalizes only when no shield applies.
 
 ### Initial Passive Coverage
 
