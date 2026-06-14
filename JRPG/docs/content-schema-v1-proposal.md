@@ -797,6 +797,10 @@ Inheritance checks use this precedence:
 
 An explicit allow never overrides `isInheritable: false` or owner exclusivity. Validation rejects the same skill ID appearing in both explicit lists.
 
+The clean runtime uses these authored fields through one typed inheritance evaluator. Preview candidates expose stable policy reason codes, while final selection re-runs the same evaluator before issuing a validated selection. Already-known skills are represented separately from policy rejection, candidate order is preserved after first-occurrence ID deduplication, and display text or effect descriptions never influence eligibility.
+
+The entity and skill schemas do not author an inherited-skill slot count. The caller supplies a nonnegative maximum when it creates an inheritance plan. A later fusion tuning profile may calculate that number, but it must remain separate from the entity's eligibility policy.
+
 ## Entity Schema
 
 An entity definition is an immutable species or character template. A summoned demon, enemy, Persona instance, or party member is runtime state created from this template.
@@ -1202,6 +1206,8 @@ There must be no magic result values such as `-1` or display strings used as ope
 ```
 
 Parent race pairs are unordered. The loader should canonicalize and detect duplicate reversed pairs.
+
+The fusion document above remains a future schema proposal. Track 10 implements only the serializer-neutral inheritance evaluator, plan, and validated-selection boundary over catalog definitions. It does not load fusion documents, adopt the illustrated inheritance-slot strategy, mutate runtime entities, or migrate the legacy Cathedral flow; those integrations begin with the later consumer-migration work.
 
 ## Reference Graph
 

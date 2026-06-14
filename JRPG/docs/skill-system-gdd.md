@@ -277,6 +277,16 @@ Entity inheritance checks use this fixed precedence:
 
 An explicit allow entry never overrides non-inheritable or owner-exclusive restrictions. Validation rejects a skill ID that appears in both explicit lists.
 
+### Runtime Fusion Inheritance
+
+The clean fusion path evaluates the receiving entity and each candidate `SkillDefinition` through one typed inheritance evaluator. The evaluator returns both an allowed flag and a stable reason code: `allowed`, `skill_not_inheritable`, `owner_exclusive`, `explicitly_blocked`, `explicitly_allowed`, `group_denied`, or `group_not_allowed`. Presentation layers may translate those codes, but they must not reproduce or reinterpret the policy rules.
+
+Inheritance planning preserves the authored candidate order and keeps the first occurrence of each skill ID. A candidate that the result already knows remains visible with an `already_known` availability reason, distinct from policy rejection. Final selection re-evaluates candidates through the same evaluator used by the preview, rejects duplicate, unknown, already-known, or ineligible selections, and returns a validated selection only when every choice passes.
+
+The maximum number of inherited skills is supplied by the caller. Track 10 does not define a slot formula or fusion tuning schema; a future fusion profile or host rule may calculate that value before planning. Zero slots and deliberately selecting no skills are both valid.
+
+This clean framework path is additive. The legacy Cathedral planner, preview, transaction, datasets, and console UI remain unchanged until runtime consumer migration. They must not be treated as the normative implementation of these typed rules.
+
 | Skill | Activation | Menu group | Inheritance group |
 | --- | --- | --- | --- |
 | Agi | Active | Offense | Fire |

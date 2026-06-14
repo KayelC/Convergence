@@ -911,10 +911,26 @@ The selected Ice Boost can be inherited by the child if the child's own policy p
 
 ### Exit Criteria
 
-- Fusion preview and transaction use the same evaluator.
+- Clean inheritance preview and final selection validation use the same evaluator.
 - UI can explain why a skill is unavailable without reproducing rules.
 - Tests cover deny-list, allow-list, explicit exceptions, exclusivity, and passive fusion fodder.
-- Legacy `InheritanceType` is no longer consulted by migrated fusion paths.
+- The caller supplies the nonnegative inherited-skill selection limit; no slot formula is adopted in this track.
+- Legacy `InheritanceType` is not consulted by the clean fusion path.
+- The Cathedral planner, preview, transaction, datasets, and console UI remain unchanged for Track 11.
+
+### Completion Record
+
+- Completed on June 14, 2026 on branch `skill-system-redesign`, starting from commit `b6f2766` (`battle: add passive triggers and rule modifiers`).
+- Added the typed `FusionInheritanceEvaluator` with the approved precedence and stable `allowed`, `skill_not_inheritable`, `owner_exclusive`, `explicitly_blocked`, `explicitly_allowed`, `group_denied`, and `group_not_allowed` reason codes.
+- Added immutable inheritance requests, first-occurrence candidate planning, already-known availability, caller-owned nonnegative selection limits, aggregate selection diagnostics, and a validated-selection token that only successful validation can create.
+- Final selection re-evaluates each selected candidate through the evaluator instance that created the preview plan. Duplicate, unknown, already-known, policy-ineligible, and over-limit selections cannot produce a validated result; zero slots and empty selection remain valid.
+- Proved the two-generation fusion-fodder scenario: an Ice-denying recipient rejects active Ice while accepting passive-group Ice Boost, which a later child may inherit when its own policy permits passive skills.
+- The clean path depends only on immutable definitions and `ContentId`. It does not inspect display text, descriptions, effect payloads, legacy inheritance strings, `Database`, `SkillData`, `PersonaData`, JSON serializers, Godot, or filesystem APIs.
+- Focused Track 10 verification passed: 18 passed, 0 failed, 0 skipped.
+- Full verification passed: 420 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --no-build --nologo --verbosity quiet`.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- `git diff --check` and clean-boundary searches passed. The Cathedral planner, preview, transaction, UI, legacy datasets, and `Entities/Persona.cs` remain unchanged for Track 11.
+- Completion commit: `fusion: enforce inheritance group policies`.
 
 ## Track 11: Runtime Consumer Migration
 
