@@ -114,7 +114,9 @@ A content pack may split a content type across multiple files. The manifest dete
   "version": "1.0.0",
   "displayName": "Convergence Core Content",
   "description": "Original reference content for the Convergence framework.",
-  "dependencies": [],
+  "dependencies": [
+    { "id": "convergence.shared", "version": "1.2.0" }
+  ],
   "documents": [
     { "type": "ruleset", "path": "ruleset.json" },
     { "type": "ailments", "path": "ailments/core.json" },
@@ -142,6 +144,10 @@ Each content document uses the same metadata envelope and a type-named record ar
 ```
 
 The equivalent arrays are `entities`, `races`, and `ailments` for those document types. `$schema` is optional authoring metadata; `schemaVersion` and the type-named array are part of the imported document shape.
+
+Dependency entries are objects containing a pack `id` and one exact Semantic Versioning 2.0 `version`. Schema v1 has no version ranges. Prerelease and build metadata are accepted, and build metadata participates in exact dependency matching. A dependency grants visibility only to that pack; dependencies are not re-exported transitively.
+
+Document paths are logical host-provided keys, not filesystem paths. They must be canonical relative paths using forward slashes. The manifest order controls deserialization and diagnostic order regardless of the order in which the host supplies document text.
 
 ## Identity Rules
 
@@ -1224,7 +1230,11 @@ Validation aggregates independent errors in deterministic authored order. Invali
 
 ### 3. Catalog And Dependency Validation
 
-Track 6 will accept only validated-content tokens. It will qualify local IDs, resolve references qualified to dependency packs, validate dependency versions and graphs, reject cross-pack ambiguity, and construct immutable catalogs. Track 5 deliberately accepts an external qualified content reference without resolving it. Host capability references are never deferred and must already exist in the explicit registration snapshot, qualified or not.
+Track 6 accepts host-supplied manifest and document text bundles, invokes Tracks 4 and 5, and then resolves the complete supplied pack graph. It rejects duplicate pack IDs, duplicate/self/missing/cyclic dependencies, exact-version mismatches, malformed logical paths, missing or unexpected documents, and unsupported document types. Independent diagnostics are aggregated in caller, manifest-document, and authored-record order.
+
+Every external content reference must target a directly declared dependency. A transitive dependency does not grant visibility. Cross-pack references are checked for target existence and type, and entity explicit-allow rules are rechecked against external skill inheritance and owner exclusivity.
+
+Successful catalog construction qualifies local record IDs, mutation-family IDs, and references to skills, entities, races, and ailments as `pack.id:local_id`. Already qualified external references remain qualified after resolution. Host capability IDs are never rewritten; resources, events, contexts, stats, groups, handlers, actions, and similar registrations retain their authored identity. Catalog repositories require qualified lookup IDs and expose immutable collections. Any load diagnostic prevents catalog creation.
 
 The broader schema proposal still reserves future catalog validation for items, equipment, shops, encounters, fusion, and other document families when those contracts are implemented.
 

@@ -18,10 +18,12 @@ internal static class SkillSystemDtoMapper
         return new ContentPackManifest(
             dto.SchemaVersion,
             NormalizePackId(dto.Id),
-            dto.Version,
+            SemanticVersion.Parse(dto.Version),
             dto.DisplayName,
             dto.Description,
-            (dto.Dependencies ?? []).Select(NormalizePackId),
+            (dto.Dependencies ?? []).Select(dependency => new ContentPackDependency(
+                NormalizePackId(dependency.Id),
+                SemanticVersion.Parse(dependency.Version))),
             dto.Documents.Select(document => new ContentPackDocumentReference(document.Type, document.Path)));
     }
 
@@ -241,7 +243,7 @@ internal static class SkillSystemDtoMapper
         new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);
 
     private static RemoveAilmentEffectDefinition MapRemoveAilment(RemoveAilmentEffectDto dto, ConditionDefinition? when) =>
-        new(dto.Scope, dto.AilmentIds.Select(Id), dto.AilmentGroupIds.Select(Id), when, dto.OnFailure);
+        new(dto.Scope, (dto.AilmentIds ?? []).Select(Id), (dto.AilmentGroupIds ?? []).Select(Id), when, dto.OnFailure);
 
     private static ReviveEffectDefinition MapRevive(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
         new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);

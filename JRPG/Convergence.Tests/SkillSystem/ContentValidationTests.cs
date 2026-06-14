@@ -386,7 +386,7 @@ public sealed class ContentValidationTests
     public void DocumentDiagnosticsRetainManifestAndSourceProvenance()
     {
         ContentPackManifest manifest = new(
-            2, "test.pack", "1.0.0", "Test", null, null,
+            2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
             [new ContentPackDocumentReference("skills", "declared.skills.json")]);
         var supplied = new SourceContentDocument<SkillDefinition>(
             "undeclared.skills.json",
@@ -414,7 +414,7 @@ public sealed class ContentValidationTests
     public void RecordDiagnosticsFollowManifestThenAuthoredRecordOrder()
     {
         ContentPackManifest manifest = new(
-            1, "test.pack", "1.0.0", "Test", null, null,
+            1, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
             [
                 new ContentPackDocumentReference("races", "races.json"),
                 new ContentPackDocumentReference("skills", "skills.json")
@@ -455,7 +455,7 @@ public sealed class ContentValidationTests
             "skills.json", "skills.json", new DeserializedContentDocument<SkillDefinition>(1, []));
         var supplied = new List<SourceContentDocument<SkillDefinition>> { source };
         SkillSystemValidationRequest request = new(
-            new ContentPackManifest(1, "test.pack", "1.0.0", "Test", null, null,
+            new ContentPackManifest(1, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
                 [new ContentPackDocumentReference("skills", "skills.json")]),
             "manifest.json", snapshot, supplied);
         supplied.Clear();
@@ -518,7 +518,8 @@ public sealed class ContentValidationTests
             new("races", "races.json"),
             new("ailments", "ailments.json")
         ];
-        ContentPackManifest manifest = new(1, "test.pack", "1.0.0", "Test Pack", null, null, references);
+        ContentPackManifest manifest = new(
+            1, "test.pack", SemanticVersion.Parse("1.0.0"), "Test Pack", null, null, references);
         return new SkillSystemValidationRequest(
             manifest,
             "manifest.json",

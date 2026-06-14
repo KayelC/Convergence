@@ -399,7 +399,7 @@ Active skills declare the execution contexts in which a host may offer them:
 
 ### Validation Boundary
 
-Deserialization does not make content runtime-ready. A host submits the complete deserialized pack and an explicit registration snapshot to the serializer-neutral validation service. Validation returns all independent diagnostics it can establish safely. Only a result with no errors contains a `ValidatedSkillSystemContentPack`; that token is the sole Track 6 input for catalog construction and cannot be constructed directly by a host.
+Deserialization does not make content runtime-ready. A host submits the complete text bundle and an explicit registration snapshot to the portable loader, which passes the deserialized pack through the serializer-neutral validation service. Validation returns all independent diagnostics it can establish safely. Only a result with no errors contains a `ValidatedSkillSystemContentPack`; the loader uses that non-constructible token internally before catalog construction.
 
 The registration snapshot contains every host-owned capability used by content: contexts, resources, stats, modifier tracks, events, phases, entity kinds, alignments, negotiation personalities, ailment groups, battle kinds, moon phases, capabilities, actions, statuses, escape rules, supported definition types, formulas, and custom handlers. Validation supplies no hidden defaults. A console host, Godot host, editor, or test harness must state what it supports.
 
@@ -415,6 +415,32 @@ Numeric validation is contract-only:
 Record IDs are local to their document pack. Local references and references qualified with the current pack ID resolve during validation. References qualified to another pack are retained without resolution until Track 6 validates dependencies and constructs the catalog. Host capability IDs are different: they must be present in the registration snapshot even when qualified, because they do not become valid merely by naming another content pack.
 
 Every diagnostic carries the pack ID, diagnostic source, record type and ID when applicable, authored JSON path, stable error code, message, and optional suggestion. Diagnostics retain authored document and record order. Independent errors are aggregated; checks that depend on a duplicate or otherwise ambiguous target are suppressed when their result would be unreliable.
+
+### Catalog Loading And Pack Dependencies
+
+The portable catalog loader receives all content as host-supplied text bundles. A bundle contains manifest JSON, document JSON keyed by logical path, and diagnostic source names. Loading is synchronous because the host has already acquired every text document before invoking the framework. The loader performs no filesystem, Godot resource, archive, network, or asset access.
+
+Manifest dependencies use explicit exact versions:
+
+```json
+{
+  "dependencies": [
+    { "id": "convergence.core", "version": "1.2.0" }
+  ]
+}
+```
+
+- Versions follow strict Semantic Versioning 2.0. Version ranges are not part of schema v1.
+- Dependency matching is exact, including prerelease and build metadata. SemVer precedence still ignores build metadata when versions are ordered.
+- Duplicate packs, duplicate dependencies, self-dependencies, missing dependencies, version mismatches, and dependency cycles are load errors.
+- A pack may reference another pack only when that target is a direct declared dependency. Transitive dependency visibility is intentionally rejected.
+- Independent packs retain caller order; dependency order takes precedence where an edge exists.
+
+Manifest document order is authoritative. Logical document paths must be canonical relative paths using `/`; absolute paths, `.` or `..` segments, backslashes, duplicate paths, missing documents, unexpected documents, and unsupported document types are rejected before catalog construction.
+
+Successful loading qualifies every record ID as `pack.id:local_id`. It also qualifies mutation-family IDs and every reference to a skill, entity, race, or ailment. References already qualified to a resolved direct dependency retain their authored target. Host vocabulary IDs such as resources, stats, events, contexts, groups, handlers, capabilities, and actions remain unchanged because they belong to the registration boundary rather than a content pack.
+
+`GameDataCatalog` exposes immutable qualified-ID dictionaries and repository interfaces for skills, entities, races, and ailments. Repository lookup rejects local IDs so callers cannot accidentally depend on an implicit current pack. Parsing, Track 5 validation, dependency resolution, cross-pack inheritance checks, qualification, and catalog construction report one ordered serializer-neutral diagnostic stream. Any diagnostic prevents catalog exposure.
 
 ## Design Invariants
 
@@ -437,3 +463,5 @@ Every diagnostic carries the pack ID, diagnostic source, record type and ID when
 17. Deserialized content is not catalog-ready until semantic validation produces a validated-content token.
 18. Validation registrations are explicit host input; the framework does not silently register capabilities.
 19. Cross-pack content references are resolved by catalog loading, while host capability references are validated immediately.
+20. Catalog identities and content-record references are always pack-qualified; host vocabulary IDs are never pack-qualified by the loader.
+21. Cross-pack references require a direct exact-version dependency; transitive visibility is not implicit.

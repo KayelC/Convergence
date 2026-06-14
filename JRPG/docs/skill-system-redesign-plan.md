@@ -582,18 +582,19 @@ Convergence.Tests/SkillSystem/
 - Catalog construction, pack dependency graphs, ID qualification, and external-reference resolution remain deferred to Track 6.
 - Completion commit: `data: add skill system validation`.
 
-## Track 6: Catalog And Loader
+## Track 6: Portable Catalog And Loader
 
 ### Purpose
 
-Expose validated immutable content through one repository surface and remove ambiguity between the two current `GameDataCatalog` classes.
+Turn host-supplied JSON text into one validated, dependency-resolved, immutable catalog without introducing filesystem or engine dependencies.
 
-### Current Code To Consolidate
+### Starting State
 
-- `Data/Database.cs` remains the legacy runtime source during consumer migration.
-- No redesign catalog exists yet; the two unused experimental catalog classes were removed in Track 3.
+- Track 4 provides portable strict deserialization through `ISkillSystemDocumentDeserializer`.
+- Track 5 provides semantic pack validation and the non-constructible `ValidatedSkillSystemContentPack` token.
+- `Data/Database.cs` remains the legacy runtime source during consumer migration and is not changed by this track.
 
-### Proposed Code Shape
+### Implemented Code Shape
 
 ```text
 GameDataCatalog
@@ -612,7 +613,13 @@ IAilmentDefinitionRepository
 IRaceDefinitionRepository
 ```
 
-Use a `ContentPackLoader` or `GameDataCatalogBuilder` to perform loading and validation. The catalog constructor should not read files.
+`ContentDocumentText`, `ContentPackTextBundle`, and `SkillSystemCatalogLoadRequest` are immutable host inputs. `ISkillSystemCatalogLoader` and `SkillSystemCatalogLoader` parse manifests and documents, run Track 5, validate dependencies and external references, qualify definitions, and return `CatalogLoadResult`. `RequireCatalog()` throws `CatalogLoadException` when diagnostics exist.
+
+`SemanticVersion` implements strict SemVer 2.0 parsing, comparison, and exact value equality without a package dependency. Manifest dependencies use typed `{ id, version }` objects. Schema v1 requires exact version equality, including prerelease and build metadata.
+
+The loader uses caller bundle order and manifest document order. It rejects noncanonical logical paths, duplicate/missing/unexpected documents, unsupported document types, duplicate packs, invalid dependency graphs, transitive-only references, missing or mistyped external records, and invalid cross-pack explicit inheritance allowances.
+
+Catalog definitions contain canonical qualified record IDs and content-record references. Mutation-family IDs are qualified. Host vocabulary IDs remain unchanged. Repository interfaces require qualified IDs and expose only immutable dictionaries.
 
 ### Compatibility
 
@@ -629,7 +636,25 @@ Do not create a reverse adapter that converts new definitions back into legacy s
 - The reference fixture pack creates a catalog.
 - Repository lookups use IDs, not display names.
 - No catalog exposes mutable collections.
-- Loader tests prove deterministic file ordering and duplicate detection.
+- Loader tests prove deterministic manifest ordering, canonical path enforcement, exact versions, dependency cycles, direct-only visibility, qualification, external reference checks, and duplicate detection.
+- Public catalog APIs expose no JSON serializer, filesystem, Godot, Newtonsoft, or legacy DTO types.
+- `Database.LoadData` and legacy runtime consumers remain unchanged.
+
+### Track 6 Completion Record
+
+- Completed on June 14, 2026 on branch `skill-system-redesign`, starting from commit `69e5463` (`data: add skill system validation`).
+- Added framework-owned strict SemVer 2.0 parsing and typed exact manifest dependencies. Build metadata participates in dependency equality while SemVer ordering follows standard precedence.
+- Added immutable host text bundles, serializer-neutral aggregate load diagnostics, `ISkillSystemCatalogLoader`, `SkillSystemCatalogLoader`, and one immutable `GameDataCatalog` implementing qualified-ID repositories for skills, entities, races, and ailments.
+- Implemented canonical logical path enforcement, manifest-ordered document loading, Track 4 deserialization, Track 5 validation, duplicate pack detection, exact dependency checks, deterministic topological ordering, cycle detection, and direct-dependency-only visibility.
+- Implemented cross-pack target/type resolution and inheritance checks, then cloned validated definitions into canonical catalog definitions with qualified record IDs, mutation-family IDs, and content-record references. Host registration IDs remain unchanged.
+- Added 25 focused catalog-loader and SemVer verification cases covering the reference fixture, two-pack loading, ordering, exact versions, build metadata, malformed content, paths, duplicates, missing dependencies, cycles, transitive-only access, external targets, inheritance, qualification, immutability, and public API portability.
+- Focused catalog verification passed: 25 passed, 0 failed, 0 skipped.
+- Combined skill-system verification passed: 89 passed, 0 failed, 0 skipped.
+- Full verification passed: 309 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo`.
+- `dotnet build JRPG.sln --no-restore --nologo -t:Rebuild` completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- `git diff --check` passed; catalog boundary searches found no JSON serializer, filesystem, Godot, Newtonsoft, or legacy DTO dependencies; `Data/Database.cs` and `JRPG.csproj` remain unchanged.
+- Runtime execution and legacy consumer migration remain deferred to later tracks.
+- Completion commit: `data: add skill system catalog loader`.
 
 ## Track 7: Combat Vocabulary
 

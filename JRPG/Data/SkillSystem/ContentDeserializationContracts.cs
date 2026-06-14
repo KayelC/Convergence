@@ -13,15 +13,17 @@ public interface ISkillSystemDocumentDeserializer
 
 public sealed record ContentPackDocumentReference(string Type, string Path);
 
+public sealed record ContentPackDependency(string Id, SemanticVersion Version);
+
 public sealed record ContentPackManifest
 {
     public ContentPackManifest(
         int schemaVersion,
         string id,
-        string version,
+        SemanticVersion version,
         string displayName,
         string? description,
-        IEnumerable<string>? dependencies,
+        IEnumerable<ContentPackDependency>? dependencies,
         IEnumerable<ContentPackDocumentReference> documents)
     {
         SchemaVersion = schemaVersion;
@@ -29,16 +31,16 @@ public sealed record ContentPackManifest
         Version = version;
         DisplayName = displayName;
         Description = description;
-        Dependencies = Array.AsReadOnly(dependencies?.ToArray() ?? Array.Empty<string>());
+        Dependencies = Array.AsReadOnly(dependencies?.ToArray() ?? Array.Empty<ContentPackDependency>());
         Documents = Array.AsReadOnly(documents.ToArray());
     }
 
     public int SchemaVersion { get; }
     public string Id { get; }
-    public string Version { get; }
+    public SemanticVersion Version { get; }
     public string DisplayName { get; }
     public string? Description { get; }
-    public IReadOnlyList<string> Dependencies { get; }
+    public IReadOnlyList<ContentPackDependency> Dependencies { get; }
     public IReadOnlyList<ContentPackDocumentReference> Documents { get; }
 }
 
