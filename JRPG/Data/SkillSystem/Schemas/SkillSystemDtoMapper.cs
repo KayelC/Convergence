@@ -49,6 +49,41 @@ internal static class SkillSystemDtoMapper
         return new DeserializedContentDocument<AilmentDefinition>(dto.SchemaVersion, dto.Ailments.Select(MapAilment));
     }
 
+    public static DeserializedContentDocument<ItemDefinition> Map(ItemDocumentDto dto)
+    {
+        return new DeserializedContentDocument<ItemDefinition>(
+            dto.SchemaVersion,
+            dto.Items.Select((record, index) => MapItem(record, $"$.items[{index}]")));
+    }
+
+    private static ItemDefinition MapItem(ItemDto dto, string path)
+    {
+        if (dto.ItemKind == ItemKind.Consumable && dto.Usage is null)
+        {
+            throw new SchemaMappingException(path + ".usage", "Consumable items require usage.");
+        }
+
+        if (dto.ItemKind != ItemKind.Consumable && dto.Usage is not null)
+        {
+            throw new SchemaMappingException(path + ".usage", "Only consumable items may declare usage.");
+        }
+
+        return new ItemDefinition(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.ItemKind,
+            dto.StackLimit,
+            dto.BaseValue,
+            dto.Usage is null
+                ? null
+                : new ItemUsageDefinition(
+                    dto.Usage.Contexts.Select(Id),
+                    MapTargeting(dto.Usage.Targeting),
+                    dto.Usage.Effects.Select(MapEffect),
+                    dto.Usage.ConsumeOn));
+    }
+
     private static SkillDefinition MapSkill(SkillDto dto, string path)
     {
         List<PassiveTriggerDto> triggers = dto.Triggers ?? [];

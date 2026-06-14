@@ -93,11 +93,11 @@ public sealed class BattlePassiveCollection
 public sealed record BattleConditionContext
 {
     public BattleConditionContext(
-        BattleActorState actor,
-        BattleActorState target,
-        IEnumerable<BattleActorState> participants,
-        ContentId battleKindId,
-        ContentId moonPhaseId,
+        RuntimeActorState actor,
+        RuntimeActorState target,
+        IEnumerable<RuntimeActorState> participants,
+        ContentId? battleKindId,
+        ContentId? moonPhaseId,
         BattleExecutionServices services,
         IEnumerable<DamageElement>? effectElements = null)
     {
@@ -110,11 +110,11 @@ public sealed record BattleConditionContext
         EffectElements = new ReadOnlySet<DamageElement>(effectElements ?? []);
     }
 
-    public BattleActorState Actor { get; }
-    public BattleActorState Target { get; }
-    public IReadOnlyList<BattleActorState> Participants { get; }
-    public ContentId BattleKindId { get; }
-    public ContentId MoonPhaseId { get; }
+    public RuntimeActorState Actor { get; }
+    public RuntimeActorState Target { get; }
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+    public ContentId? BattleKindId { get; }
+    public ContentId? MoonPhaseId { get; }
     public BattleExecutionServices Services { get; }
     public IReadOnlySet<DamageElement> EffectElements { get; }
 }
@@ -207,7 +207,7 @@ public sealed class RuleModifierResolver
     }
 
     public decimal ResolveNumeric(
-        BattleActorState owner,
+        RuntimeActorState owner,
         NumericRuleModifierType modifierType,
         decimal baseValue,
         RuleModifierContext context)
@@ -221,7 +221,7 @@ public sealed class RuleModifierResolver
     }
 
     public IReadOnlyList<ElementalAffinity> ResolveElementalAffinityReplacements(
-        BattleActorState owner,
+        RuntimeActorState owner,
         DamageElement element,
         RuleModifierContext context) =>
         Array.AsReadOnly(
@@ -232,7 +232,7 @@ public sealed class RuleModifierResolver
                 .ToArray());
 
     public ResistanceLevel ResolveAilmentResistance(
-        BattleActorState owner,
+        RuntimeActorState owner,
         ContentId ailmentId,
         ResistanceLevel baseResistance,
         RuleModifierContext context) =>
@@ -244,7 +244,7 @@ public sealed class RuleModifierResolver
             .MaxBy(GetAilmentResistancePrecedence);
 
     private IEnumerable<RuleModifierDefinition> EnumerateApplicable(
-        BattleActorState owner,
+        RuntimeActorState owner,
         RuleModifierContext context)
     {
         foreach (SkillDefinition skill in owner.Passives.EnabledSkills)
@@ -318,12 +318,12 @@ public sealed record PassiveTriggerDispatchRequest
 {
     public PassiveTriggerDispatchRequest(
         ContentId eventId,
-        BattleActorState owner,
-        IEnumerable<BattleActorState> participants,
-        IEnumerable<BattleActorState> targets,
+        RuntimeActorState owner,
+        IEnumerable<RuntimeActorState> participants,
+        IEnumerable<RuntimeActorState> targets,
         ContentId contextId,
-        ContentId battleKindId,
-        ContentId moonPhaseId)
+        ContentId? battleKindId,
+        ContentId? moonPhaseId)
     {
         EventId = eventId;
         Owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -335,12 +335,12 @@ public sealed record PassiveTriggerDispatchRequest
     }
 
     public ContentId EventId { get; }
-    public BattleActorState Owner { get; }
-    public IReadOnlyList<BattleActorState> Participants { get; }
-    public IReadOnlyList<BattleActorState> Targets { get; }
+    public RuntimeActorState Owner { get; }
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+    public IReadOnlyList<RuntimeActorState> Targets { get; }
     public ContentId ContextId { get; }
-    public ContentId BattleKindId { get; }
-    public ContentId MoonPhaseId { get; }
+    public ContentId? BattleKindId { get; }
+    public ContentId? MoonPhaseId { get; }
 }
 
 public interface IPassiveTriggerDispatcher
@@ -382,7 +382,7 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
 
                 PassiveEventPolicy policy = _policies.Resolve(request.EventId);
                 var activeKey = new ActiveTriggerKey(request.Owner, skill.Id, triggerIndex, request.EventId);
-                foreach (BattleActorState target in request.Targets)
+                foreach (RuntimeActorState target in request.Targets)
                 {
                     if (!policy.AllowReentry && activeTriggers.Contains(activeKey))
                     {
@@ -474,18 +474,21 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         SkillDefinition skill,
         PassiveTriggerDefinition trigger,
         PassiveTriggerDispatchRequest dispatchRequest,
-        BattleActorState target,
+        RuntimeActorState target,
         BattleExecutionServices services)
     {
         var results = new List<EffectExecutionResult>();
-        var request = new SkillExecutionRequest(
-            skill,
+        var request = new EffectActionExecutionRequest(
+            skill.Id,
             dispatchRequest.Owner,
             dispatchRequest.Participants,
-            dispatchRequest.ContextId,
-            dispatchRequest.BattleKindId,
-            dispatchRequest.MoonPhaseId,
-            [target.InstanceId]);
+            new EffectExecutionEnvironment(
+                dispatchRequest.ContextId,
+                dispatchRequest.BattleKindId,
+                dispatchRequest.MoonPhaseId),
+            new TargetingDefinition(TargetRelation.Self, TargetSelection.Single, TargetLifeState.Any, true),
+            [target.InstanceId],
+            skill: skill);
 
         for (int effectIndex = 0; effectIndex < trigger.Effects.Count; effectIndex++)
         {
@@ -536,7 +539,7 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         new(skillId, triggerIndex, eventId, targetId, outcome, []);
 
     private sealed record ActiveTriggerKey(
-        BattleActorState Owner,
+        RuntimeActorState Owner,
         ContentId SkillId,
         int TriggerIndex,
         ContentId EventId);

@@ -12,6 +12,11 @@ namespace JRPGPrototype
                 return new CleanBattleDemoHost(Console.Out).Run();
             }
 
+            if (args.Contains("--clean-field-demo", StringComparer.Ordinal))
+            {
+                return new CleanFieldDemoHost(Console.Out).Run();
+            }
+
             IGameIO io = new ConsoleIO();
             ConsoleGameHost host = new ConsoleGameHost(io);
 

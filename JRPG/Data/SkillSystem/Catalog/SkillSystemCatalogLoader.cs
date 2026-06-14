@@ -6,7 +6,7 @@ namespace JRPGPrototype.Data.SkillSystem.Catalog;
 public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
 {
     private static readonly HashSet<string> SupportedDocumentTypes =
-        ["skills", "entities", "races", "ailments"];
+        ["skills", "entities", "races", "ailments", "items"];
 
     private readonly ISkillSystemDocumentDeserializer _deserializer;
     private readonly ISkillSystemContentValidator _validator;
@@ -142,6 +142,7 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         var entities = new List<SourceContentDocument<EntityDefinition>>();
         var races = new List<SourceContentDocument<RaceDefinition>>();
         var ailments = new List<SourceContentDocument<AilmentDefinition>>();
+        var items = new List<SourceContentDocument<ItemDefinition>>();
         foreach (ContentPackDocumentReference reference in manifest.Documents)
         {
             ContentDocumentText document = suppliedByPath[reference.Path];
@@ -169,6 +170,11 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                             reference.Path, document.SourceName,
                             _deserializer.DeserializeAilments(document.Json, document.SourceName)));
                         break;
+                    case "items":
+                        items.Add(new SourceContentDocument<ItemDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeItems(document.Json, document.SourceName)));
+                        break;
                 }
             }
             catch (ContentDeserializationException exception)
@@ -190,7 +196,8 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                 skills,
                 entities,
                 races,
-                ailments));
+                ailments,
+                items));
             foreach (ContentValidationError error in result.Errors)
             {
                 diagnostics.Add(new CatalogLoadDiagnostic(
@@ -380,6 +387,7 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         var entities = new List<KeyValuePair<ContentId, EntityDefinition>>();
         var races = new List<KeyValuePair<ContentId, RaceDefinition>>();
         var ailments = new List<KeyValuePair<ContentId, AilmentDefinition>>();
+        var items = new List<KeyValuePair<ContentId, ItemDefinition>>();
 
         foreach (LoadedPack pack in loadOrder.Where(pack => pack.Validated is not null))
         {
@@ -388,9 +396,10 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             AddQualified(pack, pack.Validated.EntityDocuments, entities, definition => DefinitionQualifier.Entity(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.RaceDocuments, races, definition => DefinitionQualifier.Race(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.AilmentDocuments, ailments, definition => DefinitionQualifier.Ailment(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.ItemDocuments, items, definition => DefinitionQualifier.Item(packId, definition), diagnostics);
         }
 
-        return new GameDataCatalog(skills, entities, races, ailments);
+        return new GameDataCatalog(skills, entities, races, ailments, items);
     }
 
     private static void AddQualified<TDefinition>(
@@ -426,6 +435,7 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         EntityDefinition value => value.Id,
         RaceDefinition value => value.Id,
         AilmentDefinition value => value.Id,
+        ItemDefinition value => value.Id,
         _ => throw new InvalidOperationException($"Unsupported catalog definition '{typeof(TDefinition).Name}'.")
     };
 
@@ -439,6 +449,38 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             CheckSkillReferences(pack, catalog, diagnostics);
             CheckEntityReferences(pack, catalog, diagnostics);
             CheckAilmentReferences(pack, catalog, diagnostics);
+            CheckItemReferences(pack, catalog, diagnostics);
+        }
+    }
+
+    private static void CheckItemReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<ItemDefinition> document in pack.Validated!.ItemDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                ItemDefinition item = document.Document.Records[recordIndex];
+                if (item.Usage is null)
+                {
+                    continue;
+                }
+
+                for (int effectIndex = 0; effectIndex < item.Usage.Effects.Count; effectIndex++)
+                {
+                    CheckEffect(
+                        pack,
+                        document.SourceName,
+                        "item",
+                        item.Id,
+                        $"$.items[{recordIndex}].usage.effects[{effectIndex}]",
+                        item.Usage.Effects[effectIndex],
+                        catalog,
+                        diagnostics);
+                }
+            }
         }
     }
 

@@ -24,6 +24,9 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
     public DeserializedContentDocument<AilmentDefinition> DeserializeAilments(string json, string sourceName) =>
         Deserialize(json, sourceName, TypeInfo<AilmentDocumentDto>(), SkillSystemDtoMapper.Map);
 
+    public DeserializedContentDocument<ItemDefinition> DeserializeItems(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<ItemDocumentDto>(), SkillSystemDtoMapper.Map);
+
     private static System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> TypeInfo<T>()
     {
         return (System.Text.Json.Serialization.Metadata.JsonTypeInfo<T>)Options.GetTypeInfo(typeof(T));
@@ -128,6 +131,8 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<AnalysisLayer>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<InheritanceGroupPolicyMode>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<DemonFleeOutcome>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemConsumptionMode>());
         return options;
     }
 }

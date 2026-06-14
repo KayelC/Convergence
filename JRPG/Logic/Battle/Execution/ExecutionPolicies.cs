@@ -5,8 +5,8 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 namespace JRPGPrototype.Logic.Battle.Execution;
 
 public sealed record DamagePolicyRequest(
-    BattleActorState Actor,
-    BattleActorState Target,
+    RuntimeActorState Actor,
+    RuntimeActorState Target,
     DamageEffectDefinition Effect,
     ElementalAffinity Affinity);
 
@@ -18,8 +18,8 @@ public interface IDamageExecutionPolicy
 }
 
 public sealed record InstantDeathPolicyRequest(
-    BattleActorState Actor,
-    BattleActorState Target,
+    RuntimeActorState Actor,
+    RuntimeActorState Target,
     InstantKillEffectDefinition Effect,
     InstantDeathResistanceResolution Resistance);
 
@@ -29,8 +29,8 @@ public interface IInstantDeathExecutionPolicy
 }
 
 public sealed record AilmentApplicationPolicyRequest(
-    BattleActorState Actor,
-    BattleActorState Target,
+    RuntimeActorState Actor,
+    RuntimeActorState Target,
     ApplyAilmentEffectDefinition Effect,
     AilmentDefinition Ailment,
     ResistanceLevel Resistance);
@@ -42,8 +42,8 @@ public interface IAilmentApplicationPolicy
 
 public sealed record ChancePolicyRequest(
     int Chance,
-    BattleActorState Actor,
-    BattleActorState? Target,
+    RuntimeActorState Actor,
+    RuntimeActorState? Target,
     string Purpose);
 
 public interface IChanceExecutionPolicy
@@ -52,8 +52,8 @@ public interface IChanceExecutionPolicy
 }
 
 public sealed record AmountResolutionContext(
-    BattleActorState Actor,
-    BattleActorState Target,
+    RuntimeActorState Actor,
+    RuntimeActorState Target,
     ContentId ResourceId,
     string Purpose);
 
@@ -73,6 +73,23 @@ public interface IRandomTargetSelectionPolicy
         IReadOnlyList<BattleActorState> candidates,
         TargetCountDefinition count,
         SkillExecutionRequest request);
+}
+
+public interface IRuntimeRandomTargetSelectionPolicy
+{
+    IReadOnlyList<RuntimeActorState> Select(
+        IReadOnlyList<RuntimeActorState> candidates,
+        TargetCountDefinition count,
+        EffectActionExecutionRequest request);
+}
+
+public sealed class OrderedRuntimeTargetSelectionPolicy : IRuntimeRandomTargetSelectionPolicy
+{
+    public IReadOnlyList<RuntimeActorState> Select(
+        IReadOnlyList<RuntimeActorState> candidates,
+        TargetCountDefinition count,
+        EffectActionExecutionRequest request) =>
+        Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());
 }
 
 public interface IEscapeRuleHandler
@@ -110,7 +127,8 @@ public sealed class BattleExecutionServices
         RuleModifierResolver? ruleModifiers = null,
         PassiveEventPolicyRegistry? passiveEventPolicies = null,
         IPassiveTriggerDispatcher? passiveTriggers = null,
-        ContentId? ownerWouldBeDefeatedEventId = null)
+        ContentId? ownerWouldBeDefeatedEventId = null,
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
     {
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
         DamagePolicy = damagePolicy ?? throw new ArgumentNullException(nameof(damagePolicy));
@@ -119,6 +137,7 @@ public sealed class BattleExecutionServices
         ChancePolicy = chancePolicy ?? throw new ArgumentNullException(nameof(chancePolicy));
         PowerAmountPolicy = powerAmountPolicy ?? throw new ArgumentNullException(nameof(powerAmountPolicy));
         RandomTargetPolicy = randomTargetPolicy ?? throw new ArgumentNullException(nameof(randomTargetPolicy));
+        RuntimeRandomTargetPolicy = runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy();
         FormulaHandlers = Snapshot(formulaHandlers);
         EscapeRuleHandlers = Snapshot(escapeRuleHandlers);
         CustomConditionHandlers = Snapshot(customConditionHandlers);
@@ -142,6 +161,7 @@ public sealed class BattleExecutionServices
     public IChanceExecutionPolicy ChancePolicy { get; }
     public IPowerAmountPolicy PowerAmountPolicy { get; }
     public IRandomTargetSelectionPolicy RandomTargetPolicy { get; }
+    public IRuntimeRandomTargetSelectionPolicy RuntimeRandomTargetPolicy { get; }
     public IReadOnlyDictionary<ContentId, IFormulaAmountHandler> FormulaHandlers { get; }
     public IReadOnlyDictionary<ContentId, IEscapeRuleHandler> EscapeRuleHandlers { get; }
     public IReadOnlyDictionary<ContentId, ICustomConditionHandler> CustomConditionHandlers { get; }

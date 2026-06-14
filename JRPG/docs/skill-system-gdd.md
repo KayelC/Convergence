@@ -591,6 +591,24 @@ Damage results expose their resolved elemental affinity so successful and defens
 
 The demo policies are examples, not framework balance rules: HP is `40 + level * 5 + vitality * 3`, SP is `10 + level * 2 + magic * 2`, and base damage is `max(1, power + attacker.magic - target.vitality)` before host-owned Weak/Resist multipliers and passive modifiers. A Godot host may provide entirely different acquisition, initialization, selection, presentation, and balance policies while reusing the same catalog, actor factory, executor, passive runtime, and runner contracts.
 
+## Shared Effects, Items, And Field Actions
+
+`RuntimeActorState` is the shared mutable target for clean effects. `BattleActorState` remains a compatible battle-specific subtype, so battle orchestration can retain its explicit vocabulary while field skills and items reuse the same resources, ailments, statuses, defenses, passives, conditions, and ordered effect executors. This type is still independent from legacy `Combatant` and is not a Godot node or resource contract.
+
+Every clean action supplies an `EffectExecutionEnvironment`. Its context ID is required; battle kind and moon phase are optional. Battle-only conditions evaluate false when their required metadata is absent. A field host therefore does not invent placeholder battle metadata merely to execute a recovery skill or item.
+
+Active skills and items share one internal ordered-effect pipeline. `SkillExecutor` remains responsible for activation, availability, costs, and skill-specific validation. `ItemExecutor` is responsible for item kind, item usage, context, targeting, runtime handler checks, known no-effect rejection, and consumption reporting. Passive damage and healing modifiers are resolved from typed effects and actor state, regardless of whether the source is a skill or item.
+
+### Item Contract
+
+Items are immutable catalog definitions with one of four kinds: `consumable`, `key`, `material`, or `valuable`. Every item has a positive stack limit and nonnegative base value. Consumables require usage; other item kinds omit it. Usage contains registered execution contexts, shared targeting, ordered effects, and the schema-v1 consumption mode `successful_execution`.
+
+The framework never owns or mutates inventory quantities. Item execution returns `ConsumeOne` only when at least one applicable effect produces meaningful success. Failed, skipped, unavailable, rejected, and known no-effect actions return no consumption. Multi-target actions consume once when any target changes. Healing a full resource, curing no matching removable ailment, reviving a living target, setting an unchanged resource, and removing absent statuses are rejected before mutation when that absence is already knowable.
+
+Effect results may contain immutable host-action request IDs. These IDs report an approved transition request without making the framework own a dungeon, scene tree, or navigation API. Goho-M uses the registered `request_dungeon_exit` custom effect; the host decides how that request maps to its dungeon transition. Traesto uses the ordinary typed `escape` effect in the battle context.
+
+`--clean-field-demo` is the host-owned smoke path for this contract. It loads the reference, clean-battle, and shared-effects packs, executes field recovery, Medicine, Dis-Poison, Revival Bead, Traesto Gem, and Goho-M, applies returned consumption decisions to a host dictionary, prints ordered results, and exits without input. The ordinary console inventory, legacy `ItemData`, numeric item IDs, shops, and legacy `Combatant` flows remain compatibility code for Track 13.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -620,7 +638,11 @@ The demo policies are examples, not framework balance rules: HP is `40 + level *
 25. Damage, probability, amount, random-target, escape, and custom runtime decisions are explicit host policies rather than hidden console defaults.
 26. Numeric passive modifiers use add-then-multiply stacking; ailment resistance and elemental affinity use typed replacement precedence instead of numeric multiplication.
 27. Passive trigger re-entry and activation limits are code-owned event policies, never authored content fields.
-28. Clean active effects execute against `BattleActorState`; the framework does not make legacy `Combatant` a reusable host contract.
+28. Clean effects execute against `RuntimeActorState`; `BattleActorState` is its battle subtype, and legacy `Combatant` is never a reusable host contract.
 29. Catalog actor hydration preserves authored skill order and delegates runtime resource initialization to the host.
 30. Automated selection and execution share one assessment path for availability, targeting, and resolved costs.
 31. Presentation consumes ordered runtime events; battle behavior never depends on presentation text.
+32. Skill and item effects share one ordered execution pipeline; source display text never selects behavior.
+33. Item consumption is a returned decision based on meaningful success; framework execution never mutates host inventory.
+34. Field execution omits battle metadata, and battle-only conditions evaluate false when that metadata is absent.
+35. Host-action request IDs report transitions such as dungeon exit without introducing dungeon or engine APIs into the framework.

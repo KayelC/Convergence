@@ -28,10 +28,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private readonly List<RecordSource<EntityDefinition>> _entities;
         private readonly List<RecordSource<RaceDefinition>> _races;
         private readonly List<RecordSource<AilmentDefinition>> _ailments;
+        private readonly List<RecordSource<ItemDefinition>> _items;
         private readonly Dictionary<ContentId, List<RecordSource<SkillDefinition>>> _skillIndex;
         private readonly Dictionary<ContentId, List<RecordSource<EntityDefinition>>> _entityIndex;
         private readonly Dictionary<ContentId, List<RecordSource<RaceDefinition>>> _raceIndex;
         private readonly Dictionary<ContentId, List<RecordSource<AilmentDefinition>>> _ailmentIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<ItemDefinition>>> _itemIndex;
 
         public ValidationContext(SkillSystemValidationRequest request)
         {
@@ -42,10 +44,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             _entities = Flatten(request.EntityDocuments, "entity", "entities", definition => definition.Id);
             _races = Flatten(request.RaceDocuments, "race", "races", definition => definition.Id);
             _ailments = Flatten(request.AilmentDocuments, "ailment", "ailments", definition => definition.Id);
+            _items = Flatten(request.ItemDocuments, "item", "items", definition => definition.Id);
             _skillIndex = Index(_skills);
             _entityIndex = Index(_entities);
             _raceIndex = Index(_races);
             _ailmentIndex = Index(_ailments);
+            _itemIndex = Index(_items);
         }
 
         public List<ContentValidationError> Errors { get; } = [];
@@ -65,6 +69,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateDocumentSet(_request.EntityDocuments, "entities");
             ValidateDocumentSet(_request.RaceDocuments, "races");
             ValidateDocumentSet(_request.AilmentDocuments, "ailments");
+            ValidateDocumentSet(_request.ItemDocuments, "items");
         }
 
         public void ValidateRecords()
@@ -73,6 +78,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             var processedEntities = new HashSet<RecordSource<EntityDefinition>>(ReferenceEqualityComparer.Instance);
             var processedRaces = new HashSet<RecordSource<RaceDefinition>>(ReferenceEqualityComparer.Instance);
             var processedAilments = new HashSet<RecordSource<AilmentDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedItems = new HashSet<RecordSource<ItemDefinition>>(ReferenceEqualityComparer.Instance);
 
             foreach (ContentPackDocumentReference document in _request.Manifest.Documents)
             {
@@ -90,6 +96,9 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     case "ailments":
                         ValidateDocumentRecords(_ailments, document.Path, _ailmentIndex, ValidateAilment, processedAilments);
                         break;
+                    case "items":
+                        ValidateDocumentRecords(_items, document.Path, _itemIndex, ValidateItem, processedItems);
+                        break;
                 }
             }
 
@@ -97,6 +106,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateRemainingRecords(_entities, _entityIndex, ValidateEntity, processedEntities);
             ValidateRemainingRecords(_races, _raceIndex, ValidateRace, processedRaces);
             ValidateRemainingRecords(_ailments, _ailmentIndex, ValidateAilment, processedAilments);
+            ValidateRemainingRecords(_items, _itemIndex, ValidateItem, processedItems);
 
             ValidateMutationFamilies();
         }
@@ -160,6 +170,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateManifestCoverage("entities", _request.EntityDocuments.Select(document => document.ManifestPath));
             ValidateManifestCoverage("races", _request.RaceDocuments.Select(document => document.ManifestPath));
             ValidateManifestCoverage("ailments", _request.AilmentDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("items", _request.ItemDocuments.Select(document => document.ManifestPath));
         }
 
         private void ValidateManifestCoverage(string documentType, IEnumerable<string> suppliedPaths)
@@ -517,6 +528,53 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 RequireRegistration(source, ailment.Recovery.RemoveOnEventIds[index],
                     source.Path + $".recovery.removeOnEvents[{index}]", _registrations.EventIds, "event");
             }
+        }
+
+        private void ValidateItem(RecordSource<ItemDefinition> source)
+        {
+            ItemDefinition item = source.Definition;
+            RequirePositive(source, item.StackLimit, source.Path + ".stackLimit", "Item stack limit");
+            RequireNonNegative(source, item.BaseValue, source.Path + ".baseValue", "Item base value");
+
+            if (item.ItemKind == ItemKind.Consumable && item.Usage is null)
+            {
+                Add(source, source.Path + ".usage", ContentValidationErrorCode.ShapeInvalid,
+                    "Consumable items require usage.");
+                return;
+            }
+
+            if (item.ItemKind != ItemKind.Consumable && item.Usage is not null)
+            {
+                Add(source, source.Path + ".usage", ContentValidationErrorCode.ShapeInvalid,
+                    "Only consumable items may declare usage.");
+                return;
+            }
+
+            if (item.Usage is null)
+            {
+                return;
+            }
+
+            ItemUsageDefinition usage = item.Usage;
+            if (usage.ContextIds.Count == 0)
+            {
+                Add(source, source.Path + ".usage.contexts", ContentValidationErrorCode.ShapeInvalid,
+                    "Consumable item usage requires at least one context.");
+            }
+            ValidateDuplicates(source, usage.ContextIds, source.Path + ".usage.contexts");
+            for (int index = 0; index < usage.ContextIds.Count; index++)
+            {
+                RequireRegistration(source, usage.ContextIds[index],
+                    source.Path + $".usage.contexts[{index}]", _registrations.ContextIds, "context");
+            }
+
+            ValidateTargeting(source, usage.Targeting, source.Path + ".usage.targeting");
+            if (usage.Effects.Count == 0)
+            {
+                Add(source, source.Path + ".usage.effects", ContentValidationErrorCode.ShapeInvalid,
+                    "Consumable item usage requires at least one effect.");
+            }
+            ValidateEffects(source, usage.Effects, source.Path + ".usage.effects");
         }
 
         private void ValidateEffects<TDefinition>(

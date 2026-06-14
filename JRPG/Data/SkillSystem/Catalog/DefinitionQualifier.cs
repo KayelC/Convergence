@@ -77,6 +77,22 @@ internal static class DefinitionQualifier
             definition.ExclusivityGroupId,
             definition.Triggers.Select(trigger => Trigger(packId, trigger)));
 
+    public static ItemDefinition Item(string packId, ItemDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.ItemKind,
+            definition.StackLimit,
+            definition.BaseValue,
+            definition.Usage is null
+                ? null
+                : new ItemUsageDefinition(
+                    definition.Usage.ContextIds,
+                    definition.Usage.Targeting,
+                    definition.Usage.Effects.Select(effect => Effect(packId, effect)),
+                    definition.Usage.ConsumptionMode));
+
     private static SkillCostDefinition Cost(SkillCostDefinition definition) =>
         new(definition.ResourceId, Amount(definition.Amount), definition.CanReduceToZero);
 

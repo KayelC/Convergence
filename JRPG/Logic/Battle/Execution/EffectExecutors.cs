@@ -4,7 +4,7 @@ namespace JRPGPrototype.Logic.Battle.Execution;
 
 internal abstract class TargetedEffectExecutor
 {
-    protected static BattleActorState Target(EffectExecutionContext context) =>
+    protected static RuntimeActorState Target(EffectExecutionContext context) =>
         context.Target ?? throw new InvalidOperationException(
             $"Effect '{context.Effect.GetType().Name}' requires a target.");
 
@@ -43,7 +43,7 @@ internal abstract class TargetedEffectExecutor
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
         EffectExecutionContext context,
-        BattleActorState owner)
+        RuntimeActorState owner)
     {
         if (!owner.IsDefeated)
         {
@@ -68,7 +68,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
 {
     public EffectExecutionResult Execute(DamageEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         var defenseConditionContext = new BattleConditionContext(
             target,
             context.Actor,
@@ -154,7 +154,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
 
     private static void ApplyDrain(
         DamageDrainMode drain,
-        BattleActorState actor,
+        RuntimeActorState actor,
         BattleExecutionServices services,
         decimal amount)
     {
@@ -173,7 +173,7 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
 {
     public EffectExecutionResult Execute(InstantKillEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         InstantDeathResistanceResolution resistance = InstantDeathResistanceResolver.Resolve(
             target.DefenseProfile,
             definition.ResistanceCheck);
@@ -194,7 +194,7 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
 {
     public EffectExecutionResult Execute(ApplyAilmentEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         if (target.IsDefeated || !context.Services.Ailments.TryGetAilment(definition.AilmentId, out AilmentDefinition? ailment) || ailment is null)
         {
             return Failure(context, detail: "The ailment target or definition is unavailable.", relatedId: definition.AilmentId);
@@ -228,7 +228,7 @@ internal sealed class RestoreResourceEffectExecutor : TargetedEffectExecutor, IE
 {
     public EffectExecutionResult Execute(RestoreResourceEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         if (!target.TryGetResource(definition.ResourceId, out _))
         {
             return Failure(context, detail: "The target does not expose the requested resource.", relatedId: definition.ResourceId);
@@ -238,6 +238,24 @@ internal sealed class RestoreResourceEffectExecutor : TargetedEffectExecutor, IE
             definition.Amount,
             new AmountResolutionContext(context.Actor, target, definition.ResourceId, "restore_resource"),
             context.Services);
+        var conditionContext = new BattleConditionContext(
+            context.Actor,
+            target,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services,
+            context.EffectElement is DamageElement element ? [element] : []);
+        amount = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            context.Actor,
+            NumericRuleModifierType.HealingGiven,
+            amount,
+            new RuleModifierContext(conditionContext, context.Request.Skill, definition.ResourceId)));
+        amount = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            target,
+            NumericRuleModifierType.HealingReceived,
+            amount,
+            new RuleModifierContext(conditionContext, context.Request.Skill, definition.ResourceId)));
         decimal restored = target.AddResource(definition.ResourceId, amount);
         return Success(context, restored, definition.ResourceId);
     }
@@ -247,7 +265,7 @@ internal sealed class RemoveAilmentEffectExecutor : TargetedEffectExecutor, IEff
 {
     public EffectExecutionResult Execute(RemoveAilmentEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         HashSet<ContentId> ailmentIds = new(definition.AilmentIds);
         HashSet<ContentId> groupIds = new(definition.AilmentGroupIds);
         IReadOnlyList<ContentId> removed = target.RemoveAilments(active =>
@@ -262,7 +280,7 @@ internal sealed class ReviveEffectExecutor : TargetedEffectExecutor, IEffectExec
 {
     public EffectExecutionResult Execute(ReviveEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         if (!target.IsDefeated || definition.ResourceId != target.VitalResourceId || !target.TryGetResource(definition.ResourceId, out _))
         {
             return Failure(context, detail: "Revival requires a defeated target and its vital resource.");
@@ -272,6 +290,23 @@ internal sealed class ReviveEffectExecutor : TargetedEffectExecutor, IEffectExec
             definition.Amount,
             new AmountResolutionContext(context.Actor, target, definition.ResourceId, "revive"),
             context.Services);
+        var conditionContext = new BattleConditionContext(
+            context.Actor,
+            target,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services);
+        amount = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            context.Actor,
+            NumericRuleModifierType.HealingGiven,
+            amount,
+            new RuleModifierContext(conditionContext, context.Request.Skill, definition.ResourceId)));
+        amount = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            target,
+            NumericRuleModifierType.HealingReceived,
+            amount,
+            new RuleModifierContext(conditionContext, context.Request.Skill, definition.ResourceId)));
         decimal restored = target.SetResource(definition.ResourceId, amount);
         return target.IsDefeated
             ? Failure(context, detail: "The revival amount did not restore the target.")
@@ -283,7 +318,7 @@ internal sealed class ModifyStatStageEffectExecutor : TargetedEffectExecutor, IE
 {
     public EffectExecutionResult Execute(ModifyStatStageEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         foreach (ContentId id in definition.ModifierTrackIds)
         {
             target.ChangeStatStage(id, definition.StageDelta, definition.Duration);
@@ -314,7 +349,7 @@ internal sealed class OverrideAffinityEffectExecutor : TargetedEffectExecutor, I
 {
     public EffectExecutionResult Execute(OverrideAffinityEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         foreach (DamageElement element in definition.Elements)
         {
             target.OverrideAffinity(element, definition.Affinity, definition.Duration);
@@ -327,8 +362,8 @@ internal sealed class RemoveStatusEffectExecutor : TargetedEffectExecutor, IEffe
 {
     public EffectExecutionResult Execute(RemoveStatusEffectDefinition definition, EffectExecutionContext context)
     {
-        Target(context).RemoveStatuses(definition.StatusKinds, definition.StatusIds);
-        return Success(context);
+        int removed = Target(context).RemoveStatuses(definition.StatusKinds, definition.StatusIds);
+        return Success(context, removed);
     }
 }
 
@@ -336,7 +371,7 @@ internal sealed class ReduceResourceEffectExecutor : TargetedEffectExecutor, IEf
 {
     public EffectExecutionResult Execute(ReduceResourceEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         if (!target.TryGetResource(definition.ResourceId, out BattleResourceState? resource) || resource is null)
         {
             return Failure(context, detail: "The target does not expose the requested resource.", relatedId: definition.ResourceId);
@@ -356,7 +391,7 @@ internal sealed class SetResourceEffectExecutor : TargetedEffectExecutor, IEffec
 {
     public EffectExecutionResult Execute(SetResourceEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         if (!target.TryGetResource(definition.ResourceId, out _))
         {
             return Failure(context, detail: "The target does not expose the requested resource.", relatedId: definition.ResourceId);
@@ -375,7 +410,7 @@ internal sealed class AnalyzeEffectExecutor : TargetedEffectExecutor, IEffectExe
 {
     public EffectExecutionResult Execute(AnalyzeEffectDefinition definition, EffectExecutionContext context)
     {
-        BattleActorState target = Target(context);
+        RuntimeActorState target = Target(context);
         context.Actor.Reveal(target.InstanceId, definition.Layers);
         return Success(context, detail: string.Join(",", definition.Layers));
     }

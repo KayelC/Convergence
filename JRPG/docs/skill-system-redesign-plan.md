@@ -996,27 +996,54 @@ It does not inspect names or descriptions. The runner resets passive activations
 
 ### Purpose
 
-Prevent items and field actions from developing a second behavior language.
+Prevent items and field actions from developing a second behavior language while leaving the legacy inventory and ordinary console flows operational.
 
-### Current Files
+### Shared Runtime Boundary
 
-- `Data/ItemData.cs`
-- `Logic/Field/Bridges/InventoryUIBridge.cs`
-- `Logic/Field/Engines/FieldServiceEngine.cs`
-- item handling in `Logic/Battle/ActionProcessor.cs`
+- `RuntimeActorState` owns the mutable state shared by field and battle effects; `BattleActorState` remains its battle subtype.
+- `EffectExecutionEnvironment` requires a context ID and permits optional battle-kind and moon-phase metadata. Battle-only conditions are false when metadata is absent.
+- `OrderedEffectExecutor` is the internal authored-order pipeline shared by `SkillExecutor` and `ItemExecutor`.
+- Existing battle request constructors and policy boundaries remain operational.
 
-### Work
+### Item Content And Catalog
 
-- Represent usable items with targeting and ordered effects.
-- Reuse `restore_resource`, `remove_ailment`, `revive`, and escape effects.
-- Keep item consumption policy separate from effect execution.
-- Let host-specific dungeon exit requests remain adapter outcomes until dungeon design is finalized.
+- `ItemDefinition`, `ItemUsageDefinition`, `ItemKind`, and `ItemConsumptionMode` form the immutable item domain.
+- `items` is supported by strict source-generated deserialization, semantic validation, dependency-aware qualification, validated packs, and `GameDataCatalog`.
+- `IItemDefinitionRepository` requires qualified-ID lookups.
+- Consumables require usage. Key, material, and valuable items omit it. Stack limits are positive and base values are nonnegative.
+
+### Execution And Host Requests
+
+- `IItemExecutor` assesses context, targets, handlers, operands, and known no-effect uses before mutation.
+- The executor returns `ConsumeOne` only after meaningful success and never owns inventory quantities.
+- Multi-target usage consumes once when any target changes. Failed, skipped, rejected, unavailable, and no-effect actions do not consume.
+- Effect results expose immutable host-action request IDs. Goho-M emits `request_dungeon_exit`; Traesto remains the typed battle `escape` effect.
+- Typed healing modifiers execute inside the shared restore and revive effects, independent of action display text.
+
+### Demo Pack And Host
+
+- `convergence.shared_effects_demo` `0.1.0` depends directly on `convergence.clean_battle_demo` `0.1.0`.
+- The pack contains one field recovery skill, Medicine, Dis-Poison, Revival Bead, Traesto Gem, Goho-M, one valuable item, Poison, and a field-medic entity.
+- `--clean-field-demo` loads all three clean packs before ordinary host construction, applies host-owned inventory decisions, prints ordered results, and exits without input.
+- `Data/ItemData.cs`, `InventoryUIBridge`, `FieldServiceEngine`, `ActionProcessor`, shops, numeric item IDs, and legacy datasets remain unchanged for Track 13.
 
 ### Exit Criteria
 
 - Healing and cure logic is shared between skills and items.
 - Item behavior is not selected by display name or legacy type strings.
 - Field and battle contexts validate effect availability explicitly.
+
+### Completion Record
+
+- Completed on June 14, 2026 on branch `skill-system-redesign`, starting from commit `c5053db` (`runtime: add catalog-backed clean battle`).
+- Added shared runtime actor state, optional execution metadata, one ordered effect pipeline, item domain/schema/catalog support, typed item execution, meaningful-success consumption, immutable host requests, and shared passive healing resolution.
+- Added the dependent shared-effects demo pack and `--clean-field-demo` host route without changing the legacy inventory, shops, ordinary console startup, or `Database.LoadData` path.
+- Focused Track 12 verification passed: 12 passed, 0 failed, 0 skipped.
+- Full verification passed: 448 passed, 0 failed, 0 skipped.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- Both `--clean-battle-demo` and `--clean-field-demo` completed with exit code `0` and no input.
+- `git diff --check` and serializer/Godot/filesystem/legacy-boundary searches passed.
+- Completion commit: `runtime: share effects with items and field actions`.
 
 ## Track 13: Legacy Removal
 

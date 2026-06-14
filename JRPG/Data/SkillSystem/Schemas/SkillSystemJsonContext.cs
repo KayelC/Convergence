@@ -8,6 +8,7 @@ namespace JRPGPrototype.Data.SkillSystem.Schemas;
 [JsonSerializable(typeof(EntityDocumentDto))]
 [JsonSerializable(typeof(RaceDocumentDto))]
 [JsonSerializable(typeof(AilmentDocumentDto))]
+[JsonSerializable(typeof(ItemDocumentDto))]
 [JsonSerializable(typeof(ValueAmountDto))]
 [JsonSerializable(typeof(PowerAmountDto))]
 [JsonSerializable(typeof(MarkerAmountDto))]

@@ -9,6 +9,7 @@ public interface ISkillSystemDocumentDeserializer
     DeserializedContentDocument<EntityDefinition> DeserializeEntities(string json, string sourceName);
     DeserializedContentDocument<RaceDefinition> DeserializeRaces(string json, string sourceName);
     DeserializedContentDocument<AilmentDefinition> DeserializeAilments(string json, string sourceName);
+    DeserializedContentDocument<ItemDefinition> DeserializeItems(string json, string sourceName);
 }
 
 public sealed record ContentPackDocumentReference(string Type, string Path);

@@ -93,7 +93,8 @@ public sealed record SkillSystemValidationRequest
         IEnumerable<SourceContentDocument<SkillDefinition>>? skillDocuments = null,
         IEnumerable<SourceContentDocument<EntityDefinition>>? entityDocuments = null,
         IEnumerable<SourceContentDocument<RaceDefinition>>? raceDocuments = null,
-        IEnumerable<SourceContentDocument<AilmentDefinition>>? ailmentDocuments = null)
+        IEnumerable<SourceContentDocument<AilmentDefinition>>? ailmentDocuments = null,
+        IEnumerable<SourceContentDocument<ItemDefinition>>? itemDocuments = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentException.ThrowIfNullOrWhiteSpace(manifestSourceName);
@@ -106,6 +107,7 @@ public sealed record SkillSystemValidationRequest
         EntityDocuments = Snapshot(entityDocuments);
         RaceDocuments = Snapshot(raceDocuments);
         AilmentDocuments = Snapshot(ailmentDocuments);
+        ItemDocuments = Snapshot(itemDocuments);
     }
 
     public ContentPackManifest Manifest { get; }
@@ -115,6 +117,7 @@ public sealed record SkillSystemValidationRequest
     public IReadOnlyList<SourceContentDocument<EntityDefinition>> EntityDocuments { get; }
     public IReadOnlyList<SourceContentDocument<RaceDefinition>> RaceDocuments { get; }
     public IReadOnlyList<SourceContentDocument<AilmentDefinition>> AilmentDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<ItemDefinition>> ItemDocuments { get; }
 
     private static IReadOnlyList<T> Snapshot<T>(IEnumerable<T>? values) =>
         Array.AsReadOnly(values?.ToArray() ?? Array.Empty<T>());
@@ -168,6 +171,7 @@ public sealed record ValidatedSkillSystemContentPack
         EntityDocuments = request.EntityDocuments;
         RaceDocuments = request.RaceDocuments;
         AilmentDocuments = request.AilmentDocuments;
+        ItemDocuments = request.ItemDocuments;
     }
 
     public ContentPackManifest Manifest { get; }
@@ -175,4 +179,5 @@ public sealed record ValidatedSkillSystemContentPack
     public IReadOnlyList<SourceContentDocument<EntityDefinition>> EntityDocuments { get; }
     public IReadOnlyList<SourceContentDocument<RaceDefinition>> RaceDocuments { get; }
     public IReadOnlyList<SourceContentDocument<AilmentDefinition>> AilmentDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<ItemDefinition>> ItemDocuments { get; }
 }

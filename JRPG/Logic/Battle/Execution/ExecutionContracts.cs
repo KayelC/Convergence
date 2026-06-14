@@ -51,18 +51,102 @@ public sealed record SkillExecutionDiagnostic(
     int? EffectIndex = null,
     ContentId? TargetId = null);
 
-public sealed record EffectExecutionResult(
-    int EffectIndex,
-    ContentId? TargetId,
-    EffectExecutionOutcome Outcome,
-    PressTurnOutcome PressTurnOutcome = PressTurnOutcome.Normal,
-    bool IsCritical = false,
-    decimal? Value = null,
-    ContentId? RelatedId = null,
-    string? Detail = null,
-    bool EscapeRequested = false,
-    IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null,
-    ElementalAffinity? ResolvedAffinity = null);
+public sealed record EffectExecutionResult
+{
+    public EffectExecutionResult(
+        int EffectIndex,
+        ContentId? TargetId,
+        EffectExecutionOutcome Outcome,
+        PressTurnOutcome PressTurnOutcome = PressTurnOutcome.Normal,
+        bool IsCritical = false,
+        decimal? Value = null,
+        ContentId? RelatedId = null,
+        string? Detail = null,
+        bool EscapeRequested = false,
+        IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null,
+        ElementalAffinity? ResolvedAffinity = null,
+        IReadOnlyList<ContentId>? HostActionRequestIds = null)
+    {
+        this.EffectIndex = EffectIndex;
+        this.TargetId = TargetId;
+        this.Outcome = Outcome;
+        this.PressTurnOutcome = PressTurnOutcome;
+        this.IsCritical = IsCritical;
+        this.Value = Value;
+        this.RelatedId = RelatedId;
+        this.Detail = Detail;
+        this.EscapeRequested = EscapeRequested;
+        this.PassiveActivations = Array.AsReadOnly(PassiveActivations?.ToArray() ?? []);
+        this.ResolvedAffinity = ResolvedAffinity;
+        this.HostActionRequestIds = Array.AsReadOnly(HostActionRequestIds?.ToArray() ?? []);
+    }
+
+    public int EffectIndex { get; init; }
+    public ContentId? TargetId { get; init; }
+    public EffectExecutionOutcome Outcome { get; init; }
+    public PressTurnOutcome PressTurnOutcome { get; init; }
+    public bool IsCritical { get; init; }
+    public decimal? Value { get; init; }
+    public ContentId? RelatedId { get; init; }
+    public string? Detail { get; init; }
+    public bool EscapeRequested { get; init; }
+    public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; init; }
+    public ElementalAffinity? ResolvedAffinity { get; init; }
+    public IReadOnlyList<ContentId> HostActionRequestIds { get; init; }
+}
+
+public sealed record EffectExecutionEnvironment
+{
+    public EffectExecutionEnvironment(
+        ContentId contextId,
+        ContentId? battleKindId = null,
+        ContentId? moonPhaseId = null)
+    {
+        ContextId = contextId;
+        BattleKindId = battleKindId;
+        MoonPhaseId = moonPhaseId;
+    }
+
+    public ContentId ContextId { get; }
+    public ContentId? BattleKindId { get; }
+    public ContentId? MoonPhaseId { get; }
+}
+
+public sealed record EffectActionExecutionRequest
+{
+    public EffectActionExecutionRequest(
+        ContentId sourceId,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        EffectExecutionEnvironment environment,
+        TargetingDefinition targeting,
+        IEnumerable<ContentId>? selectedTargetIds = null,
+        SkillDefinition? skill = null,
+        ItemDefinition? item = null)
+    {
+        SourceId = sourceId;
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        Participants = Array.AsReadOnly(
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
+        Environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        Targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
+        SelectedTargetIds = Array.AsReadOnly(selectedTargetIds?.ToArray() ?? []);
+        Skill = skill;
+        Item = item;
+    }
+
+    public ContentId SourceId { get; }
+    public RuntimeActorState Actor { get; }
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+    public EffectExecutionEnvironment Environment { get; }
+    public TargetingDefinition Targeting { get; }
+    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public SkillDefinition? Skill { get; }
+    public ItemDefinition? Item { get; }
+    public ContentId ContextId => Environment.ContextId;
+    public ContentId? BattleKindId => Environment.BattleKindId;
+    public ContentId? MoonPhaseId => Environment.MoonPhaseId;
+}
 
 public sealed record SkillExecutionAssessment
 {
@@ -103,6 +187,8 @@ public sealed record SkillExecutionResult
         EscapeRequested = Effects.Any(effect => effect.EscapeRequested);
         PassiveActivations = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.PassiveActivations ?? []).ToArray());
+        HostActionRequestIds = Array.AsReadOnly(
+            Effects.SelectMany(effect => effect.HostActionRequestIds ?? []).ToArray());
         PressTurn = AggregatePressTurn(Effects);
     }
 
@@ -112,6 +198,7 @@ public sealed record SkillExecutionResult
     public bool CostsCommitted { get; }
     public bool EscapeRequested { get; }
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; }
+    public IReadOnlyList<ContentId> HostActionRequestIds { get; }
     public PressTurnResolution PressTurn { get; }
 
     public static SkillExecutionResult Rejected(IEnumerable<SkillExecutionDiagnostic> diagnostics) =>
@@ -144,11 +231,11 @@ public sealed record SkillExecutionRequest
 {
     public SkillExecutionRequest(
         SkillDefinition skill,
-        BattleActorState actor,
-        IEnumerable<BattleActorState> participants,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
         ContentId contextId,
-        ContentId battleKindId,
-        ContentId moonPhaseId,
+        ContentId? battleKindId,
+        ContentId? moonPhaseId,
         IEnumerable<ContentId>? selectedTargetIds = null)
     {
         ArgumentNullException.ThrowIfNull(skill);
@@ -162,38 +249,81 @@ public sealed record SkillExecutionRequest
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;
         SelectedTargetIds = Array.AsReadOnly(selectedTargetIds?.ToArray() ?? []);
+        Environment = new EffectExecutionEnvironment(contextId, battleKindId, moonPhaseId);
     }
 
     public SkillDefinition Skill { get; }
-    public BattleActorState Actor { get; }
-    public IReadOnlyList<BattleActorState> Participants { get; }
+    public RuntimeActorState Actor { get; }
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
     public ContentId ContextId { get; }
-    public ContentId BattleKindId { get; }
-    public ContentId MoonPhaseId { get; }
+    public ContentId? BattleKindId { get; }
+    public ContentId? MoonPhaseId { get; }
     public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+
+    public SkillExecutionRequest(
+        SkillDefinition skill,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        EffectExecutionEnvironment environment,
+        IEnumerable<ContentId>? selectedTargetIds = null)
+        : this(
+            skill,
+            actor,
+            participants,
+            environment.ContextId,
+            environment.BattleKindId,
+            environment.MoonPhaseId,
+            selectedTargetIds)
+    {
+        Environment = environment;
+    }
+
+    public EffectExecutionEnvironment Environment { get; private init; }
+
+    internal EffectActionExecutionRequest ToEffectActionRequest() =>
+        new(
+            Skill.Id,
+            Actor,
+            Participants,
+            Environment,
+            Skill.Targeting ?? throw new InvalidOperationException("Active skill targeting is missing."),
+            SelectedTargetIds,
+            skill: Skill);
 }
 
-public sealed record ResolvedTargetSet
+internal sealed record ResolvedRuntimeTargetSet
 {
-    internal ResolvedTargetSet(IEnumerable<BattleActorState> targets, bool isUntargeted = false)
+    public ResolvedRuntimeTargetSet(IEnumerable<RuntimeActorState> targets, bool isUntargeted = false)
     {
         Targets = Array.AsReadOnly(targets.ToArray());
         IsUntargeted = isUntargeted;
     }
 
-    public IReadOnlyList<BattleActorState> Targets { get; }
+    public IReadOnlyList<RuntimeActorState> Targets { get; }
+    public bool IsUntargeted { get; }
+}
+
+public sealed record ResolvedTargetSet
+{
+    internal ResolvedTargetSet(IEnumerable<RuntimeActorState> targets, bool isUntargeted = false)
+    {
+        Targets = Array.AsReadOnly(targets.ToArray());
+        IsUntargeted = isUntargeted;
+    }
+
+    public IReadOnlyList<RuntimeActorState> Targets { get; }
     public bool IsUntargeted { get; }
 }
 
 public sealed record EffectExecutionContext(
-    SkillExecutionRequest Request,
+    EffectActionExecutionRequest Request,
     BattleExecutionServices Services,
     int EffectIndex,
     EffectDefinition Effect,
-    BattleActorState? Target,
+    RuntimeActorState? Target,
     DamageElement? EffectElement = null)
 {
-    public BattleActorState Actor => Request.Actor;
+    public RuntimeActorState Actor => Request.Actor;
 }
 
 public interface IEffectExecutor<in TDefinition> where TDefinition : EffectDefinition

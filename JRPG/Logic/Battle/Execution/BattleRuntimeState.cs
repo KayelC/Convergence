@@ -44,7 +44,7 @@ public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? D
 public sealed record BattleShieldState(DurationDefinition? Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
 
-public sealed class BattleActorState
+public class RuntimeActorState
 {
     private readonly Dictionary<ContentId, BattleResourceState> _resources;
     private readonly Dictionary<ContentId, ActiveAilmentState> _ailments = [];
@@ -57,7 +57,7 @@ public sealed class BattleActorState
     private readonly HashSet<ContentId> _capabilityIds;
     private readonly Dictionary<ContentId, HashSet<AnalysisLayer>> _analysis = [];
 
-    public BattleActorState(
+    public RuntimeActorState(
         ContentId instanceId,
         ContentId entityId,
         ContentId teamId,
@@ -202,8 +202,9 @@ public sealed class BattleActorState
 
     public void AddOtherStatus(ContentId statusId) => _otherStatuses.Add(statusId);
 
-    public void RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
+    public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
     {
+        int before = _statStages.Count + _charges.Count + _shields.Count + _affinityOverrides.Count + _otherStatuses.Count;
         HashSet<StatusEffectKind> requested = new(kinds);
         if (requested.Contains(StatusEffectKind.Buff))
         {
@@ -232,6 +233,9 @@ public sealed class BattleActorState
                 _otherStatuses.Remove(statusId);
             }
         }
+
+        int after = _statStages.Count + _charges.Count + _shields.Count + _affinityOverrides.Count + _otherStatuses.Count;
+        return before - after;
     }
 
     public void Reveal(ContentId targetInstanceId, IEnumerable<AnalysisLayer> layers)
@@ -280,5 +284,35 @@ public sealed class BattleActorState
         public bool SetEquals(IEnumerable<T> other) => _values.SetEquals(other);
         public IEnumerator<T> GetEnumerator() => _values.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+}
+
+public sealed class BattleActorState : RuntimeActorState
+{
+    public BattleActorState(
+        ContentId instanceId,
+        ContentId entityId,
+        ContentId teamId,
+        ContentId vitalResourceId,
+        CombatDefenseProfile defenseProfile,
+        IEnumerable<BattleResourceState> resources,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
+        IEnumerable<ContentId>? skillIds = null,
+        IEnumerable<ContentId>? capabilityIds = null,
+        IEnumerable<SkillDefinition>? passiveSkills = null,
+        bool isActive = true)
+        : base(
+            instanceId,
+            entityId,
+            teamId,
+            vitalResourceId,
+            defenseProfile,
+            resources,
+            stats,
+            skillIds,
+            capabilityIds,
+            passiveSkills,
+            isActive)
+    {
     }
 }

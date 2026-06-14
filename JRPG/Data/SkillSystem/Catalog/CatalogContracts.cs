@@ -114,28 +114,38 @@ public interface IAilmentDefinitionRepository
     AilmentDefinition GetRequiredAilment(ContentId id);
 }
 
+public interface IItemDefinitionRepository
+{
+    bool TryGetItem(ContentId id, out ItemDefinition? definition);
+    ItemDefinition GetRequiredItem(ContentId id);
+}
+
 public sealed class GameDataCatalog :
     ISkillDefinitionRepository,
     IEntityDefinitionRepository,
     IRaceDefinitionRepository,
-    IAilmentDefinitionRepository
+    IAilmentDefinitionRepository,
+    IItemDefinitionRepository
 {
     internal GameDataCatalog(
         IEnumerable<KeyValuePair<ContentId, SkillDefinition>> skills,
         IEnumerable<KeyValuePair<ContentId, EntityDefinition>> entities,
         IEnumerable<KeyValuePair<ContentId, RaceDefinition>> races,
-        IEnumerable<KeyValuePair<ContentId, AilmentDefinition>> ailments)
+        IEnumerable<KeyValuePair<ContentId, AilmentDefinition>> ailments,
+        IEnumerable<KeyValuePair<ContentId, ItemDefinition>> items)
     {
         Skills = Snapshot(skills);
         Entities = Snapshot(entities);
         Races = Snapshot(races);
         Ailments = Snapshot(ailments);
+        Items = Snapshot(items);
     }
 
     public IReadOnlyDictionary<ContentId, SkillDefinition> Skills { get; }
     public IReadOnlyDictionary<ContentId, EntityDefinition> Entities { get; }
     public IReadOnlyDictionary<ContentId, RaceDefinition> Races { get; }
     public IReadOnlyDictionary<ContentId, AilmentDefinition> Ailments { get; }
+    public IReadOnlyDictionary<ContentId, ItemDefinition> Items { get; }
 
     public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
         TryGet(Skills, id, out definition);
@@ -156,6 +166,11 @@ public sealed class GameDataCatalog :
         TryGet(Ailments, id, out definition);
 
     public AilmentDefinition GetRequiredAilment(ContentId id) => GetRequired(Ailments, id, "ailment");
+
+    public bool TryGetItem(ContentId id, out ItemDefinition? definition) =>
+        TryGet(Items, id, out definition);
+
+    public ItemDefinition GetRequiredItem(ContentId id) => GetRequired(Items, id, "item");
 
     private static IReadOnlyDictionary<ContentId, T> Snapshot<T>(
         IEnumerable<KeyValuePair<ContentId, T>> values) =>

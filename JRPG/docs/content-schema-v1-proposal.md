@@ -937,6 +937,23 @@ Consumables reuse the same targeting and effect model as active skills.
 
 Other item kinds include `key`, `material`, and `valuable`. Items without `usage` are not directly usable.
 
+The `items` document is a first-class manifest type. Item IDs are local in authored documents and become pack-qualified catalog IDs. Item effects qualify content references such as ailments through the same direct-dependency rules used by skills; host vocabulary IDs such as resources, contexts, escape rules, and custom handlers remain unqualified registrations.
+
+Schema-v1 item rules are:
+
+- `stackLimit` is positive and `baseValue` is nonnegative.
+- `consumable` requires `usage`; `key`, `material`, and `valuable` omit it.
+- `usage.contexts` is nonempty, unique, and registry-backed.
+- `usage.targeting` and `usage.effects` use the same structural and semantic rules as active skills.
+- `consumeOn` has one supported value: `successful_execution`.
+- execution reports consumption but never mutates inventory.
+- consumption occurs once when any target receives meaningful success; skipped, failed, unavailable, and known no-effect actions do not consume.
+- registered custom effects may emit immutable host-action request IDs. They do not expose Godot, filesystem, scene, or dungeon APIs.
+
+Field actions use an execution environment with a required context ID and optional battle-kind and moon-phase IDs. `battle_kind` and `moon_phase` conditions are false when their metadata is absent. Active field skills remain ordinary skill definitions whose availability includes `field`; they do not use a separate field-skill schema.
+
+The clean `convergence.shared_effects_demo` pack demonstrates one field recovery skill, Medicine, Dis-Poison, Revival Bead, Traesto Gem, Goho-M, a valuable item without usage, and a removable Poison ailment. Goho-M emits `request_dungeon_exit`; Traesto Gem uses the standard `escape` effect.
+
 ## Equipment Schema
 
 ```json

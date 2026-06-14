@@ -12,6 +12,7 @@ public sealed class SkillExecutor : ISkillExecutor
 {
     private readonly BattleExecutionServices _services;
     private readonly EffectExecutorRegistry _effectExecutors;
+    private readonly OrderedEffectExecutor _orderedEffects;
 
     public SkillExecutor(
         BattleExecutionServices services,
@@ -19,6 +20,7 @@ public sealed class SkillExecutor : ISkillExecutor
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _effectExecutors = effectExecutors ?? services.EffectExecutors;
+        _orderedEffects = new OrderedEffectExecutor(_services, _effectExecutors);
     }
 
     public SkillExecutionResult Execute(SkillExecutionRequest request)
@@ -33,84 +35,14 @@ public sealed class SkillExecutor : ISkillExecutor
 
         ResolvedTargetSet targets = assessment.Targets;
         CommitCosts(request.Actor, assessment.Costs);
-        var results = new List<EffectExecutionResult>();
-        var stoppedTargets = new HashSet<ContentId>();
-        IReadOnlyList<BattleActorState?> executionTargets = targets.IsUntargeted
-            ? Array.AsReadOnly<BattleActorState?>([null])
-            : Array.AsReadOnly(targets.Targets.Cast<BattleActorState?>().ToArray());
-
-        for (int effectIndex = 0; effectIndex < request.Skill.Effects.Count; effectIndex++)
-        {
-            EffectDefinition effect = request.Skill.Effects[effectIndex];
-            DamageElement? effectElement = effect is DamageEffectDefinition damage ? damage.Element : null;
-
-            foreach (BattleActorState? target in executionTargets)
-            {
-                if (target is not null && stoppedTargets.Contains(target.InstanceId))
-                {
-                    continue;
-                }
-
-                var context = new EffectExecutionContext(
-                    request,
-                    _services,
-                    effectIndex,
-                    effect,
-                    target,
-                    effectElement);
-
-                if (!BattleConditionEvaluator.Evaluate(effect.When, context))
-                {
-                    results.Add(new EffectExecutionResult(
-                        effectIndex,
-                        target?.InstanceId,
-                        EffectExecutionOutcome.Skipped,
-                        Detail: "The effect condition was false."));
-                    continue;
-                }
-
-                EffectExecutionResult result = _effectExecutors.Execute(effect, context);
-                results.Add(result);
-
-                if (result.Outcome == EffectExecutionOutcome.Interrupted)
-                {
-                    return new SkillExecutionResult(
-                        SkillExecutionStatus.Interrupted,
-                        results,
-                        costsCommitted: request.Skill.Costs.Count > 0);
-                }
-
-                if (result.Outcome != EffectExecutionOutcome.Failure)
-                {
-                    continue;
-                }
-
-                if (effect.OnFailure == EffectFailurePolicy.StopAction)
-                {
-                    return new SkillExecutionResult(
-                        SkillExecutionStatus.Executed,
-                        results,
-                        costsCommitted: request.Skill.Costs.Count > 0);
-                }
-
-                if (effect.OnFailure == EffectFailurePolicy.StopTarget)
-                {
-                    if (target is null)
-                    {
-                        return new SkillExecutionResult(
-                            SkillExecutionStatus.Executed,
-                            results,
-                            costsCommitted: request.Skill.Costs.Count > 0);
-                    }
-
-                    stoppedTargets.Add(target.InstanceId);
-                }
-            }
-        }
+        OrderedEffectExecution execution = _orderedEffects.Execute(
+            request.ToEffectActionRequest(),
+            request.Skill.Effects,
+            new ResolvedRuntimeTargetSet(targets.Targets, targets.IsUntargeted));
 
         return new SkillExecutionResult(
-            SkillExecutionStatus.Executed,
-            results,
+            execution.Interrupted ? SkillExecutionStatus.Interrupted : SkillExecutionStatus.Executed,
+            execution.Effects,
             costsCommitted: request.Skill.Costs.Count > 0);
     }
 
@@ -244,7 +176,7 @@ public sealed class SkillExecutor : ISkillExecutor
         return Array.AsReadOnly(resolvedCosts.ToArray());
     }
 
-    private static void CommitCosts(BattleActorState actor, IEnumerable<ResolvedSkillCost> costs)
+    private static void CommitCosts(RuntimeActorState actor, IEnumerable<ResolvedSkillCost> costs)
     {
         foreach (ResolvedSkillCost cost in costs)
         {

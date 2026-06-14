@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "field_recovery_demo",
+      "displayName": "Dia",
+      "description": "Restores one ally's HP in battle or in the field.",
+      "activation": "active",
+      "menuGroup": "recovery",
+      "inheritanceGroupId": "recovery",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 3
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "ally",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": true
+      },
+      "availability": {
+        "contexts": ["battle", "field"]
+      },
+      "effects": [
+        {
+          "type": "restore_resource",
+          "resourceId": "hp",
+          "amount": {
+            "type": "flat",
+            "value": 25
+          }
+        }
+      ]
+    }
+  ]
+}

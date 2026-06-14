@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "ailments": [
+    {
+      "id": "poison_demo",
+      "displayName": "Poison",
+      "description": "A removable poison used by the shared-effects demonstration.",
+      "groupIds": ["poison"],
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": false
+      },
+      "turnBehavior": {
+        "type": "normal"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "removeOnEvents": []
+      }
+    }
+  ]
+}

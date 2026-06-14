@@ -61,6 +61,33 @@ internal sealed class AilmentDocumentDto
     public required List<AilmentDto> Ailments { get; init; }
 }
 
+internal sealed class ItemDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<ItemDto> Items { get; init; }
+}
+
+internal sealed class ItemDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required ItemKind ItemKind { get; init; }
+    public required int StackLimit { get; init; }
+    public required decimal BaseValue { get; init; }
+    public ItemUsageDto? Usage { get; init; }
+}
+
+internal sealed class ItemUsageDto
+{
+    public required List<string> Contexts { get; init; }
+    public required ItemConsumptionMode ConsumeOn { get; init; }
+    public required TargetingDto Targeting { get; init; }
+    public required List<EffectDto> Effects { get; init; }
+}
+
 internal sealed class SkillDto
 {
     public required string Id { get; init; }
