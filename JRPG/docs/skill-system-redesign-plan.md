@@ -694,6 +694,20 @@ Changing `Core.Element` directly will break broad legacy code. Prefer introducin
 - Hama/Mudo channel selection and Eternal Rest bypass behavior are covered independently.
 - Damage tests cover all six affinity outcomes and Almighty behavior.
 
+### Completion Record
+
+- Added an immutable `CombatDefenseProfile` with separate elemental, ailment, and instant-death defense maps and normal defaults for missing entries.
+- Added clean elemental-affinity, ailment-resistance, and instant-death resolvers. Elemental resolution implements approved shield, Break, Almighty, and passive-precedence rules without importing legacy guard, rigid-body, or numeric multiplier behavior.
+- Instant-death resolution is contract-only: Hama and Mudo select Light/Dark `ResistanceLevel` channels, while Eternal Rest's explicit no-channel check produces a bypass result. Chance modifiers remain deferred to Track 8.
+- Added separate elemental-affinity, ailment-resistance, and instant-death knowledge stores with immutable snapshots. `BattleKnowledge` exposes them alongside its unchanged legacy registry.
+- Added the explicit `LegacyCombatVocabularyAdapter`. Slash, Strike, and Pierce map to clean Physical; Elec maps to Electric; Earth, Mind, Nerve, Curse, and None have no clean damage-element mapping.
+- Added an independent clean defense profile to `Persona` and a clean Physical basic-attack element to `Combatant`. Legacy affinity maps, weapon elements, damage math, executors, AI, datasets, and console displays remain unchanged.
+- The legacy entity dataset was not converted: 51 of 304 records contain conflicting Slash, Strike, and Pierce affinities, so collapsing it would invent behavior.
+- Focused Track 7 verification passed: 54 passed, 0 failed, 0 skipped.
+- Full verification passed: 363 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo`.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- Completion commit: `combat: add typed combat vocabulary`.
+
 ## Track 8: Active Skill Execution
 
 ### Purpose

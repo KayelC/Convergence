@@ -16,6 +16,7 @@ namespace JRPGPrototype.Entities
 
         // Stats & affinities
         public Dictionary<Element, Affinity> AffinityMap { get; set; } = new Dictionary<Element, Affinity>();
+        public CombatDefenseProfile CombatDefenseProfile { get; set; } = CombatDefenseProfile.Empty;
         public Dictionary<StatType, int> StatModifiers { get; set; } = new Dictionary<StatType, int>();
 
         // Skills

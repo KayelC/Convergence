@@ -54,6 +54,25 @@ almighty
 - Conditional instant death may explicitly bypass those channels. Eternal Rest uses no resistance channel: each sleeping eligible target is defeated, while a target that is not sleeping is skipped.
 - Basic weapon attacks deal `physical` damage. Slash, Strike, and Pierce may survive as descriptive weapon or animation metadata, but they are not damage elements or affinities.
 
+## Runtime Combat Resolution
+
+Catalog-backed entities expose one immutable combat-defense profile with three independent maps: elemental affinities by `DamageElement`, ailment resistances by ailment `ContentId`, and instant-death resistances by the fixed Light/Dark channels. A missing entry in any map resolves to its normal value. Almighty always resolves to normal without consulting the elemental-affinity map.
+
+Elemental affinity is resolved in this order:
+
+1. Almighty returns `normal`.
+2. A matching physical or magical reflection shield returns `repel`.
+3. An active Break normalizes the affected element.
+4. The strongest response from the base affinity and applicable passive replacements wins: `absorb > repel > null > resist > normal > weak`.
+
+This resolver returns the six typed affinity outcomes only. Numeric damage multipliers are not part of the Track 7 contract. The legacy console rules that normalize weaknesses while guarding or normalize physical defenses during rigid-body ailments also remain outside the clean resolver until they are reviewed as explicit gameplay rules.
+
+Instant-death resolution selects either a Light/Dark channel and returns that channel's `ResistanceLevel`, or returns an explicit bypass result for a `mode: none` check. It does not assign success-rate multipliers to `vulnerable` or `resistant`; probability policy belongs to active effect execution after those balance values are approved. Eternal Rest therefore bypasses resistance only because its authored resistance check explicitly uses `mode: none`, not because of its name or inheritance group.
+
+Battle knowledge stores elemental-affinity, ailment-resistance, and instant-death-resistance discoveries separately. Elemental discoveries use damage elements and ignore Almighty. Ailment discoveries use ailment IDs, and instant-death discoveries use Light/Dark channels. These stores must not share keys or infer one defense from another.
+
+During compatibility migration, legacy Slash, Strike, and Pierce values may be adapted to the clean `physical` damage element only at an explicit adapter boundary. Existing legacy entity affinity data is not converted because those three authored affinities may disagree. Weapon type remains available as equipment and presentation metadata, while the clean basic-attack element is always `physical`.
+
 ## Activation
 
 Every skill has exactly one activation model:
@@ -465,3 +484,5 @@ Successful loading qualifies every record ID as `pack.id:local_id`. It also qual
 19. Cross-pack content references are resolved by catalog loading, while host capability references are validated immediately.
 20. Catalog identities and content-record references are always pack-qualified; host vocabulary IDs are never pack-qualified by the loader.
 21. Cross-pack references require a direct exact-version dependency; transitive visibility is not implicit.
+22. Runtime elemental, ailment, and instant-death defense lookups remain separate and default to their normal response when an entry is absent.
+23. Clean combat resolution implements only approved GDD rules; legacy guard, rigid-body, and balance multipliers are not inherited implicitly.

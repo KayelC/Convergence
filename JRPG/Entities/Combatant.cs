@@ -1,5 +1,6 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Entities.Components;
@@ -108,6 +109,7 @@ namespace JRPGPrototype.Entities
         #region Computed Logic Properties
 
         public Element WeaponElement => EquippedWeapon != null ? ElementHelper.FromCategory(EquippedWeapon.Type) : Element.Strike;
+        public DamageElement BasicAttackElement => DamageElement.Physical;
         public bool IsLongRange => EquippedWeapon != null && EquippedWeapon.IsLongRange;
 
         #endregion

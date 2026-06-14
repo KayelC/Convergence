@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using JRPGPrototype.Core;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Logic.Battle;           // For CombatMath
 using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 
@@ -16,6 +17,10 @@ namespace JRPGPrototype.Logic.Battle.Engines
     /// </summary>
     public class BattleKnowledge
     {
+        public ElementalAffinityKnowledge ElementalAffinities { get; } = new();
+        public AilmentResistanceKnowledge AilmentResistances { get; } = new();
+        public InstantDeathResistanceKnowledge InstantDeathResistances { get; } = new();
+
         /// <summary>
         /// Key: (string SourceId, Element element)
         /// Value: The discovered Affinity.
@@ -52,6 +57,30 @@ namespace JRPGPrototype.Logic.Battle.Engines
             {
                 _registry.Add(key, affinity);
             }
+        }
+
+        public void LearnElementalAffinity(
+            ContentId entityId,
+            DamageElement element,
+            ElementalAffinity affinity)
+        {
+            ElementalAffinities.Learn(entityId, element, affinity);
+        }
+
+        public void LearnAilmentResistance(
+            ContentId entityId,
+            ContentId ailmentId,
+            ResistanceLevel resistance)
+        {
+            AilmentResistances.Learn(entityId, ailmentId, resistance);
+        }
+
+        public void LearnInstantDeathResistance(
+            ContentId entityId,
+            InstantDeathChannel channel,
+            ResistanceLevel resistance)
+        {
+            InstantDeathResistances.Learn(entityId, channel, resistance);
         }
 
         /// <summary>
