@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "unstable_blast",
+      "displayName": "Unstable Blast",
+      "description": "A structurally valid active skill with invalid semantic values.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "almighty",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "mutation": {
+        "familyId": "unstable_family",
+        "tier": 2
+      },
+      "costs": [
+        {
+          "resourceId": "unknown_resource",
+          "amount": {
+            "type": "flat",
+            "value": -1
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "none",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false,
+        "count": {
+          "minimum": 2,
+          "maximum": 1
+        }
+      },
+      "availability": {
+        "contexts": []
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "almighty",
+          "power": -1,
+          "accuracy": 101,
+          "critical": {
+            "mode": "chance",
+            "chance": -1
+          },
+          "hits": {
+            "minimum": 2,
+            "maximum": 1,
+            "distribution": "fixed"
+          },
+          "when": {
+            "all": []
+          }
+        },
+        {
+          "type": "apply_ailment",
+          "ailmentId": "missing_ailment",
+          "chance": 101,
+          "duration": {
+            "type": "turns",
+            "value": 0,
+            "tick": "missing_event",
+            "suspendWhileReserve": false
+          }
+        },
+        {
+          "type": "modify_stat_stage",
+          "modifierTrackIds": [],
+          "stageDelta": 0
+        },
+        {
+          "type": "grant_charge",
+          "charge": "magical",
+          "multiplier": 0
+        },
+        {
+          "type": "override_affinity",
+          "elementIds": [
+            "almighty"
+          ],
+          "affinityId": "resist",
+          "duration": {
+            "type": "instant"
+          }
+        },
+        {
+          "type": "remove_status_effect",
+          "statusKinds": [],
+          "statusIds": []
+        },
+        {
+          "type": "analyze",
+          "layers": []
+        }
+      ]
+    },
+    {
+      "id": "locked_passive",
+      "displayName": "Locked Passive",
+      "description": "A passive used to exercise inheritance and mutation failures.",
+      "activation": "passive",
+      "inheritanceGroupId": "fire",
+      "inheritance": {
+        "isInheritable": false,
+        "exclusiveOwnerEntityIds": [
+          "missing_owner"
+        ]
+      },
+      "mutation": {
+        "familyId": "unstable_family",
+        "tier": 2
+      },
+      "triggers": [
+        {
+          "event": "missing_event",
+          "effects": []
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "damage_dealt",
+          "operation": "multiply",
+          "value": 0
+        },
+        {
+          "type": "elemental_affinity",
+          "elementId": "almighty",
+          "affinityId": "null"
+        },
+        {
+          "type": "basic_attack"
+        }
+      ]
+    }
+  ]
+}

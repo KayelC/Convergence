@@ -497,10 +497,10 @@ Reject invalid content before any runtime service can obtain a catalog.
 
 ### Validation Layers
 
-1. Structural validation: required fields, enums, ranges, mutually exclusive shapes.
-2. Document validation: duplicate IDs and local consistency.
-3. Cross-reference validation: skills, entities, races, ailments, groups, resources, and registered handlers.
-4. Runtime capability validation: every effect, condition, trigger, and modifier has an implementation.
+1. Track 4 structural deserialization: JSON fields, token types, enums, discriminators, and union shapes.
+2. Track 5 document validation: schema versions, manifest coverage, local IDs, duplicates, and local consistency.
+3. Track 5 semantic validation: ranges, active/passive shapes, references, inheritance, mutation families, and explicit host registrations.
+4. Track 6 catalog validation: pack qualification, dependencies, external references, and immutable catalog construction.
 
 ### Required Rules
 
@@ -516,14 +516,19 @@ Reject invalid content before any runtime service can obtain a catalog.
 - `instant_kill` requires a discriminated resistance check using a Light/Dark channel or explicit `none` mode.
 - Effects accept only `continue`, `stop_target`, or `stop_action`; omission means `continue`.
 - Effects and modifiers use one `when` tree and reject the obsolete `conditions` array.
-- Effect chances and accuracy values stay within defined ranges.
+- Effect chances and accuracy values stay within `0` through `100`, inclusive.
+- Counts, turn durations, entity levels, ranks, and mutation tiers are positive.
+- Amounts and powers are nonnegative; multiplicative modifiers and ailment multipliers are positive.
+- Balance ceilings remain outside schema validation.
 - Costs cannot reduce the actor below allowed bounds.
 - Entity skill references resolve.
 - Entity allow and deny skill lists cannot contain the same ID.
 - Explicit skill allowance cannot override non-inheritable or owner-exclusive restrictions.
 - Fusion inheritance policies refer only to declared inheritance groups.
 - Mutation tiers are positive, family/tier pairs are unique, and mutation families contain no ambiguous duplicate tier.
-- Custom handler IDs must be registered with parameter validators.
+- Custom handler and formula IDs must be registered with parameter validators.
+- Local and same-pack-qualified content references resolve in this track; external qualified content references are deferred to Track 6.
+- Host capability references must be registered even when qualified.
 
 ### Diagnostics Shape
 
@@ -542,15 +547,15 @@ optional suggestion
 
 ### Files
 
-Proposed location:
-
 ```text
 Data/SkillSystem/Validation/
-  ContentValidationError.cs
-  SkillDocumentValidator.cs
-  EntityDocumentValidator.cs
-  ContentGraphValidator.cs
-  RuntimeRegistrationValidator.cs
+  ValidationContracts.cs
+  SkillSystemRegistrationSnapshot.cs
+  SkillSystemContentValidator.cs
+
+Convergence.Tests/SkillSystem/
+  ContentValidationTests.cs
+  Fixtures/Validation/
 ```
 
 ### Exit Criteria
@@ -559,6 +564,23 @@ Data/SkillSystem/Validation/
 - Validation reports all independent errors in one pass where safe.
 - The catalog cannot be created from invalid content.
 - Tests assert error codes and paths, not only message fragments.
+
+### Track 5 Completion Record
+
+- Completed on June 13, 2026 on branch `skill-system-redesign`, starting from commit `1815144` (`data: add portable skill schema deserialization`).
+- Added serializer-neutral validation requests, source-document provenance, stable error codes, aggregated diagnostics, validation exceptions, and a `ValidatedSkillSystemContentPack` token that only successful validation can create.
+- Added immutable explicit host registrations for contexts, resources, stats, modifier tracks, events, phases, entity kinds, alignments, negotiation personalities, ailment groups, battle kinds, moon phases, capabilities, actions, statuses, escape rules, supported definition types, formulas, and custom handlers. Validation supplies no hidden defaults.
+- Implemented document, identity, range, shape, reference, inheritance, entity-assignment, ailment, registration, parameter, and mutation-family validation across the complete Track 3 vocabulary.
+- Local and same-pack-qualified references resolve to the same target identity. External qualified content references are deferred to Track 6, while host capability references always require explicit registration.
+- Numeric checks are contract-only: `0` through `100` probabilities, positive counts/durations/levels/ranks/tiers, nonnegative amounts/powers, positive multipliers, and valid minimum/maximum relationships. No balance ceilings were introduced.
+- Added a four-document structurally valid but semantically invalid fixture pack and 16 focused tests covering successful reference-pack validation, aggregated errors, stable paths/codes/provenance, deterministic authored ordering, registrations, parameter validators, same-pack aliases, external deferral, mutation and inheritance rules, immutable snapshots, and API boundaries.
+- Focused validation verification passed: 16 passed, 0 failed, 0 skipped.
+- Combined skill-system verification passed: 64 passed, 0 failed, 0 skipped.
+- Full verification passed: 284 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo`.
+- `dotnet build JRPG.sln --no-restore --nologo -t:Rebuild` completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- `git diff --check` passed; boundary searches found no serializer, Godot, or legacy DTO dependencies in validation; `Database.LoadData`, `Data/Database.cs`, and `JRPG.csproj` remain unchanged.
+- Catalog construction, pack dependency graphs, ID qualification, and external-reference resolution remain deferred to Track 6.
+- Completion commit: `data: add skill system validation`.
 
 ## Track 6: Catalog And Loader
 

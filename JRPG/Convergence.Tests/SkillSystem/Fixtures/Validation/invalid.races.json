@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "races": [
+    {
+      "id": "validation.invalid_pack:qualified_race",
+      "displayName": "Qualified Race",
+      "alignmentIds": [
+        "missing_alignment",
+        "missing_alignment"
+      ],
+      "negotiationPersonalityId": "missing_personality"
+    }
+  ]
+}

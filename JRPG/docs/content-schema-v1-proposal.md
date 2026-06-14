@@ -41,9 +41,9 @@ Schema v1 should not:
 ```mermaid
 flowchart LR
     A["Content Pack JSON"] --> B["Schema Deserialization"]
-    B --> C["Structural Validation"]
-    C --> D["Cross-Reference Validation"]
-    D --> E["Immutable GameDataCatalog"]
+    B --> C["Semantic Pack Validation"]
+    C --> D["Validated Content Token"]
+    D --> E["Dependency Resolution and Immutable GameDataCatalog"]
     E --> F["Runtime Factories"]
     F --> G["Mutable Runtime State"]
     G --> H["Battle / Field / Fusion Services"]
@@ -1193,31 +1193,40 @@ flowchart TD
 
 ## Validation Pipeline
 
-Validation happens in two stages.
+The redesigned content path has three explicit boundaries.
 
-### Structural Validation
+### 1. Structural Deserialization
 
-- required fields exist,
-- enum/discriminator values are known,
-- exactly one payload exists for each discriminated union,
-- numbers are in valid ranges,
-- IDs match the required format,
-- record IDs are case-insensitively unique,
-- target, amount, duration, condition, and effect shapes are internally valid.
+Track 4 accepts JSON text and enforces the wire contract:
 
-### Cross-Reference Validation
+- required properties and token types,
+- exact property and enum casing,
+- known discriminators and union shapes,
+- no unknown properties, comments, trailing commas, or ambiguous condition nodes,
+- mapping into immutable domain definitions without retaining serializer-owned values.
 
-- every referenced stat, resource, element, affinity, modifier track, and slot exists,
-- every ailment reference resolves,
-- every skill reference resolves,
-- every race and negotiation personality reference resolves,
-- every item/equipment/shop reference resolves,
-- every entity in an encounter exists,
-- every fusion race/entity/profile reference exists,
-- all handler, formula, strategy, condition, trigger, and effect IDs are registered,
-- mutation tiers are positive integers starting at one, each family/tier pair is unique, and mutations target only an adjacent tier in the same family,
-- duplicate unordered fusion parent pairs are rejected,
-- content-pack dependency versions are satisfied.
+Structural success does not imply that IDs resolve or gameplay values are semantically usable.
+
+### 2. Semantic Pack Validation
+
+Track 5 receives deserialized definitions plus an explicit host registration snapshot. It validates:
+
+- schema version `1`, local record IDs, duplicate records, duplicate authored IDs, and manifest/document consistency,
+- active/passive skill shapes, meaningful effect operands, target shapes, inheritance restrictions, entity skill assignments, and mutation-family continuity,
+- local and same-pack-qualified references among skills, entities, races, and ailments,
+- every host-owned context, resource, stat, modifier track, event, phase, entity kind, alignment, negotiation personality, ailment group, battle kind, moon phase, capability, action, status, and escape rule,
+- supported effect, condition, modifier, and ailment-behaviour definition types,
+- registered formulas and custom effect, condition, and ailment-behaviour parameter contracts.
+
+The numeric policy is contract-only. Probabilities and accuracy use `0` through `100`; counts, durations, levels, ranks, and mutation tiers are positive; amounts and powers are nonnegative; multiplicative values are positive; and minimums cannot exceed maximums. Balance-specific ceilings are deliberately absent.
+
+Validation aggregates independent errors in deterministic authored order. Invalid content cannot produce a `ValidatedSkillSystemContentPack`.
+
+### 3. Catalog And Dependency Validation
+
+Track 6 will accept only validated-content tokens. It will qualify local IDs, resolve references qualified to dependency packs, validate dependency versions and graphs, reject cross-pack ambiguity, and construct immutable catalogs. Track 5 deliberately accepts an external qualified content reference without resolving it. Host capability references are never deferred and must already exist in the explicit registration snapshot, qualified or not.
+
+The broader schema proposal still reserves future catalog validation for items, equipment, shops, encounters, fusion, and other document families when those contracts are implemented.
 
 Validation errors should include:
 
@@ -1225,6 +1234,7 @@ Validation errors should include:
 - source file,
 - record type and ID,
 - JSON path,
+- stable error code,
 - actionable error text.
 
 Example:

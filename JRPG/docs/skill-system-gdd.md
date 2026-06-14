@@ -397,6 +397,25 @@ Active skills declare the execution contexts in which a host may offer them:
 - Passive skills omit availability because their registered triggers determine where they operate.
 - Structural deserialization preserves authored context order. Validation requires active availability to be present and nonempty, rejects availability on passives, and checks every context against the runtime registry.
 
+### Validation Boundary
+
+Deserialization does not make content runtime-ready. A host submits the complete deserialized pack and an explicit registration snapshot to the serializer-neutral validation service. Validation returns all independent diagnostics it can establish safely. Only a result with no errors contains a `ValidatedSkillSystemContentPack`; that token is the sole Track 6 input for catalog construction and cannot be constructed directly by a host.
+
+The registration snapshot contains every host-owned capability used by content: contexts, resources, stats, modifier tracks, events, phases, entity kinds, alignments, negotiation personalities, ailment groups, battle kinds, moon phases, capabilities, actions, statuses, escape rules, supported definition types, formulas, and custom handlers. Validation supplies no hidden defaults. A console host, Godot host, editor, or test harness must state what it supports.
+
+Numeric validation is contract-only:
+
+- probabilities, accuracy, critical chance, recovery chance, and resource-percentage conditions use `0` through `100`, inclusive;
+- counts, turn durations, entity levels, ranks, and mutation tiers are positive;
+- flat, percentage, power, and cost amounts are nonnegative;
+- multiplicative modifiers, charge multipliers, and ailment multipliers are positive;
+- minimum values cannot exceed maximum values, and fixed hit counts use equal bounds;
+- no balance ceiling is imposed on power, level, rank, stage magnitude, or positive multipliers.
+
+Record IDs are local to their document pack. Local references and references qualified with the current pack ID resolve during validation. References qualified to another pack are retained without resolution until Track 6 validates dependencies and constructs the catalog. Host capability IDs are different: they must be present in the registration snapshot even when qualified, because they do not become valid merely by naming another content pack.
+
+Every diagnostic carries the pack ID, diagnostic source, record type and ID when applicable, authored JSON path, stable error code, message, and optional suggestion. Diagnostics retain authored document and record order. Independent errors are aggregated; checks that depend on a duplicate or otherwise ambiguous target are suppressed when their result would be unreliable.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -415,3 +434,6 @@ Active skills declare the execution contexts in which a host may offer them:
 14. Passive modifier stacking and affinity precedence are fixed subsystem rules, not authored priorities.
 15. JSON and engine-specific types remain behind the content-loading boundary; hosts consume immutable definitions.
 16. Active availability uses registered context IDs, while passive operation is determined by triggers.
+17. Deserialized content is not catalog-ready until semantic validation produces a validated-content token.
+18. Validation registrations are explicit host input; the framework does not silently register capabilities.
+19. Cross-pack content references are resolved by catalog loading, while host capability references are validated immediately.
