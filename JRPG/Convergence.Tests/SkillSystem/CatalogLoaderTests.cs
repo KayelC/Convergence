@@ -283,11 +283,13 @@ public sealed class CatalogLoaderTests
         PassiveTriggerDefinition trigger = Assert.Single(skill.Triggers);
         var condition = Assert.IsType<HasAilmentConditionDefinition>(trigger.When);
         var remove = Assert.IsType<RemoveAilmentEffectDefinition>(Assert.Single(trigger.Effects));
+        var resistance = Assert.IsType<AilmentResistanceRuleModifierDefinition>(Assert.Single(skill.Modifiers));
 
         Assert.Equal(Id("qualification.pack:mutation_family"), skill.Mutation!.FamilyId);
         Assert.Equal([Id("qualification.pack:owner")], skill.Inheritance.ExclusiveOwnerEntityIds);
         Assert.Equal([packAilment], condition.AilmentIds);
         Assert.Equal([packAilment], remove.AilmentIds);
+        Assert.Equal(packAilment, resistance.AilmentId);
         Assert.Equal(Id("qualification.pack:spirit"), entity.RaceId);
         Assert.Contains(packAilment, entity.AilmentResistances.Keys);
         Assert.Equal([packSkill], entity.BaseSkillIds);
@@ -500,6 +502,9 @@ public sealed class CatalogLoaderTests
               "event": "owner_turn_end",
               "when": { "type": "actor_has_ailment", "ailmentIds": ["poison"] },
               "effects": [{ "type": "remove_ailment", "scope": "selected", "ailmentIds": ["poison"] }]
+            }],
+            "modifiers": [{
+              "type": "ailment_resistance", "ailmentId": "poison", "resistance": "resistant"
             }]
           }]
         }
@@ -511,6 +516,7 @@ public sealed class CatalogLoaderTests
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("owner_turn_end")
             .SupportModifier<NumericRuleModifierDefinition>()
+            .SupportModifier<AilmentResistanceRuleModifierDefinition>()
             .SupportCondition<EffectElementConditionDefinition>()
             .SupportCondition<HasAilmentConditionDefinition>()
             .SupportEffect<RemoveAilmentEffectDefinition>()

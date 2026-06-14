@@ -829,6 +829,6 @@ public sealed class ActiveSkillExecutionTests
 
     private sealed class ConstantCustomConditionHandler(bool value) : ICustomConditionHandler
     {
-        public bool Evaluate(CustomConditionDefinition condition, EffectExecutionContext context) => value;
+        public bool Evaluate(CustomConditionDefinition condition, BattleConditionContext context) => value;
     }
 }

@@ -15,9 +15,10 @@ internal abstract class TargetedEffectExecutor
         PressTurnOutcome pressTurn = PressTurnOutcome.Normal,
         bool critical = false,
         string? detail = null,
-        bool escape = false) =>
+        bool escape = false,
+        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
-            pressTurn, critical, value, relatedId, detail, escape);
+            pressTurn, critical, value, relatedId, detail, escape, passiveActivations);
 
     protected static EffectExecutionResult Failure(
         EffectExecutionContext context,
@@ -31,9 +32,32 @@ internal abstract class TargetedEffectExecutor
         EffectExecutionContext context,
         PressTurnOutcome pressTurn,
         decimal? value = null,
-        string? detail = null) =>
+        string? detail = null,
+        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
-            pressTurn, Value: value, Detail: detail);
+            pressTurn, Value: value, Detail: detail, PassiveActivations: passiveActivations);
+
+    protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
+        EffectExecutionContext context,
+        BattleActorState owner)
+    {
+        if (!owner.IsDefeated)
+        {
+            return [];
+        }
+
+        PassiveTriggerDispatchResult dispatch = context.Services.PassiveTriggers.Dispatch(
+            new PassiveTriggerDispatchRequest(
+                context.Services.OwnerWouldBeDefeatedEventId,
+                owner,
+                context.Request.Participants,
+                [owner],
+                context.Request.ContextId,
+                context.Request.BattleKindId,
+                context.Request.MoonPhaseId),
+            context.Services);
+        return dispatch.Activations;
+    }
 }
 
 internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExecutor<DamageEffectDefinition>
@@ -41,7 +65,20 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
     public EffectExecutionResult Execute(DamageEffectDefinition definition, EffectExecutionContext context)
     {
         BattleActorState target = Target(context);
-        ElementalAffinity affinity = target.GetElementalAffinity(definition.Element);
+        var defenseConditionContext = new BattleConditionContext(
+            target,
+            context.Actor,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services,
+            [definition.Element]);
+        IReadOnlyList<ElementalAffinity> replacements = context.Services.RuleModifiers
+            .ResolveElementalAffinityReplacements(
+                target,
+                definition.Element,
+                new RuleModifierContext(defenseConditionContext, context.Request.Skill));
+        ElementalAffinity affinity = target.GetElementalAffinity(definition.Element, replacements);
         IReadOnlyList<DamageHitResolution> hits = context.Services.DamagePolicy.Resolve(
             new DamagePolicyRequest(context.Actor, target, definition, affinity));
         DamageHitResolution[] landed = hits.Where(hit => hit.Hit).ToArray();
@@ -51,6 +88,24 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         }
 
         decimal total = landed.Sum(hit => Math.Max(0, hit.Damage));
+        var attackConditionContext = new BattleConditionContext(
+            context.Actor,
+            target,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services,
+            [definition.Element]);
+        total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            context.Actor,
+            NumericRuleModifierType.DamageDealt,
+            total,
+            new RuleModifierContext(attackConditionContext, context.Request.Skill)));
+        total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
+            target,
+            NumericRuleModifierType.DamageTaken,
+            total,
+            new RuleModifierContext(defenseConditionContext, context.Request.Skill)));
         bool critical = landed.Any(hit => hit.Critical);
         switch (affinity)
         {
@@ -59,7 +114,13 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             case ElementalAffinity.Repel:
             {
                 decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
-                return Interrupted(context, PressTurnOutcome.Repel, reflected, "The damage was reflected.");
+                IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
+                return Interrupted(
+                    context,
+                    PressTurnOutcome.Repel,
+                    reflected,
+                    "The damage was reflected.",
+                    activations);
             }
             case ElementalAffinity.Absorb:
             {
@@ -69,11 +130,17 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             default:
             {
                 decimal dealt = -target.AddResource(target.VitalResourceId, -total);
+                IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
                 ApplyDrain(definition.Drain, context.Actor, context.Services, dealt);
                 PressTurnOutcome outcome = affinity == ElementalAffinity.Weak
                     ? PressTurnOutcome.Weakness
                     : critical ? PressTurnOutcome.Critical : PressTurnOutcome.Normal;
-                return Success(context, dealt, pressTurn: outcome, critical: critical);
+                return Success(
+                    context,
+                    dealt,
+                    pressTurn: outcome,
+                    critical: critical,
+                    passiveActivations: activations);
             }
         }
     }
@@ -111,7 +178,8 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
         }
 
         decimal removed = -target.SetResource(target.VitalResourceId, 0);
-        return Success(context, removed);
+        IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
+        return Success(context, removed, passiveActivations: activations);
     }
 }
 
@@ -126,6 +194,18 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
         }
 
         ResistanceLevel resistance = AilmentResistanceResolver.Resolve(target.DefenseProfile, definition.AilmentId);
+        var conditionContext = new BattleConditionContext(
+            target,
+            context.Actor,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services);
+        resistance = context.Services.RuleModifiers.ResolveAilmentResistance(
+            target,
+            definition.AilmentId,
+            resistance,
+            new RuleModifierContext(conditionContext, context.Request.Skill));
         if (!context.Services.AilmentPolicy.ShouldApply(
                 new AilmentApplicationPolicyRequest(context.Actor, target, definition, ailment, resistance)))
         {

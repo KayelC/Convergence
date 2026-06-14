@@ -396,6 +396,12 @@ internal sealed class ElementalAffinityRuleModifierDto : RuleModifierDto
     public required ElementalAffinity AffinityId { get; init; }
 }
 
+internal sealed class AilmentResistanceRuleModifierDto : RuleModifierDto
+{
+    public required string AilmentId { get; init; }
+    public required ResistanceLevel Resistance { get; init; }
+}
+
 internal sealed class BasicAttackRuleModifierDto : RuleModifierDto
 {
     public DamageElement? ElementId { get; init; }

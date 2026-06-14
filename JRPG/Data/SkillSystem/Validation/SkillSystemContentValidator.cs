@@ -741,6 +741,14 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         Add(source, modifierPath + ".elementId", ContentValidationErrorCode.AlmightyAffinityForbidden,
                             "Almighty cannot receive an authored passive affinity replacement.");
                         break;
+                    case AilmentResistanceRuleModifierDefinition resistance:
+                        ValidateContentReference(
+                            source,
+                            resistance.AilmentId,
+                            modifierPath + ".ailmentId",
+                            _ailmentIndex,
+                            "ailment");
+                        break;
                     case BasicAttackRuleModifierDefinition attack
                         when attack.Element is null && attack.Targeting is null && attack.Drain is null:
                         Add(source, modifierPath, ContentValidationErrorCode.ShapeInvalid,

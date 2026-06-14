@@ -144,6 +144,9 @@ internal static class DefinitionQualifier
             modifier.ModifierType, modifier.Operation, modifier.Value, OptionalCondition(packId, modifier.When)),
         ElementalAffinityRuleModifierDefinition modifier => new ElementalAffinityRuleModifierDefinition(
             modifier.Element, modifier.Affinity, OptionalCondition(packId, modifier.When)),
+        AilmentResistanceRuleModifierDefinition modifier => new AilmentResistanceRuleModifierDefinition(
+            ContentReference(packId, modifier.AilmentId), modifier.Resistance,
+            OptionalCondition(packId, modifier.When)),
         BasicAttackRuleModifierDefinition modifier => new BasicAttackRuleModifierDefinition(
             modifier.Element, modifier.Targeting, modifier.Drain, OptionalCondition(packId, modifier.When)),
         _ => throw new InvalidOperationException($"Unsupported modifier definition '{definition.GetType().Name}'.")

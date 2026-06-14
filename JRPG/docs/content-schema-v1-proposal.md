@@ -637,7 +637,29 @@ Hama- and Mudo-line effects use an explicit channel check rather than a damage e
 }
 ```
 
-Rule modifiers declare their type, operation, value, and optional `when` tree. Stacking groups and numeric priorities are not authored. Applicable Boost/Amp-style damage multipliers compose multiplicatively; every other modifier type follows a fixed code-owned subsystem policy.
+Numeric rule modifiers declare their type, operation, value, and optional `when` tree. Stacking groups and numeric priorities are not authored. Every numeric modifier type uses the code-owned formula `(base + sum(add)) * product(multiply)`.
+
+An ailment resistance passive uses a separate nonnumeric shape:
+
+```json
+{
+  "id": "resist_poison",
+  "displayName": "Resist Poison",
+  "description": "Improves the owner's resistance to Poison.",
+  "activation": "passive",
+  "inheritanceGroupId": "passive",
+  "inheritance": { "isInheritable": true },
+  "modifiers": [
+    {
+      "type": "ailment_resistance",
+      "ailmentId": "poison",
+      "resistance": "resistant"
+    }
+  ]
+}
+```
+
+`ailment_resistance` must provide `ailmentId` and `resistance`; it does not accept `operation` or `value`. Applicable replacements use `immune > resistant > normal > vulnerable`. The referenced ailment is a content reference and is qualified by the catalog loader, while the resistance applies only to that ailment.
 
 Elemental-affinity passives choose the strongest applicable response from the base affinity and passive replacements:
 
@@ -646,6 +668,10 @@ absorb > repel > null > resist > normal > weak
 ```
 
 An active shield overrides that result. If no shield applies, an active Break effect temporarily normalizes it. Almighty always resolves as normal.
+
+Passive triggers are processed in authored loadout, trigger, target, and effect order. The passive owner is condition `actor`, while the event-selected actor is condition `target`. Recursion permission and per-battle activation limits belong to registered event policy; they are deliberately absent from JSON. The standard `owner_would_be_defeated` policy permits one activation per trigger per battle. Trigger effects reuse ordinary effect conditions and failure policies.
+
+Hosts or migrated lifecycle services dispatch registered events such as `battle_start` and `owner_turn_end`. Ailment-owned triggers and passive duration expiration are not yet consumed by the clean runtime and remain deferred to their lifecycle integration.
 
 ### Navigator Abilities
 
@@ -1315,7 +1341,7 @@ The Skill System GDD has already settled ordered effects, presentation-only disp
 - Active skills require `menuGroup`; passive skills forbid it.
 - Effects use one per-target `when` tree and optional `onFailure`, which defaults to `continue`.
 - Hama and Mudo use explicit Light/Dark instant-death resistance channels; Eternal Rest explicitly bypasses them after its Sleep condition passes.
-- Modifier stacking is code-owned, Boost/Amp-style damage multipliers compose multiplicatively, and affinity passives use the fixed strongest-response precedence.
+- Numeric modifier stacking is code-owned and uses `(base + sum(add)) * product(multiply)`; affinity and ailment-resistance passives use their separate fixed replacement precedence.
 - Active definitions should support a list of costs. Most skills will have zero or one, but the schema should not need revision for a dual-resource action.
 - Passive mechanics should use passive skill definitions in v1. Entities and equipment grant passive skill IDs instead of embedding a second trigger format.
 - Equipment should grant skill IDs and stat modifiers. It should not embed anonymous passive behavior in v1.

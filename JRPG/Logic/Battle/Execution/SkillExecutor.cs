@@ -17,7 +17,7 @@ public sealed class SkillExecutor : ISkillExecutor
         EffectExecutorRegistry? effectExecutors = null)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
-        _effectExecutors = effectExecutors ?? EffectExecutorRegistry.CreateDefault();
+        _effectExecutors = effectExecutors ?? services.EffectExecutors;
     }
 
     public SkillExecutionResult Execute(SkillExecutionRequest request)
@@ -203,6 +203,24 @@ public sealed class SkillExecutor : ISkillExecutor
                 cost.Amount,
                 new AmountResolutionContext(request.Actor, request.Actor, cost.ResourceId, "skill_cost"),
                 _services);
+            DamageElement[] skillElements = request.Skill.Effects
+                .OfType<DamageEffectDefinition>()
+                .Select(effect => effect.Element)
+                .Distinct()
+                .ToArray();
+            var conditionContext = new BattleConditionContext(
+                request.Actor,
+                request.Actor,
+                request.Participants,
+                request.BattleKindId,
+                request.MoonPhaseId,
+                _services,
+                skillElements);
+            amount = Math.Max(0, _services.RuleModifiers.ResolveNumeric(
+                request.Actor,
+                NumericRuleModifierType.ResourceCost,
+                amount,
+                new RuleModifierContext(conditionContext, request.Skill, cost.ResourceId)));
             resolvedCosts.Add(new ResolvedSkillCost(cost.ResourceId, amount));
             requiredByResource[cost.ResourceId] = requiredByResource.GetValueOrDefault(cost.ResourceId) + amount;
             decimal remaining = resource.Current - requiredByResource[cost.ResourceId];

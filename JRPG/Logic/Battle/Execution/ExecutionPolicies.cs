@@ -82,7 +82,7 @@ public interface IEscapeRuleHandler
 
 public interface ICustomConditionHandler
 {
-    bool Evaluate(CustomConditionDefinition condition, EffectExecutionContext context);
+    bool Evaluate(CustomConditionDefinition condition, BattleConditionContext context);
 }
 
 public interface ICustomEffectHandler
@@ -105,7 +105,12 @@ public sealed class BattleExecutionServices
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditionHandlers = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null,
         ContentId? hpResourceId = null,
-        ContentId? spResourceId = null)
+        ContentId? spResourceId = null,
+        EffectExecutorRegistry? effectExecutors = null,
+        RuleModifierResolver? ruleModifiers = null,
+        PassiveEventPolicyRegistry? passiveEventPolicies = null,
+        IPassiveTriggerDispatcher? passiveTriggers = null,
+        ContentId? ownerWouldBeDefeatedEventId = null)
     {
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
         DamagePolicy = damagePolicy ?? throw new ArgumentNullException(nameof(damagePolicy));
@@ -120,6 +125,14 @@ public sealed class BattleExecutionServices
         CustomEffectHandlers = Snapshot(customEffectHandlers);
         HpResourceId = hpResourceId ?? ContentId.Parse("hp");
         SpResourceId = spResourceId ?? ContentId.Parse("sp");
+        EffectExecutors = effectExecutors ?? EffectExecutorRegistry.CreateDefault();
+        RuleModifiers = ruleModifiers ?? new RuleModifierResolver();
+        OwnerWouldBeDefeatedEventId = ownerWouldBeDefeatedEventId ?? ContentId.Parse("owner_would_be_defeated");
+        PassiveEventPolicies = passiveEventPolicies ?? new PassiveEventPolicyRegistry();
+        PassiveEventPolicies.Register(
+            OwnerWouldBeDefeatedEventId,
+            new PassiveEventPolicy(ActivationLimitPerBattle: 1));
+        PassiveTriggers = passiveTriggers ?? new PassiveTriggerDispatcher(PassiveEventPolicies);
     }
 
     public IAilmentDefinitionRepository Ailments { get; }
@@ -135,6 +148,11 @@ public sealed class BattleExecutionServices
     public IReadOnlyDictionary<ContentId, ICustomEffectHandler> CustomEffectHandlers { get; }
     public ContentId HpResourceId { get; }
     public ContentId SpResourceId { get; }
+    public EffectExecutorRegistry EffectExecutors { get; }
+    public RuleModifierResolver RuleModifiers { get; }
+    public PassiveEventPolicyRegistry PassiveEventPolicies { get; }
+    public IPassiveTriggerDispatcher PassiveTriggers { get; }
+    public ContentId OwnerWouldBeDefeatedEventId { get; }
 
     private static IReadOnlyDictionary<ContentId, T> Snapshot<T>(
         IEnumerable<KeyValuePair<ContentId, T>>? values) where T : notnull =>

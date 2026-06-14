@@ -67,6 +67,7 @@ public sealed class BattleActorState
         IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
+        IEnumerable<SkillDefinition>? passiveSkills = null,
         bool isActive = true)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
@@ -86,6 +87,7 @@ public sealed class BattleActorState
         Stats = Snapshot(stats);
         _skillIds = new HashSet<ContentId>(skillIds ?? []);
         _capabilityIds = new HashSet<ContentId>(capabilityIds ?? []);
+        Passives = new BattlePassiveCollection(passiveSkills);
         IsActive = isActive;
     }
 
@@ -94,6 +96,7 @@ public sealed class BattleActorState
     public ContentId TeamId { get; }
     public ContentId VitalResourceId { get; }
     public CombatDefenseProfile DefenseProfile { get; }
+    public BattlePassiveCollection Passives { get; }
     public IReadOnlyDictionary<ContentId, decimal> Stats { get; }
     public bool IsActive { get; set; }
     public bool IsDefeated => GetRequiredResource(VitalResourceId).Current <= 0;
@@ -127,13 +130,18 @@ public sealed class BattleActorState
     public bool HasBuff(ContentId modifierTrackId) =>
         _statStages.TryGetValue(modifierTrackId, out BattleStatStageState? state) && state.Stage != 0;
 
-    public ElementalAffinity GetElementalAffinity(DamageElement element)
+    public ElementalAffinity GetElementalAffinity(
+        DamageElement element,
+        IEnumerable<ElementalAffinity>? passiveReplacements = null,
+        bool isBroken = false)
     {
         _affinityOverrides.TryGetValue(element, out BattleAffinityOverrideState? activeOverride);
         return ElementalAffinityResolver.Resolve(
             DefenseProfile,
             element,
+            passiveReplacements,
             activeShields: _shields.Keys,
+            isBroken: isBroken,
             activeOverride: activeOverride?.Affinity);
     }
 

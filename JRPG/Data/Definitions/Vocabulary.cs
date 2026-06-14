@@ -170,7 +170,6 @@ public enum NumericRuleModifierType
     Evasion,
     CriticalChance,
     AilmentInfliction,
-    AilmentResistance,
     HealingReceived,
     HealingGiven,
     ResourceCost,

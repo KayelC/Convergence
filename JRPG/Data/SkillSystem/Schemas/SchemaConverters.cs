@@ -277,7 +277,7 @@ internal sealed class RuleModifierDtoConverter : DiscriminatedDtoConverter<RuleM
     private static readonly HashSet<string> NumericTypes =
     [
         "damage_dealt", "damage_taken", "accuracy", "evasion", "critical_chance",
-        "ailment_infliction", "ailment_resistance", "healing_received", "healing_given",
+        "ailment_infliction", "healing_received", "healing_given",
         "resource_cost", "maximum_resource", "experience_gain"
     ];
 
@@ -294,6 +294,7 @@ internal sealed class RuleModifierDtoConverter : DiscriminatedDtoConverter<RuleM
         return discriminator switch
         {
             "elemental_affinity" => typeof(ElementalAffinityRuleModifierDto),
+            "ailment_resistance" => typeof(AilmentResistanceRuleModifierDto),
             "basic_attack" => typeof(BasicAttackRuleModifierDto),
             _ => throw new SchemaDiscriminatorException(UnionName, discriminator)
         };

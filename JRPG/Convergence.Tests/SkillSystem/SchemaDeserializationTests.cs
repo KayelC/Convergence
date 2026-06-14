@@ -218,6 +218,7 @@ public sealed class SchemaDeserializationTests
               "modifiers": [
                 { "type": "damage_dealt", "operation": "multiply", "value": 1.25, "when": { "type": "effect_element_is", "elementId": "ice" } },
                 { "type": "elemental_affinity", "elementId": "fire", "affinityId": "null" },
+                { "type": "ailment_resistance", "ailmentId": "poison", "resistance": "resistant" },
                 {
                   "type": "basic_attack", "elementId": "physical", "drain": "hp",
                   "targeting": { "relation": "enemy", "selection": "all", "lifeState": "alive", "allowSelf": false }
@@ -233,6 +234,7 @@ public sealed class SchemaDeserializationTests
             skill.Modifiers,
             modifier => Assert.IsType<NumericRuleModifierDefinition>(modifier),
             modifier => Assert.IsType<ElementalAffinityRuleModifierDefinition>(modifier),
+            modifier => Assert.IsType<AilmentResistanceRuleModifierDefinition>(modifier),
             modifier => Assert.IsType<BasicAttackRuleModifierDefinition>(modifier));
     }
 

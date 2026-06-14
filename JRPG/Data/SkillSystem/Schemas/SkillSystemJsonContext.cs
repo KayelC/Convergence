@@ -49,6 +49,7 @@ namespace JRPGPrototype.Data.SkillSystem.Schemas;
 [JsonSerializable(typeof(CustomEffectDto))]
 [JsonSerializable(typeof(NumericRuleModifierDto))]
 [JsonSerializable(typeof(ElementalAffinityRuleModifierDto))]
+[JsonSerializable(typeof(AilmentResistanceRuleModifierDto))]
 [JsonSerializable(typeof(BasicAttackRuleModifierDto))]
 [JsonSerializable(typeof(MarkerAilmentTurnBehaviorDto))]
 [JsonSerializable(typeof(LimitedActionsAilmentTurnBehaviorDto))]

@@ -192,7 +192,6 @@ A rule modifier continuously changes a bounded calculation or rule:
 | `accuracy` / `evasion` | Dodge and Evade skills. |
 | `critical_chance` | Apt Pupil and similar skills. |
 | `ailment_infliction` | Poison Boost or broad ailment boosts. |
-| `ailment_resistance` | Resist Poison or ailment immunity. |
 | `healing_received` / `healing_given` | Divine Grace-style effects. |
 | `resource_cost` | Arms Master and Spell Master. |
 | `maximum_resource` | HP/SP capacity increases. |
@@ -200,9 +199,21 @@ A rule modifier continuously changes a bounded calculation or rule:
 | `basic_attack` | Change attack element, targeting, or drain behavior. |
 | `experience_gain` | Reserve or personal EXP modifiers. |
 
-Modifier stacking rules are defined by the affected subsystem and must not be inferred from skill names. JSON modifiers declare only their modifier type, operation, value, and optional `when` condition tree; they do not author arbitrary stacking groups or numeric priorities.
+Numeric modifier stacking must not be inferred from skill names. For every numeric modifier type, applicable values resolve with one code-owned policy:
 
-Applicable damage multipliers such as Boost and Amp compose multiplicatively. Other modifier types use their subsystem's fixed policy, documented and tested alongside that subsystem.
+```text
+(base + sum(add modifiers)) * product(multiply modifiers)
+```
+
+JSON numeric modifiers declare only their modifier type, operation, value, and optional `when` condition tree. They do not author arbitrary stacking groups or numeric priorities.
+
+`ailment_resistance` is not numeric. It is a dedicated replacement keyed by one ailment ID and one `ResistanceLevel`. Multiple applicable replacements use this order:
+
+```text
+immune > resistant > normal > vulnerable
+```
+
+Therefore Resist Poison changes only Poison resistance and cannot alter elemental affinities, instant-death resistance, or another ailment.
 
 Elemental-affinity passives use one deterministic effective response. After collecting the base affinity and applicable passive replacements, the strongest response wins in this order:
 
@@ -211,6 +222,22 @@ absorb > repel > null > resist > normal > weak
 ```
 
 Active reflection/protection shields take priority over that result. When no shield applies, an active Break effect temporarily normalizes the affected affinity. Almighty remains normal regardless of base affinities or passives.
+
+### Passive Runtime Semantics
+
+Each clean battle actor owns one ordered passive collection. The collection accepts only immutable passive `SkillDefinition` records, rejects duplicate IDs, and applies enable, disable, add, and remove operations immediately. Trigger and modifier resolution always follows current collection state.
+
+Trigger dispatch order is deterministic:
+
+```text
+passive loadout -> trigger -> selected target -> effect
+```
+
+Within a trigger, the passive owner is the condition `actor`; each event-selected actor is the condition `target`. Trigger effects reuse the active effect executors, condition tree, and ordinary `continue`, `stop_target`, and `stop_action` failure policies.
+
+The dispatcher suppresses recursive activation of the same owner, passive, trigger, and event unless the code-owned event policy explicitly permits re-entry. Activation limits are also event-policy rules rather than authored JSON. `owner_would_be_defeated` permits one activation per passive trigger per battle, allowing Endure to restore HP after the owner temporarily reaches zero; a later lethal event leaves the owner defeated.
+
+Battle lifecycle owners dispatch events such as `battle_start` and `owner_turn_end`. Passive activation results remain nested in the originating skill result for presentation, while Press Turn aggregation uses only the original active effect outcomes. Ailment-owned trigger dispatch and passive-duration expiration remain deferred until their lifecycle consumers are migrated.
 
 ## Inheritance Groups
 
@@ -507,7 +534,7 @@ Ordinary failures obey the effect's authored policy:
 
 Battle interruptions override every authored failure policy. Repel reflects resolved damage to the actor and interrupts the action. Absorb restores the target and interrupts the action. Both produce phase-termination input for Press Turn. Miss and Null are failures, Weakness and Critical are successful advantage results, and every per-target outcome remains available to presentation and turn-system adapters.
 
-Temporary affinity overrides are runtime statuses, not changes to authored defense data. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Durations are retained as typed runtime state; event ticking, expiration, passive triggers, and modifier consumption belong to Tracks 9 and 10.
+Temporary affinity overrides are runtime statuses, not changes to authored defense data. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Track 9 now consumes passive affinity replacements, Ice damage modifiers, physical-skill cost modifiers, typed ailment replacements, and registered passive events. Duration ticking and expiration remain deferred until their lifecycle consumers are migrated.
 
 ### Host Policy Boundary
 
@@ -553,4 +580,6 @@ The legacy `ActionProcessor`, `Combatant`, `CombatMath`, string-driven effect re
 23. Clean combat resolution implements only approved GDD rules; legacy guard, rigid-body, and balance multipliers are not inherited implicitly.
 24. Active-skill preflight is atomic: no cost or effect mutation occurs when any execution prerequisite fails.
 25. Damage, probability, amount, random-target, escape, and custom runtime decisions are explicit host policies rather than hidden console defaults.
+26. Numeric passive modifiers use add-then-multiply stacking; ailment resistance and elemental affinity use typed replacement precedence instead of numeric multiplication.
+27. Passive trigger re-entry and activation limits are code-owned event policies, never authored content fields.
 26. Clean active effects execute against `BattleActorState`; the framework does not make legacy `Combatant` a reusable host contract.

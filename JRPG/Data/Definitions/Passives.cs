@@ -32,6 +32,12 @@ public sealed record ElementalAffinityRuleModifierDefinition(
     ConditionDefinition? When = null)
     : RuleModifierDefinition(When);
 
+public sealed record AilmentResistanceRuleModifierDefinition(
+    ContentId AilmentId,
+    ResistanceLevel Resistance,
+    ConditionDefinition? When = null)
+    : RuleModifierDefinition(When);
+
 public sealed record BasicAttackRuleModifierDefinition(
     DamageElement? Element = null,
     TargetingDefinition? Targeting = null,

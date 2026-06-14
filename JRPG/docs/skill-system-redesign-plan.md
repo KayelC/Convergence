@@ -811,7 +811,7 @@ StackingPolicyRegistry
 
 The dispatcher subscribes to typed gameplay events. The modifier resolver gathers applicable modifiers for one calculation and applies deterministic stacking rules.
 
-Stacking policies are registered by modifier type in code. Content does not provide stacking groups or numeric priority. Damage multipliers compose multiplicatively. Elemental-affinity resolution uses `absorb > repel > null > resist > normal > weak`, after which shields take priority and Break normalizes only when no shield applies.
+Stacking policies are registered by modifier type in code. Content does not provide stacking groups or numeric priority. Numeric modifiers resolve as `(base + sum(add)) * product(multiply)`. Elemental-affinity resolution uses `absorb > repel > null > resist > normal > weak`, after which shields take priority and Break normalizes only when no shield applies. Ailment resistance is a dedicated replacement keyed by ailment ID and uses `immune > resistant > normal > vulnerable`.
 
 ### Initial Passive Coverage
 
@@ -836,6 +836,27 @@ Stacking policies are registered by modifier type in code. Content does not prov
 - New passive execution contains no skill-name comparisons.
 - Triggered and continuous passives both use typed definitions.
 - The reference Ice Boost fixture changes Ice damage in a focused test.
+
+### Implemented Contract
+
+- `BattlePassiveCollection` preserves loadout order, accepts passive definitions only, rejects duplicates, and applies enable, disable, add, and remove operations immediately.
+- `PassiveTriggerDispatcher` processes passive, trigger, target, and effect order; reuses Track 8 effect execution; treats the owner as condition actor; and reports nested activation results without changing Press Turn aggregation.
+- Event policies own recursion and activation limits. Same-trigger recursion is suppressed by default, and `owner_would_be_defeated` is limited to one activation per trigger per battle.
+- `RuleModifierResolver`, `RuleModifierRegistry`, and `StackingPolicyRegistry` consume conditions through one shared calculation context. Cost contexts include every typed damage element on the skill.
+- Ice Boost, Arms Master, Resist Poison, Regenerate, Auto-Tarukaja, affinity replacement, and one-use Endure behavior are integrated into the clean battle path.
+- `ailment_resistance` is a dedicated schema/domain modifier with `ailmentId` and `ResistanceLevel`; its content reference is validated and catalog-qualified.
+- The legacy console battle path remains unchanged. Ailment-owned triggers, passive duration expiration, basic-attack modifier consumption, and other unintegrated modifier consumers remain deferred.
+
+### Completion Record
+
+- Added the ordered actor-owned passive collection, shared condition calculation context, typed trigger dispatcher, event policies, modifier registry, and stacking-policy registry.
+- Integrated Ice Boost, Arms Master, Resist Poison, Regenerate, Auto-Tarukaja, passive affinity replacements, and one-use Endure into the clean Track 7-8 battle path without skill-name comparisons.
+- Replaced numeric `ailment_resistance` with the dedicated `{ type, ailmentId, resistance }` modifier throughout domain definitions, strict deserialization, validation, qualification, cross-pack checking, runtime resolution, and documentation.
+- Nested passive activations are preserved in effect and skill execution results; Press Turn aggregation remains based on the original active effect outcomes.
+- Focused Track 9 runtime verification passed: 12 passed, 0 failed, 0 skipped. The catalog qualification test for typed ailment resistance also passed.
+- Full verification passed: 402 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo --verbosity quiet`.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- Completion commit: `battle: add passive triggers and rule modifiers`.
 
 ## Track 10: Fusion Inheritance
 

@@ -481,6 +481,12 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                 }
                 for (int index = 0; index < skill.Modifiers.Count; index++)
                 {
+                    if (skill.Modifiers[index] is AilmentResistanceRuleModifierDefinition resistance)
+                    {
+                        CheckReference(pack, document.SourceName, "skill", skill.Id,
+                            root + $".modifiers[{index}].ailmentId", resistance.AilmentId,
+                            ReferenceKind.Ailment, catalog, diagnostics);
+                    }
                     if (skill.Modifiers[index].When is ConditionDefinition when)
                     {
                         CheckCondition(pack, document.SourceName, "skill", skill.Id,

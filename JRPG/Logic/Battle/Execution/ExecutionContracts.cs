@@ -60,7 +60,8 @@ public sealed record EffectExecutionResult(
     decimal? Value = null,
     ContentId? RelatedId = null,
     string? Detail = null,
-    bool EscapeRequested = false);
+    bool EscapeRequested = false,
+    IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null);
 
 public sealed record PressTurnResolution(PressTurnOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
 
@@ -77,6 +78,8 @@ public sealed record SkillExecutionResult
         Diagnostics = Array.AsReadOnly(diagnostics?.ToArray() ?? []);
         CostsCommitted = costsCommitted;
         EscapeRequested = Effects.Any(effect => effect.EscapeRequested);
+        PassiveActivations = Array.AsReadOnly(
+            Effects.SelectMany(effect => effect.PassiveActivations ?? []).ToArray());
         PressTurn = AggregatePressTurn(Effects);
     }
 
@@ -85,6 +88,7 @@ public sealed record SkillExecutionResult
     public IReadOnlyList<SkillExecutionDiagnostic> Diagnostics { get; }
     public bool CostsCommitted { get; }
     public bool EscapeRequested { get; }
+    public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; }
     public PressTurnResolution PressTurn { get; }
 
     public static SkillExecutionResult Rejected(IEnumerable<SkillExecutionDiagnostic> diagnostics) =>

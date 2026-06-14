@@ -285,6 +285,8 @@ internal static class SkillSystemDtoMapper
                 ParseNumericModifierType(numeric.Type), numeric.Operation, numeric.Value, when),
             ElementalAffinityRuleModifierDto affinity => new ElementalAffinityRuleModifierDefinition(
                 affinity.ElementId, affinity.AffinityId, when),
+            AilmentResistanceRuleModifierDto resistance => new AilmentResistanceRuleModifierDefinition(
+                Id(resistance.AilmentId), resistance.Resistance, when),
             BasicAttackRuleModifierDto attack => new BasicAttackRuleModifierDefinition(
                 attack.ElementId,
                 attack.Targeting is null ? null : MapTargeting(attack.Targeting),
@@ -302,7 +304,6 @@ internal static class SkillSystemDtoMapper
         "evasion" => NumericRuleModifierType.Evasion,
         "critical_chance" => NumericRuleModifierType.CriticalChance,
         "ailment_infliction" => NumericRuleModifierType.AilmentInfliction,
-        "ailment_resistance" => NumericRuleModifierType.AilmentResistance,
         "healing_received" => NumericRuleModifierType.HealingReceived,
         "healing_given" => NumericRuleModifierType.HealingGiven,
         "resource_cost" => NumericRuleModifierType.ResourceCost,

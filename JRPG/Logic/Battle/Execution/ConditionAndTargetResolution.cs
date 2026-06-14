@@ -33,6 +33,21 @@ internal static class BattleConditionEvaluator
 {
     public static bool Evaluate(ConditionDefinition? condition, EffectExecutionContext context)
     {
+        DamageElement[] effectElements = context.EffectElement is DamageElement element ? [element] : [];
+        var conditionContext = new BattleConditionContext(
+            context.Actor,
+            context.Target ?? context.Actor,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services,
+            effectElements);
+
+        return Evaluate(condition, conditionContext);
+    }
+
+    public static bool Evaluate(ConditionDefinition? condition, BattleConditionContext context)
+    {
         return condition is null || condition switch
         {
             AllConditionDefinition all => all.Conditions.All(child => Evaluate(child, context)),
@@ -48,16 +63,16 @@ internal static class BattleConditionEvaluator
             HasCapabilityConditionDefinition capability =>
                 Subject(capability.Subject, context)?.HasCapability(capability.CapabilityId) == true,
             LifeStateConditionDefinition life => EvaluateLifeState(Subject(life.Subject, context), life.LifeState),
-            BattleKindConditionDefinition battle => battle.AllowedBattleKindIds.Contains(context.Request.BattleKindId),
-            MoonPhaseConditionDefinition moon => moon.AllowedMoonPhaseIds.Contains(context.Request.MoonPhaseId),
+            BattleKindConditionDefinition battle => battle.AllowedBattleKindIds.Contains(context.BattleKindId),
+            MoonPhaseConditionDefinition moon => moon.AllowedMoonPhaseIds.Contains(context.MoonPhaseId),
             PartySizeConditionDefinition party => Compare(
-                context.Request.Participants.Count(candidate =>
+                context.Participants.Count(candidate =>
                     candidate.IsActive && candidate.TeamId == context.Actor.TeamId && !candidate.IsDefeated),
                 party.Comparison,
                 party.Value),
             ChanceConditionDefinition chance => context.Services.ChancePolicy.Roll(
                 new ChancePolicyRequest(chance.Chance, context.Actor, context.Target, "condition")),
-            EffectElementConditionDefinition element => context.EffectElement == element.Element,
+            EffectElementConditionDefinition element => context.EffectElements.Contains(element.Element),
             CustomConditionDefinition custom when context.Services.CustomConditionHandlers.TryGetValue(
                 custom.HandlerId,
                 out ICustomConditionHandler? handler) => handler.Evaluate(custom, context),
@@ -67,7 +82,7 @@ internal static class BattleConditionEvaluator
         };
     }
 
-    private static bool EvaluateResource(ResourcePercentageConditionDefinition condition, EffectExecutionContext context)
+    private static bool EvaluateResource(ResourcePercentageConditionDefinition condition, BattleConditionContext context)
     {
         BattleActorState? actor = Subject(condition.Subject, context);
         if (actor is null || !actor.TryGetResource(condition.ResourceId, out BattleResourceState? resource) || resource is null)
@@ -79,7 +94,7 @@ internal static class BattleConditionEvaluator
         return Compare(percentage, condition.Comparison, condition.Value);
     }
 
-    private static BattleActorState? Subject(ConditionSubject subject, EffectExecutionContext context) =>
+    private static BattleActorState? Subject(ConditionSubject subject, BattleConditionContext context) =>
         subject == ConditionSubject.Actor ? context.Actor : context.Target;
 
     private static bool EvaluateLifeState(BattleActorState? actor, TargetLifeState lifeState) =>
