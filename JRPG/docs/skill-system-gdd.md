@@ -461,6 +461,71 @@ Successful loading qualifies every record ID as `pack.id:local_id`. It also qual
 
 `GameDataCatalog` exposes immutable qualified-ID dictionaries and repository interfaces for skills, entities, races, and ailments. Repository lookup rejects local IDs so callers cannot accidentally depend on an implicit current pack. Parsing, Track 5 validation, dependency resolution, cross-pack inheritance checks, qualification, and catalog construction report one ordered serializer-neutral diagnostic stream. Any diagnostic prevents catalog exposure.
 
+## Active Skill Runtime Execution
+
+Active skills execute through the serializer-neutral `ISkillExecutor` boundary. The executor consumes a clean `SkillDefinition`, a mutable battle-state actor, the ordered battle participants, registered context IDs, and selected target instance IDs. It never receives schema DTOs, JSON values, Godot nodes or resources, legacy `SkillData`, or the legacy `Combatant` type.
+
+`BattleActorState` is the clean runtime state used by this pipeline. It owns typed resources, immutable base stats and identity sets, the Track 7 defense profile, and separate active stores for ailments, stat stages, charges, shields, affinity overrides, other statuses, and analysis discoveries. It is intentionally independent from the legacy console actor. A host adapter may eventually construct this state from its own scene or entity model, but the framework does not require that host model to inherit from or expose `BattleActorState`.
+
+### Execution Sequence
+
+An active skill follows one deterministic transaction:
+
+1. Require active activation and availability in the requested context.
+2. Resolve and validate targeting against the ordered participant snapshot.
+3. Verify resources, effect executors, ailments, formulas, escape rules, and custom handlers.
+4. Resolve every cost once without mutation. Any diagnostic rejects the complete action and preserves all resources and battle state.
+5. Commit the resolved costs in authored order.
+6. Execute effects in authored order and targets in resolved target order.
+7. Evaluate each effect's `when` tree for the current target immediately before that effect executes.
+8. Return immutable effect results, diagnostics, escape requests, and Press Turn inputs to the host.
+
+Single-target selections must contain only unique eligible instance IDs. Random target selection belongs to an explicit host policy and its result is checked against the eligible target set. `none`/`none` targeting is reserved for untargeted mechanics such as escape and registered custom actions. Ordinary target-mutating effects reject untargeted execution before costs are spent.
+
+### Effects And Outcomes
+
+The default effect registry implements the full approved active vocabulary:
+
+- damage and instant kill;
+- ailment application and removal;
+- resource restoration, reduction, and assignment;
+- revival;
+- stat-stage modification;
+- charge, shield, and affinity-override grants;
+- typed status removal;
+- analysis;
+- escape requests;
+- registered custom effects.
+
+An effect returns `success`, `failure`, `skipped`, or `interrupted`. A false condition is `skipped`, not `failure`. A valid operation that produces no state change, such as restoring an already full resource or curing no matching ailment, remains `success` because the authored operation was valid.
+
+Ordinary failures obey the effect's authored policy:
+
+- `continue` proceeds normally;
+- `stop_target` suppresses later effects for that target while other targets continue;
+- `stop_action` ends the remaining ordered effects.
+
+Battle interruptions override every authored failure policy. Repel reflects resolved damage to the actor and interrupts the action. Absorb restores the target and interrupts the action. Both produce phase-termination input for Press Turn. Miss and Null are failures, Weakness and Critical are successful advantage results, and every per-target outcome remains available to presentation and turn-system adapters.
+
+Temporary affinity overrides are runtime statuses, not changes to authored defense data. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Durations are retained as typed runtime state; event ticking, expiration, passive triggers, and modifier consumption belong to Tracks 9 and 10.
+
+### Host Policy Boundary
+
+The framework does not import the legacy console's balance formulas. A host must explicitly provide policies for:
+
+- damage hit, damage amount, and critical resolution;
+- instant-death success using the typed Light/Dark or bypass result;
+- ailment success using the ailment-specific resistance level;
+- chance checks;
+- power-based and registered-formula amounts;
+- random target selection;
+- escape eligibility;
+- registered custom conditions and effects.
+
+This keeps undecided probability curves, damage multipliers, stat formulas, and encounter rules out of the reusable contract. Policies operate only on clean definitions and battle state. Formula and custom handlers are checked before cost commitment, and a custom effect cannot forge its authored effect index or resolved target identity in the returned result.
+
+The legacy `ActionProcessor`, `Combatant`, `CombatMath`, string-driven effect registry, console datasets, and Press Turn engine remain operational and unchanged in this track. They are compatibility code until later consumer-migration tracks replace their call sites.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -486,3 +551,6 @@ Successful loading qualifies every record ID as `pack.id:local_id`. It also qual
 21. Cross-pack references require a direct exact-version dependency; transitive visibility is not implicit.
 22. Runtime elemental, ailment, and instant-death defense lookups remain separate and default to their normal response when an entry is absent.
 23. Clean combat resolution implements only approved GDD rules; legacy guard, rigid-body, and balance multipliers are not inherited implicitly.
+24. Active-skill preflight is atomic: no cost or effect mutation occurs when any execution prerequisite fails.
+25. Damage, probability, amount, random-target, escape, and custom runtime decisions are explicit host policies rather than hidden console defaults.
+26. Clean active effects execute against `BattleActorState`; the framework does not make legacy `Combatant` a reusable host contract.

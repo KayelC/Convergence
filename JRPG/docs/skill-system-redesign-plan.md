@@ -772,6 +772,21 @@ The executor should:
 - Multi-effect execution produces deterministic ordered results.
 - Existing legacy battle actions continue working until migrated.
 
+### Completion Record
+
+- Added a clean `BattleActorState` independent from legacy `Combatant`, with typed resources and separate ailment, stat-stage, charge, shield, affinity-override, status, and analysis stores.
+- Added `ISkillExecutor`, immutable execution requests/results, resolved target sets, per-effect contexts, typed diagnostics, Press Turn outcomes, and an exact-type `EffectExecutorRegistry`.
+- Execution now performs atomic preflight, strict target resolution, single-pass cost resolution, cost commitment, per-target condition evaluation, and deterministic effect-then-target ordering.
+- Implemented all 16 approved active effects. The default registry contains no display-name, description, menu-group, category-string, JSON, Godot, or legacy DTO dispatch.
+- Added explicit host policy contracts for damage, instant death, ailments, chance, power/formula amounts, random targeting, escape eligibility, custom conditions, and custom effects. No legacy balance formula was adopted as a framework default.
+- Added `continue`, `stop_target`, and `stop_action` behavior. False conditions skip; valid no-change effects succeed; Repel and Absorb interrupt regardless of authored failure policy.
+- Temporary affinity overrides now participate in the Track 7 resolver below matching shields and Break, without mutating authored defense profiles.
+- The legacy console `ActionProcessor`, `Combatant`, `CombatMath`, effect registry, datasets, and consumers remain behaviorally unchanged for later migration tracks.
+- Focused Track 8 verification passed: 27 passed, 0 failed, 0 skipped.
+- Full verification passed: 390 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --nologo --verbosity quiet`.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- Completion commit: `combat: add typed active skill execution`.
+
 ## Track 9: Passive Skill System
 
 ### Purpose

@@ -10,7 +10,8 @@ public static class ElementalAffinityResolver
         DamageElement element,
         IEnumerable<ElementalAffinity>? passiveReplacements = null,
         IEnumerable<ShieldKind>? activeShields = null,
-        bool isBroken = false)
+        bool isBroken = false,
+        ElementalAffinity? activeOverride = null)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
 
@@ -27,6 +28,11 @@ public static class ElementalAffinityResolver
         if (isBroken)
         {
             return ElementalAffinity.Normal;
+        }
+
+        if (activeOverride is ElementalAffinity overrideAffinity)
+        {
+            return overrideAffinity;
         }
 
         ElementalAffinity resolved = defenseProfile.GetElementalAffinity(element);
