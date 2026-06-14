@@ -1381,6 +1381,18 @@ Do not migrate a complete dataset immediately. First create a deliberately small
 
 This fixture becomes the executable definition of Schema v1. Full content should only be authored or migrated after the fixture validates, hydrates runtime entities, and drives representative battle, field, and fusion tests.
 
+## Catalog Actor Hydration And Demo Pack
+
+Track 11 proves the existing skill, entity, race, validation, and catalog contracts through a clean battle vertical slice. It does not add a battle document or put runtime HP/SP values into entity content.
+
+The runtime factory accepts a qualified entity ID and host-owned instance, team, and level values. It copies entity stats and defense maps, resolves base skills followed by eligible level unlocks, suppresses duplicate skill IDs after their first occurrence, attaches passive definitions, and exposes active definitions in authored loadout order. A host initialization policy supplies vital-resource identity and initial resource values. This is deliberately outside JSON because formulas and save-state resource values are runtime concerns.
+
+The separate `convergence.clean_battle_demo` pack depends exactly on `convergence.skill_system_redesign_sample` `0.1.0`. Its Frost combatant references the sample pack's qualified Ice Boost skill, demonstrating that external qualified skill references survive catalog construction and hydrate as passives. The pack also contains Fire and Ice active skills, a turn-end regeneration passive, two entities, and one race. The minimal reference fixture remains unchanged.
+
+The automated battle runner is not an authored encounter schema. Participants, team order, round limit, execution context, battle kind, and moon phase are host request values. Future encounter definitions may construct that request, but they must not alter the clean actor or execution contracts.
+
+The CLI file reader is host code. It converts known files into `ContentPackTextBundle` values and no filesystem type enters catalog, actor, selector, or runner APIs. The `--clean-battle-demo` route is evaluated before the ordinary console host, which proves the clean path can execute without `Database.LoadData`.
+
 ## Proposed Implementation Sequence
 
 1. Review and approve this conceptual model.

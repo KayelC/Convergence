@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "id": "frost_duelist_demo",
+      "displayName": "Frost Duelist",
+      "description": "Clean battle demo combatant with imported Ice Boost.",
+      "entityKind": "demon",
+      "raceId": "demo_spirit",
+      "rank": 1,
+      "baseLevel": 5,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 4,
+        "magic": 8,
+        "vitality": 5,
+        "agility": 6,
+        "luck": 4
+      },
+      "elementalAffinities": {
+        "fire": "normal",
+        "ice": "resist"
+      },
+      "ailmentResistances": {},
+      "baseSkillIds": [
+        "ember_bolt_demo",
+        "frost_lance_demo",
+        "convergence.skill_system_redesign_sample:ice_boost_sample"
+      ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "ember_duelist_demo",
+      "displayName": "Ember Duelist",
+      "description": "Clean battle demo opponent that regenerates and is weak to Ice.",
+      "entityKind": "demon",
+      "raceId": "demo_spirit",
+      "rank": 1,
+      "baseLevel": 5,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 5,
+        "magic": 6,
+        "vitality": 5,
+        "agility": 5,
+        "luck": 4
+      },
+      "elementalAffinities": {
+        "fire": "resist",
+        "ice": "weak"
+      },
+      "ailmentResistances": {},
+      "baseSkillIds": [
+        "ember_bolt_demo",
+        "regenerate_demo"
+      ],
+      "skillUnlocks": []
+    }
+  ]
+}

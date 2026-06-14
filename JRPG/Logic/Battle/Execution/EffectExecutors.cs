@@ -16,26 +16,30 @@ internal abstract class TargetedEffectExecutor
         bool critical = false,
         string? detail = null,
         bool escape = false,
-        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null) =>
+        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
+        ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
-            pressTurn, critical, value, relatedId, detail, escape, passiveActivations);
+            pressTurn, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity);
 
     protected static EffectExecutionResult Failure(
         EffectExecutionContext context,
         PressTurnOutcome pressTurn = PressTurnOutcome.Miss,
         string? detail = null,
-        ContentId? relatedId = null) =>
+        ContentId? relatedId = null,
+        ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure,
-            pressTurn, Detail: detail, RelatedId: relatedId);
+            pressTurn, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity);
 
     protected static EffectExecutionResult Interrupted(
         EffectExecutionContext context,
         PressTurnOutcome pressTurn,
         decimal? value = null,
         string? detail = null,
-        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null) =>
+        IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
+        ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
-            pressTurn, Value: value, Detail: detail, PassiveActivations: passiveActivations);
+            pressTurn, Value: value, Detail: detail, PassiveActivations: passiveActivations,
+            ResolvedAffinity: resolvedAffinity);
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
         EffectExecutionContext context,
@@ -110,7 +114,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         switch (affinity)
         {
             case ElementalAffinity.Null:
-                return Failure(context, PressTurnOutcome.Null, "The damage was nullified.");
+                return Failure(context, PressTurnOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
             case ElementalAffinity.Repel:
             {
                 decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
@@ -120,12 +124,14 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                     PressTurnOutcome.Repel,
                     reflected,
                     "The damage was reflected.",
-                    activations);
+                    activations,
+                    affinity);
             }
             case ElementalAffinity.Absorb:
             {
                 decimal absorbed = target.AddResource(target.VitalResourceId, total);
-                return Interrupted(context, PressTurnOutcome.Absorb, absorbed, "The damage was absorbed.");
+                return Interrupted(context, PressTurnOutcome.Absorb, absorbed, "The damage was absorbed.",
+                    resolvedAffinity: affinity);
             }
             default:
             {
@@ -140,7 +146,8 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                     dealt,
                     pressTurn: outcome,
                     critical: critical,
-                    passiveActivations: activations);
+                    passiveActivations: activations,
+                    resolvedAffinity: affinity);
             }
         }
     }

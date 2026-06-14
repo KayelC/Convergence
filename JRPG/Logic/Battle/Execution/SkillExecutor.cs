@@ -4,6 +4,7 @@ namespace JRPGPrototype.Logic.Battle.Execution;
 
 public interface ISkillExecutor
 {
+    SkillExecutionAssessment Assess(SkillExecutionRequest request);
     SkillExecutionResult Execute(SkillExecutionRequest request);
 }
 
@@ -24,16 +25,14 @@ public sealed class SkillExecutor : ISkillExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        List<SkillExecutionDiagnostic> diagnostics = Preflight(
-            request,
-            out ResolvedTargetSet? targets,
-            out IReadOnlyList<ResolvedSkillCost> costs);
-        if (diagnostics.Count > 0 || targets is null)
+        SkillExecutionAssessment assessment = Assess(request);
+        if (!assessment.CanExecute || assessment.Targets is null)
         {
-            return SkillExecutionResult.Rejected(diagnostics);
+            return SkillExecutionResult.Rejected(assessment.Diagnostics);
         }
 
-        CommitCosts(request.Actor, costs);
+        ResolvedTargetSet targets = assessment.Targets;
+        CommitCosts(request.Actor, assessment.Costs);
         var results = new List<EffectExecutionResult>();
         var stoppedTargets = new HashSet<ContentId>();
         IReadOnlyList<BattleActorState?> executionTargets = targets.IsUntargeted
@@ -113,6 +112,16 @@ public sealed class SkillExecutor : ISkillExecutor
             SkillExecutionStatus.Executed,
             results,
             costsCommitted: request.Skill.Costs.Count > 0);
+    }
+
+    public SkillExecutionAssessment Assess(SkillExecutionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        List<SkillExecutionDiagnostic> diagnostics = Preflight(
+            request,
+            out ResolvedTargetSet? targets,
+            out IReadOnlyList<ResolvedSkillCost> costs);
+        return new SkillExecutionAssessment(diagnostics, targets, costs);
     }
 
     private List<SkillExecutionDiagnostic> Preflight(
@@ -336,5 +345,4 @@ public sealed class SkillExecutor : ISkillExecutor
         }
     }
 
-    private sealed record ResolvedSkillCost(ContentId ResourceId, decimal Amount);
 }

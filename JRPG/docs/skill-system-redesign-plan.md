@@ -932,47 +932,65 @@ The selected Ice Boost can be inherited by the child if the child's own policy p
 - `git diff --check` and clean-boundary searches passed. The Cathedral planner, preview, transaction, UI, legacy datasets, and `Entities/Persona.cs` remain unchanged for Track 11.
 - Completion commit: `fusion: enforce inheritance group policies`.
 
-## Track 11: Runtime Consumer Migration
+## Track 11: Catalog-Backed Runtime Vertical Slice
 
 ### Purpose
 
-Move all skill and entity consumers to the catalog before deleting compatibility code.
+Prove a complete clean-schema runtime path without coupling `BattleActorState` to legacy `Combatant`. This track adds catalog-backed actor hydration, deterministic typed action selection, automated battle orchestration, presentation events, and a dedicated CLI smoke path. Unsupported legacy consumers remain for Tracks 12 and 13.
 
-### Consumer Checklist
+### Runtime Services
 
-- `Logic/Battle/ActionProcessor.cs`
-- `Logic/Battle/Engines/BehaviorEngine.cs`
-- `Logic/Battle/Engines/StatusRegistry.cs`
-- `Logic/Battle/Bridges/InteractionBridge.cs`
-- `Entities/Components/DamageHandler.cs`
-- `Entities/Components/GrowthProcessor.cs` where skill unlocks are applied
-- entity/persona factories under `Entities/Components/`
-- field skill usage under `Logic/Field/Bridges/InventoryUIBridge.cs`
-- fusion planning and preview services
-- analysis and battle-knowledge displays
+- `Logic/Battle/Runtime/CatalogBattleActorFactory.cs` hydrates immutable catalog definitions into independent mutable battle state.
+- `Logic/Battle/Runtime/AutomatedBattleRunner.cs` owns deterministic selection, team phases, passive lifecycle dispatch, typed Press Turn consumption, knowledge updates, outcomes, final snapshots, and ordered events.
+- `Logic/Battle/Execution/SkillExecutor.cs` exposes non-mutating assessment so selection and execution share availability, targeting, and cost resolution.
+- `Logic/Battle/Execution/EffectExecutors.cs` exposes the resolved elemental affinity on clean damage results.
+- `Logic/Battle/Engines/PressTurnEngine.cs` retains the legacy overload and adds a clean `PressTurnResolution` overload.
+- `Host/CleanBattleDemoHost.cs` owns file access, registrations, initialization and deterministic balance policies.
+- `Data/Jsons/clean_battle_demo.*.json` forms a separate dependent demo pack; the Track 2 reference fixture is unchanged.
 
-### Migration Rule
+### Actor Hydration Rule
 
-Each consumer receives the narrowest repository or service interface it needs. It must not access static `Database.Skills` or parse legacy `SkillData` strings after migration.
+Entity lookup requires a qualified catalog ID. Base skills precede level unlocks; all unlocks at or below the requested positive level are included in authored order, and first occurrence wins for duplicates. Passive skills populate `BattlePassiveCollection`; active skills retain loadout order. The host supplies vital-resource initialization through `IBattleActorInitializationPolicy`. Missing entities, skills, invalid levels, and invalid initialization return typed diagnostics and never create a legacy placeholder.
 
-### AI Considerations
+### Automated Battle Rule
 
-`BehaviorEngine` should evaluate typed facts:
+The deterministic selector evaluates typed facts:
 
-- menu group,
-- effects,
-- targeting,
-- costs,
-- known affinities and resistances.
+- active activation and battle availability,
+- executor-assessed targeting and resolved costs,
+- the first living eligible opponent in participant order,
+- known Weak, Resist, Null, Repel, and Absorb outcomes,
+- authored loadout order for ties.
 
-It should not search category names or description text.
+It does not inspect names or descriptions. The runner resets passive activations, dispatches `battle_start`, processes ordered team phases, dispatches `owner_turn_end` after committed skills and passes, and returns `victory`, `draw`, or `faulted` with immutable snapshots and presentation events.
+
+### Demo Host
+
+`--clean-battle-demo` bypasses `ConsoleGameHost` and `Database.LoadData`. The host reads the reference and demo pack JSON as text, supplies explicit registrations and deterministic policies, hydrates two actors, prints ordered events, and exits without input. The demo proves exact-version dependency loading, qualified cross-pack Ice Boost hydration, Regenerate, typed knowledge updates, and clean Press Turn behavior.
 
 ### Exit Criteria
 
-- Repository search finds no migrated subsystem reading `Database.Skills` or `Database.Personas`.
-- Runtime factories hydrate from `EntityDefinition`.
-- Skill unlock lists preserve multiple skills at the same level.
-- The console host can run a clean-schema battle scenario.
+- Public runtime APIs expose no JSON serializer, filesystem, Godot, Newtonsoft, `Database`, `Combatant`, `SkillData`, or `PersonaData` types.
+- Runtime factories hydrate from `EntityDefinition` and preserve multiple same-level unlocks.
+- Selection and execution share cost and targeting assessment.
+- The clean runner covers battle start, turn end, passive activation reset, knowledge, Press Turn, victory, draw, and fault outcomes.
+- `dotnet run --no-build -- --clean-battle-demo` produces the deterministic player-team victory without input.
+- Ordinary console startup and unsupported legacy systems remain unchanged.
+
+### Completion Record
+
+- Completed on June 14, 2026 on branch `skill-system-redesign`, starting from commit `d703b65` (`fusion: enforce inheritance group policies`).
+- Added `CatalogBattleActorFactory` with qualified entity lookup, host-owned resource initialization, copied typed defenses and stats, base-skill then level-unlock ordering, first-occurrence deduplication, passive attachment, active loadout exposure, and typed diagnostics.
+- Added non-mutating `ISkillExecutor.Assess` so deterministic selection and final execution share context, targeting, handler, and resolved-cost checks. Damage results now expose typed resolved affinities for knowledge updates.
+- Added deterministic typed selection, automated team phases, passive activation reset, `battle_start` and `owner_turn_end` dispatch, clean Press Turn consumption, knowledge updates, fault termination, immutable final snapshots, and ordered presentation events.
+- Added the separate `convergence.clean_battle_demo` `0.1.0` pack with an exact dependency on the unchanged reference pack. Its Frost actor imports qualified Ice Boost; the opposing actor is weak to Ice and carries Regenerate.
+- Added `--clean-battle-demo` before ordinary host construction. The host owns filesystem access, explicit registrations, HP/SP initialization, damage multipliers, deterministic chance and target policies, event printing, and process exit codes; `Database.LoadData` is not entered.
+- Focused Track 11 verification passed: 16 passed, 0 failed, 0 skipped.
+- Full verification passed: 436 passed, 0 failed, 0 skipped using `dotnet test JRPG.sln --no-restore --no-build --nologo --verbosity quiet`.
+- Rebuild verification completed with 0 errors and the repository's existing 122 nullable-reference and DTO-initialization warnings.
+- End-to-end verification completed with exit code `0`; the deterministic demo selected Fire first, learned resistance, switched to Ice, applied Ice Boost and Regenerate, and ended with `Victory` for `player_team` without input.
+- `git diff --check` and clean-boundary searches passed. Legacy console gameplay, items, field usage, negotiation, fusion recipes, datasets, and deletion remain deferred to Tracks 12 and 13.
+- Completion commit: `runtime: add catalog-backed clean battle`.
 
 ## Track 12: Shared Effects Beyond Skills
 

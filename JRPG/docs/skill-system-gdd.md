@@ -563,6 +563,34 @@ This keeps undecided probability curves, damage multipliers, stat formulas, and 
 
 The legacy `ActionProcessor`, `Combatant`, `CombatMath`, string-driven effect registry, console datasets, and Press Turn engine remain operational and unchanged in this track. They are compatibility code until later consumer-migration tracks replace their call sites.
 
+## Catalog-Backed Battle Runtime
+
+The first complete clean runtime slice begins with `GameDataCatalog`, not the legacy static database. `CatalogBattleActorFactory` receives a qualified entity ID, instance ID, team ID, and positive runtime level. It resolves base skills first, then every unlock at or below the requested level in authored order. Duplicate skill IDs use first-occurrence wins, including multiple unlocks at the same level. Missing entities, missing skills, invalid levels, and invalid host initialization produce typed diagnostics; no placeholder entity is substituted.
+
+The host owns vital-resource initialization. The framework passes the immutable `EntityDefinition` and requested level to `IBattleActorInitializationPolicy`, then constructs a clean `BattleActorState` containing copied stats, typed defenses, ordered active skills, and passive definitions. This keeps HP/SP formulas and engine-specific entity ownership outside the content schema.
+
+### Automated Battle Contract
+
+The serializer-neutral automated runner operates on ordered `CatalogBattleActor` instances:
+
+1. Reset per-battle passive activation counts.
+2. Dispatch `battle_start` to every participant in participant order.
+3. Process rounds in first-occurrence team order and actors in authored participant order.
+4. Start one Press Turn icon for each living active actor on the acting team.
+5. Select and execute typed active skills until the phase ends.
+6. Dispatch `owner_turn_end` after every committed skill or pass.
+7. Stop with victory when one living team remains, draw at the host-supplied round limit, or a typed fault if an action accepted by selection is rejected during execution.
+
+The deterministic selector considers only active skills available in the current context and asks the same `ISkillExecutor.Assess` path used by final execution to resolve targeting and costs. It selects the first eligible living opponent in participant order, prefers known Weak affinities, penalizes known Resist affinities, avoids known Null, Repel, and Absorb, and preserves loadout order for ties. It reads typed effects and `ElementalAffinityKnowledge`; display names and descriptions have no behavioral role.
+
+Damage results expose their resolved elemental affinity so successful and defensive outcomes can update knowledge directly. The clean Press Turn overload consumes typed `PressTurnResolution` while the legacy `HitType` overload remains intact. Ordered runtime events expose actor creation, phases, skills, effects, passive activation, turn icons, resource changes, defeat, faults, and the final outcome to presentation adapters.
+
+### Demo Host Boundary
+
+`--clean-battle-demo` is a host-owned smoke path. It reads JSON text before entering the framework, loads the reference pack plus the dependent `convergence.clean_battle_demo` pack, supplies explicit registrations and deterministic policies, hydrates two actors, runs without input, prints ordered events, and exits. Routing occurs before `ConsoleGameHost` construction, so `Database.LoadData` is not called.
+
+The demo policies are examples, not framework balance rules: HP is `40 + level * 5 + vitality * 3`, SP is `10 + level * 2 + magic * 2`, and base damage is `max(1, power + attacker.magic - target.vitality)` before host-owned Weak/Resist multipliers and passive modifiers. A Godot host may provide entirely different acquisition, initialization, selection, presentation, and balance policies while reusing the same catalog, actor factory, executor, passive runtime, and runner contracts.
+
 ## Design Invariants
 
 1. A skill may have multiple effects, so combinations do not require new skill kinds.
@@ -592,4 +620,7 @@ The legacy `ActionProcessor`, `Combatant`, `CombatMath`, string-driven effect re
 25. Damage, probability, amount, random-target, escape, and custom runtime decisions are explicit host policies rather than hidden console defaults.
 26. Numeric passive modifiers use add-then-multiply stacking; ailment resistance and elemental affinity use typed replacement precedence instead of numeric multiplication.
 27. Passive trigger re-entry and activation limits are code-owned event policies, never authored content fields.
-26. Clean active effects execute against `BattleActorState`; the framework does not make legacy `Combatant` a reusable host contract.
+28. Clean active effects execute against `BattleActorState`; the framework does not make legacy `Combatant` a reusable host contract.
+29. Catalog actor hydration preserves authored skill order and delegates runtime resource initialization to the host.
+30. Automated selection and execution share one assessment path for availability, targeting, and resolved costs.
+31. Presentation consumes ordered runtime events; battle behavior never depends on presentation text.

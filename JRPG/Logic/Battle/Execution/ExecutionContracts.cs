@@ -61,7 +61,30 @@ public sealed record EffectExecutionResult(
     ContentId? RelatedId = null,
     string? Detail = null,
     bool EscapeRequested = false,
-    IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null);
+    IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null,
+    ElementalAffinity? ResolvedAffinity = null);
+
+public sealed record SkillExecutionAssessment
+{
+    internal SkillExecutionAssessment(
+        IEnumerable<SkillExecutionDiagnostic> diagnostics,
+        ResolvedTargetSet? targets,
+        IEnumerable<ResolvedSkillCost> costs)
+    {
+        Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
+        TargetIds = Array.AsReadOnly(targets?.Targets.Select(target => target.InstanceId).ToArray() ?? []);
+        Targets = targets;
+        Costs = Array.AsReadOnly(costs.ToArray());
+    }
+
+    public bool CanExecute => Diagnostics.Count == 0 && Targets is not null;
+    public IReadOnlyList<SkillExecutionDiagnostic> Diagnostics { get; }
+    public IReadOnlyList<ContentId> TargetIds { get; }
+    internal ResolvedTargetSet? Targets { get; }
+    internal IReadOnlyList<ResolvedSkillCost> Costs { get; }
+}
+
+internal sealed record ResolvedSkillCost(ContentId ResourceId, decimal Amount);
 
 public sealed record PressTurnResolution(PressTurnOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
 

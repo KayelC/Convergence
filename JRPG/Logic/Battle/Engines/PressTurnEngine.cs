@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JRPGPrototype.Core;
 using JRPGPrototype.Logic.Battle;           // For CombatMath
 using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
+using JRPGPrototype.Logic.Battle.Execution;
 
 namespace JRPGPrototype.Logic.Battle.Engines
 {
@@ -107,6 +108,41 @@ namespace JRPGPrototype.Logic.Battle.Engines
             // Ensure we don't fall into negative states.
             if (_fullIcons < 0) _fullIcons = 0;
             if (_blinkingIcons < 0) _blinkingIcons = 0;
+        }
+
+        public void ConsumeAction(PressTurnResolution resolution)
+        {
+            if (!HasTurnsRemaining()) return;
+
+            if (resolution.TerminatesPhase ||
+                resolution.Outcome is PressTurnOutcome.Repel or PressTurnOutcome.Absorb)
+            {
+                TerminatePhase();
+                return;
+            }
+
+            if (resolution.Outcome is PressTurnOutcome.Miss or PressTurnOutcome.Null)
+            {
+                ConsumeIconsInternal(2);
+                return;
+            }
+
+            if (resolution.Outcome is PressTurnOutcome.Weakness or PressTurnOutcome.Critical || resolution.AnyCritical)
+            {
+                if (_fullIcons > 0)
+                {
+                    _fullIcons--;
+                    _blinkingIcons++;
+                }
+                else
+                {
+                    _blinkingIcons--;
+                }
+                return;
+            }
+
+            if (_blinkingIcons > 0) _blinkingIcons--;
+            else _fullIcons--;
         }
 
         /// <summary>
