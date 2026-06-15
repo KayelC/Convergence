@@ -65,6 +65,18 @@ Track C began from `46e9634` and completed the clean content catalog surface for
 - Legacy datasets, `Database.LoadData`, ordinary interactive startup, and existing console workflows remain the playable source of truth until their later migration tracks.
 - Three Track C catalog-surface tests bring the suite to 482 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
 
+## Track D Boundary
+
+Track D began from `68175c8` and added the framework runtime-state foundation without migrating the interactive console consumers.
+
+- `JRPGPrototype.Logic.Runtime` now owns stable runtime instance IDs, actor identity/display snapshots, controller/team/owner links, deployment state, progression, resource pools, stat blocks, skill loadouts, active form and stock references, equipment slots, battle statuses, analysis, passive activation counts, and transaction-safe mutation results.
+- `RuntimeActorSnapshot` is the aggregate save/presentation/replay boundary. It references content by qualified `ContentId` and does not duplicate content definitions.
+- Runtime state remains composed from focused snapshot records; it is not a new universal `Combatant` replacement.
+- A narrow `RuntimeResourceTransactionService` proves before/after mutation reporting and rejection without partial state changes.
+- The parity ledger now marks actor model, growth/progression state, stat/equipment state, active/reserve party state, and persona/demon stock state as `clean_foundation`. No consumer is marked migrated and no removal is authorized.
+- Ten Track D runtime-state tests bring the suite to 492 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
+- The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -105,4 +117,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track C may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track E may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

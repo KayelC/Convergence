@@ -13,6 +13,7 @@ The solution is organized around gameplay subsystems with a physical host bounda
 - immutable content definitions;
 - serializer-neutral deserialization contracts, validation, and catalog construction;
 - catalog-surface definitions for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets;
+- runtime identity, actor-state snapshots, and transaction-safe mutation result contracts;
 - typed skill, item, passive, targeting, and effect execution;
 - catalog-backed actor hydration and automated battle orchestration;
 - elemental, ailment, instant-death, knowledge, and Press Turn contracts;
@@ -37,6 +38,14 @@ The console host references the framework. The framework never references the co
 Future clean hosts use cancellation-aware asynchronous contracts for content text, commands, events, and randomness. A host supplies JSON text through `IContentPackTextSource`, consumes or publishes ordered output through `IHostEventSink<TEvent>`, obtains typed choices through `IHostCommandSource<TCommand>`, and owns nondeterminism through `IRandomSource`.
 
 The existing interactive prototype still uses synchronous `IGameIO`. Moving that consumer onto the new contracts is deliberately deferred; Track B establishes the boundary without rewriting gameplay.
+
+### Runtime State Boundary
+
+Track D adds `JRPGPrototype.Logic.Runtime` as the framework home for mutable actor state that must eventually survive save, presentation, replay, and host migration boundaries. It defines stable runtime instance IDs distinct from content definition IDs, actor identity/display metadata, controller/team/owner links, deployment state, progression, resources, base/effective stats, learned/equipped skills, active form and stock references, equipment slots, battle statuses, analysis, and passive activation counts.
+
+The runtime state layer is deliberately composed from focused snapshots rather than one replacement `Combatant` class. `RuntimeActorSnapshot` exists only as the aggregate save/transaction boundary, and content definitions are always referenced by qualified `ContentId` instead of being duplicated into mutable state.
+
+Only a narrow resource transaction service exists in Track D. Class formulas, stat composition, stock capacity, inventory quantities, party operations, fusion transactions, and full persistence services remain later migration tracks.
 
 ## Layers And Patterns
 
@@ -125,6 +134,7 @@ The field subsystem then creates the party manager, dungeon manager, bridges, se
 - Filesystem, console, delays, and legacy Newtonsoft loading are host-only concerns.
 - Framework public APIs expose no console, filesystem, serializer, Godot, or legacy runtime types.
 - Host cancellation is distinct from an ordinary menu cancellation in the async command contract.
+- Runtime snapshots are serializer-neutral contracts. A host may persist them, but the framework does not prescribe a save file format in Track D.
 
 ## Caveats
 

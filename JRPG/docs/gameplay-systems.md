@@ -125,6 +125,12 @@ Track C adds framework definitions, strict deserialization, validation, catalog 
 
 This is a schema and catalog foundation only. It does not migrate `Database`, shop transactions, dungeon traversal, negotiation sessions, equipment ownership, fusion calculation, or economy state. Those systems remain protected by the legacy characterization tests until their dedicated runtime tracks connect real consumers to the clean definitions.
 
+## Clean Runtime State Foundation
+
+Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.
+
+This is not a gameplay migration yet. The interactive console still mutates `Combatant`, `Persona`, `InventoryManager`, `PartyManager`, `StatusRegistry`, and the Cathedral services. The new runtime snapshots are save/presentation/replay contracts for later tracks, and only resource mutation has a transaction result service so far.
+
 ## Extension Mindset
 
 When adding new gameplay content:

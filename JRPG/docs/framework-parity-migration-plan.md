@@ -484,6 +484,26 @@ Define serializer-neutral save snapshots for mutable state. Content definitions 
 
 All `Combatant` and `Persona` state used by protected workflows has a typed framework home, round-trip snapshot tests pass, and no host type appears in runtime contracts.
 
+### Track D Completion
+
+Track D began from `68175c8` on `track-12-recovery`.
+
+- Added `JRPGPrototype.Logic.Runtime` with stable runtime instance IDs, focused immutable actor-state snapshots, the aggregate `RuntimeActorSnapshot` save/presentation/replay boundary, and transaction-safe resource mutation results.
+- Covered identity, display metadata, controller/team/owner links, active/reserve/deployed state, level/EXP/stat points, current/max resources, base/effective stats, learned/equipped skills, active form references, persona/demon stock references, equipment slots, ailments, statuses, stages, charges, shields, breaks, guarding, analysis, and per-battle passive activation counts.
+- Preserved the existing Track 12 `RuntimeActorState` and `BattleActorState` execution path. No console workflow, `Combatant`, `Persona`, `PartyManager`, inventory, fusion, or persistence consumer migrated in this track.
+- Updated the parity ledger to mark newly covered runtime-state capabilities as `clean_foundation` only. No consumer migration flag or removal authorization changed.
+- Added 10 focused runtime-state tests covering instance-ID normalization/rejection, full actor snapshot round-trip coverage, defensive collection snapshots, transaction before/after results, rejected mutation behavior, and public runtime API boundaries.
+
+Verification:
+
+- `dotnet test JRPG.sln --no-restore --filter FullyQualifiedName~RuntimeStateSnapshotTests`: 10 passed, 0 skipped.
+- `dotnet test JRPG.sln --no-restore`: 492 passed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 122 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- `git diff --check`: passed.
+- Framework forbidden-reference searches found no console, filesystem, sleep, Newtonsoft, `Database`, legacy DTO, `Combatant`, `Persona`, or `IGameIO` references.
+
 ## Track E: Stats, Classes, Resources, And Growth
 
 ### Goal
