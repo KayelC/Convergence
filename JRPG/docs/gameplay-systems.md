@@ -148,6 +148,22 @@ The preserved default formulas are:
 
 Ruleset JSON does not own these parameters yet. Track E uses named default policy/config records until a later ruleset migration approves authored progression profiles.
 
+## Clean Party And Stock Foundation
+
+Track F moves active/reserve party transitions, stock capacity, unified demon stock, active Persona swaps, and fusion inventory consume/replace steps into framework transition services. `PartyManager` remains the public console API, but its mutation methods now delegate through a console adapter that builds framework snapshots, applies successful results, and preserves the same live `Combatant`/`Persona` references.
+
+The preserved defaults are:
+
+- active party capacity remains four;
+- stock capacity remains 3/5/7/10/12 by owner level;
+- active demons remain in `DemonStock` while also appearing in `ActiveParty`;
+- returned demons leave `ActiveParty` but remain owned;
+- dismissed or consumed demons leave both active party and stock;
+- Persona swaps exchange the active Persona with a stock entry and then use existing HP/SP recalculation and capping;
+- adapter-owned per-session runtime IDs bridge legacy object references into framework commands without exposing legacy types to the framework.
+
+This is still not legacy removal. Field menus, battle COMP menus, compendium, fusion conductors, factories, and save/persistence ownership remain console-host systems until their later migration tracks.
+
 ## Extension Mindset
 
 When adding new gameplay content:

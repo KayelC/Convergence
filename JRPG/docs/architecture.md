@@ -47,7 +47,9 @@ The runtime state layer is deliberately composed from focused snapshots rather t
 
 Track E adds framework progression policies for stat composition, HP/SP recalculation, EXP curves, level growth, random Persona stat growth, stat allocation, and rollback. The console `StatProcessor`, `GrowthProcessor`, and `Persona` growth methods now delegate through a console-owned compatibility adapter, preserving the existing live `Combatant` and `Persona` models while moving the rules into reusable framework services.
 
-Stock capacity, inventory quantities, party operations, fusion transactions, and full persistence services remain later migration tracks. The Track E policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track F adds framework party and stock transition services for active/reserve party membership, stock capacity, unified demon stock, active Persona swaps, and fusion inventory consume/replace operations. `PartyManager`, battle Persona swaps, field Persona swaps, and fusion inventory transactions now delegate through console-owned adapters with per-session runtime IDs. The old live lists remain the source of console object ownership until a later persistence/host migration replaces them.
+
+Inventory quantities, full fusion transaction ownership, compendium persistence, and save/load services remain later migration tracks. The Track E/F policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 

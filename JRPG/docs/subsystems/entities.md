@@ -13,6 +13,7 @@
 - `CombatantFactory`: hydrates enemies and allied demons from `PersonaData`.
 - `StatProcessor`: compatibility facade for framework stat composition from class, character stats, persona influence, accessories, and buffs/debuffs.
 - `GrowthProcessor`: compatibility facade for framework EXP, level-ups, stat points, resource recalculation, and stat rollback.
+- `PartyManager`: compatibility facade for framework active/reserve party and demon-stock transitions.
 - `DamageHandler`: applies damage to a target, resolving guard, affinities, rigid-body criticals, absorb/repel/null, and ailment removal triggers.
 
 ## Main Runtime Flows
@@ -55,7 +56,7 @@ Battle effects calculate raw damage first, then `DamageHandler.ApplyDamage` appl
 - `Buffs` stores Kaja/Nda-style tracks using keys such as `PhysAtk`, `MagAtk`, `Defense`, and `Agility`.
 - `BrokenAffinities` stores temporary elemental break state.
 - `PersonaStock` and `DemonStock` live on the owning `Combatant`.
-- The unified demon stock model keeps active demons in `DemonStock`; `ActiveParty` holds references to deployed demons.
+- The unified demon stock model keeps active demons in `DemonStock`; `ActiveParty` holds references to deployed demons. Track F now preserves this through framework transition results applied back to the same live object references.
 - `ClearTransientBattleState`, `ClearEncounterPersistence`, and `CleanupBattleState` distinguish between stance/shield cleanup and encounter-wide state cleanup.
 
 ## Data Dependencies
@@ -70,6 +71,7 @@ Battle effects calculate raw damage first, then `DamageHandler.ApplyDamage` appl
 - Add new actor state to `Combatant` only when it truly applies across live battle/field systems.
 - Add new stat formulas to the framework progression policy/configuration, then expose them through `StatProcessor` only as a compatibility adapter.
 - Add new progression rules to the framework progression policy/configuration, then expose them through `GrowthProcessor` only as a compatibility adapter.
+- Add new party or stock transition rules to the framework party/stock service, then expose them through `PartyManager` only as a compatibility adapter.
 - Add new target-side damage interactions in `DamageHandler` if they affect all offensive actions.
 - Add factory variants if enemy/allied/player actor creation diverges further.
 

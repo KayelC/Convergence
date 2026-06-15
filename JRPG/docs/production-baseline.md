@@ -90,6 +90,21 @@ Track E began from `fab0ba5` and moved legacy stat, resource, EXP, level-growth,
 - Track E adds 37 focused progression and adapter tests, bringing the suite to 529 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
 - The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
 
+## Track F Boundary
+
+Track F began from `e84ba29` and moved party, Persona stock, demon stock, active Persona swap, and fusion inventory consume/replace rules into framework transition services without changing menus, datasets, fusion formulas, or live actor persistence.
+
+- `JRPGPrototype.Logic.Runtime` now owns immutable party/stock snapshots, stock capacity policy, typed transition requests, stable result codes, diagnostics, affected runtime IDs, and `IPartyStockTransitionService`.
+- `Logic/Core/LegacyRuntimeIdentityRegistry.cs` assigns adapter-owned per-session `RuntimeInstanceId`s for live `Combatant` and `Persona` references.
+- `Logic/Core/LegacyPartyStockAdapter.cs` builds framework snapshots, executes transitions, and applies successful results back to existing console lists and properties.
+- `PartyManager` remains the public console API but now delegates add, reserve swap, summon, active demon swap, return, dismiss, replace, and capacity checks to the framework-backed adapter.
+- Battle and field Persona swap paths use the same active-form stock transition while preserving existing messages, resource recalculation, and current HP/SP capping.
+- `FusionInventoryTransaction` delegates consume/replace stock operations through the adapter while leaving fusion planning, inheritance, accidents, UI, and economy behavior unchanged.
+- Preserved invariants include active party size four, stock capacity 3/5/7/10/12, active demons remaining owned in `DemonStock`, returned demons staying owned, dismissed/consumed demons leaving both active party and stock, and Persona stock exchange on swap.
+- The parity ledger marks active/reserve party, Persona/demon stock, and party operations as `parallel_partial` with migrated console consumers. Removal remains unauthorized because `Combatant`, `Persona`, UI bridges, compendium, factories, and persistence ownership are still legacy.
+- Track F adds 27 focused party/stock transition and adapter tests, bringing the suite to 556 passing tests with 0 skipped tests. The nonincremental build reports 120 warnings.
+- The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -130,4 +145,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track F may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track G may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

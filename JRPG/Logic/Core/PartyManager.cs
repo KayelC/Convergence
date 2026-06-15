@@ -16,6 +16,7 @@ namespace JRPGPrototype.Logic.Core
         public List<Combatant> ReserveMembers { get; private set; } = new List<Combatant>();
 
         private const int MAX_PARTY_SIZE = 4;
+        private readonly LegacyPartyStockAdapter _partyStock = LegacyPartyStockAdapter.Shared;
 
         public PartyManager(Combatant initialPlayer)
         {
@@ -30,14 +31,7 @@ namespace JRPGPrototype.Logic.Core
         /// Unlocks slots at specific level thresholds.
         /// Updated: Max capacity now reaches 12.
         /// </summary>
-        private int CalculateMaxStock(int level)
-        {
-            if (level < 10) return 3;
-            if (level < 20) return 5;
-            if (level < 30) return 7;
-            if (level < 40) return 10;
-            return 12;
-        }
+        private int CalculateMaxStock(int level) => _partyStock.GetStockCapacity(level);
 
         /// <summary>
         /// Checks if a specific actor has an open slot in their Demon Stock.
@@ -45,8 +39,7 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool HasOpenDemonStockSlot(Combatant actor)
         {
-            int maxStock = CalculateMaxStock(actor.Level);
-            return actor.DemonStock.Count < maxStock;
+            return _partyStock.HasOpenDemonStockSlot(actor);
         }
 
         /// <summary>
@@ -54,8 +47,7 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool HasOpenPersonaStockSlot(Combatant actor)
         {
-            int maxStock = CalculateMaxStock(actor.Level);
-            return actor.PersonaStock.Count < maxStock;
+            return _partyStock.HasOpenPersonaStockSlot(actor);
         }
 
         /// <summary>
@@ -85,35 +77,12 @@ namespace JRPGPrototype.Logic.Core
 
         public bool AddMember(Combatant member)
         {
-            if (ActiveParty.Count < MAX_PARTY_SIZE)
-            {
-                member.PartySlot = ActiveParty.Count;
-                ActiveParty.Add(member);
-                return true;
-            }
-            else
-            {
-                member.PartySlot = -1;
-                ReserveMembers.Add(member);
-                return false;
-            }
+            return _partyStock.AddMember(this, member);
         }
 
         public void SwapMember(int activeIndex, int reserveIndex)
         {
-            if (activeIndex < 0 || activeIndex >= ActiveParty.Count) return;
-            if (reserveIndex < 0 || reserveIndex >= ReserveMembers.Count) return;
-
-            Combatant active = ActiveParty[activeIndex];
-            Combatant reserve = ReserveMembers[reserveIndex];
-
-            // Perform Swap
-            ActiveParty[activeIndex] = reserve;
-            ReserveMembers[reserveIndex] = active;
-
-            // Update Indices
-            reserve.PartySlot = activeIndex;
-            active.PartySlot = -1;
+            _partyStock.SwapMember(this, activeIndex, reserveIndex);
         }
 
         /// <summary>
@@ -123,18 +92,7 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool SummonDemon(Combatant owner, Combatant demon)
         {
-            if (ActiveParty.Count < MAX_PARTY_SIZE)
-            {
-                // Ensure the demon is actually owned by the actor and not already on the field
-                if (owner.DemonStock.Contains(demon) && !ActiveParty.Contains(demon))
-                {
-                    demon.PartySlot = ActiveParty.Count;
-                    demon.BattleControl = ControlState.DirectControl; // Should default to Direct Control upon summon
-                    ActiveParty.Add(demon);
-                    return true; // Party Full
-                }
-            }
-            return false; // Party full or not owned
+            return _partyStock.SummonDemon(this, owner, demon);
         }
 
         /// <summary>
@@ -143,25 +101,7 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool SwapActiveDemon(Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
         {
-            if (!ActiveParty.Contains(activeToRemove) || !owner.DemonStock.Contains(standbyToAdd))
-                return false;
-
-            // Ensure the standby demon isn't already active (redundancy check)
-            if (ActiveParty.Contains(standbyToAdd)) return false;
-
-            int slot = activeToRemove.PartySlot;
-            int listIdx = ActiveParty.IndexOf(activeToRemove);
-
-            // Deactivate old
-            activeToRemove.PartySlot = -1;
-
-            // Activate new at the same position/index
-            standbyToAdd.PartySlot = slot;
-            standbyToAdd.BattleControl = ControlState.DirectControl;
-
-            ActiveParty[listIdx] = standbyToAdd;
-
-            return true;
+            return _partyStock.SwapActiveDemon(this, owner, activeToRemove, standbyToAdd);
         }
 
         /// <summary>
@@ -171,31 +111,13 @@ namespace JRPGPrototype.Logic.Core
         /// </summary>
         public bool ReturnDemon(Combatant owner, Combatant demon)
         {
-            if (ActiveParty.Contains(demon))
-            {
-                // 1. Remove from battlefield
-                demon.PartySlot = -1;
-                ActiveParty.Remove(demon);
-                return true;
-            }
-            return false;
+            return _partyStock.ReturnDemon(this, owner, demon);
         }
 
         /// Permanently removes a demon from the Master Stock and the Party.
         public bool DismissDemon(Combatant owner, Combatant demon)
         {
-            if (ActiveParty.Contains(demon))
-            {
-                demon.PartySlot = -1;
-                ActiveParty.Remove(demon);
-            }
-
-            if (owner.DemonStock.Contains(demon))
-            {
-                owner.DemonStock.Remove(demon);
-                return true;
-            }
-            return false;
+            return _partyStock.DismissDemon(this, owner, demon);
         }
 
         // Checks if the ActiveParty has been entirely eliminated.
@@ -219,26 +141,7 @@ namespace JRPGPrototype.Logic.Core
         /// <param name="newDemon">The new demon replacing the old one</param>
         public void ReplaceDemon(Combatant owner, Combatant oldDemon, Combatant newDemon)
         {
-            // 1. Handle Active Party replacement
-            if (ActiveParty.Contains(oldDemon))
-            {
-                int partyIdx = ActiveParty.IndexOf(oldDemon);
-                int slot = oldDemon.PartySlot;
-                ActiveParty[partyIdx] = newDemon;
-                newDemon.PartySlot = slot; // Assign the new demon to that spot
-            }
-
-            // 2. Handle Master Stock replacement
-            int stockIdx = owner.DemonStock.IndexOf(oldDemon);
-            if (stockIdx != -1)
-            {
-                owner.DemonStock[stockIdx] = newDemon;
-            }
-            else if (owner.DemonStock.Count < CalculateMaxStock(owner.Level))
-            {
-                // Fallback for edge cases where the old demon wasn't in stock for some reason
-                owner.DemonStock.Add(newDemon);
-            }
+            _partyStock.ReplaceDemon(this, owner, oldDemon, newDemon);
         }
     }
 }

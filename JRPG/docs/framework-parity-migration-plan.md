@@ -607,6 +607,24 @@ Port party and ownership behavior as reusable state transitions.
 
 The interactive organize, summon, return, swap, dismiss, Persona stock, and demon stock menus use framework commands and results.
 
+### Track F Completion
+
+Track F began from `e84ba29` on `track-12-recovery`.
+
+- Added framework party/stock transition services in `JRPGPrototype.Logic.Runtime` with immutable snapshots, stock capacity policy, typed command requests, stable result codes, diagnostics, affected runtime IDs, and unchanged before/after snapshots on rejection.
+- Added adapter-owned per-session runtime identity mapping for live `Combatant` and `Persona` objects.
+- Added `LegacyPartyStockAdapter` so the console host can build framework snapshots and apply successful transition results back onto existing live lists and properties.
+- `PartyManager` now delegates active/reserve party operations, demon summon/return/swap/dismiss/replace, and stock capacity checks through the framework-backed adapter.
+- Battle and field Persona swap paths use the same active-form stock transition and preserve existing messages, resource recalculation, and HP/SP capping behavior.
+- `FusionInventoryTransaction` now delegates demon/persona consume and replace operations through the adapter while fusion planning, inheritance, accidents, UI, and economy behavior remain unchanged.
+- Preserved active party capacity four, stock thresholds 3/5/7/10/12, active+owned demon overlap, Persona active/stock exchange, direct-control summon/swap behavior, and legacy party wipe/alive-member queries.
+- The parity ledger now marks active/reserve party, Persona/demon stock, and party operations as `parallel_partial` with console consumers migrated through adapters. No legacy files are marked removable.
+- Focused Track F tests passed: 32 tests, 0 failed, 0 skipped.
+- Full verification passed: 556 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+
 ## Track G: Production Combat Ruleset
 
 ### Goal

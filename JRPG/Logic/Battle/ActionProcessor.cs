@@ -9,6 +9,7 @@ using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Messaging;
 using JRPGPrototype.Logic.Battle.Bridges;
 using JRPGPrototype.Logic.Battle.Results;
+using JRPGPrototype.Logic.Core;
 
 namespace JRPGPrototype.Logic.Battle
 {
@@ -160,15 +161,8 @@ namespace JRPGPrototype.Logic.Battle
         {
             if (actor.ActivePersona == null) return;
 
-            // 1. Transactional Swap
-            Persona oldPersona = actor.ActivePersona;
-            int stockIdx = actor.PersonaStock.IndexOf(newPersona);
-
-            if (stockIdx != -1)
+            if (LegacyPartyStockAdapter.Shared.SwapActivePersona(actor, newPersona))
             {
-                actor.ActivePersona = newPersona;
-                actor.PersonaStock[stockIdx] = oldPersona;
-
                 // 2. Refresh Max Pools based on new stats (Vi/Ma influence)
                 actor.RecalculateResources();
 

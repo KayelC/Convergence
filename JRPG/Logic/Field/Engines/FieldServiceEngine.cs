@@ -432,12 +432,8 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public void PerformPersonaSwap(Combatant player, Persona newPersona)
         {
-            int stockIndex = player.PersonaStock.IndexOf(newPersona);
-            if (stockIndex != -1)
+            if (LegacyPartyStockAdapter.Shared.SwapActivePersona(player, newPersona))
             {
-                Persona oldActive = player.ActivePersona;
-                player.ActivePersona = newPersona;
-                player.PersonaStock[stockIndex] = oldActive;
                 _messenger.Publish($"Equipped {newPersona.Name}!", ConsoleColor.Gray, 800);
 
                 // Refresh Max Pools based on new stats (Vi/Ma influence)
