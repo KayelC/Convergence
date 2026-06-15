@@ -674,6 +674,20 @@ Document and test the order of:
 
 The production console battle path uses the clean resolver and named production policies. Demo policies remain examples only.
 
+### Track G Completion
+
+Track G began from `d053ef0` on `track-12-recovery`.
+
+- Added `ProductionCombatRuleset` to the framework with named defaults for damage, hit/evasion, critical chance, instant death, initiative, reward yields, Weak/Resist, guard, rigid-body, charge, drain, reflection inputs, and variance.
+- Added `LegacyCombatPolicyAdapter` so existing console `CombatMath` and `DamageHandler` callers use the framework policy without exposing `Combatant`, `Persona`, `IGameIO`, console, filesystem, or Newtonsoft to the framework.
+- Preserved the existing `CombatMath`, `DamageHandler`, `DamageEffect`, `BehaviorEngine`, and `BattleConductor` call surfaces; no datasets, skill records, battle menus, AI heuristics, or effect text parsing were removed.
+- Documented the production resolution order in gameplay docs and updated the parity ledger. Combat math and battle rewards are `parallel_partial`; removal remains unauthorized.
+- Focused Track G combat tests passed: 127 tests, 0 failed, 0 skipped.
+- Full verification passed: 576 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+
 ## Track H: Complete Action And Effect Execution
 
 ### Goal

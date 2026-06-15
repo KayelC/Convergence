@@ -164,6 +164,24 @@ The preserved defaults are:
 
 This is still not legacy removal. Field menus, battle COMP menus, compendium, fusion conductors, factories, and save/persistence ownership remain console-host systems until their later migration tracks.
 
+## Production Combat Ruleset Foundation
+
+Track G moves damage, hit/evasion, critical, instant-death, initiative, EXP, Macca, Weak/Resist, guard, rigid-body, charge, drain, and reflection formulas into `ProductionCombatRuleset` in the framework. The console `CombatMath` and `DamageHandler` APIs remain in place for existing battle callers, but now delegate through a console-owned adapter that translates live `Combatant` state into clean policy inputs.
+
+The production damage order is:
+
+1. target validity remains owned by the action/effect caller;
+2. hit/evasion is resolved from accuracy, agility, luck, and adapter-supplied modifiers;
+3. shields are resolved before base affinity;
+4. Break, temporary override, passive replacement, and base affinity resolve before damage application;
+5. Null, Repel, and Absorb retain their Press Turn severity;
+6. critical and rigid-body behavior are resolved from typed status flags;
+7. guard halves damage, suppresses critical, and normalizes Weak to Normal;
+8. damage modifiers, charge, variance, Weak/Resist, and drain use named policy values;
+9. defeat interception, knowledge recording, and Press Turn aggregation remain owned by the existing action/effect paths.
+
+Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing, Apt Pupil, Rebellion, Arms Master, and Spell Master remain adapter or console-effect concerns until Track H/I content migration gives them fully typed definitions. Ruleset JSON still does not author these combat constants; Track G creates named code defaults and parity tests first.
+
 ## Extension Mindset
 
 When adding new gameplay content:

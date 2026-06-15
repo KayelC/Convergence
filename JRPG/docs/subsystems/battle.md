@@ -10,7 +10,9 @@
 
 - `BattleConductor`: root encounter orchestrator.
 - `ActionProcessor`: executes attacks, skills, items, persona swaps, and analysis.
-- `CombatMath`: stateless battle math for damage, hit chance, instant kill, crits, initiative, EXP, and Macca.
+- `CombatMath`: console compatibility facade for framework-owned production combat policies.
+- `ProductionCombatRuleset`: framework policy for damage, hit/evasion, criticals, instant death, initiative, EXP, Macca, affinity multipliers, guard, rigid-body, charge, drain, and reflection math.
+- `LegacyCombatPolicyAdapter`: console adapter that translates live `Combatant`/`Persona` state into clean ruleset requests.
 - `PressTurnEngine`: SMT-style full/blinking turn icon state machine.
 - `StatusRegistry`: ailments, cures, passives, turn-start restrictions, buffs/debuffs, redundancy checks.
 - `BehaviorEngine`: AI action and target selection.
@@ -70,7 +72,7 @@ Each phase:
 - `_sessionRecruitedIds` prevents repeated recruitment of the same entity in a single encounter.
 - `BattleKnowledge` persists across battles for the session.
 - `StatusRegistry.ProcessTurnStart` is the authority for ailment-driven action restrictions.
-- `CombatMath.GetEffectiveAffinity` prioritizes shields, breaks, Almighty/None rules, base affinities, guarding, and rigid-body physical logic.
+- `CombatMath.GetEffectiveAffinity` delegates to the clean resolver through the legacy adapter. Shields precede breaks and affinity; Almighty/None normalize to Normal; guarding normalizes Weak; rigid-body physical states normalize physical resistance.
 
 ## Data Dependencies
 
@@ -78,7 +80,7 @@ Each phase:
 - Ailment definitions are driven by `Database.Ailments`.
 - Enemy combatants are hydrated from `Database.Personas`.
 - Negotiation uses `Database.NegotiationQuestions`.
-- Rewards use enemy levels/stats and `CombatMath`.
+- Rewards use enemy levels/stats through `CombatMath`, which delegates to `ProductionCombatRuleset`.
 
 ## Extension Points
 

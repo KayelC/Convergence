@@ -49,7 +49,9 @@ Track E adds framework progression policies for stat composition, HP/SP recalcul
 
 Track F adds framework party and stock transition services for active/reserve party membership, stock capacity, unified demon stock, active Persona swaps, and fusion inventory consume/replace operations. `PartyManager`, battle Persona swaps, field Persona swaps, and fusion inventory transactions now delegate through console-owned adapters with per-session runtime IDs. The old live lists remain the source of console object ownership until a later persistence/host migration replaces them.
 
-Inventory quantities, full fusion transaction ownership, compendium persistence, and save/load services remain later migration tracks. The Track E/F policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track G adds `ProductionCombatRuleset` as the framework owner for production combat formulas: damage, hit/evasion, critical chance, instant-death success, initiative, rewards, affinity multipliers, guard and rigid-body handling, charge, drain, and reflection math. `CombatMath` and `DamageHandler` remain console-host facades, but their rule work now flows through `LegacyCombatPolicyAdapter` into the framework policy.
+
+Inventory quantities, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -67,7 +69,7 @@ Conductors should remain workflow coordinators. When adding new rules, prefer pl
 
 Engines and processors own deterministic rules or bounded state mutations.
 
-- `CombatMath` calculates damage, accuracy, crit chance, initiative, EXP, and Macca yields.
+- `CombatMath` is the console compatibility facade for framework production combat policies.
 - `PressTurnEngine` owns the full/blinking turn icon state machine.
 - `StatusRegistry` owns ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies.

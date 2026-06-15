@@ -105,6 +105,18 @@ Track F began from `e84ba29` and moved party, Persona stock, demon stock, active
 - Track F adds 27 focused party/stock transition and adapter tests, bringing the suite to 556 passing tests with 0 skipped tests. The nonincremental build reports 120 warnings.
 - The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
 
+## Track G Boundary
+
+Track G began from `d053ef0` and moved production combat formulas into framework policies while preserving the interactive console battle path.
+
+- `JRPG.Framework/Logic/Battle/ProductionCombatRuleset.cs` now owns named production defaults for physical/magical damage, hit and evasion, critical chance, instant-death success, reflected damage inputs, initiative, EXP yield, Macca yield, Weak/Resist multipliers, drain recovery values, guard effects, rigid-body effects, charge, and variance.
+- `Logic/Battle/LegacyCombatPolicyAdapter.cs` translates live `Combatant`/`Persona` state, legacy passives, ailments, shields, breaks, and affinities into framework policy requests.
+- `CombatMath` and `DamageHandler` remain the compatibility APIs used by `DamageEffect`, `BehaviorEngine`, `BattleConductor`, and existing tests, but their rule work now delegates through the adapter.
+- The production order is recorded in gameplay docs: target validity, hit, shield, Break/override/passive affinity, Null/Repel/Absorb, critical/rigid body, guard, damage modifiers/charge/drain, defeat interception, knowledge, and Press Turn.
+- The parity ledger marks combat math and battle rewards as `parallel_partial` with migrated console consumers. Removal remains unauthorized because action selection, skill effects, AI, battle conductor ownership, content migration, and ruleset JSON binding are still later tracks.
+- Track G adds 20 focused production-combat policy test cases, bringing the suite to 576 passing tests with 0 skipped tests. The nonincremental build reports 120 warnings.
+- The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -145,4 +157,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track G may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track H may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
