@@ -1,5 +1,7 @@
 # Host/Core Boundary Map
 
+> **Archived:** This extraction map describes an earlier planning stage and is not a current migration contract.
+
 > **Status: Strategic planning reference.** This boundary map guides future extraction but does not override subsystem GDDs or approved schema contracts.
 
 ## Purpose

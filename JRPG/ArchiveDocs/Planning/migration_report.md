@@ -1,5 +1,7 @@
 # Migration Report
 
+> **Archived:** This report covers the abandoned legacy-to-v2 conversion and must not guide current schemas or production data.
+
 > **Status: Historical discarded-data report.** This report describes the abandoned legacy-to-v2 dataset conversion. It is retained only as migration evidence and must not define the redesign schema, vocabulary, or content requirements.
 
 ## Summary

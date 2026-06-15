@@ -1,5 +1,7 @@
 # Content Schema v1 Proposal
 
+> **Archived:** This document mixes implemented contracts with unapproved future families. Reuse requires extracting and re-approving a focused contract.
+
 ## Status
 
 This is a design proposal, not an implementation contract yet.

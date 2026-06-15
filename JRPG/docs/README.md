@@ -1,70 +1,49 @@
-# JRPGPrototype Documentation
+# Convergence Documentation
 
-This documentation describes the JRPG console prototype as both a gameplay system and a C# codebase. It is written for future developers, designers, and writers who need to understand how player-facing features map to concrete classes, data files, and runtime flows.
+This directory contains the active documentation for the Track 12 recovery branch. Historical plans, abandoned migration material, and generated technical notes live in [ArchiveDocs](../ArchiveDocs/README.md).
 
-## Project At A Glance
+## Authority
 
-- Runtime: .NET 9 console executable with nullable reference types enabled.
-- Data: JSON content in `Data/Jsons`, loaded through the static `Database` class with `Newtonsoft.Json`.
-- Presentation: console I/O is abstracted behind `IGameIO`, with `ConsoleIO` as the current implementation.
-- Architecture: conductors orchestrate workflows, engines/processors own rules, bridges own menus, and messengers/loggers separate logic events from console output.
-- Validation baseline: `dotnet build --no-restore` and the xUnit project in `Convergence.Tests` provide the current build and regression checks. Pre-existing nullable and DTO initialization warnings remain.
+Use active documents in this order:
 
-## Documentation Authority
+1. [Production Baseline](production-baseline.md) defines the current recovery boundary and migration safety rules.
+2. [Framework Parity Migration Plan](framework-parity-migration-plan.md) defines the work and gates required to port all existing systems without feature loss.
+3. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+4. Current source code and automated tests define implemented behavior.
+5. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+6. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
-Documentation is divided by purpose so current implementation notes cannot silently override approved redesign decisions.
+Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 
-| Status | Documents | How to use them |
-| --- | --- | --- |
-| Normative target | [Skill System GDD](skill-system-gdd.md) | Approved skill behavior, vocabulary, inheritance, resistance, and mutation decisions. |
-| Execution plan | [Skill System Redesign Plan](skill-system-redesign-plan.md) | Track order, compatibility strategy, test gates, and removal criteria. It must conform to the GDD. |
-| Draft contract | [Content Schema v1 Proposal](content-schema-v1-proposal.md) | Wider content architecture and schema candidates. Only reconciled, explicitly approved sections are implementation-ready. |
-| Strategic direction | [Project Vision](project-vision.md), [Host/Core Boundary](host-core-boundary.md), [Bridge Contracts](bridge-contracts.md) | Long-term framework goals and design guidance. |
-| Current implementation reference | [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), subsystem chapters, and `TechnicalDocs/` | Describes the console prototype as it exists. Treat legacy behavior as migration evidence, not target design. |
-| Historical material | [Refactor Roadmap](refactor-roadmap.md) and `../migration_report.md` | Earlier planning and discarded-data migration context. Neither defines the redesign target. |
+## Active Documents
 
-When documents conflict, use the GDD for skill-system behavior, the reconciled schema contract for data shape, and the redesign plan for implementation order. Current runtime documentation never overrides an approved target decision.
+- [Production Baseline](production-baseline.md)
+- [Framework Parity Migration Plan](framework-parity-migration-plan.md)
+- [Project Vision](project-vision.md)
+- [Skill System GDD](skill-system-gdd.md)
+- [Architecture](architecture.md)
+- [Gameplay Systems](gameplay-systems.md)
+- [Core](subsystems/core.md)
+- [Data](subsystems/data.md)
+- [Entities](subsystems/entities.md)
+- [Services](subsystems/services.md)
+- [Battle](subsystems/battle.md)
+- [Field](subsystems/field.md)
+- [Fusion](subsystems/fusion.md)
 
-## Recommended Reading Order
+## Current Project Shape
 
-1. [Project Vision](project-vision.md) records the long-term direction for Convergence as a reusable RPG systems framework.
-2. [Skill System GDD](skill-system-gdd.md) defines the approved target elements, taxonomy, effects, passives, inheritance, resistance, and mutation rules.
-3. [Skill System Redesign Plan](skill-system-redesign-plan.md) defines implementation tracks, test gates, compatibility strategy, and cleanup criteria.
-4. [Content Schema v1 Proposal](content-schema-v1-proposal.md) is the draft replacement content model. Its status section identifies what remains unresolved.
-5. [Architecture](architecture.md) and [Gameplay Systems](gameplay-systems.md) explain the current console implementation.
-6. [Host/Core Boundary](host-core-boundary.md) and [Bridge Contracts](bridge-contracts.md) provide broader framework design guidance.
-7. [Refactor Roadmap](refactor-roadmap.md) is retained as historical planning context.
-8. Current subsystem chapters:
-   - [Core](subsystems/core.md)
-   - [Data](subsystems/data.md)
-   - [Entities](subsystems/entities.md)
-   - [Services](subsystems/services.md)
-   - [Battle](subsystems/battle.md)
-   - [Field](subsystems/field.md)
-   - [Fusion](subsystems/fusion.md)
+The branch intentionally contains two paths:
 
-## Runtime Flow
+- The interactive console prototype remains the broad, playable reference implementation.
+- The clean catalog-backed path implements the approved skill, effect, passive, item, battle-demo, and inheritance foundations beside it.
 
-`Program.cs` is the executable entry point. It initializes `IGameIO`, loads JSON content through `Database.LoadData`, creates shared managers, builds a player scenario, and then either jumps into debug/test scenarios or enters the field loop through `FieldConductor`.
+The clean path does not yet replace every console subsystem. A legacy subsystem may only be removed after its replacement reaches functional parity, its real consumer has migrated, and the interactive host remains demonstrably usable.
 
-Most gameplay flows follow the same shape:
+## Documentation Maintenance
 
-1. A conductor owns the high-level loop.
-2. Bridges collect user choices through `IGameIO`.
-3. Engines/processors apply rules and mutate state.
-4. Messengers publish events.
-5. Loggers render those events to the console.
-
-## Documentation Convention
-
-Each subsystem chapter uses the same structure:
-
-- Purpose and player-facing concept.
-- Key classes and responsibilities.
-- Main runtime flows.
-- Important state and invariants.
-- JSON or data dependencies.
-- Extension points and common modification paths.
-- Known caveats observed in the current implementation.
-
-This keeps future iterations predictable: when a module changes, update the concept, code responsibilities, and flow notes together.
+- Update active documents when behavior or ownership changes.
+- Move superseded plans to `ArchiveDocs` instead of deleting them.
+- Keep proposals out of active documentation until their decisions are approved.
+- Do not treat generated class walkthroughs as architectural authority.
+- Prefer links to tests and source when describing implemented behavior.

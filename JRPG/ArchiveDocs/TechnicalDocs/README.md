@@ -1,5 +1,7 @@
 # Convergence Technical Documentation
 
+> **Archived:** These generated walkthroughs describe the legacy fusion implementation at the time they were written. Verify all behavior against source and tests.
+
 > **Status: Current implementation reference.** Files in this tree explain the source code as it exists. They do not override approved GDD or schema decisions and must be refreshed as consumers migrate.
 
 This tree is the code-level documentation layer for Convergence. The existing

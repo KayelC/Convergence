@@ -1,5 +1,7 @@
 # Refactor Roadmap: Prototype To Framework
 
+> **Archived:** This roadmap predates the Track 12 recovery baseline and is retained only as planning history.
+
 > **Status: Historical roadmap.** This document predates the skill-system redesign plan. Keep it for broader refactor context, but use `skill-system-redesign-plan.md` for all skill, entity-content, and legacy-data replacement work.
 
 ## Purpose

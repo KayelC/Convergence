@@ -1,5 +1,7 @@
 # Skill System Redesign Plan
 
+> **Archived:** This execution plan is preserved as implementation history. Track 12 is the active recovery baseline; the later legacy-removal plan is not approved production work.
+
 ## Status
 
 This document is the implementation plan for replacing the legacy and experimental skill-data systems with the model defined by the [Skill System GDD](skill-system-gdd.md).

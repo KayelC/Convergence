@@ -1,5 +1,7 @@
 # Bridge Contract Design Charter
 
+> **Archived:** This charter is retained as design history. New host contracts must be approved against the production baseline.
+
 > **Status: Design guidance.** This charter governs bridge and adapter direction; it is not a gameplay or content-schema authority.
 
 ## Purpose
