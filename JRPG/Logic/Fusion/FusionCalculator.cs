@@ -21,15 +21,21 @@ namespace JRPGPrototype.Logic.Fusion
     {
         private readonly IGameIO _io;
         private readonly IFusionMessenger _messenger;
-        private readonly Random _rnd = new Random();
+        private readonly Random _rnd;
 
         // Lookup dictionary: Dictionary<RaceA, Dictionary<RaceB, ResultString>>
         private readonly Dictionary<string, Dictionary<string, string>> _raceTable;
 
         public FusionCalculator(IGameIO io, IFusionMessenger messenger)
+            : this(io, messenger, new Random())
+        {
+        }
+
+        internal FusionCalculator(IGameIO io, IFusionMessenger messenger, Random random)
         {
             _io = io;
             _messenger = messenger;
+            _rnd = random ?? throw new ArgumentNullException(nameof(random));
             _raceTable = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             LoadFusionTable();
         }

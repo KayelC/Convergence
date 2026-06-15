@@ -326,6 +326,21 @@ Create an auditable list of everything the interactive prototype can do before m
 
 Every protected capability in this document has a parity-ledger entry. No production code is removed.
 
+### Completion Record
+
+Track A began from documentation baseline commit `fce33a9` on `track-12-recovery`.
+
+- The machine-readable ledger is `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` and protects 35 capability IDs.
+- The recovery branch began with 448 passing tests. Track A added 22 characterization and baseline tests, bringing the complete suite to 470 passing tests with 0 skipped tests.
+- A nonincremental solution build completes with 122 warnings and 0 errors. The warning count is unchanged from the recorded recovery baseline.
+- Authored data contains 420 skill records in 3 duplicate-name groups. The legacy name-keyed loader exposes 417 skills because one record from each duplicate group is discarded.
+- The remaining dataset baseline is 304 entities, 11 ailments, 14 items, 26 weapons, 3 armor records, 3 boots, 3 accessories, 460 fusion recipes, 30 shop entries, 1 dungeon with 6 blocks, 8 negotiation personalities, 40 questions, and 8 familiar-dialogue sets.
+- Known integrity findings are preserved as evidence: 56 unresolved base-skill references, 120 unresolved learned-skill references, 1 casing-only skill reference mismatch, and 1 unresolved dungeon enemy-pool reference. Dungeon boss, shop, and accepted fusion-operand checks have 0 unresolved entries.
+- Deterministic seams were limited to internal seeded random sources, a reduced Monte Carlo overload, and debug battle delegates. Existing constructors and commands retain their previous defaults.
+- Automated coverage now exercises startup, scenario setup, debug scenarios, major menu surfaces, shop transactions, dungeon milestones, negotiation outcomes, compendium behavior, and the existing clean battle and field demos.
+- Full live battle interaction, exhaustive navigation through every console branch, and long-form play sessions remain manual checks. Existing specialized tests continue to own combat, status, party, Press Turn, fusion, catalog, skill, passive, and item behavior.
+- No production subsystem, public API, gameplay rule, or content record was removed or redesigned.
+
 ## Track B: Split Framework And Hosts Without Changing Behavior
 
 ### Goal

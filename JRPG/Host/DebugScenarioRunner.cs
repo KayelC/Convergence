@@ -14,6 +14,21 @@ using JRPGPrototype.Services;
 
 namespace JRPGPrototype.Host
 {
+    internal delegate void LegacyDebugBattleRunner(
+        PartyManager party,
+        List<Combatant> enemies,
+        bool isBoss);
+
+    internal readonly record struct MonteCarloSimulationSummary(
+        int TotalTrials,
+        int Accidents,
+        int MutationsAttempted,
+        int MutationsSucceeded,
+        int RankUps,
+        int RankDowns,
+        int CurseGateTrials,
+        int CurseGateSuccesses);
+
     /// <summary>
     /// Prototype-only debug and validation scenarios for the console host.
     /// </summary>
@@ -26,6 +41,37 @@ namespace JRPGPrototype.Host
             IGameIO io,
             BattleKnowledge playerKnowledge,
             CompendiumRegistry compendium)
+        {
+            RunAilmentTechnicalBattle(
+                player,
+                inventory,
+                economy,
+                io,
+                playerKnowledge,
+                compendium,
+                (party, enemies, isBoss) =>
+                {
+                    BattleConductor battle = new BattleConductor(
+                        party,
+                        enemies,
+                        inventory,
+                        economy,
+                        io,
+                        playerKnowledge,
+                        compendium,
+                        isBoss);
+                    battle.StartBattle();
+                });
+        }
+
+        internal static void RunAilmentTechnicalBattle(
+            Combatant player,
+            InventoryManager inventory,
+            EconomyManager economy,
+            IGameIO io,
+            BattleKnowledge playerKnowledge,
+            CompendiumRegistry compendium,
+            LegacyDebugBattleRunner battleRunner)
         {
             io.Clear();
             io.WriteLine("=== DEBUG SESSION: AILMENT & TECHNICAL TESTING ===", ConsoleColor.Yellow);
@@ -45,16 +91,7 @@ namespace JRPGPrototype.Host
             }
 
             PartyManager partyManager = new PartyManager(player);
-            BattleConductor debugBattle = new BattleConductor(
-                partyManager,
-                enemies,
-                inventory,
-                economy,
-                io,
-                playerKnowledge,
-                compendium,
-                false);
-            debugBattle.StartBattle();
+            battleRunner(partyManager, enemies, false);
 
             io.WriteLine("\nDebug Battle Concluded. Press any key to exit.");
             io.ReadKey();
@@ -62,14 +99,32 @@ namespace JRPGPrototype.Host
 
         public static void RunMonteCarloSimulation(IGameIO io)
         {
+            _ = RunMonteCarloSimulation(
+                io,
+                totalTrials: 10000,
+                fusionRandom: new Random(),
+                mutationRandom: new Random(),
+                waitForInput: true);
+        }
+
+        internal static MonteCarloSimulationSummary RunMonteCarloSimulation(
+            IGameIO io,
+            int totalTrials,
+            Random fusionRandom,
+            Random mutationRandom,
+            bool waitForInput)
+        {
+            if (totalTrials <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(totalTrials));
+            }
+
             io.Clear();
-            io.WriteLine("=== STARTING MONTE CARLO SIMULATION (10,000 TRIALS) ===", ConsoleColor.Cyan);
+            io.WriteLine($"=== STARTING MONTE CARLO SIMULATION ({totalTrials:N0} TRIALS) ===", ConsoleColor.Cyan);
 
             IFusionMessenger messenger = new FusionMessenger();
-            FusionCalculator calculator = new FusionCalculator(io, messenger);
-            Random rnd = new Random();
-
-            int totalTrials = 10000;
+            FusionCalculator calculator = new FusionCalculator(io, messenger, fusionRandom);
+            Random rnd = mutationRandom;
 
             int accidents = 0;
             int mutationsAttempted = 0;
@@ -144,7 +199,10 @@ namespace JRPGPrototype.Host
             io.WriteLine("\n=== SIMULATION RESULTS ===", ConsoleColor.Yellow);
             io.WriteLine($"Total Trials: {totalTrials}");
             io.WriteLine($"Accident Rate (Full Moon): {(double)accidents / totalTrials:P2} (Expected ~12%)");
-            io.WriteLine($"Mutation Chance: {(double)mutationsSucceeded / mutationsAttempted:P2} (Expected ~20%)");
+            double mutationChance = mutationsAttempted == 0
+                ? 0
+                : (double)mutationsSucceeded / mutationsAttempted;
+            io.WriteLine($"Mutation Chance: {mutationChance:P2} (Expected ~20%)");
             io.WriteLine($"Mutation Balance: Ups: {rankUps} | Downs: {rankDowns}");
             io.WriteLine($"Curse Gate Breaches: {curseGateSuccesses} / {curseGateTrials} (Expected: 0)");
 
@@ -157,8 +215,21 @@ namespace JRPGPrototype.Host
                 io.WriteLine("CURSE GATE: FAILED", ConsoleColor.Red);
             }
 
-            io.WriteLine("\nPress any key to return to menu.");
-            io.ReadKey();
+            if (waitForInput)
+            {
+                io.WriteLine("\nPress any key to return to menu.");
+                io.ReadKey();
+            }
+
+            return new MonteCarloSimulationSummary(
+                totalTrials,
+                accidents,
+                mutationsAttempted,
+                mutationsSucceeded,
+                rankUps,
+                rankDowns,
+                curseGateTrials,
+                curseGateSuccesses);
         }
 
         public static void RunCompendiumAutoRegistrationTest(
@@ -168,6 +239,37 @@ namespace JRPGPrototype.Host
             IGameIO io,
             BattleKnowledge playerKnowledge,
             CompendiumRegistry compendium)
+        {
+            RunCompendiumAutoRegistrationTest(
+                player,
+                inventory,
+                economy,
+                io,
+                playerKnowledge,
+                compendium,
+                (party, enemies, isBoss) =>
+                {
+                    BattleConductor battle = new BattleConductor(
+                        party,
+                        enemies,
+                        inventory,
+                        economy,
+                        io,
+                        playerKnowledge,
+                        compendium,
+                        isBoss);
+                    battle.StartBattle();
+                });
+        }
+
+        internal static void RunCompendiumAutoRegistrationTest(
+            Combatant player,
+            InventoryManager inventory,
+            EconomyManager economy,
+            IGameIO io,
+            BattleKnowledge playerKnowledge,
+            CompendiumRegistry compendium,
+            LegacyDebugBattleRunner battleRunner)
         {
             player.Class = ClassType.Operator;
             player.Level = 10;
@@ -188,16 +290,7 @@ namespace JRPGPrototype.Host
             };
 
             PartyManager partyManager = new PartyManager(player);
-            BattleConductor autoRegBattle = new BattleConductor(
-                partyManager,
-                testEnemies,
-                inventory,
-                economy,
-                io,
-                playerKnowledge,
-                compendium,
-                false);
-            autoRegBattle.StartBattle();
+            battleRunner(partyManager, testEnemies, false);
 
             io.Clear();
             io.WriteLine("=== POST-BATTLE REGISTRY CHECK ===", ConsoleColor.Yellow);
@@ -224,6 +317,37 @@ namespace JRPGPrototype.Host
             IGameIO io,
             BattleKnowledge playerKnowledge,
             CompendiumRegistry compendium)
+        {
+            RunUnifiedStockModelTest(
+                player,
+                inventory,
+                economy,
+                io,
+                playerKnowledge,
+                compendium,
+                (party, enemies, isBoss) =>
+                {
+                    BattleConductor battle = new BattleConductor(
+                        party,
+                        enemies,
+                        inventory,
+                        economy,
+                        io,
+                        playerKnowledge,
+                        compendium,
+                        isBoss);
+                    battle.StartBattle();
+                });
+        }
+
+        internal static void RunUnifiedStockModelTest(
+            Combatant player,
+            InventoryManager inventory,
+            EconomyManager economy,
+            IGameIO io,
+            BattleKnowledge playerKnowledge,
+            CompendiumRegistry compendium,
+            LegacyDebugBattleRunner battleRunner)
         {
             player.Class = ClassType.Operator;
             player.Level = 25;
@@ -267,16 +391,7 @@ namespace JRPGPrototype.Host
             {
                 CombatantFactory.CreateEnemy("E_slime")
             };
-            BattleConductor stockTestBattle = new BattleConductor(
-                partyManager,
-                testEnemies,
-                inventory,
-                economy,
-                io,
-                playerKnowledge,
-                compendium,
-                false);
-            stockTestBattle.StartBattle();
+            battleRunner(partyManager, testEnemies, false);
         }
 
         private static void PrepareStandaloneBattlePlayer(Combatant player)

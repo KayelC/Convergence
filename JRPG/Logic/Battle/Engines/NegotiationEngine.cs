@@ -34,7 +34,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
         private readonly PartyManager _party;
         private readonly InventoryManager _inventory;
         private readonly EconomyManager _economy;
-        private readonly Random _rnd = new Random();
+        private readonly Random _rnd;
 
         // Mapped all 32 Races to the 8 Personality Types
         private static readonly Dictionary<string, PersonalityType> RaceToPersonality =
@@ -82,11 +82,22 @@ namespace JRPGPrototype.Logic.Battle.Engines
         };
 
         public NegotiationEngine(IGameIO io, PartyManager party, InventoryManager inventory, EconomyManager economy)
+            : this(io, party, inventory, economy, new Random())
+        {
+        }
+
+        internal NegotiationEngine(
+            IGameIO io,
+            PartyManager party,
+            InventoryManager inventory,
+            EconomyManager economy,
+            Random random)
         {
             _io = io;
             _party = party;
             _inventory = inventory;
             _economy = economy;
+            _rnd = random ?? throw new ArgumentNullException(nameof(random));
         }
 
         public NegotiationResult StartNegotiation(Combatant actor, Combatant target, List<Combatant> enemies)
