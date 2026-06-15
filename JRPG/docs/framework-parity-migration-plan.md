@@ -546,6 +546,25 @@ Port `StatProcessor` and `GrowthProcessor` into explicit ruleset services.
 
 Console status screens and level-up flows use framework services; legacy processors become thin adapters before removal.
 
+### Track E Completion
+
+Track E began from `fab0ba5` on `track-12-recovery`.
+
+- Added framework progression services in `JRPGPrototype.Logic.Runtime` for stat resolution, resource recalculation, EXP curves, level growth, Persona stat growth, stat allocation, and rollback.
+- Added standard framework IDs for Strength, Magic, Vitality, Agility, Luck, HP, SP, actor kinds, and legacy/clean modifier-track aliases. Generic attack maps to Strength and Magic; Defense maps to Vitality; Agility maps to Agility; Luck still has no buff/debuff alias.
+- Extended `RuntimeActorSnapshot` with base resource values so `BaseHP` and `BaseSP` can be represented without depending on legacy `Combatant`.
+- Added `LegacyProgressionAdapter` so `StatProcessor`, `GrowthProcessor`, and `Persona` delegate to the framework while keeping existing console state, messages, skill-name unlocks, and random behavior.
+- Preserved exact legacy formulas for Persona contribution weights, raw stat cap before stage multipliers, EXP requirements, HP/SP maximums, level-up base-resource rolls, current-resource preservation, level-up healing-by-delta, stat allocation, rollback, and Persona random stat growth.
+- The parity ledger now marks stat composition, growth/levels, and resource recalculation as `parallel_partial` with console consumers migrated through adapters. No legacy files are marked removable.
+- Added framework and adapter tests for stat parity, accessory behavior, resource policies, EXP and multi-level gains, deterministic random growth, stat allocation, rollback, Persona skill learning/scaling, and public API boundaries.
+- Focused Track E plus combat parity checks passed: 66 tests, 0 failed, 0 skipped.
+- Full verification passed: 529 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 122 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- `git diff --check`: passed.
+- Framework forbidden-reference searches found no console, filesystem, sleep, Newtonsoft, `Database`, legacy DTO, `Combatant`, `Persona`, or `IGameIO` references.
+
 ## Track F: Party, Persona Stock, And Demon Stock
 
 ### Goal

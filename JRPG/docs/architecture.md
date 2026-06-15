@@ -45,7 +45,9 @@ Track D adds `JRPGPrototype.Logic.Runtime` as the framework home for mutable act
 
 The runtime state layer is deliberately composed from focused snapshots rather than one replacement `Combatant` class. `RuntimeActorSnapshot` exists only as the aggregate save/transaction boundary, and content definitions are always referenced by qualified `ContentId` instead of being duplicated into mutable state.
 
-Only a narrow resource transaction service exists in Track D. Class formulas, stat composition, stock capacity, inventory quantities, party operations, fusion transactions, and full persistence services remain later migration tracks.
+Track E adds framework progression policies for stat composition, HP/SP recalculation, EXP curves, level growth, random Persona stat growth, stat allocation, and rollback. The console `StatProcessor`, `GrowthProcessor`, and `Persona` growth methods now delegate through a console-owned compatibility adapter, preserving the existing live `Combatant` and `Persona` models while moving the rules into reusable framework services.
+
+Stock capacity, inventory quantities, party operations, fusion transactions, and full persistence services remain later migration tracks. The Track E policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 

@@ -11,8 +11,8 @@
 - `Combatant`: universal actor type for player, humans, operators, demons, enemies, and party members.
 - `Persona`: live persona/demon mask data containing affinities, stat modifiers, skill set, learned skills, level, EXP, and race/rank metadata.
 - `CombatantFactory`: hydrates enemies and allied demons from `PersonaData`.
-- `StatProcessor`: calculates final stats from class, character stats, persona influence, accessories, and buffs/debuffs.
-- `GrowthProcessor`: handles EXP, level-ups, stat points, resource recalculation, and stat rollback.
+- `StatProcessor`: compatibility facade for framework stat composition from class, character stats, persona influence, accessories, and buffs/debuffs.
+- `GrowthProcessor`: compatibility facade for framework EXP, level-ups, stat points, resource recalculation, and stat rollback.
 - `DamageHandler`: applies damage to a target, resolving guard, affinities, rigid-body criticals, absorb/repel/null, and ailment removal triggers.
 
 ## Main Runtime Flows
@@ -27,7 +27,7 @@ Enemies and allied demons are created through `CombatantFactory`.
 
 ### Stat Calculation
 
-`Combatant.GetStat` delegates to `StatProcessor`.
+`Combatant.GetStat` delegates to `StatProcessor`, which now delegates to framework progression policies through the console-owned legacy adapter.
 
 - Demons use `ActivePersona.StatModifiers` at full value.
 - Operators use character stats and accessories, with no persona stat influence.
@@ -36,7 +36,7 @@ Enemies and allied demons are created through `CombatantFactory`.
 
 ### Growth
 
-`GrowthProcessor.GainExp` adds lifetime and current EXP, then loops through level-ups using `1.5 * Level^3` requirements. Humanoids gain randomized base HP/SP on level-up; demons rely more heavily on persona-derived stats and factory scaling.
+`GrowthProcessor.GainExp` delegates to framework level-growth policies through the console-owned legacy adapter. The preserved behavior still adds lifetime and current EXP, loops through level-ups using `1.5 * Level^3` requirements, gives humanoids randomized base HP/SP on level-up, and leaves demons without those base-resource rolls.
 
 ### Damage Application
 
@@ -68,8 +68,8 @@ Battle effects calculate raw damage first, then `DamageHandler.ApplyDamage` appl
 ## Extension Points
 
 - Add new actor state to `Combatant` only when it truly applies across live battle/field systems.
-- Add new stat formulas in `StatProcessor`, not directly in UI or battle code.
-- Add new progression rules in `GrowthProcessor`.
+- Add new stat formulas to the framework progression policy/configuration, then expose them through `StatProcessor` only as a compatibility adapter.
+- Add new progression rules to the framework progression policy/configuration, then expose them through `GrowthProcessor` only as a compatibility adapter.
 - Add new target-side damage interactions in `DamageHandler` if they affect all offensive actions.
 - Add factory variants if enemy/allied/player actor creation diverges further.
 

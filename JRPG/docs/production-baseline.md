@@ -77,6 +77,19 @@ Track D began from `68175c8` and added the framework runtime-state foundation wi
 - Ten Track D runtime-state tests bring the suite to 492 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
 - The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
 
+## Track E Boundary
+
+Track E began from `fab0ba5` and moved legacy stat, resource, EXP, level-growth, Persona-growth, stat-allocation, and rollback rules into framework progression services without changing the content schema or removing console gameplay code.
+
+- `JRPGPrototype.Logic.Runtime` now owns `IStatResolutionPolicy`, `IResourceGrowthPolicy`, `IExperienceCurve`, `ILevelGrowthPolicy`, `IStatAllocationService`, standard stat/resource/actor-kind IDs, modifier-track aliases, and immutable request/result records for progression operations.
+- `RuntimeActorSnapshot` now has typed base-resource values so legacy `BaseHP` and `BaseSP` have a framework snapshot home.
+- `Entities/Components/LegacyProgressionAdapter.cs` adapts the current `Combatant`, `Persona`, accessory, buff, and random-source shapes into the framework services.
+- `StatProcessor`, `GrowthProcessor`, and `Persona` growth methods are now thin compatibility facades over the framework policies.
+- Preserved formulas include Persona contribution weights, the raw stat cap of 40 before stage multipliers, 1.4/0.6 buff and debuff multipliers, `(int)(1.5 * level^3)` EXP requirements, HP/SP caps of 666/333, level-up resource delta healing, ordinary recalculation capping, humanoid base-resource rolls, and Persona random stat growth capped at 40.
+- The parity ledger marks stat composition, growth/levels, and resource recalculation as `parallel_partial` with migrated console consumers. Removal remains unauthorized because the live `Combatant`, `Persona`, DTO, factory, UI, and save/persistence ownership are still legacy.
+- Track E adds 37 focused progression and adapter tests, bringing the suite to 529 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
+- The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -117,4 +130,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track E may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track F may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

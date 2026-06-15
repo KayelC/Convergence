@@ -25,7 +25,7 @@ Important scenario concepts:
 - `Operator`: humanoid with no persona stat influence, but access to demon stock and COMP party management.
 - `Demon`: combatant whose stats and affinities come from its active persona template.
 
-The distinction matters in `StatProcessor`, `PartyManager`, `FusionConductor`, `FusionMutator`, and field/battle UI bridges.
+The distinction matters in the framework progression policies used by `StatProcessor`, `PartyManager`, `FusionConductor`, `FusionMutator`, and field/battle UI bridges.
 
 ## Personas And Demons
 
@@ -130,6 +130,23 @@ This is a schema and catalog foundation only. It does not migrate `Database`, sh
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.
 
 This is not a gameplay migration yet. The interactive console still mutates `Combatant`, `Persona`, `InventoryManager`, `PartyManager`, `StatusRegistry`, and the Cathedral services. The new runtime snapshots are save/presentation/replay contracts for later tracks, and only resource mutation has a transaction result service so far.
+
+## Clean Stat And Growth Foundation
+
+Track E moves the stat, resource, EXP, level-up, Persona growth, stat allocation, and rollback formulas into framework progression policies. The console `StatProcessor`, `GrowthProcessor`, and `Persona` methods now delegate through a compatibility adapter, so existing status screens, battle math, field stat allocation, reward level-ups, fusion EXP transfer, compendium recall, and factory scaling keep the same behavior while sharing the clean rules.
+
+The preserved default formulas are:
+
+- Demons use active-form stats at full value.
+- Operators use character stats plus accessory modifiers, with no active-form contribution.
+- Persona Users and Wild Cards use character stats plus active-form weights: 40% Strength/Magic, 25% Vitality/Agility, and 50% Luck.
+- Raw stats cap at 40 before stage multipliers.
+- Buff and debuff multipliers remain 1.4 and 0.6, and matching aliases stack multiplicatively.
+- EXP required is `(int)(1.5 * level^3)`.
+- Maximum HP is `min(666, baseHP + vitality * 5)` and maximum SP is `min(333, baseSP + magic * 3)`.
+- Level-up applies the max-resource delta to current HP/SP; ordinary recalculation caps current values without healing.
+
+Ruleset JSON does not own these parameters yet. Track E uses named default policy/config records until a later ruleset migration approves authored progression profiles.
 
 ## Extension Mindset
 

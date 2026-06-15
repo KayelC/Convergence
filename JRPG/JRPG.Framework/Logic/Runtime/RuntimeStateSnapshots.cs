@@ -421,13 +421,15 @@ public sealed record RuntimeActorSnapshot
         RuntimeFormStockSnapshot forms,
         RuntimeEquipmentSnapshot equipment,
         RuntimeBattleStatusSnapshot battleStatus,
-        RuntimeBattleActivationSnapshot battleActivations)
+        RuntimeBattleActivationSnapshot battleActivations,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null)
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         Ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
         Deployment = deployment ?? throw new ArgumentNullException(nameof(deployment));
         Progression = progression ?? throw new ArgumentNullException(nameof(progression));
         Resources = RuntimeSnapshotCollections.List(resources);
+        BaseResourceValues = RuntimeSnapshotCollections.Dictionary(baseResourceValues);
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
         Skills = skills ?? throw new ArgumentNullException(nameof(skills));
         Forms = forms ?? throw new ArgumentNullException(nameof(forms));
@@ -441,6 +443,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeActorDeploymentSnapshot Deployment { get; }
     public RuntimeProgressionSnapshot Progression { get; }
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
+    public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
     public RuntimeStatBlockSnapshot Stats { get; }
     public RuntimeSkillStateSnapshot Skills { get; }
     public RuntimeFormStockSnapshot Forms { get; }
@@ -460,7 +463,8 @@ public sealed record RuntimeActorSnapshot
             Forms,
             Equipment,
             BattleStatus,
-            BattleActivations);
+            BattleActivations,
+            BaseResourceValues);
 }
 
 public sealed class RuntimeActorStateSet
