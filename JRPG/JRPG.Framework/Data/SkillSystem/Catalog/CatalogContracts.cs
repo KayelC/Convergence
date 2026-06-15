@@ -120,25 +120,88 @@ public interface IItemDefinitionRepository
     ItemDefinition GetRequiredItem(ContentId id);
 }
 
+public interface IEquipmentDefinitionRepository
+{
+    bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition);
+    EquipmentDefinition GetRequiredEquipment(ContentId id);
+}
+
+public interface IShopCatalogDefinitionRepository
+{
+    bool TryGetShop(ContentId id, out ShopCatalogDefinition? definition);
+    ShopCatalogDefinition GetRequiredShop(ContentId id);
+}
+
+public interface INegotiationDefinitionRepository
+{
+    bool TryGetNegotiation(ContentId id, out NegotiationDefinition? definition);
+    NegotiationDefinition GetRequiredNegotiation(ContentId id);
+}
+
+public interface IEncounterDefinitionRepository
+{
+    bool TryGetEncounter(ContentId id, out EncounterDefinition? definition);
+    EncounterDefinition GetRequiredEncounter(ContentId id);
+}
+
+public interface IDungeonDefinitionRepository
+{
+    bool TryGetDungeon(ContentId id, out DungeonDefinition? definition);
+    DungeonDefinition GetRequiredDungeon(ContentId id);
+}
+
+public interface IFusionRecipeDefinitionRepository
+{
+    bool TryGetFusionRecipe(ContentId id, out FusionRecipeDefinition? definition);
+    FusionRecipeDefinition GetRequiredFusionRecipe(ContentId id);
+}
+
+public interface IRulesetDefinitionRepository
+{
+    bool TryGetRuleset(ContentId id, out RulesetDefinition? definition);
+    RulesetDefinition GetRequiredRuleset(ContentId id);
+}
+
 public sealed class GameDataCatalog :
     ISkillDefinitionRepository,
     IEntityDefinitionRepository,
     IRaceDefinitionRepository,
     IAilmentDefinitionRepository,
-    IItemDefinitionRepository
+    IItemDefinitionRepository,
+    IEquipmentDefinitionRepository,
+    IShopCatalogDefinitionRepository,
+    INegotiationDefinitionRepository,
+    IEncounterDefinitionRepository,
+    IDungeonDefinitionRepository,
+    IFusionRecipeDefinitionRepository,
+    IRulesetDefinitionRepository
 {
     internal GameDataCatalog(
         IEnumerable<KeyValuePair<ContentId, SkillDefinition>> skills,
         IEnumerable<KeyValuePair<ContentId, EntityDefinition>> entities,
         IEnumerable<KeyValuePair<ContentId, RaceDefinition>> races,
         IEnumerable<KeyValuePair<ContentId, AilmentDefinition>> ailments,
-        IEnumerable<KeyValuePair<ContentId, ItemDefinition>> items)
+        IEnumerable<KeyValuePair<ContentId, ItemDefinition>> items,
+        IEnumerable<KeyValuePair<ContentId, EquipmentDefinition>>? equipment = null,
+        IEnumerable<KeyValuePair<ContentId, ShopCatalogDefinition>>? shops = null,
+        IEnumerable<KeyValuePair<ContentId, NegotiationDefinition>>? negotiations = null,
+        IEnumerable<KeyValuePair<ContentId, EncounterDefinition>>? encounters = null,
+        IEnumerable<KeyValuePair<ContentId, DungeonDefinition>>? dungeons = null,
+        IEnumerable<KeyValuePair<ContentId, FusionRecipeDefinition>>? fusionRecipes = null,
+        IEnumerable<KeyValuePair<ContentId, RulesetDefinition>>? rulesets = null)
     {
         Skills = Snapshot(skills);
         Entities = Snapshot(entities);
         Races = Snapshot(races);
         Ailments = Snapshot(ailments);
         Items = Snapshot(items);
+        Equipment = Snapshot(equipment ?? []);
+        Shops = Snapshot(shops ?? []);
+        Negotiations = Snapshot(negotiations ?? []);
+        Encounters = Snapshot(encounters ?? []);
+        Dungeons = Snapshot(dungeons ?? []);
+        FusionRecipes = Snapshot(fusionRecipes ?? []);
+        Rulesets = Snapshot(rulesets ?? []);
     }
 
     public IReadOnlyDictionary<ContentId, SkillDefinition> Skills { get; }
@@ -146,6 +209,13 @@ public sealed class GameDataCatalog :
     public IReadOnlyDictionary<ContentId, RaceDefinition> Races { get; }
     public IReadOnlyDictionary<ContentId, AilmentDefinition> Ailments { get; }
     public IReadOnlyDictionary<ContentId, ItemDefinition> Items { get; }
+    public IReadOnlyDictionary<ContentId, EquipmentDefinition> Equipment { get; }
+    public IReadOnlyDictionary<ContentId, ShopCatalogDefinition> Shops { get; }
+    public IReadOnlyDictionary<ContentId, NegotiationDefinition> Negotiations { get; }
+    public IReadOnlyDictionary<ContentId, EncounterDefinition> Encounters { get; }
+    public IReadOnlyDictionary<ContentId, DungeonDefinition> Dungeons { get; }
+    public IReadOnlyDictionary<ContentId, FusionRecipeDefinition> FusionRecipes { get; }
+    public IReadOnlyDictionary<ContentId, RulesetDefinition> Rulesets { get; }
 
     public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
         TryGet(Skills, id, out definition);
@@ -171,6 +241,42 @@ public sealed class GameDataCatalog :
         TryGet(Items, id, out definition);
 
     public ItemDefinition GetRequiredItem(ContentId id) => GetRequired(Items, id, "item");
+
+    public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition) =>
+        TryGet(Equipment, id, out definition);
+
+    public EquipmentDefinition GetRequiredEquipment(ContentId id) => GetRequired(Equipment, id, "equipment");
+
+    public bool TryGetShop(ContentId id, out ShopCatalogDefinition? definition) =>
+        TryGet(Shops, id, out definition);
+
+    public ShopCatalogDefinition GetRequiredShop(ContentId id) => GetRequired(Shops, id, "shop");
+
+    public bool TryGetNegotiation(ContentId id, out NegotiationDefinition? definition) =>
+        TryGet(Negotiations, id, out definition);
+
+    public NegotiationDefinition GetRequiredNegotiation(ContentId id) => GetRequired(Negotiations, id, "negotiation");
+
+    public bool TryGetEncounter(ContentId id, out EncounterDefinition? definition) =>
+        TryGet(Encounters, id, out definition);
+
+    public EncounterDefinition GetRequiredEncounter(ContentId id) => GetRequired(Encounters, id, "encounter");
+
+    public bool TryGetDungeon(ContentId id, out DungeonDefinition? definition) =>
+        TryGet(Dungeons, id, out definition);
+
+    public DungeonDefinition GetRequiredDungeon(ContentId id) => GetRequired(Dungeons, id, "dungeon");
+
+    public bool TryGetFusionRecipe(ContentId id, out FusionRecipeDefinition? definition) =>
+        TryGet(FusionRecipes, id, out definition);
+
+    public FusionRecipeDefinition GetRequiredFusionRecipe(ContentId id) =>
+        GetRequired(FusionRecipes, id, "fusion recipe");
+
+    public bool TryGetRuleset(ContentId id, out RulesetDefinition? definition) =>
+        TryGet(Rulesets, id, out definition);
+
+    public RulesetDefinition GetRequiredRuleset(ContentId id) => GetRequired(Rulesets, id, "ruleset");
 
     private static IReadOnlyDictionary<ContentId, T> Snapshot<T>(
         IEnumerable<KeyValuePair<ContentId, T>> values) =>

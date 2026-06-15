@@ -119,6 +119,12 @@ Supported fusion concepts:
 
 Operators fuse demons from demon stock and active party references. Wild Cards fuse personas from active persona and persona stock.
 
+## Clean Catalog Surface
+
+Track C adds framework definitions, strict deserialization, validation, catalog qualification, repositories, and one small fixture pack for the content families that were still legacy-only: equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets.
+
+This is a schema and catalog foundation only. It does not migrate `Database`, shop transactions, dungeon traversal, negotiation sessions, equipment ownership, fusion calculation, or economy state. Those systems remain protected by the legacy characterization tests until their dedicated runtime tracks connect real consumers to the clean definitions.
+
 ## Extension Mindset
 
 When adding new gameplay content:

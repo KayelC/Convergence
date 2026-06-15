@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "rulesets": [
+    {
+      "id": "standard_damage_sample",
+      "displayName": "Standard Damage Policy",
+      "description": "Names the host-owned standard damage policy.",
+      "category": "damage",
+      "policyId": "standard_damage",
+      "parameters": {
+        "weakMultiplier": 1.5,
+        "resistMultiplier": 0.5
+      }
+    },
+    {
+      "id": "standard_reward_sample",
+      "displayName": "Standard Reward Policy",
+      "description": "Names the host-owned reward policy.",
+      "category": "reward",
+      "policyId": "standard_reward"
+    },
+    {
+      "id": "standard_growth_sample",
+      "displayName": "Standard Growth Policy",
+      "description": "Names the host-owned growth policy.",
+      "category": "growth",
+      "policyId": "standard_growth"
+    },
+    {
+      "id": "standard_stat_sample",
+      "displayName": "Standard Stat Policy",
+      "description": "Names the host-owned stat policy.",
+      "category": "stat",
+      "policyId": "standard_stat"
+    },
+    {
+      "id": "standard_press_turn_sample",
+      "displayName": "Standard Press Turn Policy",
+      "description": "Names the host-owned Press Turn policy.",
+      "category": "press_turn",
+      "policyId": "standard_press_turn"
+    },
+    {
+      "id": "standard_stock_capacity_sample",
+      "displayName": "Standard Stock Capacity Policy",
+      "description": "Names the host-owned stock-capacity policy.",
+      "category": "stock_capacity",
+      "policyId": "standard_stock_capacity"
+    },
+    {
+      "id": "standard_economy_sample",
+      "displayName": "Standard Economy Policy",
+      "description": "Names the host-owned economy policy.",
+      "category": "economy",
+      "policyId": "standard_economy"
+    },
+    {
+      "id": "standard_moon_phase_sample",
+      "displayName": "Standard Moon Phase Policy",
+      "description": "Names the host-owned moon-phase policy.",
+      "category": "moon_phase",
+      "policyId": "standard_moon_phase"
+    }
+  ]
+}

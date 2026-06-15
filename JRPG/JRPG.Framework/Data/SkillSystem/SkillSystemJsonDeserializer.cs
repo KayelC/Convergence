@@ -27,6 +27,27 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
     public DeserializedContentDocument<ItemDefinition> DeserializeItems(string json, string sourceName) =>
         Deserialize(json, sourceName, TypeInfo<ItemDocumentDto>(), SkillSystemDtoMapper.Map);
 
+    public DeserializedContentDocument<EquipmentDefinition> DeserializeEquipment(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<EquipmentDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<ShopCatalogDefinition> DeserializeShops(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<ShopDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<NegotiationDefinition> DeserializeNegotiations(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<NegotiationDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<EncounterDefinition> DeserializeEncounters(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<EncounterDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<DungeonDefinition> DeserializeDungeons(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<DungeonDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<FusionRecipeDefinition> DeserializeFusionRecipes(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<FusionDocumentDto>(), SkillSystemDtoMapper.Map);
+
+    public DeserializedContentDocument<RulesetDefinition> DeserializeRulesets(string json, string sourceName) =>
+        Deserialize(json, sourceName, TypeInfo<RulesetDocumentDto>(), SkillSystemDtoMapper.Map);
+
     private static System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> TypeInfo<T>()
     {
         return (System.Text.Json.Serialization.Metadata.JsonTypeInfo<T>)Options.GetTypeInfo(typeof(T));
@@ -133,6 +154,14 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<DemonFleeOutcome>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemConsumptionMode>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<EquipmentSlot>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopContentKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopPriceKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopStockKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<DungeonFixedFloorKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionParentSelectorKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionResultOperationKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<RulesetCategory>());
         return options;
     }
 }

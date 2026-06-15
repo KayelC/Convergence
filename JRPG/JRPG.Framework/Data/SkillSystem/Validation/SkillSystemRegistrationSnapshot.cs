@@ -23,6 +23,10 @@ public sealed record SkillSystemRegistrationSnapshot
         ActionIds = Snapshot(builder.ActionIds);
         StatusIds = Snapshot(builder.StatusIds);
         EscapeRuleIds = Snapshot(builder.EscapeRuleIds);
+        ShopCategoryIds = Snapshot(builder.ShopCategoryIds);
+        NegotiationDemandIds = Snapshot(builder.NegotiationDemandIds);
+        EncounterEnvironmentIds = Snapshot(builder.EncounterEnvironmentIds);
+        PolicyIds = Snapshot(builder.PolicyIds);
         FormulaValidators = Snapshot(builder.FormulaValidators);
         CustomEffectValidators = Snapshot(builder.CustomEffectValidators);
         CustomConditionValidators = Snapshot(builder.CustomConditionValidators);
@@ -49,6 +53,10 @@ public sealed record SkillSystemRegistrationSnapshot
     public IReadOnlySet<ContentId> ActionIds { get; }
     public IReadOnlySet<ContentId> StatusIds { get; }
     public IReadOnlySet<ContentId> EscapeRuleIds { get; }
+    public IReadOnlySet<ContentId> ShopCategoryIds { get; }
+    public IReadOnlySet<ContentId> NegotiationDemandIds { get; }
+    public IReadOnlySet<ContentId> EncounterEnvironmentIds { get; }
+    public IReadOnlySet<ContentId> PolicyIds { get; }
     public IReadOnlyDictionary<ContentId, IContentParameterValidator> FormulaValidators { get; }
     public IReadOnlyDictionary<ContentId, IContentParameterValidator> CustomEffectValidators { get; }
     public IReadOnlyDictionary<ContentId, IContentParameterValidator> CustomConditionValidators { get; }
@@ -99,6 +107,10 @@ public sealed class SkillSystemRegistrationBuilder
     internal HashSet<ContentId> ActionIds { get; } = [];
     internal HashSet<ContentId> StatusIds { get; } = [];
     internal HashSet<ContentId> EscapeRuleIds { get; } = [];
+    internal HashSet<ContentId> ShopCategoryIds { get; } = [];
+    internal HashSet<ContentId> NegotiationDemandIds { get; } = [];
+    internal HashSet<ContentId> EncounterEnvironmentIds { get; } = [];
+    internal HashSet<ContentId> PolicyIds { get; } = [];
     internal Dictionary<ContentId, IContentParameterValidator> FormulaValidators { get; } = [];
     internal Dictionary<ContentId, IContentParameterValidator> CustomEffectValidators { get; } = [];
     internal Dictionary<ContentId, IContentParameterValidator> CustomConditionValidators { get; } = [];
@@ -125,6 +137,12 @@ public sealed class SkillSystemRegistrationBuilder
     public SkillSystemRegistrationBuilder RegisterAction(params string[] ids) => Add(ActionIds, ids);
     public SkillSystemRegistrationBuilder RegisterStatus(params string[] ids) => Add(StatusIds, ids);
     public SkillSystemRegistrationBuilder RegisterEscapeRule(params string[] ids) => Add(EscapeRuleIds, ids);
+    public SkillSystemRegistrationBuilder RegisterShopCategory(params string[] ids) => Add(ShopCategoryIds, ids);
+    public SkillSystemRegistrationBuilder RegisterNegotiationDemand(params string[] ids) =>
+        Add(NegotiationDemandIds, ids);
+    public SkillSystemRegistrationBuilder RegisterEncounterEnvironment(params string[] ids) =>
+        Add(EncounterEnvironmentIds, ids);
+    public SkillSystemRegistrationBuilder RegisterPolicy(params string[] ids) => Add(PolicyIds, ids);
 
     public SkillSystemRegistrationBuilder RegisterFormula(
         string id,

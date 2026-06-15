@@ -69,6 +69,62 @@ internal sealed class ItemDocumentDto
     public required List<ItemDto> Items { get; init; }
 }
 
+internal sealed class EquipmentDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<EquipmentDto> Equipment { get; init; }
+}
+
+internal sealed class ShopDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<ShopCatalogDto> Shops { get; init; }
+}
+
+internal sealed class NegotiationDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<NegotiationDto> Negotiations { get; init; }
+}
+
+internal sealed class EncounterDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<EncounterDto> Encounters { get; init; }
+}
+
+internal sealed class DungeonDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<DungeonDto> Dungeons { get; init; }
+}
+
+internal sealed class FusionDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<FusionRecipeDto> FusionRecipes { get; init; }
+}
+
+internal sealed class RulesetDocumentDto
+{
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; init; }
+    public required int SchemaVersion { get; init; }
+    public required List<RulesetDto> Rulesets { get; init; }
+}
+
 internal sealed class ItemDto
 {
     public required string Id { get; init; }
@@ -86,6 +142,212 @@ internal sealed class ItemUsageDto
     public required ItemConsumptionMode ConsumeOn { get; init; }
     public required TargetingDto Targeting { get; init; }
     public required List<EffectDto> Effects { get; init; }
+}
+
+internal sealed class EquipmentDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required EquipmentSlot Slot { get; init; }
+    public required decimal BaseValue { get; init; }
+    public List<string> GrantedSkillIds { get; init; } = [];
+    public EquipmentWeaponProfileDto? Weapon { get; init; }
+    public EquipmentArmorProfileDto? Armor { get; init; }
+    public EquipmentBootsProfileDto? Boots { get; init; }
+    public EquipmentAccessoryProfileDto? Accessory { get; init; }
+}
+
+internal sealed class EquipmentWeaponProfileDto
+{
+    public required EquipmentBasicAttackDto BasicAttack { get; init; }
+}
+
+internal sealed class EquipmentBasicAttackDto
+{
+    public required DamageElement Element { get; init; }
+    public required int Power { get; init; }
+    public required int Accuracy { get; init; }
+    public required bool IsLongRange { get; init; }
+}
+
+internal sealed class EquipmentArmorProfileDto
+{
+    public required int Defense { get; init; }
+    public required int Evasion { get; init; }
+}
+
+internal sealed class EquipmentBootsProfileDto
+{
+    public required int Evasion { get; init; }
+}
+
+internal sealed class EquipmentAccessoryProfileDto
+{
+    public List<StatModifierDto> StatModifiers { get; init; } = [];
+}
+
+internal sealed class StatModifierDto
+{
+    public required string StatId { get; init; }
+    public required int Value { get; init; }
+}
+
+internal sealed class ShopCatalogDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required string CategoryId { get; init; }
+    public List<string> AvailabilityContexts { get; init; } = [];
+    public required List<ShopOfferDto> Offers { get; init; }
+}
+
+internal sealed class ShopOfferDto
+{
+    public required ShopContentKind ContentKind { get; init; }
+    public required string ContentId { get; init; }
+    public required ShopPriceDto Price { get; init; }
+    public required ShopStockDto Stock { get; init; }
+}
+
+internal sealed class ShopPriceDto
+{
+    public required ShopPriceKind Kind { get; init; }
+    public decimal? BasePrice { get; init; }
+    public string? PricingPolicyId { get; init; }
+    public Dictionary<string, JsonElement> Parameters { get; init; } = [];
+}
+
+internal sealed class ShopStockDto
+{
+    public required ShopStockKind Kind { get; init; }
+    public int? Quantity { get; init; }
+    public string? StockPolicyId { get; init; }
+    public Dictionary<string, JsonElement> Parameters { get; init; } = [];
+}
+
+internal sealed class NegotiationDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required string PersonalityId { get; init; }
+    public required List<NegotiationQuestionDto> Questions { get; init; }
+    public List<string> FamiliarDialogueLines { get; init; } = [];
+    public List<NegotiationDemandDto> Demands { get; init; } = [];
+    public List<string> DefaultRaceIds { get; init; } = [];
+    public List<string> DefaultEntityIds { get; init; } = [];
+}
+
+internal sealed class NegotiationQuestionDto
+{
+    public required string Text { get; init; }
+    public required List<NegotiationAnswerDto> Answers { get; init; }
+}
+
+internal sealed class NegotiationAnswerDto
+{
+    public required string Text { get; init; }
+    public required int Score { get; init; }
+}
+
+internal sealed class NegotiationDemandDto
+{
+    public required string DemandId { get; init; }
+    public required int Weight { get; init; }
+    public Dictionary<string, JsonElement> Parameters { get; init; } = [];
+}
+
+internal sealed class EncounterDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public string? EnvironmentId { get; init; }
+    public required List<EncounterFormationDto> Formations { get; init; }
+}
+
+internal sealed class EncounterFormationDto
+{
+    public required int Weight { get; init; }
+    public required bool IsBoss { get; init; }
+    public required List<EncounterMemberDto> Members { get; init; }
+    public string? RewardPolicyId { get; init; }
+    public Dictionary<string, JsonElement> RewardParameters { get; init; } = [];
+}
+
+internal sealed class EncounterMemberDto
+{
+    public required string EntityId { get; init; }
+    public required int Level { get; init; }
+    public int Count { get; init; } = 1;
+}
+
+internal sealed class DungeonDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required List<DungeonBlockDto> Blocks { get; init; }
+}
+
+internal sealed class DungeonBlockDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required int StartFloor { get; init; }
+    public required int EndFloor { get; init; }
+    public List<string> EncounterPoolIds { get; init; } = [];
+    public List<DungeonFixedFloorDto> FixedFloors { get; init; } = [];
+}
+
+internal sealed class DungeonFixedFloorDto
+{
+    public required int Floor { get; init; }
+    public required DungeonFixedFloorKind Kind { get; init; }
+    public required string Description { get; init; }
+    public string? EncounterId { get; init; }
+    public string? TransitionRuleId { get; init; }
+    public string? BarrierRuleId { get; init; }
+    public bool HasTerminal { get; init; }
+}
+
+internal sealed class FusionRecipeDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required List<FusionParentSelectorDto> Parents { get; init; }
+    public required FusionResultDto Result { get; init; }
+    public string? AccidentPolicyId { get; init; }
+    public string? MutationPolicyId { get; init; }
+}
+
+internal sealed class FusionParentSelectorDto
+{
+    public required FusionParentSelectorKind Kind { get; init; }
+    public required string Id { get; init; }
+}
+
+internal sealed class FusionResultDto
+{
+    public required FusionResultOperationKind Operation { get; init; }
+    public string? ResultEntityId { get; init; }
+    public string? ResultRaceId { get; init; }
+    public int? RankOffset { get; init; }
+    public string? PolicyId { get; init; }
+    public Dictionary<string, JsonElement> Parameters { get; init; } = [];
+}
+
+internal sealed class RulesetDto
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Description { get; init; }
+    public required RulesetCategory Category { get; init; }
+    public required string PolicyId { get; init; }
+    public Dictionary<string, JsonElement> Parameters { get; init; } = [];
 }
 
 internal sealed class SkillDto

@@ -93,6 +93,109 @@ internal static class DefinitionQualifier
                     definition.Usage.Effects.Select(effect => Effect(packId, effect)),
                     definition.Usage.ConsumptionMode));
 
+    public static EquipmentDefinition Equipment(string packId, EquipmentDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.Slot,
+            definition.BaseValue,
+            definition.GrantedSkillIds.Select(id => ContentReference(packId, id)),
+            definition.Weapon,
+            definition.Armor,
+            definition.Boots,
+            definition.Accessory);
+
+    public static ShopCatalogDefinition Shop(string packId, ShopCatalogDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.CategoryId,
+            definition.AvailabilityContextIds,
+            definition.Offers.Select(offer => new ShopOfferDefinition(
+                offer.ContentKind,
+                ContentReference(packId, offer.ContentId),
+                offer.Price,
+                offer.Stock)));
+
+    public static NegotiationDefinition Negotiation(string packId, NegotiationDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.PersonalityId,
+            definition.Questions,
+            definition.FamiliarDialogueLines,
+            definition.Demands,
+            definition.DefaultRaceIds.Select(id => ContentReference(packId, id)),
+            definition.DefaultEntityIds.Select(id => ContentReference(packId, id)));
+
+    public static EncounterDefinition Encounter(string packId, EncounterDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.EnvironmentId,
+            definition.Formations.Select(formation => new EncounterFormationDefinition(
+                formation.Weight,
+                formation.IsBoss,
+                formation.Members.Select(member => new EncounterMemberDefinition(
+                    ContentReference(packId, member.EntityId), member.Level, member.Count)),
+                formation.RewardPolicyId,
+                formation.RewardParameters)));
+
+    public static DungeonDefinition Dungeon(string packId, DungeonDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.Blocks.Select(block => new DungeonBlockDefinition(
+                ContentReference(packId, block.Id),
+                block.DisplayName,
+                block.StartFloor,
+                block.EndFloor,
+                block.EncounterPoolIds.Select(id => ContentReference(packId, id)),
+                block.FixedFloors.Select(floor => new DungeonFixedFloorDefinition(
+                    floor.Floor,
+                    floor.Kind,
+                    floor.Description,
+                    floor.EncounterId is null ? null : ContentReference(packId, floor.EncounterId.Value),
+                    floor.TransitionRuleId,
+                    floor.BarrierRuleId,
+                    floor.HasTerminal)))));
+
+    public static FusionRecipeDefinition FusionRecipe(string packId, FusionRecipeDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.Parents.Select(parent => new FusionParentSelectorDefinition(
+                parent.Kind,
+                ContentReference(packId, parent.Id))),
+            new FusionResultDefinition(
+                definition.Result.Operation,
+                definition.Result.ResultEntityId is null
+                    ? null
+                    : ContentReference(packId, definition.Result.ResultEntityId.Value),
+                definition.Result.ResultRaceId is null
+                    ? null
+                    : ContentReference(packId, definition.Result.ResultRaceId.Value),
+                definition.Result.RankOffset,
+                definition.Result.PolicyId,
+                definition.Result.Parameters),
+            definition.AccidentPolicyId,
+            definition.MutationPolicyId);
+
+    public static RulesetDefinition Ruleset(string packId, RulesetDefinition definition) =>
+        new(
+            ContentReference(packId, definition.Id),
+            definition.DisplayName,
+            definition.Description,
+            definition.Category,
+            definition.PolicyId,
+            definition.Parameters);
+
     private static SkillCostDefinition Cost(SkillCostDefinition definition) =>
         new(definition.ResourceId, Amount(definition.Amount), definition.CanReduceToZero);
 

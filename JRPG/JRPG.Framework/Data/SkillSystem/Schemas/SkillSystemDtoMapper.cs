@@ -56,6 +56,55 @@ internal static class SkillSystemDtoMapper
             dto.Items.Select((record, index) => MapItem(record, $"$.items[{index}]")));
     }
 
+    public static DeserializedContentDocument<EquipmentDefinition> Map(EquipmentDocumentDto dto)
+    {
+        return new DeserializedContentDocument<EquipmentDefinition>(
+            dto.SchemaVersion,
+            dto.Equipment.Select((record, index) => MapEquipment(record, $"$.equipment[{index}]")));
+    }
+
+    public static DeserializedContentDocument<ShopCatalogDefinition> Map(ShopDocumentDto dto)
+    {
+        return new DeserializedContentDocument<ShopCatalogDefinition>(
+            dto.SchemaVersion,
+            dto.Shops.Select((record, index) => MapShop(record, $"$.shops[{index}]")));
+    }
+
+    public static DeserializedContentDocument<NegotiationDefinition> Map(NegotiationDocumentDto dto)
+    {
+        return new DeserializedContentDocument<NegotiationDefinition>(
+            dto.SchemaVersion,
+            dto.Negotiations.Select((record, index) => MapNegotiation(record, $"$.negotiations[{index}]")));
+    }
+
+    public static DeserializedContentDocument<EncounterDefinition> Map(EncounterDocumentDto dto)
+    {
+        return new DeserializedContentDocument<EncounterDefinition>(
+            dto.SchemaVersion,
+            dto.Encounters.Select((record, index) => MapEncounter(record, $"$.encounters[{index}]")));
+    }
+
+    public static DeserializedContentDocument<DungeonDefinition> Map(DungeonDocumentDto dto)
+    {
+        return new DeserializedContentDocument<DungeonDefinition>(
+            dto.SchemaVersion,
+            dto.Dungeons.Select((record, index) => MapDungeon(record, $"$.dungeons[{index}]")));
+    }
+
+    public static DeserializedContentDocument<FusionRecipeDefinition> Map(FusionDocumentDto dto)
+    {
+        return new DeserializedContentDocument<FusionRecipeDefinition>(
+            dto.SchemaVersion,
+            dto.FusionRecipes.Select((record, index) => MapFusionRecipe(record, $"$.fusionRecipes[{index}]")));
+    }
+
+    public static DeserializedContentDocument<RulesetDefinition> Map(RulesetDocumentDto dto)
+    {
+        return new DeserializedContentDocument<RulesetDefinition>(
+            dto.SchemaVersion,
+            dto.Rulesets.Select((record, index) => MapRuleset(record, $"$.rulesets[{index}]")));
+    }
+
     private static ItemDefinition MapItem(ItemDto dto, string path)
     {
         if (dto.ItemKind == ItemKind.Consumable && dto.Usage is null)
@@ -83,6 +132,164 @@ internal static class SkillSystemDtoMapper
                     dto.Usage.Effects.Select(MapEffect),
                     dto.Usage.ConsumeOn));
     }
+
+    private static EquipmentDefinition MapEquipment(EquipmentDto dto, string path)
+    {
+        int profileCount =
+            (dto.Weapon is null ? 0 : 1) +
+            (dto.Armor is null ? 0 : 1) +
+            (dto.Boots is null ? 0 : 1) +
+            (dto.Accessory is null ? 0 : 1);
+        if (profileCount != 1)
+        {
+            throw new SchemaMappingException(path, "Equipment records require exactly one slot profile.");
+        }
+
+        if ((dto.Slot == EquipmentSlot.Weapon && dto.Weapon is null) ||
+            (dto.Slot == EquipmentSlot.Armor && dto.Armor is null) ||
+            (dto.Slot == EquipmentSlot.Boots && dto.Boots is null) ||
+            (dto.Slot == EquipmentSlot.Accessory && dto.Accessory is null))
+        {
+            throw new SchemaMappingException(path, "Equipment slot must match its declared profile.");
+        }
+
+        return new EquipmentDefinition(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.Slot,
+            dto.BaseValue,
+            (dto.GrantedSkillIds ?? []).Select(Id),
+            dto.Weapon is null
+                ? null
+                : new EquipmentWeaponProfileDefinition(new EquipmentBasicAttackDefinition(
+                    dto.Weapon.BasicAttack.Element,
+                    dto.Weapon.BasicAttack.Power,
+                    dto.Weapon.BasicAttack.Accuracy,
+                    dto.Weapon.BasicAttack.IsLongRange)),
+            dto.Armor is null
+                ? null
+                : new EquipmentArmorProfileDefinition(dto.Armor.Defense, dto.Armor.Evasion),
+            dto.Boots is null
+                ? null
+                : new EquipmentBootsProfileDefinition(dto.Boots.Evasion),
+            dto.Accessory is null
+                ? null
+                : new EquipmentAccessoryProfileDefinition(
+                    (dto.Accessory.StatModifiers ?? []).Select(modifier =>
+                        new StatModifierDefinition(Id(modifier.StatId), modifier.Value))));
+    }
+
+    private static ShopCatalogDefinition MapShop(ShopCatalogDto dto, string path) =>
+        new(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            Id(dto.CategoryId),
+            (dto.AvailabilityContexts ?? []).Select(Id),
+            dto.Offers.Select((offer, index) => MapShopOffer(offer, $"{path}.offers[{index}]")));
+
+    private static ShopOfferDefinition MapShopOffer(ShopOfferDto dto, string path) =>
+        new(dto.ContentKind, Id(dto.ContentId), MapShopPrice(dto.Price, path + ".price"),
+            MapShopStock(dto.Stock, path + ".stock"));
+
+    private static ShopPriceDefinition MapShopPrice(ShopPriceDto dto, string path) => dto.Kind switch
+    {
+        ShopPriceKind.Fixed when dto.BasePrice is decimal value && dto.PricingPolicyId is null =>
+            new FixedShopPriceDefinition(value),
+        ShopPriceKind.Policy when dto.PricingPolicyId is not null && dto.BasePrice is null =>
+            new PolicyShopPriceDefinition(Id(dto.PricingPolicyId), MapParameters(dto.Parameters)),
+        ShopPriceKind.Fixed => throw new SchemaMappingException(
+            path, "Fixed shop prices require basePrice and must omit pricingPolicyId."),
+        ShopPriceKind.Policy => throw new SchemaMappingException(
+            path, "Policy shop prices require pricingPolicyId and must omit basePrice."),
+        _ => throw new InvalidOperationException($"Unsupported shop price kind '{dto.Kind}'.")
+    };
+
+    private static ShopStockDefinition MapShopStock(ShopStockDto dto, string path) => dto.Kind switch
+    {
+        ShopStockKind.Unlimited when dto.Quantity is null && dto.StockPolicyId is null =>
+            new UnlimitedShopStockDefinition(),
+        ShopStockKind.Limited when dto.Quantity is int value && dto.StockPolicyId is null =>
+            new LimitedShopStockDefinition(value),
+        ShopStockKind.Policy when dto.StockPolicyId is not null && dto.Quantity is null =>
+            new PolicyShopStockDefinition(Id(dto.StockPolicyId), MapParameters(dto.Parameters)),
+        ShopStockKind.Unlimited => throw new SchemaMappingException(
+            path, "Unlimited shop stock must omit quantity and stockPolicyId."),
+        ShopStockKind.Limited => throw new SchemaMappingException(
+            path, "Limited shop stock requires quantity and must omit stockPolicyId."),
+        ShopStockKind.Policy => throw new SchemaMappingException(
+            path, "Policy shop stock requires stockPolicyId and must omit quantity."),
+        _ => throw new InvalidOperationException($"Unsupported shop stock kind '{dto.Kind}'.")
+    };
+
+    private static NegotiationDefinition MapNegotiation(NegotiationDto dto, string path) =>
+        new(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            Id(dto.PersonalityId),
+            dto.Questions.Select((question, index) => new NegotiationQuestionDefinition(
+                question.Text,
+                question.Answers.Select(answer => new NegotiationAnswerDefinition(answer.Text, answer.Score)))),
+            dto.FamiliarDialogueLines,
+            (dto.Demands ?? []).Select(demand => new NegotiationDemandDefinition(
+                Id(demand.DemandId), demand.Weight, MapParameters(demand.Parameters))),
+            (dto.DefaultRaceIds ?? []).Select(Id),
+            (dto.DefaultEntityIds ?? []).Select(Id));
+
+    private static EncounterDefinition MapEncounter(EncounterDto dto, string path) =>
+        new(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.EnvironmentId is null ? null : Id(dto.EnvironmentId),
+            dto.Formations.Select((formation, index) => new EncounterFormationDefinition(
+                formation.Weight,
+                formation.IsBoss,
+                formation.Members.Select(member => new EncounterMemberDefinition(
+                    Id(member.EntityId), member.Level, member.Count)),
+                formation.RewardPolicyId is null ? null : Id(formation.RewardPolicyId),
+                MapParameters(formation.RewardParameters))));
+
+    private static DungeonDefinition MapDungeon(DungeonDto dto, string path) =>
+        new(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.Blocks.Select(block => new DungeonBlockDefinition(
+                Id(block.Id),
+                block.DisplayName,
+                block.StartFloor,
+                block.EndFloor,
+                (block.EncounterPoolIds ?? []).Select(Id),
+                (block.FixedFloors ?? []).Select(floor => new DungeonFixedFloorDefinition(
+                    floor.Floor,
+                    floor.Kind,
+                    floor.Description,
+                    floor.EncounterId is null ? null : Id(floor.EncounterId),
+                    floor.TransitionRuleId is null ? null : Id(floor.TransitionRuleId),
+                    floor.BarrierRuleId is null ? null : Id(floor.BarrierRuleId),
+                    floor.HasTerminal)))));
+
+    private static FusionRecipeDefinition MapFusionRecipe(FusionRecipeDto dto, string path) =>
+        new(
+            Id(dto.Id),
+            dto.DisplayName,
+            dto.Description,
+            dto.Parents.Select(parent => new FusionParentSelectorDefinition(parent.Kind, Id(parent.Id))),
+            new FusionResultDefinition(
+                dto.Result.Operation,
+                dto.Result.ResultEntityId is null ? null : Id(dto.Result.ResultEntityId),
+                dto.Result.ResultRaceId is null ? null : Id(dto.Result.ResultRaceId),
+                dto.Result.RankOffset,
+                dto.Result.PolicyId is null ? null : Id(dto.Result.PolicyId),
+                MapParameters(dto.Result.Parameters)),
+            dto.AccidentPolicyId is null ? null : Id(dto.AccidentPolicyId),
+            dto.MutationPolicyId is null ? null : Id(dto.MutationPolicyId));
+
+    private static RulesetDefinition MapRuleset(RulesetDto dto, string path) =>
+        new(Id(dto.Id), dto.DisplayName, dto.Description, dto.Category, Id(dto.PolicyId), MapParameters(dto.Parameters));
 
     private static SkillDefinition MapSkill(SkillDto dto, string path)
     {

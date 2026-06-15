@@ -94,7 +94,14 @@ public sealed record SkillSystemValidationRequest
         IEnumerable<SourceContentDocument<EntityDefinition>>? entityDocuments = null,
         IEnumerable<SourceContentDocument<RaceDefinition>>? raceDocuments = null,
         IEnumerable<SourceContentDocument<AilmentDefinition>>? ailmentDocuments = null,
-        IEnumerable<SourceContentDocument<ItemDefinition>>? itemDocuments = null)
+        IEnumerable<SourceContentDocument<ItemDefinition>>? itemDocuments = null,
+        IEnumerable<SourceContentDocument<EquipmentDefinition>>? equipmentDocuments = null,
+        IEnumerable<SourceContentDocument<ShopCatalogDefinition>>? shopDocuments = null,
+        IEnumerable<SourceContentDocument<NegotiationDefinition>>? negotiationDocuments = null,
+        IEnumerable<SourceContentDocument<EncounterDefinition>>? encounterDocuments = null,
+        IEnumerable<SourceContentDocument<DungeonDefinition>>? dungeonDocuments = null,
+        IEnumerable<SourceContentDocument<FusionRecipeDefinition>>? fusionDocuments = null,
+        IEnumerable<SourceContentDocument<RulesetDefinition>>? rulesetDocuments = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentException.ThrowIfNullOrWhiteSpace(manifestSourceName);
@@ -108,6 +115,13 @@ public sealed record SkillSystemValidationRequest
         RaceDocuments = Snapshot(raceDocuments);
         AilmentDocuments = Snapshot(ailmentDocuments);
         ItemDocuments = Snapshot(itemDocuments);
+        EquipmentDocuments = Snapshot(equipmentDocuments);
+        ShopDocuments = Snapshot(shopDocuments);
+        NegotiationDocuments = Snapshot(negotiationDocuments);
+        EncounterDocuments = Snapshot(encounterDocuments);
+        DungeonDocuments = Snapshot(dungeonDocuments);
+        FusionDocuments = Snapshot(fusionDocuments);
+        RulesetDocuments = Snapshot(rulesetDocuments);
     }
 
     public ContentPackManifest Manifest { get; }
@@ -118,6 +132,13 @@ public sealed record SkillSystemValidationRequest
     public IReadOnlyList<SourceContentDocument<RaceDefinition>> RaceDocuments { get; }
     public IReadOnlyList<SourceContentDocument<AilmentDefinition>> AilmentDocuments { get; }
     public IReadOnlyList<SourceContentDocument<ItemDefinition>> ItemDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<EquipmentDefinition>> EquipmentDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<ShopCatalogDefinition>> ShopDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<NegotiationDefinition>> NegotiationDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<EncounterDefinition>> EncounterDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<DungeonDefinition>> DungeonDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<FusionRecipeDefinition>> FusionDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<RulesetDefinition>> RulesetDocuments { get; }
 
     private static IReadOnlyList<T> Snapshot<T>(IEnumerable<T>? values) =>
         Array.AsReadOnly(values?.ToArray() ?? Array.Empty<T>());
@@ -172,6 +193,13 @@ public sealed record ValidatedSkillSystemContentPack
         RaceDocuments = request.RaceDocuments;
         AilmentDocuments = request.AilmentDocuments;
         ItemDocuments = request.ItemDocuments;
+        EquipmentDocuments = request.EquipmentDocuments;
+        ShopDocuments = request.ShopDocuments;
+        NegotiationDocuments = request.NegotiationDocuments;
+        EncounterDocuments = request.EncounterDocuments;
+        DungeonDocuments = request.DungeonDocuments;
+        FusionDocuments = request.FusionDocuments;
+        RulesetDocuments = request.RulesetDocuments;
     }
 
     public ContentPackManifest Manifest { get; }
@@ -180,4 +208,11 @@ public sealed record ValidatedSkillSystemContentPack
     public IReadOnlyList<SourceContentDocument<RaceDefinition>> RaceDocuments { get; }
     public IReadOnlyList<SourceContentDocument<AilmentDefinition>> AilmentDocuments { get; }
     public IReadOnlyList<SourceContentDocument<ItemDefinition>> ItemDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<EquipmentDefinition>> EquipmentDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<ShopCatalogDefinition>> ShopDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<NegotiationDefinition>> NegotiationDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<EncounterDefinition>> EncounterDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<DungeonDefinition>> DungeonDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<FusionRecipeDefinition>> FusionDocuments { get; }
+    public IReadOnlyList<SourceContentDocument<RulesetDefinition>> RulesetDocuments { get; }
 }

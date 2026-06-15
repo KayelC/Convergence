@@ -12,6 +12,7 @@ The solution is organized around gameplay subsystems with a physical host bounda
 
 - immutable content definitions;
 - serializer-neutral deserialization contracts, validation, and catalog construction;
+- catalog-surface definitions for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets;
 - typed skill, item, passive, targeting, and effect execution;
 - catalog-backed actor hydration and automated battle orchestration;
 - elemental, ailment, instant-death, knowledge, and Press Turn contracts;
@@ -88,6 +89,8 @@ This keeps engines mostly independent from console rendering while still allowin
 - skills, entities/personas/demons, ailments, items, dungeons, equipment, fusion recipes, negotiation questions, and shop inventory.
 
 Legacy runtime systems assume `Database.LoadData(io)` has completed before factories, shops, battle effects, dungeon traversal, or fusion logic are used. Framework services instead receive immutable definitions or a validated `GameDataCatalog`.
+
+The clean catalog now has a definition surface for every retained legacy content family. That surface is not a data migration: the legacy datasets still load through `Database`, while clean fixtures prove target authoring contracts for later consumer migration tracks.
 
 ## Runtime Dependency Shape
 

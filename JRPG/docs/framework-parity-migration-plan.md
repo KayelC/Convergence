@@ -437,6 +437,17 @@ Represent all retained content families without forcing runtime state into JSON 
 
 Every protected legacy JSON family has an approved target schema and one small original valid fixture. Legacy datasets remain loaded by the interactive path.
 
+### Completion Record
+
+Track C began from `46e9634` on `track-12-recovery`.
+
+- Added immutable framework definitions for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets.
+- Extended strict deserialization, validation requests, validated-content tokens, catalog qualification, catalog repositories, and loader cross-pack reference checks for all new families.
+- Added explicit host registrations for shop categories, negotiation demands, encounter environments, and generic policy IDs; no hidden defaults were introduced.
+- Added `convergence.catalog_surface_sample` `0.1.0` with seven new document families and compact original-inspired records.
+- Updated the parity ledger so affected capabilities are `clean_foundation` only. No legacy consumer migrated, no runtime state moved into JSON, and no removal was authorized.
+- Added three Track C catalog-surface tests. The complete suite now contains 482 passing tests with 0 skipped tests, and the nonincremental build remains at 122 warnings.
+
 ## Track D: Runtime Identity, State, Transactions, And Snapshots
 
 ### Goal

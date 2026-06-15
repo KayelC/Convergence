@@ -6,7 +6,20 @@ namespace JRPGPrototype.Data.SkillSystem.Catalog;
 public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
 {
     private static readonly HashSet<string> SupportedDocumentTypes =
-        ["skills", "entities", "races", "ailments", "items"];
+    [
+        "skills",
+        "entities",
+        "races",
+        "ailments",
+        "items",
+        "equipment",
+        "shops",
+        "negotiations",
+        "encounters",
+        "dungeons",
+        "fusion",
+        "rulesets"
+    ];
 
     private readonly ISkillSystemDocumentDeserializer _deserializer;
     private readonly ISkillSystemContentValidator _validator;
@@ -143,6 +156,13 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         var races = new List<SourceContentDocument<RaceDefinition>>();
         var ailments = new List<SourceContentDocument<AilmentDefinition>>();
         var items = new List<SourceContentDocument<ItemDefinition>>();
+        var equipment = new List<SourceContentDocument<EquipmentDefinition>>();
+        var shops = new List<SourceContentDocument<ShopCatalogDefinition>>();
+        var negotiations = new List<SourceContentDocument<NegotiationDefinition>>();
+        var encounters = new List<SourceContentDocument<EncounterDefinition>>();
+        var dungeons = new List<SourceContentDocument<DungeonDefinition>>();
+        var fusion = new List<SourceContentDocument<FusionRecipeDefinition>>();
+        var rulesets = new List<SourceContentDocument<RulesetDefinition>>();
         foreach (ContentPackDocumentReference reference in manifest.Documents)
         {
             ContentDocumentText document = suppliedByPath[reference.Path];
@@ -175,6 +195,41 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                             reference.Path, document.SourceName,
                             _deserializer.DeserializeItems(document.Json, document.SourceName)));
                         break;
+                    case "equipment":
+                        equipment.Add(new SourceContentDocument<EquipmentDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeEquipment(document.Json, document.SourceName)));
+                        break;
+                    case "shops":
+                        shops.Add(new SourceContentDocument<ShopCatalogDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeShops(document.Json, document.SourceName)));
+                        break;
+                    case "negotiations":
+                        negotiations.Add(new SourceContentDocument<NegotiationDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeNegotiations(document.Json, document.SourceName)));
+                        break;
+                    case "encounters":
+                        encounters.Add(new SourceContentDocument<EncounterDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeEncounters(document.Json, document.SourceName)));
+                        break;
+                    case "dungeons":
+                        dungeons.Add(new SourceContentDocument<DungeonDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeDungeons(document.Json, document.SourceName)));
+                        break;
+                    case "fusion":
+                        fusion.Add(new SourceContentDocument<FusionRecipeDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeFusionRecipes(document.Json, document.SourceName)));
+                        break;
+                    case "rulesets":
+                        rulesets.Add(new SourceContentDocument<RulesetDefinition>(
+                            reference.Path, document.SourceName,
+                            _deserializer.DeserializeRulesets(document.Json, document.SourceName)));
+                        break;
                 }
             }
             catch (ContentDeserializationException exception)
@@ -197,7 +252,14 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                 entities,
                 races,
                 ailments,
-                items));
+                items,
+                equipment,
+                shops,
+                negotiations,
+                encounters,
+                dungeons,
+                fusion,
+                rulesets));
             foreach (ContentValidationError error in result.Errors)
             {
                 diagnostics.Add(new CatalogLoadDiagnostic(
@@ -388,6 +450,13 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         var races = new List<KeyValuePair<ContentId, RaceDefinition>>();
         var ailments = new List<KeyValuePair<ContentId, AilmentDefinition>>();
         var items = new List<KeyValuePair<ContentId, ItemDefinition>>();
+        var equipment = new List<KeyValuePair<ContentId, EquipmentDefinition>>();
+        var shops = new List<KeyValuePair<ContentId, ShopCatalogDefinition>>();
+        var negotiations = new List<KeyValuePair<ContentId, NegotiationDefinition>>();
+        var encounters = new List<KeyValuePair<ContentId, EncounterDefinition>>();
+        var dungeons = new List<KeyValuePair<ContentId, DungeonDefinition>>();
+        var fusion = new List<KeyValuePair<ContentId, FusionRecipeDefinition>>();
+        var rulesets = new List<KeyValuePair<ContentId, RulesetDefinition>>();
 
         foreach (LoadedPack pack in loadOrder.Where(pack => pack.Validated is not null))
         {
@@ -397,9 +466,28 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             AddQualified(pack, pack.Validated.RaceDocuments, races, definition => DefinitionQualifier.Race(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.AilmentDocuments, ailments, definition => DefinitionQualifier.Ailment(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.ItemDocuments, items, definition => DefinitionQualifier.Item(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.EquipmentDocuments, equipment, definition => DefinitionQualifier.Equipment(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.ShopDocuments, shops, definition => DefinitionQualifier.Shop(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.NegotiationDocuments, negotiations, definition => DefinitionQualifier.Negotiation(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.EncounterDocuments, encounters, definition => DefinitionQualifier.Encounter(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.DungeonDocuments, dungeons, definition => DefinitionQualifier.Dungeon(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.FusionDocuments, fusion, definition => DefinitionQualifier.FusionRecipe(packId, definition), diagnostics);
+            AddQualified(pack, pack.Validated.RulesetDocuments, rulesets, definition => DefinitionQualifier.Ruleset(packId, definition), diagnostics);
         }
 
-        return new GameDataCatalog(skills, entities, races, ailments, items);
+        return new GameDataCatalog(
+            skills,
+            entities,
+            races,
+            ailments,
+            items,
+            equipment,
+            shops,
+            negotiations,
+            encounters,
+            dungeons,
+            fusion,
+            rulesets);
     }
 
     private static void AddQualified<TDefinition>(
@@ -436,6 +524,13 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         RaceDefinition value => value.Id,
         AilmentDefinition value => value.Id,
         ItemDefinition value => value.Id,
+        EquipmentDefinition value => value.Id,
+        ShopCatalogDefinition value => value.Id,
+        NegotiationDefinition value => value.Id,
+        EncounterDefinition value => value.Id,
+        DungeonDefinition value => value.Id,
+        FusionRecipeDefinition value => value.Id,
+        RulesetDefinition value => value.Id,
         _ => throw new InvalidOperationException($"Unsupported catalog definition '{typeof(TDefinition).Name}'.")
     };
 
@@ -450,6 +545,179 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             CheckEntityReferences(pack, catalog, diagnostics);
             CheckAilmentReferences(pack, catalog, diagnostics);
             CheckItemReferences(pack, catalog, diagnostics);
+            CheckEquipmentReferences(pack, catalog, diagnostics);
+            CheckShopReferences(pack, catalog, diagnostics);
+            CheckNegotiationReferences(pack, catalog, diagnostics);
+            CheckEncounterReferences(pack, catalog, diagnostics);
+            CheckDungeonReferences(pack, catalog, diagnostics);
+            CheckFusionReferences(pack, catalog, diagnostics);
+        }
+    }
+
+    private static void CheckEquipmentReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<EquipmentDefinition> document in pack.Validated!.EquipmentDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                EquipmentDefinition equipment = document.Document.Records[recordIndex];
+                for (int index = 0; index < equipment.GrantedSkillIds.Count; index++)
+                {
+                    CheckReference(pack, document.SourceName, "equipment", equipment.Id,
+                        $"$.equipment[{recordIndex}].grantedSkillIds[{index}]",
+                        equipment.GrantedSkillIds[index], ReferenceKind.Skill, catalog, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static void CheckShopReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<ShopCatalogDefinition> document in pack.Validated!.ShopDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                ShopCatalogDefinition shop = document.Document.Records[recordIndex];
+                for (int index = 0; index < shop.Offers.Count; index++)
+                {
+                    ShopOfferDefinition offer = shop.Offers[index];
+                    ReferenceKind kind = offer.ContentKind == ShopContentKind.Item
+                        ? ReferenceKind.Item
+                        : ReferenceKind.Equipment;
+                    CheckReference(pack, document.SourceName, "shop", shop.Id,
+                        $"$.shops[{recordIndex}].offers[{index}].contentId",
+                        offer.ContentId, kind, catalog, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static void CheckNegotiationReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<NegotiationDefinition> document in pack.Validated!.NegotiationDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                NegotiationDefinition negotiation = document.Document.Records[recordIndex];
+                for (int index = 0; index < negotiation.DefaultRaceIds.Count; index++)
+                {
+                    CheckReference(pack, document.SourceName, "negotiation", negotiation.Id,
+                        $"$.negotiations[{recordIndex}].defaultRaceIds[{index}]",
+                        negotiation.DefaultRaceIds[index], ReferenceKind.Race, catalog, diagnostics);
+                }
+
+                for (int index = 0; index < negotiation.DefaultEntityIds.Count; index++)
+                {
+                    CheckReference(pack, document.SourceName, "negotiation", negotiation.Id,
+                        $"$.negotiations[{recordIndex}].defaultEntityIds[{index}]",
+                        negotiation.DefaultEntityIds[index], ReferenceKind.Entity, catalog, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static void CheckEncounterReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<EncounterDefinition> document in pack.Validated!.EncounterDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                EncounterDefinition encounter = document.Document.Records[recordIndex];
+                for (int formationIndex = 0; formationIndex < encounter.Formations.Count; formationIndex++)
+                {
+                    EncounterFormationDefinition formation = encounter.Formations[formationIndex];
+                    for (int memberIndex = 0; memberIndex < formation.Members.Count; memberIndex++)
+                    {
+                        CheckReference(pack, document.SourceName, "encounter", encounter.Id,
+                            $"$.encounters[{recordIndex}].formations[{formationIndex}].members[{memberIndex}].entityId",
+                            formation.Members[memberIndex].EntityId, ReferenceKind.Entity, catalog, diagnostics);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void CheckDungeonReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<DungeonDefinition> document in pack.Validated!.DungeonDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                DungeonDefinition dungeon = document.Document.Records[recordIndex];
+                for (int blockIndex = 0; blockIndex < dungeon.Blocks.Count; blockIndex++)
+                {
+                    DungeonBlockDefinition block = dungeon.Blocks[blockIndex];
+                    for (int index = 0; index < block.EncounterPoolIds.Count; index++)
+                    {
+                        CheckReference(pack, document.SourceName, "dungeon", dungeon.Id,
+                            $"$.dungeons[{recordIndex}].blocks[{blockIndex}].encounterPoolIds[{index}]",
+                            block.EncounterPoolIds[index], ReferenceKind.Encounter, catalog, diagnostics);
+                    }
+
+                    for (int floorIndex = 0; floorIndex < block.FixedFloors.Count; floorIndex++)
+                    {
+                        if (block.FixedFloors[floorIndex].EncounterId is ContentId encounterId)
+                        {
+                            CheckReference(pack, document.SourceName, "dungeon", dungeon.Id,
+                                $"$.dungeons[{recordIndex}].blocks[{blockIndex}].fixedFloors[{floorIndex}].encounterId",
+                                encounterId, ReferenceKind.Encounter, catalog, diagnostics);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void CheckFusionReferences(
+        LoadedPack pack,
+        GameDataCatalog catalog,
+        List<CatalogLoadDiagnostic> diagnostics)
+    {
+        foreach (SourceContentDocument<FusionRecipeDefinition> document in pack.Validated!.FusionDocuments)
+        {
+            for (int recordIndex = 0; recordIndex < document.Document.Records.Count; recordIndex++)
+            {
+                FusionRecipeDefinition recipe = document.Document.Records[recordIndex];
+                for (int parentIndex = 0; parentIndex < recipe.Parents.Count; parentIndex++)
+                {
+                    FusionParentSelectorDefinition parent = recipe.Parents[parentIndex];
+                    ReferenceKind kind = parent.Kind == FusionParentSelectorKind.Entity
+                        ? ReferenceKind.Entity
+                        : ReferenceKind.Race;
+                    CheckReference(pack, document.SourceName, "fusion recipe", recipe.Id,
+                        $"$.fusionRecipes[{recordIndex}].parents[{parentIndex}].id",
+                        parent.Id, kind, catalog, diagnostics);
+                }
+
+                if (recipe.Result.ResultEntityId is ContentId resultEntityId)
+                {
+                    CheckReference(pack, document.SourceName, "fusion recipe", recipe.Id,
+                        $"$.fusionRecipes[{recordIndex}].result.resultEntityId",
+                        resultEntityId, ReferenceKind.Entity, catalog, diagnostics);
+                }
+
+                if (recipe.Result.ResultRaceId is ContentId resultRaceId)
+                {
+                    CheckReference(pack, document.SourceName, "fusion recipe", recipe.Id,
+                        $"$.fusionRecipes[{recordIndex}].result.resultRaceId",
+                        resultRaceId, ReferenceKind.Race, catalog, diagnostics);
+                }
+            }
         }
     }
 
@@ -722,6 +990,9 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             ReferenceKind.Entity => catalog.Entities.ContainsKey(canonical),
             ReferenceKind.Race => catalog.Races.ContainsKey(canonical),
             ReferenceKind.Ailment => catalog.Ailments.ContainsKey(canonical),
+            ReferenceKind.Item => catalog.Items.ContainsKey(canonical),
+            ReferenceKind.Equipment => catalog.Equipment.ContainsKey(canonical),
+            ReferenceKind.Encounter => catalog.Encounters.ContainsKey(canonical),
             _ => false
         };
         if (exists) return;
@@ -729,7 +1000,15 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         bool existsAsOtherType = catalog.Skills.ContainsKey(canonical) ||
                                  catalog.Entities.ContainsKey(canonical) ||
                                  catalog.Races.ContainsKey(canonical) ||
-                                 catalog.Ailments.ContainsKey(canonical);
+                                 catalog.Ailments.ContainsKey(canonical) ||
+                                 catalog.Items.ContainsKey(canonical) ||
+                                 catalog.Equipment.ContainsKey(canonical) ||
+                                 catalog.Shops.ContainsKey(canonical) ||
+                                 catalog.Negotiations.ContainsKey(canonical) ||
+                                 catalog.Encounters.ContainsKey(canonical) ||
+                                 catalog.Dungeons.ContainsKey(canonical) ||
+                                 catalog.FusionRecipes.ContainsKey(canonical) ||
+                                 catalog.Rulesets.ContainsKey(canonical);
         Add(diagnostics,
             existsAsOtherType
                 ? CatalogLoadDiagnosticCode.ExternalReferenceWrongType
@@ -790,6 +1069,9 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         Skill,
         Entity,
         Race,
-        Ailment
+        Ailment,
+        Item,
+        Equipment,
+        Encounter
     }
 }

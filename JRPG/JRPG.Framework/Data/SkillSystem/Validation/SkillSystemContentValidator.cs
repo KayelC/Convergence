@@ -29,11 +29,25 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private readonly List<RecordSource<RaceDefinition>> _races;
         private readonly List<RecordSource<AilmentDefinition>> _ailments;
         private readonly List<RecordSource<ItemDefinition>> _items;
+        private readonly List<RecordSource<EquipmentDefinition>> _equipment;
+        private readonly List<RecordSource<ShopCatalogDefinition>> _shops;
+        private readonly List<RecordSource<NegotiationDefinition>> _negotiations;
+        private readonly List<RecordSource<EncounterDefinition>> _encounters;
+        private readonly List<RecordSource<DungeonDefinition>> _dungeons;
+        private readonly List<RecordSource<FusionRecipeDefinition>> _fusion;
+        private readonly List<RecordSource<RulesetDefinition>> _rulesets;
         private readonly Dictionary<ContentId, List<RecordSource<SkillDefinition>>> _skillIndex;
         private readonly Dictionary<ContentId, List<RecordSource<EntityDefinition>>> _entityIndex;
         private readonly Dictionary<ContentId, List<RecordSource<RaceDefinition>>> _raceIndex;
         private readonly Dictionary<ContentId, List<RecordSource<AilmentDefinition>>> _ailmentIndex;
         private readonly Dictionary<ContentId, List<RecordSource<ItemDefinition>>> _itemIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<EquipmentDefinition>>> _equipmentIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<ShopCatalogDefinition>>> _shopIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<NegotiationDefinition>>> _negotiationIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<EncounterDefinition>>> _encounterIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<DungeonDefinition>>> _dungeonIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<FusionRecipeDefinition>>> _fusionIndex;
+        private readonly Dictionary<ContentId, List<RecordSource<RulesetDefinition>>> _rulesetIndex;
 
         public ValidationContext(SkillSystemValidationRequest request)
         {
@@ -45,11 +59,25 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             _races = Flatten(request.RaceDocuments, "race", "races", definition => definition.Id);
             _ailments = Flatten(request.AilmentDocuments, "ailment", "ailments", definition => definition.Id);
             _items = Flatten(request.ItemDocuments, "item", "items", definition => definition.Id);
+            _equipment = Flatten(request.EquipmentDocuments, "equipment", "equipment", definition => definition.Id);
+            _shops = Flatten(request.ShopDocuments, "shop", "shops", definition => definition.Id);
+            _negotiations = Flatten(request.NegotiationDocuments, "negotiation", "negotiations", definition => definition.Id);
+            _encounters = Flatten(request.EncounterDocuments, "encounter", "encounters", definition => definition.Id);
+            _dungeons = Flatten(request.DungeonDocuments, "dungeon", "dungeons", definition => definition.Id);
+            _fusion = Flatten(request.FusionDocuments, "fusion recipe", "fusionRecipes", definition => definition.Id);
+            _rulesets = Flatten(request.RulesetDocuments, "ruleset", "rulesets", definition => definition.Id);
             _skillIndex = Index(_skills);
             _entityIndex = Index(_entities);
             _raceIndex = Index(_races);
             _ailmentIndex = Index(_ailments);
             _itemIndex = Index(_items);
+            _equipmentIndex = Index(_equipment);
+            _shopIndex = Index(_shops);
+            _negotiationIndex = Index(_negotiations);
+            _encounterIndex = Index(_encounters);
+            _dungeonIndex = Index(_dungeons);
+            _fusionIndex = Index(_fusion);
+            _rulesetIndex = Index(_rulesets);
         }
 
         public List<ContentValidationError> Errors { get; } = [];
@@ -70,6 +98,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateDocumentSet(_request.RaceDocuments, "races");
             ValidateDocumentSet(_request.AilmentDocuments, "ailments");
             ValidateDocumentSet(_request.ItemDocuments, "items");
+            ValidateDocumentSet(_request.EquipmentDocuments, "equipment");
+            ValidateDocumentSet(_request.ShopDocuments, "shops");
+            ValidateDocumentSet(_request.NegotiationDocuments, "negotiations");
+            ValidateDocumentSet(_request.EncounterDocuments, "encounters");
+            ValidateDocumentSet(_request.DungeonDocuments, "dungeons");
+            ValidateDocumentSet(_request.FusionDocuments, "fusion");
+            ValidateDocumentSet(_request.RulesetDocuments, "rulesets");
         }
 
         public void ValidateRecords()
@@ -79,6 +114,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             var processedRaces = new HashSet<RecordSource<RaceDefinition>>(ReferenceEqualityComparer.Instance);
             var processedAilments = new HashSet<RecordSource<AilmentDefinition>>(ReferenceEqualityComparer.Instance);
             var processedItems = new HashSet<RecordSource<ItemDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedEquipment = new HashSet<RecordSource<EquipmentDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedShops = new HashSet<RecordSource<ShopCatalogDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedNegotiations = new HashSet<RecordSource<NegotiationDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedEncounters = new HashSet<RecordSource<EncounterDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedDungeons = new HashSet<RecordSource<DungeonDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedFusion = new HashSet<RecordSource<FusionRecipeDefinition>>(ReferenceEqualityComparer.Instance);
+            var processedRulesets = new HashSet<RecordSource<RulesetDefinition>>(ReferenceEqualityComparer.Instance);
 
             foreach (ContentPackDocumentReference document in _request.Manifest.Documents)
             {
@@ -99,6 +141,27 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     case "items":
                         ValidateDocumentRecords(_items, document.Path, _itemIndex, ValidateItem, processedItems);
                         break;
+                    case "equipment":
+                        ValidateDocumentRecords(_equipment, document.Path, _equipmentIndex, ValidateEquipment, processedEquipment);
+                        break;
+                    case "shops":
+                        ValidateDocumentRecords(_shops, document.Path, _shopIndex, ValidateShop, processedShops);
+                        break;
+                    case "negotiations":
+                        ValidateDocumentRecords(_negotiations, document.Path, _negotiationIndex, ValidateNegotiation, processedNegotiations);
+                        break;
+                    case "encounters":
+                        ValidateDocumentRecords(_encounters, document.Path, _encounterIndex, ValidateEncounter, processedEncounters);
+                        break;
+                    case "dungeons":
+                        ValidateDocumentRecords(_dungeons, document.Path, _dungeonIndex, ValidateDungeon, processedDungeons);
+                        break;
+                    case "fusion":
+                        ValidateDocumentRecords(_fusion, document.Path, _fusionIndex, ValidateFusionRecipe, processedFusion);
+                        break;
+                    case "rulesets":
+                        ValidateDocumentRecords(_rulesets, document.Path, _rulesetIndex, ValidateRuleset, processedRulesets);
+                        break;
                 }
             }
 
@@ -107,6 +170,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateRemainingRecords(_races, _raceIndex, ValidateRace, processedRaces);
             ValidateRemainingRecords(_ailments, _ailmentIndex, ValidateAilment, processedAilments);
             ValidateRemainingRecords(_items, _itemIndex, ValidateItem, processedItems);
+            ValidateRemainingRecords(_equipment, _equipmentIndex, ValidateEquipment, processedEquipment);
+            ValidateRemainingRecords(_shops, _shopIndex, ValidateShop, processedShops);
+            ValidateRemainingRecords(_negotiations, _negotiationIndex, ValidateNegotiation, processedNegotiations);
+            ValidateRemainingRecords(_encounters, _encounterIndex, ValidateEncounter, processedEncounters);
+            ValidateRemainingRecords(_dungeons, _dungeonIndex, ValidateDungeon, processedDungeons);
+            ValidateRemainingRecords(_fusion, _fusionIndex, ValidateFusionRecipe, processedFusion);
+            ValidateRemainingRecords(_rulesets, _rulesetIndex, ValidateRuleset, processedRulesets);
 
             ValidateMutationFamilies();
         }
@@ -171,6 +241,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateManifestCoverage("races", _request.RaceDocuments.Select(document => document.ManifestPath));
             ValidateManifestCoverage("ailments", _request.AilmentDocuments.Select(document => document.ManifestPath));
             ValidateManifestCoverage("items", _request.ItemDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("equipment", _request.EquipmentDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("shops", _request.ShopDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("negotiations", _request.NegotiationDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("encounters", _request.EncounterDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("dungeons", _request.DungeonDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("fusion", _request.FusionDocuments.Select(document => document.ManifestPath));
+            ValidateManifestCoverage("rulesets", _request.RulesetDocuments.Select(document => document.ManifestPath));
         }
 
         private void ValidateManifestCoverage(string documentType, IEnumerable<string> suppliedPaths)
@@ -575,6 +652,419 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     "Consumable item usage requires at least one effect.");
             }
             ValidateEffects(source, usage.Effects, source.Path + ".usage.effects");
+        }
+
+        private void ValidateEquipment(RecordSource<EquipmentDefinition> source)
+        {
+            EquipmentDefinition equipment = source.Definition;
+            RequireNonNegative(source, equipment.BaseValue, source.Path + ".baseValue", "Equipment base value");
+            ValidateContentReferenceDuplicates(source, equipment.GrantedSkillIds, source.Path + ".grantedSkillIds");
+            for (int index = 0; index < equipment.GrantedSkillIds.Count; index++)
+            {
+                ValidateContentReference(source, equipment.GrantedSkillIds[index],
+                    source.Path + $".grantedSkillIds[{index}]", _skillIndex, "skill");
+            }
+
+            int profileCount =
+                (equipment.Weapon is null ? 0 : 1) +
+                (equipment.Armor is null ? 0 : 1) +
+                (equipment.Boots is null ? 0 : 1) +
+                (equipment.Accessory is null ? 0 : 1);
+            if (profileCount != 1)
+            {
+                Add(source, source.Path, ContentValidationErrorCode.ShapeInvalid,
+                    "Equipment records require exactly one slot profile.");
+            }
+
+            if ((equipment.Slot == EquipmentSlot.Weapon && equipment.Weapon is null) ||
+                (equipment.Slot == EquipmentSlot.Armor && equipment.Armor is null) ||
+                (equipment.Slot == EquipmentSlot.Boots && equipment.Boots is null) ||
+                (equipment.Slot == EquipmentSlot.Accessory && equipment.Accessory is null))
+            {
+                Add(source, source.Path, ContentValidationErrorCode.ShapeInvalid,
+                    "Equipment slot must match its declared profile.");
+            }
+
+            if (equipment.Weapon is EquipmentWeaponProfileDefinition weapon)
+            {
+                RequireNonNegative(source, weapon.BasicAttack.Power, source.Path + ".weapon.basicAttack.power",
+                    "Weapon power");
+                RequirePercentage(source, weapon.BasicAttack.Accuracy, source.Path + ".weapon.basicAttack.accuracy",
+                    "Weapon accuracy");
+            }
+
+            if (equipment.Armor is EquipmentArmorProfileDefinition armor)
+            {
+                RequireNonNegative(source, armor.Defense, source.Path + ".armor.defense", "Armor defense");
+                RequireNonNegative(source, armor.Evasion, source.Path + ".armor.evasion", "Armor evasion");
+            }
+
+            if (equipment.Boots is EquipmentBootsProfileDefinition boots)
+            {
+                RequireNonNegative(source, boots.Evasion, source.Path + ".boots.evasion", "Boot evasion");
+            }
+
+            if (equipment.Accessory is EquipmentAccessoryProfileDefinition accessory)
+            {
+                ValidateStatModifiers(source, accessory.StatModifiers, source.Path + ".accessory.statModifiers");
+            }
+        }
+
+        private void ValidateShop(RecordSource<ShopCatalogDefinition> source)
+        {
+            ShopCatalogDefinition shop = source.Definition;
+            RequireRegistration(source, shop.CategoryId, source.Path + ".categoryId",
+                _registrations.ShopCategoryIds, "shop category");
+            ValidateRegisteredList(source, shop.AvailabilityContextIds, source.Path + ".availabilityContexts",
+                _registrations.ContextIds, "context");
+            if (shop.Offers.Count == 0)
+            {
+                Add(source, source.Path + ".offers", ContentValidationErrorCode.ShapeInvalid,
+                    "Shop catalogs require at least one offer.");
+            }
+
+            for (int index = 0; index < shop.Offers.Count; index++)
+            {
+                ShopOfferDefinition offer = shop.Offers[index];
+                string path = source.Path + $".offers[{index}]";
+                if (offer.ContentKind == ShopContentKind.Item)
+                {
+                    ValidateContentReference(source, offer.ContentId, path + ".contentId", _itemIndex, "item");
+                }
+                else
+                {
+                    ValidateContentReference(source, offer.ContentId, path + ".contentId",
+                        _equipmentIndex, "equipment");
+                }
+
+                ValidateShopPrice(source, offer.Price, path + ".price");
+                ValidateShopStock(source, offer.Stock, path + ".stock");
+            }
+        }
+
+        private void ValidateNegotiation(RecordSource<NegotiationDefinition> source)
+        {
+            NegotiationDefinition negotiation = source.Definition;
+            RequireRegistration(source, negotiation.PersonalityId, source.Path + ".personalityId",
+                _registrations.NegotiationPersonalityIds, "negotiation personality");
+            if (negotiation.Questions.Count == 0)
+            {
+                Add(source, source.Path + ".questions", ContentValidationErrorCode.ShapeInvalid,
+                    "Negotiation definitions require at least one question.");
+            }
+
+            for (int questionIndex = 0; questionIndex < negotiation.Questions.Count; questionIndex++)
+            {
+                NegotiationQuestionDefinition question = negotiation.Questions[questionIndex];
+                if (question.Answers.Count == 0)
+                {
+                    Add(source, source.Path + $".questions[{questionIndex}].answers",
+                        ContentValidationErrorCode.ShapeInvalid,
+                        "Negotiation questions require at least one answer.");
+                }
+            }
+
+            for (int demandIndex = 0; demandIndex < negotiation.Demands.Count; demandIndex++)
+            {
+                NegotiationDemandDefinition demand = negotiation.Demands[demandIndex];
+                string path = source.Path + $".demands[{demandIndex}]";
+                RequireRegistration(source, demand.DemandId, path + ".demandId",
+                    _registrations.NegotiationDemandIds, "negotiation demand");
+                RequirePositive(source, demand.Weight, path + ".weight", "Negotiation demand weight");
+            }
+
+            ValidateContentReferenceDuplicates(source, negotiation.DefaultRaceIds, source.Path + ".defaultRaceIds");
+            for (int index = 0; index < negotiation.DefaultRaceIds.Count; index++)
+            {
+                ValidateContentReference(source, negotiation.DefaultRaceIds[index],
+                    source.Path + $".defaultRaceIds[{index}]", _raceIndex, "race");
+            }
+
+            ValidateContentReferenceDuplicates(source, negotiation.DefaultEntityIds, source.Path + ".defaultEntityIds");
+            for (int index = 0; index < negotiation.DefaultEntityIds.Count; index++)
+            {
+                ValidateContentReference(source, negotiation.DefaultEntityIds[index],
+                    source.Path + $".defaultEntityIds[{index}]", _entityIndex, "entity");
+            }
+        }
+
+        private void ValidateEncounter(RecordSource<EncounterDefinition> source)
+        {
+            EncounterDefinition encounter = source.Definition;
+            if (encounter.EnvironmentId is ContentId environmentId)
+            {
+                RequireRegistration(source, environmentId, source.Path + ".environmentId",
+                    _registrations.EncounterEnvironmentIds, "encounter environment");
+            }
+
+            if (encounter.Formations.Count == 0)
+            {
+                Add(source, source.Path + ".formations", ContentValidationErrorCode.ShapeInvalid,
+                    "Encounters require at least one formation.");
+            }
+
+            for (int formationIndex = 0; formationIndex < encounter.Formations.Count; formationIndex++)
+            {
+                EncounterFormationDefinition formation = encounter.Formations[formationIndex];
+                string path = source.Path + $".formations[{formationIndex}]";
+                RequirePositive(source, formation.Weight, path + ".weight", "Encounter formation weight");
+                if (formation.Members.Count == 0)
+                {
+                    Add(source, path + ".members", ContentValidationErrorCode.ShapeInvalid,
+                        "Encounter formations require at least one member.");
+                }
+
+                if (formation.RewardPolicyId is ContentId rewardPolicyId)
+                {
+                    RequireRegistration(source, rewardPolicyId, path + ".rewardPolicyId",
+                        _registrations.PolicyIds, "policy");
+                }
+
+                for (int memberIndex = 0; memberIndex < formation.Members.Count; memberIndex++)
+                {
+                    EncounterMemberDefinition member = formation.Members[memberIndex];
+                    string memberPath = path + $".members[{memberIndex}]";
+                    ValidateContentReference(source, member.EntityId, memberPath + ".entityId", _entityIndex, "entity");
+                    RequirePositive(source, member.Level, memberPath + ".level", "Encounter member level");
+                    RequirePositive(source, member.Count, memberPath + ".count", "Encounter member count");
+                }
+            }
+        }
+
+        private void ValidateDungeon(RecordSource<DungeonDefinition> source)
+        {
+            DungeonDefinition dungeon = source.Definition;
+            if (dungeon.Blocks.Count == 0)
+            {
+                Add(source, source.Path + ".blocks", ContentValidationErrorCode.ShapeInvalid,
+                    "Dungeons require at least one block.");
+            }
+
+            ValidateDuplicates(source, dungeon.Blocks.Select(block => block.Id).ToArray(), source.Path + ".blocks.id");
+            for (int blockIndex = 0; blockIndex < dungeon.Blocks.Count; blockIndex++)
+            {
+                DungeonBlockDefinition block = dungeon.Blocks[blockIndex];
+                string blockPath = source.Path + $".blocks[{blockIndex}]";
+                if (block.Id.IsQualified)
+                {
+                    Add(source, blockPath + ".id", ContentValidationErrorCode.RecordIdMustBeLocal,
+                        $"Dungeon block ID '{block.Id}' must be local and unqualified.");
+                }
+                RequirePositive(source, block.StartFloor, blockPath + ".startFloor", "Dungeon block start floor");
+                RequirePositive(source, block.EndFloor, blockPath + ".endFloor", "Dungeon block end floor");
+                if (block.StartFloor > block.EndFloor)
+                {
+                    Add(source, blockPath, ContentValidationErrorCode.MinimumExceedsMaximum,
+                        "Dungeon block start floor cannot exceed end floor.");
+                }
+
+                ValidateContentReferenceDuplicates(source, block.EncounterPoolIds, blockPath + ".encounterPoolIds");
+                for (int index = 0; index < block.EncounterPoolIds.Count; index++)
+                {
+                    ValidateContentReference(source, block.EncounterPoolIds[index],
+                        blockPath + $".encounterPoolIds[{index}]", _encounterIndex, "encounter");
+                }
+
+                for (int floorIndex = 0; floorIndex < block.FixedFloors.Count; floorIndex++)
+                {
+                    ValidateFixedFloor(source, block, block.FixedFloors[floorIndex],
+                        blockPath + $".fixedFloors[{floorIndex}]");
+                }
+            }
+        }
+
+        private void ValidateFusionRecipe(RecordSource<FusionRecipeDefinition> source)
+        {
+            FusionRecipeDefinition recipe = source.Definition;
+            if (recipe.Parents.Count < 2)
+            {
+                Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
+                    "Fusion recipes require at least two parents.");
+            }
+
+            var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
+            for (int index = 0; index < recipe.Parents.Count; index++)
+            {
+                FusionParentSelectorDefinition parent = recipe.Parents[index];
+                string path = source.Path + $".parents[{index}]";
+                ContentId normalized = NormalizeContentReference(parent.Id);
+                if (!seenParents.Add((parent.Kind, normalized)))
+                {
+                    Add(source, path + ".id", ContentValidationErrorCode.ListDuplicateValue,
+                        $"Fusion parent '{parent.Id}' is listed more than once.");
+                }
+
+                if (parent.Kind == FusionParentSelectorKind.Entity)
+                {
+                    ValidateContentReference(source, parent.Id, path + ".id", _entityIndex, "entity");
+                }
+                else
+                {
+                    ValidateContentReference(source, parent.Id, path + ".id", _raceIndex, "race");
+                }
+            }
+
+            ValidateFusionResult(source, recipe.Result, source.Path + ".result");
+            if (recipe.AccidentPolicyId is ContentId accidentPolicyId)
+            {
+                RequireRegistration(source, accidentPolicyId, source.Path + ".accidentPolicyId",
+                    _registrations.PolicyIds, "policy");
+            }
+            if (recipe.MutationPolicyId is ContentId mutationPolicyId)
+            {
+                RequireRegistration(source, mutationPolicyId, source.Path + ".mutationPolicyId",
+                    _registrations.PolicyIds, "policy");
+            }
+        }
+
+        private void ValidateRuleset(RecordSource<RulesetDefinition> source)
+        {
+            RequireRegistration(source, source.Definition.PolicyId, source.Path + ".policyId",
+                _registrations.PolicyIds, "policy");
+        }
+
+        private void ValidateStatModifiers<TDefinition>(
+            RecordSource<TDefinition> source,
+            IReadOnlyList<StatModifierDefinition> modifiers,
+            string path)
+        {
+            ValidateDuplicates(source, modifiers.Select(modifier => modifier.StatId).ToArray(), path + ".statId");
+            for (int index = 0; index < modifiers.Count; index++)
+            {
+                StatModifierDefinition modifier = modifiers[index];
+                string modifierPath = path + $"[{index}]";
+                RequireRegistration(source, modifier.StatId, modifierPath + ".statId",
+                    _registrations.StatIds, "stat");
+                if (modifier.Value == 0)
+                {
+                    Add(source, modifierPath + ".value", ContentValidationErrorCode.ShapeInvalid,
+                        "Stat modifiers cannot be zero.");
+                }
+            }
+        }
+
+        private void ValidateShopPrice<TDefinition>(
+            RecordSource<TDefinition> source,
+            ShopPriceDefinition price,
+            string path)
+        {
+            switch (price)
+            {
+                case FixedShopPriceDefinition fixedPrice:
+                    RequireNonNegative(source, fixedPrice.BasePrice, path + ".basePrice", "Shop price");
+                    break;
+                case PolicyShopPriceDefinition policy:
+                    RequireRegistration(source, policy.PricingPolicyId, path + ".pricingPolicyId",
+                        _registrations.PolicyIds, "policy");
+                    break;
+            }
+        }
+
+        private void ValidateShopStock<TDefinition>(
+            RecordSource<TDefinition> source,
+            ShopStockDefinition stock,
+            string path)
+        {
+            switch (stock)
+            {
+                case LimitedShopStockDefinition limited:
+                    RequirePositive(source, limited.Quantity, path + ".quantity", "Limited shop stock");
+                    break;
+                case PolicyShopStockDefinition policy:
+                    RequireRegistration(source, policy.StockPolicyId, path + ".stockPolicyId",
+                        _registrations.PolicyIds, "policy");
+                    break;
+            }
+        }
+
+        private void ValidateFixedFloor(
+            RecordSource<DungeonDefinition> source,
+            DungeonBlockDefinition block,
+            DungeonFixedFloorDefinition floor,
+            string path)
+        {
+            RequirePositive(source, floor.Floor, path + ".floor", "Dungeon fixed floor");
+            if (floor.Floor < block.StartFloor || floor.Floor > block.EndFloor)
+            {
+                Add(source, path + ".floor", ContentValidationErrorCode.ValueOutOfRange,
+                    "Fixed floor must be inside its block floor range.");
+            }
+
+            if (floor.Kind is DungeonFixedFloorKind.Battle or DungeonFixedFloorKind.Boss &&
+                floor.EncounterId is null)
+            {
+                Add(source, path + ".encounterId", ContentValidationErrorCode.ShapeInvalid,
+                    "Battle and boss fixed floors require an encounter ID.");
+            }
+
+            if (floor.EncounterId is ContentId encounterId)
+            {
+                ValidateContentReference(source, encounterId, path + ".encounterId", _encounterIndex, "encounter");
+            }
+
+            if (floor.TransitionRuleId is ContentId transitionRuleId)
+            {
+                RequireRegistration(source, transitionRuleId, path + ".transitionRuleId",
+                    _registrations.PolicyIds, "policy");
+            }
+
+            if (floor.BarrierRuleId is ContentId barrierRuleId)
+            {
+                RequireRegistration(source, barrierRuleId, path + ".barrierRuleId",
+                    _registrations.PolicyIds, "policy");
+            }
+        }
+
+        private void ValidateFusionResult(
+            RecordSource<FusionRecipeDefinition> source,
+            FusionResultDefinition result,
+            string path)
+        {
+            switch (result.Operation)
+            {
+                case FusionResultOperationKind.CreateEntity:
+                    if (result.ResultEntityId is null)
+                    {
+                        Add(source, path + ".resultEntityId", ContentValidationErrorCode.ShapeInvalid,
+                            "Create-entity fusion results require resultEntityId.");
+                    }
+                    else
+                    {
+                        ValidateContentReference(source, result.ResultEntityId.Value,
+                            path + ".resultEntityId", _entityIndex, "entity");
+                    }
+                    break;
+                case FusionResultOperationKind.RankOffset:
+                    if (result.ResultRaceId is null)
+                    {
+                        Add(source, path + ".resultRaceId", ContentValidationErrorCode.ShapeInvalid,
+                            "Rank-offset fusion results require resultRaceId.");
+                    }
+                    else
+                    {
+                        ValidateContentReference(source, result.ResultRaceId.Value,
+                            path + ".resultRaceId", _raceIndex, "race");
+                    }
+                    if (result.RankOffset is null or 0)
+                    {
+                        Add(source, path + ".rankOffset", ContentValidationErrorCode.ShapeInvalid,
+                            "Rank-offset fusion results require a nonzero rank offset.");
+                    }
+                    break;
+                case FusionResultOperationKind.StatBoost:
+                case FusionResultOperationKind.Special:
+                    if (result.PolicyId is null)
+                    {
+                        Add(source, path + ".policyId", ContentValidationErrorCode.ShapeInvalid,
+                            $"{result.Operation} fusion results require a policy ID.");
+                    }
+                    else
+                    {
+                        RequireRegistration(source, result.PolicyId.Value, path + ".policyId",
+                            _registrations.PolicyIds, "policy");
+                    }
+                    break;
+            }
         }
 
         private void ValidateEffects<TDefinition>(

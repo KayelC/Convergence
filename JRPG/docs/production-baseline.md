@@ -54,6 +54,17 @@ Track B began from `d97b244` and established a one-way assembly dependency: `JRP
 - Async content, command, event, and random contracts are available for future Godot and other hosts.
 - The legacy interactive workflow remains on `IGameIO`; no capability is marked `clean_parity` or consumer-migrated merely because its clean code moved assemblies.
 
+## Track C Boundary
+
+Track C began from `46e9634` and completed the clean content catalog surface for every retained legacy JSON family without migrating runtime consumers.
+
+- `GameDataCatalog` now has immutable repositories for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets in addition to skills, entities, races, ailments, and items.
+- The new definitions use strict `System.Text.Json` DTOs, validator-backed registrations, deterministic catalog qualification, and direct-dependency reference checks.
+- `convergence.catalog_surface_sample` `0.1.0` provides one compact fixture pack: four equipment records, one shop, one negotiation set, one encounter, one dungeon, one fusion recipe, and eight ruleset policy records.
+- The parity ledger marks affected content capabilities as `clean_foundation`, not `clean_parity`; no consumer-migration flag or removal authorization changed.
+- Legacy datasets, `Database.LoadData`, ordinary interactive startup, and existing console workflows remain the playable source of truth until their later migration tracks.
+- Three Track C catalog-surface tests bring the suite to 482 passing tests with 0 skipped tests. The nonincremental build remains at the existing 122 warnings.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.

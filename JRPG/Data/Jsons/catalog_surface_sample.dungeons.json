@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "dungeons": [
+    {
+      "id": "tartarus_sample",
+      "displayName": "Tartarus",
+      "description": "A minimal dungeon/block/fixed-floor sample.",
+      "blocks": [
+        {
+          "id": "thebel",
+          "displayName": "Block 1: Thebel",
+          "startFloor": 2,
+          "endFloor": 20,
+          "encounterPoolIds": [
+            "thebel_training_sample"
+          ],
+          "fixedFloors": [
+            {
+              "floor": 5,
+              "kind": "boss",
+              "description": "Gatekeeper sample.",
+              "encounterId": "thebel_training_sample"
+            },
+            {
+              "floor": 10,
+              "kind": "safe_room",
+              "description": "Terminal sample.",
+              "hasTerminal": true,
+              "transitionRuleId": "return_to_lobby"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

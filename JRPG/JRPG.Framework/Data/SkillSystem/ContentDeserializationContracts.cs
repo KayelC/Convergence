@@ -10,6 +10,13 @@ public interface ISkillSystemDocumentDeserializer
     DeserializedContentDocument<RaceDefinition> DeserializeRaces(string json, string sourceName);
     DeserializedContentDocument<AilmentDefinition> DeserializeAilments(string json, string sourceName);
     DeserializedContentDocument<ItemDefinition> DeserializeItems(string json, string sourceName);
+    DeserializedContentDocument<EquipmentDefinition> DeserializeEquipment(string json, string sourceName);
+    DeserializedContentDocument<ShopCatalogDefinition> DeserializeShops(string json, string sourceName);
+    DeserializedContentDocument<NegotiationDefinition> DeserializeNegotiations(string json, string sourceName);
+    DeserializedContentDocument<EncounterDefinition> DeserializeEncounters(string json, string sourceName);
+    DeserializedContentDocument<DungeonDefinition> DeserializeDungeons(string json, string sourceName);
+    DeserializedContentDocument<FusionRecipeDefinition> DeserializeFusionRecipes(string json, string sourceName);
+    DeserializedContentDocument<RulesetDefinition> DeserializeRulesets(string json, string sourceName);
 }
 
 public sealed record ContentPackDocumentReference(string Type, string Path);

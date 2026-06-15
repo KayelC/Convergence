@@ -36,7 +36,7 @@ Archived documents are evidence and historical context only. They must not be us
 The branch intentionally contains two paths:
 
 - `JRPG.ConsoleHost` remains the broad, playable reference implementation and owns legacy data loading, console interaction, and current gameplay consumers.
-- `JRPG.Framework` contains the reusable catalog-backed skill, effect, passive, item, battle-runtime, and inheritance foundations.
+- `JRPG.Framework` contains the reusable catalog-backed skill, effect, passive, item, battle-runtime, inheritance, and wider content-catalog foundations.
 
 The console host references the framework, never the reverse. The clean path does not yet replace every console subsystem. A legacy subsystem may only be removed after its replacement reaches functional parity, its real consumer has migrated, and the interactive host remains demonstrably usable.
 

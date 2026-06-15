@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "encounters": [
+    {
+      "id": "thebel_training_sample",
+      "displayName": "Thebel Training Encounter",
+      "description": "A one-enemy encounter sample.",
+      "environmentId": "thebel",
+      "formations": [
+        {
+          "weight": 1,
+          "isBoss": false,
+          "members": [
+            {
+              "entityId": "convergence.clean_battle_demo:ember_duelist_demo",
+              "level": 5,
+              "count": 1
+            }
+          ],
+          "rewardPolicyId": "standard_reward"
+        }
+      ]
+    }
+  ]
+}
