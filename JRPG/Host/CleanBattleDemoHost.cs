@@ -1,31 +1,11 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 
 namespace JRPGPrototype.Host;
-
-internal sealed class FileContentPackSource
-{
-    private readonly string _root;
-
-    public FileContentPackSource(string root)
-    {
-        _root = root ?? throw new ArgumentNullException(nameof(root));
-    }
-
-    public ContentPackTextBundle Read(string manifestPath, params string[] documentPaths)
-    {
-        string manifestFile = Path.Combine(_root, manifestPath);
-        ContentDocumentText[] documents = documentPaths.Select(path =>
-        {
-            string file = Path.Combine(_root, path);
-            return new ContentDocumentText(path, file, File.ReadAllText(file));
-        }).ToArray();
-        return new ContentPackTextBundle(manifestFile, File.ReadAllText(manifestFile), documents);
-    }
-}
 
 internal sealed class DemoBattleActorInitializationPolicy : IBattleActorInitializationPolicy
 {
@@ -108,38 +88,56 @@ internal sealed class CleanBattleDemoHost
     private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
 
-    private readonly TextWriter _output;
-    private readonly string _contentRoot;
+    private readonly IContentPackTextSource _contentSource;
+    private readonly IHostEventSink<string> _eventSink;
 
     public CleanBattleDemoHost(TextWriter output, string? contentRoot = null)
+        : this(
+            new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
+            new TextWriterEventSink(output))
     {
-        _output = output ?? throw new ArgumentNullException(nameof(output));
-        _contentRoot = contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons");
     }
 
-    public int Run()
+    internal CleanBattleDemoHost(
+        IContentPackTextSource contentSource,
+        IHostEventSink<string> eventSink)
+    {
+        _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
+        _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
+    }
+
+    public int Run() => RunAsync().GetAwaiter().GetResult();
+
+    public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
         ContentPackTextBundle[] bundles;
         try
         {
-            var source = new FileContentPackSource(_contentRoot);
             bundles =
             [
-                source.Read(
+                await _contentSource.ReadAsync(new ContentPackTextRequest(
                     "skill_system_redesign.manifest.sample.json",
-                    "skill_system_redesign.races.sample.json",
-                    "skill_system_redesign.skills.sample.json",
-                    "skill_system_redesign.entities.sample.json"),
-                source.Read(
+                    [
+                        "skill_system_redesign.races.sample.json",
+                        "skill_system_redesign.skills.sample.json",
+                        "skill_system_redesign.entities.sample.json"
+                    ]), cancellationToken),
+                await _contentSource.ReadAsync(new ContentPackTextRequest(
                     "clean_battle_demo.manifest.json",
-                    "clean_battle_demo.races.json",
-                    "clean_battle_demo.skills.json",
-                    "clean_battle_demo.entities.json")
+                    [
+                        "clean_battle_demo.races.json",
+                        "clean_battle_demo.skills.json",
+                        "clean_battle_demo.entities.json"
+                    ]), cancellationToken)
             ];
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
-            _output.WriteLine($"Content read failed: {exception.Message}");
+            await _eventSink.PublishAsync($"Content read failed: {exception.Message}", cancellationToken);
             return 2;
         }
 
@@ -149,7 +147,9 @@ internal sealed class CleanBattleDemoHost
         {
             foreach (CatalogLoadDiagnostic diagnostic in load.Diagnostics)
             {
-                _output.WriteLine($"[{diagnostic.Code}] {diagnostic.SourceName} {diagnostic.JsonPath}: {diagnostic.Message}");
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.SourceName} {diagnostic.JsonPath}: {diagnostic.Message}",
+                    cancellationToken);
             }
             return 3;
         }
@@ -170,7 +170,7 @@ internal sealed class CleanBattleDemoHost
         {
             foreach (CatalogBattleActorDiagnostic diagnostic in frostResult.Diagnostics.Concat(emberResult.Diagnostics))
             {
-                _output.WriteLine($"[{diagnostic.Code}] {diagnostic.Message}");
+                await _eventSink.PublishAsync($"[{diagnostic.Code}] {diagnostic.Message}", cancellationToken);
             }
             return 4;
         }
@@ -190,11 +190,15 @@ internal sealed class CleanBattleDemoHost
 
         foreach (BattleRuntimeEvent battleEvent in battle.Events)
         {
-            _output.WriteLine($"{battleEvent.Sequence:D3} [{battleEvent.Kind}] {battleEvent.Message}");
+            await _eventSink.PublishAsync(
+                $"{battleEvent.Sequence:D3} [{battleEvent.Kind}] {battleEvent.Message}",
+                cancellationToken);
         }
-        _output.WriteLine(battle.WinningTeamId is ContentId winner
-            ? $"Outcome: {battle.Outcome}; winner: {winner}"
-            : $"Outcome: {battle.Outcome}");
+        await _eventSink.PublishAsync(
+            battle.WinningTeamId is ContentId winner
+                ? $"Outcome: {battle.Outcome}; winner: {winner}"
+                : $"Outcome: {battle.Outcome}",
+            cancellationToken);
         return battle.Outcome == AutomatedBattleOutcome.Faulted ? 5 : 0;
     }
 

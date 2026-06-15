@@ -368,6 +368,19 @@ Create physical project boundaries while retaining the interactive console appli
 
 The solution builds as separate framework and console-host projects, `dotnet run` remains interactive, both clean demos still run, and no gameplay rules have changed.
 
+### Completion Record
+
+Track B began from `d97b244` on `track-12-recovery`.
+
+- `JRPG.Framework` is a package-free `net9.0` class library containing the clean definitions, content pipeline, typed execution, battle runtime, defense and knowledge vocabulary, shared Press Turn engine, and fusion inheritance services.
+- `JRPG.ConsoleHost` remains the root executable and owns `Program`, filesystem access, copied content, legacy Newtonsoft loading, console presentation, debug scenarios, and all unmigrated gameplay consumers.
+- The dependency is one-way: console host to framework. Existing `JRPGPrototype.*` namespaces remain unchanged.
+- Cancellation-aware content-source, event-sink, command-source, and random-source contracts establish the reusable host boundary. The synchronous console prototype remains on `IGameIO` until its consumer migration track.
+- The framework builds independently with 0 warnings. The complete build retains the baseline 122 legacy warnings and introduces no new warnings.
+- Nine Track B boundary and adapter tests bring the suite to 479 passing tests with 0 skipped tests.
+- Ordinary startup characterization, dataset preservation tests, and both clean demos remain green. The battle demo reports `Victory` for `player_team`; the field demo completes all seven ordered events.
+- No gameplay rule, content record, console option, capability status, consumer-migration flag, or removal authorization changed.
+
 ## Track C: Complete The Content Catalog Surface
 
 ### Goal

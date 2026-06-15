@@ -5,16 +5,16 @@ namespace JRPGPrototype
 {
     internal static class Program
     {
-        private static int Main(string[] args)
+        private static async Task<int> Main(string[] args)
         {
             if (args.Contains("--clean-battle-demo", StringComparer.Ordinal))
             {
-                return new CleanBattleDemoHost(Console.Out).Run();
+                return await new CleanBattleDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
             }
 
             if (args.Contains("--clean-field-demo", StringComparer.Ordinal))
             {
-                return new CleanFieldDemoHost(Console.Out).Run();
+                return await new CleanFieldDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
             }
 
             IGameIO io = new ConsoleIO();

@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using JRPGPrototype.Core;
-using JRPGPrototype.Logic.Battle;           // For CombatMath
-using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
 using JRPGPrototype.Logic.Battle.Execution;
 
 namespace JRPGPrototype.Logic.Battle.Engines

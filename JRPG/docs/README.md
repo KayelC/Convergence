@@ -1,6 +1,6 @@
 # Convergence Documentation
 
-This directory contains the active documentation for the Track 12 recovery branch. Historical plans, abandoned migration material, and generated technical notes live in [ArchiveDocs](../ArchiveDocs/README.md).
+This directory contains the active documentation for the Track 12 recovery branch and its framework-parity migration. Historical plans, abandoned migration material, and generated technical notes live in [ArchiveDocs](../ArchiveDocs/README.md).
 
 ## Authority
 
@@ -35,10 +35,10 @@ Archived documents are evidence and historical context only. They must not be us
 
 The branch intentionally contains two paths:
 
-- The interactive console prototype remains the broad, playable reference implementation.
-- The clean catalog-backed path implements the approved skill, effect, passive, item, battle-demo, and inheritance foundations beside it.
+- `JRPG.ConsoleHost` remains the broad, playable reference implementation and owns legacy data loading, console interaction, and current gameplay consumers.
+- `JRPG.Framework` contains the reusable catalog-backed skill, effect, passive, item, battle-runtime, and inheritance foundations.
 
-The clean path does not yet replace every console subsystem. A legacy subsystem may only be removed after its replacement reaches functional parity, its real consumer has migrated, and the interactive host remains demonstrably usable.
+The console host references the framework, never the reverse. The clean path does not yet replace every console subsystem. A legacy subsystem may only be removed after its replacement reaches functional parity, its real consumer has migrated, and the interactive host remains demonstrably usable.
 
 ## Documentation Maintenance
 

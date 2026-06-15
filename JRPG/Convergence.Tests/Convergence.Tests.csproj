@@ -21,7 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JRPG.csproj" />
+    <ProjectReference Include="..\JRPG.Framework\JRPG.Framework.csproj" />
+    <ProjectReference Include="..\JRPG.ConsoleHost.csproj" />
   </ItemGroup>
 
 </Project>

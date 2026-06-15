@@ -1,8 +1,41 @@
 # Architecture
 
-> **Status: Current implementation reference.** This document describes the console prototype. Approved redesign documents override it when defining target behavior.
+> **Status: Current implementation reference.** This document describes the Track B framework and console-host boundary. Approved GDD and parity documents remain authoritative for target behavior and migration gates.
 
-JRPGPrototype is organized around gameplay subsystems rather than a generic application framework. The important architectural rule is separation of orchestration, rules, interaction, and output.
+The solution is organized around gameplay subsystems with a physical host boundary. Existing `JRPGPrototype.*` namespaces are retained for source compatibility, but assembly ownership is explicit.
+
+## Project Boundaries
+
+### JRPG.Framework
+
+`JRPG.Framework` is a `net9.0` class library containing the reusable clean path:
+
+- immutable content definitions;
+- serializer-neutral deserialization contracts, validation, and catalog construction;
+- typed skill, item, passive, targeting, and effect execution;
+- catalog-backed actor hydration and automated battle orchestration;
+- elemental, ailment, instant-death, knowledge, and Press Turn contracts;
+- typed fusion inheritance evaluation and selection.
+
+The framework has no package references and does not access the console, filesystem, Godot, or the legacy static database. JSON implementation details remain internal to the content-loading subsystem.
+
+### JRPG.ConsoleHost
+
+`JRPG.ConsoleHost` remains the executable at the repository root. It owns:
+
+- `Program` and ordinary interactive startup;
+- the legacy database, runtime actors, gameplay conductors, and console workflows;
+- `IGameIO`, menu rendering, colors, waits, and debug scenarios;
+- filesystem-backed content acquisition and copied `Data/Jsons` content;
+- the clean battle and field demo policies and presentation.
+
+The console host references the framework. The framework never references the console host.
+
+### Host Contracts
+
+Future clean hosts use cancellation-aware asynchronous contracts for content text, commands, events, and randomness. A host supplies JSON text through `IContentPackTextSource`, consumes or publishes ordered output through `IHostEventSink<TEvent>`, obtains typed choices through `IHostCommandSource<TCommand>`, and owns nondeterminism through `IRandomSource`.
+
+The existing interactive prototype still uses synchronous `IGameIO`. Moving that consumer onto the new contracts is deliberately deferred; Track B establishes the boundary without rewriting gameplay.
 
 ## Layers And Patterns
 
@@ -50,15 +83,15 @@ This keeps engines mostly independent from console rendering while still allowin
 
 ### Static Database
 
-`Database` is the content registry. It loads JSON files from `Data/Jsons` into static dictionaries and lists:
+`Database` is the console host's legacy content registry. It loads JSON files from `Data/Jsons` into static dictionaries and lists:
 
 - skills, entities/personas/demons, ailments, items, dungeons, equipment, fusion recipes, negotiation questions, and shop inventory.
 
-Runtime systems assume `Database.LoadData(io)` has completed before factories, shops, battle effects, dungeon traversal, or fusion logic are used.
+Legacy runtime systems assume `Database.LoadData(io)` has completed before factories, shops, battle effects, dungeon traversal, or fusion logic are used. Framework services instead receive immutable definitions or a validated `GameDataCatalog`.
 
 ## Runtime Dependency Shape
 
-`Program.cs` creates the initial shared services:
+`Program.cs` belongs to `JRPG.ConsoleHost` and creates the initial legacy services:
 
 - `IGameIO` for console access.
 - `InventoryManager` and `EconomyManager` for persistent player resources.
@@ -85,11 +118,14 @@ The field subsystem then creates the party manager, dungeon manager, bridges, se
 - Demons use `ActivePersona` as their stat and affinity source; their own character stats are reset to zero by the factory.
 - Operators use demon stock and active party references; Wild Cards use active persona plus persona stock.
 - The project currently has no persistence layer beyond in-memory managers and runtime JSON loading.
-- The console UI is abstracted, but the current UI is still menu-driven and synchronous.
+- The console UI is abstracted, but the current interactive workflow remains menu-driven and synchronous.
+- Filesystem, console, delays, and legacy Newtonsoft loading are host-only concerns.
+- Framework public APIs expose no console, filesystem, serializer, Godot, or legacy runtime types.
+- Host cancellation is distinct from an ordinary menu cancellation in the async command contract.
 
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.
 - `Database` is global mutable state. This is simple for a prototype but makes test isolation harder.
 - Some systems compare names or string IDs directly. Normalize IDs to lowercase where possible and be careful when adding new content.
-- There is no automated test suite. Build success catches compilation issues, but behavior changes need manual scenario validation or future tests.
+- The automated suite covers framework contracts, legacy characterization, datasets, host adapters, and deterministic demos. Full live battles and exhaustive long-form console traversal remain manual checks.

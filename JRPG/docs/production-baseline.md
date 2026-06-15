@@ -12,8 +12,8 @@ Track A was characterized from commit `fce33a9` on `track-12-recovery`. Its exec
 
 The project currently contains:
 
-- a broad interactive console prototype backed by the legacy database and runtime models,
-- an additive clean content pipeline with immutable definitions, strict deserialization, validation, dependency-aware catalogs, typed combat vocabulary, active effects, passive rules, item execution, and fusion inheritance planning,
+- `JRPG.ConsoleHost`, a broad interactive console prototype backed by the legacy database and runtime models,
+- `JRPG.Framework`, a reusable class library containing immutable definitions, strict deserialization, validation, dependency-aware catalogs, typed combat vocabulary, active effects, passive rules, item execution, battle orchestration, and fusion inheritance planning,
 - deterministic clean battle and field demonstrations used as technical smoke tests.
 
 The clean path is a framework foundation. It is not yet a feature-complete replacement for the interactive prototype.
@@ -41,6 +41,18 @@ The legacy data is intentionally unchanged. Track A records:
 Known unresolved findings are 56 base-skill references, 120 learned-skill references, 1 casing-only skill reference mismatch, and 1 dungeon enemy-pool reference. Dungeon boss references, shop references, and fusion operands are otherwise resolved under the preserved legacy rules.
 
 These findings characterize the current datasets. They neither approve the old schemas nor silently correct their anomalies.
+
+## Track B Boundary
+
+Track B began from `d97b244` and established a one-way assembly dependency: `JRPG.ConsoleHost` references `JRPG.Framework`; the framework never references the host.
+
+- The framework builds independently with 0 warnings and has no external package dependency.
+- The complete suite contains 479 passing tests with 0 skipped tests.
+- The complete nonincremental solution build retains the existing 122 warnings, all in the console-host/legacy boundary.
+- Root `dotnet run` remains the interactive executable path.
+- The battle demo still ends in `Victory` for `player_team`; the field demo still completes all seven ordered events.
+- Async content, command, event, and random contracts are available for future Godot and other hosts.
+- The legacy interactive workflow remains on `IGameIO`; no capability is marked `clean_parity` or consumer-migrated merely because its clean code moved assemblies.
 
 ## Migration Rule
 
@@ -82,4 +94,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track B may begin only from a baseline where the full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track C may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

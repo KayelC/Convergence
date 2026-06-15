@@ -24,17 +24,6 @@ namespace JRPGPrototype.Core
         St, Ma, Vi, Ag, Lu, // Common
     }
 
-    public enum HitType
-    {
-        Normal,
-        Critical,
-        Weakness,
-        Miss,
-        Repel,
-        Absorb,
-        Null
-    }
-
     public enum DungeonEventType
     {
         Empty,

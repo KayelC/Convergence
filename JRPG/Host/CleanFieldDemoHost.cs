@@ -1,6 +1,7 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 
@@ -39,45 +40,65 @@ internal sealed class CleanFieldDemoHost
     private static readonly ContentId NewMoon = ContentId.Parse("new_moon");
     private static readonly ContentId Party = ContentId.Parse("party");
 
-    private readonly TextWriter _output;
-    private readonly string _contentRoot;
+    private readonly IContentPackTextSource _contentSource;
+    private readonly IHostEventSink<string> _eventSink;
 
     public CleanFieldDemoHost(TextWriter output, string? contentRoot = null)
+        : this(
+            new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
+            new TextWriterEventSink(output))
     {
-        _output = output ?? throw new ArgumentNullException(nameof(output));
-        _contentRoot = contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons");
     }
 
-    public int Run()
+    internal CleanFieldDemoHost(
+        IContentPackTextSource contentSource,
+        IHostEventSink<string> eventSink)
+    {
+        _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
+        _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
+    }
+
+    public int Run() => RunAsync().GetAwaiter().GetResult();
+
+    public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
         CatalogLoadResult load;
         try
         {
-            var source = new FileContentPackSource(_contentRoot);
             load = new SkillSystemCatalogLoader().Load(new SkillSystemCatalogLoadRequest(
                 BuildRegistrations(),
                 [
-                    source.Read(
+                    await _contentSource.ReadAsync(new ContentPackTextRequest(
                         "skill_system_redesign.manifest.sample.json",
-                        "skill_system_redesign.races.sample.json",
-                        "skill_system_redesign.skills.sample.json",
-                        "skill_system_redesign.entities.sample.json"),
-                    source.Read(
+                        [
+                            "skill_system_redesign.races.sample.json",
+                            "skill_system_redesign.skills.sample.json",
+                            "skill_system_redesign.entities.sample.json"
+                        ]), cancellationToken),
+                    await _contentSource.ReadAsync(new ContentPackTextRequest(
                         "clean_battle_demo.manifest.json",
-                        "clean_battle_demo.races.json",
-                        "clean_battle_demo.skills.json",
-                        "clean_battle_demo.entities.json"),
-                    source.Read(
+                        [
+                            "clean_battle_demo.races.json",
+                            "clean_battle_demo.skills.json",
+                            "clean_battle_demo.entities.json"
+                        ]), cancellationToken),
+                    await _contentSource.ReadAsync(new ContentPackTextRequest(
                         "shared_effects_demo.manifest.json",
-                        "shared_effects_demo.ailments.json",
-                        "shared_effects_demo.skills.json",
-                        "shared_effects_demo.entities.json",
-                        "shared_effects_demo.items.json")
+                        [
+                            "shared_effects_demo.ailments.json",
+                            "shared_effects_demo.skills.json",
+                            "shared_effects_demo.entities.json",
+                            "shared_effects_demo.items.json"
+                        ]), cancellationToken)
                 ]));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
-            _output.WriteLine($"Content read failed: {exception.Message}");
+            await _eventSink.PublishAsync($"Content read failed: {exception.Message}", cancellationToken);
             return 2;
         }
 
@@ -85,7 +106,9 @@ internal sealed class CleanFieldDemoHost
         {
             foreach (CatalogLoadDiagnostic diagnostic in load.Diagnostics)
             {
-                _output.WriteLine($"[{diagnostic.Code}] {diagnostic.SourceName} {diagnostic.JsonPath}: {diagnostic.Message}");
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.SourceName} {diagnostic.JsonPath}: {diagnostic.Message}",
+                    cancellationToken);
             }
             return 3;
         }
@@ -106,7 +129,7 @@ internal sealed class CleanFieldDemoHost
         {
             foreach (CatalogBattleActorDiagnostic diagnostic in medicResult.Diagnostics.Concat(allyResult.Diagnostics))
             {
-                _output.WriteLine($"[{diagnostic.Code}] {diagnostic.Message}");
+                await _eventSink.PublishAsync($"[{diagnostic.Code}] {diagnostic.Message}", cancellationToken);
             }
             return 4;
         }
@@ -129,20 +152,30 @@ internal sealed class CleanFieldDemoHost
             participants,
             new EffectExecutionEnvironment(Field),
             [ally.State.InstanceId]));
-        Print(ref sequence, "skill", $"{fieldRecovery.DisplayName}: {skill.Status}; restored {skill.Effects.Sum(effect => effect.Value ?? 0)} HP.");
+        await PrintAsync(
+            sequence++,
+            "skill",
+            $"{fieldRecovery.DisplayName}: {skill.Status}; restored {skill.Effects.Sum(effect => effect.Value ?? 0)} HP.",
+            cancellationToken);
 
         ally.State.AddResource(ally.State.VitalResourceId, -20);
-        ExecuteItem("medicine_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, ref sequence);
+        sequence = await ExecuteItemAsync(
+            "medicine_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            cancellationToken: cancellationToken);
 
         AilmentDefinition poison = catalog.GetRequiredAilment(
             ContentId.Parse("convergence.shared_effects_demo:poison_demo"));
         ally.State.ApplyAilment(poison, poison.DefaultDuration);
-        ExecuteItem("dis_poison_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, ref sequence);
+        sequence = await ExecuteItemAsync(
+            "dis_poison_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            cancellationToken: cancellationToken);
 
         ally.State.SetResource(ally.State.VitalResourceId, 0);
-        ExecuteItem("revival_bead_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, ref sequence);
+        sequence = await ExecuteItemAsync(
+            "revival_bead_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            cancellationToken: cancellationToken);
 
-        ExecuteItem(
+        sequence = await ExecuteItemAsync(
             "traesto_gem_demo",
             Battle,
             null,
@@ -150,16 +183,19 @@ internal sealed class CleanFieldDemoHost
             catalog,
             participants,
             inventory,
-            ref sequence,
+            sequence,
             NormalBattle,
-            NewMoon);
-        ExecuteItem("goho_m_demo", Field, null, itemExecutor, catalog, participants, inventory, ref sequence);
+            NewMoon,
+            cancellationToken);
+        sequence = await ExecuteItemAsync(
+            "goho_m_demo", Field, null, itemExecutor, catalog, participants, inventory, sequence,
+            cancellationToken: cancellationToken);
 
-        Print(ref sequence, "outcome", "Shared field effects demo completed successfully.");
+        await PrintAsync(sequence, "outcome", "Shared field effects demo completed successfully.", cancellationToken);
         return 0;
     }
 
-    private void ExecuteItem(
+    private async Task<int> ExecuteItemAsync(
         string localId,
         ContentId contextId,
         ContentId? targetId,
@@ -167,9 +203,10 @@ internal sealed class CleanFieldDemoHost
         GameDataCatalog catalog,
         IReadOnlyList<RuntimeActorState> participants,
         IDictionary<ContentId, int> inventory,
-        ref int sequence,
+        int sequence,
         ContentId? battleKindId = null,
-        ContentId? moonPhaseId = null)
+        ContentId? moonPhaseId = null,
+        CancellationToken cancellationToken = default)
     {
         ContentId itemId = ContentId.Parse($"convergence.shared_effects_demo:{localId}");
         ItemDefinition item = catalog.GetRequiredItem(itemId);
@@ -188,14 +225,20 @@ internal sealed class CleanFieldDemoHost
         string hostRequests = result.HostActionRequestIds.Count == 0
             ? "none"
             : string.Join(",", result.HostActionRequestIds);
-        Print(
-            ref sequence,
+        await PrintAsync(
+            sequence,
             "item",
-            $"{item.DisplayName}: {result.Status}; consume={result.Consumption}; escape={result.EscapeRequested}; hostRequests={hostRequests}; remaining={inventory[itemId]}.");
+            $"{item.DisplayName}: {result.Status}; consume={result.Consumption}; escape={result.EscapeRequested}; hostRequests={hostRequests}; remaining={inventory[itemId]}.",
+            cancellationToken);
+        return sequence + 1;
     }
 
-    private void Print(ref int sequence, string kind, string message) =>
-        _output.WriteLine($"{sequence++:D3} [{kind}] {message}");
+    private ValueTask PrintAsync(
+        int sequence,
+        string kind,
+        string message,
+        CancellationToken cancellationToken) =>
+        _eventSink.PublishAsync($"{sequence:D3} [{kind}] {message}", cancellationToken);
 
     private static SkillSystemRegistrationSnapshot BuildRegistrations() =>
         new SkillSystemRegistrationBuilder()
