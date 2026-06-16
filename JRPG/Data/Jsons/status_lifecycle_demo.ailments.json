@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "ailments": [
+    {
+      "id": "poison",
+      "displayName": "Poison",
+      "description": "Legacy-parity poison: acts normally, deals lethal turn-end damage, and can recover naturally.",
+      "groupIds": ["major_ailment", "poison"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "normal"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "reduce_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "formula",
+                "formulaId": "legacy_poison_damage"
+              },
+              "canReduceToZero": true
+            }
+          ]
+        }
+      ],
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "freeze",
+      "displayName": "Freeze",
+      "description": "Legacy-parity freeze: skips a turn, grants rigid-body handling, and expires after one turn-end.",
+      "groupIds": ["major_ailment", "immobilize"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 1,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0,
+        "criticalChanceTakenBonus": 100,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": true
+      },
+      "recovery": {
+        "removeOnEvents": ["owner_turn_end"]
+      }
+    },
+    {
+      "id": "shock",
+      "displayName": "Shock",
+      "description": "Legacy-parity shock: skips a turn, grants rigid-body handling, and expires after one turn-end.",
+      "groupIds": ["major_ailment", "immobilize"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 1,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0,
+        "criticalChanceTakenBonus": 100,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": true
+      },
+      "recovery": {
+        "removeOnEvents": ["owner_turn_end"]
+      }
+    },
+    {
+      "id": "fear",
+      "displayName": "Fear",
+      "description": "Legacy-parity fear: may flee or skip, otherwise acts normally.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "chance_skip_or_flee",
+        "skipChance": 40,
+        "fleeChance": 15,
+        "demonFleeOutcome": "return_to_stock"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "panic",
+      "displayName": "Panic",
+      "description": "Legacy-parity panic: 50 percent chance to skip the turn.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "chance_skip",
+        "skipChance": 50
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "charm",
+      "displayName": "Charm",
+      "description": "Legacy-parity charm: forces confused action selection.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "confused_action"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "rage",
+      "displayName": "Rage",
+      "description": "Legacy-parity rage: forces physical attacks and changes damage taken/dealt.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "forced_basic_attack"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 3,
+        "damageDealtMultiplier": 1.5,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "distress",
+      "displayName": "Distress",
+      "description": "Legacy-parity distress: action is available, but evasion and incoming critical pressure are altered.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "normal"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0,
+        "criticalChanceTakenBonus": 50,
+        "damageTakenMultiplier": 1.5,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "sleep",
+      "displayName": "Sleep",
+      "description": "Legacy-parity sleep: skips turns and restores HP/SP at turn end.",
+      "groupIds": ["major_ailment", "mental"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "restore_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "percent_max",
+                "value": 10
+              }
+            },
+            {
+              "type": "restore_resource",
+              "resourceId": "sp",
+              "amount": {
+                "type": "percent_max",
+                "value": 10
+              }
+            }
+          ]
+        }
+      ],
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "bind",
+      "displayName": "Bind",
+      "description": "Legacy-parity bind: limits action choices and marks the body rigid.",
+      "groupIds": ["major_ailment", "immobilize"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "limited_actions",
+        "allowedActionIds": ["basic_attack", "guard", "pass"]
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 20,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": true
+      },
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "stun",
+      "displayName": "Stun",
+      "description": "Legacy-parity stun: skips a turn and marks the body rigid.",
+      "groupIds": ["major_ailment", "immobilize"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 1,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0.5,
+        "criticalChanceTakenBonus": 40,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": true
+      },
+      "recovery": {
+        "removeOnEvents": ["owner_turn_end"]
+      }
+    }
+  ]
+}

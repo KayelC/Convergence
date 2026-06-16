@@ -43,6 +43,11 @@ public sealed record BattleStatStageState(int Stage, DurationDefinition? Duratio
 public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? Duration);
 public sealed record BattleShieldState(DurationDefinition? Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
+public sealed record BattleDurationTickResult(
+    ContentId Id,
+    DurationDefinition PreviousDuration,
+    DurationDefinition? CurrentDuration,
+    bool Expired);
 
 public class RuntimeActorState
 {
@@ -172,6 +177,12 @@ public class RuntimeActorState
         _ailments[definition.Id] = new ActiveAilmentState(definition, duration);
     }
 
+    public void ApplyAilment(AilmentDefinition definition, DurationDefinition duration, bool isRemovable)
+    {
+        ApplyAilment(definition, duration);
+        _ailments[definition.Id] = _ailments[definition.Id] with { IsRemovable = isRemovable };
+    }
+
     public IReadOnlyList<ContentId> RemoveAilments(Func<ActiveAilmentState, bool> predicate)
     {
         ContentId[] removed = _ailments
@@ -204,6 +215,128 @@ public class RuntimeActorState
         _affinityOverrides[element] = new BattleAffinityOverrideState(affinity, duration);
 
     public void AddOtherStatus(ContentId statusId) => _otherStatuses.Add(statusId);
+
+    public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId)
+    {
+        var results = new List<BattleDurationTickResult>();
+        foreach ((ContentId id, ActiveAilmentState state) in _ailments.ToArray())
+        {
+            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _ailments.Remove(id);
+            }
+            else if (current is not null)
+            {
+                _ailments[id] = state with { Duration = current };
+            }
+        }
+
+        return Array.AsReadOnly(results.ToArray());
+    }
+
+    public IReadOnlyList<BattleDurationTickResult> TickTimedStatuses(ContentId eventId)
+    {
+        var results = new List<BattleDurationTickResult>();
+
+        foreach ((ContentId id, BattleStatStageState state) in _statStages.ToArray())
+        {
+            if (state.Duration is null ||
+                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _statStages.Remove(id);
+            }
+            else
+            {
+                _statStages[id] = state with { Duration = current };
+            }
+        }
+
+        foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
+        {
+            if (state.Duration is null ||
+                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            ContentId id = ContentId.Parse("charge_" + kind.ToString().ToLowerInvariant());
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _charges.Remove(kind);
+            }
+            else
+            {
+                _charges[kind] = state with { Duration = current };
+            }
+        }
+
+        foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
+        {
+            if (state.Duration is null ||
+                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            ContentId id = ContentId.Parse("shield_" + kind.ToString().ToLowerInvariant());
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _shields.Remove(kind);
+            }
+            else
+            {
+                _shields[kind] = state with { Duration = current };
+            }
+        }
+
+        foreach ((DamageElement element, BattleAffinityOverrideState state) in _affinityOverrides.ToArray())
+        {
+            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            ContentId id = ContentId.Parse("affinity_override_" + element.ToString().ToLowerInvariant());
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _affinityOverrides.Remove(element);
+            }
+            else if (current is not null)
+            {
+                _affinityOverrides[element] = state with { Duration = current };
+            }
+        }
+
+        return Array.AsReadOnly(results.ToArray());
+    }
+
+    public void ClearTransientStatuses()
+    {
+        IsGuarding = false;
+        _charges.Clear();
+        _shields.Clear();
+    }
+
+    public void ClearEncounterStatuses()
+    {
+        _statStages.Clear();
+        _affinityOverrides.Clear();
+    }
 
     public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
     {
@@ -268,6 +401,36 @@ public class RuntimeActorState
         {
             _statStages.Remove(id);
         }
+    }
+
+    private static bool TryTickDuration(
+        DurationDefinition duration,
+        ContentId eventId,
+        bool isActive,
+        out DurationDefinition? current,
+        out bool expired)
+    {
+        current = duration;
+        expired = false;
+        if (duration is not TurnDurationDefinition turns ||
+            turns.TickEventId != eventId ||
+            turns.SuspendWhileReserve && !isActive)
+        {
+            return false;
+        }
+
+        int remaining = turns.Value - 1;
+        if (remaining <= 0)
+        {
+            current = null;
+            expired = true;
+        }
+        else
+        {
+            current = turns with { Value = remaining };
+        }
+
+        return true;
     }
 
     private static IReadOnlyDictionary<ContentId, decimal> Snapshot(

@@ -196,6 +196,25 @@ The framework action result reports:
 
 Field recovery skills and items in the clean field demo now use this action facade with an explicit host-owned inventory reservation adapter. The interactive console battle still preserves its legacy skill/item/effect flow, but guard and pass are now coordinated through a console compatibility adapter over the framework action executor. Full battle orchestration, AI/tactics behavior, negotiation/recruitment, inventory ownership, and production content reauthoring remain later tracks.
 
+## Clean Status Lifecycle Foundation
+
+Track I moves the approved status lifecycle rules into `BattleStatusLifecycleService`. The console `StatusRegistry` still exposes the same methods to battle and field callers, but ailment infliction, turn-start restrictions, turn-end effects, natural recovery, duration ticking, cleanup scopes, and stat-stage mutation now delegate through a console adapter where strict parity exists.
+
+The preserved parity rules are:
+
+- one active major ailment at a time through a shared exclusivity group;
+- Poison deals 13% of maximum HP at turn end, minimum 1, and remains lethal;
+- Sleep restores 10% maximum HP and 10% maximum SP at turn end;
+- natural recovery chance is `20 + Luck / 2`;
+- Panic has a 50% skip chance;
+- Fear checks 15% flee or return-to-COMP first, then 40% skip;
+- Guard clears at actor turn start and blocks ailment application;
+- reserve actors suspend ailment ticking, poison damage, sleep recovery, and turn-end passive recovery;
+- stat stages clamp at `-4..+4`, while legacy redundancy still treats `+3/-3` as already enough;
+- zero evasion multipliers are valid for legacy immobilization-style ailments.
+
+`convergence.status_lifecycle_demo` reauthors the 11 legacy ailments as clean content for tests and future hosts. The legacy `status_ailments.json` file remains unchanged and continues to feed ordinary console loading.
+
 ## Extension Mindset
 
 When adding new gameplay content:

@@ -53,7 +53,9 @@ Track G adds `ProductionCombatRuleset` as the framework owner for production com
 
 Track H adds `BattleActionExecutor` as the framework action facade over clean basic attacks, skills, items, guard, pass, analyze, escape, Persona/demon stock transitions, and host-mediated tactics/negotiation/special actions. It provides one shared assessment/execution path, structured action events, turn-consumption results, cancellation-before-mutation, and host-owned item reservation/commit ports. The console host now routes guard/pass through a compatibility adapter, and the clean field demo uses the facade for field skills and items.
 
-Inventory quantities, full battle orchestration, AI/tactics policy, negotiation/recruitment rules, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G/H policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track I adds `BattleStatusLifecycleService` as the framework owner for clean ailment application, turn-start restrictions, turn-end status effects, natural recovery, duration ticking, cleanup scopes, and battle-start or turn-end passive dispatch. `StatusRegistry` remains the console-facing compatibility facade, but ailment infliction, turn-start, turn-end, and stat-stage mutation now route through `LegacyStatusLifecycleAdapter` where strict legacy parity exists. Cure parsing and redundancy checks stay in the console host until the old skill and item content is reauthored.
+
+Inventory quantities, full battle orchestration, AI/tactics policy, negotiation/recruitment rules, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -73,7 +75,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 
 - `CombatMath` is the console compatibility facade for framework production combat policies.
 - `PressTurnEngine` owns the full/blinking turn icon state machine.
-- `StatusRegistry` owns ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks.
+- `StatusRegistry` is the console compatibility facade for ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks. Migrated lifecycle decisions delegate into the framework through `LegacyStatusLifecycleAdapter`.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine`, `ShopEngine`, and `ExplorationProcessor` own field-side service, shop, item, skill, equipment, and dungeon traversal rules.
 - `FusionCalculator`, `FusionMutator`, and fusion strategies own fusion prediction and state mutation.

@@ -107,8 +107,8 @@ The following capabilities must not disappear during migration.
 | Press Turn | `PressTurnEngine` | Typed overload exists; full interactive orchestration not migrated |
 | Basic attack, guard, pass, skill, item, analyze, swap | `ActionProcessor`, `BattleConductor` | Skills/items partial; remaining actions missing |
 | Typed damage, recovery, cures, buffs, shields | Legacy effects and clean executors | Clean foundation exists; parity incomplete |
-| Ailment restrictions and lifecycle | `StatusRegistry` | Definitions exist; lifecycle consumer incomplete |
-| Passive startup and turn-end behavior | `StatusRegistry` | Trigger system exists; complete content/rules missing |
+| Ailment restrictions and lifecycle | `StatusRegistry` | Framework lifecycle service with console adapter; production content migration incomplete |
+| Passive startup and turn-end behavior | `StatusRegistry` | Framework lifecycle dispatch for startup/turn-end paths; production content migration incomplete |
 | Enemy AI and tactics | `BehaviorEngine`, `BattleConductor` | Minimal deterministic selector only |
 | Affinity knowledge and analysis | `BattleKnowledge` | Clean stores exist; interactive use incomplete |
 | Negotiation, demands, recruitment | `NegotiationEngine`, `BattleConductor` | Missing |
@@ -751,7 +751,7 @@ Track H began from `a9c79a4` on `track-12-recovery`.
 
 ### Goal
 
-Port all `StatusRegistry` behavior without retaining skill-name parsing.
+Port the strict-parity status lifecycle rules into framework services while keeping legacy display/effect-string compatibility isolated in the console host.
 
 ### Required Behavior
 
@@ -773,7 +773,7 @@ Port all `StatusRegistry` behavior without retaining skill-name parsing.
 
 ### Data Work
 
-Reauthor the 11 ailment records against the approved ailment schema and replace name/description inference with explicit triggers, modifiers, recovery, and turn behavior.
+Reauthor the 11 ailment records against the approved ailment schema with explicit triggers, modifiers, recovery, and turn behavior. The clean content pack must not infer behaviour from names or descriptions. Legacy `status_ailments.json` remains untouched until production data migration.
 
 ### Tests
 
@@ -786,7 +786,26 @@ Reauthor the 11 ailment records against the approved ailment schema and replace 
 
 ### Exit Gate
 
-No migrated status rule reads a skill or ailment display name. The interactive battle path uses the clean lifecycle dispatcher.
+Framework lifecycle rules do not read skill or ailment display names. The interactive battle path uses the clean lifecycle dispatcher through a console compatibility adapter. Any remaining name or effect-string parsing is adapter-owned legacy compatibility and must be removed only after production skills, items, and ailments are reauthored.
+
+### Track I Completion
+
+Track I began from `f7dbf08` on `track-12-recovery`.
+
+- Added `BattleStatusLifecycleService` for clean ailment application, turn-start restrictions, turn-end ailment/passive effects, natural recovery, duration ticking, cleanup scopes, and battle-start or turn-end passive dispatch.
+- Extended `BattleActorState` with duration helpers for ailments, stat stages, charges, shields, affinity overrides, transient cleanup, and encounter cleanup.
+- Routed `StatusRegistry.TryInflict`, `ProcessTurnStart`, `ProcessTurnEnd`, and stat-stage mutation through `LegacyStatusLifecycleAdapter` while preserving public method signatures and visible console behavior.
+- Added `convergence.status_lifecycle_demo` `0.1.0`, a clean 11-ailment pack covering Poison, Freeze, Shock, Fear, Panic, Charm, Rage, Distress, Sleep, Bind, and Stun.
+- Preserved strict parity: one active major ailment, lethal 13% max-HP Poison, 10% HP/SP Sleep recovery, `20 + Luck / 2` natural recovery, Panic and Fear chance rules, Guard blocking ailment application, reserve suspension, `-4..+4` stage caps, and `+3/-3` redundancy thresholds.
+- Relaxed clean validation so ailment evasion multipliers may be zero, matching legacy immobilization-style content.
+- Updated the parity ledger. `ailment_lifecycle` and `passive_lifecycle` are `parallel_partial` with migrated console consumers; no legacy file removal is authorized.
+- Focused Track I lifecycle/status tests passed: 37 tests, 0 failed, 0 skipped.
+- Full verification passed: 592 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- Legacy `Data/Jsons/status_ailments.json` is unchanged. Data/Jsons changes are limited to the new status lifecycle demo pack.
+- Framework boundary search found no serializer, console, filesystem, Godot, Newtonsoft, legacy database, DTO, `IGameIO`, `Combatant`, or `Persona` dependency in the new lifecycle service. The console adapter remains the only Track I code that touches legacy runtime types.
 
 ## Track J: Battle Orchestration, AI, Knowledge, And Tactics
 

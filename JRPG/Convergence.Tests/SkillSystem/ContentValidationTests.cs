@@ -359,7 +359,7 @@ public sealed class ContentValidationTests
 
         Assert.Contains(result.Errors, error => error.JsonPath == "$.ailments[0].turnBehavior" &&
             error.Code == ContentValidationErrorCode.ValueOutOfRange);
-        Assert.Equal(5, result.Errors.Count(error => error.Code == ContentValidationErrorCode.ValueMustBePositive));
+        Assert.Equal(4, result.Errors.Count(error => error.Code == ContentValidationErrorCode.ValueMustBePositive));
         Assert.Contains(result.Errors, error => error.JsonPath == "$.ailments[0].recovery.natural.baseChance" &&
             error.Code == ContentValidationErrorCode.ValueOutOfRange);
         Assert.True(result.Errors.Count(error => error.Code == ContentValidationErrorCode.ListDuplicateValue) >= 2);

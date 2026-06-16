@@ -195,12 +195,12 @@
       "name": "Ailment restrictions, duration, recovery, damage, and exclusivity",
       "status": "parallel_partial",
       "legacyOwners": ["Logic/Battle/Engines/StatusRegistry.cs"],
-      "cleanOwners": ["JRPG.Framework/Data/Definitions/AilmentDefinition.cs", "JRPG.Framework/Logic/Battle/Execution/BattleRuntimeState.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
-      "decisionDependencies": ["simultaneous_ailment_policy", "poison_lethality", "reserve_ticking"],
-      "tests": ["StatusRegistryTests", "ActiveSkillExecutionTests.Execute_AilmentLifecycleUsesAilmentIdentityAndExclusivity", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
+      "cleanOwners": ["JRPG.Framework/Data/Definitions/AilmentDefinition.cs", "JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs", "JRPG.Framework/Logic/Battle/Execution/BattleRuntimeState.cs", "Logic/Battle/Engines/LegacyStatusLifecycleAdapter.cs", "Data/Jsons/status_lifecycle_demo.ailments.json", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
+      "decisionDependencies": ["production_status_content_migration", "complete_battle_orchestration"],
+      "tests": ["BattleStatusLifecycleTests", "StatusRegistryTests", "ActiveSkillExecutionTests.Execute_AilmentLifecycleUsesAilmentIdentityAndExclusivity", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
       "futureTrack": "I",
       "removalFiles": ["Logic/Battle/Engines/StatusRegistry.cs"],
-      "consumerMigrated": false,
+      "consumerMigrated": true,
       "removalAuthorized": false
     },
     {
@@ -208,12 +208,12 @@
       "name": "Passive startup, rule modifiers, defeat prevention, and turn events",
       "status": "parallel_partial",
       "legacyOwners": ["Logic/Battle/Engines/StatusRegistry.cs", "Logic/Battle/CombatMath.cs"],
-      "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/PassiveRuntime.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
-      "decisionDependencies": ["complete_passive_content"],
-      "tests": ["StatusRegistryTests.ProcessInitialPassives_AppliesSingleTargetAutoKajaToActor", "PassiveSkillRuntimeTests", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
+      "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/PassiveRuntime.cs", "JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs", "Logic/Battle/Engines/LegacyStatusLifecycleAdapter.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
+      "decisionDependencies": ["complete_passive_content", "complete_battle_orchestration"],
+      "tests": ["BattleStatusLifecycleTests", "StatusRegistryTests.ProcessInitialPassives_AppliesSingleTargetAutoKajaToActor", "PassiveSkillRuntimeTests", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
       "futureTrack": "I",
       "removalFiles": ["Logic/Battle/Engines/StatusRegistry.cs"],
-      "consumerMigrated": false,
+      "consumerMigrated": true,
       "removalAuthorized": false
     },
     {

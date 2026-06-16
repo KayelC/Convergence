@@ -134,6 +134,23 @@ Track H began from `a9c79a4` and added a framework-owned action execution facade
 - `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
 - `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events through the action facade.
 
+## Track I Boundary
+
+Track I began from `f7dbf08` and moved strict-parity status lifecycle rules into framework services while leaving legacy status data and console battle orchestration intact.
+
+- `JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs` now owns clean ailment application, turn-start restrictions, turn-end status effects, natural recovery, duration ticking, cleanup scopes, and battle-start or turn-end passive dispatch.
+- `BattleActorState` now has duration helpers for ailments, stat stages, charges, shields, affinity overrides, transient cleanup, and encounter cleanup.
+- `Logic/Battle/Engines/LegacyStatusLifecycleAdapter.cs` adapts live `Combatant` state into the framework lifecycle and copies results back for the existing `StatusRegistry` callers.
+- `Data/Jsons/status_lifecycle_demo.*.json` adds a clean 11-ailment content pack for Poison, Freeze, Shock, Fear, Panic, Charm, Rage, Distress, Sleep, Bind, and Stun. The legacy `Data/Jsons/status_ailments.json` file remains unchanged.
+- The preserved parity rules include one active major ailment, lethal 13% max-HP Poison, 10% HP/SP Sleep recovery, `20 + Luck / 2` natural recovery, Panic/Fear chances, Guard blocking ailment application, reserve suspension, `-4..+4` stat-stage caps, and legacy `+3/-3` redundancy thresholds.
+- Ailment evasion modifiers now accept zero in validation because the legacy immobilization behaviours need explicit zero-evasion content.
+- The parity ledger marks ailment lifecycle and passive lifecycle as `parallel_partial` with migrated console consumers. Removal remains unauthorized because legacy content, cure parsing, redundancy checks, full battle orchestration, and production skill/item reauthoring remain later tracks.
+- Focused Track I lifecycle/status tests passed: 37 tests, 0 failed, 0 skipped.
+- Full verification passed: 592 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -174,4 +191,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track I may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track J may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

@@ -580,7 +580,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     _registrations.AilmentGroupIds, "ailment group");
             }
 
-            RequirePositive(source, ailment.Modifiers.EvasionMultiplier, source.Path + ".modifiers.evasionMultiplier",
+            RequireNonNegative(source, ailment.Modifiers.EvasionMultiplier, source.Path + ".modifiers.evasionMultiplier",
                 "Ailment evasion multiplier");
             RequirePositive(source, ailment.Modifiers.DamageTakenMultiplier,
                 source.Path + ".modifiers.damageTakenMultiplier", "Ailment damage-taken multiplier");

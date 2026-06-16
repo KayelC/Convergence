@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
@@ -17,7 +16,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
     /// </summary>
     public class StatusRegistry
     {
-        private readonly Random _rnd = new Random();
+        private readonly LegacyStatusLifecycleAdapter _lifecycle = new LegacyStatusLifecycleAdapter();
         private IBattleMessenger? _messenger;
 
         // Allows the conductor to inject the shared communication mediator.
@@ -128,49 +127,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// </summary>
         public bool TryInflict(Combatant attacker, Combatant target, string skillEffect)
         {
-            if (string.IsNullOrEmpty(skillEffect) || target.IsDead) return false;
-
-            // --- PASSIVE TRIGGER: Ailment Protection ---
-            // Unshaken Will prevents all mental ailments from succeeding.
-            var targetPassives = target.GetConsolidatedSkills();
-            if (targetPassives.Contains("Unshaken Will"))
-            {
-                return false;
-            }
-
-            AilmentData? ailmentToApply = null;
-            foreach (var ailment in Database.Ailments.Values)
-            {
-                if (skillEffect.Contains(ailment.Name, StringComparison.OrdinalIgnoreCase))
-                {
-                    ailmentToApply = ailment;
-                    break;
-                }
-            }
-
-            if (ailmentToApply == null) return false;
-
-            // Match the pattern "(XX% chance)" as seen in skills_database.json
-            int baseChance = 100;
-            Match match = Regex.Match(skillEffect, @"\((\d+)%");
-            if (match.Success)
-            {
-                baseChance = int.Parse(match.Groups[1].Value);
-            }
-
-            int finalChance = baseChance + (attacker.GetStat(StatType.Lu) - target.GetStat(StatType.Lu));
-
-            if (_rnd.Next(0, 100) < Math.Clamp(finalChance, 5, 95))
-            {
-                bool success = target.InflictAilment(ailmentToApply, 3);
-                if (success && _messenger != null)
-                {
-                    _messenger.Publish($"{target.Name} was inflicted with {ailmentToApply.Name}!", ConsoleColor.Magenta);
-                }
-                return success;
-            }
-
-            return false;
+            return _lifecycle.TryInflict(attacker, target, skillEffect, _messenger);
         }
 
         /// <summary>
@@ -234,44 +191,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// </summary>
         public TurnStartResult ProcessTurnStart(Combatant actor)
         {
-            // Guarding always drops at the start of the actor's own turn.
-            actor.IsGuarding = false;
-
-            if (actor.CurrentAilment == null) return TurnStartResult.CanAct;
-
-            string restriction = actor.CurrentAilment.ActionRestriction;
-
-            switch (restriction)
-            {
-                case "SkipTurn":
-                    return TurnStartResult.Skip;
-
-                case "LimitedAction":
-                    return TurnStartResult.LimitedAction;
-
-                case "ChanceSkip":
-                    // Panic: 50% chance to lose turn.
-                    return _rnd.Next(0, 100) < 50 ? TurnStartResult.Skip : TurnStartResult.CanAct;
-
-                case "ChanceSkipOrFlee":
-                    // Fear logic.
-                    int fearRoll = _rnd.Next(0, 100);
-                    if (fearRoll < 15) // 15% chance to flee
-                    {
-                        if (actor.Class != ClassType.Demon) return TurnStartResult.FleeBattle;
-                        if (actor.Class == ClassType.Demon) return TurnStartResult.ReturnToCOMP;
-                    }
-                    return fearRoll < 55 ? TurnStartResult.Skip : TurnStartResult.CanAct; // 40% skip turn
-
-                case "ConfusedAction":
-                    return TurnStartResult.ForcedConfusion;
-
-                case "ForceAttack":
-                    return TurnStartResult.ForcedPhysical;
-
-                default:
-                    return TurnStartResult.CanAct;
-            }
+            return _lifecycle.ProcessTurnStart(actor);
         }
 
         /// <summary>
@@ -281,96 +201,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// </summary>
         public void ProcessTurnEnd(Combatant actor)
         {
-            // --- DEPLOYMENT GATE ---
-            // If the demon is in the COMP (standby), all turn-based changes are suspended.
-            // This prevents DOT deaths in the COMP and freezes ailment durations.
-            if (actor.PartySlot == -1) return;
-
-            // --- PASSIVE TRIGGER: Turn-End Restoration ---
-            var skills = actor.GetConsolidatedSkills();
-
-            // 1. HP Restoration (Regenerate / Spring of Life)
-            int hpRecovery = 0;
-            if (skills.Contains("Spring of Life")) hpRecovery += (int)(actor.MaxHP * 0.08);
-            if (skills.Contains("Regenerate 3")) hpRecovery += (int)(actor.MaxHP * 0.06);
-            else if (skills.Contains("Regenerate 2")) hpRecovery += (int)(actor.MaxHP * 0.04);
-            else if (skills.Contains("Regenerate 1")) hpRecovery += (int)(actor.MaxHP * 0.02);
-
-            // Sleep restores 10% HP/SP per turn
-            if (actor.CurrentAilment?.Name == "Sleep")
-            {
-                hpRecovery += (int)(actor.MaxHP * 0.10);
-            }
-
-            if (hpRecovery > 0 && actor.CurrentHP < actor.MaxHP)
-            {
-                actor.CurrentHP = Math.Min(actor.MaxHP, actor.CurrentHP + hpRecovery);
-                _messenger?.Publish($"{actor.Name} restored {hpRecovery} HP.");
-            }
-
-            // 2. SP Restoration (Invigorate)
-            int spRecovery = 0;
-            if (skills.Contains("Invigorate 3")) spRecovery += 7;
-            else if (skills.Contains("Invigorate 2")) spRecovery += 5;
-            else if (skills.Contains("Invigorate 1")) spRecovery += 3;
-
-            if (actor.CurrentAilment?.Name == "Sleep")
-            {
-                spRecovery += (int)(actor.MaxSP * 0.10);
-            }
-
-            if (spRecovery > 0 && actor.CurrentSP < actor.MaxSP)
-            {
-                actor.CurrentSP = Math.Min(actor.MaxSP, actor.CurrentSP + spRecovery);
-                _messenger?.Publish($"{actor.Name} restored {spRecovery} SP via passives.");
-            }
-
-            if (actor.CurrentAilment == null) return;
-
-            AilmentData ailment = actor.CurrentAilment;
-
-            // Handle Poison DOT
-            if (ailment.DotPercent > 0)
-            {
-                int damage = (int)(actor.MaxHP * 0.13); // Fixed 13% per legacy requirement
-                if (damage < 1) damage = 1;
-
-                actor.CurrentHP -= damage;
-
-                // Poison cannot kill a combatant, it leaves them at 1 HP.
-                // if (actor.CurrentHP < 1) actor.CurrentHP = 1;
-                // I decided to make Poison Lethal by commenting it out, I can always add it back by Uncommenting if needed.
-
-                _messenger?.Publish($"{actor.Name} is hurt by {ailment.Name}! ({damage} DMG)");
-            }
-
-            // Immediate Removal Triggers
-            if (ailment.RemovalTriggers.Contains("OneTurn"))
-            {
-                actor.RemoveAilment();
-                _messenger?.Publish($"{actor.Name} is no longer {ailment.Name}.");
-                return;
-            }
-
-            // Natural Recovery (Luck Roll)
-            else if (ailment.RemovalTriggers.Contains("NaturalRoll"))
-            {
-                int recoveryChance = 20 + (actor.GetStat(StatType.Lu) / 2);
-                if (_rnd.Next(0, 100) < recoveryChance)
-                {
-                    actor.RemoveAilment();
-                    _messenger?.Publish($"{actor.Name} recovered from {ailment.Name}!");
-                    return;
-                }
-            }
-
-            // Turn Decay
-            actor.AilmentDuration--;
-            if (actor.AilmentDuration <= 0 && actor.CurrentAilment != null)
-            {
-                actor.RemoveAilment();
-                _messenger?.Publish($"{actor.Name}'s {ailment.Name} wore off.");
-            }
+            _lifecycle.ProcessTurnEnd(actor, _messenger);
         }
 
         /// <summary>
@@ -379,49 +210,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
         /// </summary>
         public void ApplyStatChange(string skillName, Combatant target)
         {
-            string skill = skillName.ToLower();
-            bool isBuff = skill.EndsWith("kaja") || skill == "heat riser";
-            bool isDebuff = skill.EndsWith("nda") || skill == "debilitate";
-
-            if (!isBuff && !isDebuff) return;
-
-            int delta = isBuff ? 1 : -1;
-
-            // Omni-Modifiers: Affect all 4 tracks
-            if (skill == "heat riser")
-            {
-                ChangeBuff(target, "PhysAtk", 1);
-                ChangeBuff(target, "MagAtk", 1);
-                ChangeBuff(target, "Defense", 1);
-                ChangeBuff(target, "Agility", 1);
-                return;
-            }
-            if (skill == "debilitate")
-            {
-                ChangeBuff(target, "PhysAtk", -1);
-                ChangeBuff(target, "MagAtk", -1);
-                ChangeBuff(target, "Defense", -1);
-                ChangeBuff(target, "Agility", -1);
-                return;
-            }
-
-            // Physical Track Parsing
-            if (skill.Contains("taru")) ChangeBuff(target, "PhysAtk", delta);
-
-            // Magical Track Parsing
-            if (skill.Contains("maka")) ChangeBuff(target, "MagAtk", delta);
-
-            // Defense Track Parsing
-            if (skill.Contains("raku")) ChangeBuff(target, "Defense", delta);
-
-            // Agility Track Parsing
-            if (skill.Contains("suku")) ChangeBuff(target, "Agility", delta);
-        }
-
-        private void ChangeBuff(Combatant target, string stat, int delta)
-        {
-            int current = target.Buffs.GetValueOrDefault(stat, 0);
-            target.Buffs[stat] = Math.Clamp(current + delta, -4, 4);
+            _lifecycle.ApplyStatChange(skillName, target);
         }
     }
 }
