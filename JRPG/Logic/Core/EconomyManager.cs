@@ -8,17 +8,17 @@ namespace JRPGPrototype.Logic.Core
 
         public void AddMacca(int amount)
         {
-            Macca += amount;
+            LegacyInventoryResourceAdapter.Shared.AddMacca(this, amount);
         }
 
         public bool SpendMacca(int amount)
         {
-            if (Macca >= amount)
-            {
-                Macca -= amount;
-                return true;
-            }
-            return false;
+            return LegacyInventoryResourceAdapter.Shared.SpendMacca(this, amount);
+        }
+
+        internal void ReplaceMacca(int macca)
+        {
+            Macca = macca;
         }
     }
 }

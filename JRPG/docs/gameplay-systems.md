@@ -94,14 +94,19 @@ Dungeon state is stored in `DungeonState`: current dungeon ID, current floor, ma
 
 `InventoryManager` stores consumable quantities and owned equipment IDs. `EconomyManager` stores Macca. `ShopEngine` calculates buy/sell prices and executes transactions.
 
+Track L moves the transaction rules behind those console facades into `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs`. `LegacyInventoryResourceAdapter` translates numeric legacy IDs, live equipment slots, and Macca state into immutable framework snapshots, then applies successful results back to `InventoryManager`, `EconomyManager`, and `Combatant`.
+
 Important rules:
 
 - Items are quantity-based.
-- Equipment ownership is stored as ID lists by category.
-- Buy prices decrease with Luck down to a 50% multiplier.
-- Sell prices start at 50% and increase with Luck.
+- Equipment ownership is stored as unique ID lists by category; Track L intentionally does not introduce per-copy equipment instances.
+- Buy prices decrease with Luck down to a 50% multiplier: `(int)(basePrice * max(0.5, 1.0 - Luck * 0.01))`.
+- Sell prices start at 50% and increase with Luck: `(int)(basePrice * (0.50 + Luck * 0.01))`.
+- Missing sell metadata still falls back to base price `100`.
+- Framework shop transactions reject duplicate equipment, unavailable stock, insufficient Macca, and selling currently equipped gear before mutation.
 - Equipment metadata can be patched from shop entries if JSON-loaded objects are missing names or IDs.
 - Equipping recalculates resources because accessories and defensive equipment can affect derived stats and pools.
+- Hospital restoration costs `missing HP * 1 + missing SP * 5`, fully restores HP/SP, removes the active ailment, and clears encounter-persistent buffs/breaks only after payment succeeds.
 
 ## Fusion And Compendium
 

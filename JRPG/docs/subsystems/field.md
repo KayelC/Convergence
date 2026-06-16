@@ -47,21 +47,26 @@ During exploration:
 
 ### City Services And Shops
 
-`FieldServiceEngine.OpenShop` delegates to `ShopUIBridge` and `ShopEngine`.
+`FieldServiceEngine.OpenShop` delegates to `ShopUIBridge` and `ShopEngine`. Track L keeps that console flow, but `ShopEngine` now delegates buy/sell assessment and mutation to framework resource-management services through `LegacyInventoryResourceAdapter`.
 
 - Buying checks Macca, applies Luck-based discounts, and adds item/equipment ownership.
 - Selling removes inventory/equipment and grants Luck-scaled Macca.
+- Duplicate equipment purchases, insufficient Macca, unavailable stock, and equipped-item sales are rejected before mutation.
+- Item/equipment inventory and Macca changes are applied atomically from immutable before/after snapshots.
 - Equipment metadata can be repaired from shop entries before display or possession.
 
 ### Hospital, Items, And Skills
 
 Hospital restoration costs 1 Macca per missing HP and 5 Macca per missing SP. Treatment fully restores HP/SP, removes ailments, and clears encounter-persistent battle state.
 
+Track L routes the hospital cost/payment/restoration decision through the framework. The engine still permits ailment-only treatment at zero cost, while the current hospital UI continues to mark full HP/SP patients as healthy to preserve visible menu behavior until the field state machine is migrated.
+
 Field item/skill usage uses explicit effect gates:
 
 - Redundant heals/cures are blocked.
 - `Goho-M` resets dungeon state to the entry and returns `RequestDungeonExit`.
 - Field skills spend SP only when the effect applies.
+- Field item consumption now uses the same framework-backed inventory transaction adapter after a meaningful legacy item effect succeeds.
 
 ### Status, Equipment, And Party Organization
 

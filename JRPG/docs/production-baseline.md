@@ -224,3 +224,18 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
 Track L may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+
+## Track L Boundary
+
+Track L began from `51ab35c` and moved persistent resource-management transaction rules into the framework while preserving the interactive console host and legacy data ownership.
+
+- `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs` now owns immutable inventory snapshots, item reservations, unique equipment-ID ownership, equipment slot checks, Macca wallet transactions, Luck-based shop pricing, shop buy/sell transactions, and hospital restoration results.
+- `LegacyInventoryResourceAdapter` maps legacy numeric IDs, `InventoryManager`, `EconomyManager`, live equipment, and hospital patients into framework snapshots, then applies only successful transaction results back to console-owned objects.
+- `InventoryManager`, `EconomyManager`, `ShopEngine`, `FieldServiceEngine.PerformEquip`, `FieldServiceEngine.ExecuteItemUsage`, and `FieldServiceEngine.TryRestoreCombatant` now route migrated mutation decisions through the adapter.
+- Legacy `Data/Jsons`, `Database`, DTOs, shop inspection metadata repair, UI bridges, field item effect parsing, and visible menu behavior remain console-host owned. Removal remains unauthorized.
+- Preserved formulas: buy price is `(int)(basePrice * max(0.5, 1.0 - Luck * 0.01))`, sell price is `(int)(basePrice * (0.50 + Luck * 0.01))`, missing sell metadata falls back to `100`, and hospital cost is `missing HP + missing SP * 5`.
+- Track L intentionally keeps unique equipment IDs rather than per-copy equipment instances. Duplicate equipment purchases and equipped-item sales are rejected before mutation.
+- Focused Track L checks passed: 7 framework resource-management tests, the 12-test legacy workflow characterization suite, and the parity-ledger validation test all passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 620 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 119 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.

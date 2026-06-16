@@ -156,6 +156,110 @@ public sealed class LegacyWorkflowCharacterizationTests
     }
 
     [Fact]
+    public void InventoryAndEconomyManagers_DelegateThroughFrameworkResourceServices()
+    {
+        LegacyBaselineSupport.ResetAndLoadLegacyDatabase();
+        var inventory = new InventoryManager();
+        var economy = new EconomyManager();
+
+        inventory.AddItem("101", 2);
+        inventory.AddItem("missing", 9);
+        inventory.RemoveItem("101", 1);
+        inventory.RemoveItem("101", 9);
+        inventory.AddEquipment("1", ShopCategory.Weapon);
+        inventory.AddEquipment("1", ShopCategory.Weapon);
+        inventory.AddEquipment("missing", ShopCategory.Weapon);
+
+        economy.AddMacca(100);
+        Assert.False(economy.SpendMacca(150));
+        Assert.True(economy.SpendMacca(40));
+
+        Assert.Equal(1, inventory.GetQuantity("101"));
+        Assert.Equal(0, inventory.GetQuantity("missing"));
+        Assert.Equal(["1"], inventory.OwnedWeapons);
+        Assert.Equal(60, economy.Macca);
+    }
+
+    [Fact]
+    public void ShopTransactions_RejectDuplicateAndEquippedEquipmentWithoutMutation()
+    {
+        LegacyBaselineSupport.ResetAndLoadLegacyDatabase();
+        var inventory = new InventoryManager();
+        var economy = new EconomyManager();
+        var engine = new ShopEngine(inventory, economy, new FieldMessenger());
+        var player = new Combatant("Hero");
+        player.CharacterStats[StatType.Lu] = 0;
+
+        ShopEntry sword = Assert.Single(Database.ShopInventory, entry =>
+            entry.Id == "1" && entry.Category == ShopCategory.Weapon);
+        inventory.AddEquipment("1", ShopCategory.Weapon);
+        player.EquippedWeapon = Database.Weapons["1"];
+        int beforeMacca = 1_000;
+        economy.AddMacca(beforeMacca);
+
+        Assert.False(engine.ExecutePurchase(sword, player));
+        Assert.Equal(beforeMacca, economy.Macca);
+        Assert.Equal(["1"], inventory.OwnedWeapons);
+
+        engine.ExecuteSale("1", ShopCategory.Weapon, player);
+        Assert.Equal(beforeMacca, economy.Macca);
+        Assert.Equal(["1"], inventory.OwnedWeapons);
+    }
+
+    [Fact]
+    public void FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions()
+    {
+        LegacyBaselineSupport.ResetAndLoadLegacyDatabase();
+        var io = new ScriptedGameIO();
+        var inventory = new InventoryManager();
+        var economy = new EconomyManager();
+        var player = new Combatant("Hero") { MaxHP = 100, CurrentHP = 40, MaxSP = 30, CurrentSP = 10 };
+        var party = new PartyManager(player);
+        var dungeon = new DungeonState { CurrentFloor = 7 };
+        var engine = new FieldServiceEngine(
+            new FieldMessenger(),
+            io,
+            economy,
+            inventory,
+            party,
+            dungeon);
+
+        engine.PerformEquip(player, "1", ShopCategory.Weapon);
+        Assert.Null(player.EquippedWeapon);
+
+        inventory.AddEquipment("1", ShopCategory.Weapon);
+        engine.PerformEquip(player, "1", ShopCategory.Weapon);
+        Assert.Equal("1", player.EquippedWeapon?.Id);
+
+        player.InflictAilment(new AilmentData { Name = "Poison", CureKeyword = "Poison" });
+        player.AddBuff("PhysAtk", 3);
+        economy.AddMacca(engine.CalculateRestorationCost(player));
+        Assert.True(engine.TryRestoreCombatant(player));
+        Assert.Equal(player.MaxHP, player.CurrentHP);
+        Assert.Equal(player.MaxSP, player.CurrentSP);
+        Assert.Null(player.CurrentAilment);
+        Assert.Empty(player.Buffs);
+        Assert.Equal(0, economy.Macca);
+
+        var itemUser = new Combatant("Medic") { MaxHP = 100, CurrentHP = 100, MaxSP = 20, CurrentSP = 20 };
+        ItemData medicine = Database.Items["101"];
+        inventory.AddItem("101", 1);
+        Assert.Equal(ItemUsageResult.Failed, engine.ExecuteItemUsage(medicine, itemUser, itemUser));
+        Assert.Equal(1, inventory.GetQuantity("101"));
+
+        itemUser.CurrentHP = 50;
+        Assert.Equal(ItemUsageResult.Applied, engine.ExecuteItemUsage(medicine, itemUser, itemUser));
+        Assert.Equal(0, inventory.GetQuantity("101"));
+        Assert.Equal(100, itemUser.CurrentHP);
+
+        ItemData goho = Database.Items["114"];
+        inventory.AddItem("114", 1);
+        Assert.Equal(ItemUsageResult.RequestDungeonExit, engine.ExecuteItemUsage(goho, player, player));
+        Assert.Equal(0, inventory.GetQuantity("114"));
+        Assert.Equal(1, dungeon.CurrentFloor);
+    }
+
+    [Fact]
     public void DungeonNavigation_PreservesLobbyFixedFloorsTerminalsAndBossDefeat()
     {
         LegacyBaselineSupport.ResetAndLoadLegacyDatabase();

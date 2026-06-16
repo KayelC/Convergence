@@ -7,6 +7,7 @@ using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Messaging;
+using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Services;
 
 namespace JRPGPrototype.Logic.Field.Engines
@@ -38,8 +39,7 @@ namespace JRPGPrototype.Logic.Field.Engines
         public int CalculateBuyPrice(ShopEntry entry, Combatant player)
         {
             int luk = player.GetStat(StatType.Lu);
-            double discountMult = Math.Max(0.5, 1.0 - (luk * 0.01));
-            return (int)(entry.BasePrice * discountMult);
+            return LegacyInventoryResourceAdapter.Shared.CalculateBuyPrice(entry, luk);
         }
 
         /// <summary>
@@ -52,8 +52,7 @@ namespace JRPGPrototype.Logic.Field.Engines
             int basePrice = entry?.BasePrice ?? 100;
 
             int luk = player.GetStat(StatType.Lu);
-            double sellMult = 0.50 + (luk * 0.01);
-            return (int)(basePrice * sellMult);
+            return LegacyInventoryResourceAdapter.Shared.CalculateSellPrice(basePrice, luk);
         }
 
         #endregion
@@ -66,52 +65,41 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public bool ExecutePurchase(ShopEntry entry, Combatant player)
         {
-            int finalPrice = CalculateBuyPrice(entry, player);
+            var result = LegacyInventoryResourceAdapter.Shared.ExecutePurchase(
+                _inventory,
+                _economy,
+                entry,
+                player.GetStat(StatType.Lu));
 
-            if (_economy.Macca < finalPrice)
+            if (!result.Applied)
             {
-                _messenger.Publish("\nNot enough Macca!", ConsoleColor.Gray, 800);
+                string message = result.Code == ResourceTransactionCode.InsufficientCurrency
+                    ? "\nNot enough Macca!"
+                    : result.Diagnostics.FirstOrDefault()?.Message ?? "\nPurchase failed.";
+                _messenger.Publish(message, ConsoleColor.Gray, 800);
                 return false;
             }
 
-            if (_economy.SpendMacca(finalPrice))
-            {
-                switch (entry.Category)
-                {
-                    case ShopCategory.Weapon:
-                    case ShopCategory.Armor:
-                    case ShopCategory.Boots:
-                    case ShopCategory.Accessory:
-                        _inventory.AddEquipment(entry.Id, entry.Category);
-                        break;
-                    case ShopCategory.Item:
-                        _inventory.AddItem(entry.Id, 1);
-                        break;
-                }
-
-                _messenger.Publish("\nBought!", ConsoleColor.Gray, 500);
-                return true;
-            }
-
-            return false;
+            _messenger.Publish("\nBought!", ConsoleColor.Gray, 500);
+            return true;
         }
 
         // Executes the sale of a player-owned item or unequipped piece of equipment.
         public void ExecuteSale(string id, ShopCategory category, Combatant player)
         {
-            int price = CalculateSellPrice(id, category, player);
+            var entry = Database.ShopInventory.FirstOrDefault(e => e.Id == id && e.Category == category)
+                ?? new ShopEntry { Id = id, Name = id, BasePrice = 100, Category = category };
+            var result = LegacyInventoryResourceAdapter.Shared.ExecuteSale(
+                _inventory,
+                _economy,
+                entry,
+                player.GetStat(StatType.Lu),
+                player);
 
-            if (category == ShopCategory.Item)
+            if (result.Applied)
             {
-                _inventory.RemoveItem(id, 1);
+                _messenger.Publish("\nSold!", ConsoleColor.Gray, 500);
             }
-            else
-            {
-                _inventory.RemoveEquipment(id, category);
-            }
-
-            _economy.AddMacca(price);
-            _messenger.Publish("\nSold!", ConsoleColor.Gray, 500);
         }
 
         #endregion

@@ -110,11 +110,12 @@ namespace JRPGPrototype.Logic.Field.Engines
         {
             string id = equipId?.Trim() ?? "";
             bool success = false;
+            bool canEquip = LegacyInventoryResourceAdapter.Shared.Equip(_inventory, player, id, category);
 
             switch (category)
             {
                 case ShopCategory.Weapon:
-                    if (Database.Weapons.TryGetValue(id, out var w))
+                    if (canEquip && Database.Weapons.TryGetValue(id, out var w))
                     {
                         ValidateMetadata(w, id);
                         player.EquippedWeapon = w;
@@ -122,7 +123,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                     }
                     break;
                 case ShopCategory.Armor:
-                    if (Database.Armors.TryGetValue(id, out var a))
+                    if (canEquip && Database.Armors.TryGetValue(id, out var a))
                     {
                         ValidateMetadata(a, id);
                         player.EquippedArmor = a;
@@ -130,7 +131,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                     }
                     break;
                 case ShopCategory.Boots:
-                    if (Database.Boots.TryGetValue(id, out var b))
+                    if (canEquip && Database.Boots.TryGetValue(id, out var b))
                     {
                         ValidateMetadata(b, id);
                         player.EquippedBoots = b;
@@ -138,7 +139,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                     }
                     break;
                 case ShopCategory.Accessory:
-                    if (Database.Accessories.TryGetValue(id, out var acc))
+                    if (canEquip && Database.Accessories.TryGetValue(id, out var acc))
                     {
                         ValidateMetadata(acc, id);
                         player.EquippedAccessory = acc;
@@ -200,9 +201,7 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public int CalculateRestorationCost(Combatant patient)
         {
-            int hpMissing = patient.MaxHP - patient.CurrentHP;
-            int spMissing = patient.MaxSP - patient.CurrentSP;
-            return (hpMissing * 1) + (spMissing * 5);
+            return LegacyInventoryResourceAdapter.Shared.CalculateRestorationCost(patient);
         }
 
         /// <summary>
@@ -212,27 +211,7 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public bool TryRestoreCombatant(Combatant patient)
         {
-            int cost = CalculateRestorationCost(patient);
-
-            // Allow treatment if HP/SP are missing OR if an ailment is present.
-            if (cost <= 0 && patient.CurrentAilment == null) return false;
-
-            if (_economy.Macca >= cost)
-            {
-                if (_economy.SpendMacca(cost))
-                {
-                    patient.CurrentHP = patient.MaxHP;
-                    patient.CurrentSP = patient.MaxSP;
-
-                    // Implement Status Persistence Clearing:
-                    // Hospital treatment clears persistent field ailments and battle-leftover buffs.
-                    patient.RemoveAilment();
-                    patient.ClearEncounterPersistence();
-
-                    return true;
-                }
-            }
-            return false;
+            return LegacyInventoryResourceAdapter.Shared.Restore(_economy, patient).Applied;
         }
 
         #endregion
@@ -252,7 +231,7 @@ namespace JRPGPrototype.Logic.Field.Engines
             if (item.Name == "Goho-M")
             {
                 _messenger.Publish("Using Goho-M... A mystical light surrounds the party.", ConsoleColor.Gray, 1000);
-                _inventory.RemoveItem(item.Id, 1);
+                LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
                 _dungeonState.ResetToEntry();
                 return ItemUsageResult.RequestDungeonExit;
             }
@@ -305,7 +284,7 @@ namespace JRPGPrototype.Logic.Field.Engines
 
             if (effectApplied)
             {
-                _inventory.RemoveItem(item.Id, 1);
+                LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
                 _messenger.Publish(null, ConsoleColor.Gray, 800);
                 return ItemUsageResult.Applied;
             }

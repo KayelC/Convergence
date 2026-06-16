@@ -989,6 +989,21 @@ Port persistent resource-management systems as atomic framework services.
 
 Interactive inventory, equip, shop, and hospital menus consume framework services. Legacy managers can then be adapted or removed independently.
 
+### Track L Completion
+
+Track L began from `51ab35c` on `track-12-recovery`.
+
+- Added `RuntimeInventorySnapshot`, `RuntimeWalletSnapshot`, item reservation/commit/rollback support, inventory/equipment transitions, Macca transactions, shop buy/sell transactions, and hospital restoration results under `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs`.
+- Preserved the current adapter-first boundary. `InventoryManager`, `EconomyManager`, `ShopEngine`, and the field equipment/item/hospital mutation paths now delegate through `LegacyInventoryResourceAdapter`, while UI bridges, legacy DTOs, `Database`, and `Data/Jsons` remain console-host owned.
+- Preserved exact resource formulas: unique equipment IDs, unbounded legacy item stacks unless a clean stack limit is supplied, Luck-based buy/sell prices, base-price `100` sell fallback, and hospital cost `missing HP + missing SP * 5`.
+- Kept the existing hospital UI healthy/full-resource behavior while allowing engine-level ailment-only treatment at zero cost.
+- Added focused framework tests for inventory, reservations, equipment, economy, shop, and hospital services. Strengthened console characterization for managers, shop duplicate/equipped rejection, equipment ownership checks, hospital restoration, and field item consumption.
+- Updated the parity ledger. `inventory_quantities`, `equipment_ownership`, `economy`, `shops`, and `hospital` are now `parallel_partial` with adapter-routed consumers. `field_items_and_skills` remains partial because legacy item/skill effect parsing still exists. No removal is authorized.
+- Focused Track L checks passed: 7 framework resource-management tests, the 12-test legacy workflow characterization suite, and the parity-ledger validation test all passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 620 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 119 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track M: Field And Dungeon State Machines
 
 ### Goal
