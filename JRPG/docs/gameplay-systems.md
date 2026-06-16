@@ -112,7 +112,7 @@ Important rules:
 
 ## Fusion And Compendium
 
-`FusionConductor` runs the Cathedral workflow. `FusionCalculator` predicts results, `FusionMutator` commits transactions, and strategies implement operation-specific mutation.
+`FusionConductor` runs the Cathedral workflow. Track N keeps the same Cathedral menus and live `Combatant`/`Persona` participants, but `FusionCalculator` now adapts those participants into framework fusion services for result resolution, slot calculation, skill mutation, and duplicate-result checks. `FusionMutator` and the existing strategies still apply confirmed transactions to the legacy stock models.
 
 Supported fusion concepts:
 
@@ -127,6 +127,8 @@ Supported fusion concepts:
 - Compendium registration and recall.
 
 Operators fuse demons from demon stock and active party references. Wild Cards fuse personas from active persona and persona stock.
+
+The Compendium now uses framework state/recall contracts for registration, overwrite, recall pricing, and recall assessment while retaining the existing console registry API. Registered entries are deep snapshots, including active Persona state; mutating a recalled clone no longer mutates the stored entry. Recall cost remains base price fallback `2000`, plus `level * 100`, stat sum `* 50`, and skill count `* 200`.
 
 ## Clean Catalog Surface
 

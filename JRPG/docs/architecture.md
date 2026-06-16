@@ -17,7 +17,7 @@ The solution is organized around gameplay subsystems with a physical host bounda
 - typed action, skill, item, passive, targeting, and effect execution;
 - catalog-backed actor hydration and automated battle orchestration;
 - elemental, ailment, instant-death, knowledge, and Press Turn contracts;
-- typed fusion inheritance evaluation and selection.
+- typed fusion inheritance evaluation, result resolution, planning, transaction assessment, and Compendium state.
 
 The framework has no package references and does not access the console, filesystem, Godot, or the legacy static database. JSON implementation details remain internal to the content-loading subsystem.
 
@@ -63,7 +63,9 @@ Track L adds framework resource-management services for inventory quantities, un
 
 Track M adds framework-owned field/dungeon state-machine services for dungeon progress snapshots, floor evaluation, terminal unlocks, boss defeat state, barrier handling, deterministic encounter selection, and ordered transition events. `DungeonManager` is now a console compatibility facade over those services, using `LegacyDungeonContentAdapter` to adapt `Database.Dungeons` without changing `tartarus.json` or menu behavior.
 
-Complete AI/tactics policy, full fusion transaction ownership, compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track N adds framework fusion runtime services for recipe lookup, result operation selection, inheritance slot calculation, skill mutation, accident inheritance replacement, preview snapshots, transaction assessment, and Compendium registration/recall assessment. `FusionCalculator`, duplicate-result guards, and `CompendiumRegistry` now adapt legacy database/live object state into those services while keeping Cathedral menus and legacy transaction strategies intact. Compendium snapshots now deep-clone active Persona data instead of sharing live references.
+
+Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -87,7 +89,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine` and `ShopEngine` are console compatibility facades over framework-backed resource-management transactions for inventory, equipment, shops, and hospital restoration. They still own legacy item/skill effects, metadata repair, messages, and dungeon traversal coordination.
 - `ExplorationProcessor` remains the console host for field-side messages, battle handoff, encounter hydration, and duplicate enemy display suffixes; movement and floor evaluation are delegated through the framework-backed dungeon manager.
-- `FusionCalculator`, `FusionMutator`, and fusion strategies own fusion prediction and state mutation.
+- `FusionCalculator`, `FusionMutator`, and fusion strategies remain console compatibility facades; fusion prediction and Compendium rule checks now route through framework services where Track N migrated them.
 - `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.
 
 ### Bridges

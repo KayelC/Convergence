@@ -1,6 +1,6 @@
 # Fusion Subsystem
 
-> **Status: Current implementation reference.** Existing fusion and skill-mutation behavior is migration evidence; approved redesign contracts define future data shape.
+> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services while preserving the interactive Cathedral workflow and legacy datasets.
 
 ## Purpose
 
@@ -9,10 +9,12 @@
 ## Key Classes And Responsibilities
 
 - `FusionConductor`: root Cathedral workflow and menu loop.
-- `FusionCalculator`: predicts operation type, target result, accidents, inheritable skills, exclusive skills, skill mutation, and inheritance slots.
+- `JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs`: framework contracts and services for result resolution, planning, slot calculation, mutation, accident inheritance, preview snapshots, transaction assessment, and Compendium state.
+- `LegacyFusionContentAdapter`: console adapter that maps `Database.FusionRecipes`, `PersonaData`, `SkillData`, and live participants into framework snapshots.
+- `FusionCalculator`: compatibility facade over the framework result resolver and planning helpers.
 - `FusionMutator`: dispatches committed transactions and handles compendium recall.
 - `FusionContext`: transaction object passed to strategies.
-- `CompendiumRegistry`: in-memory demon snapshot registry and recall-cost calculator.
+- `CompendiumRegistry`: in-memory console facade over framework Compendium registration, recall-cost, and recall-assessment contracts.
 - `CathedralUIBridge`: participant selection, inheritance selection, preview/confirmation, compendium menus.
 - `FusionStrategyRegistry`: maps `FusionOperationType` to strategy implementations.
 - `StandardFusionStrategy`: creates new demons/personas from normal fusion.
@@ -45,7 +47,7 @@ The conductor creates transient `Combatant` wrappers for persona participants so
 
 ### Result Prediction
 
-`FusionCalculator.CalculateResult` handles:
+`FusionCalculator.CalculateResult` adapts parents into framework snapshots, then `FusionResultResolver` handles:
 
 - Mitama override into `StatBoostFusion`.
 - Specific ID recipe lookup.
@@ -55,11 +57,11 @@ The conductor creates transient `Combatant` wrappers for persona participants so
 - Normal race fusion using average base level plus a random offset.
 - Accident chance: 1% normally, 12% at Full Moon.
 
-Fusion table mappings are registered commutatively so parent order does not matter.
+Recipe lookup is parent-order neutral. Specific ID pairs are checked before race pairs.
 
 ### Skill Inheritance
 
-The calculator builds a unique parent skill pool, filters out exclusive skills for actual inheritance, returns exclusive skills separately for UI display, and calculates inheritance slots from legal unique skill count.
+The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.
 
 Slot scale:
 
@@ -82,17 +84,20 @@ After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a str
 
 ### Compendium
 
-`CompendiumRegistry` stores demon snapshots by normalized species ID. Recall cost combines base shop price fallback, level premium, stat premium, and skill premium. `FusionMutator.FinalizeRecall` spends Macca and adds recalled demons/personas back to the appropriate stock.
+`CompendiumRegistry` stores demon snapshots by normalized species ID while mirroring those entries into framework `CompendiumStateSnapshot` records. Recall cost combines base shop price fallback, level premium, stat premium, and skill premium. `FusionMutator.FinalizeRecall` spends Macca and adds recalled demons/personas back to the appropriate stock.
+
+Track N intentionally fixes the previous shallow-copy behavior: registered entries deep-clone active Persona skill lists, stat modifiers, learn tables, affinities, and growth fields. Recalled clones can be modified without mutating the stored Compendium entry.
 
 ## Important State And Invariants
 
-- Fusion requires `Database.FusionRecipes` and `Database.Personas`.
+- Interactive fusion still requires `Database.FusionRecipes` and `Database.Personas`; the legacy content adapter is the only layer that reads them for framework fusion services.
 - Operators use `DemonStock`; Wild Cards use `ActivePersona` and `PersonaStock`.
 - Active demons are still owned through unified `DemonStock`.
 - Mitama plus Mitama is unsupported.
 - Elements cannot receive Mitama stat boosts.
 - Exclusive skills can be displayed but not inherited.
 - Fusion accident skill mutation only applies to skills with valid family/rank evolution data.
+- Legacy transaction strategies remain compatibility code until a dedicated parity review replaces them.
 
 ## Data Dependencies
 
@@ -105,12 +110,12 @@ After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a str
 
 - Add new fusion recipes in `fusion_table.json`.
 - Add a new fusion operation by extending `FusionOperationType`, writing an `IFusionStrategy`, and registering it.
-- Add new Mitama-like behavior in `FusionCalculator` and `StatBoostStrategy`.
-- Add new inheritance restrictions in `FusionCalculator.GetInheritableSkills`.
+- Add new framework-supported result behavior in `FusionRuntimeServices` and adapt console presentation only after the rule exists.
+- Add new inheritance restrictions through typed skill/entity definitions and `FusionInheritanceEvaluator`.
 - Add new compendium persistence by replacing or extending `CompendiumRegistry`.
 
 ## Caveats
 
-- Compendium snapshots clone combatant scalar state and skill lists, but `ActivePersona` is copied by reference.
+- Full strategy removal is not authorized yet; old strategy classes remain the console transaction adapters.
 - Some strategy paths assume non-null active personas and matching database records.
 - Accidents are revealed after confirmation, so previewed choices can be discarded by design.

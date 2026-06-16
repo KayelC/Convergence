@@ -527,9 +527,12 @@ public sealed class LegacyWorkflowCharacterizationTests
 
         Combatant firstRecall = compendium.GetRecallEntry("PIXIE");
         Assert.NotSame(demon, firstRecall);
+        Assert.NotSame(demon.ActivePersona, firstRecall.ActivePersona);
         Assert.Equal(10, firstRecall.Level);
         Assert.Equal(["Dia"], firstRecall.ExtraSkills);
         Assert.Equal(7, firstRecall.CharacterStats[StatType.Ma]);
+        firstRecall.ActivePersona!.SkillSet.Add("Mutated Recall Skill");
+        Assert.DoesNotContain("Mutated Recall Skill", compendium.GetRecallEntry("pixie").ActivePersona!.SkillSet);
 
         firstRecall.Level = 1;
         Assert.Equal(10, compendium.GetRecallEntry("pixie").Level);

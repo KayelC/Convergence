@@ -1,5 +1,6 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Core;
 using System;
@@ -89,37 +90,22 @@ namespace JRPGPrototype.Logic.Fusion
                 return false;
             }
 
-            // Direct pair recipes may be authored either against exact source ids or against races.
-            // Special fusion rules such as Mitama boosts and Element rank shifts are intentionally left
-            // to the transaction guard because they are not ordinary "create a new demon" results.
-            string? resultString =
-                FindFusionRecipeResult(parentA.SourceId, parentB.SourceId) ??
-                FindFusionRecipeResult(parentA.ActivePersona.Race, parentB.ActivePersona.Race);
-
-            if (string.IsNullOrEmpty(resultString))
+            LegacyFusionContentAdapter adapter = LegacyFusionContentAdapter.Shared;
+            var resolver = new FusionResultResolver(adapter, new LegacyFusionRandomSource(new Random(0)));
+            FusionParticipantSnapshot first = adapter.ToParticipant(parentA);
+            FusionParticipantSnapshot second = adapter.ToParticipant(parentB);
+            ContentId? directResult = resolver.TryResolveDirectCreateResult(
+                first.EntityId,
+                first.RaceId,
+                second.EntityId,
+                second.RaceId);
+            if (directResult is null)
             {
                 return false;
             }
 
-            string lookupId = resultString.ToLower();
-            if (!Database.Personas.ContainsKey(lookupId))
-            {
-                return false;
-            }
-
-            resultId = lookupId;
+            resultId = adapter.EntityId(directResult.Value);
             return true;
-        }
-
-        private static string? FindFusionRecipeResult(string parentA, string parentB)
-        {
-            var recipe = Database.FusionRecipes.FirstOrDefault(r =>
-                (r.ParentA.Equals(parentA, StringComparison.OrdinalIgnoreCase) &&
-                 r.ParentB.Equals(parentB, StringComparison.OrdinalIgnoreCase)) ||
-                (r.ParentA.Equals(parentB, StringComparison.OrdinalIgnoreCase) &&
-                 r.ParentB.Equals(parentA, StringComparison.OrdinalIgnoreCase)));
-
-            return recipe?.Result;
         }
     }
 

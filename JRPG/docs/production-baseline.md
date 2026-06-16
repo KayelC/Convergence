@@ -253,3 +253,17 @@ Track M began from `1502970` and moved field/dungeon state-machine rules into th
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 627 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 118 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+## Track N Boundary
+
+Track N began from `ec7d4fa` and moved fusion result resolution, inheritance planning, transaction assessment, and Compendium rule checks into the framework while preserving the interactive Cathedral, legacy fusion datasets, and visible ritual flow.
+
+- `JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs` now owns recipe lookup, result operation selection, moon-phase accident checks, rank operations, Mitama stat-boost decisions, inheritance slot calculation, mutation selection, preview snapshots, transaction assessment, and immutable Compendium registration/recall assessment.
+- `LegacyFusionContentAdapter` maps `Database.FusionRecipes`, `Database.Personas`, `Database.Skills`, live `Combatant`, and live `Persona` state into framework snapshots without reauthoring `fusion_table.json`, entity data, or skill data.
+- `FusionCalculator`, duplicate-result guards, and `CompendiumRegistry` now delegate migrated rule decisions through framework services. `FusionConductor`, `CathedralUIBridge`, `FusionMutator`, fusion strategies, economy mutation, stock mutation, prompts, waits, and visible Cathedral text remain console-host owned compatibility surfaces.
+- Compendium registration now stores deep immutable snapshots, including active Persona data, instead of sharing live references. Recall pricing remains the legacy base-price fallback plus level, stat, and skill-count formula.
+- Legacy `Data/Jsons`, DTOs, live actor models, Cathedral menus, and fusion transaction strategy classes remain present. Removal remains unauthorized.
+- Focused Track N checks passed: 4 framework fusion/Compendium runtime tests plus the Compendium snapshot characterization test passed; the 52-test fusion regression, bridge-result, and inheritance suite passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 631 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 115 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.

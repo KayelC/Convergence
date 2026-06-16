@@ -1121,6 +1121,20 @@ Build the full catalog-backed fusion workflow while retaining the approved inher
 
 The interactive Cathedral and compendium flows use catalog-backed services. Legacy calculators, mutators, strategies, and transaction helpers are removed only after a dedicated parity review.
 
+### Track N Completion
+
+Track N began from `ec7d4fa` on `track-12-recovery`.
+
+- Added `FusionRuntimeServices` as the framework home for fusion recipe lookup, result operation selection, moon-phase accident checks, standard race results, rank up/down operations, Mitama stat-boost decisions, typed inheritance planning, slot calculation, accident inheritance replacement, mutation selection, immutable previews, transaction assessment, and Compendium registration/recall assessment.
+- Added `LegacyFusionContentAdapter` to map `Database.FusionRecipes`, `Database.Personas`, `Database.Skills`, live `Combatant`, and live `Persona` data into framework snapshots. Legacy JSON files and DTOs remain console-host owned and unchanged.
+- Converted `FusionCalculator`, duplicate-result checks, and `CompendiumRegistry` into compatibility facades where Track N migrated rules. Cathedral menus, prompts, waits, ritual confirmation, fusion strategies, economy mutation, and stock mutation remain host-owned compatibility surfaces.
+- Fixed Compendium snapshot isolation: registered entries deep-clone active Persona state instead of retaining live references.
+- Updated the parity ledger. Fusion result calculation, slots/mutation/accidents, fusion transactions, and Compendium are now `parallel_partial` where console consumers delegate through adapters; no removal is authorized.
+- Focused Track N checks passed: 4 framework fusion/Compendium runtime tests plus the Compendium snapshot characterization test passed; the 52-test fusion regression, bridge-result, and inheritance suite passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 631 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 115 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O: Console Host Migration
 
 ### Goal

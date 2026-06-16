@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Fusion.Strategies;
 using JRPGPrototype.Logic.Fusion.Messaging;
@@ -21,6 +23,8 @@ namespace JRPGPrototype.Logic.Fusion
         // Key: Normalized Species ID (matching the final_unified_database IDs)
         // Value: The snapshot of the Combatant
         private readonly Dictionary<string, Combatant> _demonEntries;
+        private readonly ICompendiumService _service;
+        private CompendiumStateSnapshot _state;
 
         private readonly IGameIO _io;
 
@@ -28,6 +32,8 @@ namespace JRPGPrototype.Logic.Fusion
         {
             _io = io;
             _demonEntries = new Dictionary<string, Combatant>(StringComparer.OrdinalIgnoreCase);
+            _service = new CompendiumService();
+            _state = new CompendiumStateSnapshot();
         }
 
         #region Registration Logic
@@ -51,14 +57,16 @@ namespace JRPGPrototype.Logic.Fusion
             Combatant snapshot = CloneCombatant(demon);
             snapshot.SourceId = speciesId; // Ensure the snapshot itself is normalized
 
-            if (_demonEntries.ContainsKey(speciesId))
+            CompendiumRegistrationResult result = _service.Register(_state, ToEntry(snapshot));
+            _state = result.After;
+            _demonEntries[speciesId] = snapshot;
+
+            if (result.Code == CompendiumRegistrationCode.Updated)
             {
-                _demonEntries[speciesId] = snapshot;
                 _io.WriteLine($"{demon.Name} data has been updated in the registry.", ConsoleColor.Cyan);
             }
             else
             {
-                _demonEntries.Add(speciesId, snapshot);
                 _io.WriteLine($"{demon.Name} has been recorded in the Compendium.", ConsoleColor.Green);
             }
 
@@ -76,7 +84,8 @@ namespace JRPGPrototype.Logic.Fusion
         {
             string cleanId = speciesId.ToLower();
 
-            if (!_demonEntries.TryGetValue(cleanId, out var snapshot))
+            ContentId species = LegacyFusionContentAdapter.ToContentId(cleanId);
+            if (!_state.TryGet(species, out CompendiumEntrySnapshot? entry) || entry is null)
             {
                 return 0;
             }
@@ -89,18 +98,7 @@ namespace JRPGPrototype.Logic.Fusion
                 basePrice = shopEntry.BasePrice;
             }
 
-            // 2. Calculate Level Premium
-            int levelMod = snapshot.Level * 100;
-
-            // 3. Calculate Stat Premium
-            int statsSum = snapshot.CharacterStats.Values.Sum();
-            int statsMod = statsSum * 50;
-
-            // 4. Calculate Skill Premium
-            int skillCount = snapshot.GetConsolidatedSkills().Count;
-            int skillMod = skillCount * 200;
-
-            return basePrice + levelMod + statsMod + skillMod;
+            return _service.CalculateRecallCost(entry, basePrice);
         }
 
         /// <summary>
@@ -115,7 +113,7 @@ namespace JRPGPrototype.Logic.Fusion
                 return CloneCombatant(snapshot);
             }
 
-            return null;
+            return null!;
         }
 
         #endregion
@@ -127,12 +125,13 @@ namespace JRPGPrototype.Logic.Fusion
             return _demonEntries.Values
                 .OrderBy(d => d.Level)
                 .ThenBy(d => d.Name)
+                .Select(CloneCombatant)
                 .ToList();
         }
 
         public bool HasEntry(string speciesId)
         {
-            return _demonEntries.ContainsKey(speciesId.ToLower());
+            return _state.TryGet(LegacyFusionContentAdapter.ToContentId(speciesId), out _);
         }
 
         #endregion
@@ -161,7 +160,7 @@ namespace JRPGPrototype.Logic.Fusion
                 OwnerId = original.OwnerId,
                 BattleControl = original.BattleControl,
                 Controller = original.Controller,
-                ActivePersona = original.ActivePersona
+                ActivePersona = original.ActivePersona == null ? null : ClonePersona(original.ActivePersona)
             };
 
             foreach (var stat in original.CharacterStats)
@@ -183,6 +182,59 @@ namespace JRPGPrototype.Logic.Fusion
 
             return clone;
         }
+
+        private static Persona ClonePersona(Persona original)
+        {
+            var clone = new Persona
+            {
+                Name = original.Name,
+                Level = original.Level,
+                Race = original.Race,
+                Rank = original.Rank,
+                InheritanceType = original.InheritanceType,
+                Exp = original.Exp,
+                LifetimeEarnedExp = original.LifetimeEarnedExp,
+                CombatDefenseProfile = original.CombatDefenseProfile
+            };
+
+            foreach (var affinity in original.AffinityMap)
+            {
+                clone.AffinityMap[affinity.Key] = affinity.Value;
+            }
+
+            foreach (var stat in original.StatModifiers)
+            {
+                clone.StatModifiers[stat.Key] = stat.Value;
+            }
+
+            clone.SkillSet.AddRange(original.SkillSet);
+            foreach (var learned in original.SkillsToLearn)
+            {
+                clone.SkillsToLearn[learned.Key] = learned.Value;
+            }
+
+            return clone;
+        }
+
+        private static CompendiumEntrySnapshot ToEntry(Combatant snapshot) =>
+            new(
+                LegacyFusionContentAdapter.ToContentId(snapshot.SourceId),
+                snapshot.Name,
+                Math.Max(1, snapshot.Level),
+                snapshot.CharacterStats.Select(stat => new KeyValuePair<ContentId, int>(
+                    stat.Key switch
+                    {
+                        StatType.St => ContentId.Parse("strength"),
+                        StatType.Ma => ContentId.Parse("magic"),
+                        StatType.Vi => ContentId.Parse("vitality"),
+                        StatType.Ag => ContentId.Parse("agility"),
+                        StatType.Lu => ContentId.Parse("luck"),
+                        _ => LegacyFusionContentAdapter.ToContentId(stat.Key.ToString())
+                    },
+                    stat.Value)),
+                snapshot.GetConsolidatedSkills().Select(LegacyFusionContentAdapter.ToContentId),
+                snapshot.Exp,
+                snapshot.LifetimeEarnedExp);
 
         #endregion
     }

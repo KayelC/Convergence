@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Fusion.Strategies;
 using JRPGPrototype.Logic.Fusion.Messaging;
 using JRPGPrototype.Logic.Fusion.Bridges;
+using JRPGPrototype.Logic.Fusion.Inheritance;
 
 namespace JRPGPrototype.Logic.Fusion
 {
@@ -22,6 +24,9 @@ namespace JRPGPrototype.Logic.Fusion
         private readonly IGameIO _io;
         private readonly IFusionMessenger _messenger;
         private readonly Random _rnd;
+        private readonly LegacyFusionContentAdapter _adapter;
+        private readonly FusionResultResolver _resultResolver;
+        private readonly FusionPlanningService _planningService;
 
         // Lookup dictionary: Dictionary<RaceA, Dictionary<RaceB, ResultString>>
         private readonly Dictionary<string, Dictionary<string, string>> _raceTable;
@@ -36,6 +41,14 @@ namespace JRPGPrototype.Logic.Fusion
             _io = io;
             _messenger = messenger;
             _rnd = random ?? throw new ArgumentNullException(nameof(random));
+            _adapter = LegacyFusionContentAdapter.Shared;
+            var randomSource = new LegacyFusionRandomSource(_rnd);
+            _resultResolver = new FusionResultResolver(_adapter, randomSource);
+            _planningService = new FusionPlanningService(
+                _adapter,
+                _resultResolver,
+                randomSource,
+                new FusionInheritancePlanner());
             _raceTable = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             LoadFusionTable();
         }
@@ -91,173 +104,53 @@ namespace JRPGPrototype.Logic.Fusion
             if (a.ActivePersona == null || b.ActivePersona == null)
                 return (FusionOperationType.NoFusionPossible, null, false);
 
-            // Establish Identifiers
-            string idA = a.SourceId;
-            string idB = b.SourceId;
-            string raceA = a.ActivePersona.Race;
-            string raceB = b.ActivePersona.Race;
+            FusionResolvedResult result = _resultResolver.Resolve(new FusionResultRequest(
+                _adapter.ToParticipant(a),
+                _adapter.ToParticipant(b),
+                moonPhase));
 
-            // Accident Roll
-            int accidentThreshold = (moonPhase == 8) ? 12 : 1;
-            bool isAccident = _rnd.Next(0, 100) < accidentThreshold;
-
-            // --- TIER 0: GLOBAL MITAMA OVERRIDE ---
-            // If one parent is a Mitama, it's always a Stat Boost, unless the other is also a Mitama.
-            bool aIsMitama = raceA.Equals("Mitama", StringComparison.OrdinalIgnoreCase);
-            bool bIsMitama = raceB.Equals("Mitama", StringComparison.OrdinalIgnoreCase);
-
-            if (aIsMitama || bIsMitama)
+            if (!result.IsSuccessful || result.ResultEntityId is null)
             {
-                // If both are Mitamas, typically no result
-                if (aIsMitama && bIsMitama)
+                foreach (FusionRuntimeDiagnostic diagnostic in result.Diagnostics)
                 {
-                    _messenger.Publish("[Fusion Trace] Mitama + Mitama fusion is not supported.", ConsoleColor.DarkGray);
-                    return (FusionOperationType.NoFusionPossible, null, false);
+                    _messenger.Publish($"[Fusion Trace] {diagnostic.Message}", ConsoleColor.DarkGray);
                 }
 
-                // Identify the non-Mitama parent to receive the boost
-                Combatant target = aIsMitama ? b : a;
-
-                // Check: Non-Mitama parent cannot be an Element (Elements only Rank Up/Down)
-                if (target.ActivePersona.Race.Equals("Element", StringComparison.OrdinalIgnoreCase))
-                {
-                    _messenger.Publish("[Fusion Trace] Elements cannot receive Mitama stat boosts.", ConsoleColor.DarkGray);
-                    return (FusionOperationType.NoFusionPossible, null, false);
-                }
-
-                _messenger.Publish($"[Fusion Trace] Mitama Global Override: Stat boosting {target.Name}", ConsoleColor.DarkGray);
-                return (FusionOperationType.StatBoostFusion, target.SourceId.ToLower(), isAccident);
-            }
-
-            // --- TIER 1 & 2: TABLE LOOKUP ---
-            string? resultString = null;
-
-            // Search by Specific IDs
-            if (_raceTable.TryGetValue(idA, out var idBranch) && idBranch.TryGetValue(idB, out resultString))
-            {
-                _messenger.Publish($"[Fusion Trace] Match found via Specific IDs: {idA} + {idB}", ConsoleColor.DarkGray);
-            }
-            // Search by Races
-            else if (_raceTable.TryGetValue(raceA, out var raceBranch) && raceBranch.TryGetValue(raceB, out resultString))
-            {
-                _messenger.Publish($"[Fusion Trace] Match found via Races: {raceA} + {raceB}", ConsoleColor.DarkGray);
-            }
-
-            if (resultString == null)
-            {
-                _messenger.Publish($"[Fusion Trace] No combination found for {idA}({raceA}) + {idB}({raceB})", ConsoleColor.DarkGray);
                 return (FusionOperationType.NoFusionPossible, null, false);
             }
 
-            // PRIORITY 1: Literal ID Search (Element/Mitama Creation)
-            string lookupId = resultString.ToLower();
-            if (Database.Personas.ContainsKey(lookupId))
+            string targetEntityId = _adapter.EntityId(result.ResultEntityId.Value);
+            FusionOperationType operation = result.Operation switch
             {
-                _messenger.Publish($"[Fusion Trace] Result identified as Entity ID: {lookupId}", ConsoleColor.DarkGray);
-                return (FusionOperationType.CreateNewDemon, lookupId, isAccident);
-            }
+                FusionRuntimeOperation.CreateNewEntity => FusionOperationType.CreateNewDemon,
+                FusionRuntimeOperation.RankUpParent => FusionOperationType.RankUpParent,
+                FusionRuntimeOperation.RankDownParent => FusionOperationType.RankDownParent,
+                FusionRuntimeOperation.StatBoost => FusionOperationType.StatBoostFusion,
+                _ => FusionOperationType.NoFusionPossible
+            };
 
-            // PRIORITY 2: Rank Up/Down Logic
-            if (resultString == "1" || resultString == "-1")
-            {
-                Combatant? parentToRank = null;
-                if (!raceA.Equals("Element", StringComparison.OrdinalIgnoreCase)) parentToRank = a;
-                else if (!raceB.Equals("Element", StringComparison.OrdinalIgnoreCase)) parentToRank = b;
-
-                if (parentToRank != null)
-                {
-                    int rankDir = (resultString == "1") ? 1 : -1;
-                    int targetRank = parentToRank.ActivePersona.Rank + rankDir;
-
-                    // Find the new entity in the database that matches the Race and the Target Rank
-                    var nextRankData = Database.Personas.Values.FirstOrDefault(p =>
-                        p.Race.Equals(parentToRank.ActivePersona.Race, StringComparison.OrdinalIgnoreCase) &&
-                        p.Rank == targetRank);
-
-                    if (nextRankData != null)
-                    {
-                        var op = (resultString == "1") ? FusionOperationType.RankUpParent : FusionOperationType.RankDownParent;
-                        _messenger.Publish($"[Fusion Trace] Rank Mutation: Target {nextRankData.Name} identified.", ConsoleColor.DarkGray);
-
-                        // Return the NEW ID, not the parent's ID
-                        return (op, nextRankData.Id.ToLower(), isAccident);
-                    }
-                }
-                return (FusionOperationType.NoFusionPossible, null, false);
-            }
-
-            // PRIORITY 3: Normal Race Fusion (Level-Based)
-            // resultString is assumed to be a Race Name (e.g., "Fury")
-
-            // Get templates to find Base Levels
-            if (!Database.Personas.TryGetValue(a.SourceId.ToLower(), out var templateA) ||
-                !Database.Personas.TryGetValue(b.SourceId.ToLower(), out var templateB))
-            {
-                return (FusionOperationType.NoFusionPossible, null, false);
-            }
-
-            int avgBaseLevel = (templateA.Level + templateB.Level) / 2;
-            int targetLevel = avgBaseLevel + _rnd.Next(1, 6); // Add 1 to 5 to the average base level.
-
-            // Fetch all demons of the resulting race
-            var racePool = Database.Personas.Values
-                .Where(p => p.Race.Equals(resultString, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p.Level).ToList();
-
-            if (!racePool.Any())
-            {
-                _messenger.Publish($"[Fusion Trace] Resulting Race '{resultString}' has no members in database.", ConsoleColor.DarkGray);
-                return (FusionOperationType.NoFusionPossible, null, false);
-            }
-
-            PersonaData resultData;
-            if (isAccident)
-            {
-                resultData = racePool.First();
-                _messenger.Publish("[Fusion Trace] Fusion Accident! Result shifted to lowest tier.", ConsoleColor.DarkGray);
-            }
-            else
-            {
-                // Find nearest match where p.Level >= targetLevel, or default to the highest in that race
-                resultData = racePool.FirstOrDefault(p => p.Level >= targetLevel) ?? racePool.Last();
-
-                // Rule: If the result is one of the parents, move to the next tier in the pool
-                if (resultData.Id == templateA.Id || resultData.Id == templateB.Id)
-                {
-                    int idx = racePool.IndexOf(resultData);
-                    if (idx + 1 < racePool.Count) resultData = racePool[idx + 1];
-                    _messenger.Publish("[Fusion Trace] Result matches parent; shifting to next tier.", ConsoleColor.DarkGray);
-                }
-            }
-
-            _messenger.Publish($"[Fusion Trace] Normal Fusion: Predicted Result -> {resultData.Name}", ConsoleColor.DarkGray);
-            return (FusionOperationType.CreateNewDemon, resultData.Id, isAccident);
+            _messenger.Publish($"[Fusion Trace] Framework fusion resolved {operation} -> {targetEntityId}", ConsoleColor.DarkGray);
+            return (operation, targetEntityId, result.IsAccident);
         }
 
         // Aggregates all unique skills from parents to determine the total inheritable pool.
         public List<string> GetInheritableSkills(params Combatant[] parents)
         {
-            List<string> pool = new List<string>();
-            foreach (var p in parents)
+            var skills = new List<string>();
+            foreach (Combatant parent in parents.Where(parent => parent != null))
             {
-                if (p == null) continue;
-
-                foreach (var skillName in p.GetConsolidatedSkills())
+                foreach (string skillName in parent.GetConsolidatedSkills())
                 {
-                    // 1. Find the skill in the database to check its effect text
-                    if (Database.Skills.TryGetValue(skillName, out var skillData))
+                    if (_adapter.TryGetSkill(_adapter.ContentIdForSkill(skillName), out var skill) &&
+                        skill is not null &&
+                        skill.Inheritance.IsInheritable)
                     {
-                        // Filter out skills marked as exclusive in their effect description
-                        bool isExclusive = skillData.IsExclusive();
-
-                        if (!isExclusive)
-                        {
-                            pool.Add(skillName);
-                        }
+                        skills.Add(skill.DisplayName);
                     }
                 }
             }
-            return pool.Distinct().ToList();
+
+            return skills.Distinct().ToList();
         }
 
         /// <summary>
@@ -266,24 +159,21 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         public List<string> GetExclusiveSkills(params Combatant[] parents)
         {
-            List<string> pool = new List<string>();
-            foreach (var p in parents)
+            var skills = new List<string>();
+            foreach (Combatant parent in parents.Where(parent => parent != null))
             {
-                if (p == null) continue;
-
-                foreach (var skillName in p.GetConsolidatedSkills())
+                foreach (string skillName in parent.GetConsolidatedSkills())
                 {
-                    if (Database.Skills.TryGetValue(skillName, out var skillData))
+                    if (_adapter.TryGetSkill(_adapter.ContentIdForSkill(skillName), out var skill) &&
+                        skill is not null &&
+                        !skill.Inheritance.IsInheritable)
                     {
-                        if (skillData.IsExclusive())
-                        {
-                            pool.Add(skillName);
-                        }
+                        skills.Add(skill.DisplayName);
                     }
                 }
             }
-            // Use Union or Distinct to prevent duplicates in the pool
-            return pool.Distinct().ToList();
+
+            return skills.Distinct().ToList();
         }
 
         /// <summary>
@@ -292,50 +182,18 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         public string GetMutatedSkill(string originalSkillName)
         {
-            if (!Database.Skills.TryGetValue(originalSkillName, out var current)) return originalSkillName;
-
-            // Skills with Rank "-" or Family "-" cannot evolve/mutate
-            if (!current.CanEvolve()) return originalSkillName;
-
-            if (!int.TryParse(current.Rank, out int currentRankInt)) return originalSkillName;
-
-            // Mutation Roll: 50% Rank Up, 50% Rank Down
-            int direction = _rnd.Next(0, 2) == 0 ? 1 : -1;
-
-            // Rule: If Rank 1 and rolling down, it must go Up.
-            if (currentRankInt == 1 && direction == -1) direction = 1;
-
-            int targetRank = currentRankInt + direction;
-
-            // Search for the skill in the same family with the target rank
-            var mutation = Database.Skills.Values.FirstOrDefault(s =>
-                s.Family.Equals(current.Family, StringComparison.OrdinalIgnoreCase) &&
-                s.Rank == targetRank.ToString());
-
-            // If no higher or lower rank exists in the database, return the original (Ignore Mutation)
-            return mutation?.Name ?? originalSkillName;
+            return _adapter.SkillName(_planningService.MutateSkill(_adapter.ContentIdForSkill(originalSkillName)));
         }
 
         // Calculates the number of skill slots available for inheritance based on total unique parent skills.
         public int GetInheritanceSlotCount(params Combatant[] parents)
         {
-            // Slots are calculated based on the LEGAL inheritable skills only.
-            int uniqueSkillCount = GetInheritableSkills(parents).Count;
-
-            // Inheritance Scaling
-            // 1-6 skills = 1 slot
-            // 7-9 skills = 2 slots
-            // 10-13 skills = 3 slots
-            // 14-18 skills = 4 slots
-            // 19-23 skills = 5 slots
-            // 24+ skills = 6 slots
-            if (uniqueSkillCount >= 24) return 6;
-            if (uniqueSkillCount >= 19) return 5;
-            if (uniqueSkillCount >= 14) return 4;
-            if (uniqueSkillCount >= 10) return 3;
-            if (uniqueSkillCount >= 7) return 2;
-
-            return 1;
+            var legalSkills = GetInheritableSkills(parents)
+                .Select(_adapter.ContentIdForSkill)
+                .Select(id => _adapter.TryGetSkill(id, out var skill) ? skill : null)
+                .Where(skill => skill is not null)
+                .Cast<SkillDefinition>();
+            return _planningService.GetInheritanceSlotCount(legalSkills);
         }
     }
 }
