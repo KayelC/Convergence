@@ -44,15 +44,17 @@ Battles use an SMT-style Press Turn loop.
 
 Core flow:
 
-1. `BattleConductor.StartBattle` announces enemies and rolls initiative through `CombatMath.RollInitiative`.
-2. Initial passive buffs are applied by `StatusRegistry.ProcessInitialPassives`.
-3. Each side begins a phase with one full turn icon per alive actor through `PressTurnEngine.StartPhase`.
-4. Actors process turn-start restrictions through `StatusRegistry.ProcessTurnStart`.
-5. Player choices are collected by `InteractionBridge`; enemy choices are selected by `BehaviorEngine`.
-6. `ActionProcessor` executes attacks, skills, items, swaps, and analysis.
+1. `BattleConductor.StartBattle` announces enemies and creates a console adapter for `BattleEncounterRunner`.
+2. `BattleEncounterRunner` resolves initiative through the adapter, then dispatches battle-start lifecycle.
+3. Each active team begins a phase with one full turn icon per alive actor through `PressTurnEngine.StartPhase`.
+4. Actors process turn-start restrictions once through the framework lifecycle boundary.
+5. Player choices are collected by `InteractionBridge`; enemy choices are selected by `BehaviorEngine` through the framework turn handler.
+6. `ActionProcessor` executes legacy attacks, skills, items, swaps, negotiation, and analysis as a host-owned action adapter.
 7. Effects are resolved by `BattleEffectRegistry` strategies and `CombatMath`.
-8. `PressTurnEngine` consumes, chains, or terminates icons according to hit outcome.
-9. Battle completion resolves rewards, recruitment, cleanup, and compendium registration.
+8. `BattleEncounterRunner` consumes, chains, passes, or terminates Press Turn icons from typed turn-consumption results.
+9. Turn-end lifecycle runs after committed actions, passes, skips, and host-mediated turn-consuming commands.
+10. Battle completion returns victory, defeat, escape, draw, cancellation, or fault to the console host.
+11. Battle rewards, recruitment side effects, cleanup, and compendium registration remain console-owned after the runner reports the outcome.
 
 Important battle concepts:
 
@@ -214,6 +216,14 @@ The preserved parity rules are:
 - zero evasion multipliers are valid for legacy immobilization-style ailments.
 
 `convergence.status_lifecycle_demo` reauthors the 11 legacy ailments as clean content for tests and future hosts. The legacy `status_ailments.json` file remains unchanged and continues to feed ordinary console loading.
+
+## Framework Battle Orchestration Foundation
+
+Track J moves the encounter loop itself into `BattleEncounterRunner`. The framework now owns the ordered battle state machine, including initiative policy, battle-start lifecycle, phase setup, turn-start lifecycle, command execution boundary, Press Turn consumption, turn-end lifecycle, phase-end cleanup, participant refresh, completion checks, cancellation, typed faults, and serializer-neutral battle events.
+
+The ordinary console battle now runs through this framework runner. The console adapter still owns the live `Combatant` objects, `InteractionBridge` menus, `ActionProcessor` legacy skill and item execution, `BehaviorEngine` AI heuristics, `NegotiationEngine`, reward payout, data files, message colors, waits, and final cleanup. This is adapter-first migration: the flow is reusable, but the legacy content and effect semantics are still protected until their later tracks.
+
+Track J does not migrate negotiation, recruitment, EXP/Macca reward ownership, inventory/equipment ownership, production skill reauthoring, or complete AI policy authoring. Those remain Track K and later work.
 
 ## Extension Mindset
 

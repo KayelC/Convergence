@@ -312,240 +312,319 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         if (request.RoundLimit <= 0) throw new ArgumentOutOfRangeException(nameof(request), "Round limit must be positive.");
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
 
-        var events = new List<BattleRuntimeEvent>();
-        int sequence = 0;
-        void Add(BattleRuntimeEventKind kind, string message, ContentId? actor = null,
-            ContentId? target = null, ContentId? skill = null, decimal? value = null) =>
-            events.Add(new BattleRuntimeEvent(++sequence, kind, message, actor, target, skill, value));
-
-        foreach (CatalogBattleActor actor in request.Participants)
-        {
-            actor.State.Passives.ResetBattleActivations();
-            Add(BattleRuntimeEventKind.ActorCreated,
-                $"Created {actor.Entity.DisplayName} as {actor.State.InstanceId} on {actor.State.TeamId}.",
-                actor.State.InstanceId);
-        }
-
-        var knowledge = request.Participants.Select(actor => actor.State.TeamId).Distinct()
-            .ToDictionary(team => team, _ => new ElementalAffinityKnowledge());
-        Add(BattleRuntimeEventKind.BattleStarted, "Battle started.");
-        DispatchEventToAll(ContentId.Parse("battle_start"), request, Add);
-
-        ContentId[] teamOrder = request.Participants.Select(actor => actor.State.TeamId).Distinct().ToArray();
-        for (int round = 1; round <= request.RoundLimit; round++)
-        {
-            Add(BattleRuntimeEventKind.RoundStarted, $"Round {round} started.");
-            foreach (ContentId teamId in teamOrder)
-            {
-                CatalogBattleActor[] phaseActors = request.Participants
-                    .Where(actor => actor.State.TeamId == teamId && actor.State.IsActive && !actor.State.IsDefeated)
-                    .ToArray();
-                if (phaseActors.Length == 0) continue;
-
-                var pressTurn = new PressTurnEngine();
-                pressTurn.StartPhase(phaseActors.Length);
-                Add(BattleRuntimeEventKind.PhaseStarted,
-                    $"Team {teamId} started a phase with {pressTurn.GetTotalIconCount()} icon(s).");
-                int actorIndex = 0;
-                while (pressTurn.HasTurnsRemaining())
-                {
-                    phaseActors = phaseActors.Where(actor => !actor.State.IsDefeated && actor.State.IsActive).ToArray();
-                    if (phaseActors.Length == 0) break;
-                    CatalogBattleActor actor = phaseActors[actorIndex++ % phaseActors.Length];
-                    var selectionRequest = new BattleActionSelectionRequest(
-                        actor,
-                        request.Participants,
-                        request.ContextId,
-                        request.BattleKindId,
-                        request.MoonPhaseId,
-                        knowledge[teamId]);
-                    BattleActionSelection selection = _selector.Select(selectionRequest);
-                    if (selection.Status == BattleActionSelectionStatus.Pass || selection.Skill is null)
-                    {
-                        pressTurn.Pass();
-                        Add(BattleRuntimeEventKind.SkillPassed, $"{actor.State.InstanceId} passed.", actor.State.InstanceId);
-                        DispatchOwnerTurnEnd(actor, request, Add);
-                        Add(BattleRuntimeEventKind.PressTurnChanged,
-                            $"Press Turn: {pressTurn.FullIcons} full, {pressTurn.BlinkingIcons} blinking.");
-                    }
-                    else
-                    {
-                        Add(BattleRuntimeEventKind.SkillSelected,
-                            $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}.",
-                            actor.State.InstanceId,
-                            selection.SelectedTargetIds.FirstOrDefault(),
-                            selection.Skill.Id);
-                        var executionRequest = new SkillExecutionRequest(
-                            selection.Skill,
-                            actor.State,
-                            request.Participants.Select(participant => participant.State),
-                            request.ContextId,
-                            request.BattleKindId,
-                            request.MoonPhaseId,
-                            selection.SelectedTargetIds);
-                        SkillExecutionResult execution = _executor.Execute(executionRequest);
-                        if (execution.Status == SkillExecutionStatus.Rejected)
-                        {
-                            string fault = $"Selected skill '{selection.Skill.Id}' was rejected: " +
-                                           string.Join("; ", execution.Diagnostics.Select(diagnostic => diagnostic.Message));
-                            Add(BattleRuntimeEventKind.BattleFaulted, fault, actor.State.InstanceId, skill: selection.Skill.Id);
-                            return Finish(AutomatedBattleOutcome.Faulted, null, request, events, fault);
-                        }
-
-                        RecordExecution(actor, selection.Skill, execution, request, knowledge[teamId], Add);
-                        pressTurn.ConsumeAction(execution.PressTurn);
-                        Add(BattleRuntimeEventKind.PressTurnChanged,
-                            $"Press Turn: {pressTurn.FullIcons} full, {pressTurn.BlinkingIcons} blinking.",
-                            actor.State.InstanceId,
-                            skill: selection.Skill.Id);
-                        DispatchOwnerTurnEnd(actor, request, Add);
-                    }
-
-                    ContentId? winner = FindWinner(request.Participants);
-                    if (winner is ContentId winningTeam)
-                    {
-                        Add(BattleRuntimeEventKind.BattleEnded, $"Team {winningTeam} won.");
-                        return Finish(AutomatedBattleOutcome.Victory, winningTeam, request, events);
-                    }
-                }
-            }
-        }
-
-        Add(BattleRuntimeEventKind.BattleEnded, $"Battle ended in a draw after {request.RoundLimit} round(s).");
-        return Finish(AutomatedBattleOutcome.Draw, null, request, events);
-    }
-
-    private void DispatchEventToAll(
-        ContentId eventId,
-        AutomatedBattleRequest request,
-        Action<BattleRuntimeEventKind, string, ContentId?, ContentId?, ContentId?, decimal?> add)
-    {
-        foreach (CatalogBattleActor actor in request.Participants)
-        {
-            PassiveTriggerDispatchResult dispatch = _services.PassiveTriggers.Dispatch(
-                new PassiveTriggerDispatchRequest(
-                    eventId,
-                    actor.State,
-                    request.Participants.Select(participant => participant.State),
-                    [actor.State],
-                    request.ContextId,
-                    request.BattleKindId,
-                    request.MoonPhaseId),
-                _services);
-            RecordPassives(actor, dispatch, add);
-        }
-    }
-
-    private void DispatchOwnerTurnEnd(
-        CatalogBattleActor actor,
-        AutomatedBattleRequest request,
-        Action<BattleRuntimeEventKind, string, ContentId?, ContentId?, ContentId?, decimal?> add)
-    {
-        PassiveTriggerDispatchResult dispatch = _services.PassiveTriggers.Dispatch(
-            new PassiveTriggerDispatchRequest(
-                ContentId.Parse("owner_turn_end"),
-                actor.State,
-                request.Participants.Select(participant => participant.State),
-                [actor.State],
+        BattleEncounterParticipant[] participants = request.Participants
+            .Select(actor => new BattleEncounterParticipant(actor.State, actor.Entity.DisplayName))
+            .ToArray();
+        var services = new BattleEncounterServices(
+            new ParticipantOrderInitiativePolicy(),
+            new AutomatedBattleLifecyclePort(_services),
+            new AutomatedBattleTurnHandler(_executor, _selector, _services, request.Participants),
+            new LastTeamStandingCompletionPolicy());
+        BattleEncounterResult result = new BattleEncounterRunner().Run(
+            new BattleEncounterRequest(
+                participants,
                 request.ContextId,
                 request.BattleKindId,
-                request.MoonPhaseId),
-            _services);
-        RecordPassives(actor, dispatch, add);
+                request.MoonPhaseId,
+                request.RoundLimit),
+            services);
+
+        return new AutomatedBattleResult(
+            result.Outcome switch
+            {
+                BattleEncounterOutcome.Victory => AutomatedBattleOutcome.Victory,
+                BattleEncounterOutcome.Faulted => AutomatedBattleOutcome.Faulted,
+                _ => AutomatedBattleOutcome.Draw
+            },
+            result.WinningTeamId,
+            request.Participants,
+            ToRuntimeEvents(result.Events),
+            result.FaultMessage);
+    }
+
+    private static IReadOnlyList<BattleRuntimeEvent> ToRuntimeEvents(IEnumerable<BattleEncounterEvent> events)
+    {
+        var mapped = new List<BattleRuntimeEvent>();
+        foreach (BattleEncounterEvent battleEvent in events)
+        {
+            BattleRuntimeEventKind? kind = battleEvent.Kind switch
+            {
+                BattleEncounterEventKind.ActorCreated => BattleRuntimeEventKind.ActorCreated,
+                BattleEncounterEventKind.BattleStarted => BattleRuntimeEventKind.BattleStarted,
+                BattleEncounterEventKind.RoundStarted => BattleRuntimeEventKind.RoundStarted,
+                BattleEncounterEventKind.PhaseStarted => BattleRuntimeEventKind.PhaseStarted,
+                BattleEncounterEventKind.CommandSelected => BattleRuntimeEventKind.SkillSelected,
+                BattleEncounterEventKind.CommandPassed => BattleRuntimeEventKind.SkillPassed,
+                BattleEncounterEventKind.EffectResolved => BattleRuntimeEventKind.EffectResolved,
+                BattleEncounterEventKind.PassiveActivated => BattleRuntimeEventKind.PassiveActivated,
+                BattleEncounterEventKind.PressTurnChanged => BattleRuntimeEventKind.PressTurnChanged,
+                BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
+                BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
+                BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,
+                BattleEncounterEventKind.BattleEnded => BattleRuntimeEventKind.BattleEnded,
+                _ => null
+            };
+            if (kind is null)
+            {
+                continue;
+            }
+
+            mapped.Add(new BattleRuntimeEvent(
+                mapped.Count + 1,
+                kind.Value,
+                battleEvent.Message,
+                battleEvent.ActorId,
+                battleEvent.TargetId,
+                battleEvent.SourceId,
+                battleEvent.Value));
+        }
+
+        return Array.AsReadOnly(mapped.ToArray());
+    }
+
+    private sealed class AutomatedBattleLifecyclePort : IBattleEncounterLifecyclePort
+    {
+        private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
+        private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
+        private readonly BattleExecutionServices _services;
+
+        public AutomatedBattleLifecyclePort(BattleExecutionServices services)
+        {
+            _services = services ?? throw new ArgumentNullException(nameof(services));
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Dispatch(BattleStart, request.Participants, request.Encounter));
+
+        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []));
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Dispatch(OwnerTurnEnd, [request.Actor], request.Encounter));
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        private IReadOnlyList<BattleEncounterEvent> Dispatch(
+            ContentId eventId,
+            IEnumerable<BattleEncounterParticipant> actors,
+            BattleEncounterRequest request)
+        {
+            var events = new List<BattleEncounterEvent>();
+            RuntimeActorState[] states = request.Participants.Select(participant => participant.State).ToArray();
+            foreach (BattleEncounterParticipant actor in actors)
+            {
+                PassiveTriggerDispatchResult dispatch = _services.PassiveTriggers.Dispatch(
+                    new PassiveTriggerDispatchRequest(
+                        eventId,
+                        actor.State,
+                        states,
+                        [actor.State],
+                        request.ContextId,
+                        request.BattleKindId,
+                        request.MoonPhaseId),
+                    _services);
+                RecordPassives(events, actor.State.InstanceId, dispatch);
+            }
+
+            return Array.AsReadOnly(events.ToArray());
+        }
+    }
+
+    private sealed class AutomatedBattleTurnHandler : IBattleEncounterTurnHandler
+    {
+        private readonly ISkillExecutor _executor;
+        private readonly IBattleActionSelector _selector;
+        private readonly IReadOnlyList<CatalogBattleActor> _actors;
+        private readonly Dictionary<ContentId, ElementalAffinityKnowledge> _knowledge;
+
+        public AutomatedBattleTurnHandler(
+            ISkillExecutor executor,
+            IBattleActionSelector selector,
+            BattleExecutionServices services,
+            IReadOnlyList<CatalogBattleActor> actors)
+        {
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+            _selector = selector ?? throw new ArgumentNullException(nameof(selector));
+            ArgumentNullException.ThrowIfNull(services);
+            _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+            _knowledge = _actors.Select(actor => actor.State.TeamId).Distinct()
+                .ToDictionary(team => team, _ => new ElementalAffinityKnowledge());
+        }
+
+        public ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CatalogBattleActor actor = _actors.Single(actor => actor.State.InstanceId == request.Actor.InstanceId);
+            var events = new List<BattleEncounterEvent>();
+
+            if (request.TurnStartOutcome != BattleTurnStartOutcome.CanAct)
+            {
+                return new ValueTask<BattleEncounterCommandResult>(
+                    BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+            }
+
+            var selectionRequest = new BattleActionSelectionRequest(
+                actor,
+                _actors,
+                request.Encounter.ContextId,
+                request.Encounter.BattleKindId,
+                request.Encounter.MoonPhaseId,
+                _knowledge[actor.State.TeamId]);
+            BattleActionSelection selection = _selector.Select(selectionRequest);
+            if (selection.Status == BattleActionSelectionStatus.Pass || selection.Skill is null)
+            {
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.CommandPassed,
+                    $"{actor.State.InstanceId} passed.",
+                    actor.State.InstanceId));
+                return new ValueTask<BattleEncounterCommandResult>(
+                    BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass, events));
+            }
+
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.CommandSelected,
+                $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}.",
+                actor.State.InstanceId,
+                selection.SelectedTargetIds.FirstOrDefault(),
+                selection.Skill.Id));
+
+            SkillExecutionResult execution = _executor.Execute(new SkillExecutionRequest(
+                selection.Skill,
+                actor.State,
+                _actors.Select(participant => participant.State),
+                request.Encounter.ContextId,
+                request.Encounter.BattleKindId,
+                request.Encounter.MoonPhaseId,
+                selection.SelectedTargetIds));
+            if (execution.Status == SkillExecutionStatus.Rejected)
+            {
+                string fault = $"Selected skill '{selection.Skill.Id}' was rejected: " +
+                               string.Join("; ", execution.Diagnostics.Select(diagnostic => diagnostic.Message));
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.BattleFaulted,
+                    fault,
+                    actor.State.InstanceId,
+                    SourceId: selection.Skill.Id));
+                return new ValueTask<BattleEncounterCommandResult>(
+                    BattleEncounterCommandResult.Faulted(fault, events));
+            }
+
+            RecordExecution(events, actor, selection.Skill, execution, _actors, _knowledge[actor.State.TeamId]);
+            return new ValueTask<BattleEncounterCommandResult>(
+                BattleEncounterCommandResult.Executed(
+                    ActionTurnConsumption.FromPressTurn(execution.PressTurn),
+                    events));
+        }
     }
 
     private static void RecordExecution(
+        List<BattleEncounterEvent> events,
         CatalogBattleActor actor,
         SkillDefinition skill,
         SkillExecutionResult execution,
-        AutomatedBattleRequest request,
-        ElementalAffinityKnowledge knowledge,
-        Action<BattleRuntimeEventKind, string, ContentId?, ContentId?, ContentId?, decimal?> add)
+        IReadOnlyList<CatalogBattleActor> participants,
+        ElementalAffinityKnowledge knowledge)
     {
         foreach (EffectExecutionResult effect in execution.Effects)
         {
-            add(BattleRuntimeEventKind.EffectResolved,
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.EffectResolved,
                 $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.PressTurnOutcome}).",
                 actor.State.InstanceId,
                 effect.TargetId,
                 skill.Id,
-                effect.Value);
+                effect.Value));
             if (effect.Value is decimal value)
             {
-                add(BattleRuntimeEventKind.ResourceChanged,
-                    $"Resource changed by {value}.", actor.State.InstanceId, effect.TargetId, skill.Id, value);
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ResourceChanged,
+                    $"Resource changed by {value}.",
+                    actor.State.InstanceId,
+                    effect.TargetId,
+                    skill.Id,
+                    value));
             }
 
-            if (effect.TargetId is ContentId targetId && effect.ResolvedAffinity is ElementalAffinity affinity &&
+            if (effect.TargetId is ContentId targetId &&
+                effect.ResolvedAffinity is ElementalAffinity affinity &&
                 skill.Effects.ElementAtOrDefault(effect.EffectIndex) is DamageEffectDefinition damage)
             {
-                CatalogBattleActor? target = request.Participants.FirstOrDefault(candidate => candidate.State.InstanceId == targetId);
+                CatalogBattleActor? target = participants.FirstOrDefault(candidate => candidate.State.InstanceId == targetId);
                 if (target is not null) knowledge.Learn(target.Entity.Id, damage.Element, affinity);
             }
 
             foreach (PassiveTriggerExecutionResult passive in effect.PassiveActivations ?? [])
             {
-                add(BattleRuntimeEventKind.PassiveActivated,
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.PassiveActivated,
                     $"Passive {passive.SkillId} resolved as {passive.Outcome}.",
                     passive.TargetId,
                     passive.TargetId,
-                    passive.SkillId,
-                    null);
+                    passive.SkillId));
             }
-        }
-
-        foreach (CatalogBattleActor target in request.Participants.Where(candidate => candidate.State.IsDefeated))
-        {
-            add(BattleRuntimeEventKind.ActorDefeated,
-                $"{target.State.InstanceId} was defeated.", target.State.InstanceId, null, null, null);
         }
     }
 
     private static void RecordPassives(
-        CatalogBattleActor actor,
-        PassiveTriggerDispatchResult dispatch,
-        Action<BattleRuntimeEventKind, string, ContentId?, ContentId?, ContentId?, decimal?> add)
+        List<BattleEncounterEvent> events,
+        ContentId actorId,
+        PassiveTriggerDispatchResult dispatch)
     {
         foreach (PassiveTriggerExecutionResult activation in dispatch.Activations)
         {
-            add(BattleRuntimeEventKind.PassiveActivated,
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.PassiveActivated,
                 $"Passive {activation.SkillId} resolved as {activation.Outcome}.",
-                actor.State.InstanceId,
+                actorId,
                 activation.TargetId,
-                activation.SkillId,
-                null);
+                activation.SkillId));
             foreach (EffectExecutionResult effect in activation.Effects)
             {
-                add(BattleRuntimeEventKind.EffectResolved,
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.EffectResolved,
                     $"Passive effect {effect.EffectIndex} resolved as {effect.Outcome}.",
-                    actor.State.InstanceId,
+                    actorId,
                     effect.TargetId,
                     activation.SkillId,
-                    effect.Value);
+                    effect.Value));
                 if (effect.Value is decimal value)
                 {
-                    add(BattleRuntimeEventKind.ResourceChanged,
-                        $"Resource changed by {value}.", actor.State.InstanceId, effect.TargetId, activation.SkillId, value);
+                    events.Add(new BattleEncounterEvent(
+                        0,
+                        BattleEncounterEventKind.ResourceChanged,
+                        $"Resource changed by {value}.",
+                        actorId,
+                        effect.TargetId,
+                        activation.SkillId,
+                        value));
                 }
             }
         }
     }
-
-    private static ContentId? FindWinner(IReadOnlyList<CatalogBattleActor> participants)
-    {
-        ContentId[] livingTeams = participants
-            .Where(actor => actor.State.IsActive && !actor.State.IsDefeated)
-            .Select(actor => actor.State.TeamId)
-            .Distinct()
-            .ToArray();
-        return livingTeams.Length == 1 ? livingTeams[0] : null;
-    }
-
-    private static AutomatedBattleResult Finish(
-        AutomatedBattleOutcome outcome,
-        ContentId? winningTeam,
-        AutomatedBattleRequest request,
-        IEnumerable<BattleRuntimeEvent> events,
-        string? fault = null) =>
-        new(outcome, winningTeam, request.Participants, events, fault);
 }

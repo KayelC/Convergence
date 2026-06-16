@@ -104,13 +104,13 @@ The following capabilities must not disappear during migration.
 | Persona stock and demon stock | `Combatant`, `PartyManager` | Missing |
 | Summon, return, swap, dismiss, duplicate checks | `PartyManager` | Missing |
 | Legacy battle math | `CombatMath` | Interfaces exist; production policy missing |
-| Press Turn | `PressTurnEngine` | Typed overload exists; full interactive orchestration not migrated |
-| Basic attack, guard, pass, skill, item, analyze, swap | `ActionProcessor`, `BattleConductor` | Skills/items partial; remaining actions missing |
+| Press Turn | `PressTurnEngine` | Framework encounter runner now orchestrates console Press Turn phases; engine remains shared compatibility |
+| Basic attack, guard, pass, skill, item, analyze, swap | `ActionProcessor`, `BattleConductor` | Action facade exists; legacy skill/item/effect semantics remain host-owned |
 | Typed damage, recovery, cures, buffs, shields | Legacy effects and clean executors | Clean foundation exists; parity incomplete |
 | Ailment restrictions and lifecycle | `StatusRegistry` | Framework lifecycle service with console adapter; production content migration incomplete |
 | Passive startup and turn-end behavior | `StatusRegistry` | Framework lifecycle dispatch for startup/turn-end paths; production content migration incomplete |
-| Enemy AI and tactics | `BehaviorEngine`, `BattleConductor` | Minimal deterministic selector only |
-| Affinity knowledge and analysis | `BattleKnowledge` | Clean stores exist; interactive use incomplete |
+| Enemy AI and tactics | `BehaviorEngine`, `BattleConductor` | Framework strategy boundary exists; ordinary AI still delegates to legacy heuristics |
+| Affinity knowledge and analysis | `BattleKnowledge` | Clean stores exist; interactive battle still uses legacy session knowledge |
 | Negotiation, demands, recruitment | `NegotiationEngine`, `BattleConductor` | Missing |
 | EXP and Macca battle rewards | `CombatMath`, `BattleConductor` | Missing |
 | Inventory quantities | `InventoryManager` | Item executor reports consumption only |
@@ -624,6 +624,7 @@ Track F began from `e84ba29` on `track-12-recovery`.
 - `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
 - `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
 - `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- `git diff --check` passed. `Data/Jsons` has no Track J changes. The new Track J runtime files contain no console, filesystem, Godot, Newtonsoft, legacy database, DTO, `IGameIO`, `Combatant`, or `Persona` references.
 
 ## Track G: Production Combat Ruleset
 
@@ -857,6 +858,24 @@ Events must cover everything currently rendered by `BattleMessenger`, `BattleLog
 ### Exit Gate
 
 The ordinary console battle uses the framework encounter state machine. `BattleConductor` is either a host adapter or removable after parity review.
+
+### Track J Completion
+
+Track J began from `aa82101` on `track-12-recovery`.
+
+- Added `BattleEncounterRunner`, `BattleEncounterRequest`, `BattleEncounterResult`, `BattleEncounterParticipant`, initiative/lifecycle/turn/completion/event/synchronization ports, typed outcomes, typed command results, and ordered serializer-neutral battle events.
+- Reworked `AutomatedBattleRunner` to use the encounter runner internally while preserving its public API and existing clean battle demo event stream.
+- Routed ordinary `BattleConductor.StartBattle()` through the framework encounter state machine with `LegacyEncounterAdapter`, keeping live `Combatant` state, `InteractionBridge`, `ActionProcessor`, `BehaviorEngine`, `NegotiationEngine`, rewards, and console messages host-owned.
+- Preserved legacy battle action execution and content. Track J does not reauthor `SkillData`, `ItemData`, negotiation rules, recruitment, rewards, inventory/equipment ownership, or production AI policies.
+- Added a turn-start parity seam to `BehaviorEngine` so the framework lifecycle result is consumed once and not rerolled by AI.
+- Added focused framework tests for initiative, event ordering, Press Turn outcomes, skip/turn-end dispatch, state refresh after defeat, victory, escape, cancellation, and typed faults.
+- Added a console characterization proving `BattleConductor.StartBattle()` routes a real ordinary battle through the framework runner while preserving menu ordering, attack narration, victory, and reward text.
+- Updated the parity ledger. Press Turn orchestration is `parallel_partial` with a migrated console consumer; battle actions, AI/tactics, battle knowledge, negotiation, and rewards remain partial or later-track work. No removal is authorized.
+- Focused Track J framework and console-route tests passed: 14 tests, 0 failed, 0 skipped.
+- Full verification passed: 606 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
 
 ## Track K: Negotiation, Recruitment, And Battle Rewards
 

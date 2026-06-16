@@ -34,11 +34,12 @@ namespace JRPGPrototype.Logic.Battle.Engines
             List<Combatant> opponents,
             BattleKnowledge knowledge,
             int fullIcons,
-            int blinkingIcons)
+            int blinkingIcons,
+            TurnStartResult? resolvedTurnStart = null)
         {
             // --- Step 1: Ailment Hijack Logic (Highest Priority) ---
             // We check the registry to see if the actor's turn is being dictated by an ailment.
-            TurnStartResult turnState = _statusRegistry.ProcessTurnStart(actor);
+            TurnStartResult turnState = resolvedTurnStart ?? _statusRegistry.ProcessTurnStart(actor);
 
             if (turnState == TurnStartResult.ForcedPhysical)
             {

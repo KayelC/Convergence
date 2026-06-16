@@ -6,6 +6,7 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.Bridges;
@@ -253,6 +254,64 @@ public sealed class LegacyWorkflowCharacterizationTests
             new Random(3)).StartNegotiation(successActor, successTarget, [successTarget]);
         Assert.Equal(NegotiationResult.Success, success);
         Assert.True(successEconomy.Macca < 100_000);
+    }
+
+    [Fact]
+    public void BattleConductor_StartBattle_RoutesOrdinaryBattleThroughFrameworkEncounterRunner()
+    {
+        var io = new ScriptedGameIO()
+            .QueueMenu(0, 0)
+            .QueueKey('x', ConsoleKey.X);
+        var economy = new EconomyManager();
+        var player = new Combatant("Hero", ClassType.Human)
+        {
+            Level = 99,
+            MaxHP = 999,
+            CurrentHP = 999,
+            MaxSP = 99,
+            CurrentSP = 99
+        };
+        player.CharacterStats[StatType.St] = 40;
+        player.CharacterStats[StatType.Ag] = 40;
+        player.CharacterStats[StatType.Lu] = 40;
+        var party = new PartyManager(player);
+
+        var enemy = new Combatant("Training Dummy", ClassType.Demon)
+        {
+            SourceId = "training_dummy",
+            Level = 1,
+            MaxHP = 1,
+            CurrentHP = 1,
+            MaxSP = 1,
+            CurrentSP = 1
+        };
+        enemy.CharacterStats[StatType.Vi] = 1;
+        enemy.CharacterStats[StatType.Ag] = 1;
+        enemy.CharacterStats[StatType.Lu] = 1;
+
+        var conductor = new BattleConductor(
+            party,
+            [enemy],
+            new InventoryManager(),
+            economy,
+            io,
+            new BattleKnowledge(),
+            new CompendiumRegistry(io));
+
+        conductor.StartBattle();
+
+        Assert.True(conductor.BattleEnded);
+        Assert.True(conductor.PlayerWon);
+        Assert.False(conductor.Escaped);
+        Assert.True(enemy.IsDead);
+        Assert.Contains("=== ENEMY ENCOUNTER ===", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Contains("Appeared: Training Dummy (Lv.1)", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Contains("Hero attacks Training Dummy!", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Contains("VICTORY!", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Contains("Gained", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Equal(["Attack", "Guard", "Skill", "Item", "Tactics", "Pass"], io.Menus[0].Options);
+        Assert.Equal(["Training Dummy (HP: 1/1)", "Back"], io.Menus[1].Options);
+        io.AssertConsumed();
     }
 
     [Fact]

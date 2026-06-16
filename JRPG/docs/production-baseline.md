@@ -150,6 +150,23 @@ Track I began from `f7dbf08` and moved strict-parity status lifecycle rules into
 - `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
 - `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
 - `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- `git diff --check` passed. `Data/Jsons` has no Track J changes. The new Track J runtime files contain no console, filesystem, Godot, Newtonsoft, legacy database, DTO, `IGameIO`, `Combatant`, or `Persona` references.
+
+## Track J Boundary
+
+Track J began from `aa82101` and moved battle orchestration into the framework while keeping legacy battle actions, actors, content, negotiation, and rewards in the console host.
+
+- `JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs` now owns initiative, battle-start lifecycle, team phases, actor turns, turn-start lifecycle, command orchestration, Press Turn consumption, turn-end lifecycle, phase-end cleanup, deployment refresh, completion checks, cancellation, typed faults, and ordered battle events.
+- `AutomatedBattleRunner` now delegates to the encounter runner underneath while preserving the existing clean battle demo API and output shape.
+- `BattleConductor.StartBattle()` now routes ordinary console battles through `BattleEncounterRunner` using a console-owned legacy adapter.
+- `InteractionBridge`, `ActionProcessor`, `BehaviorEngine`, `NegotiationEngine`, `BattleKnowledge`, rewards, datasets, message rendering, and live `Combatant` state remain console-owned compatibility boundaries.
+- `BehaviorEngine` gained a parity seam so framework orchestration can pass an already-computed turn-start result instead of rolling status lifecycle twice.
+- The parity ledger marks Press Turn orchestration as `parallel_partial` with a migrated console consumer, and keeps battle actions, AI/tactics, battle knowledge, negotiation, and rewards as partial or later-track work. Removal remains unauthorized for every legacy file.
+- Focused Track J framework and console-route tests passed: 14 tests, 0 failed, 0 skipped.
+- Full verification passed: 606 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
 
 ## Migration Rule
 
@@ -191,4 +208,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track J may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track K may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

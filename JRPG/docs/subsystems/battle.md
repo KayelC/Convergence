@@ -1,6 +1,6 @@
 # Battle Subsystem
 
-> **Status: Current implementation reference.** This chapter describes legacy battle execution; the Skill System GDD defines the redesign target.
+> **Status: Current implementation reference.** This chapter describes the Track J adapter-first battle path; the Skill System GDD defines the redesign target.
 
 ## Purpose
 
@@ -8,7 +8,8 @@
 
 ## Key Classes And Responsibilities
 
-- `BattleConductor`: root encounter orchestrator.
+- `BattleEncounterRunner`: framework encounter state machine for initiative, phases, actor turns, lifecycle dispatch, Press Turn consumption, completion, cancellation, faults, and ordered battle events.
+- `BattleConductor`: console adapter that announces encounters, delegates the phase loop to `BattleEncounterRunner`, and keeps legacy rewards/cleanup host-owned.
 - `ActionProcessor`: executes attacks, skills, items, persona swaps, and analysis.
 - `CombatMath`: console compatibility facade for framework-owned production combat policies.
 - `ProductionCombatRuleset`: framework policy for damage, hit/evasion, criticals, instant death, initiative, EXP, Macca, affinity multipliers, guard, rigid-body, charge, drain, and reflection math.
@@ -26,7 +27,7 @@
 
 ### Encounter Start
 
-`BattleConductor.StartBattle` announces enemies, calculates average agility for both sides, rolls initiative, applies initial Auto-Kaja passives to the side that acts first, refreshes the HUD, and enters the phase loop.
+`BattleConductor.StartBattle` announces enemies, creates a legacy encounter adapter, and calls `BattleEncounterRunner`. The adapter calculates average agility for both sides, rolls initiative through `CombatMath.RollInitiative`, applies initial Auto-Kaja passives to the side that acts first, refreshes the HUD, and synchronizes live `Combatant` state with framework participants.
 
 ### Phase Loop
 
@@ -35,11 +36,12 @@ Each phase:
 1. Builds the current live actor list.
 2. Resets per-phase swap flags.
 3. Starts turn icons with one full icon per live actor.
-4. Iterates actors while icons remain.
-5. Processes ailments and restrictions at turn start.
-6. Runs player input or AI behavior.
-7. Applies action results and consumes Press Turn icons.
-8. Checks encounter completion before flipping sides.
+4. Iterates framework participants while icons remain.
+5. Processes ailments and restrictions once at turn start.
+6. Runs player input, AI behavior, or host-mediated commands through the console turn handler.
+7. Applies action results and consumes Press Turn icons from typed turn-consumption results.
+8. Dispatches owner-turn-end lifecycle for committed actions, passes, skips, and turn-consuming host commands.
+9. Checks encounter completion before flipping sides.
 
 ### Action Execution
 
@@ -63,7 +65,7 @@ Each phase:
 
 ### Battle End
 
-`BattleConductor` resolves win/loss/escape, rewards, recruitment side effects, compendium auto-registration, and battle-state cleanup. It also unsubscribes the logger from the messenger.
+`BattleEncounterRunner` reports victory, defeat, escape, draw, cancellation, or fault. `BattleConductor` then resolves legacy rewards, recruitment side effects, compendium auto-registration, battle-state cleanup, and logger unsubscription.
 
 ## Important State And Invariants
 
@@ -87,11 +89,11 @@ Each phase:
 - Add a new skill category by implementing `IBattleEffect` and registering it in `BattleEffectRegistry`.
 - Add new ailment behavior in `StatusRegistry`, and update `status_ailments.json`.
 - Add new AI behavior in `BehaviorEngine` after rule support exists in processors/effects.
-- Add new battle UI commands in `InteractionBridge` and handle them in `BattleConductor.ExecuteAction`.
+- Add new battle UI commands in `InteractionBridge` and route their command result through the console turn handler used by `BattleEncounterRunner`.
 - Add new battle messages through `IBattleMessenger` rather than direct console calls.
 
 ## Caveats
 
 - Battle has several string-driven checks for skill names, effects, categories, and passive names.
 - The current build has nullable warnings in battle messages, bridge returns, and some action paths.
-- There is no automated test harness for Press Turn edge cases, ailments, or AI decisions.
+- Track J adds framework encounter-loop tests for Press Turn, lifecycle ordering, completion, cancellation, and faults. Exhaustive live console battle traversal remains manual and later-track work.
