@@ -9,6 +9,7 @@ using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Field.Engines;
@@ -292,6 +293,75 @@ public sealed class LegacyWorkflowCharacterizationTests
         Assert.Equal(19, manager.CurrentFloor);
         manager.Ascend();
         Assert.Equal(20, manager.CurrentFloor);
+    }
+
+    [Fact]
+    public void FieldConductor_RoutesDungeonEntryTerminalWarpAndReturnThroughFrameworkState()
+    {
+        LegacyBaselineSupport.ResetAndLoadLegacyDatabase();
+        var io = new ScriptedGameIO().QueueMenu(
+            0, // main field: Explore Tartarus
+            1, // entry point: Floor 10
+            2, // floor 10: Access Terminal
+            0, // terminal: Lobby
+            3, // lobby: Return to City
+            5); // main field: Exit Game
+        var player = new Combatant("Hero", ClassType.Operator)
+        {
+            MaxHP = 100,
+            CurrentHP = 100,
+            MaxSP = 50,
+            CurrentSP = 50
+        };
+        var dungeon = new DungeonState();
+        dungeon.UnlockTerminal(10);
+        var conductor = new FieldConductor(
+            player,
+            new InventoryManager(),
+            new EconomyManager(),
+            dungeon,
+            io,
+            new BattleKnowledge(),
+            new CompendiumRegistry(io));
+
+        conductor.NavigateMenus();
+
+        Assert.Equal(1, dungeon.CurrentFloor);
+        Assert.Contains(10, dungeon.UnlockedTerminals);
+        Assert.Equal("=== SELECT ENTRY POINT ===", io.Menus[1].Header);
+        Assert.Contains("Floor 10", io.Menus[1].Options);
+        Assert.Contains("Access Terminal (Return)", io.Menus[2].Options);
+        Assert.Equal("=== TERMINAL SYSTEM ===", io.Menus[3].Header);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public void ExplorationProcessor_PrepareEncounterPreservesHydrationAndDuplicateSuffixes()
+    {
+        LegacyBaselineSupport.ResetAndLoadLegacyDatabase();
+        var io = new ScriptedGameIO();
+        var player = new Combatant("Hero", ClassType.Operator);
+        var dungeon = new DungeonState();
+        var manager = new DungeonManager(dungeon);
+        var messenger = new FieldMessenger();
+        var serviceEngine = new FieldServiceEngine(
+            messenger,
+            io,
+            new EconomyManager(),
+            new InventoryManager(),
+            new PartyManager(player),
+            dungeon);
+        var processor = new ExplorationProcessor(
+            messenger,
+            manager,
+            dungeon,
+            new DungeonUIBridge(io, new FieldUIState()),
+            serviceEngine);
+
+        List<Combatant> enemies = processor.PrepareEncounter(["pixie", "pixie"]);
+
+        Assert.Equal(["Pixie A", "Pixie B"], enemies.Select(enemy => enemy.Name));
+        Assert.All(enemies, enemy => Assert.Equal(ClassType.Demon, enemy.Class));
     }
 
     [Fact]

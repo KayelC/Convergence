@@ -1050,6 +1050,20 @@ The framework returns transitions and events. Godot maps them to scenes; the con
 
 The interactive console field loop runs through the framework state machine, and a headless test can traverse the same dungeon without UI.
 
+### Track M Completion
+
+Track M began from `1502970` on `track-12-recovery`.
+
+- Added `RuntimeFieldDungeonService` and immutable runtime snapshots/events for field location, dungeon progress, dungeon content, floor results, available dungeon actions, transitions, terminal unlocks, barriers, boss defeat state, dungeon exits, game-over recovery, and deterministic encounter generation.
+- Added `LegacyDungeonContentAdapter` for adapting `Database.Dungeons` without reauthoring `tartarus.json`; legacy IDs are encoded as reversible `legacy_<hex>` content IDs and decoded before host encounter hydration.
+- Converted `DungeonManager` into the compatibility facade over the framework service. `FieldConductor` now routes dungeon entry, terminal return, Goho-M/explicit exits, return-to-city, and boss-defeat registration through that facade.
+- Preserved visible console ownership: menus, battle handoff, item/skill parsing, shops, hospital, Cathedral, `CombatantFactory`, duplicate enemy suffix naming, legacy DTOs, and datasets remain host-owned.
+- Updated the parity ledger. `field_navigation`, `dungeon_traversal`, and `encounters` are now `parallel_partial`; no removal is authorized.
+- Focused Track M checks passed: 5 framework field/dungeon state-machine tests, the 14-test legacy workflow characterization suite, and the parity-ledger validation test all passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 627 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 118 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track N: Complete Fusion And Compendium
 
 ### Goal

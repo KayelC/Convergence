@@ -81,14 +81,16 @@ Player-facing behavior:
 
 `FieldConductor` owns non-combat navigation. It coordinates city services, inventory, status, party organization, dungeon entry, and fusion access.
 
+Track M keeps the same console conductor and menus, but moves dungeon state transitions into the framework. `DungeonManager` now adapts legacy dungeon JSON into immutable runtime snapshots and delegates floor evaluation, movement, terminal unlocks, boss defeat state, barriers, dungeon exit, and random encounter selection to `RuntimeFieldDungeonService`.
+
 Field gameplay is split between:
 
 - `FieldServiceEngine`: hospital restoration, field items, field skills, equipment, stat allocation, and progression side effects.
-- `DungeonManager`: current floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
-- `ExplorationProcessor`: floor transitions, entry triggers, terminal unlocks, and enemy hydration.
+- `DungeonManager`: console compatibility facade over framework floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
+- `ExplorationProcessor`: field-side movement messages, entry triggers, battle handoff, and enemy hydration.
 - Field bridges: menu rendering and choice collection.
 
-Dungeon state is stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses.
+Dungeon state is still stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses. Direct debug/test warps preserve the legacy ability to move to a floor without increasing max-floor progress.
 
 ## Inventory, Equipment, Shops, And Economy
 

@@ -10,8 +10,8 @@
 
 - `FieldConductor`: root field-loop orchestrator.
 - `FieldServiceEngine`: field-side rules for shops, equipment, restoration, items, skills, stat allocation, persona swaps, terminals, and boss defeat registration.
-- `ExplorationProcessor`: floor movement, warp execution, floor-entry triggers, terminal unlocks, and encounter preparation.
-- `DungeonManager`: dungeon state interpretation, fixed floor processing, random encounters, terminals, and boss state checks.
+- `ExplorationProcessor`: floor movement messages, warp execution, floor-entry triggers, battle handoff, and encounter preparation.
+- `DungeonManager`: console compatibility facade over framework dungeon state interpretation, fixed floor processing, random encounters, terminals, and boss state checks.
 - `DungeonState`: persistent dungeon progress.
 - `ShopEngine`: purchase/sale pricing and inventory/economy mutations.
 - Field bridges: `ServiceUIBridge`, `DungeonUIBridge`, `InventoryUIBridge`, `StatusUIBridge`, and `ShopUIBridge`.
@@ -35,11 +35,11 @@ The conductor routes choices to private workflow methods and exits if the player
 
 ### Dungeon Entry And Traversal
 
-Dungeon entry checks unlocked terminals. If only floor 1 is available, it warps directly to the entrance; otherwise the player selects an entry point.
+Dungeon entry checks unlocked terminals. If only floor 1 is available, it warps directly to the entrance; otherwise the player selects an entry point. Track M keeps that menu flow, but routes entry, movement, terminal returns, explicit dungeon exit, and boss defeat through framework transition results.
 
 During exploration:
 
-1. `DungeonManager.ProcessCurrentFloor` produces a `DungeonFloorResult`.
+1. `DungeonManager.ProcessCurrentFloor` adapts a framework floor snapshot into the legacy `DungeonFloorResult`.
 2. `DungeonUIBridge` shows available floor actions.
 3. `ExplorationProcessor` handles ascension, descension, or warp.
 4. `ProcessFloorEntry` unlocks terminals and identifies safe rooms, battles, bosses, and block ends.
@@ -76,7 +76,7 @@ Status bridges render character/persona/demon details, stat allocation, equipmen
 
 - `DungeonState.UnlockedTerminals` starts with floor 1.
 - `DungeonState.DefeatedBosses` prevents defeated fixed-floor bosses from respawning.
-- `DungeonManager` treats floor 1 as a safe lobby with terminal.
+- `RuntimeFieldDungeonService` treats floor 1 as a safe lobby with terminal; `DungeonManager` exposes the same legacy result.
 - Random encounters currently produce 1 to 3 enemies from the current block pool.
 - `FieldServiceEngine` owns field-side resource mutation, not UI bridges.
 - `FieldConductor` creates the `FusionConductor`, sharing party, economy, UI state, and compendium.
@@ -91,7 +91,7 @@ Status bridges render character/persona/demon details, stat allocation, equipmen
 ## Extension Points
 
 - Add new city services in `ServiceUIBridge`, then handle them in `FieldConductor.OpenCityMenu` or `FieldServiceEngine`.
-- Add new dungeon floor types by updating `DungeonData`, `DungeonManager`, `ExplorationProcessor`, and `DungeonUIBridge`.
+- Add new dungeon floor types by updating `DungeonData`, the legacy content adapter, framework floor-kind handling, and `DungeonUIBridge`.
 - Add new field-use item behavior in `FieldServiceEngine.ExecuteItemUsage`.
 - Add new field skill behavior in `ExecuteSkillUsage` or shared status/effect helpers.
 - Add new shop categories only after extending `ShopCategory`, inventory storage, shop UI, and equipment/data loading.

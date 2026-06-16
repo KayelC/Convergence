@@ -69,7 +69,7 @@ namespace JRPGPrototype.Logic.Field.Engines
         {
             _messenger.Publish($"Warping to Floor {floor}...", delay: 1000);
 
-            _dungeonManager.WarpToFloor(floor);
+            _dungeonManager.TryWarpToUnlockedFloor(floor);
             return _dungeonManager.ProcessCurrentFloor();
         }
 

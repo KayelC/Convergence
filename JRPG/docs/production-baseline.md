@@ -239,3 +239,17 @@ Track L began from `51ab35c` and moved persistent resource-management transactio
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 620 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 119 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+## Track M Boundary
+
+Track M began from `1502970` and moved field/dungeon state-machine rules into the framework while preserving the interactive console host, legacy dungeon JSON, and visible menu behavior.
+
+- `JRPG.Framework/Logic/Runtime/FieldDungeonStateMachines.cs` now owns immutable dungeon progress/content/floor snapshots, movement and warp transitions, terminal unlocks, boss defeat state, barrier results, dungeon exits, game-over recovery transitions, random encounter selection, and ordered runtime events.
+- `LegacyDungeonContentAdapter` maps `Database.Dungeons` and `tartarus.json` into framework snapshots using the same reversible `legacy_<hex>` ID strategy as the resource adapters.
+- `DungeonManager` remains the public console facade for existing callers. It delegates floor processing and transitions to the framework service, then writes successful results back to `DungeonState`.
+- `FieldConductor` routes dungeon entry, terminal return, explicit dungeon exit, return-to-city, and boss-defeat registration through the framework-backed manager. `ExplorationProcessor` still owns host messages, battle handoff, `CombatantFactory` hydration, and duplicate enemy display suffixes.
+- Legacy `Data/Jsons`, `Database`, DTOs, `BattleConductor`, `FieldServiceEngine`, fusion entry, and menu bridges remain console-host owned. Removal remains unauthorized.
+- Focused Track M checks passed: 5 framework field/dungeon state-machine tests, the 14-test legacy workflow characterization suite, and the parity-ledger validation test all passed.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 627 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 118 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.

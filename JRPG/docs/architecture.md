@@ -61,7 +61,9 @@ Track K adds framework negotiation/reward services for the conversation state ma
 
 Track L adds framework resource-management services for inventory quantities, unique equipment-ID ownership, equipment equip/sale invariants, Macca transactions, Luck-based shop pricing, shop buy/sell transactions, and hospital restoration. `InventoryManager`, `EconomyManager`, `ShopEngine`, and the field service item/equipment/hospital mutation paths now delegate through `LegacyInventoryResourceAdapter`, while `Database`, legacy DTOs, shop inspection text, and console menu presentation remain host-owned.
 
-Complete AI/tactics policy, full fusion transaction ownership, compendium persistence, save/load services, authored negotiation content, legacy item/equipment content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track M adds framework-owned field/dungeon state-machine services for dungeon progress snapshots, floor evaluation, terminal unlocks, boss defeat state, barrier handling, deterministic encounter selection, and ordered transition events. `DungeonManager` is now a console compatibility facade over those services, using `LegacyDungeonContentAdapter` to adapt `Database.Dungeons` without changing `tartarus.json` or menu behavior.
+
+Complete AI/tactics policy, full fusion transaction ownership, compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -69,7 +71,7 @@ Complete AI/tactics policy, full fusion transaction ownership, compendium persis
 
 Conductors own high-level workflows and decide which subsystem should act next.
 
-- `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops.
+- `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops. Dungeon entry, terminal return, explicit dungeon exit, and boss-defeat registration now pass through the framework-backed `DungeonManager` facade.
 - `BattleConductor` adapts the console battle into the framework encounter runner, applies framework reward results through a console adapter, and keeps cleanup flow host-owned.
 - `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions.
 
@@ -84,7 +86,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 - `StatusRegistry` is the console compatibility facade for ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks. Migrated lifecycle decisions delegate into the framework through `LegacyStatusLifecycleAdapter`.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine` and `ShopEngine` are console compatibility facades over framework-backed resource-management transactions for inventory, equipment, shops, and hospital restoration. They still own legacy item/skill effects, metadata repair, messages, and dungeon traversal coordination.
-- `ExplorationProcessor` owns field-side dungeon traversal rules.
+- `ExplorationProcessor` remains the console host for field-side messages, battle handoff, encounter hydration, and duplicate enemy display suffixes; movement and floor evaluation are delegated through the framework-backed dungeon manager.
 - `FusionCalculator`, `FusionMutator`, and fusion strategies own fusion prediction and state mutation.
 - `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.
 

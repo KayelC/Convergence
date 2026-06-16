@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using JRPGPrototype.Core;
-using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Field.Dungeon
 {
@@ -12,32 +12,31 @@ namespace JRPGPrototype.Logic.Field.Dungeon
         public string BlockName { get; set; }
         public DungeonEventType Type { get; set; }
         public string Description { get; set; }
-        public List<string> EnemyIds { get; set; } = new List<string>(); // Changed from string to List
+        public List<string> EnemyIds { get; set; } = new List<string>();
         public bool HasTerminal { get; set; }
     }
 
     public class DungeonManager
     {
-        private DungeonState _state;
-        private DungeonData _data;
-        private Random _rnd = new Random();
+        private readonly DungeonState _state;
+        private readonly IRuntimeFieldDungeonService _service;
+        private RuntimeDungeonContentSnapshot _content;
 
         public DungeonManager(DungeonState state)
+            : this(state, new Random())
+        {
+        }
+
+        internal DungeonManager(DungeonState state, Random random)
+            : this(state, new RuntimeFieldDungeonService(new LegacyDungeonRandomSource(random)))
+        {
+        }
+
+        internal DungeonManager(DungeonState state, IRuntimeFieldDungeonService service)
         {
             _state = state;
-
-            if (Database.Dungeons.TryGetValue(_state.CurrentDungeonId, out var dungeonData))
-            {
-                _data = dungeonData;
-            }
-            else
-            {
-                _data = new DungeonData
-                {
-                    Name = "Unknown Void",
-                    Blocks = new List<BlockData>()
-                };
-            }
+            _service = service;
+            _content = LegacyDungeonContentAdapter.FromDatabase(_state.CurrentDungeonId);
         }
 
         public int CurrentFloor => _state.CurrentFloor;
@@ -45,16 +44,12 @@ namespace JRPGPrototype.Logic.Field.Dungeon
         // --- NAVIGATION ---
         public void Ascend()
         {
-            _state.CurrentFloor++;
-            if (_state.CurrentFloor > _state.MaxFloorReached)
-            {
-                _state.MaxFloorReached = _state.CurrentFloor;
-            }
+            Apply(_service.Ascend(CurrentContent(), Snapshot()));
         }
 
         public void Descend()
         {
-            if (_state.CurrentFloor > 1) _state.CurrentFloor--;
+            Apply(_service.Descend(CurrentContent(), Snapshot()));
         }
 
         public void WarpToFloor(int floor)
@@ -62,86 +57,32 @@ namespace JRPGPrototype.Logic.Field.Dungeon
             _state.CurrentFloor = floor;
         }
 
+        internal bool TryWarpToUnlockedFloor(int floor)
+        {
+            RuntimeDungeonTransitionResult result = _service.Warp(CurrentContent(), Snapshot(), floor);
+            Apply(result);
+            return result.Applied;
+        }
+
+        public void ReturnToCity()
+        {
+            Apply(_service.ReturnToCity(Snapshot()));
+        }
+
+        public void RequestDungeonExit()
+        {
+            Apply(_service.RequestDungeonExit(Snapshot()));
+        }
+
+        public IReadOnlyList<RuntimeFieldActionOption> GetActionOptions(DungeonFloorResult floorInfo, bool canOrganizeParty) =>
+            _service.GetDungeonActionOptions(ToRuntimeFloor(floorInfo), canOrganizeParty);
+
         // --- CORE LOGIC ---
         public DungeonFloorResult ProcessCurrentFloor()
         {
-            // 0. Handle Lobby (Floor 1)
-            if (_state.CurrentFloor == 1)
-            {
-                return new DungeonFloorResult
-                {
-                    FloorNumber = 1,
-                    BlockName = "Entrance",
-                    Type = DungeonEventType.SafeRoom,
-                    Description = "The Lobby. A large clock ticks quietly.",
-                    HasTerminal = true
-                };
-            }
-
-            var result = new DungeonFloorResult
-            {
-                FloorNumber = _state.CurrentFloor,
-                BlockName = "Unknown Block",
-                Type = DungeonEventType.Empty,
-                Description = "A quiet corridor in the tower."
-            };
-
-            // 1. Identify Current Block
-            var block = GetCurrentBlock();
-            if (block == null)
-            {
-                result.Description = "You are outside the known map.";
-                return result;
-            }
-
-            result.BlockName = block.Name;
-
-            // 2. Check for Fixed Floors WITHIN this Block
-            var fixedData = block.FixedFloors?.FirstOrDefault(f => f.Floor == _state.CurrentFloor);
-
-            if (fixedData != null)
-            {
-                result.Description = fixedData.Description;
-                result.HasTerminal = fixedData.HasTerminal;
-
-                if (fixedData.HasTerminal)
-                {
-                    _state.UnlockTerminal(_state.CurrentFloor);
-                }
-
-                switch (fixedData.Type)
-                {
-                    case "Boss":
-                        if (_state.IsBossDefeated(fixedData.Id))
-                        {
-                            result.Type = DungeonEventType.Empty;
-                            result.Description = "The area is quiet. The guardian has been defeated.";
-                        }
-                        else
-                        {
-                            result.Type = DungeonEventType.Boss;
-                            result.EnemyIds.Add(fixedData.Id); // Add single boss ID
-                        }
-                        break;
-                    case "SafeRoom":
-                        result.Type = DungeonEventType.SafeRoom;
-                        break;
-                    case "BlockEnd":
-                        result.Type = DungeonEventType.BlockEnd;
-                        break;
-                    default:
-                        result.Type = DungeonEventType.Empty;
-                        break;
-                }
-                return result;
-            }
-
-            // 3. Random Encounters (Mixed Groups)
-            result.Type = DungeonEventType.Battle;
-            result.Description = "Shadows lurk in the darkness...";
-            result.EnemyIds = GenerateRandomEncounter(block);
-
-            return result;
+            RuntimeDungeonTransitionResult result = _service.ProcessCurrentFloor(CurrentContent(), Snapshot());
+            Apply(result);
+            return ToLegacyFloor(result.Floor!);
         }
 
         public List<int> GetUnlockedTerminals()
@@ -151,42 +92,94 @@ namespace JRPGPrototype.Logic.Field.Dungeon
 
         public void RegisterBossDefeat(string bossId)
         {
-            if (!string.IsNullOrEmpty(bossId))
-            {
-                _state.MarkBossDefeated(bossId);
-            }
+            ContentId? cleanBossId = string.IsNullOrWhiteSpace(bossId)
+                ? null
+                : LegacyContentIdCodec.Encode(bossId);
+            Apply(_service.RegisterBossDefeat(Snapshot(), cleanBossId));
         }
 
-        private BlockData GetCurrentBlock()
+        private RuntimeDungeonProgressSnapshot Snapshot() =>
+            new(
+                LegacyContentIdCodec.Encode(_state.CurrentDungeonId),
+                _state.CurrentFloor,
+                _state.MaxFloorReached,
+                _state.UnlockedTerminals,
+                _state.DefeatedBosses.Select(LegacyContentIdCodec.Encode));
+
+        private RuntimeDungeonContentSnapshot CurrentContent()
         {
-            return _data.Blocks.FirstOrDefault(b =>
-                b.FloorRange != null &&
-                b.FloorRange.Length >= 2 &&
-                _state.CurrentFloor >= b.FloorRange[0] &&
-                _state.CurrentFloor <= b.FloorRange[1]);
+            if (_content.Id != LegacyContentIdCodec.Encode(_state.CurrentDungeonId))
+            {
+                _content = LegacyDungeonContentAdapter.FromDatabase(_state.CurrentDungeonId);
+            }
+
+            return _content;
         }
 
-        private List<string> GenerateRandomEncounter(BlockData block)
+        private void Apply(RuntimeDungeonTransitionResult result)
         {
-            List<string> encounter = new List<string>();
-
-            if (block.EnemyPool == null || block.EnemyPool.Count == 0)
+            if (!result.Applied && result.Code != RuntimeDungeonTransitionCode.BarrierBlocked)
             {
-                encounter.Add("E_slime");
-                return encounter;
+                return;
             }
 
-            // Determine party size (1 to 3 enemies)
-            // Future: Adjust max count based on floor/difficulty
-            int count = _rnd.Next(1, 4);
+            _state.CurrentFloor = result.After.CurrentFloor;
+            _state.MaxFloorReached = result.After.MaxFloorReached;
+            _state.UnlockedTerminals = result.After.UnlockedTerminals.ToHashSet();
+            _state.DefeatedBosses = result.After.DefeatedBossIds.Select(LegacyContentIdCodec.Decode).ToHashSet();
+        }
 
-            for (int i = 0; i < count; i++)
+        private static DungeonFloorResult ToLegacyFloor(RuntimeDungeonFloorSnapshot floor) =>
+            new()
             {
-                int index = _rnd.Next(block.EnemyPool.Count);
-                encounter.Add(block.EnemyPool[index]);
+                FloorNumber = floor.FloorNumber,
+                BlockName = floor.BlockName,
+                Type = ToLegacyFloorKind(floor.Kind),
+                Description = floor.Description,
+                EnemyIds = floor.EnemyIds.Select(LegacyContentIdCodec.Decode).ToList(),
+                HasTerminal = floor.HasTerminal
+            };
+
+        private static RuntimeDungeonFloorSnapshot ToRuntimeFloor(DungeonFloorResult floor) =>
+            new(
+                floor.FloorNumber,
+                floor.BlockName,
+                ToRuntimeFloorKind(floor.Type),
+                floor.Description,
+                floor.HasTerminal,
+                floor.EnemyIds.Select(LegacyContentIdCodec.Encode));
+
+        private static DungeonEventType ToLegacyFloorKind(RuntimeDungeonFloorKind kind) => kind switch
+        {
+            RuntimeDungeonFloorKind.Battle => DungeonEventType.Battle,
+            RuntimeDungeonFloorKind.Boss => DungeonEventType.Boss,
+            RuntimeDungeonFloorKind.SafeRoom => DungeonEventType.SafeRoom,
+            RuntimeDungeonFloorKind.BlockEnd => DungeonEventType.BlockEnd,
+            _ => DungeonEventType.Empty
+        };
+
+        private static RuntimeDungeonFloorKind ToRuntimeFloorKind(DungeonEventType kind) => kind switch
+        {
+            DungeonEventType.Battle => RuntimeDungeonFloorKind.Battle,
+            DungeonEventType.Boss => RuntimeDungeonFloorKind.Boss,
+            DungeonEventType.SafeRoom => RuntimeDungeonFloorKind.SafeRoom,
+            DungeonEventType.BlockEnd => RuntimeDungeonFloorKind.BlockEnd,
+            _ => RuntimeDungeonFloorKind.Empty
+        };
+
+        private sealed class LegacyDungeonRandomSource : IRandomSource
+        {
+            private readonly Random _random;
+
+            public LegacyDungeonRandomSource(Random random)
+            {
+                _random = random ?? throw new ArgumentNullException(nameof(random));
             }
 
-            return encounter;
+            public int NextInt32(int minimumInclusive, int maximumExclusive) =>
+                _random.Next(minimumInclusive, maximumExclusive);
+
+            public decimal NextUnitDecimal() => (decimal)_random.NextDouble();
         }
     }
 }

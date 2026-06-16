@@ -211,7 +211,10 @@ namespace JRPGPrototype.Logic.Field
 
                     case "Inventory":
                         if (OpenInventoryMenu(inDungeon: true) == ItemUsageResult.RequestDungeonExit)
+                        {
+                            _dungeonManager.RequestDungeonExit();
                             exitLoop = true;
+                        }
                         break;
 
                     case "Status":
@@ -223,7 +226,7 @@ namespace JRPGPrototype.Logic.Field
                         break;
 
                     case "Return to City":
-                        _dungeonState.ResetToEntry();
+                        _dungeonManager.ReturnToCity();
                         exitLoop = true;
                         break;
 
