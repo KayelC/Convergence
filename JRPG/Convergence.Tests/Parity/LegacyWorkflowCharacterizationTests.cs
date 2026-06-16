@@ -254,6 +254,26 @@ public sealed class LegacyWorkflowCharacterizationTests
             new Random(3)).StartNegotiation(successActor, successTarget, [successTarget]);
         Assert.Equal(NegotiationResult.Success, success);
         Assert.True(successEconomy.Macca < 100_000);
+
+        var recruitmentIo = new ScriptedGameIO();
+        var recruitmentActor = new Combatant("Hero", ClassType.Operator) { Level = 50 };
+        var recruitmentParty = new PartyManager(recruitmentActor);
+        var recruitmentTarget = CombatantFactory.CreateEnemy("pixie");
+        var recruitmentEnemies = new List<Combatant> { recruitmentTarget };
+        var recruitmentSession = new HashSet<string>();
+        var compendium = new CompendiumRegistry(recruitmentIo);
+        LegacyRecruitmentResult recruited = LegacyRecruitmentAdapter.Shared.TryRecruit(
+            recruitmentActor,
+            recruitmentTarget,
+            recruitmentSession,
+            recruitmentEnemies,
+            recruitmentParty,
+            compendium);
+        Assert.True(recruited.Applied);
+        Assert.Empty(recruitmentEnemies);
+        Assert.Contains("pixie", recruitmentSession);
+        Assert.Contains(recruitmentActor.DemonStock, demon => demon.SourceId.Equals("pixie", StringComparison.OrdinalIgnoreCase));
+        Assert.True(compendium.HasEntry("pixie"));
     }
 
     [Fact]
@@ -279,7 +299,7 @@ public sealed class LegacyWorkflowCharacterizationTests
         var enemy = new Combatant("Training Dummy", ClassType.Demon)
         {
             SourceId = "training_dummy",
-            Level = 1,
+            Level = 10,
             MaxHP = 1,
             CurrentHP = 1,
             MaxSP = 1,
@@ -304,8 +324,10 @@ public sealed class LegacyWorkflowCharacterizationTests
         Assert.True(conductor.PlayerWon);
         Assert.False(conductor.Escaped);
         Assert.True(enemy.IsDead);
+        Assert.True(player.LifetimeEarnedExp > 0);
+        Assert.True(economy.Macca > 0);
         Assert.Contains("=== ENEMY ENCOUNTER ===", io.CombinedOutput, StringComparison.Ordinal);
-        Assert.Contains("Appeared: Training Dummy (Lv.1)", io.CombinedOutput, StringComparison.Ordinal);
+        Assert.Contains("Appeared: Training Dummy (Lv.10)", io.CombinedOutput, StringComparison.Ordinal);
         Assert.Contains("Hero attacks Training Dummy!", io.CombinedOutput, StringComparison.Ordinal);
         Assert.Contains("VICTORY!", io.CombinedOutput, StringComparison.Ordinal);
         Assert.Contains("Gained", io.CombinedOutput, StringComparison.Ordinal);

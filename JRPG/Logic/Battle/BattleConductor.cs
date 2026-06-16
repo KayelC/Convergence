@@ -53,6 +53,8 @@ namespace JRPGPrototype.Logic.Battle
         private readonly NegotiationEngine _negotiationEngine;
         private readonly BattleKnowledge _playerKnowledge;
         private readonly CompendiumRegistry _compendium;
+        private readonly LegacyRecruitmentAdapter _recruitmentAdapter;
+        private readonly LegacyBattleRewardAdapter _rewardAdapter;
 
         // Added session-specific list to prevent re-recruiting in same battle
         private readonly HashSet<string> _sessionRecruitedIds = new HashSet<string>();
@@ -102,6 +104,8 @@ namespace JRPGPrototype.Logic.Battle
             _ai = new BehaviorEngine(_statusRegistry);
             _ui = new InteractionBridge(_io, _party, _inv, _enemies, _turnEngine, _playerKnowledge);
             _negotiationEngine = new NegotiationEngine(_io, _party, _inv, _eco);
+            _recruitmentAdapter = LegacyRecruitmentAdapter.Shared;
+            _rewardAdapter = LegacyBattleRewardAdapter.Shared;
         }
 
         // Entry point for the encounter. Handles initiative and the phase loop.
@@ -628,17 +632,21 @@ namespace JRPGPrototype.Logic.Battle
             switch (result)
             {
                 case NegotiationResult.Success:
-                    _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
-                    var newDemon = CombatantFactory.CreateEnemy(target.SourceId);
-                    if (!_compendium.HasEntry(newDemon.SourceId))
+                    LegacyRecruitmentResult recruitment = _recruitmentAdapter.TryRecruit(
+                        actor,
+                        target,
+                        _sessionRecruitedIds,
+                        _enemies,
+                        _party,
+                        _compendium);
+                    if (recruitment.Applied)
                     {
-                        _compendium.RegisterDemon(newDemon);
+                        _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
+                        return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
                     }
 
-                    actor.DemonStock.Add(newDemon);
-                    _sessionRecruitedIds.Add(target.SourceId);
-                    _enemies.Remove(target);
-                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                    _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
+                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.TerminatePhase);
 
                 case NegotiationResult.Failure:
                     _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
@@ -704,23 +712,23 @@ namespace JRPGPrototype.Logic.Battle
             switch (result)
             {
                 case NegotiationResult.Success:
-                    _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
-                    // Use the Factory to create the demon to ensure correct stats
-                    // We can use the target.SourceId directly as CreateEnemy handles ID resolution
-                    var newDemon = CombatantFactory.CreateEnemy(target.SourceId);
-
-                    // Auto-Registration in Compendium
-                    if (!_compendium.HasEntry(newDemon.SourceId))
+                    LegacyRecruitmentResult recruitment = _recruitmentAdapter.TryRecruit(
+                        actor,
+                        target,
+                        _sessionRecruitedIds,
+                        _enemies,
+                        _party,
+                        _compendium);
+                    if (recruitment.Applied)
                     {
-                        _compendium.RegisterDemon(newDemon);
+                        _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
+                        _turnEngine.ConsumeAction(HitType.Normal, false);
                     }
-
-                    // Add to player's stock
-                    actor.DemonStock.Add(newDemon);
-                    _sessionRecruitedIds.Add(target.SourceId); // Track for this battle
-
-                    _enemies.Remove(target);
-                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                    else
+                    {
+                        _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
+                        _turnEngine.TerminatePhase();
+                    }
                     break;
 
                 case NegotiationResult.Failure:
@@ -1071,18 +1079,16 @@ namespace JRPGPrototype.Logic.Battle
             {
                 _messenger.Publish("\nVICTORY!", ConsoleColor.Green, 500);
 
-                // Use CombatMath for dynamic reward calculation
-                int totalExp = _enemies.Sum(e => CombatMath.CalculateExpYield(e));
-                int totalMacca = _enemies.Sum(e => CombatMath.CalculateMaccaYield(e));
+                LegacyBattleRewardCalculation rewards = _rewardAdapter.Calculate(
+                    _enemies,
+                    _party.GetAliveMembers());
 
-                _messenger.Publish($"Gained {totalExp} EXP and {totalMacca} Macca.", ConsoleColor.Gray, 800);
+                _messenger.Publish(
+                    $"Gained {rewards.Result.TotalExperience} EXP and {rewards.Result.TotalMacca} Macca.",
+                    ConsoleColor.Gray,
+                    800);
 
-                foreach (var m in _party.GetAliveMembers())
-                {
-                    m.GainExp(totalExp);
-                    if (m.ActivePersona != null) m.ActivePersona.GainExp(totalExp, _io);
-                }
-                _eco.AddMacca(totalMacca);
+                _rewardAdapter.Apply(rewards, _eco, _io);
             }
             else if (!Escaped && !TraestoUsed)
             {

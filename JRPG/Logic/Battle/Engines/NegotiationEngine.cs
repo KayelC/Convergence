@@ -6,8 +6,8 @@ using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
-using JRPGPrototype.Logic.Battle;           // For CombatMath
-using JRPGPrototype.Logic.Battle.Messaging; // For IBattleMessenger (used in StatusRegistry)
+using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Engines
 {
@@ -102,220 +102,214 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
         public NegotiationResult StartNegotiation(Combatant actor, Combatant target, List<Combatant> enemies)
         {
-            // 1. Check Environmental & State Blockers
-            if (MoonPhaseSystem.IsNegotiationBlocked())
+            NegotiationSessionRequest request = CreateRequest(actor, target, enemies);
+            var service = new NegotiationSessionService(new LegacyRandomSource(_rnd));
+            NegotiationSessionResult result = service.RunAsync(
+                    request,
+                    new LegacyNegotiationCommandSource(_io, target.Name),
+                    new LegacyNegotiationEventSink(_io))
+                .AsTask()
+                .GetAwaiter()
+                .GetResult();
+
+            ApplyResult(result);
+            return result.Outcome switch
             {
-                _io.WriteLine($"The {target.Name} is agitated due to the Full Moon and cannot be reasoned with!", ConsoleColor.Red);
-                _io.Wait(1000);
-                return NegotiationResult.Failure;
-            }
-
-            // Check against the specific actor initiating the talk
-            if (_party.IsDemonOwned(actor, target.SourceId))
-            {
-                return HandleFamiliarDemon(actor, target);
-            }
-
-            if (!_party.HasOpenDemonStockSlot(actor))
-            {
-                _io.WriteLine("Your Demon Stock is full!");
-                _io.Wait(1000);
-                return NegotiationResult.Failure;
-            }
-
-            // Check global negotiation chance based on number of enemies
-            if (!CheckNegotiationChance(enemies.Count(e => !e.IsDead)))
-            {
-                _io.WriteLine($"{target.Name} is on guard and refuses to talk!");
-                _io.Wait(1000);
-                return NegotiationResult.Failure;
-            }
-
-            // Determine Personality & Fetch Questions
-            // Uses the "Race" property from the active persona/demon template
-            string race = target.ActivePersona?.Race ?? "Fairy";
-            PersonalityType personality = RaceToPersonality.GetValueOrDefault(race, PersonalityType.Childlike);
-
-            var questionPool = Database.NegotiationQuestions.Questions.GetValueOrDefault(personality, new List<NegotiationQuestion>());
-            if (!questionPool.Any())
-            {
-                _io.WriteLine($"{target.Name} seems unresponsive...");
-                _io.Wait(800);
-                return NegotiationResult.Failure;
-            }
-
-            int moodScore = 0;
-            // Create a session-specific copy of the pool to prevent repeated questions.
-            var sessionQuestions = new List<NegotiationQuestion>(questionPool);
-
-            // Increased difficulty by requiring 3 successful rounds instead of 2.
-            for (int i = 0; i < 3; i++)
-            {
-                if (!sessionQuestions.Any()) break;
-
-                // Pick a question and remove it from the session pool immediately.
-                int qIdx = _rnd.Next(sessionQuestions.Count);
-                var question = sessionQuestions[qIdx];
-                sessionQuestions.RemoveAt(qIdx);
-
-                int choice = _io.RenderMenu($"{target.Name}: \"{question.Text}\"", question.Answers.Select(a => a.Text).ToList(), 0);
-
-                if (choice == -1)
-                {
-                    _io.WriteLine($"{target.Name} seems disappointed...");
-                    return NegotiationResult.Failure;
-                }
-
-                moodScore += question.Answers[choice].Value;
-            }
-
-            // The Demand & Resolution Phase
-            // Note: moodScore requirements adjusted for 3 rounds (max 6, success threshold 4).
-            if (moodScore >= 4)
-            {
-                _io.WriteLine($"{target.Name} seems pleased with your answers.");
-                return ProcessDemands(actor, target);
-            }
-            else if (moodScore > 0)
-            {
-                _io.WriteLine($"{target.Name} is considering your words...");
-                return NegotiationResult.Flee;
-            }
-            else // Negative mood
-            {
-                _io.WriteLine($"{target.Name} grows angry!", ConsoleColor.Red);
-                _io.Wait(800);
-                return NegotiationResult.Failure;
-            }
+                NegotiationOutcomeKind.Success => NegotiationResult.Success,
+                NegotiationOutcomeKind.Trick => NegotiationResult.Trick,
+                NegotiationOutcomeKind.Flee => NegotiationResult.Flee,
+                NegotiationOutcomeKind.FamiliarFlee => NegotiationResult.FamiliarFlee,
+                _ => NegotiationResult.Failure
+            };
         }
 
-        private NegotiationResult HandleFamiliarDemon(Combatant actor, Combatant target)
+        private NegotiationSessionRequest CreateRequest(Combatant actor, Combatant target, List<Combatant> enemies)
         {
-            string dialogue = $"{target.Name} looks at you with a sense of familiarity...";
-
-            // Check for specific familiar dialogue in PersonaData
+            string race = target.ActivePersona?.Race ?? "Fairy";
+            PersonalityType personality = RaceToPersonality.GetValueOrDefault(race, PersonalityType.Childlike);
+            var questionPool = Database.NegotiationQuestions.Questions.GetValueOrDefault(
+                personality,
+                new List<NegotiationQuestion>());
+            string? specificFamiliarDialogue = null;
             string lookupId = target.SourceId.ToLower();
-
             if (Database.Personas.TryGetValue(lookupId, out var pData) &&
                 !string.IsNullOrEmpty(pData.FamiliarDialogue))
             {
-                dialogue = $"{target.Name}: \"{pData.FamiliarDialogue}\"";
-            }
-            else
-            {
-                // Fallback to personality-based familiar dialogue
-                string race = target.ActivePersona?.Race ?? "Fairy";
-                PersonalityType personality = RaceToPersonality.GetValueOrDefault(race, PersonalityType.Childlike);
-
-                var dialogues = Database.NegotiationQuestions
-                    .FamiliarDialogues.GetValueOrDefault(personality, new List<string>());
-
-                if (dialogues.Any())
-                {
-                    dialogue = $"{target.Name}: \"{dialogues[_rnd.Next(dialogues.Count)]}\"";
-                }
+                specificFamiliarDialogue = pData.FamiliarDialogue;
             }
 
-            _io.WriteLine(dialogue, ConsoleColor.Cyan);
+            var familiarDialogue = Database.NegotiationQuestions
+                .FamiliarDialogues.GetValueOrDefault(personality, new List<string>());
+            var healingItems = _inventory.GetAllItemIds()
+                .Where(id => Database.Items.TryGetValue(id, out var item) && item.Type == "Healing")
+                .Select(id => new NegotiationAvailableItem(id, Database.Items[id].Name));
 
-            // Familiar demons usually give something and then leave
-            int roll = _rnd.Next(0, 100);
-            if (roll < 50) // 50% chance for a gift item
-            {
-                _io.WriteLine($"{target.Name} gives you a Medicine and departs.");
-                _inventory.AddItem("101", 1); // "101" is Medicine ID
-            }
-            else if (roll < 80) // 20% chance for Macca
-            {
-                int macca = target.Level * 20;
-                _io.WriteLine($"{target.Name} gives you {macca} Macca and departs.");
-                _economy.AddMacca(macca);
-            }
-            else // 20% chance to heal party
-            {
-                _io.WriteLine($"{target.Name} casts a gentle light upon your party before departing.");
-                foreach (var member in _party.GetAliveMembers())
-                {
-                    member.CurrentHP = (int)Math.Min(member.MaxHP, member.CurrentHP + (member.MaxHP * 0.15)); // Heal 15% HP
-                }
-            }
-            return NegotiationResult.FamiliarFlee;
+            return new NegotiationSessionRequest(
+                target.Name,
+                Math.Max(1, actor.Level),
+                Math.Max(1, target.Level),
+                actor.GetStat(StatType.Lu),
+                Math.Max(1, enemies.Count(e => !e.IsDead)),
+                MoonPhaseSystem.IsNegotiationBlocked(),
+                _party.IsDemonOwned(actor, target.SourceId),
+                _party.HasOpenDemonStockSlot(actor),
+                _economy.Macca,
+                questionPool.Select(question => new NegotiationQuestionPrompt(
+                    question.Text,
+                    question.Answers.Select(answer => new NegotiationAnswerOption(answer.Text, answer.Value)))),
+                familiarDialogue,
+                specificFamiliarDialogue,
+                healingItems);
         }
 
-        private bool CheckNegotiationChance(int livingEnemyCount)
+        private void ApplyResult(NegotiationSessionResult result)
         {
-            if (livingEnemyCount <= 1) return true; // Higher chance with fewer enemies
-            if (livingEnemyCount == 2) return _rnd.Next(0, 100) < 75;
-            if (livingEnemyCount == 3) return _rnd.Next(0, 100) < 50;
-            if (livingEnemyCount >= 4) return _rnd.Next(0, 100) < 25; // Very hard with many enemies
-            return false;
+            if (result.MaccaSpent > 0)
+            {
+                _economy.SpendMacca(result.MaccaSpent);
+            }
+            if (result.ItemSpentId is string itemId)
+            {
+                _inventory.RemoveItem(itemId, 1);
+            }
+
+            NegotiationFamiliarGift gift = result.FamiliarGift;
+            switch (gift.Kind)
+            {
+                case NegotiationFamiliarGiftKind.Item when gift.ItemId is string giftItem:
+                    _inventory.AddItem(giftItem, gift.Quantity);
+                    break;
+                case NegotiationFamiliarGiftKind.Macca:
+                    _economy.AddMacca(gift.Macca);
+                    break;
+                case NegotiationFamiliarGiftKind.HealParty:
+                    foreach (var member in _party.GetAliveMembers())
+                    {
+                        member.CurrentHP = (int)Math.Min(
+                            member.MaxHP,
+                            member.CurrentHP + (member.MaxHP * (double)gift.HealPercent));
+                    }
+                    break;
+            }
         }
 
-        private NegotiationResult ProcessDemands(Combatant actor, Combatant target)
+        private sealed class LegacyRandomSource : IRandomSource
         {
-            // Macca Demand Formula
-            if (target.Level > actor.Level)
+            private readonly Random _random;
+
+            public LegacyRandomSource(Random random)
             {
-                _io.WriteLine($"{target.Name}: \"You have courage, but you are not yet worthy to command me. Perhaps we shall meet again.\"");
-                return NegotiationResult.Flee;
+                _random = random ?? throw new ArgumentNullException(nameof(random));
             }
 
-            double baseCost = Math.Pow(target.Level, 2) * 10;
-            double luckDiscount = baseCost * ((double)actor.GetStat(StatType.Lu) / 100.0);
-            int maccaDemand = (int)Math.Max(target.Level * 5, baseCost - luckDiscount);
+            public int NextInt32(int minimumInclusive, int maximumExclusive) =>
+                _random.Next(minimumInclusive, maximumExclusive);
 
-            string itemDemandId = _inventory.GetAllItemIds().FirstOrDefault(id => Database.Items[id].Type == "Healing");
-            bool demandsItem = itemDemandId != null && _rnd.Next(0, 100) < 50; // 50% chance to demand item
+            public decimal NextUnitDecimal() => (decimal)_random.NextDouble();
+        }
 
-            _io.WriteLine($"{target.Name}: \"Your words are intriguing. But talk is cheap.\"");
-            _io.Wait(800);
+        private sealed class LegacyNegotiationCommandSource : INegotiationCommandSource
+        {
+            private readonly IGameIO _io;
+            private readonly string _targetName;
 
-            // --- Macca Demand ---
-            if (maccaDemand > 0)
+            public LegacyNegotiationCommandSource(IGameIO io, string targetName)
             {
-                if (_economy.Macca < maccaDemand)
+                _io = io ?? throw new ArgumentNullException(nameof(io));
+                _targetName = targetName;
+            }
+
+            public ValueTask<NegotiationAnswerSelection> ReadAnswerAsync(
+                NegotiationQuestionPrompt prompt,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int choice = _io.RenderMenu(
+                    $"{_targetName}: \"{prompt.Text}\"",
+                    prompt.Answers.Select(answer => answer.Text).ToList(),
+                    0);
+                return ValueTask.FromResult(choice < 0
+                    ? NegotiationAnswerSelection.Cancel()
+                    : NegotiationAnswerSelection.Selected(choice));
+            }
+
+            public ValueTask<NegotiationDemandSelection> ReadDemandAsync(
+                NegotiationDemandPrompt prompt,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int choice = _io.RenderMenu(
+                    prompt.Prompt,
+                    prompt.Options.Select(option => option.Label).ToList(),
+                    0);
+                if (choice < 0)
                 {
-                    _io.WriteLine($"The required donation of {maccaDemand} Macca is missing.", ConsoleColor.Red);
-                    _io.Wait(1000);
-                    return NegotiationResult.Failure;
+                    return ValueTask.FromResult(NegotiationDemandSelection.Cancel());
                 }
 
-                var options = new List<string> { $"Give {maccaDemand} Macca", "Refuse" };
-                int choice = _io.RenderMenu($"{target.Name}: \"A gift of {maccaDemand} Macca should suffice.\"", options, 0);
-                if (choice == 0) // Player accepts macca demand
-                {
-                    _economy.SpendMacca(maccaDemand);
-                    // If no item is demanded, then success
-                    if (!demandsItem || itemDemandId == null) return NegotiationResult.Success;
-                }
-                else return NegotiationResult.Failure; // Player refused Macca
-            }
-
-            // --- Item Demand ---
-            if (demandsItem && itemDemandId != null)
-            {
-                ItemData item = Database.Items[itemDemandId];
-                List<string> options = new List<string> { $"Give {item.Name}", "Refuse" };
-                int choice = _io.RenderMenu($"{target.Name}: \"A {item.Name} would be lovely.\"", options, 0);
-
-                if (choice == 0) // Player accepts item demand
-                {
-                    _inventory.RemoveItem(itemDemandId, 1);
-                    return NegotiationResult.Success;
-                }
-                else return NegotiationResult.Failure; // Player refused Item
-            }
-
-            // If no demands were made (unlikely but possible) or passed all checks
-            if (_rnd.Next(0, 100) < 50)
-            {
-                return NegotiationResult.Success; // Demon joins
-            }
-            else
-            {
-                _io.WriteLine($"{target.Name}: \"Hmph. You waste my time.\"");
-                return NegotiationResult.Trick; // Demon takes payment and flees
+                return ValueTask.FromResult(NegotiationDemandSelection.Selected(prompt.Options[choice].Decision));
             }
         }
+
+        private sealed class LegacyNegotiationEventSink : IHostEventSink<NegotiationEvent>
+        {
+            private readonly IGameIO _io;
+
+            public LegacyNegotiationEventSink(IGameIO io)
+            {
+                _io = io ?? throw new ArgumentNullException(nameof(io));
+            }
+
+            public ValueTask PublishAsync(
+                NegotiationEvent hostEvent,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _io.WriteLine(hostEvent.Message, Color(hostEvent));
+
+                int wait = WaitMilliseconds(hostEvent);
+                if (wait > 0)
+                {
+                    _io.Wait(wait);
+                }
+
+                return ValueTask.CompletedTask;
+            }
+
+            private static ConsoleColor Color(NegotiationEvent hostEvent) => hostEvent.Kind switch
+            {
+                NegotiationEventKind.FamiliarDialogue => ConsoleColor.Cyan,
+                NegotiationEventKind.MoodNegative => ConsoleColor.Red,
+                NegotiationEventKind.Failure when hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
+                    hostEvent.Message.Contains("required donation", StringComparison.Ordinal) => ConsoleColor.Red,
+                _ => ConsoleColor.White
+            };
+
+            private static int WaitMilliseconds(NegotiationEvent hostEvent)
+            {
+                if (hostEvent.Kind == NegotiationEventKind.DemandIntro ||
+                    hostEvent.Kind == NegotiationEventKind.MoodNegative ||
+                    hostEvent.ReasonlessMessageIsUnresponsive())
+                {
+                    return 800;
+                }
+
+                if (hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
+                    hostEvent.Message.Contains("Demon Stock is full", StringComparison.Ordinal) ||
+                    hostEvent.Message.Contains("refuses to talk", StringComparison.Ordinal) ||
+                    hostEvent.Message.Contains("required donation", StringComparison.Ordinal))
+                {
+                    return 1000;
+                }
+
+                return 0;
+            }
+        }
+    }
+
+    internal static class NegotiationEventExtensions
+    {
+        public static bool ReasonlessMessageIsUnresponsive(this NegotiationEvent hostEvent) =>
+            hostEvent.Message.Contains("seems unresponsive", StringComparison.Ordinal);
     }
 }

@@ -55,9 +55,11 @@ Track H adds `BattleActionExecutor` as the framework action facade over clean ba
 
 Track I adds `BattleStatusLifecycleService` as the framework owner for clean ailment application, turn-start restrictions, turn-end status effects, natural recovery, duration ticking, cleanup scopes, and battle-start or turn-end passive dispatch. `StatusRegistry` remains the console-facing compatibility facade, but ailment infliction, turn-start, turn-end, and stat-stage mutation now route through `LegacyStatusLifecycleAdapter` where strict legacy parity exists. Cure parsing and redundancy checks stay in the console host until the old skill and item content is reauthored.
 
-Track J adds `BattleEncounterRunner` as the framework owner for the encounter state machine: initiative, battle-start lifecycle, team phases, actor turns, Press Turn consumption, command orchestration, turn-end lifecycle, deployment refresh, completion, cancellation, faults, and ordered battle events. `BattleConductor` now acts as a console adapter over that runner, while `InteractionBridge`, `ActionProcessor`, `BehaviorEngine`, `NegotiationEngine`, rewards, legacy content, and console presentation remain host-owned compatibility systems.
+Track J adds `BattleEncounterRunner` as the framework owner for the encounter state machine: initiative, battle-start lifecycle, team phases, actor turns, Press Turn consumption, command orchestration, turn-end lifecycle, deployment refresh, completion, cancellation, faults, and ordered battle events. `BattleConductor` now acts as a console adapter over that runner, while `InteractionBridge`, `ActionProcessor`, `BehaviorEngine`, legacy content, and console presentation remain host-owned compatibility systems.
 
-Inventory quantities, complete AI/tactics policy, negotiation/recruitment rules, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track K adds framework negotiation/reward services for the conversation state machine, typed prompts, demand outcomes, familiar gifts, recruitment validation, and immutable battle reward calculation. The console `NegotiationEngine`, `BattleConductor`, and new legacy adapters translate `IGameIO`, live `Combatant` lists, inventory, economy, and compendium mutation into those framework results. Legacy `questions.json` remains the data source until production content is reauthored.
+
+Inventory quantities, complete AI/tactics policy, full fusion transaction ownership, compendium persistence, save/load services, authored negotiation content, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -66,7 +68,7 @@ Inventory quantities, complete AI/tactics policy, negotiation/recruitment rules,
 Conductors own high-level workflows and decide which subsystem should act next.
 
 - `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops.
-- `BattleConductor` adapts the console battle into the framework encounter runner, then keeps legacy reward and cleanup flow host-owned.
+- `BattleConductor` adapts the console battle into the framework encounter runner, applies framework reward results through a console adapter, and keeps cleanup flow host-owned.
 - `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions.
 
 Conductors should remain workflow coordinators. When adding new rules, prefer placing rule logic in an engine, processor, strategy, or registry.

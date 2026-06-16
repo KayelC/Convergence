@@ -168,6 +168,21 @@ Track J began from `aa82101` and moved battle orchestration into the framework w
 - `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
 - `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
 
+## Track K Boundary
+
+Track K began from `c3f3039` and moved negotiation session rules, recruitment validation, and battle reward calculation into framework services while preserving legacy content files and console-facing behavior.
+
+- `JRPG.Framework/Logic/Battle/Runtime/BattleNegotiationAndRewards.cs` now owns typed negotiation prompts, answer scoring, moon/stock/ownership gates, familiar gifts, demand outcomes, recruitment transaction validation, and immutable battle reward results.
+- `NegotiationEngine` remains the console compatibility adapter. It maps `questions.json`, inventory, economy, moon phase, and live party state into framework requests, then applies only the returned Macca/item/familiar-gift mutations.
+- `BattleConductor` now uses `LegacyRecruitmentAdapter` for stock/compendium/enemy-list mutation after a successful negotiation and `LegacyBattleRewardAdapter` for victory EXP/Macca application.
+- No production data was reauthored. `Data/Jsons` remains unchanged, and removal stays unauthorized for `NegotiationEngine`, `CombatMath`, `BattleConductor`, `Data/NegotiationData.cs`, and the legacy JSON datasets.
+- The parity ledger marks negotiation/recruitment and battle rewards as `parallel_partial` with migrated console consumers. Remaining work is clean negotiation content, authored ruleset binding, and later host/content migration.
+- Focused Track K framework and console-route tests passed: 13 tests, 0 failed, 0 skipped. Boundary-focused runtime API checks also pass.
+- Full verification passed: 610 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 119 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -208,4 +223,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track K may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track L may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

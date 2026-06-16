@@ -111,8 +111,8 @@ The following capabilities must not disappear during migration.
 | Passive startup and turn-end behavior | `StatusRegistry` | Framework lifecycle dispatch for startup/turn-end paths; production content migration incomplete |
 | Enemy AI and tactics | `BehaviorEngine`, `BattleConductor` | Framework strategy boundary exists; ordinary AI still delegates to legacy heuristics |
 | Affinity knowledge and analysis | `BattleKnowledge` | Clean stores exist; interactive battle still uses legacy session knowledge |
-| Negotiation, demands, recruitment | `NegotiationEngine`, `BattleConductor` | Missing |
-| EXP and Macca battle rewards | `CombatMath`, `BattleConductor` | Missing |
+| Negotiation, demands, recruitment | `NegotiationEngine`, `BattleConductor` | Framework session and recruitment services with console adapters; legacy data remains authoritative |
+| EXP and Macca battle rewards | `CombatMath`, `BattleConductor` | Framework reward result service with console adapter; ruleset JSON binding remains incomplete |
 | Inventory quantities | `InventoryManager` | Item executor reports consumption only |
 | Equipment ownership and equipping | `InventoryManager`, `FieldServiceEngine` | Missing clean definitions and runtime |
 | Economy and Macca transactions | `EconomyManager` | Missing |
@@ -917,6 +917,23 @@ Port the systems currently embedded across `NegotiationEngine` and `BattleConduc
 ### Exit Gate
 
 An interactive host can complete negotiation and recruitment without `IGameIO` entering framework rules, and battle rewards match approved legacy vectors.
+
+### Track K Completion
+
+Track K began from `c3f3039` on `track-12-recovery`.
+
+- Added `NegotiationSessionService`, typed negotiation prompts, demand selections, outcomes, familiar gifts, `RecruitmentTransactionService`, and `BattleRewardService` under the framework runtime namespace.
+- Kept `questions.json` and `Data/NegotiationData.cs` unchanged. `NegotiationEngine` now maps legacy data and `IGameIO` interactions into framework requests, then applies returned Macca, item, or familiar-gift mutations.
+- Added `LegacyRecruitmentAdapter` so `BattleConductor` validates recruitment before mutating demon stock, session recruitment IDs, enemy lists, and compendium registration.
+- Added `LegacyBattleRewardAdapter` so victory rewards are calculated as immutable framework results and then applied to live console actors, active Personas, and economy.
+- Preserved legacy battle orchestration and data ownership. Track K does not reauthor production negotiation content, bind rulesets from JSON, migrate boss completion callbacks, or authorize deletion of legacy files.
+- Added focused framework tests for demand flow, familiar gifts, recruitment validation, reward applications, and immutable results. Strengthened console characterization for recruitment and victory reward state.
+- Focused Track K tests passed: 13 tests, 0 failed, 0 skipped. Runtime public API boundary tests also pass.
+- Full verification passed: 610 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 119 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events.
+- `git diff --check` passed. `Data/Jsons` has no Track K changes. The new framework runtime file contains no console, filesystem, Godot, Newtonsoft, legacy database, DTO, `IGameIO`, `Combatant`, `Persona`, `SkillData`, `PersonaData`, or `ItemData` references.
 
 ## Track L: Inventory, Equipment, Economy, Shops, And Hospital
 

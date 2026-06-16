@@ -52,7 +52,7 @@ internal sealed class LegacyStatusLifecycleAdapter
             return false;
         }
 
-        AilmentData? legacyAilment = Database.Ailments.Values.FirstOrDefault(ailment =>
+        AilmentData? legacyAilment = Database.Ailments.Values.ToArray().FirstOrDefault(ailment =>
             skillEffect.Contains(ailment.Name, StringComparison.OrdinalIgnoreCase));
         if (legacyAilment is null)
         {
