@@ -99,6 +99,7 @@ public class RuntimeActorState
     public BattlePassiveCollection Passives { get; }
     public IReadOnlyDictionary<ContentId, decimal> Stats { get; }
     public bool IsActive { get; set; }
+    public bool IsGuarding { get; private set; }
     public bool IsDefeated => GetRequiredResource(VitalResourceId).Current <= 0;
     public IReadOnlyDictionary<ContentId, BattleResourceState> Resources =>
         new ReadOnlyDictionary<ContentId, BattleResourceState>(_resources);
@@ -196,6 +197,8 @@ public class RuntimeActorState
 
     public void GrantShield(ShieldKind kind, DurationDefinition? duration) =>
         _shields[kind] = new BattleShieldState(duration);
+
+    public void SetGuarding(bool isGuarding) => IsGuarding = isGuarding;
 
     public void OverrideAffinity(DamageElement element, ElementalAffinity affinity, DurationDefinition duration) =>
         _affinityOverrides[element] = new BattleAffinityOverrideState(affinity, duration);

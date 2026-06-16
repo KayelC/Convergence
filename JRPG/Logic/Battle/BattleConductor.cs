@@ -290,8 +290,7 @@ namespace JRPGPrototype.Logic.Battle
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Guard)
                     {
-                        actor.IsGuarding = true;
-                        _messenger.Publish($"{actor.Name} is guarding.");
+                        _processor.ExecuteGuard(actor);
                         _turnEngine.ConsumeAction(HitType.Normal, false);
                         actionCommitted = true;
                         return; // Turn finished
@@ -411,7 +410,7 @@ namespace JRPGPrototype.Logic.Battle
                     else if (menuResult.Action == BattleMainMenuAction.Pass)
                     {
                         _turnEngine.Pass();
-                        _messenger.Publish($"{actor.Name} passes.");
+                        _processor.ExecutePass(actor);
                         actionCommitted = true;
                         return;
                     }
@@ -501,7 +500,7 @@ namespace JRPGPrototype.Logic.Battle
                 if (targets != null && targets.Count == 0 && skill == null)
                 {
                     _turnEngine.Pass();
-                    _messenger.Publish($"{actor.Name} passes.");
+                    _processor.ExecutePass(actor);
                     return;
                 }
 

@@ -115,13 +115,43 @@ public sealed class ActionProcessorResultTests
         Assert.Equal(20, target.CurrentHP);
     }
 
+    [Fact]
+    public void ExecuteGuard_PreservesVisibleLegacyMessage()
+    {
+        var (processor, messenger) = CreateProcessorWithMessenger();
+        var actor = CreateCombatant("Actor");
+
+        processor.ExecuteGuard(actor);
+
+        Assert.True(actor.IsGuarding);
+        BattleMessageArgs message = Assert.Single(messenger.Messages);
+        Assert.Equal("Actor is guarding.", message.Message);
+    }
+
+    [Fact]
+    public void ExecutePass_PreservesVisibleLegacyMessage()
+    {
+        var (processor, messenger) = CreateProcessorWithMessenger();
+        var actor = CreateCombatant("Actor");
+
+        processor.ExecutePass(actor);
+
+        BattleMessageArgs message = Assert.Single(messenger.Messages);
+        Assert.Equal("Actor passes.", message.Message);
+    }
+
     private static ActionProcessor CreateProcessor()
+    {
+        return CreateProcessorWithMessenger().Processor;
+    }
+
+    private static (ActionProcessor Processor, RecordingBattleMessenger Messenger) CreateProcessorWithMessenger()
     {
         var status = new StatusRegistry();
         var messenger = new RecordingBattleMessenger();
         status.SetMessenger(messenger);
 
-        return new ActionProcessor(status, new BattleKnowledge(), messenger);
+        return (new ActionProcessor(status, new BattleKnowledge(), messenger), messenger);
     }
 
     private static Combatant CreateCombatant(string name, int currentHp = 100)
@@ -167,6 +197,8 @@ public sealed class ActionProcessorResultTests
 
     private sealed class RecordingBattleMessenger : IBattleMessenger
     {
+        public List<BattleMessageArgs> Messages { get; } = [];
+
         public event EventHandler<BattleMessageArgs>? OnMessagePublished;
 
         public void Publish(
@@ -177,9 +209,9 @@ public sealed class ActionProcessorResultTests
             Combatant? analysisTarget = null,
             bool clearScreen = false)
         {
-            OnMessagePublished?.Invoke(
-                this,
-                new BattleMessageArgs(message, color, delay, waitForInput, analysisTarget, clearScreen));
+            var args = new BattleMessageArgs(message, color, delay, waitForInput, analysisTarget, clearScreen);
+            Messages.Add(args);
+            OnMessagePublished?.Invoke(this, args);
         }
     }
 }

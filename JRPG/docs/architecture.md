@@ -14,7 +14,7 @@ The solution is organized around gameplay subsystems with a physical host bounda
 - serializer-neutral deserialization contracts, validation, and catalog construction;
 - catalog-surface definitions for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets;
 - runtime identity, actor-state snapshots, and transaction-safe mutation result contracts;
-- typed skill, item, passive, targeting, and effect execution;
+- typed action, skill, item, passive, targeting, and effect execution;
 - catalog-backed actor hydration and automated battle orchestration;
 - elemental, ailment, instant-death, knowledge, and Press Turn contracts;
 - typed fusion inheritance evaluation and selection.
@@ -51,7 +51,9 @@ Track F adds framework party and stock transition services for active/reserve pa
 
 Track G adds `ProductionCombatRuleset` as the framework owner for production combat formulas: damage, hit/evasion, critical chance, instant-death success, initiative, rewards, affinity multipliers, guard and rigid-body handling, charge, drain, and reflection math. `CombatMath` and `DamageHandler` remain console-host facades, but their rule work now flows through `LegacyCombatPolicyAdapter` into the framework policy.
 
-Inventory quantities, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track H adds `BattleActionExecutor` as the framework action facade over clean basic attacks, skills, items, guard, pass, analyze, escape, Persona/demon stock transitions, and host-mediated tactics/negotiation/special actions. It provides one shared assessment/execution path, structured action events, turn-consumption results, cancellation-before-mutation, and host-owned item reservation/commit ports. The console host now routes guard/pass through a compatibility adapter, and the clean field demo uses the facade for field skills and items.
+
+Inventory quantities, full battle orchestration, AI/tactics policy, negotiation/recruitment rules, full fusion transaction ownership, compendium persistence, save/load services, and authored ruleset binding remain later migration tracks. The Track E/F/G/H policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -72,7 +74,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 - `CombatMath` is the console compatibility facade for framework production combat policies.
 - `PressTurnEngine` owns the full/blinking turn icon state machine.
 - `StatusRegistry` owns ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks.
-- `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies.
+- `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine`, `ShopEngine`, and `ExplorationProcessor` own field-side service, shop, item, skill, equipment, and dungeon traversal rules.
 - `FusionCalculator`, `FusionMutator`, and fusion strategies own fusion prediction and state mutation.
 - `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.

@@ -621,6 +621,7 @@ public sealed class ProductionCombatRuleset :
             level: 1,
             new ProductionCombatStats(strength, magic, vitality, agility, luck),
             new ProductionCombatStatus(
+                IsGuarding: actor.IsGuarding,
                 IsRigidBody: rigid,
                 HasPhysicalCharge: physicalCharge,
                 HasMagicalCharge: magicalCharge),

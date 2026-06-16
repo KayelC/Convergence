@@ -117,6 +117,23 @@ Track G began from `d053ef0` and moved production combat formulas into framework
 - Track G adds 20 focused production-combat policy test cases, bringing the suite to 576 passing tests with 0 skipped tests. The nonincremental build reports 120 warnings.
 - The clean battle demo still ends in `Victory` for `player_team`; the clean field demo still completes all seven ordered events.
 
+## Track H Boundary
+
+Track H began from `a9c79a4` and added a framework-owned action execution facade without replacing the interactive battle state machine.
+
+- `JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs` now owns typed action commands for basic attacks, skills, items, guard, pass, analyze, escape, Persona swap, demon summon/return/swap, tactics change, negotiation, and host-special requests.
+- Assessment and execution share the same target, cost, item availability, effect, Press Turn, and party-stock transition services.
+- Item use now has a host-owned reservation port. The framework commits the reservation only when execution returns `ConsumeOne`; rejected, unavailable, no-effect, skipped, failed, or cancelled actions do not commit quantity changes.
+- `Host/CleanFieldDemoHost.cs` now executes clean field skills and items through the action facade with an explicit inventory adapter.
+- `ActionProcessor` and `BattleConductor` preserve existing visible console behavior while routing guard/pass coordination through a console-owned compatibility adapter.
+- Tactics and negotiation are represented as host-mediated action commands only. Full AI, tactics policy, negotiation/recruitment, and battle orchestration remain Tracks J and K.
+- The parity ledger marks battle actions, typed effects, inventory quantities, and field items/skills as `parallel_partial`; removal remains unauthorized.
+- Focused Track H action/shared-effect tests passed: 27 tests, 0 failed, 0 skipped.
+- Full verification passed: 585 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events through the action facade.
+
 ## Migration Rule
 
 No working subsystem is removed merely because a cleaner API exists.
@@ -157,4 +174,4 @@ Battle, field exploration, party management, inventory, shops, negotiation, grow
 
 The completed `skill-system-redesign` branch remains an architectural reference. It must not replace the playable line merely because its internal contracts are cleaner. Work on this recovery branch should preserve the interactive prototype until a deliberate successor exists.
 
-Track H may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.
+Track I may begin only while the two-project build, full suite, ordinary interactive startup, clean demos, parity ledger, and dataset assertions remain green. Full live battle sessions and exhaustive console traversal remain manual checks alongside the automated representative workflows.

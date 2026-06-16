@@ -138,20 +138,21 @@ internal sealed class CleanFieldDemoHost
         CatalogBattleActor ally = allyResult.RequireActor();
         RuntimeActorState[] participants = [medic.State, ally.State];
         BattleExecutionServices services = CreateExecutionServices(catalog);
-        var skillExecutor = new SkillExecutor(services);
-        var itemExecutor = new ItemExecutor(services);
+        var actionExecutor = new BattleActionExecutor(
+            new SkillExecutor(services),
+            new ItemExecutor(services),
+            services);
         var inventory = catalog.Items.Keys.ToDictionary(id => id, _ => 1);
         int sequence = 1;
 
         ally.State.AddResource(ally.State.VitalResourceId, -30);
         SkillDefinition fieldRecovery = catalog.GetRequiredSkill(
             ContentId.Parse("convergence.shared_effects_demo:field_recovery_demo"));
-        SkillExecutionResult skill = skillExecutor.Execute(new SkillExecutionRequest(
-            fieldRecovery,
+        BattleActionExecutionResult skill = await actionExecutor.ExecuteAsync(new BattleActionExecutionRequest(
+            new SkillBattleActionCommand(fieldRecovery, [ally.State.InstanceId]),
             medic.State,
             participants,
-            new EffectExecutionEnvironment(Field),
-            [ally.State.InstanceId]));
+            new EffectExecutionEnvironment(Field)), cancellationToken);
         await PrintAsync(
             sequence++,
             "skill",
@@ -160,26 +161,26 @@ internal sealed class CleanFieldDemoHost
 
         ally.State.AddResource(ally.State.VitalResourceId, -20);
         sequence = await ExecuteItemAsync(
-            "medicine_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            "medicine_demo", Field, ally.State.InstanceId, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
 
         AilmentDefinition poison = catalog.GetRequiredAilment(
             ContentId.Parse("convergence.shared_effects_demo:poison_demo"));
         ally.State.ApplyAilment(poison, poison.DefaultDuration);
         sequence = await ExecuteItemAsync(
-            "dis_poison_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            "dis_poison_demo", Field, ally.State.InstanceId, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
 
         ally.State.SetResource(ally.State.VitalResourceId, 0);
         sequence = await ExecuteItemAsync(
-            "revival_bead_demo", Field, ally.State.InstanceId, itemExecutor, catalog, participants, inventory, sequence,
+            "revival_bead_demo", Field, ally.State.InstanceId, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
 
         sequence = await ExecuteItemAsync(
             "traesto_gem_demo",
             Battle,
             null,
-            itemExecutor,
+            actionExecutor,
             catalog,
             participants,
             inventory,
@@ -188,7 +189,7 @@ internal sealed class CleanFieldDemoHost
             NewMoon,
             cancellationToken);
         sequence = await ExecuteItemAsync(
-            "goho_m_demo", Field, null, itemExecutor, catalog, participants, inventory, sequence,
+            "goho_m_demo", Field, null, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
 
         await PrintAsync(sequence, "outcome", "Shared field effects demo completed successfully.", cancellationToken);
@@ -199,7 +200,7 @@ internal sealed class CleanFieldDemoHost
         string localId,
         ContentId contextId,
         ContentId? targetId,
-        ItemExecutor executor,
+        BattleActionExecutor executor,
         GameDataCatalog catalog,
         IReadOnlyList<RuntimeActorState> participants,
         IDictionary<ContentId, int> inventory,
@@ -210,17 +211,12 @@ internal sealed class CleanFieldDemoHost
     {
         ContentId itemId = ContentId.Parse($"convergence.shared_effects_demo:{localId}");
         ItemDefinition item = catalog.GetRequiredItem(itemId);
-        ItemExecutionResult result = executor.Execute(new ItemExecutionRequest(
-            item,
+        BattleActionExecutionResult result = await executor.ExecuteAsync(new BattleActionExecutionRequest(
+            new ItemBattleActionCommand(item, targetId is ContentId selected ? [selected] : []),
             participants[0],
             participants,
             new EffectExecutionEnvironment(contextId, battleKindId, moonPhaseId),
-            targetId is ContentId selected ? [selected] : []));
-
-        if (result.Consumption == ItemConsumptionDecision.ConsumeOne)
-        {
-            inventory[itemId]--;
-        }
+            new DemoItemActionInventory(inventory)), cancellationToken);
 
         string hostRequests = result.HostActionRequestIds.Count == 0
             ? "none"
@@ -228,7 +224,7 @@ internal sealed class CleanFieldDemoHost
         await PrintAsync(
             sequence,
             "item",
-            $"{item.DisplayName}: {result.Status}; consume={result.Consumption}; escape={result.EscapeRequested}; hostRequests={hostRequests}; remaining={inventory[itemId]}.",
+            $"{item.DisplayName}: {result.Status}; consume={result.ItemConsumption}; escape={result.EscapeRequested}; hostRequests={hostRequests}; remaining={inventory[itemId]}.",
             cancellationToken);
         return sequence + 1;
     }
@@ -284,4 +280,52 @@ internal sealed class CleanFieldDemoHost
                     ContentId.Parse("request_dungeon_exit"),
                     new DungeonExitRequestHandler())
             ]);
+
+    private sealed class DemoItemActionInventory(IDictionary<ContentId, int> quantities) : IItemActionInventory
+    {
+        public bool HasAvailable(ContentId itemId, int quantity) =>
+            quantities.TryGetValue(itemId, out int available) && available >= quantity;
+
+        public IItemActionReservation Reserve(ContentId itemId, int quantity)
+        {
+            if (!HasAvailable(itemId, quantity))
+            {
+                throw new InvalidOperationException($"Item '{itemId}' is not available.");
+            }
+
+            return new Reservation(quantities, itemId, quantity);
+        }
+
+        private sealed class Reservation(
+            IDictionary<ContentId, int> quantities,
+            ContentId itemId,
+            int quantity) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = itemId;
+            public int Quantity { get; } = quantity;
+            public bool IsCommitted { get; private set; }
+            public bool IsRolledBack { get; private set; }
+
+            public void Commit()
+            {
+                if (IsCommitted || IsRolledBack)
+                {
+                    return;
+                }
+
+                quantities[ItemId] -= Quantity;
+                IsCommitted = true;
+            }
+
+            public void Rollback()
+            {
+                if (IsCommitted || IsRolledBack)
+                {
+                    return;
+                }
+
+                IsRolledBack = true;
+            }
+        }
+    }
 }

@@ -182,6 +182,20 @@ The production damage order is:
 
 Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing, Apt Pupil, Rebellion, Arms Master, and Spell Master remain adapter or console-effect concerns until Track H/I content migration gives them fully typed definitions. Ruleset JSON still does not author these combat constants; Track G creates named code defaults and parity tests first.
 
+## Clean Action Execution Foundation
+
+Track H adds a framework-owned action facade for the clean path. `BattleActionExecutor` accepts typed commands for basic attack, skill, item, guard, pass, analyze, escape, Persona swap, demon summon/return/swap, tactics change, negotiation, and host-special actions. Assessment and execution share the same services, so eligibility, target resolution, cost checks, item availability, and party-stock transitions cannot drift apart inside the clean API.
+
+The framework action result reports:
+
+- ordered action events for presentation adapters;
+- effect results and host-action request IDs;
+- item consumption decisions and whether a host reservation committed;
+- party-stock transition results;
+- Press Turn consumption, normal consumption, pass consumption, phase termination, or free/no-turn actions.
+
+Field recovery skills and items in the clean field demo now use this action facade with an explicit host-owned inventory reservation adapter. The interactive console battle still preserves its legacy skill/item/effect flow, but guard and pass are now coordinated through a console compatibility adapter over the framework action executor. Full battle orchestration, AI/tactics behavior, negotiation/recruitment, inventory ownership, and production content reauthoring remain later tracks.
+
 ## Extension Mindset
 
 When adding new gameplay content:

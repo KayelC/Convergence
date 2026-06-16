@@ -728,6 +728,25 @@ Make the clean executor capable of every ordinary battle and field action.
 
 `ActionProcessor` delegates all migrated actions to framework services, and bridge eligibility cannot disagree with execution.
 
+### Track H Completion
+
+Track H began from `a9c79a4` on `track-12-recovery`.
+
+- Added `BattleActionExecutor` with typed commands for basic attack, skill, item, guard, pass, analyze, escape, Persona swap, demon summon/return/swap, tactics change, negotiation, and host-special actions.
+- Added shared assessment/execution results, stable diagnostics, ordered action events, explicit turn consumption, item reservation/commit ports, and cancellation checks before mutation or host-special dispatch.
+- Reused the existing clean skill, item, ordered-effect, Press Turn, party-stock, escape, and combat-policy services rather than adding a second execution path.
+- Updated the clean field demo so field recovery skills, recovery/cure/revival items, Traesto, and Goho-M execute through the action facade with host-owned inventory quantities.
+- Added `LegacyBattleActionAdapter` and routed console guard/pass through it while preserving current `ActionProcessor`, `BattleConductor`, `SkillData`/`ItemData`, basic-attack Slash/Strike/Pierce, bridge, and effect-strategy behavior.
+- Represented tactics and negotiation as typed host-mediated action commands only. Full battle orchestration, AI/tactics policy, negotiation/recruitment, production content reauthoring, inventory ownership, and legacy effect retirement remain later tracks.
+- Updated the parity ledger. `battle_actions`, `typed_effects`, `inventory_quantities`, and `field_items_and_skills` remain `parallel_partial`; no removal is authorized.
+- Focused Track H action/shared-effect tests passed: 27 tests, 0 failed, 0 skipped.
+- Full verification passed: 585 tests, 0 failed, 0 skipped.
+- `dotnet build JRPG.sln --no-restore --no-incremental`: 120 warnings, 0 errors.
+- `dotnet run --no-build -- --clean-battle-demo`: completed with `Victory` for `player_team`.
+- `dotnet run --no-build -- --clean-field-demo`: completed all seven ordered field-effect events through the action facade.
+- `git diff --check`: clean. Data/Jsons had no diff.
+- Framework boundary search found no production references to host/legacy actor or DTO types, `Database`, `IGameIO`, console, filesystem, or Newtonsoft in the new action facade. Existing clean `CombatDefenseProfile` still lives under the preserved `JRPGPrototype.Entities.Components` namespace from Track B compatibility.
+
 ## Track I: Ailment, Status, Duration, And Passive Lifecycle
 
 ### Goal

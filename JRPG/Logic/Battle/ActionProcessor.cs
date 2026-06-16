@@ -24,6 +24,7 @@ namespace JRPGPrototype.Logic.Battle
         private readonly BattleKnowledge _knowledge;
         private readonly IBattleMessenger _messenger;
         private readonly BattleEffectRegistry _registry;
+        private readonly LegacyBattleActionAdapter _actions;
 
         public ActionProcessor(StatusRegistry status, BattleKnowledge knowledge,
             IBattleMessenger messenger)
@@ -31,6 +32,7 @@ namespace JRPGPrototype.Logic.Battle
             _status = status;
             _knowledge = knowledge;
             _messenger = messenger;
+            _actions = new LegacyBattleActionAdapter();
 
             // The Registry is our centralized toolbox of the logic patterns.
             _registry = new BattleEffectRegistry();
@@ -177,6 +179,11 @@ namespace JRPGPrototype.Logic.Battle
         // Orchestrates the Analysis logic and records knowledge discovery.
         public void ExecuteAnalyze(Combatant target)
         {
+            // The framework action facade owns the host-neutral analyze command shape.
+            // Legacy battle knowledge still records the current affinity channels until Track J/K migrate consumers.
+            Combatant analyzer = target;
+            _actions.ExecuteAnalyze(analyzer, target);
+
             // 1. LOGIC: Force record all affinities into player memory (Discover All)
             foreach (Element elem in Enum.GetValues(typeof(Element)))
             {
@@ -188,6 +195,18 @@ namespace JRPGPrototype.Logic.Battle
             // 2. BROADCAST: Send the analysis signal to the Messenger. 
             // The BattleLogger sees that 'analysisTarget' is not null and renders the stat sheet.
             _messenger.Publish(message: null, analysisTarget: target);
+        }
+
+        public void ExecuteGuard(Combatant actor)
+        {
+            _actions.ExecuteGuard(actor);
+            _messenger.Publish($"{actor.Name} is guarding.");
+        }
+
+        public void ExecutePass(Combatant actor)
+        {
+            _actions.ExecutePass(actor);
+            _messenger.Publish($"{actor.Name} passes.");
         }
 
         // Utility check for the Conductor/AI to determine if a skill targets multiple people.
