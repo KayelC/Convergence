@@ -1137,6 +1137,8 @@ Track N began from `ec7d4fa` on `track-12-recovery`.
 
 ## Track O: Console Host Migration
 
+Track O is now split into subtracks after O1. Use [Track O Console Host Migration Plan](o-track-plan.md) as the active working checklist for O2 and later passes.
+
 ### Goal
 
 Make the interactive console application a real consumer of framework commands, results, events, catalogs, and snapshots.
