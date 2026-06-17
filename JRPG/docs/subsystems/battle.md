@@ -25,12 +25,15 @@
 - `InteractionBridge`: player-facing battle menus and target/skill/item selection.
 - `BattleEffectRegistry` and `IBattleEffect` implementations: category-specific skill and item effects.
 - `BattleMessenger` and `BattleLogger`: battle event publication and console rendering.
+- `LegacyBattleEventPresentationAdapter`: console-host adapter that consumes ordered framework encounter events, suppresses structural events that should not print, and renders only migrated lifecycle-shell messages through the existing messenger.
 
 ## Main Runtime Flows
 
 ### Encounter Start
 
 `BattleConductor.StartBattle` announces enemies, creates a legacy encounter adapter, and calls `BattleEncounterRunner`. The adapter calculates average agility for both sides, rolls initiative through `CombatMath.RollInitiative`, applies initial Auto-Kaja passives to the side that acts first, refreshes the HUD, and synchronizes live `Combatant` state with framework participants.
+
+The conductor also supplies `LegacyBattleEventPresentationAdapter` as the runner event sink. Actor creation, battle-start, round, phase, turn-start, Press Turn, and phase-end framework events are recorded and suppressed so the console does not gain new narration. Migrated lifecycle-shell output, such as skip, fear flee, return-to-COMP, enemy flee, and demon defeat return, is represented as typed presentation results before flowing through `BattleMessenger`.
 
 ### Phase Loop
 
@@ -93,7 +96,7 @@ Each phase:
 - Add new ailment behavior in `StatusRegistry`, and update `status_ailments.json`.
 - Add new AI behavior in `BehaviorEngine` after rule support exists in processors/effects.
 - Add new battle UI commands in `InteractionBridge` and route their command result through the console turn handler used by `BattleEncounterRunner`.
-- Add new battle messages through `IBattleMessenger` rather than direct console calls.
+- Add new battle messages through `IBattleMessenger` or a typed event-presentation result rather than direct console calls.
 
 ## Caveats
 
@@ -101,3 +104,4 @@ Each phase:
 - The current build has nullable warnings in battle messages, bridge returns, and some action paths.
 - Track J adds framework encounter-loop tests for Press Turn, lifecycle ordering, completion, cancellation, and faults.
 - Track K adds framework negotiation/recruitment/reward tests plus console characterization for recruitment and victory reward application. Exhaustive live console battle traversal remains manual and later-track work.
+- Track O6 adds event-presentation tests for deterministic event mapping and visible-output preservation. It does not migrate legacy skill/item execution, AI policy, negotiation, rewards, or production battle content.

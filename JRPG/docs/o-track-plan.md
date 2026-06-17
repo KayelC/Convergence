@@ -337,6 +337,19 @@ Exit gate:
 - The console battle can consume structured framework battle events for migrated phases.
 - Existing ordinary battle characterization remains green.
 
+Completion:
+
+- Track O6 began from `3dae5ae` on `track-12-recovery`.
+- Added `BattleEventPresentationResult` and `LegacyBattleEventPresentationAdapter` for typed `Shown`, `Suppressed`, and `HostOwned` battle-event presentation outcomes.
+- `BattleConductor.RunFrameworkEncounter` now passes the event presentation sink into `BattleEncounterServices`, so framework encounter events are consumed by the console host without printing generic structural narration.
+- Generic actor-created, battle-started, initiative, round, phase, turn-start, Press Turn, and phase-end events are suppressed to preserve existing visible output. Lifecycle-shell messages for skip, fear flee, return-to-COMP, enemy flee, and demon defeat return now flow through typed presentation results.
+- O5 command-shell behavior remains intact. Legacy attack, skill, item, escape, tactics, negotiation, AI, rewards, recruitment, production `Data/Jsons`, and clean skill/item execution did not change.
+- Updated the parity ledger. `press_turn`, `battle_actions`, `enemy_ai_and_tactics`, and `console_presentation` gained O6 evidence and remain `parallel_partial`; `battle_knowledge` did not gain new O6 evidence and was left unchanged. No removal is authorized.
+- Focused O6 verification passed: `BattleEventPresentationTests`, `BattleCommandShellTests`, `BattleBridgeResultTests`, `ActionProcessorResultTests`, `BattleEncounterRunnerTests`, and the ordinary battle routing characterization reported 74 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 671 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O7: Negotiation And Reward Presentation
 
 Goal:

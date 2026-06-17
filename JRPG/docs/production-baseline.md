@@ -281,6 +281,19 @@ Track O5 began from `f671491` and migrates player battle command selection into 
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O6 Boundary
+
+Track O6 began from `3dae5ae` and migrates battle event presentation into a typed console-host event sink without changing visible battle narration.
+
+- `BattleEventPresentationResult` records `Shown`, `Suppressed`, and `HostOwned` outcomes for framework battle events.
+- `LegacyBattleEventPresentationAdapter` consumes `BattleEncounterEvent` streams from `BattleEncounterRunner` through `BattleEncounterServices`.
+- Generic structural events are consumed but suppressed, preserving the existing console output policy. Lifecycle-shell messages for skip, fear flee, return-to-COMP, enemy flee, and demon defeat return now flow through typed presentation results.
+- `BattleConductor`, `ActionProcessor`, `StatusRegistry`, `BehaviorEngine`, `NegotiationEngine`, reward/recruitment adapters, production `Data/Jsons`, and clean skill/item execution remain protected. Removal remains unauthorized.
+- Focused O6 verification passed: `BattleEventPresentationTests`, `BattleCommandShellTests`, `BattleBridgeResultTests`, `ActionProcessorResultTests`, `BattleEncounterRunnerTests`, and the ordinary battle routing characterization reported 74 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 671 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

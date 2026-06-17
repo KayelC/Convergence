@@ -75,6 +75,8 @@ Track O4 routes party organization, demon stock, Persona stock, and field-side s
 
 Track O5 routes player battle command selection through a console-host command shell. The shell produces framework `BattleActionCommand` objects and assessments before handing back the legacy payloads needed by `ActionProcessor`, `PartyManager`, `NegotiationEngine`, and current battle helpers. Legacy attack, skill, item, and escape execution remain host-mediated; concrete framework commands are used for guard, pass, analyze, Persona swap, and COMP stock commands.
 
+Track O6 routes framework battle encounter events through a console-host event presentation adapter. `BattleConductor` now supplies the runner with an event sink that records `Shown`, `Suppressed`, and `HostOwned` presentation results. Generic framework structural events stay quiet to preserve visible console narration, while migrated lifecycle-shell messages for skip, fear flee, return-to-COMP, enemy flee, and demon defeat return use typed presentation results.
+
 Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining battle/Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns

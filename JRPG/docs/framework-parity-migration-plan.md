@@ -1239,6 +1239,20 @@ Track O5 began from `f671491` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O6 Completion
+
+Track O6 began from `3dae5ae` on `track-12-recovery`.
+
+- Added a console-host battle event presentation layer with typed `Shown`, `Suppressed`, and `HostOwned` results.
+- `BattleConductor` now provides a `LegacyBattleEventPresentationAdapter` to `BattleEncounterRunner`, allowing the console host to consume ordered framework events while preserving existing visible narration.
+- Generic framework structural events are suppressed instead of printed. Skip, fear flee, return-to-COMP, enemy flee, and demon defeat return messages now pass through typed lifecycle-shell presentation results.
+- Legacy attack, skill, item, escape, tactics, negotiation, AI, rewards, recruitment, Press Turn outcomes, production `Data/Jsons`, and clean skill/item execution remain unchanged.
+- Updated the parity ledger. `press_turn`, `battle_actions`, `enemy_ai_and_tactics`, and `console_presentation` remain `parallel_partial`; `battle_knowledge` did not receive new O6 evidence; no removal is authorized.
+- Focused O6 verification passed: `BattleEventPresentationTests`, `BattleCommandShellTests`, `BattleBridgeResultTests`, `ActionProcessorResultTests`, `BattleEncounterRunnerTests`, and the ordinary battle routing characterization reported 74 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 671 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

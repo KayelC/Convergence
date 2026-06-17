@@ -130,7 +130,8 @@ namespace JRPGPrototype.Logic.Battle
 
         private void RunFrameworkEncounter()
         {
-            var adapter = new LegacyEncounterAdapter(this);
+            var eventPresentation = new LegacyBattleEventPresentationAdapter(_messenger);
+            var adapter = new LegacyEncounterAdapter(this, eventPresentation);
             BattleEncounterResult result = new BattleEncounterRunner().Run(
                 new BattleEncounterRequest(
                     adapter.Participants,
@@ -144,6 +145,7 @@ namespace JRPGPrototype.Logic.Battle
                     adapter,
                     adapter,
                     adapter,
+                    eventPresentation,
                     pressTurnFactory: () => _turnEngine));
 
             BattleEnded = true;
@@ -805,11 +807,15 @@ namespace JRPGPrototype.Logic.Battle
             private static readonly ContentId Sp = StandardProgressionIds.Sp;
             private static readonly ContentId ReturnToStock = ContentId.Parse("return_to_stock");
             private readonly BattleConductor _owner;
+            private readonly LegacyBattleEventPresentationAdapter _events;
             private readonly Dictionary<ContentId, Combatant> _actors = [];
 
-            public LegacyEncounterAdapter(BattleConductor owner)
+            public LegacyEncounterAdapter(
+                BattleConductor owner,
+                LegacyBattleEventPresentationAdapter events)
             {
                 _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+                _events = events ?? throw new ArgumentNullException(nameof(events));
                 Participants = BuildParticipants();
             }
 
@@ -901,7 +907,7 @@ namespace JRPGPrototype.Logic.Battle
                 {
                     if (member.IsDead && member.Class == ClassType.Demon)
                     {
-                        _owner._messenger.Publish($"{member.Name} faded away and returned to stock...");
+                        _events.Publish(_events.PresentDemonReturnedToStock(member));
                         _owner._party.ReturnDemon(actor, member);
                     }
                 }
@@ -939,14 +945,14 @@ namespace JRPGPrototype.Logic.Battle
 
                 if (legacyTurn == TurnStartResult.Skip)
                 {
-                    _owner._messenger.Publish($"{actor.Name} is unable to move!", ConsoleColor.Magenta, 800);
+                    _events.Publish(_events.PresentTurnRestriction(actor, legacyTurn, isPlayerSide));
                     return new ValueTask<BattleEncounterCommandResult>(
                         BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal));
                 }
 
                 if (legacyTurn == TurnStartResult.FleeBattle)
                 {
-                    _owner._messenger.Publish($"{actor.Name} fled in fear!", ConsoleColor.Red, 1000);
+                    _events.Publish(_events.PresentTurnRestriction(actor, legacyTurn, isPlayerSide));
                     return new ValueTask<BattleEncounterCommandResult>(
                         BattleEncounterCommandResult.Executed(
                             EncounterActionTurnConsumption.None,
@@ -957,12 +963,12 @@ namespace JRPGPrototype.Logic.Battle
                 {
                     if (isPlayerSide)
                     {
-                        _owner._messenger.Publish($"{actor.Name} returned to COMP in terror!", ConsoleColor.Red, 400);
+                        _events.Publish(_events.PresentTurnRestriction(actor, legacyTurn, isPlayerSide));
                         _owner._party.ReturnDemon(actor, actor);
                     }
                     else
                     {
-                        _owner._messenger.Publish($"{actor.Name} has fled!", ConsoleColor.Yellow, 400);
+                        _events.Publish(_events.PresentTurnRestriction(actor, legacyTurn, isPlayerSide));
                         _owner._enemies.Remove(actor);
                     }
 
