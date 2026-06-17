@@ -10,7 +10,7 @@
 
 - `FieldConductor`: root field-loop orchestrator.
 - `FieldServiceEngine`: field-side rules for shops, equipment, restoration, items, skills, stat allocation, persona swaps, terminals, and boss defeat registration.
-- `ExplorationProcessor`: floor movement messages, warp execution, floor-entry triggers, battle handoff, and encounter preparation.
+- `ExplorationProcessor`: floor movement messages, warp execution, floor-entry presentation, battle handoff, and encounter preparation.
 - `DungeonManager`: console compatibility facade over framework dungeon state interpretation, fixed floor processing, random encounters, terminals, and boss state checks.
 - `DungeonState`: persistent dungeon progress.
 - `ShopEngine`: purchase/sale pricing and inventory/economy mutations.
@@ -37,12 +37,14 @@ The conductor routes choices to private workflow methods and exits if the player
 
 Dungeon entry checks unlocked terminals. If only floor 1 is available, it warps directly to the entrance; otherwise the player selects an entry point. Track M keeps that menu flow, but routes entry, movement, terminal returns, explicit dungeon exit, and boss defeat through framework transition results.
 
+Track O9 adds typed console-host presentation results over those transition results. `DungeonManager` exposes detailed transition records, `DungeonUIBridge` maps runtime events to `Shown`, `Suppressed`, or selection results, and `FieldConductor` consumes those records for movement, terminal warp, Goho-M/explicit exits, barriers, floor entry, and boss-defeat registration.
+
 During exploration:
 
-1. `DungeonManager.ProcessCurrentFloor` adapts a framework floor snapshot into the legacy `DungeonFloorResult`.
-2. `DungeonUIBridge` shows available floor actions.
-3. `ExplorationProcessor` handles ascension, descension, or warp.
-4. `ProcessFloorEntry` unlocks terminals and identifies safe rooms, battles, bosses, and block ends.
+1. `DungeonManager.ProcessCurrentFloorDetailed` adapts a framework floor snapshot into a legacy `DungeonFloorResult` plus ordered mapped presentation events.
+2. `DungeonUIBridge` shows available floor actions and returns typed selected/back/unavailable results before legacy wrappers translate them for older callers.
+3. `ExplorationProcessor` handles ascension, descension, or warp and publishes only the existing movement/warp-visible messages.
+4. `ProcessFloorEntryDetailed` unlocks terminals and identifies safe rooms, battles, bosses, and block ends while suppressing structural runtime events that do not have a legacy visible message.
 5. Encounters are prepared by hydrating enemy IDs through `CombatantFactory`.
 
 ### City Services And Shops
@@ -84,6 +86,8 @@ Status bridges render character/persona/demon details, stat allocation, equipmen
 - `DungeonState.DefeatedBosses` prevents defeated fixed-floor bosses from respawning.
 - `RuntimeFieldDungeonService` treats floor 1 as a safe lobby with terminal; `DungeonManager` exposes the same legacy result.
 - Random encounters currently produce 1 to 3 enemies from the current block pool.
+- Framework dungeon events such as floor entry, terminal unlock, encounter request, dungeon exit, and action rejection are recorded for presentation tests but not printed unless they replace an existing legacy message.
+- Visible dungeon traversal messages preserved by O9 are `Ascending...`, `Descending...`, `The air here is calm.`, `!!! POWERFUL SHADOW DETECTED !!!`, `The path is sealed.`, and `The Guardian has been defeated!`.
 - `FieldServiceEngine` owns field-side resource mutation, not UI bridges.
 - `FieldConductor` creates the `FusionConductor`, sharing party, economy, UI state, and compendium.
 

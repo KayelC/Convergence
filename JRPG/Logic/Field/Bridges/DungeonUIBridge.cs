@@ -8,6 +8,7 @@ using JRPGPrototype.Host;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Field.State;
 
@@ -69,6 +70,14 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         public DungeonFloorActionCommand ShowFloorActionCommand(DungeonFloorResult floorInfo, Combatant player)
         {
+            DungeonFloorActionSelectionResult result = ShowFloorActionResult(floorInfo, player);
+            return result.Kind == DungeonPresentationResultKind.Selected
+                ? result.Command
+                : DungeonFloorActionCommand.Cancel;
+        }
+
+        internal DungeonFloorActionSelectionResult ShowFloorActionResult(DungeonFloorResult floorInfo, Combatant player)
+        {
             string header = $"=== TARTARUS: {floorInfo.BlockName.ToUpper()} ===\n" +
                             $"Floor: {floorInfo.FloorNumber}\n" +
                             $"Info: {floorInfo.Description}\n" +
@@ -120,10 +129,10 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 ConsoleHostCommandReader.Read(_io, header, options, _uiState.DungeonMenuIndex);
 
             ConsoleMenuSelection<DungeonFloorActionCommand>? selection = result.Command;
-            if (!result.IsSelected || selection is null) return DungeonFloorActionCommand.Cancel;
+            if (!result.IsSelected || selection is null) return DungeonFloorActionSelectionResult.Back;
 
             _uiState.DungeonMenuIndex = selection.Value.Index;
-            return selection.Value.Command;
+            return DungeonFloorActionSelectionResult.Selected(selection.Value.Command);
         }
 
         #endregion
@@ -135,6 +144,12 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Feature: Distinct labeling for the Lobby (Floor 1).
         /// </summary>
         public int? SelectEntryPoint(List<int> unlockedTerminals)
+        {
+            DungeonFloorSelectionResult result = SelectEntryPointResult(unlockedTerminals);
+            return result.Kind == DungeonPresentationResultKind.Selected ? result.Floor : null;
+        }
+
+        internal DungeonFloorSelectionResult SelectEntryPointResult(List<int> unlockedTerminals)
         {
             var options = new List<HostCommandOption<DungeonFloorSelection>>();
             for (int index = 0; index < unlockedTerminals.Count; index++)
@@ -152,9 +167,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 ConsoleHostCommandReader.Read(_io, "=== SELECT ENTRY POINT ===", options, 0);
 
             DungeonFloorSelection? selection = result.Command;
-            if (!result.IsSelected || selection is null || selection.IsCancel) return null;
+            if (!result.IsSelected || selection is null || selection.IsCancel) return DungeonFloorSelectionResult.Back;
 
-            return selection.Floor;
+            return selection.Floor.HasValue
+                ? DungeonFloorSelectionResult.Selected(selection.Floor.Value)
+                : DungeonFloorSelectionResult.Unavailable;
         }
 
         /// <summary>
@@ -162,6 +179,12 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Identifies the current floor as a disabled option to prevent redundant warps.
         /// </summary>
         public int? SelectWarpDestination(List<int> unlockedTerminals, int currentFloor)
+        {
+            DungeonFloorSelectionResult result = SelectWarpDestinationResult(unlockedTerminals, currentFloor);
+            return result.Kind == DungeonPresentationResultKind.Selected ? result.Floor : null;
+        }
+
+        internal DungeonFloorSelectionResult SelectWarpDestinationResult(List<int> unlockedTerminals, int currentFloor)
         {
             var options = new List<HostCommandOption<DungeonFloorSelection>>();
             for (int index = 0; index < unlockedTerminals.Count; index++)
@@ -184,9 +207,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 ConsoleHostCommandReader.Read(_io, "=== TERMINAL SYSTEM ===", options, 0);
 
             DungeonFloorSelection? selection = result.Command;
-            if (!result.IsSelected || selection is null || selection.IsCancel) return null;
+            if (!result.IsSelected || selection is null || selection.IsCancel) return DungeonFloorSelectionResult.Back;
 
-            return selection.Floor;
+            return selection.Floor.HasValue
+                ? DungeonFloorSelectionResult.Selected(selection.Floor.Value)
+                : DungeonFloorSelectionResult.Unavailable;
         }
 
         #endregion
@@ -198,8 +223,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ReportSafeRoom()
         {
-            _io.WriteLine("The air here is calm.", ConsoleColor.Green);
-            _io.Wait(800);
+            PublishPresentationEvents(
+                [new DungeonPresentationEvent(
+                    JRPGPrototype.Logic.Runtime.RuntimeDungeonEventKind.SafeRoom,
+                    DungeonPresentationResultKind.Shown,
+                    "The air here is calm.",
+                    ConsoleColor.Green,
+                    800)]);
         }
 
         /// <summary>
@@ -207,8 +237,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ReportBossRoom()
         {
-            _io.WriteLine("!!! POWERFUL SHADOW DETECTED !!!", ConsoleColor.Red);
-            _io.Wait(1000);
+            PublishPresentationEvents(
+                [new DungeonPresentationEvent(
+                    JRPGPrototype.Logic.Runtime.RuntimeDungeonEventKind.BossRequested,
+                    DungeonPresentationResultKind.Shown,
+                    "!!! POWERFUL SHADOW DETECTED !!!",
+                    ConsoleColor.Red,
+                    1000)]);
         }
 
         /// <summary>
@@ -216,8 +251,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ReportBossDefeated()
         {
-            _io.WriteLine("The Guardian has been defeated!", ConsoleColor.Cyan);
-            _io.Wait(1500);
+            PublishPresentationEvents(
+                [new DungeonPresentationEvent(
+                    JRPGPrototype.Logic.Runtime.RuntimeDungeonEventKind.BossDefeated,
+                    DungeonPresentationResultKind.Shown,
+                    "The Guardian has been defeated!",
+                    ConsoleColor.Cyan,
+                    1500)]);
         }
 
         /// <summary>
@@ -225,8 +265,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ReportMovement(bool ascending)
         {
-            _io.WriteLine(ascending ? "Ascending..." : "Descending...");
-            _io.Wait(500);
+            PublishPresentationEvents(
+                [new DungeonPresentationEvent(
+                    JRPGPrototype.Logic.Runtime.RuntimeDungeonEventKind.Movement,
+                    DungeonPresentationResultKind.Shown,
+                    ascending ? "Ascending..." : "Descending...",
+                    ConsoleColor.White,
+                    Delay: 500)]);
         }
 
         /// <summary>
@@ -234,11 +279,51 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ReportBarrierBlocked()
         {
-            _io.WriteLine("The path is sealed.", ConsoleColor.Gray);
-            _io.Wait(1000);
+            PublishPresentationEvents(
+                [new DungeonPresentationEvent(
+                    JRPGPrototype.Logic.Runtime.RuntimeDungeonEventKind.BarrierBlocked,
+                    DungeonPresentationResultKind.Shown,
+                    "The path is sealed.",
+                    ConsoleColor.Gray,
+                    1000)]);
         }
 
         #endregion
+
+        internal IReadOnlyList<DungeonPresentationEvent> PublishPresentationEvents(
+            IEnumerable<DungeonPresentationEvent> events)
+        {
+            var published = new List<DungeonPresentationEvent>();
+            foreach (DungeonPresentationEvent presentationEvent in events)
+            {
+                if (presentationEvent.Kind != DungeonPresentationResultKind.Shown ||
+                    string.IsNullOrEmpty(presentationEvent.Message))
+                {
+                    continue;
+                }
+
+                if (presentationEvent.ClearScreen)
+                {
+                    _io.Clear();
+                }
+
+                _io.WriteLine(presentationEvent.Message, presentationEvent.Color);
+
+                if (presentationEvent.Delay > 0)
+                {
+                    _io.Wait(presentationEvent.Delay);
+                }
+
+                if (presentationEvent.WaitForInput)
+                {
+                    _io.ReadKey(intercept: true);
+                }
+
+                published.Add(presentationEvent);
+            }
+
+            return published;
+        }
 
         private static HostCommandOption<ConsoleMenuSelection<TCommand>> Option<TCommand>(
             TCommand command,

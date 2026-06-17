@@ -14,6 +14,7 @@ using JRPGPrototype.Logic.Field.Messaging;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Field.State;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Field
 {
@@ -164,10 +165,10 @@ namespace JRPGPrototype.Logic.Field
                 return;
             }
 
-            int? selectedFloor = _dungeonUI.SelectEntryPoint(terminals);
-            if (selectedFloor.HasValue)
+            DungeonFloorSelectionResult selectedFloor = _dungeonUI.SelectEntryPointResult(terminals);
+            if (selectedFloor.Kind == DungeonPresentationResultKind.Selected && selectedFloor.Floor.HasValue)
             {
-                _dungeonManager.WarpToFloor(selectedFloor.Value);
+                _dungeonManager.WarpToFloor(selectedFloor.Floor.Value);
                 ExploreDungeon();
             }
         }
@@ -175,63 +176,69 @@ namespace JRPGPrototype.Logic.Field
         private void ExploreDungeon()
         {
             // Initial trigger for the floor we just arrived on
-            HandleFloorChange(_dungeonManager.ProcessCurrentFloor());
+            HandleFloorChange(_dungeonManager.ProcessCurrentFloorDetailed());
 
             while (_player.CurrentHP > 0)
             {
-                DungeonFloorResult floorInfo = _dungeonManager.ProcessCurrentFloor();
-                string action = _dungeonUI.ShowFloorActionMenu(floorInfo, _player);
+                DungeonTransitionPresentationResult currentFloor = _dungeonManager.ProcessCurrentFloorDetailed();
+                DungeonFloorResult floorInfo = currentFloor.Floor!;
+                DungeonFloorActionSelectionResult action = _dungeonUI.ShowFloorActionResult(floorInfo, _player);
 
-                if (action == "Cancel") continue;
+                if (action.Kind != DungeonPresentationResultKind.Selected) continue;
 
                 bool exitLoop = false;
 
-                switch (action)
+                switch (action.Command)
                 {
-                    case "Ascend Stairs":
-                        HandleFloorChange(_explorationProcessor.PerformAscension());
+                    case DungeonFloorActionCommand.AscendStairs:
+                        HandleFloorChange(_explorationProcessor.PerformAscensionDetailed());
                         break;
 
-                    case "Descend Stairs":
-                        HandleFloorChange(_explorationProcessor.PerformDescension());
+                    case DungeonFloorActionCommand.DescendStairs:
+                        HandleFloorChange(_explorationProcessor.PerformDescensionDetailed());
                         break;
 
-                    case "Clock (Heal)":
+                    case DungeonFloorActionCommand.Clock:
                         OpenHospitalMenu();
                         break;
 
-                    case "Terminal (Warp)":
-                    case "Access Terminal (Return)":
-                        int? destination = _dungeonUI.SelectWarpDestination(_dungeonManager.GetUnlockedTerminals(), floorInfo.FloorNumber);
-                        if (destination.HasValue)
+                    case DungeonFloorActionCommand.TerminalWarp:
+                    case DungeonFloorActionCommand.TerminalReturn:
+                        DungeonFloorSelectionResult destination =
+                            _dungeonUI.SelectWarpDestinationResult(_dungeonManager.GetUnlockedTerminals(), floorInfo.FloorNumber);
+                        if (destination.Kind == DungeonPresentationResultKind.Selected && destination.Floor.HasValue)
                         {
-                            HandleFloorChange(_explorationProcessor.PerformWarp(destination.Value));
+                            HandleFloorChange(_explorationProcessor.PerformWarpDetailed(destination.Floor.Value));
                         }
                         break;
 
-                    case "Inventory":
+                    case DungeonFloorActionCommand.Inventory:
                         if (OpenInventoryMenu(inDungeon: true) == ItemUsageResult.RequestDungeonExit)
                         {
-                            _dungeonManager.RequestDungeonExit();
+                            _dungeonManager.RequestDungeonExitDetailed();
                             exitLoop = true;
                         }
                         break;
 
-                    case "Status":
+                    case DungeonFloorActionCommand.Status:
                         OpenSeamlessStatusMenu();
                         break;
 
-                    case "Organize Party":
+                    case DungeonFloorActionCommand.OrganizeParty:
                         OpenOrganizeMenu();
                         break;
 
-                    case "Return to City":
-                        _dungeonManager.ReturnToCity();
+                    case DungeonFloorActionCommand.ReturnToCity:
+                        _dungeonManager.ReturnToCityDetailed();
                         exitLoop = true;
                         break;
 
-                    case "Barrier (Cannot Pass)":
-                        _dungeonUI.ReportBarrierBlocked();
+                    case DungeonFloorActionCommand.Barrier:
+                        DungeonTransitionPresentationResult barrier = _dungeonManager.InteractBarrierDetailed();
+                        _dungeonUI.PublishPresentationEvents(
+                            DungeonPresentationMapper.VisibleOnly(
+                                barrier.Events,
+                                RuntimeDungeonEventKind.BarrierBlocked));
                         break;
                 }
 
@@ -241,12 +248,29 @@ namespace JRPGPrototype.Logic.Field
 
         private void HandleFloorChange(DungeonFloorResult floorInfo)
         {
-            ExplorationEvent result = _explorationProcessor.ProcessFloorEntry(floorInfo);
+            DungeonFloorEntryPresentationResult result =
+                _explorationProcessor.ProcessFloorEntryDetailed(floorInfo);
+            HandleFloorEntryResult(result);
+        }
 
-            if (result == ExplorationEvent.Encounter || result == ExplorationEvent.BossEncounter)
+        private void HandleFloorChange(DungeonTransitionPresentationResult transition)
+        {
+            if (transition.Floor is null)
             {
-                bool isBoss = (result == ExplorationEvent.BossEncounter);
-                List<Combatant> enemies = _explorationProcessor.PrepareEncounter(floorInfo.EnemyIds);
+                return;
+            }
+
+            DungeonFloorEntryPresentationResult result =
+                _explorationProcessor.ProcessFloorEntryDetailed(transition);
+            HandleFloorEntryResult(result);
+        }
+
+        private void HandleFloorEntryResult(DungeonFloorEntryPresentationResult result)
+        {
+            if (result.RequiresBattle)
+            {
+                bool isBoss = result.IsBoss;
+                List<Combatant> enemies = _explorationProcessor.PrepareEncounter(result.EnemyIds.ToList());
 
                 // Transition to Battle Sub-System
                 BattleConductor battle = new BattleConductor(
@@ -264,8 +288,12 @@ namespace JRPGPrototype.Logic.Field
                 // Post-Battle Logic
                 if (isBoss && !enemies.Any(e => !e.IsDead))
                 {
-                    _dungeonUI.ReportBossDefeated();
-                    _logicEngine.RegisterBossDefeat(floorInfo.EnemyIds.FirstOrDefault());
+                    DungeonTransitionPresentationResult defeated =
+                        _dungeonManager.RegisterBossDefeatDetailed(result.EnemyIds.FirstOrDefault());
+                    _dungeonUI.PublishPresentationEvents(
+                        DungeonPresentationMapper.VisibleOnly(
+                            defeated.Events,
+                            RuntimeDungeonEventKind.BossDefeated));
                 }
             }
         }

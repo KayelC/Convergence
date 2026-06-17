@@ -119,9 +119,9 @@ The following capabilities must not disappear during migration.
 | Shops and buy/sell pricing | `ShopEngine`, `ShopUIBridge` | Framework transaction service with O8 typed presentation; legacy shop data remains authoritative |
 | Hospital restoration | `FieldServiceEngine` | Framework restoration service with O8 typed presentation; current hospital UI quirks preserved |
 | Field skill and item use | `FieldServiceEngine` | Clean field/action presentation exists; legacy skill/item content and effect parsing remain host-owned |
-| City and field navigation | `FieldConductor` | Missing framework state machine |
-| Dungeon traversal and terminals | `DungeonManager`, `DungeonState`, `ExplorationProcessor` | Missing |
-| Encounter and boss preparation | `ExplorationProcessor` | Missing encounter schema/runtime |
+| City and field navigation | `FieldConductor` | Framework dungeon state machine with O9 typed presentation; broader city/menu flow remains console-host presentation |
+| Dungeon traversal and terminals | `DungeonManager`, `DungeonState`, `ExplorationProcessor` | Framework state machine with O9 typed presentation; legacy dungeon data remains authoritative |
+| Encounter and boss preparation | `ExplorationProcessor` | Framework random encounter selection plus O9 host handoff; catalog-backed encounter content remains future work |
 | Moon phase | `MoonPhaseSystem` | Registration vocabulary only |
 | Fusion result calculation | `FusionCalculator` | Inheritance only |
 | Fusion slots, mutation, accidents | `FusionCalculator` | Missing |
@@ -1280,6 +1280,21 @@ Track O8 began from `713d3cb` on `track-12-recovery`.
 - Updated the parity ledger. `shops`, `hospital`, `economy`, `equipment_ownership`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
 - Focused O8 verification passed: `ShopHospitalPresentationTests`, `ResourceManagementServiceTests`, and the shop/hospital/menu characterizations reported 17 passed, 0 failed, 0 skipped.
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 694 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+### Track O9 Completion
+
+Track O9 began from `60858c6` on `track-12-recovery`.
+
+- Added typed console-host dungeon traversal presentation records for floor action selection, entry/terminal floor selection, transition presentation, floor-entry presentation, and mapped runtime event presentation.
+- `DungeonManager` now exposes detailed transition presentation methods over `RuntimeFieldDungeonService` while preserving the old public wrappers for existing callers.
+- `DungeonUIBridge`, `ExplorationProcessor`, and `FieldConductor` now consume typed dungeon results for movement, terminal warp, Goho-M/explicit exits, barriers, safe rooms, boss requests, boss defeat registration, and encounter handoff.
+- Structural framework events such as floor entry, terminal unlock, encounter request, dungeon exit, and action rejection are recorded but suppressed unless they replace an existing legacy message.
+- Legacy `tartarus.json`, enemy hydration through `CombatantFactory`, duplicate suffix naming, battle handoff, menu order, visible text, and framework public APIs remain unchanged.
+- Updated the parity ledger. `field_navigation`, `dungeon_traversal`, `encounters`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O9 verification passed: `DungeonTraversalPresentationTests`, `FieldDungeonStateMachineTests`, the dungeon workflow characterizations, and dungeon/target menu command tests reported 14 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 699 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 

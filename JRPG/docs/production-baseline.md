@@ -322,6 +322,20 @@ Track O8 began from `713d3cb` and migrates shop/hospital presentation into typed
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O9 Boundary
+
+Track O9 began from `60858c6` and migrates dungeon traversal presentation into typed console-host results without changing dungeon data, traversal rules, encounter hydration, boss battle handoff, or visible menu behavior.
+
+- `DungeonTraversalPresentationResults` records floor action selections, entry/terminal floor selections, detailed transition presentation, floor-entry presentation, and mapped runtime events.
+- `DungeonManager` keeps its legacy public surface but now exposes detailed framework-backed transition results for floor processing, movement, terminal warp, return-to-city, Goho-M/explicit dungeon exit, barrier interaction, and boss-defeat registration.
+- `DungeonUIBridge` maps framework dungeon events into existing visible messages or suppressed records. Visible preserved messages include movement, safe room calm, boss alert, sealed barrier, and guardian defeat.
+- `ExplorationProcessor` and `FieldConductor` now consume detailed transition/floor-entry results while keeping `CombatantFactory` enemy hydration, duplicate suffix naming, battle construction, boss battle flags, and legacy live-object state host-owned.
+- Legacy `tartarus.json`, `Database.Dungeons`, framework public APIs, production content, and `Data/Jsons` remain unchanged. Removal remains unauthorized.
+- Focused O9 verification passed: `DungeonTraversalPresentationTests`, `FieldDungeonStateMachineTests`, the dungeon workflow characterizations, and dungeon/target menu command tests reported 14 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 699 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

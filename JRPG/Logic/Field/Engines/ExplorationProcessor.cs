@@ -7,9 +7,11 @@ using JRPGPrototype.Entities;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Field.Messaging;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Field.Engines
 {
@@ -47,9 +49,20 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public DungeonFloorResult PerformAscension()
         {
-            _dungeonUI.ReportMovement(ascending: true);
-            _dungeonManager.Ascend();
-            return _dungeonManager.ProcessCurrentFloor();
+            return PerformAscensionDetailed().Floor!;
+        }
+
+        internal DungeonTransitionPresentationResult PerformAscensionDetailed()
+        {
+            DungeonTransitionPresentationResult result = _dungeonManager.AscendDetailed();
+            IReadOnlyList<DungeonPresentationEvent> visibleEvents =
+                result.Transition.Code == RuntimeDungeonTransitionCode.BarrierBlocked
+                    ? DungeonPresentationMapper.VisibleOnly(result.Events, RuntimeDungeonEventKind.BarrierBlocked)
+                    : DungeonPresentationMapper.VisibleOnly(result.Events, RuntimeDungeonEventKind.Movement);
+            _dungeonUI.PublishPresentationEvents(visibleEvents);
+            return result.Transition.Code == RuntimeDungeonTransitionCode.BarrierBlocked
+                ? result
+                : _dungeonManager.ProcessCurrentFloorDetailed();
         }
 
         /// <summary>
@@ -57,9 +70,15 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public DungeonFloorResult PerformDescension()
         {
-            _dungeonUI.ReportMovement(ascending: false);
-            _dungeonManager.Descend();
-            return _dungeonManager.ProcessCurrentFloor();
+            return PerformDescensionDetailed().Floor!;
+        }
+
+        internal DungeonTransitionPresentationResult PerformDescensionDetailed()
+        {
+            DungeonTransitionPresentationResult result = _dungeonManager.DescendDetailed();
+            _dungeonUI.PublishPresentationEvents(
+                DungeonPresentationMapper.VisibleOnly(result.Events, RuntimeDungeonEventKind.Movement));
+            return _dungeonManager.ProcessCurrentFloorDetailed();
         }
 
         /// <summary>
@@ -67,10 +86,15 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public DungeonFloorResult PerformWarp(int floor)
         {
+            return PerformWarpDetailed(floor).Floor!;
+        }
+
+        internal DungeonTransitionPresentationResult PerformWarpDetailed(int floor)
+        {
             _messenger.Publish($"Warping to Floor {floor}...", delay: 1000);
 
-            _dungeonManager.TryWarpToUnlockedFloor(floor);
-            return _dungeonManager.ProcessCurrentFloor();
+            DungeonTransitionPresentationResult result = _dungeonManager.WarpToUnlockedFloorDetailed(floor);
+            return result.LegacySuccess ? _dungeonManager.ProcessCurrentFloorDetailed() : result;
         }
 
         #endregion
@@ -83,38 +107,58 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public ExplorationEvent ProcessFloorEntry(DungeonFloorResult floorInfo)
         {
+            return ProcessFloorEntryDetailed(floorInfo).LegacyEvent;
+        }
+
+        internal DungeonFloorEntryPresentationResult ProcessFloorEntryDetailed(
+            DungeonTransitionPresentationResult transition)
+        {
+            if (transition.Floor is null)
+            {
+                throw new InvalidOperationException("A floor transition is required before processing floor entry.");
+            }
+
+            return ProcessFloorEntryDetailed(
+                transition.Floor,
+                transition.Events);
+        }
+
+        internal DungeonFloorEntryPresentationResult ProcessFloorEntryDetailed(DungeonFloorResult floorInfo)
+        {
+            return ProcessFloorEntryDetailed(
+                floorInfo,
+                DungeonPresentationMapper.MapFloorEntry(floorInfo));
+        }
+
+        private DungeonFloorEntryPresentationResult ProcessFloorEntryDetailed(
+            DungeonFloorResult floorInfo,
+            IReadOnlyList<DungeonPresentationEvent> events)
+        {
             // 1. Handle Persistent Terminal Unlocks
             if (floorInfo.HasTerminal)
             {
                 _serviceEngine.UnlockTerminal(floorInfo.FloorNumber);
             }
 
-            // 2. Process Environmental Type
-            switch (floorInfo.Type)
+            _dungeonUI.PublishPresentationEvents(
+                DungeonPresentationMapper.VisibleOnly(
+                    events,
+                    RuntimeDungeonEventKind.SafeRoom,
+                    RuntimeDungeonEventKind.BossRequested));
+
+            ExplorationEvent legacyEvent = floorInfo.Type switch
             {
-                case DungeonEventType.SafeRoom:
-                    // Only report if it's not the lobby (which has its own logic)
-                    if (floorInfo.FloorNumber != 1)
-                    {
-                        _dungeonUI.ReportSafeRoom();
-                    }
-                    return ExplorationEvent.None;
+                DungeonEventType.Battle => ExplorationEvent.Encounter,
+                DungeonEventType.Boss => ExplorationEvent.BossEncounter,
+                _ => ExplorationEvent.None
+            };
 
-                case DungeonEventType.Battle:
-                    // Return encounter event for the Conductor to handle
-                    return ExplorationEvent.Encounter;
-
-                case DungeonEventType.Boss:
-                    _dungeonUI.ReportBossRoom();
-                    return ExplorationEvent.BossEncounter;
-
-                case DungeonEventType.BlockEnd:
-                    // Handled as part of the navigation menu, no immediate trigger
-                    return ExplorationEvent.None;
-
-                default:
-                    return ExplorationEvent.None;
-            }
+            return new DungeonFloorEntryPresentationResult(
+                legacyEvent,
+                floorInfo,
+                floorInfo.EnemyIds,
+                legacyEvent == ExplorationEvent.BossEncounter,
+                events);
         }
 
         #endregion

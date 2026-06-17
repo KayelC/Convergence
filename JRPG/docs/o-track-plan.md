@@ -460,7 +460,7 @@ Candidate files:
 - `Logic/Field/ExplorationProcessor.cs`
 - `Logic/Field/FieldConductor.cs`
 - `Logic/Field/Bridges/DungeonUIBridge.cs`
-- `JRPG.Framework/Logic/Field/FieldDungeonRuntime.cs`
+- `JRPG.Framework/Logic/Runtime/FieldDungeonStateMachines.cs`
 
 Work:
 
@@ -480,6 +480,21 @@ Exit gate:
 
 - Dungeon traversal presentation consumes framework transition events where migrated.
 - Existing dungeon characterization tests remain green.
+
+Completion:
+
+- Track O9 began from `60858c6` on `track-12-recovery`.
+- Added `DungeonTraversalPresentationResults` for typed dungeon action selection, floor selection, transition presentation, floor-entry presentation, and mapped shown/suppressed/host-owned event records.
+- `DungeonManager` now exposes detailed transition presentation methods while keeping `Ascend`, `Descend`, `ProcessCurrentFloor`, `TryWarpToUnlockedFloor`, `ReturnToCity`, `RequestDungeonExit`, and `RegisterBossDefeat` behavior-compatible for existing callers.
+- `DungeonUIBridge` now exposes typed selection methods for floor actions, entry floors, and terminal destinations, plus a presentation-event publisher that preserves the existing visible text, colors, waits, and cancellation behavior.
+- `ExplorationProcessor` and `FieldConductor` consume detailed transition/floor-entry results for movement, terminal warp, Goho-M/explicit exits, barriers, boss requests, boss defeat registration, and encounter handoff. Enemy hydration and duplicate suffix naming remain host-owned.
+- Production `tartarus.json`, framework public APIs, `BattleConductor`, `CombatantFactory`, and legacy live-object behavior did not change.
+- Updated the parity ledger. `field_navigation`, `dungeon_traversal`, `encounters`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O9 verification passed: `DungeonTraversalPresentationTests`, `FieldDungeonStateMachineTests`, the dungeon workflow characterizations, and dungeon/target menu command tests reported 14 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 699 passed, 0 failed, 0 skipped.
+- The nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
 ### O10: Fusion And Compendium Presentation
 
@@ -580,17 +595,16 @@ Ledger rules:
 
 ## Recommended Next Subtrack
 
-Proceed with **O2: Status And Read-Only Presentation**.
+Proceed with **O10: Fusion And Compendium Presentation**.
 
 Reason:
 
-- O1 already introduced the status snapshot projection.
-- O2 is low mutation risk compared with inventory, battle, dungeon, or Cathedral flows.
-- It improves the host-boundary shape while preserving all gameplay rules.
-- It creates reusable projection patterns for later O subtracks.
+- O1 through O9 have migrated startup, field/status/inventory/party, battle command/event, negotiation/reward, shop/hospital, and dungeon presentation shells.
+- Cathedral fusion and compendium presentation are the remaining planned Track O host-presentation surface.
+- Track N already provides the framework fusion and Compendium services that O10 should present through typed console-host results.
 
 Suggested commit message:
 
 ```text
-host: migrate status presentation snapshots
+host: migrate fusion compendium presentation
 ```

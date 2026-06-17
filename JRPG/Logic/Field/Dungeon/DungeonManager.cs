@@ -2,6 +2,7 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Field.Dungeon
@@ -44,12 +45,12 @@ namespace JRPGPrototype.Logic.Field.Dungeon
         // --- NAVIGATION ---
         public void Ascend()
         {
-            Apply(_service.Ascend(CurrentContent(), Snapshot()));
+            AscendDetailed();
         }
 
         public void Descend()
         {
-            Apply(_service.Descend(CurrentContent(), Snapshot()));
+            DescendDetailed();
         }
 
         public void WarpToFloor(int floor)
@@ -59,19 +60,17 @@ namespace JRPGPrototype.Logic.Field.Dungeon
 
         internal bool TryWarpToUnlockedFloor(int floor)
         {
-            RuntimeDungeonTransitionResult result = _service.Warp(CurrentContent(), Snapshot(), floor);
-            Apply(result);
-            return result.Applied;
+            return WarpToUnlockedFloorDetailed(floor).LegacySuccess;
         }
 
         public void ReturnToCity()
         {
-            Apply(_service.ReturnToCity(Snapshot()));
+            ReturnToCityDetailed();
         }
 
         public void RequestDungeonExit()
         {
-            Apply(_service.RequestDungeonExit(Snapshot()));
+            RequestDungeonExitDetailed();
         }
 
         public IReadOnlyList<RuntimeFieldActionOption> GetActionOptions(DungeonFloorResult floorInfo, bool canOrganizeParty) =>
@@ -80,9 +79,7 @@ namespace JRPGPrototype.Logic.Field.Dungeon
         // --- CORE LOGIC ---
         public DungeonFloorResult ProcessCurrentFloor()
         {
-            RuntimeDungeonTransitionResult result = _service.ProcessCurrentFloor(CurrentContent(), Snapshot());
-            Apply(result);
-            return ToLegacyFloor(result.Floor!);
+            return ProcessCurrentFloorDetailed().Floor!;
         }
 
         public List<int> GetUnlockedTerminals()
@@ -92,10 +89,36 @@ namespace JRPGPrototype.Logic.Field.Dungeon
 
         public void RegisterBossDefeat(string bossId)
         {
+            RegisterBossDefeatDetailed(bossId);
+        }
+
+        internal DungeonTransitionPresentationResult ProcessCurrentFloorDetailed() =>
+            Present(_service.ProcessCurrentFloor(CurrentContent(), Snapshot()));
+
+        internal DungeonTransitionPresentationResult AscendDetailed() =>
+            Present(_service.Ascend(CurrentContent(), Snapshot()));
+
+        internal DungeonTransitionPresentationResult DescendDetailed() =>
+            Present(_service.Descend(CurrentContent(), Snapshot()));
+
+        internal DungeonTransitionPresentationResult WarpToUnlockedFloorDetailed(int floor) =>
+            Present(_service.Warp(CurrentContent(), Snapshot(), floor));
+
+        internal DungeonTransitionPresentationResult ReturnToCityDetailed() =>
+            Present(_service.ReturnToCity(Snapshot()));
+
+        internal DungeonTransitionPresentationResult RequestDungeonExitDetailed() =>
+            Present(_service.RequestDungeonExit(Snapshot()));
+
+        internal DungeonTransitionPresentationResult InteractBarrierDetailed() =>
+            Present(_service.InteractBarrier(Snapshot()));
+
+        internal DungeonTransitionPresentationResult RegisterBossDefeatDetailed(string? bossId)
+        {
             ContentId? cleanBossId = string.IsNullOrWhiteSpace(bossId)
                 ? null
                 : LegacyContentIdCodec.Encode(bossId);
-            Apply(_service.RegisterBossDefeat(Snapshot(), cleanBossId));
+            return Present(_service.RegisterBossDefeat(Snapshot(), cleanBossId));
         }
 
         private RuntimeDungeonProgressSnapshot Snapshot() =>
@@ -127,6 +150,16 @@ namespace JRPGPrototype.Logic.Field.Dungeon
             _state.MaxFloorReached = result.After.MaxFloorReached;
             _state.UnlockedTerminals = result.After.UnlockedTerminals.ToHashSet();
             _state.DefeatedBosses = result.After.DefeatedBossIds.Select(LegacyContentIdCodec.Decode).ToHashSet();
+        }
+
+        private DungeonTransitionPresentationResult Present(RuntimeDungeonTransitionResult result)
+        {
+            Apply(result);
+            DungeonFloorResult? floor = result.Floor is null ? null : ToLegacyFloor(result.Floor);
+            return new DungeonTransitionPresentationResult(
+                result,
+                floor,
+                DungeonPresentationMapper.MapTransitionEvents(result.Events, floor));
         }
 
         private static DungeonFloorResult ToLegacyFloor(RuntimeDungeonFloorSnapshot floor) =>

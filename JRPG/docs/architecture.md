@@ -81,7 +81,9 @@ Track O7 routes negotiation, recruitment, and victory reward presentation throug
 
 Track O8 routes shop and hospital presentation through typed console-host results. `ShopUIBridge` now exposes explicit command, offer, confirmation, inspection, and transaction result shapes over the framework-backed shop transactions, while `ServiceUIBridge`, `FieldServiceEngine`, and `FieldConductor` present hospital selection and treatment from typed results over framework restoration transactions. Legacy shop data, pricing formulas, metadata repair, and hospital UI quirks remain host-owned.
 
-Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining battle/Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track O9 routes dungeon traversal presentation through typed console-host results over `RuntimeFieldDungeonService` transition events. `DungeonManager` now exposes detailed transition presentation results, `DungeonUIBridge` maps selected/back/unavailable choices and shown/suppressed runtime events, and `FieldConductor` consumes those results for movement, terminal warp, dungeon exits, barriers, floor entry, and boss defeat. Legacy `tartarus.json`, enemy hydration, battle handoff, visible text, and menu order remain host-owned.
+
+Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -89,7 +91,7 @@ Complete AI/tactics policy, full fusion strategy replacement, Compendium persist
 
 Conductors own high-level workflows and decide which subsystem should act next.
 
-- `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops. Dungeon entry, terminal return, explicit dungeon exit, and boss-defeat registration now pass through the framework-backed `DungeonManager` facade.
+- `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops. Dungeon entry, terminal return, explicit dungeon exit, barrier feedback, floor entry, and boss-defeat registration now pass through framework-backed dungeon transition presentation results.
 - `BattleConductor` adapts the console battle into the framework encounter runner, applies framework reward results through a console adapter, and keeps cleanup flow host-owned.
 - `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions.
 
@@ -104,7 +106,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 - `StatusRegistry` is the console compatibility facade for ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks. Migrated lifecycle decisions delegate into the framework through `LegacyStatusLifecycleAdapter`.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine` and `ShopEngine` are console compatibility facades over framework-backed resource-management transactions for inventory, equipment, shops, and hospital restoration. They still own legacy item/skill effects, metadata repair, messages, and dungeon traversal coordination.
-- `ExplorationProcessor` remains the console host for field-side messages, battle handoff, encounter hydration, and duplicate enemy display suffixes; movement and floor evaluation are delegated through the framework-backed dungeon manager.
+- `ExplorationProcessor` remains the console host for field-side messages, battle handoff, encounter hydration, and duplicate enemy display suffixes; movement and floor evaluation are delegated through the framework-backed dungeon manager and mapped into typed presentation events before visible console output.
 - `FusionCalculator`, `FusionMutator`, and fusion strategies remain console compatibility facades; fusion prediction and Compendium rule checks now route through framework services where Track N migrated them.
 - `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.
 
