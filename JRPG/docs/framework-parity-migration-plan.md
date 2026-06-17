@@ -1168,6 +1168,20 @@ Make the interactive console application a real consumer of framework commands, 
 
 Every protected workflow is reachable through the console host using framework services. Clean demos remain separate technical tools.
 
+### Track O1 Completion
+
+Track O1 began from `e163b81` on `track-12-recovery`.
+
+- Added `InteractiveConsoleHostContext` and console host adapters for framework content-text, event-sink, and command-source contracts.
+- Ordinary startup still calls `Database.LoadData` first, then attempts to load the retained clean reference, battle-demo, shared-effects, catalog-surface, and status-lifecycle packs as a nonfatal sidecar catalog. Catalog diagnostics are printed as warnings and do not block legacy gameplay.
+- Migrated plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menu choices through the host-command contract while preserving legacy return values and menu ordering.
+- Added a human-status projection through runtime snapshots before rendering the same console status text.
+- Updated the parity ledger. `interactive_boot` and `console_presentation` are now `parallel_partial`; no gameplay rule, legacy dataset, rich presentation bridge, battle command flow, Cathedral flow, or removal authorization changed.
+- Focused Track O1 checks passed: the startup sidecar tests, plain-menu command tests, framework host-adapter tests, parity-ledger validation test, and ordinary startup characterization test reported 13 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 636 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

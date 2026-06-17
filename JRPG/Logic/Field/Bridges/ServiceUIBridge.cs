@@ -4,12 +4,36 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Host;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
 {
+    public enum FieldMainMenuCommand
+    {
+        Cancel,
+        ExploreTartarus,
+        CityServices,
+        Inventory,
+        Status,
+        OrganizeParty,
+        ExitGame
+    }
+
+    public enum CityServicesCommand
+    {
+        Back,
+        Weapons,
+        Clothing,
+        Accessories,
+        Items,
+        Hospital,
+        Cathedral
+    }
+
     /// <summary>
     /// Handles all UI interactions for City Services (Hospital and Shop) 
     /// and the primary Field Main Menu.
@@ -36,26 +60,49 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public string ShowFieldMainMenu(Combatant player)
         {
+            return ShowFieldMainMenuCommand(player) switch
+            {
+                FieldMainMenuCommand.ExploreTartarus => "Explore Tartarus",
+                FieldMainMenuCommand.CityServices => "City Services",
+                FieldMainMenuCommand.Inventory => "Inventory",
+                FieldMainMenuCommand.Status => "Status",
+                FieldMainMenuCommand.OrganizeParty => "Organize Party",
+                FieldMainMenuCommand.ExitGame => "Exit Game",
+                _ => "Cancel"
+            };
+        }
+
+        public FieldMainMenuCommand ShowFieldMainMenuCommand(Combatant player)
+        {
             string header = $"=== FIELD MENU ===\n" +
                             $"Macca: {_economy.Macca}\n" +
                             $"HP: {player.CurrentHP}/{player.MaxHP} | SP: {player.CurrentSP}/{player.MaxSP}";
 
-            List<string> options = new List<string>
+            var options = new List<HostCommandOption<ConsoleMenuSelection<FieldMainMenuCommand>>>
             {
-                "Explore Tartarus",
-                "City Services",
-                "Inventory",
-                "Status"
+                Option(FieldMainMenuCommand.ExploreTartarus, "Explore Tartarus", 0),
+                Option(FieldMainMenuCommand.CityServices, "City Services", 1),
+                Option(FieldMainMenuCommand.Inventory, "Inventory", 2),
+                Option(FieldMainMenuCommand.Status, "Status", 3)
             };
 
-            if (player.Class == ClassType.Operator) options.Add("Organize Party");
-            options.Add("Exit Game");
+            int nextIndex = options.Count;
+            if (player.Class == ClassType.Operator)
+            {
+                options.Add(Option(FieldMainMenuCommand.OrganizeParty, "Organize Party", nextIndex++));
+            }
+            options.Add(Option(FieldMainMenuCommand.ExitGame, "Exit Game", nextIndex));
 
-            int choice = _io.RenderMenu(header, options, _uiState.MainMenuIndex);
-            if (choice == -1) return "Cancel";
+            HostCommandReadResult<ConsoleMenuSelection<FieldMainMenuCommand>> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.MainMenuIndex);
+            ConsoleMenuSelection<FieldMainMenuCommand>? selection = result.Command;
+            if (!result.IsSelected || selection is null)
+            {
+                return FieldMainMenuCommand.Cancel;
+            }
 
-            _uiState.MainMenuIndex = choice;
-            return options[choice];
+            _uiState.MainMenuIndex = selection.Value.Index;
+            return selection.Value.Command;
         }
 
         #endregion
@@ -82,31 +129,36 @@ namespace JRPGPrototype.Logic.Field.Bridges
                             $"Current Macca: {_economy.Macca}\n" +
                             $"Select a member to treat:";
 
-            List<string> labels = new List<string>();
-            List<bool> disabledList = new List<bool>();
+            var options = new List<HostCommandOption<HospitalPatientSelection>>();
 
-            foreach (var p in sortedPatients)
+            for (int index = 0; index < sortedPatients.Count; index++)
             {
+                Combatant p = sortedPatients[index];
                 int hpMissing = p.MaxHP - p.CurrentHP;
                 int spMissing = p.MaxSP - p.CurrentSP;
                 int cost = (hpMissing * 1) + (spMissing * 5);
 
                 bool isHealthy = (hpMissing <= 0 && spMissing <= 0);
                 string costDisplay = isHealthy ? "[HEALTHY]" : $"{cost} M";
+                string label = $"{p.Name,-15} | HP: {p.CurrentHP,3}/{p.MaxHP,3} SP: {p.CurrentSP,3}/{p.MaxSP,3} | {costDisplay}";
 
-                labels.Add($"{p.Name,-15} | HP: {p.CurrentHP,3}/{p.MaxHP,3} SP: {p.CurrentSP,3}/{p.MaxSP,3} | {costDisplay}");
-                disabledList.Add(isHealthy);
+                options.Add(new HostCommandOption<HospitalPatientSelection>(
+                    new HospitalPatientSelection(p, IsLeave: false, index),
+                    label,
+                    IsEnabled: !isHealthy));
             }
 
-            labels.Add("Leave");
-            disabledList.Add(false);
+            options.Add(new HostCommandOption<HospitalPatientSelection>(
+                new HospitalPatientSelection(null, IsLeave: true, sortedPatients.Count),
+                "Leave"));
 
             // Resetting index to 0 for hospital as urgency sorting changes the list context
-            int choice = _io.RenderMenu(header, labels, 0, disabledList);
+            HostCommandReadResult<HospitalPatientSelection> result =
+                ConsoleHostCommandReader.Read(_io, header, options, 0);
 
-            if (choice == -1 || choice == labels.Count - 1) return null;
-
-            return sortedPatients[choice];
+            HospitalPatientSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsLeave) return null!;
+            return selection.Patient!;
         }
 
         #endregion
@@ -118,23 +170,42 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public string ShowCityServicesMenu()
         {
-            string header = $"=== CITY SERVICES ===\nMacca: {_economy.Macca}";
-            List<string> options = new List<string>
+            return ShowCityServicesCommand() switch
             {
-                "Blacksmith (Weapons)",
-                "Clothing Store (Armor/Boots)",
-                "Jeweler (Accessories)",
-                "Pharmacy (Items)",
-                "Hospital (Heal)",
-                "Cathedral of Shadows",
-                "Back"
+                CityServicesCommand.Weapons => "Blacksmith (Weapons)",
+                CityServicesCommand.Clothing => "Clothing Store (Armor/Boots)",
+                CityServicesCommand.Accessories => "Jeweler (Accessories)",
+                CityServicesCommand.Items => "Pharmacy (Items)",
+                CityServicesCommand.Hospital => "Hospital (Heal)",
+                CityServicesCommand.Cathedral => "Cathedral of Shadows",
+                _ => "Back"
+            };
+        }
+
+        public CityServicesCommand ShowCityServicesCommand()
+        {
+            string header = $"=== CITY SERVICES ===\nMacca: {_economy.Macca}";
+            var options = new List<HostCommandOption<ConsoleMenuSelection<CityServicesCommand>>>
+            {
+                Option(CityServicesCommand.Weapons, "Blacksmith (Weapons)", 0),
+                Option(CityServicesCommand.Clothing, "Clothing Store (Armor/Boots)", 1),
+                Option(CityServicesCommand.Accessories, "Jeweler (Accessories)", 2),
+                Option(CityServicesCommand.Items, "Pharmacy (Items)", 3),
+                Option(CityServicesCommand.Hospital, "Hospital (Heal)", 4),
+                Option(CityServicesCommand.Cathedral, "Cathedral of Shadows", 5),
+                Option(CityServicesCommand.Back, "Back", 6)
             };
 
-            int choice = _io.RenderMenu(header, options, _uiState.CityMenuIndex);
-            if (choice == -1 || choice == options.Count - 1) return "Back";
+            HostCommandReadResult<ConsoleMenuSelection<CityServicesCommand>> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.CityMenuIndex);
+            ConsoleMenuSelection<CityServicesCommand>? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.Value.Command == CityServicesCommand.Back)
+            {
+                return CityServicesCommand.Back;
+            }
 
-            _uiState.CityMenuIndex = choice;
-            return options[choice];
+            _uiState.CityMenuIndex = selection.Value.Index;
+            return selection.Value.Command;
         }
 
         /// Renders the specific list of equipment available for the player to equip.
@@ -214,5 +285,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         }
 
         #endregion
+
+        private static HostCommandOption<ConsoleMenuSelection<TCommand>> Option<TCommand>(
+            TCommand command,
+            string label,
+            int index) =>
+            new(new ConsoleMenuSelection<TCommand>(command, index), label);
     }
+
+    internal sealed record HospitalPatientSelection(Combatant? Patient, bool IsLeave, int Index);
 }

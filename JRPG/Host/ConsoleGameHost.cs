@@ -6,6 +6,7 @@ using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 
 namespace JRPGPrototype.Host
@@ -17,17 +18,31 @@ namespace JRPGPrototype.Host
     internal sealed class ConsoleGameHost
     {
         private readonly IGameIO _io;
+        private readonly InteractiveConsoleHostContextFactory _contextFactory;
 
-        public ConsoleGameHost(IGameIO io)
+        public ConsoleGameHost(
+            IGameIO io,
+            IContentPackTextSource? contentSource = null,
+            IHostEventSink<string>? eventSink = null)
         {
             _io = io;
+            _contextFactory = new InteractiveConsoleHostContextFactory(
+                contentSource ?? new FileContentPackSource(Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
+                eventSink ?? new GameIoEventSink(io));
         }
 
-        public void Run(string[] args)
+        internal InteractiveConsoleHostContext? LastStartupContext { get; private set; }
+
+        public void Run(string[] args) =>
+            RunAsync(args).GetAwaiter().GetResult();
+
+        public async Task RunAsync(string[] args, CancellationToken cancellationToken = default)
         {
             _io.WriteLine("=== JRPG PROTOTYPE INITIALIZING ===");
 
             Database.LoadData(_io);
+            LastStartupContext = await _contextFactory.CreateAsync(_io, cancellationToken)
+                .ConfigureAwait(false);
 
             InventoryManager inventory = new InventoryManager();
             EconomyManager economy = new EconomyManager();

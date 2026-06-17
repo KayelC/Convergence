@@ -8,6 +8,8 @@ This document explains the main player-facing systems and the code that implemen
 
 `Program.cs` starts the application, loads all JSON data, creates shared state managers, and asks the player to select a scenario. Scenarios configure the player's class, active persona, persona stock, demon stock, level, resources, and debug paths.
 
+Track O1 keeps that legacy startup path intact and adds a clean-catalog sidecar after `Database.LoadData`. The sidecar loads the retained clean reference/demo/catalog packs through the framework catalog loader for host-readiness checks; if that load fails, the console prints clean-catalog warnings and continues using the legacy runtime data.
+
 Important scenario concepts:
 
 - Human: basic character with no persona or demon management.
@@ -88,7 +90,7 @@ Field gameplay is split between:
 - `FieldServiceEngine`: hospital restoration, field items, field skills, equipment, stat allocation, and progression side effects.
 - `DungeonManager`: console compatibility facade over framework floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
 - `ExplorationProcessor`: field-side movement messages, entry triggers, battle handoff, and enemy hydration.
-- Field bridges: menu rendering and choice collection.
+- Field bridges: menu rendering and choice collection. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now route through the framework host-command contracts before returning legacy-compatible values to existing conductors. Rich preview menus and long-form inspection screens remain legacy presentation surfaces.
 
 Dungeon state is still stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses. Direct debug/test warps preserve the legacy ability to move to a floor without increasing max-floor progress.
 

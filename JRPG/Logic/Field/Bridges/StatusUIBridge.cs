@@ -4,12 +4,32 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Host;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
 {
+    public enum StatusHubCommand
+    {
+        Back,
+        AllocateStats,
+        ChangeEquipment,
+        PersonaStock,
+        DemonStock
+    }
+
+    public enum EquipmentSlotMenuCommand
+    {
+        Back,
+        Weapon,
+        Armor,
+        Boots,
+        Accessory
+    }
+
     /// <summary>
     /// Specialized UI Bridge for Status screens and Persona management.
     /// Authority for stat allocation menu rendering and confirmation dialogs.
@@ -35,48 +55,81 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public string ShowStatusHub(Combatant player)
         {
+            return ShowStatusHubCommand(player) switch
+            {
+                StatusHubCommand.AllocateStats => "Allocate Stats",
+                StatusHubCommand.ChangeEquipment => "Change Equipment",
+                StatusHubCommand.PersonaStock => "Persona Stock",
+                StatusHubCommand.DemonStock => "Demon Stock",
+                _ => "Back"
+            };
+        }
+
+        public StatusHubCommand ShowStatusHubCommand(Combatant player)
+        {
             string header = RenderHumanStatusToString(player) + $"\nPoints Available: {player.StatPoints}";
 
-            List<string> options = new List<string> { "Allocate Stats", "Change Equipment" };
+            var options = new List<HostCommandOption<ConsoleMenuSelection<StatusHubCommand>>>
+            {
+                Option(StatusHubCommand.AllocateStats, "Allocate Stats", 0),
+                Option(StatusHubCommand.ChangeEquipment, "Change Equipment", 1)
+            };
 
             // Class-specific menu augmentation
+            int nextIndex = options.Count;
             if (player.Class == ClassType.WildCard || player.Class == ClassType.PersonaUser)
             {
-                options.Add("Persona Stock");
+                options.Add(Option(StatusHubCommand.PersonaStock, "Persona Stock", nextIndex++));
             }
 
             if (player.Class == ClassType.Operator)
             {
-                options.Add("Demon Stock");
+                options.Add(Option(StatusHubCommand.DemonStock, "Demon Stock", nextIndex++));
             }
 
-            options.Add("Back");
+            options.Add(Option(StatusHubCommand.Back, "Back", nextIndex));
 
-            int choice = _io.RenderMenu(header, options, _uiState.StatusHubIndex);
-            if (choice == -1 || choice == options.Count - 1) return "Back";
+            HostCommandReadResult<ConsoleMenuSelection<StatusHubCommand>> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.StatusHubIndex);
+            ConsoleMenuSelection<StatusHubCommand>? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.Value.Command == StatusHubCommand.Back)
+            {
+                return StatusHubCommand.Back;
+            }
 
-            _uiState.StatusHubIndex = choice;
-            return options[choice];
+            _uiState.StatusHubIndex = selection.Value.Index;
+            return selection.Value.Command;
         }
 
         // Renders the equipment slot selection menu.
         public string ShowEquipSlotMenu(Combatant player)
         {
+            EquipmentSlotMenuSelection selection = ShowEquipSlotCommand(player);
+            return selection.IsBack ? "Back" : selection.Label;
+        }
+
+        public EquipmentSlotMenuSelection ShowEquipSlotCommand(Combatant player)
+        {
             string header = "=== EQUIPMENT SLOTS ===";
-            List<string> options = new List<string>
+            var options = new List<HostCommandOption<EquipmentSlotMenuSelection>>
             {
-                $"Weapon:    {ResolveName(player.EquippedWeapon?.Id, player.EquippedWeapon?.Name)}",
-                $"Armor:     {ResolveName(player.EquippedArmor?.Id, player.EquippedArmor?.Name)}",
-                $"Boots:     {ResolveName(player.EquippedBoots?.Id, player.EquippedBoots?.Name)}",
-                $"Accessory: {ResolveName(player.EquippedAccessory?.Id, player.EquippedAccessory?.Name)}",
-                "Back"
+                EquipOption(EquipmentSlotMenuCommand.Weapon, $"Weapon:    {ResolveName(player.EquippedWeapon?.Id, player.EquippedWeapon?.Name)}", 0),
+                EquipOption(EquipmentSlotMenuCommand.Armor, $"Armor:     {ResolveName(player.EquippedArmor?.Id, player.EquippedArmor?.Name)}", 1),
+                EquipOption(EquipmentSlotMenuCommand.Boots, $"Boots:     {ResolveName(player.EquippedBoots?.Id, player.EquippedBoots?.Name)}", 2),
+                EquipOption(EquipmentSlotMenuCommand.Accessory, $"Accessory: {ResolveName(player.EquippedAccessory?.Id, player.EquippedAccessory?.Name)}", 3),
+                EquipOption(EquipmentSlotMenuCommand.Back, "Back", 4)
             };
 
-            int choice = _io.RenderMenu(header, options, _uiState.EquipSlotIndex);
-            if (choice == -1 || choice == options.Count - 1) return "Back";
+            HostCommandReadResult<EquipmentSlotMenuSelection> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.EquipSlotIndex);
+            EquipmentSlotMenuSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsBack)
+            {
+                return new EquipmentSlotMenuSelection(EquipmentSlotMenuCommand.Back, "Back", 4);
+            }
 
-            _uiState.EquipSlotIndex = choice;
-            return options[choice];
+            _uiState.EquipSlotIndex = selection.Index;
+            return selection;
         }
 
         // Attempts to get the name from the object, falls back to the Shop Registry if blank.
@@ -435,26 +488,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
         }
 
         public string RenderHumanStatusToString(Combatant entity)
-        {
-            string output = "=== STATUS & PARAMETERS ===\n";
-            output += $"Name: {entity.Name} (Lv.{entity.Level}) | Class: {entity.Class}\n";
-            output += $"HP: {entity.CurrentHP,3}/{entity.MaxHP,3} SP: {entity.CurrentSP,3}/{entity.MaxSP,3}\n";
-            output += $"EXP: {entity.Exp,6}/{entity.ExpRequired,6} Next: {entity.ExpRequired - entity.Exp,6}\n";
-            output += "-----------------------------\n";
-
-            var stats = Enum.GetValues(typeof(StatType)).Cast<StatType>();
-            foreach (var stat in stats)
-            {
-                int total = entity.GetStat(stat);
-                int baseVal = entity.CharacterStats.GetValueOrDefault(stat, 0);
-                int mod = total - baseVal;
-
-                if (mod > 0) output += $"{stat,-4}: {total,3} (+{mod})\n";
-                else output += $"{stat,-4}: {total,3}\n";
-            }
-            output += "-----------------------------";
-            return output;
-        }
+            => LegacyHumanStatusProjection.FromCombatant(entity).Render();
 
         private string GetPersonaDetailString(Persona p, bool isEquipped)
         {
@@ -546,5 +580,22 @@ namespace JRPGPrototype.Logic.Field.Bridges
         }
 
         #endregion
+
+        private static HostCommandOption<ConsoleMenuSelection<TCommand>> Option<TCommand>(
+            TCommand command,
+            string label,
+            int index) =>
+            new(new ConsoleMenuSelection<TCommand>(command, index), label);
+
+        private static HostCommandOption<EquipmentSlotMenuSelection> EquipOption(
+            EquipmentSlotMenuCommand command,
+            string label,
+            int index) =>
+            new(new EquipmentSlotMenuSelection(command, label, index), label);
+    }
+
+    public sealed record EquipmentSlotMenuSelection(EquipmentSlotMenuCommand Command, string Label, int Index)
+    {
+        public bool IsBack => Command == EquipmentSlotMenuCommand.Back;
     }
 }

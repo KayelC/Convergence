@@ -4,6 +4,8 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Host;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.Dungeon;
@@ -11,6 +13,21 @@ using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
 {
+    public enum DungeonFloorActionCommand
+    {
+        Cancel,
+        AscendStairs,
+        DescendStairs,
+        Clock,
+        TerminalWarp,
+        TerminalReturn,
+        Inventory,
+        Status,
+        OrganizeParty,
+        ReturnToCity,
+        Barrier
+    }
+
     /// <summary>
     /// Specialized UI Bridge for Dungeon Exploration (Tartarus).
     /// Handles navigation prompts, floor selection, and environmental feedback.
@@ -34,58 +51,79 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public string ShowFloorActionMenu(DungeonFloorResult floorInfo, Combatant player)
         {
+            return ShowFloorActionCommand(floorInfo, player) switch
+            {
+                DungeonFloorActionCommand.AscendStairs => "Ascend Stairs",
+                DungeonFloorActionCommand.DescendStairs => "Descend Stairs",
+                DungeonFloorActionCommand.Clock => "Clock (Heal)",
+                DungeonFloorActionCommand.TerminalWarp => "Terminal (Warp)",
+                DungeonFloorActionCommand.TerminalReturn => "Access Terminal (Return)",
+                DungeonFloorActionCommand.Inventory => "Inventory",
+                DungeonFloorActionCommand.Status => "Status",
+                DungeonFloorActionCommand.OrganizeParty => "Organize Party",
+                DungeonFloorActionCommand.ReturnToCity => "Return to City",
+                DungeonFloorActionCommand.Barrier => "Barrier (Cannot Pass)",
+                _ => "Cancel"
+            };
+        }
+
+        public DungeonFloorActionCommand ShowFloorActionCommand(DungeonFloorResult floorInfo, Combatant player)
+        {
             string header = $"=== TARTARUS: {floorInfo.BlockName.ToUpper()} ===\n" +
                             $"Floor: {floorInfo.FloorNumber}\n" +
                             $"Info: {floorInfo.Description}\n" +
                             $"HP: {player.CurrentHP,3}/{player.MaxHP,3} | SP: {player.CurrentSP,3}/{player.MaxSP,3}";
 
-            List<string> options = new List<string>();
+            var options = new List<HostCommandOption<ConsoleMenuSelection<DungeonFloorActionCommand>>>();
+            int index = 0;
 
             // 1. Navigation Logic
             if (floorInfo.Type != DungeonEventType.BlockEnd)
             {
-                options.Add("Ascend Stairs");
+                options.Add(Option(DungeonFloorActionCommand.AscendStairs, "Ascend Stairs", index++));
             }
             else
             {
-                options.Add("Barrier (Cannot Pass)");
+                options.Add(Option(DungeonFloorActionCommand.Barrier, "Barrier (Cannot Pass)", index++));
             }
 
             if (floorInfo.FloorNumber > 1)
             {
-                options.Add("Descend Stairs");
+                options.Add(Option(DungeonFloorActionCommand.DescendStairs, "Descend Stairs", index++));
             }
 
             // 2. Floor-Specific Features
             if (floorInfo.FloorNumber == 1)
             {
-                options.Add("Clock (Heal)");
-                options.Add("Terminal (Warp)");
-                options.Add("Return to City");
+                options.Add(Option(DungeonFloorActionCommand.Clock, "Clock (Heal)", index++));
+                options.Add(Option(DungeonFloorActionCommand.TerminalWarp, "Terminal (Warp)", index++));
+                options.Add(Option(DungeonFloorActionCommand.ReturnToCity, "Return to City", index++));
             }
             else if (floorInfo.HasTerminal)
             {
-                options.Add("Access Terminal (Return)");
+                options.Add(Option(DungeonFloorActionCommand.TerminalReturn, "Access Terminal (Return)", index++));
             }
 
             // 3. Global Field Actions
-            options.Add("Inventory");
-            options.Add("Status");
+            options.Add(Option(DungeonFloorActionCommand.Inventory, "Inventory", index++));
+            options.Add(Option(DungeonFloorActionCommand.Status, "Status", index++));
 
             if (player.Class == ClassType.Operator)
             {
-                options.Add("Organize Party");
+                options.Add(Option(DungeonFloorActionCommand.OrganizeParty, "Organize Party", index++));
             }
 
             // Ensure the cursor index doesn't exceed the newly built list size
             if (_uiState.DungeonMenuIndex >= options.Count) _uiState.DungeonMenuIndex = 0;
 
-            int choice = _io.RenderMenu(header, options, _uiState.DungeonMenuIndex);
+            HostCommandReadResult<ConsoleMenuSelection<DungeonFloorActionCommand>> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.DungeonMenuIndex);
 
-            if (choice == -1) return "Cancel";
+            ConsoleMenuSelection<DungeonFloorActionCommand>? selection = result.Command;
+            if (!result.IsSelected || selection is null) return DungeonFloorActionCommand.Cancel;
 
-            _uiState.DungeonMenuIndex = choice;
-            return options[choice];
+            _uiState.DungeonMenuIndex = selection.Value.Index;
+            return selection.Value.Command;
         }
 
         #endregion
@@ -98,18 +136,25 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public int? SelectEntryPoint(List<int> unlockedTerminals)
         {
-            List<string> options = new List<string>();
-            foreach (int t in unlockedTerminals)
+            var options = new List<HostCommandOption<DungeonFloorSelection>>();
+            for (int index = 0; index < unlockedTerminals.Count; index++)
             {
-                options.Add(t == 1 ? "Lobby (Entrance)" : $"Floor {t}");
+                int floor = unlockedTerminals[index];
+                options.Add(new HostCommandOption<DungeonFloorSelection>(
+                    new DungeonFloorSelection(floor, IsCancel: false, index),
+                    floor == 1 ? "Lobby (Entrance)" : $"Floor {floor}"));
             }
-            options.Add("Cancel");
+            options.Add(new HostCommandOption<DungeonFloorSelection>(
+                new DungeonFloorSelection(null, IsCancel: true, unlockedTerminals.Count),
+                "Cancel"));
 
-            int choice = _io.RenderMenu("=== SELECT ENTRY POINT ===", options, 0);
+            HostCommandReadResult<DungeonFloorSelection> result =
+                ConsoleHostCommandReader.Read(_io, "=== SELECT ENTRY POINT ===", options, 0);
 
-            if (choice == -1 || choice == options.Count - 1) return null;
+            DungeonFloorSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsCancel) return null;
 
-            return unlockedTerminals[choice];
+            return selection.Floor;
         }
 
         /// <summary>
@@ -118,26 +163,30 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public int? SelectWarpDestination(List<int> unlockedTerminals, int currentFloor)
         {
-            List<string> labels = new List<string>();
-            List<bool> disabledList = new List<bool>();
-
-            foreach (int f in unlockedTerminals)
+            var options = new List<HostCommandOption<DungeonFloorSelection>>();
+            for (int index = 0; index < unlockedTerminals.Count; index++)
             {
+                int f = unlockedTerminals[index];
                 string name = (f == 1) ? "Lobby" : $"Floor {f}";
                 bool isCurrent = (f == currentFloor);
 
-                labels.Add(isCurrent ? $"{name} (Current)" : name);
-                disabledList.Add(isCurrent);
+                options.Add(new HostCommandOption<DungeonFloorSelection>(
+                    new DungeonFloorSelection(f, IsCancel: false, index),
+                    isCurrent ? $"{name} (Current)" : name,
+                    IsEnabled: !isCurrent));
             }
 
-            labels.Add("Cancel");
-            disabledList.Add(false);
+            options.Add(new HostCommandOption<DungeonFloorSelection>(
+                new DungeonFloorSelection(null, IsCancel: true, unlockedTerminals.Count),
+                "Cancel"));
 
-            int choice = _io.RenderMenu("=== TERMINAL SYSTEM ===", labels, 0, disabledList);
+            HostCommandReadResult<DungeonFloorSelection> result =
+                ConsoleHostCommandReader.Read(_io, "=== TERMINAL SYSTEM ===", options, 0);
 
-            if (choice == -1 || choice == labels.Count - 1) return null;
+            DungeonFloorSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsCancel) return null;
 
-            return unlockedTerminals[choice];
+            return selection.Floor;
         }
 
         #endregion
@@ -190,5 +239,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
         }
 
         #endregion
+
+        private static HostCommandOption<ConsoleMenuSelection<TCommand>> Option<TCommand>(
+            TCommand command,
+            string label,
+            int index) =>
+            new(new ConsoleMenuSelection<TCommand>(command, index), label);
     }
+
+    internal sealed record DungeonFloorSelection(int? Floor, bool IsCancel, int Index);
 }

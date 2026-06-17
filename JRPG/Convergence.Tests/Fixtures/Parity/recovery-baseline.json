@@ -37,14 +37,14 @@
     {
       "id": "interactive_boot",
       "name": "Interactive boot and scenario selection",
-      "status": "legacy_only",
+      "status": "parallel_partial",
       "legacyOwners": ["Program.cs", "Host/ConsoleGameHost.cs", "Host/ScenarioFactory.cs"],
-      "cleanOwners": ["Host/CleanBattleDemoHost.cs", "Host/CleanFieldDemoHost.cs"],
+      "cleanOwners": ["Host/InteractiveConsoleHostContext.cs", "Host/FrameworkHostAdapters.cs", "Host/CleanBattleDemoHost.cs", "Host/CleanFieldDemoHost.cs"],
       "decisionDependencies": [],
-      "tests": ["LegacyHostCharacterizationTests.OrdinaryStartup_LoadsDataReachesFieldAndExits"],
+      "tests": ["LegacyHostCharacterizationTests.OrdinaryStartup_LoadsDataReachesFieldAndExits", "InteractiveConsoleHostStartupTests.OrdinaryStartup_LoadsCleanCatalogSidecarSilently", "InteractiveConsoleHostStartupTests.OrdinaryStartup_WarnsAndContinuesWhenCleanCatalogSidecarFails"],
       "futureTrack": "O",
       "removalFiles": ["Program.cs", "Host/ConsoleGameHost.cs", "Host/ScenarioFactory.cs"],
-      "consumerMigrated": false,
+      "consumerMigrated": true,
       "removalAuthorized": false
     },
     {
@@ -479,14 +479,14 @@
     {
       "id": "console_presentation",
       "name": "Console presentation, menu ordering, cancellation, delays, and confirmation flows",
-      "status": "legacy_only",
+      "status": "parallel_partial",
       "legacyOwners": ["Services/IGameIO.cs", "Services/ConsoleIO.cs", "Logic/Battle/Bridges", "Logic/Field/Bridges", "Logic/Fusion/Bridges"],
-      "cleanOwners": [],
+      "cleanOwners": ["JRPG.Framework/Hosting/HostContracts.cs", "Host/FrameworkHostAdapters.cs", "Logic/Field/Bridges/ServiceUIBridge.cs", "Logic/Field/Bridges/InventoryUIBridge.cs", "Logic/Field/Bridges/StatusUIBridge.cs", "Logic/Field/Bridges/DungeonUIBridge.cs", "Logic/Field/Bridges/LegacyHumanStatusProjection.cs"],
       "decisionDependencies": ["host_command_and_event_flow"],
-      "tests": ["BattleBridgeResultTests", "FusionBridgeResultTests", "LegacyWorkflowCharacterizationTests.MenuSurfaces_PreserveOptionOrderingAndCancellation"],
+      "tests": ["BattleBridgeResultTests", "FusionBridgeResultTests", "LegacyWorkflowCharacterizationTests.MenuSurfaces_PreserveOptionOrderingAndCancellation", "FrameworkHostAdapterTests", "ConsolePlainMenuCommandTests"],
       "futureTrack": "O",
       "removalFiles": ["Services/ConsoleIO.cs", "Logic/Battle/Bridges", "Logic/Field/Bridges", "Logic/Fusion/Bridges"],
-      "consumerMigrated": false,
+      "consumerMigrated": true,
       "removalAuthorized": false
     }
   ]

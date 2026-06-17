@@ -37,7 +37,7 @@ The console host references the framework. The framework never references the co
 
 Future clean hosts use cancellation-aware asynchronous contracts for content text, commands, events, and randomness. A host supplies JSON text through `IContentPackTextSource`, consumes or publishes ordered output through `IHostEventSink<TEvent>`, obtains typed choices through `IHostCommandSource<TCommand>`, and owns nondeterminism through `IRandomSource`.
 
-The existing interactive prototype still uses synchronous `IGameIO`. Moving that consumer onto the new contracts is deliberately deferred; Track B establishes the boundary without rewriting gameplay.
+The existing interactive prototype still uses synchronous `IGameIO`, but Track O1 adds console adapters over the clean host contracts. Those adapters are intentionally narrow: already-simple menus can return typed commands and startup can publish sidecar catalog warnings through the event sink without forcing full battle, fusion, shop, or preview-heavy screens through asynchronous host contracts yet.
 
 ### Runtime State Boundary
 
@@ -65,7 +65,9 @@ Track M adds framework-owned field/dungeon state-machine services for dungeon pr
 
 Track N adds framework fusion runtime services for recipe lookup, result operation selection, inheritance slot calculation, skill mutation, accident inheritance replacement, preview snapshots, transaction assessment, and Compendium registration/recall assessment. `FusionCalculator`, duplicate-result guards, and `CompendiumRegistry` now adapt legacy database/live object state into those services while keeping Cathedral menus and legacy transaction strategies intact. Compendium snapshots now deep-clone active Persona data instead of sharing live references.
 
-Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track O1 starts the interactive console-host migration without changing gameplay rules. `ConsoleGameHost` still loads the legacy `Database` first, then creates an `InteractiveConsoleHostContext` that attempts to load the retained clean content packs as a nonfatal sidecar catalog. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now pass through the framework host-command contracts via console adapters while preserving legacy return strings for existing conductors. Rich hover-preview menus, battle commands, Cathedral prompts, and long-form status inspection remain legacy bridge surfaces.
+
+Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, rich console presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O1 policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 
@@ -121,6 +123,8 @@ This keeps engines mostly independent from console rendering while still allowin
 Legacy runtime systems assume `Database.LoadData(io)` has completed before factories, shops, battle effects, dungeon traversal, or fusion logic are used. Framework services instead receive immutable definitions or a validated `GameDataCatalog`.
 
 The clean catalog now has a definition surface for every retained legacy content family. That surface is not a data migration: the legacy datasets still load through `Database`, while clean fixtures prove target authoring contracts for later consumer migration tracks.
+
+During ordinary console startup, the clean catalog is loaded as a sidecar after the legacy database. Sidecar failures are reported as clean-catalog warnings and do not stop the prototype because the retained legacy datasets remain the gameplay authority until production content is reauthored.
 
 ## Runtime Dependency Shape
 

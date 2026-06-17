@@ -267,3 +267,16 @@ Track N began from `ec7d4fa` and moved fusion result resolution, inheritance pla
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 631 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 115 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+## Track O1 Boundary
+
+Track O1 began from `e163b81` and starts the interactive console-host migration while preserving the ordinary scenario startup, legacy datasets, and visible menu behavior.
+
+- `ConsoleGameHost` now creates an `InteractiveConsoleHostContext` after `Database.LoadData`. The context loads retained clean packs as a nonfatal sidecar catalog and publishes clean-catalog diagnostics through a host event sink.
+- `ServiceUIBridge`, `InventoryUIBridge`, `StatusUIBridge`, and `DungeonUIBridge` route plain menus through framework host-command adapters while still returning the legacy strings or objects expected by existing conductors.
+- Human status rendering now uses a serializer-neutral runtime snapshot projection before producing the unchanged console text.
+- The sidecar catalog is readiness evidence only. Legacy `Data/Jsons`, `Database`, live `Combatant`/`Persona` objects, rich preview menus, battle commands, Cathedral prompts, shop presentation, and gameplay rule consumers remain console-host owned. Removal remains unauthorized.
+- Focused Track O1 checks passed: the startup sidecar tests, plain-menu command tests, framework host-adapter tests, parity-ledger validation test, and ordinary startup characterization test reported 13 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 636 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.

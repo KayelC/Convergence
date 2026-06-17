@@ -4,12 +4,23 @@ using System.Linq;
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Host;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
 {
+    public enum InventorySubMenuCommand
+    {
+        Back,
+        UseItem,
+        UseSkill,
+        Equipment,
+        Demons
+    }
+
     /// <summary>
     /// Specialized UI Bridge for Inventory management and Field-based utility usage.
     /// Handles the selection of items, skills, performers, and targets.
@@ -35,22 +46,44 @@ namespace JRPGPrototype.Logic.Field.Bridges
         // Renders the primary Inventory sub-menu.
         public string ShowInventorySubMenu(Combatant player)
         {
-            string header = "=== INVENTORY ===";
-            List<string> options = new List<string> { "Use Item", "Use Skill", "Equipment" };
+            return ShowInventorySubMenuCommand(player) switch
+            {
+                InventorySubMenuCommand.UseItem => "Use Item",
+                InventorySubMenuCommand.UseSkill => "Use Skill",
+                InventorySubMenuCommand.Equipment => "Equipment",
+                InventorySubMenuCommand.Demons => "Demons (COMP)",
+                _ => "Back"
+            };
+        }
 
+        public InventorySubMenuCommand ShowInventorySubMenuCommand(Combatant player)
+        {
+            string header = "=== INVENTORY ===";
+            var options = new List<HostCommandOption<ConsoleMenuSelection<InventorySubMenuCommand>>>
+            {
+                Option(InventorySubMenuCommand.UseItem, "Use Item", 0),
+                Option(InventorySubMenuCommand.UseSkill, "Use Skill", 1),
+                Option(InventorySubMenuCommand.Equipment, "Equipment", 2)
+            };
+
+            int nextIndex = options.Count;
             if (player.Class == ClassType.Operator)
             {
-                options.Add("Demons (COMP)");
+                options.Add(Option(InventorySubMenuCommand.Demons, "Demons (COMP)", nextIndex++));
             }
 
-            options.Add("Back");
+            options.Add(Option(InventorySubMenuCommand.Back, "Back", nextIndex));
 
-            int choice = _io.RenderMenu(header, options, _uiState.InventoryMenuIndex);
+            HostCommandReadResult<ConsoleMenuSelection<InventorySubMenuCommand>> result =
+                ConsoleHostCommandReader.Read(_io, header, options, _uiState.InventoryMenuIndex);
+            ConsoleMenuSelection<InventorySubMenuCommand>? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.Value.Command == InventorySubMenuCommand.Back)
+            {
+                return InventorySubMenuCommand.Back;
+            }
 
-            if (choice == -1 || choice == options.Count - 1) return "Back";
-
-            _uiState.InventoryMenuIndex = choice;
-            return options[choice];
+            _uiState.InventoryMenuIndex = selection.Value.Index;
+            return selection.Value.Command;
         }
 
         #endregion
@@ -282,23 +315,42 @@ namespace JRPGPrototype.Logic.Field.Bridges
         {
             var targetPool = _party.ActiveParty.ToList();
 
-            List<string> targetLabels = targetPool.Select(c =>
-                $"{c.Name,-15} (HP: {c.CurrentHP,3}/{c.MaxHP,3} SP: {c.CurrentSP,3}/" +
-                $"{c.MaxSP,3})").ToList();
+            var options = new List<HostCommandOption<FieldTargetSelection>>();
+            for (int index = 0; index < targetPool.Count; index++)
+            {
+                Combatant target = targetPool[index];
+                string label = $"{target.Name,-15} (HP: {target.CurrentHP,3}/{target.MaxHP,3} SP: {target.CurrentSP,3}/" +
+                    $"{target.MaxSP,3})";
+                options.Add(new HostCommandOption<FieldTargetSelection>(
+                    new FieldTargetSelection(target, IsBack: false, index),
+                    label));
+            }
 
-            targetLabels.Add("Back");
+            options.Add(new HostCommandOption<FieldTargetSelection>(
+                new FieldTargetSelection(null, IsBack: true, targetPool.Count),
+                "Back"));
 
             string prompt = !string.IsNullOrEmpty(actionName)
                 ? $"Using {actionName}. Select Target:"
                 : "Select Target:";
 
-            int choice = _io.RenderMenu(prompt, targetLabels, 0);
+            HostCommandReadResult<FieldTargetSelection> result =
+                ConsoleHostCommandReader.Read(_io, prompt, options, 0);
 
-            if (choice == -1 || choice == targetLabels.Count - 1) return null;
+            FieldTargetSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsBack) return null!;
 
-            return targetPool[choice];
+            return selection.Target!;
         }
 
         #endregion
+
+        private static HostCommandOption<ConsoleMenuSelection<TCommand>> Option<TCommand>(
+            TCommand command,
+            string label,
+            int index) =>
+            new(new ConsoleMenuSelection<TCommand>(command, index), label);
     }
+
+    internal sealed record FieldTargetSelection(Combatant? Target, bool IsBack, int Index);
 }

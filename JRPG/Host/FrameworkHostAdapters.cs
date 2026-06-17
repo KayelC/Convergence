@@ -51,6 +51,23 @@ internal sealed class TextWriterEventSink : IHostEventSink<string>
     }
 }
 
+internal sealed class GameIoEventSink : IHostEventSink<string>
+{
+    private readonly IGameIO _io;
+
+    public GameIoEventSink(IGameIO io)
+    {
+        _io = io ?? throw new ArgumentNullException(nameof(io));
+    }
+
+    public ValueTask PublishAsync(string hostEvent, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _io.WriteLine(hostEvent);
+        return ValueTask.CompletedTask;
+    }
+}
+
 internal sealed class ConsoleHostCommandSource<TCommand> : IHostCommandSource<TCommand>
 {
     private readonly IGameIO _io;
@@ -75,6 +92,24 @@ internal sealed class ConsoleHostCommandSource<TCommand> : IHostCommandSource<TC
             : HostCommandReadResult<TCommand>.Selected(request.Options[selection].Command));
     }
 }
+
+internal static class ConsoleHostCommandReader
+{
+    public static HostCommandReadResult<TCommand> Read<TCommand>(
+        IGameIO io,
+        string prompt,
+        IEnumerable<HostCommandOption<TCommand>> options,
+        int initialIndex = 0)
+    {
+        return new ConsoleHostCommandSource<TCommand>(io)
+            .ReadAsync(new HostCommandRequest<TCommand>(prompt, options, initialIndex))
+            .AsTask()
+            .GetAwaiter()
+            .GetResult();
+    }
+}
+
+internal readonly record struct ConsoleMenuSelection<TCommand>(TCommand Command, int Index);
 
 internal sealed class SystemRandomSource : IRandomSource
 {
