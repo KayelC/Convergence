@@ -22,6 +22,7 @@
 - `RecruitmentTransactionService`: framework validation for session recruitment, duplicate ownership, stock capacity, and valid targets.
 - `BattleRewardService`: framework reward calculator producing immutable EXP/Macca totals and applications.
 - `NegotiationEngine`, `LegacyRecruitmentAdapter`, and `LegacyBattleRewardAdapter`: console compatibility adapters over the framework negotiation/recruitment/reward services.
+- `LegacyNegotiationPresentationAdapter` and negotiation/reward presentation results: console-host prompt, event, recruitment, and reward display contracts over framework negotiation/reward results.
 - `InteractionBridge`: player-facing battle menus and target/skill/item selection.
 - `BattleEffectRegistry` and `IBattleEffect` implementations: category-specific skill and item effects.
 - `BattleMessenger` and `BattleLogger`: battle event publication and console rendering.
@@ -89,6 +90,7 @@ Each phase:
 - Enemy combatants are hydrated from `Database.Personas`.
 - Negotiation still uses `Database.NegotiationQuestions`; `NegotiationEngine` maps those legacy records into framework prompts and applies returned costs or familiar gifts.
 - Rewards use enemy levels/stats through `LegacyBattleRewardAdapter`, which delegates to `BattleRewardService` and `ProductionCombatRuleset`.
+- O7 presentation records wrap those negotiation and reward results without changing `questions.json`, reward formulas, recruitment validation, compendium registration, or visible console text.
 
 ## Extension Points
 
@@ -105,3 +107,4 @@ Each phase:
 - Track J adds framework encounter-loop tests for Press Turn, lifecycle ordering, completion, cancellation, and faults.
 - Track K adds framework negotiation/recruitment/reward tests plus console characterization for recruitment and victory reward application. Exhaustive live console battle traversal remains manual and later-track work.
 - Track O6 adds event-presentation tests for deterministic event mapping and visible-output preservation. It does not migrate legacy skill/item execution, AI policy, negotiation, rewards, or production battle content.
+- Track O7 adds negotiation/reward presentation tests for prompt mapping, event color/delay mapping, recruitment outcome display, and victory reward display. It does not migrate authored negotiation content or Cathedral compendium presentation.

@@ -238,6 +238,8 @@ Track J moves the encounter loop itself into `BattleEncounterRunner`. The framew
 
 The ordinary console battle now runs through this framework runner. The console adapter still owns the live `Combatant` objects, `InteractionBridge` menus, `ActionProcessor` legacy skill and item execution, `BehaviorEngine` AI heuristics, `NegotiationEngine`, reward payout, data files, message colors, waits, and final cleanup. This is adapter-first migration: the flow is reusable, but the legacy content and effect semantics are still protected until their later tracks.
 
+Track O7 keeps that adapter-first boundary and adds typed presentation records for negotiation prompts, demand prompts, negotiation events, recruitment outcomes, and battle reward display. The framework still owns the negotiation/reward service results, while the console host keeps `questions.json`, legacy mutation, message wording, menu order, waits, and automatic compendium registration hooks.
+
 Track J does not migrate negotiation, recruitment, EXP/Macca reward ownership, inventory/equipment ownership, production skill reauthoring, or complete AI policy authoring. Those remain Track K and later work.
 
 ## Extension Mindset

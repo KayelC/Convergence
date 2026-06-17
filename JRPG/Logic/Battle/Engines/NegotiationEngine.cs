@@ -7,6 +7,7 @@ using JRPGPrototype.Entities;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Bridges;
 using JRPGPrototype.Logic.Battle.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Engines
@@ -102,25 +103,36 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
         public NegotiationResult StartNegotiation(Combatant actor, Combatant target, List<Combatant> enemies)
         {
+            return StartNegotiationDetailed(actor, target, enemies).LegacyResult;
+        }
+
+        internal NegotiationSessionPresentationResult StartNegotiationDetailed(
+            Combatant actor,
+            Combatant target,
+            List<Combatant> enemies)
+        {
             NegotiationSessionRequest request = CreateRequest(actor, target, enemies);
             var service = new NegotiationSessionService(new LegacyRandomSource(_rnd));
+            var presentation = new LegacyNegotiationPresentationAdapter(_io, target.Name);
             NegotiationSessionResult result = service.RunAsync(
                     request,
-                    new LegacyNegotiationCommandSource(_io, target.Name),
-                    new LegacyNegotiationEventSink(_io))
+                    presentation,
+                    presentation)
                 .AsTask()
                 .GetAwaiter()
                 .GetResult();
 
             ApplyResult(result);
-            return result.Outcome switch
-            {
-                NegotiationOutcomeKind.Success => NegotiationResult.Success,
-                NegotiationOutcomeKind.Trick => NegotiationResult.Trick,
-                NegotiationOutcomeKind.Flee => NegotiationResult.Flee,
-                NegotiationOutcomeKind.FamiliarFlee => NegotiationResult.FamiliarFlee,
-                _ => NegotiationResult.Failure
-            };
+            return new NegotiationSessionPresentationResult(
+                ToLegacyResult(result),
+                result,
+                new NegotiationMutationPresentationResult(
+                    result.MaccaSpent,
+                    result.ItemSpentId,
+                    result.FamiliarGift),
+                presentation.AnswerPrompts,
+                presentation.DemandPrompts,
+                presentation.Events);
         }
 
         private NegotiationSessionRequest CreateRequest(Combatant actor, Combatant target, List<Combatant> enemies)
@@ -208,103 +220,15 @@ namespace JRPGPrototype.Logic.Battle.Engines
             public decimal NextUnitDecimal() => (decimal)_random.NextDouble();
         }
 
-        private sealed class LegacyNegotiationCommandSource : INegotiationCommandSource
-        {
-            private readonly IGameIO _io;
-            private readonly string _targetName;
-
-            public LegacyNegotiationCommandSource(IGameIO io, string targetName)
+        private static NegotiationResult ToLegacyResult(NegotiationSessionResult result) =>
+            result.Outcome switch
             {
-                _io = io ?? throw new ArgumentNullException(nameof(io));
-                _targetName = targetName;
-            }
-
-            public ValueTask<NegotiationAnswerSelection> ReadAnswerAsync(
-                NegotiationQuestionPrompt prompt,
-                CancellationToken cancellationToken = default)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                int choice = _io.RenderMenu(
-                    $"{_targetName}: \"{prompt.Text}\"",
-                    prompt.Answers.Select(answer => answer.Text).ToList(),
-                    0);
-                return ValueTask.FromResult(choice < 0
-                    ? NegotiationAnswerSelection.Cancel()
-                    : NegotiationAnswerSelection.Selected(choice));
-            }
-
-            public ValueTask<NegotiationDemandSelection> ReadDemandAsync(
-                NegotiationDemandPrompt prompt,
-                CancellationToken cancellationToken = default)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                int choice = _io.RenderMenu(
-                    prompt.Prompt,
-                    prompt.Options.Select(option => option.Label).ToList(),
-                    0);
-                if (choice < 0)
-                {
-                    return ValueTask.FromResult(NegotiationDemandSelection.Cancel());
-                }
-
-                return ValueTask.FromResult(NegotiationDemandSelection.Selected(prompt.Options[choice].Decision));
-            }
-        }
-
-        private sealed class LegacyNegotiationEventSink : IHostEventSink<NegotiationEvent>
-        {
-            private readonly IGameIO _io;
-
-            public LegacyNegotiationEventSink(IGameIO io)
-            {
-                _io = io ?? throw new ArgumentNullException(nameof(io));
-            }
-
-            public ValueTask PublishAsync(
-                NegotiationEvent hostEvent,
-                CancellationToken cancellationToken = default)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                _io.WriteLine(hostEvent.Message, Color(hostEvent));
-
-                int wait = WaitMilliseconds(hostEvent);
-                if (wait > 0)
-                {
-                    _io.Wait(wait);
-                }
-
-                return ValueTask.CompletedTask;
-            }
-
-            private static ConsoleColor Color(NegotiationEvent hostEvent) => hostEvent.Kind switch
-            {
-                NegotiationEventKind.FamiliarDialogue => ConsoleColor.Cyan,
-                NegotiationEventKind.MoodNegative => ConsoleColor.Red,
-                NegotiationEventKind.Failure when hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
-                    hostEvent.Message.Contains("required donation", StringComparison.Ordinal) => ConsoleColor.Red,
-                _ => ConsoleColor.White
+                NegotiationOutcomeKind.Success => NegotiationResult.Success,
+                NegotiationOutcomeKind.Trick => NegotiationResult.Trick,
+                NegotiationOutcomeKind.Flee => NegotiationResult.Flee,
+                NegotiationOutcomeKind.FamiliarFlee => NegotiationResult.FamiliarFlee,
+                _ => NegotiationResult.Failure
             };
-
-            private static int WaitMilliseconds(NegotiationEvent hostEvent)
-            {
-                if (hostEvent.Kind == NegotiationEventKind.DemandIntro ||
-                    hostEvent.Kind == NegotiationEventKind.MoodNegative ||
-                    hostEvent.ReasonlessMessageIsUnresponsive())
-                {
-                    return 800;
-                }
-
-                if (hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
-                    hostEvent.Message.Contains("Demon Stock is full", StringComparison.Ordinal) ||
-                    hostEvent.Message.Contains("refuses to talk", StringComparison.Ordinal) ||
-                    hostEvent.Message.Contains("required donation", StringComparison.Ordinal))
-                {
-                    return 1000;
-                }
-
-                return 0;
-            }
-        }
     }
 
     internal static class NegotiationEventExtensions

@@ -294,6 +294,20 @@ Track O6 began from `3dae5ae` and migrates battle event presentation into a type
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O7 Boundary
+
+Track O7 began from `01ddcc4` and migrates negotiation/recruitment/reward presentation into typed console-host results without changing battle outcomes or legacy data.
+
+- `NegotiationRewardPresentationResults` records answer prompts, demand prompts, negotiation events, session outcomes, mutation summaries, recruitment presentation, and battle reward presentation.
+- `NegotiationEngine` keeps `StartNegotiation` as the legacy wrapper and adds an internal detailed result around `NegotiationSessionService`.
+- `BattleConductor` uses one negotiation/recruitment presentation helper for both framework encounter execution and older compatibility execution.
+- `LegacyBattleRewardAdapter` now presents immutable reward totals through the existing victory reward message before applying rewards.
+- Legacy `questions.json`, negotiation data, reward formulas, recruitment rules, compendium recall, Cathedral presentation, production `Data/Jsons`, and framework public APIs remain protected. Removal remains unauthorized.
+- Focused O7 verification passed: `NegotiationRewardPresentationTests`, `NegotiationRewardRuntimeTests`, `BattleCommandShellTests`, `BattleEventPresentationTests`, and the negotiation/ordinary battle characterizations reported 40 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 688 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

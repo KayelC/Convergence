@@ -3,6 +3,7 @@ using JRPGPrototype.Core;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Bridges;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Services;
@@ -55,6 +56,12 @@ namespace JRPGPrototype.Logic.Battle
                     enemy.GetDefense())),
                 recipientSnapshots));
             return new LegacyBattleRewardCalculation(result, recipientMap);
+        }
+
+        public BattleRewardPresentationResult Present(LegacyBattleRewardCalculation calculation)
+        {
+            ArgumentNullException.ThrowIfNull(calculation);
+            return BattleRewardPresentationResult.Shown(calculation.Result);
         }
 
         public void Apply(LegacyBattleRewardCalculation calculation, EconomyManager economy, IGameIO io)

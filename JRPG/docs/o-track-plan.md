@@ -385,6 +385,21 @@ Exit gate:
 - Negotiation and rewards remain visibly unchanged but flow through typed prompt/result contracts.
 - Existing negotiation and reward characterization tests remain green.
 
+Completion:
+
+- Track O7 began from `01ddcc4` on `track-12-recovery`.
+- Added `NegotiationRewardPresentationResults` for typed negotiation prompt, demand, event, outcome, recruitment, and reward presentation records.
+- `NegotiationEngine` now keeps `StartNegotiation` as the public legacy wrapper and exposes an internal detailed result containing the framework `NegotiationSessionResult`, mapped legacy result, prompt records, event records, and mutation summary.
+- The old private negotiation command/event classes were replaced with `LegacyNegotiationPresentationAdapter`, still backed by `IGameIO` and preserving current prompt headers, options, colors, waits, and message text.
+- `BattleConductor` now shares one negotiation/recruitment presentation helper between the framework encounter path and older compatibility method, preserving already-spoken, joined-party, failed, trick/flee, and familiar-flee turn effects.
+- `LegacyBattleRewardAdapter` now exposes typed reward presentation for the existing victory reward message before applying EXP/Macca mutations.
+- Production `questions.json`, negotiation data, reward formulas, recruitment rules, compendium recall, Cathedral presentation, production `Data/Jsons`, and framework public APIs did not change.
+- Updated the parity ledger. `negotiation_and_recruitment`, `battle_rewards`, `battle_actions`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O7 verification passed: `NegotiationRewardPresentationTests`, `NegotiationRewardRuntimeTests`, `BattleCommandShellTests`, `BattleEventPresentationTests`, and the negotiation/ordinary battle characterizations reported 40 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 688 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O8: Shops And Hospital Presentation
 
 Goal:

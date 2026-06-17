@@ -670,14 +670,26 @@ namespace JRPGPrototype.Logic.Battle
         private BattleEncounterCommandResult HandleNegotiationForFramework(Combatant actor, BattleCommandShellResult command)
         {
             Combatant target = command.Targets.Single();
-            if (_sessionRecruitedIds.Contains(target.SourceId))
+            BattleNegotiationPresentationResult presentation = ResolveNegotiationPresentation(actor, target);
+            PublishNegotiationPresentation(presentation);
+            if (presentation.RemoveTarget)
             {
-                _messenger.Publish($"{target.Name} has already been spoken to.", ConsoleColor.Gray, 800);
-                return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.None);
+                _enemies.Remove(target);
             }
 
-            NegotiationResult result = _negotiationEngine.StartNegotiation(actor, target, _enemies);
-            switch (result)
+            return BattleEncounterCommandResult.Executed(ToFrameworkTurnConsumption(presentation.TurnEffect));
+        }
+
+        private BattleNegotiationPresentationResult ResolveNegotiationPresentation(Combatant actor, Combatant target)
+        {
+            if (_sessionRecruitedIds.Contains(target.SourceId))
+            {
+                return BattleNegotiationPresentationResult.AlreadySpoken(target);
+            }
+
+            NegotiationSessionPresentationResult result =
+                _negotiationEngine.StartNegotiationDetailed(actor, target, _enemies);
+            switch (result.LegacyResult)
             {
                 case NegotiationResult.Success:
                     LegacyRecruitmentResult recruitment = _recruitmentAdapter.TryRecruit(
@@ -689,28 +701,46 @@ namespace JRPGPrototype.Logic.Battle
                         _compendium);
                     if (recruitment.Applied)
                     {
-                        _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
-                        return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                        return BattleNegotiationPresentationResult.Joined(target);
                     }
 
-                    _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
-                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.TerminatePhase);
+                    return BattleNegotiationPresentationResult.FailedEndsTurn();
 
                 case NegotiationResult.Failure:
-                    _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
-                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.TerminatePhase);
+                    return BattleNegotiationPresentationResult.FailedEndsTurn();
 
                 case NegotiationResult.Trick:
                 case NegotiationResult.Flee:
                 case NegotiationResult.FamiliarFlee:
-                    _messenger.Publish($"{target.Name} left the battle.");
-                    _enemies.Remove(target);
-                    return BattleEncounterCommandResult.Executed(ToFrameworkPressTurn(HitType.Miss, false));
+                    return BattleNegotiationPresentationResult.LeftBattle(target);
 
                 default:
-                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                    return new BattleNegotiationPresentationResult(
+                        NegotiationPresentationKind.Suppressed,
+                        null,
+                        ConsoleColor.Gray,
+                        0,
+                        BattleNegotiationTurnEffect.Normal);
             }
         }
+
+        private void PublishNegotiationPresentation(BattleNegotiationPresentationResult presentation)
+        {
+            if (presentation.Kind == NegotiationPresentationKind.Shown &&
+                !string.IsNullOrEmpty(presentation.Message))
+            {
+                _messenger.Publish(presentation.Message, presentation.Color, presentation.Delay);
+            }
+        }
+
+        private static EncounterActionTurnConsumption ToFrameworkTurnConsumption(BattleNegotiationTurnEffect effect) =>
+            effect switch
+            {
+                BattleNegotiationTurnEffect.None => EncounterActionTurnConsumption.None,
+                BattleNegotiationTurnEffect.TerminatePhase => EncounterActionTurnConsumption.TerminatePhase,
+                BattleNegotiationTurnEffect.Miss => ToFrameworkPressTurn(HitType.Miss, false),
+                _ => EncounterActionTurnConsumption.Normal
+            };
 
         private void HandleTactics(Combatant actor)
         {
@@ -748,48 +778,25 @@ namespace JRPGPrototype.Logic.Battle
 
         private void HandleNegotiation(Combatant actor, Combatant target)
         {
-            // Check session-recruited list before starting
-            if (_sessionRecruitedIds.Contains(target.SourceId))
+            BattleNegotiationPresentationResult presentation = ResolveNegotiationPresentation(actor, target);
+            PublishNegotiationPresentation(presentation);
+            if (presentation.RemoveTarget)
             {
-                // We treat this as a "Familiar" encounter but simplified
-                _messenger.Publish($"{target.Name} has already been spoken to.", ConsoleColor.Gray, 800);
-                return; // Does not consume a turn
+                _enemies.Remove(target);
             }
 
-            NegotiationResult result = _negotiationEngine.StartNegotiation(actor, target, _enemies);
-            switch (result)
+            switch (presentation.TurnEffect)
             {
-                case NegotiationResult.Success:
-                    LegacyRecruitmentResult recruitment = _recruitmentAdapter.TryRecruit(
-                        actor,
-                        target,
-                        _sessionRecruitedIds,
-                        _enemies,
-                        _party,
-                        _compendium);
-                    if (recruitment.Applied)
-                    {
-                        _messenger.Publish($"{target.Name} joined your party!", ConsoleColor.Green);
-                        _turnEngine.ConsumeAction(HitType.Normal, false);
-                    }
-                    else
-                    {
-                        _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
-                        _turnEngine.TerminatePhase();
-                    }
+                case BattleNegotiationTurnEffect.None:
                     break;
-
-                case NegotiationResult.Failure:
-                    _messenger.Publish("Negotiation failed! Your turn ends.", ConsoleColor.Red);
+                case BattleNegotiationTurnEffect.TerminatePhase:
                     _turnEngine.TerminatePhase();
                     break;
-
-                case NegotiationResult.Trick:
-                case NegotiationResult.Flee:
-                case NegotiationResult.FamiliarFlee:
-                    _messenger.Publish($"{target.Name} left the battle.");
-                    _enemies.Remove(target);
+                case BattleNegotiationTurnEffect.Miss:
                     _turnEngine.ConsumeAction(HitType.Miss, false);
+                    break;
+                default:
+                    _turnEngine.ConsumeAction(HitType.Normal, false);
                     break;
             }
         }
@@ -1135,10 +1142,14 @@ namespace JRPGPrototype.Logic.Battle
                     _enemies,
                     _party.GetAliveMembers());
 
-                _messenger.Publish(
-                    $"Gained {rewards.Result.TotalExperience} EXP and {rewards.Result.TotalMacca} Macca.",
-                    ConsoleColor.Gray,
-                    800);
+                BattleRewardPresentationResult rewardPresentation = _rewardAdapter.Present(rewards);
+                if (rewardPresentation.Kind == NegotiationPresentationKind.Shown)
+                {
+                    _messenger.Publish(
+                        rewardPresentation.Message,
+                        rewardPresentation.Color,
+                        rewardPresentation.Delay);
+                }
 
                 _rewardAdapter.Apply(rewards, _eco, _io);
             }

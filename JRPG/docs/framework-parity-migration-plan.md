@@ -1253,6 +1253,21 @@ Track O6 began from `3dae5ae` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O7 Completion
+
+Track O7 began from `01ddcc4` on `track-12-recovery`.
+
+- Added typed console-host presentation records for negotiation prompts, demands, events, final outcomes, recruitment outcomes, and battle reward display.
+- `NegotiationEngine` now exposes an internal detailed result while keeping the public `StartNegotiation` wrapper unchanged. The detailed result records the framework session result, mapped legacy result, prompt/event presentation records, and mutation summary.
+- `BattleConductor` now uses one shared negotiation/recruitment presentation helper for both the framework encounter path and older compatibility method.
+- `LegacyBattleRewardAdapter` now converts immutable reward totals into the existing victory reward message before applying EXP/Macca mutations.
+- Legacy negotiation data, reward formulas, recruitment rules, production `Data/Jsons`, compendium recall, Cathedral presentation, and framework public APIs remain unchanged.
+- Updated the parity ledger. `negotiation_and_recruitment`, `battle_rewards`, `battle_actions`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O7 verification passed: `NegotiationRewardPresentationTests`, `NegotiationRewardRuntimeTests`, `BattleCommandShellTests`, `BattleEventPresentationTests`, and the negotiation/ordinary battle characterizations reported 40 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 688 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal
