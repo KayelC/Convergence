@@ -1298,6 +1298,22 @@ Track O9 began from `60858c6` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O10 Completion
+
+Track O10 began from `4ed67ca` on `track-12-recovery`.
+
+- Added typed console-host presentation records for Cathedral menu selection, ritual participant selection, inheritance rows, ritual confirmation, ritual sequence events, fusion transaction outcomes, Compendium recall selection, Compendium registration, and recall transaction outcomes.
+- `CathedralUIBridge` keeps the existing public wrappers and now exposes detailed methods for the full Cathedral and Compendium presentation surface.
+- `FusionConductor` consumes the detailed results while preserving binary/sacrificial ritual loops, cancellation, wait, forbidden preview, accident reveal, legacy transaction strategies, stock/economy mutation, and visible text.
+- `FusionPlan` carries framework inheritance display entries from `FusionPlanningService` as presentation evidence; legacy display names and pickable/exclusive behavior remain unchanged.
+- `FusionMutator` and `CompendiumRegistry` now expose detailed transaction/registration/recall results while preserving legacy wrappers, recall pricing, deep snapshot behavior, and mutation ownership.
+- Production fusion data, production `Data/Jsons`, framework public APIs, accident/mutation probabilities, recall pricing, and fusion strategy classes remain unchanged.
+- Updated the parity ledger. `fusion_preview_confirmation`, `fusion_transactions`, `compendium`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O10 verification passed: `FusionCompendiumPresentationTests`, `FusionBridgeResultTests`, `FusionCompendiumRuntimeTests`, `FusionBugRegressionTests`, and `FusionInheritanceTests` reported 63 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 706 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

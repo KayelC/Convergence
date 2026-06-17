@@ -1,6 +1,6 @@
 # Fusion Subsystem
 
-> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services while preserving the interactive Cathedral workflow and legacy datasets.
+> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets.
 
 ## Purpose
 
@@ -14,8 +14,8 @@
 - `FusionCalculator`: compatibility facade over the framework result resolver and planning helpers.
 - `FusionMutator`: dispatches committed transactions and handles compendium recall.
 - `FusionContext`: transaction object passed to strategies.
-- `CompendiumRegistry`: in-memory console facade over framework Compendium registration, recall-cost, and recall-assessment contracts.
-- `CathedralUIBridge`: participant selection, inheritance selection, preview/confirmation, compendium menus.
+- `CompendiumRegistry`: in-memory console facade over framework Compendium registration, recall-cost, and recall-assessment contracts, with detailed presentation results for registration and recall assessment.
+- `CathedralUIBridge`: participant selection, inheritance selection, preview/confirmation, compendium menus, and typed presentation records for the console Cathedral surface.
 - `FusionStrategyRegistry`: maps `FusionOperationType` to strategy implementations.
 - `StandardFusionStrategy`: creates new demons/personas from normal fusion.
 - `RankMutationStrategy`: handles Element-driven rank up/down.
@@ -63,6 +63,8 @@ Recipe lookup is parent-order neutral. Specific ID pairs are checked before race
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.
 
+Track O10 carries the framework planner's inheritance display entries into the console `FusionPlan` as presentation evidence. The bridge still renders legacy display names and the existing "Already Known" / "Exclusive" labels, but detailed results now expose the framework reason codes for tests and future host adapters.
+
 Slot scale:
 
 - 1 to 6 legal skills: 1 slot.
@@ -76,7 +78,7 @@ Sacrificial fusion adds 2 slots, with the UI cap applied by the conductor.
 
 ### Transaction Commit
 
-After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a strategy.
+After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a strategy. Track O10 adds `ExecuteFusionTransactionDetailed` so the console conductor can observe applied/rejected transaction presentation results without changing the strategy-owned mutation path.
 
 - Standard fusion consumes participants, creates a child, applies chosen skills, transfers sacrifice EXP as `LifetimeEarnedExp / 1.5`, recalculates resources, and adds/summons the result.
 - Rank mutation replaces a non-Element parent with the target rank result and preserves selected skills plus stat modifiers.
@@ -84,7 +86,7 @@ After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a str
 
 ### Compendium
 
-`CompendiumRegistry` stores demon snapshots by normalized species ID while mirroring those entries into framework `CompendiumStateSnapshot` records. Recall cost combines base shop price fallback, level premium, stat premium, and skill premium. `FusionMutator.FinalizeRecall` spends Macca and adds recalled demons/personas back to the appropriate stock.
+`CompendiumRegistry` stores demon snapshots by normalized species ID while mirroring those entries into framework `CompendiumStateSnapshot` records. Recall cost combines base shop price fallback, level premium, stat premium, and skill premium. Track O10 exposes detailed registration, recall-list, recall-assessment, and recall-transaction presentation results; `FusionMutator.FinalizeRecall` still spends Macca and adds recalled demons/personas back to the appropriate stock.
 
 Track N intentionally fixes the previous shallow-copy behavior: registered entries deep-clone active Persona skill lists, stat modifiers, learn tables, affinities, and growth fields. Recalled clones can be modified without mutating the stored Compendium entry.
 

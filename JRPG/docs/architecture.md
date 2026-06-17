@@ -93,7 +93,7 @@ Conductors own high-level workflows and decide which subsystem should act next.
 
 - `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops. Dungeon entry, terminal return, explicit dungeon exit, barrier feedback, floor entry, and boss-defeat registration now pass through framework-backed dungeon transition presentation results.
 - `BattleConductor` adapts the console battle into the framework encounter runner, applies framework reward results through a console adapter, and keeps cleanup flow host-owned.
-- `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions.
+- `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions through typed console-host presentation results where Track O10 migrated the surface.
 
 Conductors should remain workflow coordinators. When adding new rules, prefer placing rule logic in an engine, processor, strategy, or registry.
 
@@ -107,7 +107,7 @@ Engines and processors own deterministic rules or bounded state mutations.
 - `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies; migrated guard/pass coordination now passes through the framework action facade.
 - `FieldServiceEngine` and `ShopEngine` are console compatibility facades over framework-backed resource-management transactions for inventory, equipment, shops, and hospital restoration. They still own legacy item/skill effects, metadata repair, messages, and dungeon traversal coordination.
 - `ExplorationProcessor` remains the console host for field-side messages, battle handoff, encounter hydration, and duplicate enemy display suffixes; movement and floor evaluation are delegated through the framework-backed dungeon manager and mapped into typed presentation events before visible console output.
-- `FusionCalculator`, `FusionMutator`, and fusion strategies remain console compatibility facades; fusion prediction and Compendium rule checks now route through framework services where Track N migrated them.
+- `FusionCalculator`, `FusionMutator`, and fusion strategies remain console compatibility facades; fusion prediction and Compendium rule checks now route through framework services where Track N migrated them, and O10 exposes detailed presentation/transaction results without changing legacy mutation ownership.
 - `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.
 
 ### Bridges
@@ -116,7 +116,7 @@ Bridges are interactive console UI adapters. They turn game state into menus and
 
 - Battle: `InteractionBridge`.
 - Field: `ServiceUIBridge`, `DungeonUIBridge`, `InventoryUIBridge`, `StatusUIBridge`, `ShopUIBridge`.
-- Fusion: `CathedralUIBridge`.
+- Fusion: `CathedralUIBridge`, backed by `FusionCompendiumPresentationResults` for detailed Cathedral and Compendium presentation records.
 
 Bridge code is allowed to know about menu layout and display strings. Rule code should not depend on bridge behavior except through returned choices.
 

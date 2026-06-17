@@ -532,6 +532,20 @@ Exit gate:
 - Cathedral presentation is backed by framework fusion/Compendium results where migrated.
 - Existing fusion and compendium characterization tests remain green.
 
+Completion:
+
+- Track O10 began from `4ed67ca` on `track-12-recovery`.
+- Added `FusionCompendiumPresentationResults` for typed Cathedral menu, ritual participant, inheritance row, ritual confirmation, ritual sequence, transaction, Compendium recall, Compendium registration, and recall transaction presentation records.
+- `CathedralUIBridge` keeps its existing public wrapper methods while exposing detailed presentation methods for main menu selection, participant selection, inheritance selection, ritual confirmation, ritual animation, Compendium recall, and registration selection.
+- `FusionConductor` now consumes the detailed bridge results while preserving the existing binary/sacrificial ritual loops, wait/cancel behavior, accident reveal timing, legacy live-object mutation, and post-ritual return flow.
+- `FusionPlan` now carries framework inheritance display entries from `FusionPlanningService` as presentation evidence; legacy display names and existing pickable/exclusive behavior remain unchanged.
+- `FusionMutator` and `CompendiumRegistry` now expose detailed transaction/registration/recall presentation results while preserving their legacy public wrappers, messages, recall pricing, stock/economy mutation, and deep snapshot behavior.
+- Production `fusion_table.json`, production `Data/Jsons`, fusion strategy classes, accident/mutation probabilities, recall pricing, and framework public APIs did not change.
+- Focused O10 verification passed: `FusionCompendiumPresentationTests`, `FusionBridgeResultTests`, `FusionCompendiumRuntimeTests`, `FusionBugRegressionTests`, and `FusionInheritanceTests` reported 63 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 706 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O Final Exit Gate
 
 Track O is complete only when:
@@ -593,15 +607,15 @@ Ledger rules:
 - Keep `clean_parity` for a capability only when framework implementation, data, tests, and consumer migration all satisfy the protected behavior.
 - Keep `removalAuthorized: false` throughout Track O unless a separate removal track is approved.
 
-## Recommended Next Subtrack
+## Recommended Next Track
 
-Proceed with **O10: Fusion And Compendium Presentation**.
+Track O presentation migration is complete after O10 once the full quality gate has passed and the completion commit is pushed.
 
 Reason:
 
-- O1 through O9 have migrated startup, field/status/inventory/party, battle command/event, negotiation/reward, shop/hospital, and dungeon presentation shells.
-- Cathedral fusion and compendium presentation are the remaining planned Track O host-presentation surface.
-- Track N already provides the framework fusion and Compendium services that O10 should present through typed console-host results.
+- O1 through O10 migrate the planned console-host presentation shells for startup, field/status/inventory/party, battle command/event, negotiation/reward, shop/hospital, dungeon traversal, and Cathedral fusion/Compendium.
+- All Track O capabilities remain protected as `parallel_partial`; no removal is authorized.
+- The next documented migration lane is **Track P: Godot Integration Contract** in `docs/framework-parity-migration-plan.md`, but it should begin only after O10 verification is recorded.
 
 Suggested commit message:
 

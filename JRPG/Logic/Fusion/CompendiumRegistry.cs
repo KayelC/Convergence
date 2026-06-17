@@ -43,11 +43,19 @@ namespace JRPGPrototype.Logic.Fusion
         /// Feature: Normalizes the ID to ensure species-level uniqueness.
         /// </summary>
         public void RegisterDemon(Combatant demon)
+            => RegisterDemonDetailed(demon);
+
+        internal CompendiumRegistrationPresentationResult RegisterDemonDetailed(Combatant demon)
         {
             if (demon == null || demon.Class != ClassType.Demon)
             {
-                _io.WriteLine("Invalid entity. Only demons can be registered in the Compendium.", ConsoleColor.Red);
-                return;
+                string message = "Invalid entity. Only demons can be registered in the Compendium.";
+                _io.WriteLine(message, ConsoleColor.Red);
+                return new CompendiumRegistrationPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    demon,
+                    null,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Red));
             }
 
             // Ensure we use the canonical ID for registration
@@ -63,14 +71,26 @@ namespace JRPGPrototype.Logic.Fusion
 
             if (result.Code == CompendiumRegistrationCode.Updated)
             {
-                _io.WriteLine($"{demon.Name} data has been updated in the registry.", ConsoleColor.Cyan);
+                string message = $"{demon.Name} data has been updated in the registry.";
+                _io.WriteLine(message, ConsoleColor.Cyan);
+                _io.Wait(600);
+                return new CompendiumRegistrationPresentationResult(
+                    FusionPresentationResultKind.Applied,
+                    demon,
+                    result,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Cyan, 600));
             }
             else
             {
-                _io.WriteLine($"{demon.Name} has been recorded in the Compendium.", ConsoleColor.Green);
+                string message = $"{demon.Name} has been recorded in the Compendium.";
+                _io.WriteLine(message, ConsoleColor.Green);
+                _io.Wait(600);
+                return new CompendiumRegistrationPresentationResult(
+                    FusionPresentationResultKind.Applied,
+                    demon,
+                    result,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Green, 600));
             }
-
-            _io.Wait(600);
         }
 
         #endregion
@@ -90,15 +110,25 @@ namespace JRPGPrototype.Logic.Fusion
                 return 0;
             }
 
-            // 1. Get Base Price from Database (Fallback to 2000 if not in shop)
-            int basePrice = 2000;
-            var shopEntry = Database.ShopInventory.FirstOrDefault(s => s.Id.Equals(cleanId, StringComparison.OrdinalIgnoreCase));
-            if (shopEntry != null)
-            {
-                basePrice = shopEntry.BasePrice;
-            }
+            return _service.CalculateRecallCost(entry, ResolveRecallBasePrice(cleanId));
+        }
 
-            return _service.CalculateRecallCost(entry, basePrice);
+        internal CompendiumRecallAssessment AssessRecall(
+            Combatant owner,
+            string speciesId,
+            int currentMacca,
+            bool alreadyOwned,
+            bool hasOpenStockSlot)
+        {
+            ArgumentNullException.ThrowIfNull(owner);
+            string cleanId = speciesId.ToLower();
+            return _service.AssessRecall(
+                _state,
+                LegacyFusionContentAdapter.ToContentId(cleanId),
+                currentMacca,
+                alreadyOwned,
+                hasOpenStockSlot,
+                ResolveRecallBasePrice(cleanId));
         }
 
         /// <summary>
@@ -145,6 +175,12 @@ namespace JRPGPrototype.Logic.Fusion
         private string ResolveSpeciesId(Combatant c)
         {
             return c.SourceId.ToLower();
+        }
+
+        private static int ResolveRecallBasePrice(string cleanId)
+        {
+            var shopEntry = Database.ShopInventory.FirstOrDefault(s => s.Id.Equals(cleanId, StringComparison.OrdinalIgnoreCase));
+            return shopEntry?.BasePrice ?? 2000;
         }
 
         private Combatant CloneCombatant(Combatant original)

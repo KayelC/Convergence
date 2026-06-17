@@ -22,6 +22,7 @@ namespace JRPGPrototype.Logic.Fusion
         public IReadOnlyList<string> PickableSkills { get; }
         public IReadOnlyList<string> ExclusiveSkills { get; }
         public IReadOnlyList<string> DisplaySkills { get; }
+        public IReadOnlyList<FusionInheritanceEntry> FrameworkDisplaySkills { get; }
         public int MaxInheritanceSlots { get; }
         public Combatant PreviewBaseline { get; }
 
@@ -37,6 +38,7 @@ namespace JRPGPrototype.Logic.Fusion
             IReadOnlyList<string> pickableSkills,
             IReadOnlyList<string> exclusiveSkills,
             IReadOnlyList<string> displaySkills,
+            IReadOnlyList<FusionInheritanceEntry>? frameworkDisplaySkills,
             int maxInheritanceSlots,
             Combatant previewBaseline)
         {
@@ -51,6 +53,7 @@ namespace JRPGPrototype.Logic.Fusion
             PickableSkills = pickableSkills;
             ExclusiveSkills = exclusiveSkills;
             DisplaySkills = displaySkills;
+            FrameworkDisplaySkills = frameworkDisplaySkills ?? [];
             MaxInheritanceSlots = maxInheritanceSlots;
             PreviewBaseline = previewBaseline;
         }

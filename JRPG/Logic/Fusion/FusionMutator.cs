@@ -80,20 +80,41 @@ namespace JRPGPrototype.Logic.Fusion
         /// Executes a fusion strategy based on the operation type.
         /// </summary>
         public void ExecuteFusionTransaction(FusionContext context, FusionOperationType type)
+            => ExecuteFusionTransactionDetailed(context, type);
+
+        internal FusionTransactionPresentationResult ExecuteFusionTransactionDetailed(FusionContext context, FusionOperationType type)
         {
             if (type == FusionOperationType.CreateNewDemon && IsDuplicateFusionResult(context))
             {
-                return;
+                return new FusionTransactionPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    type,
+                    context.ResultId,
+                    [new FusionRuntimeDiagnostic(
+                        FusionRuntimeDiagnosticCode.DuplicateResult,
+                        "The fusion result is already owned.",
+                        LegacyFusionContentAdapter.ToContentId(context.ResultId))]);
             }
 
             var strategy = _registry.GetStrategy(type);
             if (strategy != null)
             {
                 strategy.Execute(context);
+                return new FusionTransactionPresentationResult(
+                    FusionPresentationResultKind.Applied,
+                    type,
+                    context.ResultId,
+                    consumedParticipants: context.Materials);
             }
             else
             {
-                _messenger.Publish($"[System Error] No strategy found for {type}", ConsoleColor.Red);
+                string message = $"[System Error] No strategy found for {type}";
+                _messenger.Publish(message, ConsoleColor.Red);
+                return new FusionTransactionPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    type,
+                    context.ResultId,
+                    [new FusionRuntimeDiagnostic(FusionRuntimeDiagnosticCode.NoFusionPossible, message)]);
             }
         }
 
@@ -118,24 +139,49 @@ namespace JRPGPrototype.Logic.Fusion
         /// Updated for Unified 12-Slot Model: Recalls enter the master stock first.
         /// </summary>
         public bool FinalizeRecall(Combatant owner, Combatant snapshot, int cost)
+            => FinalizeRecallDetailed(owner, snapshot, cost).Applied;
+
+        internal CompendiumRecallTransactionPresentationResult FinalizeRecallDetailed(
+            Combatant owner,
+            Combatant snapshot,
+            int cost,
+            CompendiumRecallAssessment? assessment = null)
         {
             if (_economy.Macca < cost)
             {
-                _messenger.Publish("Recall Aborted: Insufficient Macca.", ConsoleColor.Red);
-                return false;
+                string message = "Recall Aborted: Insufficient Macca.";
+                _messenger.Publish(message, ConsoleColor.Red);
+                return new CompendiumRecallTransactionPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    snapshot,
+                    cost,
+                    assessment,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Red));
             }
 
             if (owner.Class == ClassType.Operator && _partyManager.IsDemonOwned(owner, snapshot.SourceId))
             {
-                _messenger.Publish($"{snapshot.Name} is already in your party or COMP.", ConsoleColor.Red, 1000);
-                return false;
+                string message = $"{snapshot.Name} is already in your party or COMP.";
+                _messenger.Publish(message, ConsoleColor.Red, 1000);
+                return new CompendiumRecallTransactionPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    snapshot,
+                    cost,
+                    assessment,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Red, 1000));
             }
 
             if (owner.Class == ClassType.WildCard && snapshot.ActivePersona != null &&
                 _partyManager.IsPersonaOwned(owner, snapshot.ActivePersona.Name))
             {
-                _messenger.Publish($"{snapshot.ActivePersona.Name} is already in your Persona stock.", ConsoleColor.Red, 1000);
-                return false;
+                string message = $"{snapshot.ActivePersona.Name} is already in your Persona stock.";
+                _messenger.Publish(message, ConsoleColor.Red, 1000);
+                return new CompendiumRecallTransactionPresentationResult(
+                    FusionPresentationResultKind.Rejected,
+                    snapshot,
+                    cost,
+                    assessment,
+                    new FusionPresentationEvent(FusionPresentationResultKind.Shown, message, ConsoleColor.Red, 1000));
             }
 
             if (_economy.SpendMacca(cost))
@@ -148,7 +194,14 @@ namespace JRPGPrototype.Logic.Fusion
                     // 2. Attempt to automatically deploy to the Active Party if room exists
                     if (!_partyManager.SummonDemon(owner, snapshot))
                     {
-                        _messenger.Publish($"{snapshot.Name} was sent to the COMP.", ConsoleColor.Gray, 600);
+                        string sentMessage = $"{snapshot.Name} was sent to the COMP.";
+                        _messenger.Publish(sentMessage, ConsoleColor.Gray, 600);
+                        return new CompendiumRecallTransactionPresentationResult(
+                            FusionPresentationResultKind.Applied,
+                            snapshot,
+                            cost,
+                            assessment,
+                            new FusionPresentationEvent(FusionPresentationResultKind.Shown, sentMessage, ConsoleColor.Gray, 600));
                     }
                 }
                 else
@@ -166,10 +219,20 @@ namespace JRPGPrototype.Logic.Fusion
                     owner.PersonaStock.Add(essence);
                 }
 
-                return true;
+                return new CompendiumRecallTransactionPresentationResult(
+                    FusionPresentationResultKind.Applied,
+                    snapshot,
+                    cost,
+                    assessment,
+                    null);
             }
 
-            return false;
+            return new CompendiumRecallTransactionPresentationResult(
+                FusionPresentationResultKind.Rejected,
+                snapshot,
+                cost,
+                assessment,
+                null);
         }
 
         #endregion

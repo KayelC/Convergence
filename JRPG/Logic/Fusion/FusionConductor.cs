@@ -78,7 +78,8 @@ namespace JRPGPrototype.Logic.Fusion
             while (true)
             {
                 // Dispatch from typed Cathedral intent so menu labels remain presentation-only.
-                FusionMainMenuResult choice = _uiBridge.ShowCathedralMainMenu(MoonPhaseSystem.CurrentPhase);
+                CathedralMainMenuPresentationResult choicePresentation = _uiBridge.ShowCathedralMainMenuDetailed(MoonPhaseSystem.CurrentPhase);
+                FusionMainMenuResult choice = choicePresentation.LegacyResult;
 
                 if (choice.Kind == FusionMenuResultKind.Back) return;
 
@@ -131,8 +132,9 @@ namespace JRPGPrototype.Logic.Fusion
                 List<object> parents = new List<object>();
 
                 // Backing out on the first parent leaves this ritual attempt and returns to the Cathedral menu.
-                RitualParticipantSelectionResult<object> p1Result =
-                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
+                RitualParticipantPresentationResult<object> p1Presentation =
+                    _uiBridge.SelectRitualParticipantDetailed<object>(participantPool, "CHOOSE THE FIRST PARTICIPANT:", parents);
+                RitualParticipantSelectionResult<object> p1Result = p1Presentation.LegacyResult;
                 if (p1Result.Kind != RitualParticipantSelectionKind.Selected || p1Result.Participant == null) return;
                 object p1 = p1Result.Participant;
                 parents.Add(p1);
@@ -140,8 +142,9 @@ namespace JRPGPrototype.Logic.Fusion
                 // Backing out on the second parent restarts the parent pair, because parent one may be the mistake.
                 Dictionary<object, string> p2DisabledReasons =
                     BuildOwnedDuplicateResultReasons(participantPool, p1, parents);
-                RitualParticipantSelectionResult<object> p2Result =
-                    _uiBridge.SelectRitualParticipant<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents, p2DisabledReasons);
+                RitualParticipantPresentationResult<object> p2Presentation =
+                    _uiBridge.SelectRitualParticipantDetailed<object>(participantPool, "CHOOSE THE SECOND PARTICIPANT:", parents, p2DisabledReasons);
+                RitualParticipantSelectionResult<object> p2Result = p2Presentation.LegacyResult;
                 if (p2Result.Kind != RitualParticipantSelectionKind.Selected || p2Result.Participant == null) continue; // Go back to start of parent selection
                 object p2 = p2Result.Participant;
                 parents.Add(p2);
@@ -151,8 +154,9 @@ namespace JRPGPrototype.Logic.Fusion
                 {
                     // Sacrificial fusion consumes a third eligible participant, drawn from the same class-specific pool.
                     List<object> sacrificePool = participantPool.Where(x => !parents.Contains(x)).ToList();
-                    RitualParticipantSelectionResult<object> sacrificeResult =
-                        _uiBridge.SelectRitualParticipant<object>(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
+                    RitualParticipantPresentationResult<object> sacrificePresentation =
+                        _uiBridge.SelectRitualParticipantDetailed<object>(sacrificePool, "CHOOSE THE SACRIFICIAL OFFERING:", parents);
+                    RitualParticipantSelectionResult<object> sacrificeResult = sacrificePresentation.LegacyResult;
 
                     // Sacrifice is part of the staged recipe, so canceling it discards the current parent pair.
                     if (sacrificeResult.Kind != RitualParticipantSelectionKind.Selected || sacrificeResult.Participant == null) continue;
@@ -172,12 +176,14 @@ namespace JRPGPrototype.Logic.Fusion
                 while (true) // Skill-selection/preview loop; Wait returns here without changing selected parents.
                 {
                     // The bridge owns labeling, but the conductor supplies the rule sets that make entries unavailable.
-                    SkillInheritanceSelectionResult inheritanceResult = _uiBridge.SelectInheritedSkills(
+                    SkillInheritancePresentationResult inheritancePresentation = _uiBridge.SelectInheritedSkillsDetailed(
                         plan.DisplaySkills.ToList(),
                         plan.MaxInheritanceSlots,
                         plan.InherentSkills.ToList(), // Will be labeled "Already Known"
-                        plan.ExclusiveSkills.ToList()  // Will be labeled "Exclusive"
+                        plan.ExclusiveSkills.ToList(), // Will be labeled "Exclusive"
+                        plan.FrameworkDisplaySkills
                     );
+                    SkillInheritanceSelectionResult inheritanceResult = inheritancePresentation.LegacyResult;
 
                     if (inheritanceResult.Kind == SkillInheritanceSelectionKind.Aborted) break;
                     List<string> chosenSkills = inheritanceResult.Skills.ToList();
@@ -187,9 +193,10 @@ namespace JRPGPrototype.Logic.Fusion
 
                     if (staged == null) { _messenger.Publish("Error staging fusion result.", ConsoleColor.Red); break; }
 
-                    RitualConfirmationResult confirm = _uiBridge.ConfirmRitual(staged,
+                    RitualConfirmationPresentationResult confirmationPresentation = _uiBridge.ConfirmRitualDetailed(staged,
                         plan.PreviewBaseline, chosenSkills,
                         _player.Level, plan.Operation);
+                    RitualConfirmationResult confirm = confirmationPresentation.LegacyResult;
 
                     // Wait preserves the chosen participants and loops back to inheritance.
                     // Cancel and Forbidden both abandon the staged preview; Forbidden is produced by the level gate.
@@ -218,11 +225,11 @@ namespace JRPGPrototype.Logic.Fusion
                         chosenSkills = accidentPool;
                     }
 
-                    _uiBridge.DisplayRitualSequence(plan.IsAccident);
+                    _uiBridge.DisplayRitualSequenceDetailed(plan.IsAccident);
 
                     // Build the transaction context after accidents so the mutator receives the final inherited kit.
                     var context = new FusionContext(_player, parents, sacrifice, chosenSkills, plan.TargetId, _messenger, _partyManager);
-                    _mutator.ExecuteFusionTransaction(context, plan.Operation);
+                    _mutator.ExecuteFusionTransactionDetailed(context, plan.Operation);
 
                     _messenger.Publish(null, delay: 1500, waitForInput: true);
                     return; // Exit to Cathedral menu after a successful fusion; return to participant selection on any cancel or retry path.
@@ -245,7 +252,8 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         private void HandleCompendiumRecall()
         {
-            CompendiumRecallResult recall = _uiBridge.ShowCompendiumRecallMenu();
+            CompendiumRecallPresentationResult recallPresentation = _uiBridge.ShowCompendiumRecallMenuDetailed();
+            CompendiumRecallResult recall = recallPresentation.LegacyResult;
             if (recall.Kind != CompendiumRecallResultKind.Selected || recall.Entry == null) return;
 
             Combatant entry = recall.Entry;
@@ -261,8 +269,16 @@ namespace JRPGPrototype.Logic.Fusion
 
             if (!canRecall) { _messenger.Publish("You have no vessel capable of containing this soul.", ConsoleColor.Red, 1000); return; }
 
+            bool alreadyOwned = _player.Class switch
+            {
+                ClassType.Operator => _partyManager.IsDemonOwned(_player, entry.SourceId),
+                ClassType.WildCard => entry.ActivePersona != null && _partyManager.IsPersonaOwned(_player, entry.ActivePersona.Name),
+                _ => false
+            };
+            CompendiumRecallAssessment assessment = _compendium.AssessRecall(_player, entry.SourceId, _economy.Macca, alreadyOwned, canRecall);
+
             Combatant? snapshot = _compendium.GetRecallEntry(entry.SourceId);
-            if (snapshot != null && _mutator.FinalizeRecall(_player, snapshot, cost))
+            if (snapshot != null && _mutator.FinalizeRecallDetailed(_player, snapshot, cost, assessment).Applied)
             {
                 _messenger.Publish($"{snapshot.Name} has been materialized.", ConsoleColor.Cyan, 800);
             }
@@ -280,21 +296,23 @@ namespace JRPGPrototype.Logic.Fusion
                 // Operators pool all demons at their disposal (Active Party + DemonStock)
                 var pool = _partyManager.ActiveParty.Where(c => c.Class == ClassType.Demon).ToList();
                 pool.AddRange(_player.DemonStock);
-                CompendiumRegistrationSelectionResult result = _uiBridge.SelectDemonToRegister(pool.Distinct().ToList());
+                CompendiumRegistrationSelectionPresentationResult selectionPresentation = _uiBridge.SelectDemonToRegisterDetailed(pool.Distinct().ToList());
+                CompendiumRegistrationSelectionResult result = selectionPresentation.LegacyResult;
                 if (result.Kind == CompendiumRegistrationSelectionKind.Selected && result.Demon != null)
                 {
-                    _compendium.RegisterDemon(result.Demon);
+                    _compendium.RegisterDemonDetailed(result.Demon);
                 }
             }
             else if (_player.Class == ClassType.WildCard)
             {
                 // Registration source for WildCards is their PersonaStock
-                RitualParticipantSelectionResult<Persona> result =
-                    _uiBridge.SelectRitualParticipant<Persona>(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
+                RitualParticipantPresentationResult<Persona> selectionPresentation =
+                    _uiBridge.SelectRitualParticipantDetailed<Persona>(_player.PersonaStock, "SELECT PERSONA TO RECORD:", new List<Persona>());
+                RitualParticipantSelectionResult<Persona> result = selectionPresentation.LegacyResult;
                 // Registration is optional. Canceled and Unavailable both mean no compendium write occurs.
                 if (result.Kind == RitualParticipantSelectionKind.Selected && result.Participant != null)
                 {
-                    _compendium.RegisterDemon(FusionParticipant.CreateTransientCombatant(result.Participant));
+                    _compendium.RegisterDemonDetailed(FusionParticipant.CreateTransientCombatant(result.Participant));
                 }
             }
         }

@@ -55,6 +55,13 @@ namespace JRPGPrototype.Logic.Fusion
             Combatant previewBaseline = operation == FusionOperationType.StatBoostFusion
                 ? FusionPreviewFactory.GetStatBoostTarget(firstParent.CombatantView, secondParent.CombatantView)
                 : (firstParent.Race != "Element" ? firstParent.CombatantView : secondParent.CombatantView);
+            IReadOnlyList<FusionInheritanceEntry> frameworkDisplaySkills =
+                _calculator.CreateFrameworkInheritanceDisplayEntries(
+                    operation,
+                    targetId,
+                    previewBaseline,
+                    combatantMaterials,
+                    inherentSkills);
 
             plan = new FusionPlan(
                 operation,
@@ -68,6 +75,7 @@ namespace JRPGPrototype.Logic.Fusion
                 pickableSkills,
                 exclusiveSkills,
                 displaySkills,
+                frameworkDisplaySkills,
                 maxSlots,
                 previewBaseline);
 

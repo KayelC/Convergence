@@ -133,6 +133,57 @@ namespace JRPGPrototype.Logic.Fusion
             return (operation, targetEntityId, result.IsAccident);
         }
 
+        internal IReadOnlyList<FusionInheritanceEntry> CreateFrameworkInheritanceDisplayEntries(
+            FusionOperationType operation,
+            string targetId,
+            Combatant previewBaseline,
+            IEnumerable<Combatant> materials,
+            IEnumerable<string> inherentSkills)
+        {
+            if (!_adapter.TryGetEntity(_adapter.ContentIdForEntity(targetId), out FusionEntitySnapshot? resultEntity) ||
+                resultEntity is null)
+            {
+                return Array.Empty<FusionInheritanceEntry>();
+            }
+
+            var candidates = new List<SkillDefinition>();
+            var seen = new HashSet<ContentId>();
+            foreach (Combatant material in materials)
+            {
+                foreach (string skillName in material.GetConsolidatedSkills())
+                {
+                    ContentId skillId = _adapter.ContentIdForSkill(skillName);
+                    if (!seen.Add(skillId))
+                    {
+                        continue;
+                    }
+
+                    if (_adapter.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
+                    {
+                        candidates.Add(skill);
+                    }
+                }
+            }
+
+            IReadOnlyList<ContentId> naturalSkillIds = operation == FusionOperationType.StatBoostFusion
+                ? previewBaseline.GetConsolidatedSkills().Select(_adapter.ContentIdForSkill).ToArray()
+                : inherentSkills.Select(_adapter.ContentIdForSkill).ToArray();
+
+            FusionInheritancePlan inheritancePlan = new FusionInheritancePlanner().CreatePlan(new FusionInheritancePlanRequest(
+                resultEntity.Definition,
+                candidates,
+                naturalSkillIds,
+                maximumSelections: int.MaxValue));
+
+            return inheritancePlan.Candidates
+                .Select(candidate => new FusionInheritanceEntry(
+                    candidate.Skill.Id,
+                    candidate.Skill.DisplayName,
+                    candidate.IsSelectable,
+                    candidate.AvailabilityReasonCode))
+                .ToArray();
+        }
+
         // Aggregates all unique skills from parents to determine the total inheritable pool.
         public List<string> GetInheritableSkills(params Combatant[] parents)
         {

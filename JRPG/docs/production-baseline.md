@@ -336,6 +336,21 @@ Track O9 began from `60858c6` and migrates dungeon traversal presentation into t
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O10 Boundary
+
+Track O10 began from `4ed67ca` and migrates Cathedral fusion and Compendium presentation into typed console-host results without changing fusion data, ritual rules, recall pricing, stock/economy mutation, or visible Cathedral behavior.
+
+- `FusionCompendiumPresentationResults` records Cathedral menu selections, ritual participant selections, inheritance rows, ritual confirmation, ritual sequence events, fusion transaction outcomes, Compendium recall selections, registration results, and recall transaction outcomes.
+- `CathedralUIBridge` keeps the legacy wrapper methods while exposing detailed typed methods for O10 tests and future host adapters.
+- `FusionConductor` consumes detailed presentation results while preserving the existing binary/sacrificial ritual loops, inheritance wait/cancel flow, accident reveal timing, and live-object transaction path.
+- `FusionPlan` carries framework inheritance display entries as presentation evidence; the legacy pickable/exclusive display lists remain unchanged.
+- `FusionMutator` and `CompendiumRegistry` now expose detailed transaction/registration/recall results while preserving their public wrappers, messages, deep snapshot behavior, and mutation authority.
+- Legacy `fusion_table.json`, production `Data/Jsons`, fusion strategies, accident/mutation odds, recall pricing, framework public APIs, and removal authorization remain unchanged.
+- Focused O10 verification passed: `FusionCompendiumPresentationTests`, `FusionBridgeResultTests`, `FusionCompendiumRuntimeTests`, `FusionBugRegressionTests`, and `FusionInheritanceTests` reported 63 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 706 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.
