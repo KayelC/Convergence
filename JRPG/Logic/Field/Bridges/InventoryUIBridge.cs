@@ -8,6 +8,7 @@ using JRPGPrototype.Host;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
@@ -93,6 +94,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
         // Logic for selecting an item from the player's stock.
         public ItemData SelectItem(Combatant user, bool inDungeon)
         {
+            return SelectItemResult(user, inDungeon).Item!;
+        }
+
+        public FieldItemSelectionResult SelectItemResult(Combatant user, bool inDungeon)
+        {
             var ownedItems = Database.Items.Values
                 .Where(itm => _inventory.GetQuantity(itm.Id) > 0)
                 .ToList();
@@ -101,7 +107,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             {
                 _io.WriteLine("No usable items remaining.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return FieldItemSelectionResult.Unavailable;
             }
 
             List<string> options = new List<string>();
@@ -141,10 +147,10 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 }
             });
 
-            if (choice == -1 || choice == options.Count - 1) return null;
+            if (choice == -1 || choice == options.Count - 1) return FieldItemSelectionResult.Back;
 
             _uiState.ItemMenuIndex = choice;
-            return ownedItems[choice];
+            return FieldItemSelectionResult.Selected(ownedItems[choice]);
         }
 
         #endregion
@@ -251,6 +257,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
         public Combatant SelectSkillPerformer(Combatant player)
         {
+            return SelectSkillPerformerResult(player).Performer!;
+        }
+
+        public FieldSkillPerformerSelectionResult SelectSkillPerformerResult(Combatant player)
+        {
             List<Combatant> candidates = new List<Combatant>();
             if (player.Class != ClassType.Demon) candidates.Add(player);
             if (player.Class == ClassType.Operator)
@@ -264,9 +275,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             int perfIdx = _io.RenderMenu("Who is performing the skill?", performerLabels, 0);
 
-            if (perfIdx == -1 || perfIdx == performerLabels.Count - 1) return null;
+            if (perfIdx == -1 || perfIdx == performerLabels.Count - 1) return FieldSkillPerformerSelectionResult.Back;
 
-            return candidates[perfIdx];
+            return FieldSkillPerformerSelectionResult.Selected(candidates[perfIdx]);
         }
 
         /// <summary>
@@ -275,16 +286,27 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public SkillData SelectFieldSkill(Combatant performer)
         {
-            var skillPool = performer.GetConsolidatedSkills()
-                .Select(s => Database.Skills.TryGetValue(s, out var d) ? d : null)
-                .Where(d => d != null && d.Category != "Passive Skills" && (d.Category.Contains("Recovery") || d.Effect.Contains("Cure")))
-                .ToList();
+            return SelectFieldSkillResult(performer).Skill!;
+        }
+
+        public FieldSkillSelectionResult SelectFieldSkillResult(Combatant performer)
+        {
+            var skillPool = new List<SkillData>();
+            foreach (string skillName in performer.GetConsolidatedSkills())
+            {
+                if (Database.Skills.TryGetValue(skillName, out SkillData? skill) &&
+                    skill.Category != "Passive Skills" &&
+                    (skill.Category.Contains("Recovery") || skill.Effect.Contains("Cure")))
+                {
+                    skillPool.Add(skill);
+                }
+            }
 
             if (!skillPool.Any())
             {
                 _io.WriteLine($"{performer.Name} has no field-usable skills.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return FieldSkillSelectionResult.Unavailable;
             }
 
             List<string> skillLabels = skillPool.Select(s => $"{s.Name,-15} ({s.Cost})").ToList();
@@ -300,10 +322,10 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 }
             });
 
-            if (choice == -1 || choice == skillLabels.Count - 1) return null;
+            if (choice == -1 || choice == skillLabels.Count - 1) return FieldSkillSelectionResult.Back;
 
             _uiState.SkillMenuIndex = choice;
-            return skillPool[choice];
+            return FieldSkillSelectionResult.Selected(skillPool[choice]);
         }
 
         #endregion
@@ -313,34 +335,39 @@ namespace JRPGPrototype.Logic.Field.Bridges
         // General purpose target selection for field items or skills.
         public Combatant SelectFieldTarget(Combatant player, string actionName)
         {
+            return SelectFieldTargetResult(player, actionName).Target!;
+        }
+
+        public FieldTargetSelectionResult SelectFieldTargetResult(Combatant player, string actionName)
+        {
             var targetPool = _party.ActiveParty.ToList();
 
-            var options = new List<HostCommandOption<FieldTargetSelection>>();
+            var options = new List<HostCommandOption<FieldTargetMenuSelection>>();
             for (int index = 0; index < targetPool.Count; index++)
             {
                 Combatant target = targetPool[index];
                 string label = $"{target.Name,-15} (HP: {target.CurrentHP,3}/{target.MaxHP,3} SP: {target.CurrentSP,3}/" +
                     $"{target.MaxSP,3})";
-                options.Add(new HostCommandOption<FieldTargetSelection>(
-                    new FieldTargetSelection(target, IsBack: false, index),
+                options.Add(new HostCommandOption<FieldTargetMenuSelection>(
+                    new FieldTargetMenuSelection(target, IsBack: false, index),
                     label));
             }
 
-            options.Add(new HostCommandOption<FieldTargetSelection>(
-                new FieldTargetSelection(null, IsBack: true, targetPool.Count),
+            options.Add(new HostCommandOption<FieldTargetMenuSelection>(
+                new FieldTargetMenuSelection(null, IsBack: true, targetPool.Count),
                 "Back"));
 
             string prompt = !string.IsNullOrEmpty(actionName)
                 ? $"Using {actionName}. Select Target:"
                 : "Select Target:";
 
-            HostCommandReadResult<FieldTargetSelection> result =
+            HostCommandReadResult<FieldTargetMenuSelection> result =
                 ConsoleHostCommandReader.Read(_io, prompt, options, 0);
 
-            FieldTargetSelection? selection = result.Command;
-            if (!result.IsSelected || selection is null || selection.IsBack) return null!;
+            FieldTargetMenuSelection? selection = result.Command;
+            if (!result.IsSelected || selection is null || selection.IsBack) return FieldTargetSelectionResult.Back;
 
-            return selection.Target!;
+            return FieldTargetSelectionResult.Selected(selection.Target!);
         }
 
         #endregion
@@ -352,5 +379,5 @@ namespace JRPGPrototype.Logic.Field.Bridges
             new(new ConsoleMenuSelection<TCommand>(command, index), label);
     }
 
-    internal sealed record FieldTargetSelection(Combatant? Target, bool IsBack, int Index);
+    internal sealed record FieldTargetMenuSelection(Combatant? Target, bool IsBack, int Index);
 }

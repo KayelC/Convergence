@@ -1197,6 +1197,20 @@ Track O2 began from `a9f2f87` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O3 Completion
+
+Track O3 began from `53fbf40` on `track-12-recovery`.
+
+- Added typed console-host results for field item selection, skill performer selection, field skill selection, target selection, field-use assessment, execution reasons, consumption decisions, and ordered presentation events.
+- Routed field item and field skill conductor flows through those results while preserving existing nullable compatibility wrappers, menu labels, disabled options, hover text, saved menu indices, messages, delays, and dungeon-exit signaling.
+- `FieldServiceEngine` now exposes assessment and detailed execution for field item/skill use. Consumption stays host-owned through `LegacyInventoryResourceAdapter`; successful effects or Goho-M consume once, while cancellation, unavailable, no-effect, unsupported field items, and insufficient-SP paths do not consume or spend.
+- Legacy item/skill DTO parsing remains console-host compatibility code. Production JSON, framework public APIs, rich battle presentation, shops, hospital menus, party organization, and Cathedral presentation remain unchanged.
+- Updated the parity ledger. `field_items_and_skills` and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O3 verification passed: field inventory presentation tests, plain menu command tests, and the representative field/shop characterization test reported 11 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 647 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 105 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

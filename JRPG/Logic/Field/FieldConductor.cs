@@ -368,29 +368,44 @@ namespace JRPGPrototype.Logic.Field
 
         private ItemUsageResult ShowItemMenu(bool inDungeon)
         {
-            ItemData selectedItem = _inventoryUI.SelectItem(_player, inDungeon);
-            if (selectedItem == null) return ItemUsageResult.None;
+            FieldItemSelectionResult itemResult = _inventoryUI.SelectItemResult(_player, inDungeon);
+            if (itemResult.Kind != FieldSelectionResultKind.Selected || itemResult.Item == null)
+            {
+                return ItemUsageResult.None;
+            }
 
-            Combatant target = _inventoryUI.SelectFieldTarget(_player, selectedItem.Name);
-            if (target == null) return ItemUsageResult.None;
+            FieldTargetSelectionResult targetResult = _inventoryUI.SelectFieldTargetResult(_player, itemResult.Item.Name);
+            if (targetResult.Kind != FieldSelectionResultKind.Selected || targetResult.Target == null)
+            {
+                return ItemUsageResult.None;
+            }
 
-            return _logicEngine.ExecuteItemUsage(selectedItem, _player, target);
+            return _logicEngine.ExecuteItemUsageDetailed(itemResult.Item, _player, targetResult.Target).LegacyResult;
         }
 
         #endregion
 
         private void ShowSkillMenu()
         {
-            Combatant performer = _inventoryUI.SelectSkillPerformer(_player);
-            if (performer == null) return;
+            FieldSkillPerformerSelectionResult performerResult = _inventoryUI.SelectSkillPerformerResult(_player);
+            if (performerResult.Kind != FieldSelectionResultKind.Selected || performerResult.Performer == null)
+            {
+                return;
+            }
 
-            SkillData selectedSkill = _inventoryUI.SelectFieldSkill(performer);
-            if (selectedSkill == null) return;
+            FieldSkillSelectionResult skillResult = _inventoryUI.SelectFieldSkillResult(performerResult.Performer);
+            if (skillResult.Kind != FieldSelectionResultKind.Selected || skillResult.Skill == null)
+            {
+                return;
+            }
 
-            Combatant target = _inventoryUI.SelectFieldTarget(_player, selectedSkill.Name);
-            if (target == null) return;
+            FieldTargetSelectionResult targetResult = _inventoryUI.SelectFieldTargetResult(_player, skillResult.Skill.Name);
+            if (targetResult.Kind != FieldSelectionResultKind.Selected || targetResult.Target == null)
+            {
+                return;
+            }
 
-            _logicEngine.ExecuteSkillUsage(selectedSkill, performer, target);
+            _logicEngine.ExecuteSkillUsageDetailed(skillResult.Skill, performerResult.Performer, targetResult.Target);
         }
 
         private void OpenSeamlessStatusMenu()

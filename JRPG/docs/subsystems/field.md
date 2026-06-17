@@ -61,7 +61,7 @@ Hospital restoration costs 1 Macca per missing HP and 5 Macca per missing SP. Tr
 
 Track L routes the hospital cost/payment/restoration decision through the framework. The engine still permits ailment-only treatment at zero cost, while the current hospital UI continues to mark full HP/SP patients as healthy to preserve visible menu behavior until the field state machine is migrated.
 
-Field item/skill usage uses explicit effect gates:
+Field item/skill usage now routes through typed console-host field selection and execution results before adapting back to the legacy conductor signals. The legacy item and skill data, effect-string parsing, and visible messages remain unchanged.
 
 - Redundant heals/cures are blocked.
 - `Goho-M` resets dungeon state to the entry and returns `RequestDungeonExit`.

@@ -4,6 +4,7 @@ using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Field.Messaging;
@@ -223,73 +224,134 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public ItemUsageResult ExecuteItemUsage(ItemData item, Combatant user, Combatant target)
         {
-            if (!_inventory.HasItem(item.Id)) return ItemUsageResult.Failed;
+            return ExecuteItemUsageDetailed(item, user, target).LegacyResult;
+        }
 
-            bool effectApplied = false;
-
-            // Specialized Item: Goho-M (Explicit Exit Request)
-            if (item.Name == "Goho-M")
+        public FieldUseAssessment AssessItemUsage(ItemData item, Combatant target)
+        {
+            if (!_inventory.HasItem(item.Id))
             {
-                _messenger.Publish("Using Goho-M... A mystical light surrounds the party.", ConsoleColor.Gray, 1000);
-                LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
-                _dungeonState.ResetToEntry();
-                return ItemUsageResult.RequestDungeonExit;
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.ItemUnavailable);
             }
 
-            // Standard Item Categories
+            if (item.Name == "Goho-M")
+            {
+                return FieldUseAssessment.RequestDungeonExit;
+            }
+
             switch (item.Type)
             {
                 case "Healing":
                 case "Healing_All":
-                    if (target.CurrentHP >= target.MaxHP)
-                    {
-                        _messenger.Publish($"{target.Name}'s HP is already full.");
-                    }
-                    else
-                    {
-                        int healAmount = item.EffectValue >= 9999 ? target.MaxHP : item.EffectValue;
-                        target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + healAmount);
-                        _messenger.Publish($"{target.Name} recovered health.");
-                        effectApplied = true;
-                    }
+                    return target.CurrentHP >= target.MaxHP
+                        ? FieldUseAssessment.Failed(FieldUseExecutionReason.FullHp)
+                        : FieldUseAssessment.CanApply(consumeItem: true);
+
+                case "Spirit":
+                    return target.CurrentSP >= target.MaxSP
+                        ? FieldUseAssessment.Failed(FieldUseExecutionReason.FullSp)
+                        : FieldUseAssessment.CanApply(consumeItem: true);
+
+                case "Cure":
+                    return CanCure(target, item.Name)
+                        ? FieldUseAssessment.CanApply(consumeItem: true)
+                        : FieldUseAssessment.Failed(FieldUseExecutionReason.NoEffect);
+            }
+
+            return FieldUseAssessment.Failed(FieldUseExecutionReason.UnsupportedFieldUse);
+        }
+
+        public FieldUseExecutionResult ExecuteItemUsageDetailed(ItemData item, Combatant user, Combatant target)
+        {
+            var events = new List<FieldUsePresentationEvent>();
+            FieldUseAssessment assessment = AssessItemUsage(item, target);
+
+            if (!assessment.CanExecute)
+            {
+                switch (assessment.Reason)
+                {
+                    case FieldUseExecutionReason.FullHp:
+                        PublishFieldEvent(events, $"{target.Name}'s HP is already full.");
+                        break;
+                    case FieldUseExecutionReason.FullSp:
+                        PublishFieldEvent(events, $"{target.Name}'s SP is already full.");
+                        break;
+                    case FieldUseExecutionReason.NoEffect:
+                        PublishFieldEvent(events, "The item had no effect.");
+                        break;
+                }
+
+                return new FieldUseExecutionResult(
+                    assessment.LegacyResult,
+                    applied: false,
+                    consumeItem: false,
+                    assessment.Reason,
+                    events);
+            }
+
+            if (item.Name == "Goho-M")
+            {
+                PublishFieldEvent(events, "Using Goho-M... A mystical light surrounds the party.", ConsoleColor.Gray, 1000);
+                bool consumed = LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
+                _dungeonState.ResetToEntry();
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.RequestDungeonExit,
+                    applied: true,
+                    consumeItem: consumed,
+                    FieldUseExecutionReason.DungeonExitRequested,
+                    events);
+            }
+
+            bool effectApplied = false;
+
+            switch (item.Type)
+            {
+                case "Healing":
+                case "Healing_All":
+                    int healAmount = item.EffectValue >= 9999 ? target.MaxHP : item.EffectValue;
+                    target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + healAmount);
+                    PublishFieldEvent(events, $"{target.Name} recovered health.");
+                    effectApplied = true;
                     break;
 
                 case "Spirit":
-                    if (target.CurrentSP >= target.MaxSP)
-                    {
-                        _messenger.Publish($"{target.Name}'s SP is already full.");
-                    }
-                    else
-                    {
-                        target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + item.EffectValue);
-                        _messenger.Publish($"{target.Name} recovered SP.");
-                        effectApplied = true;
-                    }
+                    target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + item.EffectValue);
+                    PublishFieldEvent(events, $"{target.Name} recovered SP.");
+                    effectApplied = true;
                     break;
 
                 case "Cure":
-                    // Instantiate a transient StatusRegistry to handle the removal logic
                     StatusRegistry sr = new StatusRegistry();
                     if (sr.CheckAndExecuteCure(target, item.Name))
                     {
-                        _messenger.Publish($"{target.Name} was cured of their ailment!");
+                        PublishFieldEvent(events, $"{target.Name} was cured of their ailment!");
                         effectApplied = true;
                     }
                     else
                     {
-                        _messenger.Publish("The item had no effect.");
+                        PublishFieldEvent(events, "The item had no effect.");
                     }
                     break;
             }
 
-            if (effectApplied)
+            if (!effectApplied)
             {
-                LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
-                _messenger.Publish(null, ConsoleColor.Gray, 800);
-                return ItemUsageResult.Applied;
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.Failed,
+                    applied: false,
+                    consumeItem: false,
+                    FieldUseExecutionReason.NoEffect,
+                    events);
             }
 
-            return ItemUsageResult.Failed;
+            bool itemConsumed = LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
+            PublishFieldEvent(events, null, ConsoleColor.Gray, 800);
+            return new FieldUseExecutionResult(
+                ItemUsageResult.Applied,
+                applied: true,
+                consumeItem: itemConsumed,
+                FieldUseExecutionReason.None,
+                events);
         }
 
         #endregion
@@ -302,22 +364,53 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// </summary>
         public bool ExecuteSkillUsage(SkillData skill, Combatant user, Combatant target)
         {
+            return ExecuteSkillUsageDetailed(skill, user, target).Applied;
+        }
+
+        public FieldUseAssessment AssessSkillUsage(SkillData skill, Combatant user, Combatant target)
+        {
             var cost = skill.ParseCost();
 
             if (user.CurrentSP < cost.value)
             {
-                _messenger.Publish($"{user.Name} does not have enough SP.", ConsoleColor.Gray, 800);
-                return false;
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.InsufficientSp);
             }
 
             // --- EFFECTIVENESS GATE ---
             // If the action is redundant (e.g. curing a healthy person or healing a full HP person), block execution.
             if (_statusRegistry.IsActionRedundant(user, skill, new List<Combatant> { target }))
             {
-                _messenger.Publish("This action would have no effect.");
-                return false;
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.NoEffect);
             }
 
+            return FieldUseAssessment.CanApply();
+        }
+
+        public FieldUseExecutionResult ExecuteSkillUsageDetailed(SkillData skill, Combatant user, Combatant target)
+        {
+            var events = new List<FieldUsePresentationEvent>();
+            FieldUseAssessment assessment = AssessSkillUsage(skill, user, target);
+
+            if (!assessment.CanExecute)
+            {
+                if (assessment.Reason == FieldUseExecutionReason.InsufficientSp)
+                {
+                    PublishFieldEvent(events, $"{user.Name} does not have enough SP.", ConsoleColor.Gray, 800);
+                }
+                else if (assessment.Reason == FieldUseExecutionReason.NoEffect)
+                {
+                    PublishFieldEvent(events, "This action would have no effect.");
+                }
+
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.Failed,
+                    applied: false,
+                    consumeItem: false,
+                    assessment.Reason,
+                    events);
+            }
+
+            var cost = skill.ParseCost();
             bool applied = false;
             string effectLower = skill.Effect.ToLower();
 
@@ -345,7 +438,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                 if (target.CurrentHP < target.MaxHP)
                 {
                     target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + heal);
-                    _messenger.Publish($"{target.Name} was healed.");
+                    PublishFieldEvent(events, $"{target.Name} was healed.");
                     applied = true;
                 }
                 else if (effectLower.Contains("sp") || effectLower.Contains("spirit"))
@@ -353,7 +446,7 @@ namespace JRPGPrototype.Logic.Field.Engines
                     if (target.CurrentSP < target.MaxSP)
                     {
                         target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + heal);
-                        _messenger.Publish($"{target.Name}'s SP was restored.");
+                        PublishFieldEvent(events, $"{target.Name}'s SP was restored.");
                         applied = true;
                     }
                 }
@@ -362,10 +455,15 @@ namespace JRPGPrototype.Logic.Field.Engines
             if (applied)
             {
                 user.CurrentSP -= cost.value;
-                _messenger.Publish(null, ConsoleColor.Gray, 800);
+                PublishFieldEvent(events, null, ConsoleColor.Gray, 800);
             }
 
-            return applied;
+            return new FieldUseExecutionResult(
+                applied ? ItemUsageResult.Applied : ItemUsageResult.Failed,
+                applied,
+                consumeItem: false,
+                applied ? FieldUseExecutionReason.None : FieldUseExecutionReason.NoEffect,
+                events);
         }
 
         #endregion
@@ -441,5 +539,33 @@ namespace JRPGPrototype.Logic.Field.Engines
         }
 
         #endregion
+
+        private static bool CanCure(Combatant target, string effectText)
+        {
+            if (target.CurrentAilment == null) return false;
+
+            string effectLower = effectText.ToLower();
+            bool curesAll = effectLower.Contains("cure all") ||
+                           effectLower.Contains("cures all") ||
+                           effectLower.Contains("amrita") ||
+                           effectLower.Contains("salvation");
+
+            return curesAll ||
+                effectLower.Contains(target.CurrentAilment.Name.ToLower()) ||
+                effectLower.Contains("dispel") ||
+                effectLower.Contains("dispels");
+        }
+
+        private void PublishFieldEvent(
+            List<FieldUsePresentationEvent> events,
+            string? message,
+            ConsoleColor color = ConsoleColor.Gray,
+            int delay = 0,
+            bool waitForInput = false,
+            bool clearScreen = false)
+        {
+            events.Add(new FieldUsePresentationEvent(message, color, delay, waitForInput, clearScreen));
+            _messenger.Publish(message, color, delay, waitForInput, clearScreen);
+        }
     }
 }

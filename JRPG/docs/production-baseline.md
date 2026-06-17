@@ -240,6 +240,19 @@ Track L began from `51ab35c` and moved persistent resource-management transactio
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O3 Boundary
+
+Track O3 began from `53fbf40` and migrates field inventory/effect presentation into typed console-host results without changing production data or gameplay rules.
+
+- `FieldActionResults` now records field selection outcomes, field-use assessment, execution reasons, item-consumption decisions, and ordered presentation events.
+- `InventoryUIBridge` returns typed item, skill performer, field skill, and target selection results while preserving existing wrapper methods, menu text, disabled labels, hover descriptions, and cancellation behavior.
+- `FieldServiceEngine` now has shared assessment and detailed execution paths for field item and field skill use. Item consumption still goes through `LegacyInventoryResourceAdapter`; successful effects and Goho-M consume once, and no-effect or unavailable paths do not consume.
+- Legacy `ItemData`, `SkillData`, `Database`, effect-string parsing, and production `Data/Jsons` remain console-host compatibility concerns.
+- Focused O3 verification passed: field inventory presentation tests, plain menu command tests, and the representative field/shop characterization test reported 11 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 647 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 105 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

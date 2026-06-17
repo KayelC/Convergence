@@ -196,6 +196,18 @@ Exit gate:
 - Consumption remains host-owned but is driven by framework result decisions.
 - Legacy field item/skill characterization tests remain green.
 
+Completion:
+
+- Track O3 began from `53fbf40` on `track-12-recovery`.
+- Added typed console-host field selection and field-use result contracts for item selection, skill performer selection, field skill selection, target selection, assessment, execution reasons, consumption decisions, and ordered presentation events.
+- Routed `FieldConductor` item/skill flows through typed bridge results and detailed field execution results while keeping legacy-compatible wrapper methods available for existing callers.
+- `FieldServiceEngine` now exposes shared assessment and detailed execution for field items and skills. Recovery, cure, Goho-M, no-effect, unsupported field item, and insufficient-SP behavior keep their previous visible outcomes and mutation order.
+- Legacy `ItemData`, `SkillData`, `Database`, and string/effect parsing remain console-host compatibility concerns. No production JSON or framework public API changed.
+- Focused O3 verification passed: `FieldInventoryPresentationTests`, `ConsolePlainMenuCommandTests`, and the representative field/shop characterization test reported 11 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 647 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 105 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O4: Party And Stock Organization Presentation
 
 Goal:
