@@ -253,6 +253,21 @@ Track O3 began from `53fbf40` and migrates field inventory/effect presentation i
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O4 Boundary
+
+Track O4 began from `c7d7c40` and migrates field party/stock organization presentation into typed console-host results without changing party rules, production data, fusion transactions, or battle COMP behavior.
+
+- `PartyStockPresentationResults` records organize-slot selections, Persona stock selections/actions, demon stock selections, summon-target selections, and mutation presentation results.
+- `StatusUIBridge` now exposes typed result methods for Persona stock, demon stock, organization slots, Persona action selection, and summon/replace targets. Existing wrapper methods and legacy null/string/object return behavior remain available for current callers.
+- `LegacyPartyStockAdapter` exposes detailed Track F transition results for summon, return, swap, dismiss, and Persona swap while preserving the existing bool-returning `PartyManager` methods.
+- `FieldServiceEngine` now returns typed mutation presentation results for field-side Persona swaps and demon summon/return/swap/dismiss paths. Results carry transition codes, affected runtime IDs, and ordered presentation events while preserving legacy messages, transient cleanup, active plus owned demon overlap, and Persona HP/SP capping.
+- `FieldConductor` consumes the typed party/stock bridge results for field organization, demon stock, and Persona stock flows.
+- Legacy `Combatant`, `Persona`, `PartyManager`, live stock lists, field menu text, status-peek behavior, production `Data/Jsons`, fusion stock transactions, and battle COMP flow remain protected. Removal remains unauthorized.
+- Focused O4 verification passed: `PartyStockPresentationTests`, `PartyStockAdapterTests`, `PartyManagerTests`, and `StatusPresentationProjectionTests` reported 27 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 654 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

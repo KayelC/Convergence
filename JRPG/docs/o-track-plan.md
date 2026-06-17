@@ -242,6 +242,19 @@ Exit gate:
 - Organize-party and stock presentation is backed by framework transition results.
 - Existing `PartyManagerTests`, field organize tests, battle COMP tests, and stock characterization tests remain green.
 
+Completion:
+
+- Track O4 began from `c7d7c40` on `track-12-recovery`.
+- Added `PartyStockPresentationResults` for typed organize-slot, demon stock, Persona stock, summon-target, and mutation presentation outcomes.
+- `StatusUIBridge` now exposes typed selected/back/unavailable result methods for Persona stock, demon stock, organization slots, Persona actions, and summon targets while preserving the old wrapper return values for existing callers.
+- `LegacyPartyStockAdapter` now exposes detailed Track F transition results for field-side party/stock presentation without changing the existing bool-returning `PartyManager` surface.
+- `FieldServiceEngine` now returns typed mutation presentation results for Persona swap, demon summon, return, swap, and dismiss. These results carry transition codes, affected runtime IDs, and ordered field messages while preserving live `Combatant`/`Persona` mutation, active plus owned demon overlap, transient cleanup, and Persona HP/SP capping.
+- `FieldConductor` now consumes typed bridge results for field party organization, demon stock, and Persona stock flows.
+- Focused O4 verification passed: `PartyStockPresentationTests`, `PartyStockAdapterTests`, `PartyManagerTests`, and `StatusPresentationProjectionTests` reported 27 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 654 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O5: Battle Command Shell
 
 Goal:

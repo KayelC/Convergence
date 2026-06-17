@@ -1211,6 +1211,21 @@ Track O3 began from `53fbf40` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O4 Completion
+
+Track O4 began from `c7d7c40` on `track-12-recovery`.
+
+- Added typed console-host results for organization slot selection, demon stock selection, Persona stock selection/action, summon target selection, and party/stock mutation presentation.
+- `StatusUIBridge` now exposes typed result methods while keeping its legacy wrapper methods and return values for existing conductors.
+- `LegacyPartyStockAdapter` exposes detailed Track F transition results for field-side presentation; existing bool-returning `PartyManager` mutation methods still behave the same.
+- `FieldServiceEngine` now returns typed presentation results for Persona swap, demon summon, demon return, demon swap, and dismiss. Results include transition codes, affected runtime IDs, and ordered field messages.
+- `FieldConductor` consumes the typed bridge results for field organization, demon stock, and Persona stock flows while preserving menu order, cancellation, status peek, active plus owned demon overlap, transient cleanup, Persona HP/SP capping, and visible messages.
+- Updated the parity ledger. `party_operations`, `persona_and_demon_stock`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O4 verification passed: `PartyStockPresentationTests`, `PartyStockAdapterTests`, `PartyManagerTests`, and `StatusPresentationProjectionTests` reported 27 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 654 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

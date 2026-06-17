@@ -507,15 +507,16 @@ namespace JRPGPrototype.Logic.Field
         {
             while (true)
             {
-                Persona selected = _statusUI.SelectPersonaFromStock(_player);
-                if (selected == null) return;
+                PersonaStockSelectionResult selection = _statusUI.SelectPersonaFromStockResult(_player);
+                if (selection.Kind != PartyStockSelectionResultKind.Selected || selection.Persona is null) return;
 
-                bool isEquipped = (selected == _player.ActivePersona);
-                string action = _statusUI.ShowPersonaDetails(selected, isEquipped);
+                Persona selected = selection.Persona;
+                bool isEquipped = selected == _player.ActivePersona;
+                PersonaStockActionResult action = _statusUI.ShowPersonaDetailsResult(selected, isEquipped);
 
-                if (action == "Equip Persona")
+                if (action.Kind == PersonaStockActionKind.Equip)
                 {
-                    _logicEngine.PerformPersonaSwap(_player, selected);
+                    _logicEngine.PerformPersonaSwapDetailed(_player, selected);
                 }
             }
         }
@@ -524,10 +525,10 @@ namespace JRPGPrototype.Logic.Field
         {
             while (true)
             {
-                Combatant selected = _statusUI.SelectDemonFromStock(_player);
-                if (selected == null) return;
+                DemonStockSelectionResult selection = _statusUI.SelectDemonFromStockResult(_player);
+                if (selection.Kind != PartyStockSelectionResultKind.Selected || selection.Demon is null) return;
 
-                _statusUI.ShowDemonDetails(selected);
+                _statusUI.ShowDemonDetails(selection.Demon);
             }
         }
 
@@ -540,50 +541,39 @@ namespace JRPGPrototype.Logic.Field
         {
             while (true)
             {
-                // Bridge returns -1 for Back, or 1, 2, 3 for demon slots.
+                // Bridge returns Back or 1, 2, 3 for demon slots.
                 // Slot 0 (Hero) peeks status and loops internally in the bridge.
-                int slotIndex = _statusUI.ShowOrganizationSlots();
-                if (slotIndex == -1) return;
+                OrganizationSlotSelectionResult slotSelection = _statusUI.ShowOrganizationSlotsResult();
+                if (slotSelection.Kind != PartyStockSelectionResultKind.Selected) return;
 
                 // Identify if the slot is currently occupied
                 Combatant? occupant = null;
+                int slotIndex = slotSelection.SlotIndex;
                 if (slotIndex < _partyManager.ActiveParty.Count)
                 {
                     occupant = _partyManager.ActiveParty[slotIndex];
                 }
 
                 // Immediately open Summon/Replace target menu
-                object result = _statusUI.SelectSummonTarget(_player, occupant);
+                SummonTargetSelectionResult result = _statusUI.SelectSummonTargetResult(_player, occupant);
 
-                if (result == null) continue; // User backed out
+                if (result.Kind is SummonTargetSelectionKind.Back or SummonTargetSelectionKind.Unavailable) continue;
 
                 // Logic Branching based on selection
-                if (result is string s && s == "RETURN_SIGNAL")
+                if (result.Kind == SummonTargetSelectionKind.ReturnToComp)
                 {
-                    if (occupant != null && _partyManager.ReturnDemon(_player, occupant))
-                    {
-                        // Clean up transient flags (Guard/Charge) when returning on field
-                        occupant.ClearTransientBattleState();
-                        _messenger.Publish($"{occupant.Name} returned to stock.", ConsoleColor.Gray, 600);
-                    }
+                    if (occupant != null) _logicEngine.ReturnDemonDetailed(_player, occupant);
                 }
-                else if (result is Combatant newDemon)
+                else if (result.Kind == SummonTargetSelectionKind.SelectedDemon && result.Demon is Combatant newDemon)
                 {
                     if (occupant != null)
                     {
-                        if (_partyManager.SwapActiveDemon(_player, occupant, newDemon))
-                        {
-                            occupant.ClearTransientBattleState();
-                            _messenger.Publish($"{occupant.Name} swapped for {newDemon.Name}!", ConsoleColor.Gray, 600);
-                        }
+                        _logicEngine.SwapActiveDemonDetailed(_player, occupant, newDemon);
                     }
                     else
                     {
                         // Empty slot Summon
-                        if (_partyManager.SummonDemon(_player, newDemon))
-                        {
-                            _messenger.Publish($"{newDemon.Name} joined the party!", ConsoleColor.Gray, 800);
-                        }
+                        _logicEngine.SummonDemonDetailed(_player, newDemon);
                     }
                 }
             }

@@ -70,7 +70,9 @@ Field item/skill usage now routes through typed console-host field selection and
 
 ### Status, Equipment, And Party Organization
 
-Status bridges render character/persona/demon details, stat allocation, equipment slots, persona stock, demon stock, and organization menus. `FieldServiceEngine` mutates stats/equipment/persona swaps while `PartyManager` mutates active party and demon deployment.
+Status bridges render character/persona/demon details, stat allocation, equipment slots, persona stock, demon stock, and organization menus. Track O4 gives Persona stock, demon stock, organization slots, and summon/replace menus typed selected/back/unavailable results while keeping the existing wrapper methods for current callers.
+
+`FieldServiceEngine` mutates stats/equipment/persona swaps while `PartyManager` mutates active party and demon deployment. Field-side Persona swaps, demon summons, demon returns, and active demon swaps now expose typed presentation results carrying the Track F transition code, affected runtime IDs, and ordered messages; the underlying live objects, stock overlap, HP/SP capping, and menu text remain unchanged.
 
 ## Important State And Invariants
 

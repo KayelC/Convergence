@@ -8,6 +8,7 @@ using JRPGPrototype.Host;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
@@ -239,6 +240,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
         #region Persona Stock
 
         public Persona SelectPersonaFromStock(Combatant player)
+            => SelectPersonaFromStockResult(player).Persona!;
+
+        public PersonaStockSelectionResult SelectPersonaFromStockResult(Combatant player)
         {
             var allPersonas = new List<Persona>();
             if (player.ActivePersona != null) allPersonas.Add(player.ActivePersona);
@@ -248,7 +252,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             {
                 _io.WriteLine("No Personas available.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return PersonaStockSelectionResult.Unavailable;
             }
 
             int lastIdx = 0;
@@ -261,7 +265,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
                 int idx = _io.RenderMenu("=== PERSONA STOCK ===", options, lastIdx, null, null, true);
 
-                if (idx == -1 || idx == options.Count - 1) return null;
+                if (idx == -1 || idx == options.Count - 1) return PersonaStockSelectionResult.Back;
 
                 // Handle Status Peek
                 if (idx <= -10)
@@ -272,7 +276,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     continue;
                 }
 
-                return allPersonas[idx];
+                return PersonaStockSelectionResult.Selected(allPersonas[idx]);
             }
         }
 
@@ -280,6 +284,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Renders the detailed stat sheet for a specific Persona.
         /// </summary>
         public string ShowPersonaDetails(Persona p, bool isEquipped)
+            => ShowPersonaDetailsResult(p, isEquipped).Kind == PersonaStockActionKind.Equip
+                ? "Equip Persona"
+                : "Back";
+
+        public PersonaStockActionResult ShowPersonaDetailsResult(Persona p, bool isEquipped)
         {
             string header = RenderPersonaDetailsToString(p, isEquipped);
             List<string> options = new List<string>();
@@ -288,9 +297,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
             options.Add("Back");
 
             int choice = _io.RenderMenu(header, options, 0);
-            if (choice == -1 || choice == options.Count - 1) return "Back";
+            if (choice == -1 || choice == options.Count - 1) return PersonaStockActionResult.Back;
 
-            return options[choice];
+            return PersonaStockActionResult.Equip;
         }
 
         #endregion
@@ -302,6 +311,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Marks their current location (Field vs Stock).
         /// </summary>
         public Combatant SelectDemonFromStock(Combatant player)
+            => SelectDemonFromStockResult(player).Demon!;
+
+        public DemonStockSelectionResult SelectDemonFromStockResult(Combatant player)
         {
             var allDemons = _party.ActiveParty.Where(m => m.Class == ClassType.Demon).ToList();
             allDemons.AddRange(player.DemonStock);
@@ -310,7 +322,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
             {
                 _io.WriteLine("No demons found.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return DemonStockSelectionResult.Unavailable;
             }
 
             int lastIdx = 0;
@@ -323,7 +335,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
                 int idx = _io.RenderMenu("=== DEMON OVERVIEW ===", options, lastIdx, null, null, true);
 
-                if (idx == -1 || idx == options.Count - 1) return null;
+                if (idx == -1 || idx == options.Count - 1) return DemonStockSelectionResult.Back;
 
                 // Handle Status Peek
                 if (idx <= -10)
@@ -334,7 +346,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     continue;
                 }
 
-                return allDemons[idx];
+                return DemonStockSelectionResult.Selected(allDemons[idx]);
             }
         }
 
@@ -344,6 +356,12 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Status Screens available to view in Organize Party Menu.
         /// </summary>
         public int ShowOrganizationSlots()
+        {
+            OrganizationSlotSelectionResult result = ShowOrganizationSlotsResult();
+            return result.Kind == PartyStockSelectionResultKind.Selected ? result.SlotIndex : -1;
+        }
+
+        public OrganizationSlotSelectionResult ShowOrganizationSlotsResult()
         {
             int lastIdx = 0;
             while (true)
@@ -368,7 +386,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 // supportStatusInspect: true
                 int choice = _io.RenderMenu(header, options, lastIdx, null, null, true);
 
-                if (choice == -1 || choice == options.Count - 1) return -1;
+                if (choice == -1 || choice == options.Count - 1) return OrganizationSlotSelectionResult.Back;
 
                 // Handle Peek Logic
                 if (choice <= -10)
@@ -390,7 +408,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     continue;
                 }
 
-                return choice;
+                return OrganizationSlotSelectionResult.Selected(choice);
             }
         }
 
@@ -400,13 +418,24 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public object SelectSummonTarget(Combatant player, Combatant? occupantBeingReplaced)
         {
+            SummonTargetSelectionResult result = SelectSummonTargetResult(player, occupantBeingReplaced);
+            return result.Kind switch
+            {
+                SummonTargetSelectionKind.ReturnToComp => "RETURN_SIGNAL",
+                SummonTargetSelectionKind.SelectedDemon => result.Demon!,
+                _ => null!
+            };
+        }
+
+        public SummonTargetSelectionResult SelectSummonTargetResult(Combatant player, Combatant? occupantBeingReplaced)
+        {
             var masterStock = player.DemonStock;
 
             if (!masterStock.Any())
             {
                 _io.WriteLine("No demons in stock.", ConsoleColor.Red);
                 _io.Wait(800);
-                return null;
+                return SummonTargetSelectionResult.Unavailable;
             }
 
             int lastIdx = 0;
@@ -414,14 +443,14 @@ namespace JRPGPrototype.Logic.Field.Bridges
             {
                 List<string> options = new List<string>();
                 List<bool> disabledList = new List<bool>();
-                List<object> mapping = new List<object>();
+                List<SummonTargetSelectionResult> mapping = new List<SummonTargetSelectionResult>();
 
                 // 1. Optional Return Entry
                 if (occupantBeingReplaced != null)
                 {
                     options.Add(LegacyStatusPresentationProjection.ReturnToCompLabel(occupantBeingReplaced));
                     disabledList.Add(false);
-                    mapping.Add("RETURN_SIGNAL");
+                    mapping.Add(SummonTargetSelectionResult.ReturnToComp);
                 }
 
                 // 2. Master Stock List
@@ -430,7 +459,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     bool inParty = _party.ActiveParty.Contains(d);
                     options.Add(LegacyStatusPresentationProjection.FromCombatant(d).SummonTargetLabel(inParty));
                     disabledList.Add(inParty || d.IsDead);
-                    mapping.Add(d);
+                    mapping.Add(SummonTargetSelectionResult.SelectedDemon(d));
                 }
 
                 options.Add("Cancel");
@@ -439,13 +468,13 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 // supportStatusInspect: true
                 int choice = _io.RenderMenu("=== SUMMON / REPLACE ===", options, lastIdx, disabledList, null, true);
 
-                if (choice == -1 || choice == options.Count - 1) return null;
+                if (choice == -1 || choice == options.Count - 1) return SummonTargetSelectionResult.Back;
 
                 // Handle Peek Logic
                 if (choice <= -10)
                 {
                     int inspectIdx = Math.Abs(choice) - 10;
-                    if (mapping[inspectIdx] is Combatant d)
+                    if (mapping[inspectIdx].Demon is Combatant d)
                     {
                         ShowEntityStatus(d);
                     }

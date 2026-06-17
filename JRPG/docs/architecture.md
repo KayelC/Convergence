@@ -71,7 +71,9 @@ Track O2 moves read-only status presentation behind console-owned projection ada
 
 Track O3 routes field item and field skill presentation through typed console-host selection and execution results. Item/skill menus, target cancellation, field-use assessment, consumption decisions, and ordered field presentation events now have explicit result contracts, while legacy `ItemData`, `SkillData`, production JSON, effect-string parsing, and visible field behavior remain console-host compatibility concerns.
 
-Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, rich console presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track O4 routes party organization, demon stock, Persona stock, and field-side summon/return/swap presentation through typed console-host results backed by the Track F party/stock adapter. The old `StatusUIBridge` wrappers, `PartyManager`, live `Combatant`/`Persona` lists, active plus owned demon stock invariant, messages, cancellation, and status-peek behavior remain intact.
+
+Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining battle/Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 

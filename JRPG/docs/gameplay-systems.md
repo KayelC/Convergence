@@ -90,7 +90,7 @@ Field gameplay is split between:
 - `FieldServiceEngine`: hospital restoration, field items, field skills, equipment, stat allocation, and progression side effects.
 - `DungeonManager`: console compatibility facade over framework floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
 - `ExplorationProcessor`: field-side movement messages, entry triggers, battle handoff, and enemy hydration.
-- Field bridges: menu rendering and choice collection. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now route through the framework host-command contracts before returning legacy-compatible values to existing conductors. Status summaries, Persona details, demon details, stock rows, organization rows, summon rows, and equipment slot labels now render through copied runtime projection data. Field item and field skill selection, assessment, consumption decisions, and result narration now use typed console-host results while preserving legacy item/skill data and effect-string parsing. Rich preview menus outside status and field inventory remain legacy presentation surfaces.
+- Field bridges: menu rendering and choice collection. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now route through the framework host-command contracts before returning legacy-compatible values to existing conductors. Status summaries, Persona details, demon details, stock rows, organization rows, summon rows, and equipment slot labels now render through copied runtime projection data. Field item/skill selection, assessment, consumption decisions, party/stock organization choices, and result narration now use typed console-host results while preserving legacy item/skill data, effect-string parsing, and live party objects. Rich preview menus outside status, field inventory, and field party/stock organization remain legacy presentation surfaces.
 
 Dungeon state is still stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses. Direct debug/test warps preserve the legacy ability to move to a floor without increasing max-floor progress.
 
@@ -176,6 +176,8 @@ The preserved defaults are:
 - adapter-owned per-session runtime IDs bridge legacy object references into framework commands without exposing legacy types to the framework.
 
 This is still not legacy removal. Field menus, battle COMP menus, compendium, fusion conductors, factories, and save/persistence ownership remain console-host systems until their later migration tracks.
+
+Track O4 gives the field party/stock organization screens explicit console-host result contracts for selected/back/unavailable states, demon stock commands, summon targets, Persona stock actions, and mutation presentation events. The mutation path still applies through the Track F adapter and the live `PartyManager`, preserving active party capacity, active slot behavior, active plus owned demon overlap, return-to-COMP behavior, Persona swap HP/SP capping, and the existing console messages.
 
 ## Production Combat Ruleset Foundation
 

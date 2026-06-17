@@ -65,6 +65,9 @@ namespace JRPGPrototype.Logic.Core
         }
 
         public bool SummonDemon(PartyManager party, Combatant owner, Combatant demon)
+            => SummonDemonDetailed(party, owner, demon).Applied;
+
+        public PartyStockTransitionResult SummonDemonDetailed(PartyManager party, Combatant owner, Combatant demon)
         {
             PartyStockTransitionResult result = _transitions.SummonDemon(new SummonDemonRequest(
                 Snapshot(party, owner),
@@ -72,14 +75,17 @@ namespace JRPGPrototype.Logic.Core
 
             if (!result.Applied)
             {
-                return false;
+                return result;
             }
 
             ApplyActors(party, owner, result.After, directControlActors: [demon]);
-            return true;
+            return result;
         }
 
         public bool SwapActiveDemon(PartyManager party, Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
+            => SwapActiveDemonDetailed(party, owner, activeToRemove, standbyToAdd).Applied;
+
+        public PartyStockTransitionResult SwapActiveDemonDetailed(PartyManager party, Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
         {
             PartyStockTransitionResult result = _transitions.SwapActiveDemon(new SwapActiveDemonRequest(
                 Snapshot(party, owner),
@@ -88,14 +94,17 @@ namespace JRPGPrototype.Logic.Core
 
             if (!result.Applied)
             {
-                return false;
+                return result;
             }
 
             ApplyActors(party, owner, result.After, directControlActors: [standbyToAdd]);
-            return true;
+            return result;
         }
 
         public bool ReturnDemon(PartyManager party, Combatant owner, Combatant demon)
+            => ReturnDemonDetailed(party, owner, demon).Applied;
+
+        public PartyStockTransitionResult ReturnDemonDetailed(PartyManager party, Combatant owner, Combatant demon)
         {
             PartyStockTransitionResult result = _transitions.ReturnDemon(new ReturnDemonRequest(
                 Snapshot(party, owner),
@@ -103,14 +112,17 @@ namespace JRPGPrototype.Logic.Core
 
             if (!result.Applied)
             {
-                return false;
+                return result;
             }
 
             ApplyActors(party, owner, result.After);
-            return true;
+            return result;
         }
 
         public bool DismissDemon(PartyManager party, Combatant owner, Combatant demon)
+            => DismissDemonDetailed(party, owner, demon).Applied;
+
+        public PartyStockTransitionResult DismissDemonDetailed(PartyManager party, Combatant owner, Combatant demon)
         {
             PartyStockTransitionResult result = _transitions.DismissDemon(new DismissDemonRequest(
                 Snapshot(party, owner),
@@ -118,11 +130,11 @@ namespace JRPGPrototype.Logic.Core
 
             if (!result.Applied)
             {
-                return false;
+                return result;
             }
 
             ApplyActors(party, owner, result.After);
-            return true;
+            return result;
         }
 
         public void ReplaceDemon(PartyManager party, Combatant owner, Combatant oldDemon, Combatant newDemon)
@@ -154,6 +166,9 @@ namespace JRPGPrototype.Logic.Core
         }
 
         public bool SwapActivePersona(Combatant owner, Persona newPersona)
+            => SwapActivePersonaDetailed(owner, newPersona).Applied;
+
+        public PartyStockTransitionResult SwapActivePersonaDetailed(Combatant owner, Persona newPersona)
         {
             PartyStockTransitionResult result = _transitions.SwapActivePersona(new SwapActivePersonaRequest(
                 Snapshot(owner),
@@ -161,11 +176,11 @@ namespace JRPGPrototype.Logic.Core
 
             if (!result.Applied)
             {
-                return false;
+                return result;
             }
 
             ApplyForms(owner, result.After);
-            return true;
+            return result;
         }
 
         public bool ConsumePersona(Combatant owner, Persona persona)

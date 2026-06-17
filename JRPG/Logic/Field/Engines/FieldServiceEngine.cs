@@ -8,6 +8,7 @@ using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.Bridges;
 using JRPGPrototype.Logic.Field.Dungeon;
 using JRPGPrototype.Logic.Field.Messaging;
+using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Services;
 using System;
 using System.Collections.Generic;
@@ -508,18 +509,78 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// Uses "Flat Preservation" (Current HP remains same but capped at new MaxHP).
         /// </summary>
         public void PerformPersonaSwap(Combatant player, Persona newPersona)
+            => PerformPersonaSwapDetailed(player, newPersona);
+
+        public PartyStockPresentationResult PerformPersonaSwapDetailed(Combatant player, Persona newPersona)
         {
-            if (LegacyPartyStockAdapter.Shared.SwapActivePersona(player, newPersona))
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SwapActivePersonaDetailed(player, newPersona);
+            if (!transition.Applied)
             {
-                _messenger.Publish($"Equipped {newPersona.Name}!", ConsoleColor.Gray, 800);
-
-                // Refresh Max Pools based on new stats (Vi/Ma influence)
-                player.RecalculateResources();
-
-                // Apply Edge-Case Capping (Absolute values preserved, but capped at new maximums)
-                player.CurrentHP = Math.Min(player.CurrentHP, player.MaxHP);
-                player.CurrentSP = Math.Min(player.CurrentSP, player.MaxSP);
+                return PartyStockResult(PartyStockPresentationOperation.SwapActivePersona, transition);
             }
+
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"Equipped {newPersona.Name}!", ConsoleColor.Gray, 800);
+
+            // Refresh Max Pools based on new stats (Vi/Ma influence)
+            player.RecalculateResources();
+
+            // Apply Edge-Case Capping (Absolute values preserved, but capped at new maximums)
+            player.CurrentHP = Math.Min(player.CurrentHP, player.MaxHP);
+            player.CurrentSP = Math.Min(player.CurrentSP, player.MaxSP);
+
+            return PartyStockResult(PartyStockPresentationOperation.SwapActivePersona, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult SummonDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SummonDemonDetailed(_party, owner, demon);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.SummonDemon, transition);
+            }
+
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{demon.Name} joined the party!", ConsoleColor.Gray, 800);
+            return PartyStockResult(PartyStockPresentationOperation.SummonDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult ReturnDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.ReturnDemonDetailed(_party, owner, demon);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.ReturnDemon, transition);
+            }
+
+            demon.ClearTransientBattleState();
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{demon.Name} returned to stock.", ConsoleColor.Gray, 600);
+            return PartyStockResult(PartyStockPresentationOperation.ReturnDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult SwapActiveDemonDetailed(Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SwapActiveDemonDetailed(
+                _party,
+                owner,
+                activeToRemove,
+                standbyToAdd);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.SwapActiveDemon, transition);
+            }
+
+            activeToRemove.ClearTransientBattleState();
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{activeToRemove.Name} swapped for {standbyToAdd.Name}!", ConsoleColor.Gray, 600);
+            return PartyStockResult(PartyStockPresentationOperation.SwapActiveDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult DismissDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.DismissDemonDetailed(_party, owner, demon);
+            return PartyStockResult(PartyStockPresentationOperation.DismissDemon, transition);
         }
 
         #endregion
@@ -554,6 +615,29 @@ namespace JRPGPrototype.Logic.Field.Engines
                 effectLower.Contains(target.CurrentAilment.Name.ToLower()) ||
                 effectLower.Contains("dispel") ||
                 effectLower.Contains("dispels");
+        }
+
+        private static PartyStockPresentationResult PartyStockResult(
+            PartyStockPresentationOperation operation,
+            PartyStockTransitionResult transition,
+            IEnumerable<PartyStockPresentationEvent>? events = null) =>
+            new(
+                operation,
+                transition.Applied,
+                transition.Code,
+                transition.AffectedInstanceIds,
+                events);
+
+        private PartyStockPresentationEvent PublishPartyStockEvent(
+            string message,
+            ConsoleColor color,
+            int delay,
+            bool waitForInput = false,
+            bool clearScreen = false)
+        {
+            var presentationEvent = new PartyStockPresentationEvent(message, color, delay, waitForInput, clearScreen);
+            _messenger.Publish(message, color, delay, waitForInput, clearScreen);
+            return presentationEvent;
         }
 
         private void PublishFieldEvent(
