@@ -240,6 +240,19 @@ Track L began from `51ab35c` and moved persistent resource-management transactio
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O2 Boundary
+
+Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.
+
+- `LegacyStatusPresentationProjection` now backs Human summaries, Persona details, demon details, stock labels, organization labels, summon labels, and equipment slot labels with framework runtime snapshots plus copied display-only legacy data.
+- `StatusUIBridge` keeps its existing public methods, menu text, option order, cancellation behavior, status-peek flow, and legacy return values.
+- Stat allocation mutation, equipment mutation, Persona/demon stock mutation, rich battle presentation, Cathedral presentation, and production content authority remain unchanged.
+- Legacy `Data/Jsons`, `Database`, live `Combatant`/`Persona` state, and all removal gates remain protected.
+- Focused O2 verification passed: status projection tests, plain menu command tests, and the status/equipment surface characterization test reported 8 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 640 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track M Boundary
 
 Track M began from `1502970` and moved field/dungeon state-machine rules into the framework while preserving the interactive console host, legacy dungeon JSON, and visible menu behavior.

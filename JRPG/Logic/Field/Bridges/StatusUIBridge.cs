@@ -113,10 +113,10 @@ namespace JRPGPrototype.Logic.Field.Bridges
             string header = "=== EQUIPMENT SLOTS ===";
             var options = new List<HostCommandOption<EquipmentSlotMenuSelection>>
             {
-                EquipOption(EquipmentSlotMenuCommand.Weapon, $"Weapon:    {ResolveName(player.EquippedWeapon?.Id, player.EquippedWeapon?.Name)}", 0),
-                EquipOption(EquipmentSlotMenuCommand.Armor, $"Armor:     {ResolveName(player.EquippedArmor?.Id, player.EquippedArmor?.Name)}", 1),
-                EquipOption(EquipmentSlotMenuCommand.Boots, $"Boots:     {ResolveName(player.EquippedBoots?.Id, player.EquippedBoots?.Name)}", 2),
-                EquipOption(EquipmentSlotMenuCommand.Accessory, $"Accessory: {ResolveName(player.EquippedAccessory?.Id, player.EquippedAccessory?.Name)}", 3),
+                EquipOption(EquipmentSlotMenuCommand.Weapon, LegacyStatusPresentationProjection.EquipmentSlotLabel(EquipmentSlotMenuCommand.Weapon, ResolveName(player.EquippedWeapon?.Id, player.EquippedWeapon?.Name)), 0),
+                EquipOption(EquipmentSlotMenuCommand.Armor, LegacyStatusPresentationProjection.EquipmentSlotLabel(EquipmentSlotMenuCommand.Armor, ResolveName(player.EquippedArmor?.Id, player.EquippedArmor?.Name)), 1),
+                EquipOption(EquipmentSlotMenuCommand.Boots, LegacyStatusPresentationProjection.EquipmentSlotLabel(EquipmentSlotMenuCommand.Boots, ResolveName(player.EquippedBoots?.Id, player.EquippedBoots?.Name)), 2),
+                EquipOption(EquipmentSlotMenuCommand.Accessory, LegacyStatusPresentationProjection.EquipmentSlotLabel(EquipmentSlotMenuCommand.Accessory, ResolveName(player.EquippedAccessory?.Id, player.EquippedAccessory?.Name)), 3),
                 EquipOption(EquipmentSlotMenuCommand.Back, "Back", 4)
             };
 
@@ -254,8 +254,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
             int lastIdx = 0;
             while (true)
             {
-                List<string> options = allPersonas.Select(p =>
-                    $"{p.Name,-15} (Lv.{p.Level}) {p.Race,-10} {(p == player.ActivePersona ? "[E]" : "")}").ToList();
+                List<string> options = allPersonas
+                    .Select(p => LegacyPersonaStatusProjection.FromPersona(p).StockLabel(p == player.ActivePersona))
+                    .ToList();
                 options.Add("Back");
 
                 int idx = _io.RenderMenu("=== PERSONA STOCK ===", options, lastIdx, null, null, true);
@@ -280,7 +281,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public string ShowPersonaDetails(Persona p, bool isEquipped)
         {
-            string header = GetPersonaDetailString(p, isEquipped);
+            string header = RenderPersonaDetailsToString(p, isEquipped);
             List<string> options = new List<string>();
 
             if (!isEquipped) options.Add("Equip Persona");
@@ -315,8 +316,9 @@ namespace JRPGPrototype.Logic.Field.Bridges
             int lastIdx = 0;
             while (true)
             {
-                List<string> options = allDemons.Select(d =>
-                    $"{d.Name,-15} (Lv.{d.Level}) {(_party.ActiveParty.Contains(d) ? "[PARTY]" : "[STOCK]")}").ToList();
+                List<string> options = allDemons
+                    .Select(d => LegacyStatusPresentationProjection.FromCombatant(d).DemonStockLabel(_party.ActiveParty.Contains(d)))
+                    .ToList();
                 options.Add("Back");
 
                 int idx = _io.RenderMenu("=== DEMON OVERVIEW ===", options, lastIdx, null, null, true);
@@ -354,12 +356,11 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     if (i < _party.ActiveParty.Count)
                     {
                         var member = _party.ActiveParty[i];
-                        string label = i == 0 ? "Leader: " : $"Slot {i + 1}: ";
-                        options.Add($"{label}{member.Name,-15} (Lv.{member.Level})");
+                        options.Add(LegacyStatusPresentationProjection.FromCombatant(member).OrganizationSlotLabel(i));
                     }
                     else
                     {
-                        options.Add($"Slot {i + 1}: [EMPTY]");
+                        options.Add(LegacyStatusPresentationProjection.EmptyOrganizationSlotLabel(i));
                     }
                 }
                 options.Add("Back");
@@ -418,7 +419,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 // 1. Optional Return Entry
                 if (occupantBeingReplaced != null)
                 {
-                    options.Add($"[ RETURN {occupantBeingReplaced.Name.ToUpper()} TO COMP ]");
+                    options.Add(LegacyStatusPresentationProjection.ReturnToCompLabel(occupantBeingReplaced));
                     disabledList.Add(false);
                     mapping.Add("RETURN_SIGNAL");
                 }
@@ -427,9 +428,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 foreach (var d in masterStock)
                 {
                     bool inParty = _party.ActiveParty.Contains(d);
-                    string status = inParty ? "[IN PARTY]" : d.IsDead ? "[DEAD]" : "";
-
-                    options.Add($"{d.Name,-15} (Lv.{d.Level}) {status}");
+                    options.Add(LegacyStatusPresentationProjection.FromCombatant(d).SummonTargetLabel(inParty));
                     disabledList.Add(inParty || d.IsDead);
                     mapping.Add(d);
                 }
@@ -469,7 +468,7 @@ namespace JRPGPrototype.Logic.Field.Bridges
         private void ShowEntityStatus(object entity)
         {
             _io.Clear();
-            string statusString = entity is Combatant c ? GetDemonDetailString(c) : GetPersonaDetailString((Persona)entity, false);
+            string statusString = entity is Combatant c ? RenderDemonDetailsToString(c) : RenderPersonaDetailsToString((Persona)entity, false);
 
             _io.WriteLine(statusString);
             _io.WriteLine("\n--------------------------------------------------");
@@ -482,102 +481,19 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// </summary>
         public void ShowDemonDetails(Combatant demon)
         {
-            string header = GetDemonDetailString(demon);
+            string header = RenderDemonDetailsToString(demon);
             List<string> options = new List<string> { "Back" };
             _io.RenderMenu(header, options, 0);
         }
 
         public string RenderHumanStatusToString(Combatant entity)
-            => LegacyHumanStatusProjection.FromCombatant(entity).Render();
+            => LegacyStatusPresentationProjection.FromCombatant(entity).RenderHumanStatus();
 
-        private string GetPersonaDetailString(Persona p, bool isEquipped)
-        {
-            string output = $"=== PERSONA DETAILS {(isEquipped ? "[EQUIPPED]" : "")} ===\n";
-            output += $"Name: {p.Name} (Lv.{p.Level}) | Race: {p.Race}\n";
-            output += $"EXP: {p.Exp,6}/{p.ExpRequired,6} Next: {p.ExpRequired - p.Exp,6}\n";
-            output += "-----------------------------\nRaw Stats:\n";
+        public string RenderPersonaDetailsToString(Persona persona, bool isEquipped)
+            => LegacyPersonaStatusProjection.FromPersona(persona).RenderDetails(isEquipped);
 
-            var displayStats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
-            foreach (var stat in displayStats)
-            {
-                int val = p.StatModifiers.ContainsKey(stat) ? p.StatModifiers[stat] : 0;
-                output += $" {stat,-4}: {val,3}\n";
-            }
-
-            output += "\nRESISTANCES:\n";
-            foreach (Element elem in Enum.GetValues(typeof(Element)))
-            {
-                if (elem == Element.None) continue;
-                Affinity aff = p.GetAffinity(elem);
-                if (aff != Affinity.Normal)
-                {
-                    output += $" {elem,-10}: {aff}\n";
-                }
-            }
-
-            output += "-----------------------------\nSkills:\n";
-            foreach (var s in p.SkillSet) output += $" - {s}\n";
-
-            var nextSkills = p.SkillsToLearn.Where(k => k.Key > p.Level).OrderBy(k => k.Key).Take(3).ToList();
-            if (nextSkills.Any())
-            {
-                output += "\nNext to Learn:\n";
-                foreach (var ns in nextSkills) output += $" [Lv.{ns.Key,2}] {ns.Value}\n";
-            }
-            else if (p.SkillsToLearn.Any())
-            {
-                output += "\n(Mastered)\n";
-            }
-
-            return output;
-        }
-
-        private string GetDemonDetailString(Combatant demon)
-        {
-            string output = "=== DEMON DETAILS ===\n";
-            output += $"Name: {demon.Name} (Lv.{demon.Level})\n";
-            output += $"HP: {demon.CurrentHP,3}/{demon.MaxHP,3} SP: {demon.CurrentSP,3}/{demon.MaxSP,3}\n";
-            output += $"EXP: {demon.Exp,6}/{demon.ExpRequired,6} Next: {demon.ExpRequired - demon.Exp,6}\n";
-            output += "-----------------------------\n";
-
-            var stats = new[] { StatType.St, StatType.Ma, StatType.Vi, StatType.Ag, StatType.Lu };
-            foreach (var stat in stats)
-            {
-                int total = demon.GetStat(stat);
-                output += $"{stat,-4}: {total,3}\n";
-            }
-
-            output += "\nRESISTANCES:\n";
-            var activeP = demon.ActivePersona;
-            foreach (Element elem in Enum.GetValues(typeof(Element)))
-            {
-                if (elem == Element.None) continue;
-                Affinity aff = activeP?.GetAffinity(elem) ?? Affinity.Normal;
-                if (aff != Affinity.Normal)
-                {
-                    output += $" {elem,-10}: {aff}\n";
-                }
-            }
-
-            output += "-----------------------------\nSkills:\n";
-            foreach (var s in demon.GetConsolidatedSkills()) output += $" - {s}\n";
-
-            if (demon.ActivePersona != null)
-            {
-                var nextSkills = demon.ActivePersona.SkillsToLearn.Where(k => k.Key > demon.Level).OrderBy(k => k.Key).Take(3).ToList();
-                if (nextSkills.Any())
-                {
-                    output += "\nNext to Learn:\n";
-                    foreach (var ns in nextSkills) output += $" [Lv.{ns.Key,2}] {ns.Value}\n";
-                }
-                else if (demon.ActivePersona.SkillsToLearn.Any())
-                {
-                    output += "\n(Mastered)\n";
-                }
-            }
-
-            return output;
-        }
+        public string RenderDemonDetailsToString(Combatant demon)
+            => LegacyStatusPresentationProjection.FromCombatant(demon).RenderDemonDetails();
 
         #endregion
 

@@ -1184,6 +1184,19 @@ Track O1 began from `e163b81` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O2 Completion
+
+Track O2 began from `a9f2f87` on `track-12-recovery`.
+
+- Replaced the O1 human-only status projection with `LegacyStatusPresentationProjection`, a console-owned adapter that copies live legacy actor and Persona data into framework runtime snapshots plus immutable display details.
+- Routed Human status, Persona details, demon details, stock rows, organization rows, summon rows, and equipment-slot labels through projection helpers while preserving existing `StatusUIBridge` public methods and return values.
+- Kept stat allocation, stock mutation, equipment mutation, battle presentation, Cathedral presentation, and production content authority unchanged.
+- Updated the parity ledger. `console_presentation` remains `parallel_partial`; no removal is authorized.
+- Focused O2 verification passed: status projection tests, plain menu command tests, and the status/equipment surface characterization test reported 8 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 640 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

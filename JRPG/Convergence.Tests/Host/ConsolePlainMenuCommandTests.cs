@@ -123,7 +123,7 @@ public sealed class ConsolePlainMenuCommandTests
         player.CharacterStats[StatType.Ag] = 4;
         player.CharacterStats[StatType.Lu] = 3;
 
-        string rendered = LegacyHumanStatusProjection.FromCombatant(player).Render();
+        string rendered = LegacyStatusPresentationProjection.FromCombatant(player).RenderHumanStatus();
 
         Assert.Contains("Name: Hero (Lv.9) | Class: Human", rendered, StringComparison.Ordinal);
         Assert.Contains("HP:  70/ 90 SP:  25/ 40", rendered, StringComparison.Ordinal);

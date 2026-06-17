@@ -148,6 +148,18 @@ Exit gate:
 - Existing status workflow tests pass unchanged.
 - New projection tests cover Human, Persona User, Wild Card, Operator, and Demon views.
 
+Completion:
+
+- Replaced the narrow human-only projection with `LegacyStatusPresentationProjection`.
+- Human summaries, Persona details, demon details, Persona stock labels, demon stock labels, organize-party labels, summon labels, and equipment slot labels now render through copied projection data.
+- `StatusUIBridge` keeps its public methods, menu order, cancellation behavior, status-peek flow, and legacy return values.
+- O2 remains read-only presentation work. Stat allocation, equipment mutation, Persona/demon stock mutation, rich battle presentation, Cathedral presentation, and production content authority remain outside this subtrack.
+- The parity ledger keeps `console_presentation` at `parallel_partial` and records `StatusPresentationProjectionTests` as O2 evidence.
+- Focused O2 verification passed: status projection tests, plain menu command tests, and the status/equipment surface characterization test reported 8 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 640 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O3: Inventory And Field Effect Presentation
 
 Goal:

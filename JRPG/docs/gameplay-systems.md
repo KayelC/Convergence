@@ -90,7 +90,7 @@ Field gameplay is split between:
 - `FieldServiceEngine`: hospital restoration, field items, field skills, equipment, stat allocation, and progression side effects.
 - `DungeonManager`: console compatibility facade over framework floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
 - `ExplorationProcessor`: field-side movement messages, entry triggers, battle handoff, and enemy hydration.
-- Field bridges: menu rendering and choice collection. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now route through the framework host-command contracts before returning legacy-compatible values to existing conductors. Rich preview menus and long-form inspection screens remain legacy presentation surfaces.
+- Field bridges: menu rendering and choice collection. Plain field, city, inventory, status, dungeon, terminal, hospital-patient, and field-target menus now route through the framework host-command contracts before returning legacy-compatible values to existing conductors. Status summaries, Persona details, demon details, stock rows, organization rows, summon rows, and equipment slot labels now render through copied runtime projection data. Rich preview menus outside status remain legacy presentation surfaces.
 
 Dungeon state is still stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses. Direct debug/test warps preserve the legacy ability to move to a floor without increasing max-floor progress.
 
