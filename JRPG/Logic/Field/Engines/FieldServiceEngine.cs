@@ -211,9 +211,30 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// Validates funds and applies the state change.
         /// Now handles persistent ailment removal (Task Implementation).
         /// </summary>
-        public bool TryRestoreCombatant(Combatant patient)
+        public bool TryRestoreCombatant(Combatant patient) =>
+            TryRestoreCombatantDetailed(patient).LegacySuccess;
+
+        public HospitalTreatmentPresentationResult TryRestoreCombatantDetailed(Combatant patient)
         {
-            return LegacyInventoryResourceAdapter.Shared.Restore(_economy, patient).Applied;
+            var result = LegacyInventoryResourceAdapter.Shared.Restore(_economy, patient);
+            string? message;
+            ConsoleColor color;
+            int delay;
+
+            if (result.Applied)
+            {
+                message = $"{patient.Name} has been fully restored!";
+                color = ConsoleColor.Green;
+                delay = 800;
+            }
+            else
+            {
+                message = "Could not complete treatment.";
+                color = ConsoleColor.Red;
+                delay = 1000;
+            }
+
+            return new HospitalTreatmentPresentationResult(patient, result, message, color, delay);
         }
 
         #endregion

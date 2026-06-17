@@ -8,6 +8,7 @@ using JRPGPrototype.Host;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Services;
 using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Field;
 using JRPGPrototype.Logic.Field.State;
 
 namespace JRPGPrototype.Logic.Field.Bridges
@@ -113,7 +114,10 @@ namespace JRPGPrototype.Logic.Field.Bridges
         /// Renders the medical treatment list.
         /// Feature: Sorts injured party/stock members to the top.
         /// </summary>
-        public Combatant SelectHospitalPatient(Combatant player)
+        public Combatant SelectHospitalPatient(Combatant player) =>
+            SelectHospitalPatientResult(player).Patient!;
+
+        public HospitalPatientSelectionResult SelectHospitalPatientResult(Combatant player)
         {
             // Gather all possible patients: Player + Active Party + Stock
             var patients = new List<Combatant> { player };
@@ -125,11 +129,17 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 .OrderByDescending(p => (p.CurrentHP < p.MaxHP || p.CurrentSP < p.MaxSP))
                 .ToList();
 
+            if (sortedPatients.Count == 0)
+            {
+                return HospitalPatientSelectionResult.Unavailable;
+            }
+
             string header = $"=== HOSPITAL / CLOCK ===\n" +
                             $"Current Macca: {_economy.Macca}\n" +
                             $"Select a member to treat:";
 
             var options = new List<HostCommandOption<HospitalPatientSelection>>();
+            var presentations = new List<HospitalPatientPresentation>();
 
             for (int index = 0; index < sortedPatients.Count; index++)
             {
@@ -141,6 +151,14 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 bool isHealthy = (hpMissing <= 0 && spMissing <= 0);
                 string costDisplay = isHealthy ? "[HEALTHY]" : $"{cost} M";
                 string label = $"{p.Name,-15} | HP: {p.CurrentHP,3}/{p.MaxHP,3} SP: {p.CurrentSP,3}/{p.MaxSP,3} | {costDisplay}";
+                presentations.Add(new HospitalPatientPresentation(
+                    p,
+                    index,
+                    hpMissing,
+                    spMissing,
+                    cost,
+                    isHealthy,
+                    label));
 
                 options.Add(new HostCommandOption<HospitalPatientSelection>(
                     new HospitalPatientSelection(p, IsLeave: false, index),
@@ -157,8 +175,8 @@ namespace JRPGPrototype.Logic.Field.Bridges
                 ConsoleHostCommandReader.Read(_io, header, options, 0);
 
             HospitalPatientSelection? selection = result.Command;
-            if (!result.IsSelected || selection is null || selection.IsLeave) return null!;
-            return selection.Patient!;
+            if (!result.IsSelected || selection is null || selection.IsLeave) return HospitalPatientSelectionResult.Back;
+            return HospitalPatientSelectionResult.Selected(presentations[selection.Index]);
         }
 
         #endregion

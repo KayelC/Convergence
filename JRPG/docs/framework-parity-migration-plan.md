@@ -113,12 +113,12 @@ The following capabilities must not disappear during migration.
 | Affinity knowledge and analysis | `BattleKnowledge` | Clean stores exist; interactive battle still uses legacy session knowledge |
 | Negotiation, demands, recruitment | `NegotiationEngine`, `BattleConductor` | Framework session and recruitment services with console adapters; legacy data remains authoritative |
 | EXP and Macca battle rewards | `CombatMath`, `BattleConductor` | Framework reward result service with console adapter; ruleset JSON binding remains incomplete |
-| Inventory quantities | `InventoryManager` | Item executor reports consumption only |
-| Equipment ownership and equipping | `InventoryManager`, `FieldServiceEngine` | Missing clean definitions and runtime |
-| Economy and Macca transactions | `EconomyManager` | Missing |
-| Shops and buy/sell pricing | `ShopEngine`, `ShopUIBridge` | Missing |
-| Hospital restoration | `FieldServiceEngine` | Missing |
-| Field skill and item use | `FieldServiceEngine` | Clean effect execution exists; interactive workflow not migrated |
+| Inventory quantities | `InventoryManager` | Framework resource services with console adapter; legacy item content remains authoritative |
+| Equipment ownership and equipping | `InventoryManager`, `FieldServiceEngine` | Framework resource services with console adapter; legacy equipment content remains authoritative |
+| Economy and Macca transactions | `EconomyManager` | Framework transaction service with console adapter |
+| Shops and buy/sell pricing | `ShopEngine`, `ShopUIBridge` | Framework transaction service with O8 typed presentation; legacy shop data remains authoritative |
+| Hospital restoration | `FieldServiceEngine` | Framework restoration service with O8 typed presentation; current hospital UI quirks preserved |
+| Field skill and item use | `FieldServiceEngine` | Clean field/action presentation exists; legacy skill/item content and effect parsing remain host-owned |
 | City and field navigation | `FieldConductor` | Missing framework state machine |
 | Dungeon traversal and terminals | `DungeonManager`, `DungeonState`, `ExplorationProcessor` | Missing |
 | Encounter and boss preparation | `ExplorationProcessor` | Missing encounter schema/runtime |
@@ -1265,6 +1265,21 @@ Track O7 began from `01ddcc4` on `track-12-recovery`.
 - Updated the parity ledger. `negotiation_and_recruitment`, `battle_rewards`, `battle_actions`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
 - Focused O7 verification passed: `NegotiationRewardPresentationTests`, `NegotiationRewardRuntimeTests`, `BattleCommandShellTests`, `BattleEventPresentationTests`, and the negotiation/ordinary battle characterizations reported 40 passed, 0 failed, 0 skipped.
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 688 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+### Track O8 Completion
+
+Track O8 began from `713d3cb` on `track-12-recovery`.
+
+- Added typed console-host presentation records for shop command selection, buy/sell offers, transaction confirmation, transaction display, hospital patient selection, and hospital treatment display.
+- `ShopUIBridge` keeps `OpenShop` unchanged and now routes command selection, offer selection, confirmation, and inspection through typed results.
+- `ShopEngine` keeps `ExecutePurchase` and `ExecuteSale` unchanged and now exposes detailed framework-backed transaction presentation results.
+- `ServiceUIBridge`, `FieldServiceEngine`, and `FieldConductor` now present hospital selection and treatment from typed results backed by `HospitalRestorationResult`.
+- Legacy shop data, Luck pricing, metadata repair, equipment ownership, hospital UI quirks, production `Data/Jsons`, and framework public APIs remain unchanged.
+- Updated the parity ledger. `shops`, `hospital`, `economy`, `equipment_ownership`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O8 verification passed: `ShopHospitalPresentationTests`, `ResourceManagementServiceTests`, and the shop/hospital/menu characterizations reported 17 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 694 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 

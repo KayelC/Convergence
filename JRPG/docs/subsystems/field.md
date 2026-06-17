@@ -49,6 +49,8 @@ During exploration:
 
 `FieldServiceEngine.OpenShop` delegates to `ShopUIBridge` and `ShopEngine`. Track L keeps that console flow, but `ShopEngine` now delegates buy/sell assessment and mutation to framework resource-management services through `LegacyInventoryResourceAdapter`.
 
+Track O8 keeps the same visible shop flow while adding typed console-host presentation results for shop command selection, buy/sell offers, confirmation, inspection, transaction success, and transaction failure. The UI still reads legacy `Database.ShopInventory` and equipment/item metadata, but mutation and failure decisions are presented from framework-backed transaction results.
+
 - Buying checks Macca, applies Luck-based discounts, and adds item/equipment ownership.
 - Selling removes inventory/equipment and grants Luck-scaled Macca.
 - Duplicate equipment purchases, insufficient Macca, unavailable stock, and equipped-item sales are rejected before mutation.
@@ -60,6 +62,8 @@ During exploration:
 Hospital restoration costs 1 Macca per missing HP and 5 Macca per missing SP. Treatment fully restores HP/SP, removes ailments, and clears encounter-persistent battle state.
 
 Track L routes the hospital cost/payment/restoration decision through the framework. The engine still permits ailment-only treatment at zero cost, while the current hospital UI continues to mark full HP/SP patients as healthy to preserve visible menu behavior until the field state machine is migrated.
+
+Track O8 adds typed hospital patient-selection and treatment-presentation results. `FieldConductor` now publishes success/failure from those results, preserving the existing “fully restored” and “could not complete treatment” messages.
 
 Field item/skill usage now routes through typed console-host field selection and execution results before adapting back to the legacy conductor signals. The legacy item and skill data, effect-string parsing, and visible messages remain unchanged.
 

@@ -321,16 +321,14 @@ namespace JRPGPrototype.Logic.Field
         {
             while (true)
             {
-                Combatant patient = _serviceUI.SelectHospitalPatient(_player);
-                if (patient == null) return;
+                HospitalPatientSelectionResult selection = _serviceUI.SelectHospitalPatientResult(_player);
+                if (selection.Kind != HospitalSelectionResultKind.Selected || selection.Patient is null) return;
 
-                if (!_logicEngine.TryRestoreCombatant(patient))
+                HospitalTreatmentPresentationResult treatment =
+                    _logicEngine.TryRestoreCombatantDetailed(selection.Patient);
+                if (treatment.Message is not null)
                 {
-                    _messenger.Publish("Could not complete treatment.", ConsoleColor.Red, 1000);
-                }
-                else
-                {
-                    _messenger.Publish($"{patient.Name} has been fully restored!", ConsoleColor.Green, 800);
+                    _messenger.Publish(treatment.Message, treatment.Color, treatment.Delay);
                 }
             }
         }

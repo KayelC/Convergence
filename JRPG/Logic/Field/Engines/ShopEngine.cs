@@ -63,7 +63,10 @@ namespace JRPGPrototype.Logic.Field.Engines
         /// Validates funds and executes the purchase of an item or piece of equipment.
         /// Includes a safety check to ensure Name/Id hydration.
         /// </summary>
-        public bool ExecutePurchase(ShopEntry entry, Combatant player)
+        public bool ExecutePurchase(ShopEntry entry, Combatant player) =>
+            ExecutePurchaseDetailed(entry, player).LegacySuccess;
+
+        public ShopTransactionPresentationResult ExecutePurchaseDetailed(ShopEntry entry, Combatant player)
         {
             var result = LegacyInventoryResourceAdapter.Shared.ExecutePurchase(
                 _inventory,
@@ -71,21 +74,16 @@ namespace JRPGPrototype.Logic.Field.Engines
                 entry,
                 player.GetStat(StatType.Lu));
 
-            if (!result.Applied)
-            {
-                string message = result.Code == ResourceTransactionCode.InsufficientCurrency
-                    ? "\nNot enough Macca!"
-                    : result.Diagnostics.FirstOrDefault()?.Message ?? "\nPurchase failed.";
-                _messenger.Publish(message, ConsoleColor.Gray, 800);
-                return false;
-            }
-
-            _messenger.Publish("\nBought!", ConsoleColor.Gray, 500);
-            return true;
+            ShopTransactionPresentationResult presentation = BuildPurchasePresentation(entry, result);
+            PublishTransactionPresentation(presentation);
+            return presentation;
         }
 
         // Executes the sale of a player-owned item or unequipped piece of equipment.
-        public void ExecuteSale(string id, ShopCategory category, Combatant player)
+        public void ExecuteSale(string id, ShopCategory category, Combatant player) =>
+            ExecuteSaleDetailed(id, category, player);
+
+        public ShopTransactionPresentationResult ExecuteSaleDetailed(string id, ShopCategory category, Combatant player)
         {
             var entry = Database.ShopInventory.FirstOrDefault(e => e.Id == id && e.Category == category)
                 ?? new ShopEntry { Id = id, Name = id, BasePrice = 100, Category = category };
@@ -96,13 +94,58 @@ namespace JRPGPrototype.Logic.Field.Engines
                 player.GetStat(StatType.Lu),
                 player);
 
-            if (result.Applied)
-            {
-                _messenger.Publish("\nSold!", ConsoleColor.Gray, 500);
-            }
+            ShopTransactionPresentationResult presentation = BuildSalePresentation(entry, result);
+            PublishTransactionPresentation(presentation);
+            return presentation;
         }
 
         #endregion
+
+        private static ShopTransactionPresentationResult BuildPurchasePresentation(
+            ShopEntry entry,
+            ShopTransactionResult result)
+        {
+            string? message = result.Applied
+                ? "\nBought!"
+                : result.Code == ResourceTransactionCode.InsufficientCurrency
+                    ? "\nNot enough Macca!"
+                    : result.Diagnostics.FirstOrDefault()?.Message ?? "\nPurchase failed.";
+
+            return new ShopTransactionPresentationResult(
+                ShopTransactionOperation.Buy,
+                entry.Category,
+                entry.Id,
+                entry.Name,
+                result.Price,
+                result,
+                message,
+                ConsoleColor.Gray,
+                result.Applied ? 500 : 800);
+        }
+
+        private static ShopTransactionPresentationResult BuildSalePresentation(
+            ShopEntry entry,
+            ShopTransactionResult result)
+        {
+            return new ShopTransactionPresentationResult(
+                ShopTransactionOperation.Sell,
+                entry.Category,
+                entry.Id,
+                entry.Name,
+                result.Price,
+                result,
+                result.Applied ? "\nSold!" : null,
+                ConsoleColor.Gray,
+                result.Applied ? 500 : 0);
+        }
+
+        private void PublishTransactionPresentation(ShopTransactionPresentationResult presentation)
+        {
+            if (presentation.Message is not null)
+            {
+                _messenger.Publish(presentation.Message, presentation.Color, presentation.Delay);
+            }
+        }
 
         #region Inspection Logic
 

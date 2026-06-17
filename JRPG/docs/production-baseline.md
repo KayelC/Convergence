@@ -308,6 +308,20 @@ Track O7 began from `01ddcc4` and migrates negotiation/recruitment/reward presen
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+## Track O8 Boundary
+
+Track O8 began from `713d3cb` and migrates shop/hospital presentation into typed console-host results without changing shop data, pricing, hospital formulas, or visible menu behavior.
+
+- `ShopHospitalPresentationResults` records shop command selection, buy/sell offer selection, confirmation, inspection, transaction display, hospital patient selection, and hospital treatment presentation.
+- `ShopUIBridge` keeps `OpenShop` as the legacy wrapper and routes command, offer, confirmation, and inspection surfaces through typed results.
+- `ShopEngine` keeps `ExecutePurchase` and `ExecuteSale` compatible while exposing detailed transaction presentation backed by framework `ShopTransactionResult`.
+- `ServiceUIBridge`, `FieldServiceEngine`, and `FieldConductor` now route hospital selection and treatment display through typed results backed by framework `HospitalRestorationResult`.
+- Legacy `shop_inventory.json`, item/equipment metadata repair, Luck pricing, equipped sale blocking, hospital HP/SP eligibility labels, zero-cost ailment-only engine treatment, production `Data/Jsons`, and framework public APIs remain protected. Removal remains unauthorized.
+- Focused O8 verification passed: `ShopHospitalPresentationTests`, `ResourceManagementServiceTests`, and the shop/hospital/menu characterizations reported 17 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 694 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track O2 Boundary
 
 Track O2 began from `a9f2f87` and migrates read-only status presentation deeper into the console-host/framework adapter boundary.

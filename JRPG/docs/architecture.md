@@ -79,6 +79,8 @@ Track O6 routes framework battle encounter events through a console-host event p
 
 Track O7 routes negotiation, recruitment, and victory reward presentation through typed console-host results. `NegotiationEngine` now exposes detailed prompt/event/outcome records around the framework session service, `BattleConductor` shares one negotiation outcome presenter across its battle paths, and reward totals are presented from immutable framework reward results before legacy mutation is applied.
 
+Track O8 routes shop and hospital presentation through typed console-host results. `ShopUIBridge` now exposes explicit command, offer, confirmation, inspection, and transaction result shapes over the framework-backed shop transactions, while `ServiceUIBridge`, `FieldServiceEngine`, and `FieldConductor` present hospital selection and treatment from typed results over framework restoration transactions. Legacy shop data, pricing formulas, metadata repair, and hospital UI quirks remain host-owned.
+
 Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining battle/Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns

@@ -434,6 +434,20 @@ Exit gate:
 - Shop/hospital mutation decisions and visible failures are driven by framework transaction results.
 - Existing shop and hospital characterization tests remain green.
 
+Completion:
+
+- Track O8 began from `713d3cb` on `track-12-recovery`.
+- Added `ShopHospitalPresentationResults` for typed shop command, offer selection, confirmation, inspection, transaction, hospital patient, and hospital treatment presentation records.
+- `ShopUIBridge` now keeps `OpenShop` as the public legacy wrapper while routing shop command selection, buy/sell selection, confirmation, and inspection through typed results.
+- `ShopEngine` now keeps `ExecutePurchase` and `ExecuteSale` as legacy wrappers while exposing detailed transaction presentation results backed by framework `ShopTransactionResult`.
+- `ServiceUIBridge`, `FieldServiceEngine`, and `FieldConductor` now route hospital patient selection and treatment display through typed results backed by framework `HospitalRestorationResult`.
+- Luck pricing, missing metadata fallback, equipped sale blocking, duplicate equipment rejection, hospital HP/SP eligibility labels, zero-cost ailment-only engine treatment, production `Data/Jsons`, and framework public APIs did not change.
+- Updated the parity ledger. `shops`, `hospital`, `economy`, `equipment_ownership`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O8 verification passed: `ShopHospitalPresentationTests`, `ResourceManagementServiceTests`, and the shop/hospital/menu characterizations reported 17 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 694 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O9: Dungeon Traversal Presentation
 
 Goal:

@@ -45,16 +45,16 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             while (true)
             {
-                string header = $"--- {title} ---\nMacca: {_economy.Macca}";
-                List<string> options = new List<string> { "Buy", "Sell", "Exit" };
+                ShopSessionCommandResult command = SelectShopSessionCommand(title, shopIndex);
+                if (command.Kind is ShopSessionCommandKind.Back or ShopSessionCommandKind.Exit)
+                {
+                    return;
+                }
 
-                int choice = _io.RenderMenu(header, options, shopIndex);
+                shopIndex = command.SelectedIndex;
 
-                if (choice == -1 || choice == 2) return; // Exit logic
-                shopIndex = choice;
-
-                if (choice == 0) BuyMenu(player, shopType);
-                else if (choice == 1) SellMenu(player, shopType);
+                if (command.Kind == ShopSessionCommandKind.Buy) BuyMenu(player, shopType);
+                else if (command.Kind == ShopSessionCommandKind.Sell) SellMenu(player, shopType);
             }
         }
 
@@ -75,26 +75,19 @@ namespace JRPGPrototype.Logic.Field.Bridges
 
             while (true)
             {
-                List<string> options = filteredStock.Select(entry =>
-                    $"{entry.Name,-18} {entry.BasePrice,5} M").ToList();
-
-                string header = $"--- BUY ({shopType}) ---\nMacca: {_economy.Macca}";
-
-                int idx = _io.RenderMenu(header, options, listIndex, null, (index) =>
+                ShopOfferSelectionResult selection = SelectBuyOffer(player, shopType, filteredStock, listIndex);
+                if (selection.Kind != ShopSelectionResultKind.Selected || selection.Offer is null)
                 {
-                    var entry = filteredStock[index];
-                    ShowItemInspection(entry, player, isBuying: true);
-                });
+                    return;
+                }
 
-                if (idx == -1) return;
-                listIndex = idx;
+                listIndex = selection.Offer.Index;
+                int finalPrice = _engine.CalculateBuyPrice(selection.Offer.Entry, player);
 
-                var selected = filteredStock[idx];
-                int finalPrice = _engine.CalculateBuyPrice(selected, player);
-
-                if (ConfirmTransaction(selected.Name, finalPrice, isBuying: true))
+                if (ConfirmTransactionDetailed(selection.Offer.Name, finalPrice, isBuying: true).Kind ==
+                    ShopTransactionConfirmationKind.Confirmed)
                 {
-                    _engine.ExecutePurchase(selected, player);
+                    _engine.ExecutePurchaseDetailed(selection.Offer.Entry, player);
                 }
             }
         }
@@ -113,65 +106,176 @@ namespace JRPGPrototype.Logic.Field.Bridges
                     return;
                 }
 
-                List<string> options = new List<string>();
-                List<bool> disabled = new List<bool>();
-
-                foreach (var obj in sellables)
-                {
-                    string id = GetIdFromObject(obj);
-                    string name = GetNameFromObject(obj);
-                    bool equipped = IsEquipped(obj, player);
-                    int price = _engine.CalculateSellPrice(id, targetCategory, player);
-
-                    options.Add($"{name,-15}{(equipped ? " [E]" : "")} ({price} M)");
-                    disabled.Add(equipped);
-                }
-
                 if (listIndex >= sellables.Count) listIndex = Math.Max(0, sellables.Count - 1);
 
-                string header = $"--- SELL ({shopType}) ---\nMacca: {_economy.Macca}";
-
-                int idx = _io.RenderMenu(header, options, listIndex, disabled, (index) =>
+                ShopOfferSelectionResult selection = SelectSellOffer(player, shopType, targetCategory, sellables, listIndex);
+                if (selection.Kind != ShopSelectionResultKind.Selected || selection.Offer is null)
                 {
-                    _messenger.Publish("Selling gives 50% value + Luck Bonus.");
-                });
+                    return;
+                }
 
-                if (idx == -1) return;
-                listIndex = idx;
-
-                var selectedObj = sellables[idx];
-                string sellId = GetIdFromObject(selectedObj);
-
-                if (ConfirmTransaction(GetNameFromObject(selectedObj),
-                    _engine.CalculateSellPrice(sellId, targetCategory, player), isBuying: false))
+                listIndex = selection.Offer.Index;
+                if (ConfirmTransactionDetailed(selection.Offer.Name, selection.Offer.DisplayedPrice, isBuying: false).Kind ==
+                    ShopTransactionConfirmationKind.Confirmed)
                 {
-                    _engine.ExecuteSale(sellId, targetCategory, player);
+                    _engine.ExecuteSaleDetailed(selection.Offer.ContentId, targetCategory, player);
                 }
             }
         }
 
         #region Helpers and UI Coordination
 
-        private bool ConfirmTransaction(string name, int price, bool isBuying)
+        internal ShopSessionCommandResult SelectShopSessionCommand(string title, int initialIndex)
+        {
+            string header = $"--- {title} ---\nMacca: {_economy.Macca}";
+            List<string> options = new List<string> { "Buy", "Sell", "Exit" };
+
+            int choice = _io.RenderMenu(header, options, initialIndex);
+            return choice switch
+            {
+                -1 => ShopSessionCommandResult.Back,
+                0 => ShopSessionCommandResult.Buy(choice),
+                1 => ShopSessionCommandResult.Sell(choice),
+                2 => ShopSessionCommandResult.Exit(choice),
+                _ => ShopSessionCommandResult.Unavailable
+            };
+        }
+
+        internal ShopOfferSelectionResult SelectBuyOffer(
+            Combatant player,
+            ShopType shopType,
+            List<ShopEntry> filteredStock,
+            int initialIndex)
+        {
+            List<ShopOfferPresentation> offers = filteredStock
+                .Select((entry, index) => new ShopOfferPresentation(
+                    entry,
+                    entry.Id,
+                    entry.Name,
+                    entry.Category,
+                    index,
+                    entry.BasePrice,
+                    $"{entry.Name,-18} {entry.BasePrice,5} M"))
+                .ToList();
+            if (offers.Count == 0)
+            {
+                return ShopOfferSelectionResult.Unavailable;
+            }
+
+            List<string> options = offers.Select(offer => offer.Label).ToList();
+            string header = $"--- BUY ({shopType}) ---\nMacca: {_economy.Macca}";
+
+            int idx = _io.RenderMenu(header, options, initialIndex, null, (index) =>
+            {
+                if (index >= 0 && index < offers.Count)
+                {
+                    ShowItemInspectionDetailed(offers[index].Entry, player, isBuying: true);
+                }
+            });
+
+            return idx == -1
+                ? ShopOfferSelectionResult.Back
+                : ShopOfferSelectionResult.Selected(offers[idx]);
+        }
+
+        internal ShopOfferSelectionResult SelectSellOffer(
+            Combatant player,
+            ShopType shopType,
+            ShopCategory targetCategory,
+            List<object> sellables,
+            int initialIndex)
+        {
+            List<ShopOfferPresentation> offers = BuildSellOffers(player, targetCategory, sellables);
+            if (offers.Count == 0)
+            {
+                return ShopOfferSelectionResult.Unavailable;
+            }
+
+            List<string> options = offers.Select(offer => offer.Label).ToList();
+            List<bool> disabled = offers.Select(offer => offer.IsEquipped).ToList();
+            string header = $"--- SELL ({shopType}) ---\nMacca: {_economy.Macca}";
+
+            int idx = _io.RenderMenu(header, options, initialIndex, disabled, (index) =>
+            {
+                _messenger.Publish("Selling gives 50% value + Luck Bonus.");
+            });
+
+            return idx == -1
+                ? ShopOfferSelectionResult.Back
+                : ShopOfferSelectionResult.Selected(offers[idx]);
+        }
+
+        internal ShopTransactionConfirmationResult ConfirmTransactionDetailed(string name, int price, bool isBuying)
         {
             string verb = isBuying ? "Buy" : "Sell";
             _messenger.Publish($"\n{verb} {name} for {price} M?");
 
             int choice = _io.RenderMenu("Confirm?", new List<string> { "Yes", "No" }, 0);
-            return choice == 0;
+            return choice switch
+            {
+                0 => ShopTransactionConfirmationResult.Confirmed,
+                1 => ShopTransactionConfirmationResult.Declined,
+                _ => ShopTransactionConfirmationResult.Back
+            };
         }
 
-        private void ShowItemInspection(ShopEntry entry, Combatant player, bool isBuying)
+        internal ShopInspectionPresentationResult ShowItemInspectionDetailed(ShopEntry entry, Combatant player, bool isBuying)
         {
             var (desc, stats) = _engine.GetItemDetails(entry);
-            int price = isBuying ? _engine.CalculateBuyPrice(entry, player) : 0;
+            int? price = isBuying ? _engine.CalculateBuyPrice(entry, player) : null;
+            List<ShopHospitalPresentationEvent> events = new()
+            {
+                PublishShopEvent($"Info: {desc}"),
+                PublishShopEvent($"Stats: {stats}")
+            };
 
-            _messenger.Publish($"Info: {desc}");
-            _messenger.Publish($"Stats: {stats}");
             if (isBuying)
             {
-                _messenger.Publish($"Price: {price} M (Base: {entry.BasePrice})");
+                events.Add(PublishShopEvent($"Price: {price} M (Base: {entry.BasePrice})"));
             }
+
+            return new ShopInspectionPresentationResult(desc, stats, price, events);
+        }
+
+        private List<ShopOfferPresentation> BuildSellOffers(
+            Combatant player,
+            ShopCategory category,
+            List<object> sellables)
+        {
+            List<ShopOfferPresentation> offers = new List<ShopOfferPresentation>();
+            for (int index = 0; index < sellables.Count; index++)
+            {
+                object obj = sellables[index];
+                string id = GetIdFromObject(obj);
+                string name = GetNameFromObject(obj);
+                bool equipped = IsEquipped(obj, player);
+                int price = _engine.CalculateSellPrice(id, category, player);
+                var entry = Database.ShopInventory.FirstOrDefault(e => e.Id == id && e.Category == category)
+                    ?? new ShopEntry { Id = id, Name = id, BasePrice = 100, Category = category };
+
+                offers.Add(new ShopOfferPresentation(
+                    entry,
+                    id,
+                    name,
+                    category,
+                    index,
+                    price,
+                    $"{name,-15}{(equipped ? " [E]" : "")} ({price} M)",
+                    equipped));
+            }
+
+            return offers;
+        }
+
+        private ShopHospitalPresentationEvent PublishShopEvent(
+            string? message,
+            ConsoleColor color = ConsoleColor.Gray,
+            int delay = 0,
+            bool waitForInput = false,
+            bool clearScreen = false)
+        {
+            _messenger.Publish(message, color, delay, waitForInput, clearScreen);
+            return new ShopHospitalPresentationEvent(message, color, delay, waitForInput, clearScreen);
         }
 
         private List<object> GetSellableObjects(ShopCategory category)
