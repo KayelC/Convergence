@@ -55,6 +55,7 @@ namespace JRPGPrototype.Logic.Battle
         private readonly CompendiumRegistry _compendium;
         private readonly LegacyRecruitmentAdapter _recruitmentAdapter;
         private readonly LegacyBattleRewardAdapter _rewardAdapter;
+        private readonly LegacyBattleCommandShellAdapter _commandShell;
 
         // Added session-specific list to prevent re-recruiting in same battle
         private readonly HashSet<string> _sessionRecruitedIds = new HashSet<string>();
@@ -106,6 +107,7 @@ namespace JRPGPrototype.Logic.Battle
             _negotiationEngine = new NegotiationEngine(_io, _party, _inv, _eco);
             _recruitmentAdapter = LegacyRecruitmentAdapter.Shared;
             _rewardAdapter = LegacyBattleRewardAdapter.Shared;
+            _commandShell = new LegacyBattleCommandShellAdapter();
         }
 
         // Entry point for the encounter. Handles initiative and the phase loop.
@@ -304,11 +306,15 @@ namespace JRPGPrototype.Logic.Battle
                     {
                         BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor);
                         if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
-                        targets = targetResult.Targets.ToList();
+                        BattleCommandShellResult command = _commandShell.CreateBasicAttack(actor, targetResult.Targets);
+                        if (!command.CanExecute) continue;
+                        targets = command.Targets.ToList();
                         actionCommitted = true;
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Guard)
                     {
+                        BattleCommandShellResult command = _commandShell.CreateGuard(actor);
+                        if (!command.CanExecute) continue;
                         _processor.ExecuteGuard(actor);
                         return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
                     }
@@ -331,6 +337,8 @@ namespace JRPGPrototype.Logic.Battle
                                 if (personaSelection.Kind == BattleSelectionResultKind.Selected &&
                                     personaSelection.Persona != null)
                                 {
+                                    BattleCommandShellResult command = _commandShell.CreatePersonaSwap(actor, personaSelection.Persona);
+                                    if (!command.CanExecute) continue;
                                     _processor.ExecutePersonaSwap(actor, personaSelection.Persona);
                                     actor.HasSwappedThisTurn = true;
                                     // FREE ACTION: Logic remains in this inner loop.
@@ -345,7 +353,10 @@ namespace JRPGPrototype.Logic.Battle
 
                                 if (targetResult.Kind == BattleSelectionResultKind.Selected)
                                 {
-                                    targets = targetResult.Targets.ToList();
+                                    BattleCommandShellResult command = _commandShell.CreateLegacySkill(actor, skill, targetResult.Targets);
+                                    if (!command.CanExecute) continue;
+                                    targets = command.Targets.ToList();
+                                    skill = command.Skill;
                                     actionCommitted = true;
                                     selectingPersonaAction = false;
                                 }
@@ -363,7 +374,10 @@ namespace JRPGPrototype.Logic.Battle
 
                         BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, skill);
                         if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
-                        targets = targetResult.Targets.ToList();
+                        BattleCommandShellResult command = _commandShell.CreateLegacySkill(actor, skill, targetResult.Targets);
+                        if (!command.CanExecute) continue;
+                        targets = command.Targets.ToList();
+                        skill = command.Skill;
                         actionCommitted = true;
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Comp)
@@ -374,7 +388,10 @@ namespace JRPGPrototype.Logic.Battle
                         if (comp.Kind == BattleCompActionKind.Summon)
                         {
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
-                            if (comp.Standby != null && _party.SummonDemon(actor, comp.Standby))
+                            BattleCommandShellResult command = comp.Standby is null
+                                ? BattleCommandShellResult.Unavailable
+                                : _commandShell.CreateDemonSummon(_party, actor, comp.Standby);
+                            if (command.CanExecute && comp.Standby != null && _party.SummonDemon(actor, comp.Standby))
                             {
                                 _messenger.Publish($"{actor.Name} summoned {comp.Standby.Name}!");
                                 return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
@@ -385,13 +402,17 @@ namespace JRPGPrototype.Logic.Battle
                             // ATOMIC TRANSACTION: Exchange an active member for a standby member
                             if (comp.Standby != null && comp.Active != null)
                             {
-                                // Clear Transient state (Guard/Shields/Charge) for the demon leaving
-                                comp.Active.ClearTransientBattleState();
-
-                                if (_party.SwapActiveDemon(actor, comp.Active, comp.Standby))
+                                BattleCommandShellResult command = _commandShell.CreateDemonSwap(_party, actor, comp.Active, comp.Standby);
+                                if (command.CanExecute)
                                 {
-                                    _messenger.Publish($"{actor.Name} swapped {comp.Active.Name} for {comp.Standby.Name}!");
-                                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                                    // Clear Transient state (Guard/Shields/Charge) for the demon leaving
+                                    comp.Active.ClearTransientBattleState();
+
+                                    if (_party.SwapActiveDemon(actor, comp.Active, comp.Standby))
+                                    {
+                                        _messenger.Publish($"{actor.Name} swapped {comp.Active.Name} for {comp.Standby.Name}!");
+                                        return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                                    }
                                 }
                             }
                         }
@@ -400,24 +421,35 @@ namespace JRPGPrototype.Logic.Battle
                             // ATOMIC TRANSACTION: PartyManager handles stock and party state
                             if (comp.Active != null)
                             {
-                                // Clear Transient state for the demon leaving
-                                comp.Active.ClearTransientBattleState();
-
-                                if (_party.ReturnDemon(actor, comp.Active))
+                                BattleCommandShellResult command = _commandShell.CreateDemonReturn(_party, actor, comp.Active);
+                                if (command.CanExecute)
                                 {
-                                    _messenger.Publish($"{actor.Name} returned {comp.Active.Name} to stock.");
-                                    return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                                    // Clear Transient state for the demon leaving
+                                    comp.Active.ClearTransientBattleState();
+
+                                    if (_party.ReturnDemon(actor, comp.Active))
+                                    {
+                                        _messenger.Publish($"{actor.Name} returned {comp.Active.Name} to stock.");
+                                        return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                                    }
                                 }
                             }
                         }
                         else if (comp.Kind == BattleCompActionKind.Analyze)
                         {
-                            if (comp.AnalyzeTarget != null) _processor.ExecuteAnalyze(comp.AnalyzeTarget);
-                            return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                            if (comp.AnalyzeTarget != null)
+                            {
+                                BattleCommandShellResult command = _commandShell.CreateAnalyze(actor, comp.AnalyzeTarget);
+                                if (!command.CanExecute) continue;
+                                _processor.ExecuteAnalyze(comp.AnalyzeTarget);
+                                return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Normal);
+                            }
                         }
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Pass)
                     {
+                        BattleCommandShellResult command = _commandShell.CreatePass(actor);
+                        if (!command.CanExecute) continue;
                         _processor.ExecutePass(actor);
                         return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.Pass);
                     }
@@ -430,13 +462,18 @@ namespace JRPGPrototype.Logic.Battle
                         // Traesto Gem should not prompt for targets
                         if (item.Name == "Traesto Gem")
                         {
+                            BattleCommandShellResult command = _commandShell.CreateLegacyItem(actor, item, []);
+                            if (!command.CanExecute) continue;
                             actionCommitted = true;
                         }
                         else
                         {
                             BattleTargetSelectionResult targetResult = _ui.SelectTarget(actor, null, item);
                             if (targetResult.Kind != BattleSelectionResultKind.Selected) continue; // Back to Menu
-                            targets = targetResult.Targets.ToList();
+                            BattleCommandShellResult command = _commandShell.CreateLegacyItem(actor, item, targetResult.Targets);
+                            if (!command.CanExecute) continue;
+                            targets = command.Targets.ToList();
+                            item = command.Item;
                             actionCommitted = true;
                         }
                     }
@@ -448,9 +485,11 @@ namespace JRPGPrototype.Logic.Battle
                         // continue the loop to allow them to pick a different action.
                         if (targetResult.Kind != BattleSelectionResultKind.Selected) continue;
                         targets = targetResult.Targets.ToList();
+                        BattleCommandShellResult command = _commandShell.CreateNegotiation(actor, targets[0]);
+                        if (!command.CanExecute) continue;
 
                         // Proceed to end the turn after negotiation attempt
-                        return HandleNegotiationForFramework(actor, targets[0]);
+                        return HandleNegotiationForFramework(actor, command);
                     }
                     else if (menuResult.Action == BattleMainMenuAction.Tactics)
                     {
@@ -589,6 +628,9 @@ namespace JRPGPrototype.Logic.Battle
 
             if (tactic.Action == BattleTacticsAction.Escape)
             {
+                BattleCommandShellResult command = _commandShell.CreateTacticsEscape(actor);
+                if (!command.CanExecute) return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.None);
+
                 int pAgi = actor.GetStat(StatType.Ag);
                 double eAvgAgi = _enemies.Any() ? _enemies.Average(e => e.GetStat(StatType.Ag)) : 1;
 
@@ -610,6 +652,9 @@ namespace JRPGPrototype.Logic.Battle
                 if (stratTarget.Kind == BattleSelectionResultKind.Selected &&
                     stratTarget.Target != null)
                 {
+                    BattleCommandShellResult command = _commandShell.CreateTacticsStrategy(actor, stratTarget.Target);
+                    if (!command.CanExecute) return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.None);
+
                     stratTarget.Target.BattleControl = (stratTarget.Target.BattleControl == ControlState.ActFreely)
                         ? ControlState.DirectControl
                         : ControlState.ActFreely;
@@ -620,8 +665,9 @@ namespace JRPGPrototype.Logic.Battle
             return BattleEncounterCommandResult.Executed(EncounterActionTurnConsumption.None);
         }
 
-        private BattleEncounterCommandResult HandleNegotiationForFramework(Combatant actor, Combatant target)
+        private BattleEncounterCommandResult HandleNegotiationForFramework(Combatant actor, BattleCommandShellResult command)
         {
+            Combatant target = command.Targets.Single();
             if (_sessionRecruitedIds.Contains(target.SourceId))
             {
                 _messenger.Publish($"{target.Name} has already been spoken to.", ConsoleColor.Gray, 800);

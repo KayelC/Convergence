@@ -1,6 +1,7 @@
 using System;
 using JRPGPrototype.Data;
 using JRPGPrototype.Entities;
+using JRPGPrototype.Logic.Battle.Execution;
 
 namespace JRPGPrototype.Logic.Battle.Bridges
 {
@@ -164,5 +165,71 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         public static BattleItemSelectionResult Selected(ItemData item)
             => new BattleItemSelectionResult(BattleSelectionResultKind.Selected, item);
+    }
+
+    public enum BattleCommandShellPayloadKind
+    {
+        None,
+        BasicAttack,
+        LegacySkill,
+        LegacyItem,
+        Guard,
+        Pass,
+        PersonaSwap,
+        DemonSummon,
+        DemonReturn,
+        DemonSwap,
+        Analyze,
+        TacticsEscape,
+        TacticsStrategy,
+        Negotiation
+    }
+
+    public sealed record BattleCommandShellResult
+    {
+        public BattleCommandShellResult(
+            BattleSelectionResultKind kind,
+            BattleCommandShellPayloadKind payloadKind = BattleCommandShellPayloadKind.None,
+            BattleActionCommand? command = null,
+            BattleActionAssessment? assessment = null,
+            ActionTurnConsumption? expectedTurnConsumption = null,
+            SkillData? skill = null,
+            ItemData? item = null,
+            IEnumerable<Combatant>? targets = null,
+            Persona? persona = null,
+            BattleCompActionResult? compAction = null,
+            BattleTacticsAction? tacticsAction = null)
+        {
+            Kind = kind;
+            PayloadKind = payloadKind;
+            Command = command;
+            Assessment = assessment;
+            ExpectedTurnConsumption = expectedTurnConsumption ?? assessment?.TurnConsumption ?? ActionTurnConsumption.None;
+            Skill = skill;
+            Item = item;
+            Targets = Array.AsReadOnly((targets ?? []).ToArray());
+            Persona = persona;
+            CompAction = compAction;
+            TacticsAction = tacticsAction;
+        }
+
+        public BattleSelectionResultKind Kind { get; }
+        public BattleCommandShellPayloadKind PayloadKind { get; }
+        public BattleActionCommand? Command { get; }
+        public BattleActionAssessment? Assessment { get; }
+        public ActionTurnConsumption ExpectedTurnConsumption { get; }
+        public SkillData? Skill { get; }
+        public ItemData? Item { get; }
+        public IReadOnlyList<Combatant> Targets { get; }
+        public Persona? Persona { get; }
+        public BattleCompActionResult? CompAction { get; }
+        public BattleTacticsAction? TacticsAction { get; }
+        public bool CanExecute => Kind == BattleSelectionResultKind.Selected && (Assessment?.CanExecute ?? true);
+
+        public static BattleCommandShellResult Back { get; } =
+            new(BattleSelectionResultKind.Back);
+
+        public static BattleCommandShellResult Unavailable { get; } =
+            new(BattleSelectionResultKind.Unavailable);
     }
 }

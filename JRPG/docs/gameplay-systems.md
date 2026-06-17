@@ -209,7 +209,7 @@ The framework action result reports:
 - party-stock transition results;
 - Press Turn consumption, normal consumption, pass consumption, phase termination, or free/no-turn actions.
 
-Field recovery skills and items in the clean field demo now use this action facade with an explicit host-owned inventory reservation adapter. The interactive console battle still preserves its legacy skill/item/effect flow, but guard and pass are now coordinated through a console compatibility adapter over the framework action executor. Full battle orchestration, AI/tactics behavior, negotiation/recruitment, inventory ownership, and production content reauthoring remain later tracks.
+Field recovery skills and items in the clean field demo now use this action facade with an explicit host-owned inventory reservation adapter. Track O5 connects the interactive player battle menu to the action vocabulary through a console-host command shell. Attack, Skill, Item, Escape, Tactics, and Talk remain host-mediated legacy commands, while Guard, Pass, Analyze, Persona swap, demon summon, demon return, and demon swap use concrete framework command types and assessment before the console applies the existing mutation path. Full battle event presentation, richer AI/tactics migration, production content reauthoring, and legacy skill/item execution replacement remain later tracks.
 
 ## Clean Status Lifecycle Foundation
 

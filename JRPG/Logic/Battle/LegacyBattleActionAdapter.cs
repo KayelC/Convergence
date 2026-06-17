@@ -41,6 +41,20 @@ namespace JRPGPrototype.Logic.Battle
             return result;
         }
 
+        public BattleActionAssessment Assess(BattleActionCommand command, Combatant actor, IEnumerable<Combatant>? participants = null)
+        {
+            RuntimeActorState actorState = ToRuntimeActor(actor);
+            IReadOnlyList<RuntimeActorState> runtimeParticipants = ToRuntimeParticipants(actor, actorState, participants);
+            return _actions.Assess(
+                new BattleActionExecutionRequest(
+                    command,
+                    actorState,
+                    runtimeParticipants,
+                    new EffectExecutionEnvironment(BattleContext, LegacyBattleKind, LegacyMoonPhase)));
+        }
+
+        public ContentId GetRuntimeActorId(Combatant combatant) => RuntimeId(combatant);
+
         public BattleActionExecutionResult ExecutePass(Combatant actor)
         {
             RuntimeActorState state = ToRuntimeActor(actor);
@@ -94,6 +108,25 @@ namespace JRPGPrototype.Logic.Battle
                 .AsTask()
                 .GetAwaiter()
                 .GetResult();
+
+        private static IReadOnlyList<RuntimeActorState> ToRuntimeParticipants(
+            Combatant actor,
+            RuntimeActorState actorState,
+            IEnumerable<Combatant>? participants)
+        {
+            var runtimeParticipants = new List<RuntimeActorState> { actorState };
+            foreach (Combatant participant in participants ?? [])
+            {
+                if (ReferenceEquals(participant, actor))
+                {
+                    continue;
+                }
+
+                runtimeParticipants.Add(ToRuntimeActor(participant));
+            }
+
+            return Array.AsReadOnly(runtimeParticipants.ToArray());
+        }
 
         private static RuntimeActorState ToRuntimeActor(Combatant combatant, string? suffix = null)
         {

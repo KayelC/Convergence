@@ -1226,6 +1226,19 @@ Track O4 began from `c7d7c40` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
 
+### Track O5 Completion
+
+Track O5 began from `f671491` on `track-12-recovery`.
+
+- Added a console-host battle command shell that turns player battle selections into framework `BattleActionCommand` objects while preserving the legacy execution payloads required by `ActionProcessor`, `PartyManager`, `NegotiationEngine`, and existing battle helpers.
+- Legacy attack, skill, item, escape, tactics, and negotiation paths are represented as host-mediated commands with stable IDs. Guard, pass, analyze, Persona swap, demon summon, demon return, and demon swap use concrete framework command shapes and assessment.
+- `BattleConductor` now routes player command selection through the shell before continuing through legacy execution. Legacy skill/item DTOs, production `Data/Jsons`, battle narration, AI, rewards, recruitment, Press Turn outcomes, and clean skill/item execution remain unchanged.
+- Updated the parity ledger. `battle_actions`, `enemy_ai_and_tactics`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O5 verification passed: `BattleCommandShellTests`, `BattleBridgeResultTests`, and `ActionProcessorResultTests` reported 53 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 664 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ## Track P: Godot Integration Contract
 
 ### Goal

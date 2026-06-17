@@ -290,6 +290,20 @@ Exit gate:
 - Legacy `ActionProcessor` remains available as the compatibility executor.
 - Battle menu characterization tests remain green.
 
+Completion:
+
+- Track O5 began from `f671491` on `track-12-recovery`.
+- Added `BattleCommandShellResult` and payload kinds for selected/back/unavailable battle command outcomes.
+- Added `LegacyBattleCommandShellAdapter`, which converts live console battle selections into framework `BattleActionCommand` objects while carrying the legacy payloads still needed by `ActionProcessor`, `PartyManager`, `NegotiationEngine`, and existing battle helper methods.
+- Legacy-only attack, skill, item, escape, tactics, and negotiation surfaces use stable host-mediated action IDs. Guard, pass, analyze, Persona swap, demon summon, demon return, and demon swap use concrete framework command shapes where those contracts already exist.
+- `BattleConductor` now routes player selection through the shell before legacy execution. Failed framework-backed stock/persona assessment returns to the relevant menu without mutating live legacy state.
+- Legacy `SkillData`, `ItemData`, production `Data/Jsons`, AI, Press Turn outcomes, reward/recruitment logic, battle narration, and clean skill/item execution remain unchanged.
+- Updated the parity ledger. `battle_actions`, `enemy_ai_and_tactics`, and `console_presentation` remain `parallel_partial`; no removal is authorized.
+- Focused O5 verification passed: `BattleCommandShellTests`, `BattleBridgeResultTests`, and `ActionProcessorResultTests` reported 53 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 664 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 99 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
 ### O6: Battle Event Presentation And Lifecycle Shell
 
 Goal:
