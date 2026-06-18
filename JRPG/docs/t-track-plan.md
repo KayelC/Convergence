@@ -151,3 +151,16 @@ Track T1 is the roadmap and guardrail pass. It adds no runtime behavior, no prod
 - Nonincremental solution build passed: 98 warnings, 0 errors.
 - Clean demos passed: battle demo ended in player-team victory, field demo completed, and save demo restored 2 actors, 1 item stack, and dungeon floor 5.
 - Quality gates passed: `git diff --check`, framework forbidden-reference search, and `git status --short -- Data/Jsons`.
+
+## Track T2 Completion
+
+Track T2 adds authored ruleset binding without changing runtime behavior or promoting prototype JSON into production authority.
+
+- Added `RuntimeRulesetBindingResolver` and standard policy IDs under the framework runtime layer.
+- The resolver binds catalog `RulesetDefinition` records to existing standard framework services for damage, rewards, stats, growth, stock capacity, economy/resource management, Press Turn, and moon-phase policy validation.
+- Standard damage binding supports only the approved `weakMultiplier` and `resistMultiplier` parameters; unsupported parameters and bad values produce stable diagnostics instead of silent behavior changes.
+- Hosts still supply randomness explicitly. The framework does not invent hidden random sources while binding combat rulesets.
+- Production content remains unconverted, no gameplay consumer switches to clean catalog ruleset authority, and no legacy source is archived.
+- Focused Track T2 tests passed: 3 passed, 0 failed, 0 skipped.
+- Full solution tests passed: 728 passed, 0 failed, 0 skipped.
+- Framework build passed: 0 warnings, 0 errors.

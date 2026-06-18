@@ -169,7 +169,7 @@ The preserved default formulas are:
 - Maximum HP is `min(666, baseHP + vitality * 5)` and maximum SP is `min(333, baseSP + magic * 3)`.
 - Level-up applies the max-resource delta to current HP/SP; ordinary recalculation caps current values without healing.
 
-Ruleset JSON does not own these parameters yet. Track E uses named default policy/config records until a later ruleset migration approves authored progression profiles.
+Ruleset JSON does not own these parameters as production authority yet. Track T2 can bind a catalog `standard_stat` or `standard_growth` ruleset to these existing framework policies, but no production consumer has switched from named defaults to authored ruleset selection.
 
 ## Clean Party And Stock Foundation
 
@@ -205,7 +205,7 @@ The production damage order is:
 8. damage modifiers, charge, variance, Weak/Resist, and drain use named policy values;
 9. defeat interception, knowledge recording, and Press Turn aggregation remain owned by the existing action/effect paths.
 
-Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing, Apt Pupil, Rebellion, Arms Master, and Spell Master remain adapter or console-effect concerns until Track H/I content migration gives them fully typed definitions. Ruleset JSON still does not author these combat constants; Track G creates named code defaults and parity tests first.
+Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing, Apt Pupil, Rebellion, Arms Master, and Spell Master remain adapter or console-effect concerns until Track H/I content migration gives them fully typed definitions. Track T2 can bind a catalog `standard_damage` ruleset to `ProductionCombatRuleset`; only `weakMultiplier` and `resistMultiplier` are currently supported authored parameters, and production consumers have not switched to catalog-selected combat rulesets.
 
 ## Clean Action Execution Foundation
 

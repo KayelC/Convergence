@@ -94,7 +94,7 @@ Track P adds the Godot integration contract proof. It does not introduce a Godot
 
 Track R adds `RuntimeSaveGameSnapshot` version `1`, typed battle knowledge snapshots, session progress, checkpoint breadcrumbs, save validation diagnostics, and `--clean-save-demo`. The demo serializes through console-host-owned DTOs, proving the contract is portable without exposing serializer APIs from `JRPG.Framework`.
 
-Complete AI/tactics policy, full fusion strategy replacement, interactive save/load menus, save-version migration tooling, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
+Complete AI/tactics policy, full fusion strategy replacement, interactive save/load menus, save-version migration tooling, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and production ruleset authority remain later migration tracks. Track T2 adds conservative catalog ruleset binding for existing standard policies, but the Track E/F/G/H/I/J/K/L/M/N/O consumers still run through named defaults and compatibility adapters until original clean content is wired deliberately.
 
 Track S is an archive gate, not a proof that the framework is finished. Legacy files may move to `ArchiveDocs/LegacyFramework` only after the parity ledger marks the corresponding capability `clean_parity`, `consumerMigrated: true`, and `removalAuthorized: true`. Until then, the console adapters and legacy datasets remain active compatibility code while production continues on the new architecture.
 

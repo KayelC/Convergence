@@ -469,3 +469,14 @@ Track T begins the build-forward phase after the archive gate. Its active refere
 - The legacy prototype datasets remain prototype-only evidence; new production content must be original clean content.
 - No active source is archived in T1, and all `removalAuthorized` flags remain `false`.
 - T1 verification passed with 4 focused roadmap tests, 725 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save demos, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.
+
+## Track T2 Ruleset Binding Baseline
+
+Track T2 adds the first catalog-backed ruleset binding layer without switching production consumers.
+
+- `JRPG.Framework/Logic/Runtime/RuntimeRulesetBindings.cs` maps supported `RulesetDefinition` records onto existing standard framework services.
+- Supported bindings cover damage, rewards, stats, growth, stock capacity, economy/resource management, Press Turn construction, and moon-phase policy validation.
+- Only approved standard policy IDs bind. Unknown policy IDs, wrong categories, missing records, unsupported parameters, invalid parameter types, and invalid parameter values return diagnostics.
+- `weakMultiplier` and `resistMultiplier` are the only authored damage parameters currently accepted; they default to the existing `ProductionCombatRulesetConfig` values when omitted.
+- Production `Data/Jsons` remains unchanged and prototype-only. No interactive consumer now treats ruleset JSON as production authority.
+- T2 verification passed with 3 focused ruleset-binding tests, 728 full-suite tests, and a 0-warning framework build.

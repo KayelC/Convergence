@@ -1584,6 +1584,20 @@ Track T1 establishes the build-forward lane without changing runtime behavior or
 - Quality gates passed: `git diff --check`, framework forbidden-reference search, and `git status --short -- Data/Jsons`.
 - No production JSON, gameplay rule, parity-ledger removal authorization, or archived source changed.
 
+### Track T2 Completion
+
+Track T2 begins authored ruleset binding while preserving all existing gameplay behavior.
+
+- Added `RuntimeRulesetBindingResolver`, `IRuntimeRulesetBindingResolver`, standard policy IDs, binding diagnostics, and immutable binding result records in `JRPG.Framework/Logic/Runtime/RuntimeRulesetBindings.cs`.
+- Catalog `RulesetDefinition` records can now bind to standard framework services for damage, rewards, stat resolution, growth, stock capacity, resource/economy/shop/hospital transactions, Press Turn engine construction, and moon-phase policy validation.
+- Binding is explicit and conservative: policy IDs must match the supported standard policy for the expected category, hosts supply random sources, and unsupported parameters produce diagnostics.
+- The only authored damage parameters currently bound are `weakMultiplier` and `resistMultiplier`; all other combat, progression, economy, and stock formulas remain the named defaults already implemented by the framework.
+- `RuntimeRulesetBindingTests` prove the `catalog_surface_sample` rulesets bind to the existing standard services, supported damage parameters alter only the corresponding config fields, and missing/wrong/unsupported/bad authoring fails with stable diagnostics.
+- Focused Track T2 verification passed: 3 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 728 passed, 0 failed, 0 skipped.
+- Framework build verification passed with 0 warnings and 0 errors.
+- No production JSON, consumer switch, parity-ledger removal authorization, gameplay rule change, or archived source changed.
+
 ## Test Strategy
 
 ### Unit Tests
