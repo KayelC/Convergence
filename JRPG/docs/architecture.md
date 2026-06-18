@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status: Current implementation reference.** This document describes the Track B framework and console-host boundary. Approved GDD and parity documents remain authoritative for target behavior and migration gates.
+> **Status: Current implementation reference.** Read [Framework State And Roadmap](framework-state-and-roadmap.md) first for the current project map. This document explains implementation shape, not the forward plan.
 
 The solution is organized around gameplay subsystems with a physical host boundary. Existing `JRPGPrototype.*` namespaces are retained for source compatibility, but assembly ownership is explicit.
 

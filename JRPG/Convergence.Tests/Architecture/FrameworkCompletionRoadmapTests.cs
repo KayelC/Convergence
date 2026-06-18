@@ -7,29 +7,48 @@ namespace Convergence.Tests.Architecture;
 public sealed class FrameworkCompletionRoadmapTests
 {
     [Fact]
-    public void TrackTRoadmap_RecordsBuildForwardArchiveLaterPolicy()
+    public void FrameworkStateDocument_RecordsCurrentOwnershipMapAndForwardPlan()
     {
-        string roadmap = Read("docs", "t-track-plan.md");
+        string roadmap = Read("docs", "framework-state-and-roadmap.md");
 
-        Assert.Contains("# Track T Framework Completion Roadmap", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Track T1: Framework Completion Audit", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Track T2: Authored Ruleset Binding", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Track T3: Original Clean Content Vertical Slice", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Track T4: Clean Runtime Consumer Slice", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Track T5: Archive Candidate Review", roadmap, StringComparison.Ordinal);
-        Assert.Contains("The framework architecture is ready for continued production work, but the framework is not finished.", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Legacy `Data/Jsons` is prototype-only evidence", roadmap, StringComparison.Ordinal);
-        Assert.Contains("Every protected legacy capability remains `removalAuthorized: false`.", roadmap, StringComparison.Ordinal);
-        Assert.Contains("ArchiveDocs/LegacyFramework", roadmap, StringComparison.Ordinal);
+        Assert.Contains("# Framework State And Roadmap", roadmap, StringComparison.Ordinal);
+        Assert.Contains("This document resets the map.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("The framework foundation exists, but it is not yet a finished framework product.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("The Training Annex demo is the first original clean runtime slice.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("0 archive candidates", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Do not casually invent new lettered tracks.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("No direct conversion of prototype `Data/Jsons` into production clean content.", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ActiveDocumentationIndex_LinksTrackTRoadmap()
+    public void ActiveDocumentationIndex_UsesFrameworkStateAsPrimaryAuthority()
     {
         string index = Read("docs", "README.md");
 
-        Assert.Contains("[Track T Framework Completion Roadmap](t-track-plan.md)", index, StringComparison.Ordinal);
-        Assert.Contains("defines the active build-forward lane after the archive gate", index, StringComparison.Ordinal);
+        Assert.Contains("[Framework State And Roadmap](framework-state-and-roadmap.md)", index, StringComparison.Ordinal);
+        Assert.Contains("is the current project map and forward plan", index, StringComparison.Ordinal);
+        Assert.Contains("[Framework Completion Problems](framework-completion/README.md)", index, StringComparison.Ordinal);
+        Assert.DoesNotContain("[Track T Framework Completion Roadmap](t-track-plan.md)", index, StringComparison.Ordinal);
+        Assert.DoesNotContain("[Framework Parity Migration Plan](framework-parity-migration-plan.md)", index, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SupersededPlanningDocs_AreArchivedInsteadOfActive()
+    {
+        string[] archivedPlans =
+        [
+            "framework-parity-migration-plan.md",
+            "o-track-plan.md",
+            "production-baseline.md",
+            "q-track-plan.md",
+            "t-track-plan.md"
+        ];
+
+        foreach (string plan in archivedPlans)
+        {
+            Assert.False(File.Exists(Path.Combine(LegacyBaselineSupport.RepositoryRoot, "docs", plan)), $"{plan} should no longer be active.");
+            Assert.True(File.Exists(Path.Combine(LegacyBaselineSupport.RepositoryRoot, "ArchiveDocs", "Planning", plan)), $"{plan} should be archived.");
+        }
     }
 
     [Fact]

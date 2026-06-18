@@ -1,29 +1,25 @@
 # Convergence Documentation
 
-This directory contains the active documentation for the Track 12 recovery branch and its framework-parity migration. Historical plans, abandoned migration material, and generated technical notes live in [ArchiveDocs](../ArchiveDocs/README.md).
+This directory contains the active documentation for the `track-12-recovery` branch. Historical plans, abandoned migration material, completed track journals, and generated technical notes live in [ArchiveDocs](../ArchiveDocs/README.md).
 
 ## Authority
 
 Use active documents in this order:
 
-1. [Production Baseline](production-baseline.md) defines the current recovery boundary and migration safety rules.
-2. [Framework Parity Migration Plan](framework-parity-migration-plan.md) defines the work and gates required to port all existing systems without feature loss.
-3. [Track T Framework Completion Roadmap](t-track-plan.md) defines the active build-forward lane after the archive gate.
-4. [Track O Console Host Migration Plan](o-track-plan.md) remains the completed split plan for console-host presentation migration.
-5. [Godot Integration Contract](godot-integration-contract.md) defines the Track P host boundary for Godot-style adapters.
-6. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
-7. Current source code and automated tests define implemented behavior.
-8. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
-9. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
+1. [Framework State And Roadmap](framework-state-and-roadmap.md) is the current project map and forward plan.
+2. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
+3. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+4. Current source code and automated tests define implemented behavior.
+5. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+6. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
+7. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
 Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 
 ## Active Documents
 
-- [Production Baseline](production-baseline.md)
-- [Framework Parity Migration Plan](framework-parity-migration-plan.md)
-- [Track T Framework Completion Roadmap](t-track-plan.md)
-- [Track O Console Host Migration Plan](o-track-plan.md)
+- [Framework State And Roadmap](framework-state-and-roadmap.md)
+- [Framework Completion Problems](framework-completion/README.md)
 - [Godot Integration Contract](godot-integration-contract.md)
 - [Project Vision](project-vision.md)
 - [Skill System GDD](skill-system-gdd.md)
@@ -45,6 +41,8 @@ The branch intentionally contains two paths:
 - `JRPG.Framework` contains the reusable catalog-backed skill, effect, passive, item, battle-runtime, inheritance, and wider content-catalog foundations.
 
 The console host references the framework, never the reverse. The clean path does not yet replace every console subsystem. A legacy subsystem may only be removed after its replacement reaches functional parity, its real consumer has migrated, and the interactive host remains demonstrably usable.
+
+The completed O, Q, T, parity, and production-baseline track documents have been archived under `ArchiveDocs/Planning`. They are useful history, not current planning authority.
 
 ## Documentation Maintenance
 

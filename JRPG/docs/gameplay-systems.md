@@ -1,6 +1,6 @@
 # Gameplay Systems
 
-> **Status: Current implementation reference.** This document describes the console prototype and may include systems scheduled for migration.
+> **Status: Current implementation reference.** Read [Framework State And Roadmap](framework-state-and-roadmap.md) first for the current project map. This document describes current systems and may mention historical migration tracks.
 
 This document explains the main player-facing systems and the code that implements them.
 

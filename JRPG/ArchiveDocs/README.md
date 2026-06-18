@@ -18,6 +18,11 @@ Documents belong here when they are:
 
 ### Planning
 
+- `framework-parity-migration-plan.md`: large historical migration ledger through Track T5. Superseded by `docs/framework-state-and-roadmap.md`.
+- `production-baseline.md`: historical recovery baseline and track-by-track completion record. Superseded by `docs/framework-state-and-roadmap.md`.
+- `o-track-plan.md`: completed console-host presentation migration plan.
+- `q-track-plan.md`: completed original-content policy and legacy dataset boundary plan.
+- `t-track-plan.md`: completed framework completion and Training Annex seed plan.
 - `skill-system-redesign-plan.md`: execution history through the proposed destructive cleanup tracks. Track 12 is the recovery point; later removal plans are not approved production work.
 - `content-schema-v1-proposal.md`: mixed implemented and speculative schema material. It must be split into focused approved contracts before reuse.
 - `refactor-roadmap.md`: pre-redesign framework roadmap.
