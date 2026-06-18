@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "dungeons": [
+    {
+      "id": "training_annex",
+      "displayName": "Training Annex",
+      "description": "A tiny original clean-content dungeon segment for framework review.",
+      "blocks": [
+        {
+          "id": "annex_floor",
+          "displayName": "Annex Floor",
+          "startFloor": 2,
+          "endFloor": 3,
+          "encounterPoolIds": [
+            "ashling_drill"
+          ],
+          "fixedFloors": [
+            {
+              "floor": 3,
+              "kind": "safe_room",
+              "description": "A quiet review alcove at the end of the first slice.",
+              "hasTerminal": true,
+              "transitionRuleId": "return_to_lobby"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

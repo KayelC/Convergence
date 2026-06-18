@@ -78,6 +78,8 @@ Candidate surfaces:
 
 Create a tiny original clean content pack that is not mechanically derived from legacy data.
 
+The first slice is `convergence.training_annex_slice` `0.1.0`, a neutral testbed pack with one playable actor, one enemy, one race, active/passive skills, one item, one encounter, one small dungeon segment, and standard ruleset records.
+
 The slice should include enough content to prove:
 
 - one playable actor and one enemy;
@@ -164,3 +166,20 @@ Track T2 adds authored ruleset binding without changing runtime behavior or prom
 - Focused Track T2 tests passed: 3 passed, 0 failed, 0 skipped.
 - Full solution tests passed: 728 passed, 0 failed, 0 skipped.
 - Framework build passed: 0 warnings, 0 errors.
+
+## Track T3 Completion
+
+Track T3 adds the first original clean content seed without converting prototype data or switching a gameplay consumer.
+
+- Added `convergence.training_annex_slice` `0.1.0` under `Data/Jsons`.
+- The pack contains `annex_spirit`, playable `echo_adept`, enemy `ashling`, active skills `echo_strike` and `ash_spark`, passive `steady_breath`, item `annex_tonic`, encounter `ashling_drill`, dungeon `training_annex`, and eight standard ruleset records.
+- The pack is self-contained and uses no legacy prototype pack dependency.
+- `OriginalCleanContentSliceTests` load only the Training Annex slice, prove catalog qualification, reject local-ID lookups, bind standard rulesets through `RuntimeRulesetBindingResolver`, and calculate a nonzero reward.
+- Existing legacy/prototype `Data/Jsons` files remain unchanged; T3 adds only the new clean slice files.
+- No runtime consumer switch, gameplay rule change, parity-ledger removal authorization, or source archive movement occurs in T3.
+- Focused Track T3 tests passed: 3 passed, 0 failed, 0 skipped.
+- Full solution tests passed: 731 passed, 0 failed, 0 skipped.
+- Framework build passed: 0 warnings, 0 errors.
+- Nonincremental solution build passed: 98 warnings, 0 errors.
+- Clean demos passed: battle demo ended in player-team victory, field demo completed, and save demo restored 2 actors, 1 item stack, and dungeon floor 5.
+- Quality gates passed: `git diff --check`, framework forbidden-reference search, and Data/Jsons delta review showing only the new Training Annex slice files.

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "rulesets": [
+    {
+      "id": "standard_damage",
+      "displayName": "Training Annex Damage",
+      "description": "Binds the slice to the standard damage policy.",
+      "category": "damage",
+      "policyId": "standard_damage",
+      "parameters": {
+        "weakMultiplier": 1.5,
+        "resistMultiplier": 0.5
+      }
+    },
+    {
+      "id": "standard_reward",
+      "displayName": "Training Annex Rewards",
+      "description": "Binds the slice to the standard reward policy.",
+      "category": "reward",
+      "policyId": "standard_reward"
+    },
+    {
+      "id": "standard_growth",
+      "displayName": "Training Annex Growth",
+      "description": "Binds the slice to the standard growth policy.",
+      "category": "growth",
+      "policyId": "standard_growth"
+    },
+    {
+      "id": "standard_stat",
+      "displayName": "Training Annex Stats",
+      "description": "Binds the slice to the standard stat policy.",
+      "category": "stat",
+      "policyId": "standard_stat"
+    },
+    {
+      "id": "standard_press_turn",
+      "displayName": "Training Annex Press Turns",
+      "description": "Binds the slice to the standard Press Turn policy.",
+      "category": "press_turn",
+      "policyId": "standard_press_turn"
+    },
+    {
+      "id": "standard_stock_capacity",
+      "displayName": "Training Annex Stock Capacity",
+      "description": "Binds the slice to the standard stock-capacity policy.",
+      "category": "stock_capacity",
+      "policyId": "standard_stock_capacity"
+    },
+    {
+      "id": "standard_economy",
+      "displayName": "Training Annex Economy",
+      "description": "Binds the slice to the standard economy policy.",
+      "category": "economy",
+      "policyId": "standard_economy"
+    },
+    {
+      "id": "standard_moon_phase",
+      "displayName": "Training Annex Moon Phase",
+      "description": "Binds the slice to the standard moon-phase policy.",
+      "category": "moon_phase",
+      "policyId": "standard_moon_phase"
+    }
+  ]
+}

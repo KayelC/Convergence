@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "encounters": [
+    {
+      "id": "ashling_drill",
+      "displayName": "Ashling Drill",
+      "description": "A one-enemy Training Annex encounter.",
+      "environmentId": "training_annex",
+      "formations": [
+        {
+          "weight": 1,
+          "isBoss": false,
+          "members": [
+            {
+              "entityId": "ashling",
+              "level": 2,
+              "count": 1
+            }
+          ],
+          "rewardPolicyId": "standard_reward"
+        }
+      ]
+    }
+  ]
+}

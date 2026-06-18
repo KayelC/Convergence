@@ -1598,6 +1598,22 @@ Track T2 begins authored ruleset binding while preserving all existing gameplay 
 - Framework build verification passed with 0 warnings and 0 errors.
 - No production JSON, consumer switch, parity-ledger removal authorization, gameplay rule change, or archived source changed.
 
+### Track T3 Completion
+
+Track T3 creates the first original clean content slice while keeping legacy prototype content protected.
+
+- Added the self-contained `convergence.training_annex_slice` `0.1.0` pack with race, skills, entities, item, encounter, dungeon, and standard ruleset documents.
+- The slice uses neutral testbed content: `annex_spirit`, `echo_adept`, `ashling`, `echo_strike`, `ash_spark`, `steady_breath`, `annex_tonic`, `ashling_drill`, and `training_annex`.
+- `OriginalCleanContentSliceTests` prove the pack loads by itself, all content IDs are catalog-qualified, local-ID lookups are rejected, rulesets bind to standard services, and reward calculation returns nonzero values.
+- Existing legacy/prototype `Data/Jsons` files remain unchanged; T3 adds only new original clean content files.
+- No clean runtime consumer is switched in T3. Track T4 remains responsible for executing this slice through a clean host path.
+- Focused Track T3 verification passed: 3 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 731 passed, 0 failed, 0 skipped.
+- Build verification passed: framework build reported 0 warnings and 0 errors; nonincremental solution build reported 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
+- Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and Data/Jsons delta review showing only the new Training Annex slice files.
+- No gameplay rule, parity-ledger status, removal authorization, or archived source changed.
+
 ## Test Strategy
 
 ### Unit Tests

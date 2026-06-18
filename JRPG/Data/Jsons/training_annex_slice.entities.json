@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "id": "echo_adept",
+      "displayName": "Echo Adept",
+      "description": "The first original clean-content player actor for the Training Annex slice.",
+      "entityKind": "demon",
+      "raceId": "annex_spirit",
+      "rank": 1,
+      "baseLevel": 3,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 6,
+        "magic": 4,
+        "vitality": 5,
+        "agility": 5,
+        "luck": 4
+      },
+      "elementalAffinities": {
+        "fire": "normal",
+        "ice": "normal"
+      },
+      "ailmentResistances": {},
+      "baseSkillIds": [
+        "echo_strike",
+        "steady_breath"
+      ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "ashling",
+      "displayName": "Ashling",
+      "description": "A small Training Annex opponent used to prove original encounter content.",
+      "entityKind": "demon",
+      "raceId": "annex_spirit",
+      "rank": 1,
+      "baseLevel": 2,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 3,
+        "magic": 5,
+        "vitality": 3,
+        "agility": 4,
+        "luck": 3
+      },
+      "elementalAffinities": {
+        "fire": "resist",
+        "ice": "weak"
+      },
+      "ailmentResistances": {},
+      "baseSkillIds": [
+        "ash_spark"
+      ],
+      "skillUnlocks": []
+    }
+  ]
+}

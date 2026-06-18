@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "annex_tonic",
+      "displayName": "Annex Tonic",
+      "description": "Restores 20 HP in battle or field contexts.",
+      "itemKind": "consumable",
+      "stackLimit": 20,
+      "baseValue": 50,
+      "usage": {
+        "contexts": [
+          "battle",
+          "field"
+        ],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "restore_resource",
+            "resourceId": "hp",
+            "amount": {
+              "type": "flat",
+              "value": 20
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

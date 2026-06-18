@@ -480,3 +480,15 @@ Track T2 adds the first catalog-backed ruleset binding layer without switching p
 - `weakMultiplier` and `resistMultiplier` are the only authored damage parameters currently accepted; they default to the existing `ProductionCombatRulesetConfig` values when omitted.
 - Production `Data/Jsons` remains unchanged and prototype-only. No interactive consumer now treats ruleset JSON as production authority.
 - T2 verification passed with 3 focused ruleset-binding tests, 728 full-suite tests, and a 0-warning framework build.
+
+## Track T3 Original Content Seed
+
+Track T3 adds the first original clean content pack while preserving the prototype datasets as protected evidence.
+
+- `Data/Jsons/training_annex_slice.*.json` defines `convergence.training_annex_slice` `0.1.0`.
+- The pack includes one race, two entities, three skills, one item, one encounter, one dungeon, and eight rulesets.
+- The playable actor is `echo_adept`; the enemy is `ashling`; the neutral environment is `training_annex`.
+- `OriginalCleanContentSliceTests` load only this pack, prove qualified catalog IDs, bind the standard rulesets, and calculate nonzero rewards.
+- Existing legacy/prototype `Data/Jsons` records are not converted or edited. T3 only adds new original clean content.
+- No console consumer switches to this content yet; T4 owns the first clean runtime consumer slice.
+- T3 verification passed with 3 focused content-slice tests, 731 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, and successful clean battle, field, and save demos.

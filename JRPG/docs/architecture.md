@@ -94,11 +94,11 @@ Track P adds the Godot integration contract proof. It does not introduce a Godot
 
 Track R adds `RuntimeSaveGameSnapshot` version `1`, typed battle knowledge snapshots, session progress, checkpoint breadcrumbs, save validation diagnostics, and `--clean-save-demo`. The demo serializes through console-host-owned DTOs, proving the contract is portable without exposing serializer APIs from `JRPG.Framework`.
 
-Complete AI/tactics policy, full fusion strategy replacement, interactive save/load menus, save-version migration tooling, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and production ruleset authority remain later migration tracks. Track T2 adds conservative catalog ruleset binding for existing standard policies, but the Track E/F/G/H/I/J/K/L/M/N/O consumers still run through named defaults and compatibility adapters until original clean content is wired deliberately.
+Complete AI/tactics policy, full fusion strategy replacement, interactive save/load menus, save-version migration tooling, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and production ruleset authority remain later migration tracks. Track T2 adds conservative catalog ruleset binding for existing standard policies, and Track T3 adds the self-contained `convergence.training_annex_slice` original clean content seed, but the Track E/F/G/H/I/J/K/L/M/N/O consumers still run through named defaults and compatibility adapters until original clean content is wired deliberately.
 
 Track S is an archive gate, not a proof that the framework is finished. Legacy files may move to `ArchiveDocs/LegacyFramework` only after the parity ledger marks the corresponding capability `clean_parity`, `consumerMigrated: true`, and `removalAuthorized: true`. Until then, the console adapters and legacy datasets remain active compatibility code while production continues on the new architecture.
 
-Track T is the build-forward lane after that archive gate. It keeps active legacy code in place while the framework gains missing production authority through authored ruleset binding, original clean content, and an end-to-end clean runtime slice.
+Track T is the build-forward lane after that archive gate. It keeps active legacy code in place while the framework gains missing production authority through authored ruleset binding, original clean content, and an end-to-end clean runtime slice. The first original content seed is the Training Annex slice; it is reviewable catalog content only until Track T4 wires a clean runtime consumer.
 
 ## Layers And Patterns
 
@@ -157,7 +157,7 @@ The clean catalog now has a definition surface for every retained legacy content
 
 During ordinary console startup, the clean catalog is loaded as a sidecar after the legacy database. Sidecar failures are reported as clean-catalog warnings and do not stop the prototype because the retained legacy datasets remain the gameplay authority until production content is reauthored.
 
-Track Q1 started the production-content audit pass. Track Q2 amends the boundary: legacy `Data/Jsons` records are prototype-only evidence, not approved commercial/shippable framework content and not a direct conversion queue. `docs/q-track-plan.md` and `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` now define the original-content policy, manual-decision buckets, legacy file coverage, clean schema targets, and removal gates. No production JSON file is converted by Q2, and `Database` remains the gameplay authority until original clean content exists and a later consumer switch is explicitly verified.
+Track Q1 started the production-content audit pass. Track Q2 amends the boundary: legacy `Data/Jsons` records are prototype-only evidence, not approved commercial/shippable framework content and not a direct conversion queue. `docs/q-track-plan.md` and `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` now define the original-content policy, manual-decision buckets, legacy file coverage, clean schema targets, and removal gates. Track T3 adds `convergence.training_annex_slice` as original clean catalog content, but `Database` remains the ordinary gameplay authority until a later consumer switch is explicitly verified.
 
 ## Runtime Dependency Shape
 

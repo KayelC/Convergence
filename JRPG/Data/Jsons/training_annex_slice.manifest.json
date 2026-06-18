@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "convergence.training_annex_slice",
+  "version": "0.1.0",
+  "displayName": "Training Annex Slice",
+  "documents": [
+    {
+      "type": "races",
+      "path": "training_annex_slice.races.json"
+    },
+    {
+      "type": "skills",
+      "path": "training_annex_slice.skills.json"
+    },
+    {
+      "type": "entities",
+      "path": "training_annex_slice.entities.json"
+    },
+    {
+      "type": "items",
+      "path": "training_annex_slice.items.json"
+    },
+    {
+      "type": "encounters",
+      "path": "training_annex_slice.encounters.json"
+    },
+    {
+      "type": "dungeons",
+      "path": "training_annex_slice.dungeons.json"
+    },
+    {
+      "type": "rulesets",
+      "path": "training_annex_slice.rulesets.json"
+    }
+  ]
+}

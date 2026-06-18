@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "echo_strike",
+      "displayName": "Echo Strike",
+      "description": "A stable Physical attack used by the Training Annex player actor.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "physical",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": [
+          "battle"
+        ]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "physical",
+          "power": 10,
+          "accuracy": 100,
+          "critical": {
+            "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ash_spark",
+      "displayName": "Ash Spark",
+      "description": "A simple Fire attack used by the Training Annex enemy actor.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "fire",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 2
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": [
+          "battle"
+        ]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "fire",
+          "power": 8,
+          "accuracy": 100,
+          "critical": {
+            "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "steady_breath",
+      "displayName": "Steady Breath",
+      "description": "Restores a small amount of HP at the end of the owner's committed action.",
+      "activation": "passive",
+      "inheritanceGroupId": "passive",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "restore_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "flat",
+                "value": 3
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
