@@ -103,6 +103,12 @@ internal sealed class CleanTrainingAnnexDemoHost
         GameDataCatalog catalog = load.Catalog;
         await PrintAsync(sequence++, "catalog", "Loaded Training Annex slice.", cancellationToken)
             .ConfigureAwait(false);
+        await PrintAsync(
+            sequence++,
+            "catalog",
+            $"Sample counts: {catalog.Races.Count} races, {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters.",
+            cancellationToken)
+            .ConfigureAwait(false);
 
         var resolver = new RuntimeRulesetBindingResolver();
         var random = new MinimumRandomSource();
@@ -280,11 +286,16 @@ internal sealed class CleanTrainingAnnexDemoHost
             "training_annex_slice.manifest.json",
             [
                 "training_annex_slice.races.json",
+                "training_annex_slice.ailments.json",
                 "training_annex_slice.skills.json",
                 "training_annex_slice.entities.json",
                 "training_annex_slice.items.json",
+                "training_annex_slice.equipment.json",
+                "training_annex_slice.shops.json",
+                "training_annex_slice.negotiations.json",
                 "training_annex_slice.encounters.json",
                 "training_annex_slice.dungeons.json",
+                "training_annex_slice.fusion.json",
                 "training_annex_slice.rulesets.json"
             ]);
 
@@ -293,10 +304,16 @@ internal sealed class CleanTrainingAnnexDemoHost
             .RegisterContext("battle", "field")
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
+            .RegisterModifierTrack("attack", "defense")
             .RegisterEntityKind("demon")
+            .RegisterAlignment("neutral")
+            .RegisterNegotiationPersonality("steady_sample")
+            .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterBattleKind("normal_battle")
             .RegisterMoonPhase("new_moon")
+            .RegisterShopCategory("training_supply")
+            .RegisterNegotiationDemand("sample_macca")
             .RegisterEncounterEnvironment("training_annex")
             .RegisterPolicy(
                 "standard_damage",
@@ -307,9 +324,19 @@ internal sealed class CleanTrainingAnnexDemoHost
                 "standard_stock_capacity",
                 "standard_economy",
                 "standard_moon_phase",
-                "return_to_lobby")
+                "return_to_lobby",
+                "training_barrier",
+                "standard_accident",
+                "standard_mutation")
             .SupportEffect<DamageEffectDefinition>()
             .SupportEffect<RestoreResourceEffectDefinition>()
+            .SupportEffect<ReduceResourceEffectDefinition>()
+            .SupportEffect<RemoveAilmentEffectDefinition>()
+            .SupportEffect<ReviveEffectDefinition>()
+            .SupportEffect<ApplyAilmentEffectDefinition>()
+            .SupportEffect<ModifyStatStageEffectDefinition>()
+            .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
+            .SupportAilmentBehavior<SkipAilmentTurnBehaviorDefinition>()
             .Build();
 
     private static BattleExecutionServices CreateExecutionServices(GameDataCatalog catalog) =>

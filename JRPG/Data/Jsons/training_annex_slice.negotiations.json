@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "negotiations": [
+    {
+      "id": "steady_sample",
+      "displayName": "Steady Sample",
+      "description": "A neutral negotiation personality for framework example content.",
+      "personalityId": "steady_sample",
+      "questions": [
+        {
+          "text": "The sample watches your stance. What do you do?",
+          "answers": [
+            {
+              "text": "Lower your weapon.",
+              "score": 2
+            },
+            {
+              "text": "Hold your ground.",
+              "score": 1
+            },
+            {
+              "text": "Step forward suddenly.",
+              "score": -1
+            }
+          ]
+        }
+      ],
+      "familiarDialogueLines": [
+        "The sample recognizes the training mark and waits."
+      ],
+      "demands": [
+        {
+          "demandId": "sample_macca",
+          "weight": 1,
+          "parameters": {
+            "amount": 50
+          }
+        }
+      ],
+      "defaultRaceIds": ["annex_spirit", "annex_beast"],
+      "defaultEntityIds": ["ashling", "bramble_runner"]
+    }
+  ]
+}

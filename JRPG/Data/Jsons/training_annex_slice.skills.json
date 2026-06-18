@@ -19,9 +19,7 @@
         "allowSelf": false
       },
       "availability": {
-        "contexts": [
-          "battle"
-        ]
+        "contexts": ["battle"]
       },
       "effects": [
         {
@@ -36,6 +34,252 @@
             "minimum": 1,
             "maximum": 1,
             "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "frost_tip",
+      "displayName": "Frost Tip",
+      "description": "A small Ice attack used to demonstrate elemental targeting.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "ice",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 1
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": ["battle"]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "ice",
+          "power": 8,
+          "accuracy": 100,
+          "critical": {
+            "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mend",
+      "displayName": "Mend",
+      "description": "Restores a small amount of HP in battle or field contexts.",
+      "activation": "active",
+      "menuGroup": "recovery",
+      "inheritanceGroupId": "recovery",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 2
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "ally",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": true
+      },
+      "availability": {
+        "contexts": ["battle", "field"]
+      },
+      "effects": [
+        {
+          "type": "restore_resource",
+          "resourceId": "hp",
+          "amount": {
+            "type": "flat",
+            "value": 12
+          }
+        }
+      ]
+    },
+    {
+      "id": "clear_toxin",
+      "displayName": "Clear Toxin",
+      "description": "Removes the sample poison ailment.",
+      "activation": "active",
+      "menuGroup": "recovery",
+      "inheritanceGroupId": "recovery",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 1
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "ally",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": true
+      },
+      "availability": {
+        "contexts": ["battle", "field"]
+      },
+      "effects": [
+        {
+          "type": "remove_ailment",
+          "scope": "selected",
+          "ailmentIds": ["sample_poison"]
+        }
+      ]
+    },
+    {
+      "id": "focus_call",
+      "displayName": "Focus Call",
+      "description": "Raises the target's attack track for a short duration.",
+      "activation": "active",
+      "menuGroup": "buff",
+      "inheritanceGroupId": "support",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 2
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "ally",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": true
+      },
+      "availability": {
+        "contexts": ["battle"]
+      },
+      "effects": [
+        {
+          "type": "modify_stat_stage",
+          "modifierTrackIds": ["attack"],
+          "stageDelta": 1,
+          "duration": {
+            "type": "turns",
+            "value": 3,
+            "tick": "owner_turn_end",
+            "suspendWhileReserve": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "soften_guard",
+      "displayName": "Soften Guard",
+      "description": "Lowers the target's defense track for a short duration.",
+      "activation": "active",
+      "menuGroup": "debuff",
+      "inheritanceGroupId": "support",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 2
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": ["battle"]
+      },
+      "effects": [
+        {
+          "type": "modify_stat_stage",
+          "modifierTrackIds": ["defense"],
+          "stageDelta": -1,
+          "duration": {
+            "type": "turns",
+            "value": 3,
+            "tick": "owner_turn_end",
+            "suspendWhileReserve": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "toxin_touch",
+      "displayName": "Toxin Touch",
+      "description": "Applies the sample poison ailment.",
+      "activation": "active",
+      "menuGroup": "ailment",
+      "inheritanceGroupId": "ailment",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 2
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": ["battle"]
+      },
+      "effects": [
+        {
+          "type": "apply_ailment",
+          "ailmentId": "sample_poison",
+          "chance": 100,
+          "duration": {
+            "type": "turns",
+            "value": 3,
+            "tick": "owner_turn_end",
+            "suspendWhileReserve": true
           }
         }
       ]
@@ -66,9 +310,7 @@
         "allowSelf": false
       },
       "availability": {
-        "contexts": [
-          "battle"
-        ]
+        "contexts": ["battle"]
       },
       "effects": [
         {
@@ -78,6 +320,44 @@
           "accuracy": 100,
           "critical": {
             "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "shell_bash",
+      "displayName": "Shell Bash",
+      "description": "A sturdy Physical attack for construct-style samples.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "physical",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": ["battle"]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "physical",
+          "power": 12,
+          "accuracy": 95,
+          "critical": {
+            "mode": "chance",
+            "chance": 5
           },
           "hits": {
             "minimum": 1,

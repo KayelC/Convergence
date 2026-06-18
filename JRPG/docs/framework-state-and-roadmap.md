@@ -122,7 +122,7 @@ The console host also contains clean demos:
 - `--clean-save-demo`;
 - `--clean-training-annex-demo`.
 
-The Training Annex demo is the first original clean runtime slice. It loads only the `convergence.training_annex_slice` pack and proves catalog loading, ruleset binding, actor hydration, dungeon traversal, item execution, automated battle, rewards, progression, and save validation.
+The Training Annex demo is the first original clean runtime slice. It loads only the `convergence.training_annex_slice` pack and proves catalog loading, ruleset binding, actor hydration, dungeon traversal, item execution, automated battle, rewards, progression, and save validation. The pack now also carries neutral reference records for ailments, equipment, shop, negotiation, additional encounters, and concept-level fusion recipes so future clean demos can grow without using legacy prototype data.
 
 ## What We Achieved
 
@@ -133,7 +133,7 @@ Concrete wins:
 - The old monolithic console shape was split into framework and host ownership.
 - Framework APIs are mostly serializer-neutral and host-neutral.
 - Clean content can be loaded, validated, qualified, and consumed without the legacy static database.
-- The system has a small original clean content slice that runs end to end.
+- The system has a small original clean content slice that runs end to end and a broader neutral sample catalog for future clean demos.
 - The legacy prototype is still protected by characterization tests and parity ledgers.
 - The archive gate prevents premature cleanup.
 - The test suite is broad enough to make future changes less scary.
@@ -146,7 +146,7 @@ Detailed problem notes live in [Framework Completion Problems](framework-complet
 
 ### Original Production Content
 
-Only a tiny original clean slice exists. The old `Data/Jsons` content is prototype evidence, not approved shippable content and not a direct conversion queue.
+Only a small original clean slice exists. The old prototype `Data/Jsons` content is evidence, not approved shippable content and not a direct conversion queue.
 
 Still needed:
 

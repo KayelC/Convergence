@@ -33,12 +33,24 @@
         "fire": "normal",
         "ice": "normal"
       },
-      "ailmentResistances": {},
+      "ailmentResistances": {
+        "sample_poison": "normal"
+      },
       "baseSkillIds": [
+        "frost_tip",
         "echo_strike",
         "steady_breath"
       ],
-      "skillUnlocks": []
+      "skillUnlocks": [
+        {
+          "level": 4,
+          "skillId": "mend"
+        },
+        {
+          "level": 5,
+          "skillId": "focus_call"
+        }
+      ]
     },
     {
       "id": "ashling",
@@ -72,9 +84,149 @@
         "fire": "resist",
         "ice": "weak"
       },
-      "ailmentResistances": {},
+      "ailmentResistances": {
+        "sample_poison": "normal"
+      },
       "baseSkillIds": [
         "ash_spark"
+      ],
+      "skillUnlocks": [
+        {
+          "level": 3,
+          "skillId": "toxin_touch"
+        }
+      ]
+    },
+    {
+      "id": "bramble_runner",
+      "displayName": "Bramble Runner",
+      "description": "A fast physical sample enemy with access to poison.",
+      "entityKind": "demon",
+      "raceId": "annex_beast",
+      "rank": 2,
+      "baseLevel": 3,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": ["ice"]
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 6,
+        "magic": 2,
+        "vitality": 4,
+        "agility": 6,
+        "luck": 4
+      },
+      "elementalAffinities": {
+        "fire": "weak",
+        "ice": "normal",
+        "wind": "resist"
+      },
+      "ailmentResistances": {
+        "sample_poison": "resistant"
+      },
+      "baseSkillIds": [
+        "shell_bash",
+        "toxin_touch"
+      ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "ward_shell",
+      "displayName": "Ward Shell",
+      "description": "A defensive construct sample used by fusion and fixed encounters.",
+      "entityKind": "demon",
+      "raceId": "annex_construct",
+      "rank": 3,
+      "baseLevel": 4,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "allow_list",
+          "groupIds": ["physical", "support", "passive"]
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": ["frost_tip"]
+      },
+      "stats": {
+        "strength": 5,
+        "magic": 3,
+        "vitality": 8,
+        "agility": 2,
+        "luck": 3
+      },
+      "elementalAffinities": {
+        "physical": "resist",
+        "electric": "weak",
+        "dark": "null"
+      },
+      "ailmentResistances": {
+        "sample_poison": "immune",
+        "sample_sleep": "resistant"
+      },
+      "instantDeathResistances": {
+        "light": "resistant",
+        "dark": "immune"
+      },
+      "baseSkillIds": [
+        "shell_bash",
+        "soften_guard"
+      ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "annex_mentor",
+      "displayName": "Annex Mentor",
+      "description": "A support-oriented sample entity for recovery, cure, and buff examples.",
+      "entityKind": "demon",
+      "raceId": "annex_spirit",
+      "rank": 4,
+      "baseLevel": 5,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": false,
+        "compendiumEligible": false
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 3,
+        "magic": 7,
+        "vitality": 5,
+        "agility": 4,
+        "luck": 6
+      },
+      "elementalAffinities": {
+        "light": "resist",
+        "dark": "weak"
+      },
+      "ailmentResistances": {
+        "sample_poison": "immune",
+        "sample_sleep": "immune",
+        "sample_stun": "resistant"
+      },
+      "baseSkillIds": [
+        "mend",
+        "clear_toxin",
+        "focus_call"
       ],
       "skillUnlocks": []
     }

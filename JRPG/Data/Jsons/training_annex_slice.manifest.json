@@ -9,6 +9,10 @@
       "path": "training_annex_slice.races.json"
     },
     {
+      "type": "ailments",
+      "path": "training_annex_slice.ailments.json"
+    },
+    {
       "type": "skills",
       "path": "training_annex_slice.skills.json"
     },
@@ -21,12 +25,28 @@
       "path": "training_annex_slice.items.json"
     },
     {
+      "type": "equipment",
+      "path": "training_annex_slice.equipment.json"
+    },
+    {
+      "type": "shops",
+      "path": "training_annex_slice.shops.json"
+    },
+    {
+      "type": "negotiations",
+      "path": "training_annex_slice.negotiations.json"
+    },
+    {
       "type": "encounters",
       "path": "training_annex_slice.encounters.json"
     },
     {
       "type": "dungeons",
       "path": "training_annex_slice.dungeons.json"
+    },
+    {
+      "type": "fusion",
+      "path": "training_annex_slice.fusion.json"
     },
     {
       "type": "rulesets",

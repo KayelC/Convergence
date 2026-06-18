@@ -27,11 +27,16 @@ public sealed class CleanTrainingAnnexDemoHostTests
         Assert.Equal(
             [
                 "training_annex_slice.races.json",
+                "training_annex_slice.ailments.json",
                 "training_annex_slice.skills.json",
                 "training_annex_slice.entities.json",
                 "training_annex_slice.items.json",
+                "training_annex_slice.equipment.json",
+                "training_annex_slice.shops.json",
+                "training_annex_slice.negotiations.json",
                 "training_annex_slice.encounters.json",
                 "training_annex_slice.dungeons.json",
+                "training_annex_slice.fusion.json",
                 "training_annex_slice.rulesets.json"
             ],
             source.DocumentRequests);
@@ -61,10 +66,12 @@ public sealed class CleanTrainingAnnexDemoHostTests
 
         string text = output.ToString();
         Assert.Contains("[catalog] Loaded Training Annex slice.", text, StringComparison.Ordinal);
+        Assert.Contains("[catalog] Sample counts: 3 races, 5 entities, 10 skills, 5 items, 3 encounters.", text, StringComparison.Ordinal);
         Assert.Contains("[ruleset] Bound standard Training Annex rulesets.", text, StringComparison.Ordinal);
         Assert.Contains("[dungeon] EncounterRequested floor 2.", text, StringComparison.Ordinal);
         Assert.Contains("[encounter] Resolved Ashling Drill: Ashling.", text, StringComparison.Ordinal);
         Assert.Contains("[item] Annex Tonic:", text, StringComparison.Ordinal);
+        Assert.Contains("SkillSelected: echo_adept selected Frost Tip.", text, StringComparison.Ordinal);
         Assert.Contains("[battle] Outcome Victory; winner player_team.", text, StringComparison.Ordinal);
         Assert.Contains("[reward] Awarded", text, StringComparison.Ordinal);
         Assert.Contains("[save] Validated Training Annex save snapshot with 0 diagnostic(s).", text, StringComparison.Ordinal);

@@ -20,6 +20,51 @@
           "rewardPolicyId": "standard_reward"
         }
       ]
+    },
+    {
+      "id": "mixed_drill",
+      "displayName": "Mixed Drill",
+      "description": "A two-enemy encounter proving multi-member formations.",
+      "environmentId": "training_annex",
+      "formations": [
+        {
+          "weight": 1,
+          "isBoss": false,
+          "members": [
+            {
+              "entityId": "ashling",
+              "level": 2,
+              "count": 1
+            },
+            {
+              "entityId": "bramble_runner",
+              "level": 3,
+              "count": 1
+            }
+          ],
+          "rewardPolicyId": "standard_reward"
+        }
+      ]
+    },
+    {
+      "id": "shell_check",
+      "displayName": "Shell Check",
+      "description": "A sturdier fixed encounter used to prove defensive enemy content.",
+      "environmentId": "training_annex",
+      "formations": [
+        {
+          "weight": 1,
+          "isBoss": true,
+          "members": [
+            {
+              "entityId": "ward_shell",
+              "level": 4,
+              "count": 1
+            }
+          ],
+          "rewardPolicyId": "standard_reward"
+        }
+      ]
     }
   ]
 }

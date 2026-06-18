@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "equipment": [
+    {
+      "id": "practice_blade",
+      "displayName": "Practice Blade",
+      "description": "A generic physical weapon example.",
+      "slot": "weapon",
+      "baseValue": 120,
+      "weapon": {
+        "basicAttack": {
+          "element": "physical",
+          "power": 12,
+          "accuracy": 95,
+          "isLongRange": false
+        }
+      }
+    },
+    {
+      "id": "padded_jacket",
+      "displayName": "Padded Jacket",
+      "description": "A generic light armor example.",
+      "slot": "armor",
+      "baseValue": 90,
+      "armor": {
+        "defense": 6,
+        "evasion": 1
+      }
+    },
+    {
+      "id": "light_steps",
+      "displayName": "Light Steps",
+      "description": "A generic boots example.",
+      "slot": "boots",
+      "baseValue": 80,
+      "boots": {
+        "evasion": 4
+      }
+    },
+    {
+      "id": "focus_charm",
+      "displayName": "Focus Charm",
+      "description": "A generic accessory example.",
+      "slot": "accessory",
+      "baseValue": 110,
+      "accessory": {
+        "statModifiers": [
+          {
+            "statId": "magic",
+            "value": 1
+          }
+        ]
+      }
+    }
+  ]
+}

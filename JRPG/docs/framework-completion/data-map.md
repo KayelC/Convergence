@@ -13,18 +13,18 @@ Use generic placeholder content for tests and demos. Downstream games should rep
 | Family | What It Represents | Current Slice | Placeholder Direction |
 | --- | --- | --- | --- |
 | Packs and manifests | Pack identity, version, document list, dependencies | Training Annex has one pack | `convergence.framework_example` with small self-contained documents |
-| Rulesets | Named policy choices for damage, rewards, growth, stats, Press Turn, stock, economy, moon phase | Eight standard rulesets in Training Annex | `standard_damage`, `standard_rewards`, `standard_growth`, etc. |
-| Races / classifications | Broad entity families used by entities, fusion, negotiation, and presentation | One race: `annex_spirit` | `sample_spirit`, `sample_beast`, `sample_construct` |
-| Entities | Playable actors, enemies, recruitables, fusion-eligible templates | `echo_adept`, `ashling` | `sample_guardian`, `sample_wisp`, `sample_brute` |
-| Skills | Active and passive behavior definitions | Two active attacks, one passive recovery | physical hit, fire spell, ice spell, heal, poison, buff, passive boost |
-| Ailments / statuses | Status definitions, turn behavior, recovery, modifiers | Separate demo pack exists, not Training Annex | poison, sleep, stun as neutral examples |
-| Items | Consumables, key items, materials, valuables | One HP recovery item | tonic, antidote, revival item, escape item, key token |
-| Equipment | Weapons, armor, boots, accessories, stat modifiers, basic attacks | Catalog sample exists, not Training Annex | training blade, padded vest, light boots, focus charm |
-| Shops | Offers, prices, stock policies, availability | Catalog sample exists, not Training Annex | supply kiosk selling tonic and training blade |
-| Negotiation | Question sets, answers, demands, familiar dialogue | Catalog sample exists, not Training Annex | calm personality with one greeting and one demand |
-| Encounters | Formations, enemy levels, reward policy hooks | One encounter: `ashling_drill` | single enemy, two-enemy group, boss formation |
-| Dungeons / fields | Blocks, floors, fixed floors, encounter pools, terminals, barriers | One tiny dungeon | three-floor training area with safe room and boss gate |
-| Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Catalog surface exists; not used by Training Annex | concept recipes using generic entities only |
+| Rulesets | Named policy choices for damage, rewards, growth, stats, Press Turn, stock, economy, moon phase | Eight standard Training Annex rulesets; fusion recipes reference registered host policy IDs separately | `standard_damage`, `standard_reward`, `standard_growth`, etc. |
+| Races / classifications | Broad entity families used by entities, fusion, negotiation, and presentation | `annex_spirit`, `annex_beast`, `annex_construct` | `sample_spirit`, `sample_beast`, `sample_construct` |
+| Entities | Playable actors, enemies, recruitables, fusion-eligible templates | `echo_adept`, `ashling`, `bramble_runner`, `ward_shell`, `annex_mentor` | `sample_guardian`, `sample_wisp`, `sample_brute` |
+| Skills | Active and passive behavior definitions | Damage, recovery, cure, ailment, buff/debuff, and passive examples | physical hit, fire spell, ice spell, heal, poison, buff, passive boost |
+| Ailments / statuses | Status definitions, turn behavior, recovery, modifiers | `sample_poison`, `sample_sleep`, `sample_stun` | poison, sleep, stun as neutral examples |
+| Items | Consumables, key items, materials, valuables | HP, SP, cure, revive, and key-item examples | tonic, antidote, revival item, escape item, key token |
+| Equipment | Weapons, armor, boots, accessories, stat modifiers, basic attacks | `practice_blade`, `padded_jacket`, `light_steps`, `focus_charm` | training blade, padded vest, light boots, focus charm |
+| Shops | Offers, prices, stock policies, availability | `training_supply` | supply kiosk selling tonic and training blade |
+| Negotiation | Question sets, answers, demands, familiar dialogue | `steady_sample` | calm personality with one greeting and one demand |
+| Encounters | Formations, enemy levels, reward policy hooks | `ashling_drill`, `mixed_drill`, `shell_check` | single enemy, two-enemy group, boss formation |
+| Dungeons / fields | Blocks, floors, fixed floors, encounter pools, terminals, barriers | `training_annex` with random, safe, fixed battle, and barrier floors | three-floor training area with safe room and boss gate |
+| Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Two concept-level Training Annex recipes | concept recipes using generic entities only |
 | Compendium state | Runtime snapshots and recall rules | Framework services exist, content is thin | use generic species IDs and placeholder recall pricing |
 | Rewards | EXP/Macca-like reward policies and parameters | Bound standard reward service | generic experience and currency values |
 | Host registrations | Contexts, resources, stats, events, handlers, policies | Tests register explicit values | documented registration sets per demo |
@@ -140,16 +140,14 @@ Do not imitate ATLUS race charts, names, demons, inheritance labels, or fusion t
 
 ## Immediate Data Need
 
-The framework needs a richer neutral example pack, not a giant production database.
+The framework now has a richer neutral example pack, not a giant production database.
 
-Start with:
+Next, use that sample data more deeply:
 
-1. a few more skills;
-2. a few more entities/races;
-3. a few items and equipment records;
-4. one shop;
-5. two more encounters;
-6. one ailment;
-7. one minimal fusion concept file only if the fusion rules are being tested.
+1. route more sample skills through the clean runtime demo;
+2. exercise ailment application and curing;
+3. run the fixed `shell_check` encounter;
+4. prove shop/equipment records through a tiny host flow;
+5. prove the concept fusion recipes without deciding final fusion identity.
 
 Keep every addition small enough for the owner to review and understand.

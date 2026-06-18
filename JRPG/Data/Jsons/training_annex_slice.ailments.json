@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "ailments": [
+    {
+      "id": "sample_poison",
+      "displayName": "Sample Poison",
+      "description": "A neutral poison example used by the framework sample pack.",
+      "groupIds": ["major_ailment", "toxin"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 3,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "normal"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "reduce_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "flat",
+                "value": 2
+              },
+              "canReduceToZero": true
+            }
+          ]
+        }
+      ],
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "sample_sleep",
+      "displayName": "Sample Sleep",
+      "description": "A neutral sleep example that skips action and restores small resources at turn end.",
+      "groupIds": ["major_ailment", "rest"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 2,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 1,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": false
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "restore_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "flat",
+                "value": 2
+              }
+            },
+            {
+              "type": "restore_resource",
+              "resourceId": "sp",
+              "amount": {
+                "type": "flat",
+                "value": 1
+              }
+            }
+          ]
+        }
+      ],
+      "recovery": {
+        "natural": {
+          "baseChance": 20,
+          "statId": "luck",
+          "statMultiplier": 0.5
+        },
+        "removeOnEvents": []
+      }
+    },
+    {
+      "id": "sample_stun",
+      "displayName": "Sample Stun",
+      "description": "A neutral one-turn action skip example.",
+      "groupIds": ["major_ailment", "immobilize"],
+      "exclusivityGroupId": "major_ailment",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 1,
+        "tick": "owner_turn_end",
+        "suspendWhileReserve": true
+      },
+      "turnBehavior": {
+        "type": "skip"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0.5,
+        "criticalChanceTakenBonus": 20,
+        "damageTakenMultiplier": 1,
+        "damageDealtMultiplier": 1,
+        "isRigidBody": true
+      },
+      "recovery": {
+        "removeOnEvents": ["owner_turn_end"]
+      }
+    }
+  ]
+}

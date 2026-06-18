@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "fusionRecipes": [
+    {
+      "id": "ashling_bramble_shell",
+      "displayName": "Ashling + Bramble Runner",
+      "description": "A generic entity-pair recipe proving clean fusion recipe references.",
+      "parents": [
+        {
+          "kind": "entity",
+          "id": "ashling"
+        },
+        {
+          "kind": "entity",
+          "id": "bramble_runner"
+        }
+      ],
+      "result": {
+        "operation": "create_entity",
+        "resultEntityId": "ward_shell"
+      },
+      "accidentPolicyId": "standard_accident",
+      "mutationPolicyId": "standard_mutation"
+    },
+    {
+      "id": "spirit_beast_construct_rank",
+      "displayName": "Spirit + Beast Construct Rank",
+      "description": "A generic race-pair rank-offset recipe for framework review.",
+      "parents": [
+        {
+          "kind": "race",
+          "id": "annex_spirit"
+        },
+        {
+          "kind": "race",
+          "id": "annex_beast"
+        }
+      ],
+      "result": {
+        "operation": "rank_offset",
+        "resultRaceId": "annex_construct",
+        "rankOffset": 1
+      },
+      "accidentPolicyId": "standard_accident",
+      "mutationPolicyId": "standard_mutation"
+    }
+  ]
+}
