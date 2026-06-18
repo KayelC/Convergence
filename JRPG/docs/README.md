@@ -9,10 +9,11 @@ Use active documents in this order:
 1. [Production Baseline](production-baseline.md) defines the current recovery boundary and migration safety rules.
 2. [Framework Parity Migration Plan](framework-parity-migration-plan.md) defines the work and gates required to port all existing systems without feature loss.
 3. [Track O Console Host Migration Plan](o-track-plan.md) defines the active O subtracks now that console-host migration is split into smaller passes.
-4. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
-5. Current source code and automated tests define implemented behavior.
-6. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
-7. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
+4. [Godot Integration Contract](godot-integration-contract.md) defines the Track P host boundary for Godot-style adapters.
+5. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+6. Current source code and automated tests define implemented behavior.
+7. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+8. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
 Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 
@@ -21,6 +22,7 @@ Archived documents are evidence and historical context only. They must not be us
 - [Production Baseline](production-baseline.md)
 - [Framework Parity Migration Plan](framework-parity-migration-plan.md)
 - [Track O Console Host Migration Plan](o-track-plan.md)
+- [Godot Integration Contract](godot-integration-contract.md)
 - [Project Vision](project-vision.md)
 - [Skill System GDD](skill-system-gdd.md)
 - [Architecture](architecture.md)

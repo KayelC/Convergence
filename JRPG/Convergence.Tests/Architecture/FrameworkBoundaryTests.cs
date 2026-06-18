@@ -72,7 +72,7 @@ public sealed class FrameworkBoundaryTests
     public void FrameworkSources_DoNotUseConsoleFilesystemSleepingOrNewtonsoft()
     {
         string frameworkRoot = RepositoryPath("JRPG.Framework");
-        string[] forbidden = ["Console.", "File.", "Directory.", "Thread.Sleep", "Newtonsoft"];
+        string[] forbidden = ["Console.", "File.", "Directory.", "Thread.Sleep", "Newtonsoft", "Godot"];
 
         foreach (string file in Directory.EnumerateFiles(frameworkRoot, "*.cs", SearchOption.AllDirectories))
         {

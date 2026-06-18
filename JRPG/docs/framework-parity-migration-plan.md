@@ -1340,11 +1340,35 @@ Prove that the framework is reusable from Godot without redesigning gameplay aro
 
 ### Proof
 
-Build a small Godot-facing integration sample or adapter test that loads content, creates actors, executes an action, consumes events, and restores a snapshot.
+Build a contract-only Godot-facing adapter test. Track P does not add a GodotSharp package or Godot project.
+
+The proof must:
+
+- load retained clean packs from fake `res://` resources while preserving logical manifest and document paths,
+- build a `GameDataCatalog` with explicit registrations,
+- create catalog-backed actors,
+- execute a deterministic clean battle/action path,
+- consume ordered framework events through a host-owned sink,
+- map runtime actor IDs to host-owned scene handles,
+- save and restore framework snapshots inside a host-owned save envelope.
 
 ### Exit Gate
 
-Godot integration requires adapter code, not changes to core rules or domain definitions.
+Godot integration requires adapter code, not changes to core rules or domain definitions. No protected capability moves to `clean_parity`, no legacy removal is authorized, and production `Data/Jsons` remains unchanged.
+
+### Track P Completion
+
+Track P began from `c3883e5` on `track-12-recovery`.
+
+- Added [Godot Integration Contract](godot-integration-contract.md) as the active host-boundary reference for Godot-style adapters.
+- Added `GodotIntegrationContractTests`, proving fake `res://` resource loading, signal-style command input, event consumption, scene-instance mapping, deterministic clean battle execution, and host-owned snapshot save/restore.
+- Tightened framework boundary tests so framework source checks also reject `Godot` references.
+- No GodotSharp package, Godot project, framework public API change, gameplay rule change, production JSON edit, parity promotion, or removal authorization was introduced.
+- Focused Track P checks passed: `GodotIntegrationContractTests` plus `FrameworkBoundaryTests` reported 5 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 708 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Packaging verification passed after building the Release framework artifact: `dotnet pack JRPG.Framework/JRPG.Framework.csproj --no-build` created `JRPG.Framework.1.0.0.nupkg` and emitted only the NuGet readme advisory.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, framework forbidden-reference searches found no Godot/console/filesystem/Newtonsoft/legacy public-type leakage, and `Data/Jsons` had no modified files.
 
 ## Track Q: Production Data Reauthoring And Verification
 

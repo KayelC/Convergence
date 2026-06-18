@@ -404,3 +404,17 @@ Track O1 began from `e163b81` and starts the interactive console-host migration 
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 636 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 113 warnings and 0 errors.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed the shared field effects demo successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no legacy DTO/host/Newtonsoft/filesystem dependencies, and `Data/Jsons` had no modified files.
+
+## Track P Boundary
+
+Track P began from `c3883e5` and proved Godot-style integration through test-only adapters without adding a Godot project or dependency.
+
+- `docs/godot-integration-contract.md` now records the host boundary: Godot owns resources, nodes, scenes, input, presentation, asset IDs, scheduling, save-file format, and scene-instance handles.
+- The framework remains responsible for content loading from host-supplied text, validation, catalogs, runtime rules, actor creation, transitions, ordered events, diagnostics, and serializer-neutral snapshots.
+- `GodotIntegrationContractTests` load retained clean packs from fake `res://` paths, build a catalog, create actors, run deterministic clean battle execution, consume ordered events, map instance IDs to host-owned scene handles, and restore actor plus field/dungeon snapshots from a host-owned save envelope.
+- No framework public API, gameplay rule, production JSON file, parity-ledger status, or removal authorization changed.
+- Focused Track P checks passed: `GodotIntegrationContractTests` and `FrameworkBoundaryTests` reported 5 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 708 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Packaging verification passed after a Release framework build: `dotnet pack JRPG.Framework/JRPG.Framework.csproj --no-build` created the framework package and emitted only the NuGet readme advisory.
+- Demo verification passed: the clean battle demo ended in player-team victory, and the clean field demo completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy public-type leakage, and `Data/Jsons` had no modified files.

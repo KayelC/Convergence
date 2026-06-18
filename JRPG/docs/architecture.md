@@ -39,6 +39,8 @@ Future clean hosts use cancellation-aware asynchronous contracts for content tex
 
 The existing interactive prototype still uses synchronous `IGameIO`, but Track O1 adds console adapters over the clean host contracts. Those adapters are intentionally narrow: already-simple menus can return typed commands and startup can publish sidecar catalog warnings through the event sink without forcing full battle, fusion, shop, or preview-heavy screens through asynchronous host contracts yet.
 
+Track P proves the same contracts are usable from a Godot-style host without adding GodotSharp or engine types to the framework. The test-only Godot contract adapters model `res://` resource loading, signal-style commands, event consumption, scene-instance mapping, deterministic randomness, and host-owned save snapshots while keeping all Godot responsibilities outside `JRPG.Framework`.
+
 ### Runtime State Boundary
 
 Track D adds `JRPGPrototype.Logic.Runtime` as the framework home for mutable actor state that must eventually survive save, presentation, replay, and host migration boundaries. It defines stable runtime instance IDs distinct from content definition IDs, actor identity/display metadata, controller/team/owner links, deployment state, progression, resources, base/effective stats, learned/equipped skills, active form and stock references, equipment slots, battle statuses, analysis, and passive activation counts.
@@ -83,7 +85,11 @@ Track O8 routes shop and hospital presentation through typed console-host result
 
 Track O9 routes dungeon traversal presentation through typed console-host results over `RuntimeFieldDungeonService` transition events. `DungeonManager` now exposes detailed transition presentation results, `DungeonUIBridge` maps selected/back/unavailable choices and shown/suppressed runtime events, and `FieldConductor` consumes those results for movement, terminal warp, dungeon exits, barriers, floor entry, and boss defeat. Legacy `tartarus.json`, enemy hydration, battle handoff, visible text, and menu order remain host-owned.
 
-Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, remaining Cathedral presentation migration, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track O10 routes Cathedral fusion and Compendium presentation through typed console-host results while preserving the visible ritual flow, legacy data, mutation ownership, accident/mutation odds, recall pricing, and deep Compendium snapshots.
+
+Track P adds the Godot integration contract proof. It does not introduce a Godot project; it verifies that content loading, command input, event output, clean actor creation, deterministic battle execution, scene mapping, and snapshot save/restore are all possible through engine-neutral framework APIs.
+
+Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, production save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 

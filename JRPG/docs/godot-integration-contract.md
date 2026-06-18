@@ -1,0 +1,63 @@
+# Godot Integration Contract
+
+> **Status: Track P contract proof.** This document defines how a Godot host consumes `JRPG.Framework` without making the framework depend on Godot.
+
+## Purpose
+
+Track P proves that Godot integration is adapter work. The framework remains an engine-neutral class library that owns content validation, catalogs, runtime rules, transitions, and immutable results. A Godot project owns resource acquisition, nodes, scenes, input, presentation scheduling, asset IDs, and save-file format.
+
+No GodotSharp package or Godot project is required in this repository for Track P. The proof lives in test-only Godot-shaped adapters that use fake `res://` paths, signal-style commands, event sinks, scene-instance handles, and host-owned save snapshots.
+
+## Host Responsibilities
+
+A Godot host must provide these adapters around the existing framework contracts:
+
+- Content acquisition: read JSON or imported resources from Godot-owned locations such as `res://`, then supply JSON text and diagnostic source names through `IContentPackTextSource`.
+- Input: translate player input, UI button signals, and menu cancellation into `IHostCommandSource<TCommand>` results.
+- Presentation: consume framework events through event sinks and map them to UI, animation, audio, waits, and scene transitions.
+- Randomness: provide an `IRandomSource` seeded or unseeded according to the host's run mode.
+- Scene identity: map framework `RuntimeInstanceId` or battle instance IDs to host-owned node/scene handles.
+- Persistence: store framework snapshots inside the Godot save format alongside host-owned scene, asset, and UI state.
+
+The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`, `res://`, animation players, save-file layout, or Godot signals.
+
+## Framework Responsibilities
+
+`JRPG.Framework` owns the reusable logic:
+
+- content definitions, validation, catalog loading, and qualified IDs;
+- actor hydration from catalog definitions;
+- skill, item, passive, status, action, battle, dungeon, party/stock, economy, fusion, and Compendium rule services;
+- ordered events and diagnostics expressed as serializer-neutral records;
+- runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonProgressSnapshot`.
+
+Framework APIs remain plain .NET contracts. JSON DTOs, `JsonElement`, console types, filesystem access, Newtonsoft, legacy DTOs, and Godot types must not appear in public framework signatures.
+
+## Track P Proof
+
+`GodotIntegrationContractTests` proves the current adapter boundary by:
+
+- loading the retained reference and clean battle demo packs from fake `res://` resources while preserving logical document paths;
+- building a `GameDataCatalog` through explicit registrations;
+- creating clean battle actors through `CatalogBattleActorFactory`;
+- mapping actor instance IDs to host-owned scene handles;
+- reading selected and cancelled signal-style commands through `IHostCommandSource<TCommand>`;
+- running deterministic clean battle execution and consuming ordered framework events;
+- restoring actor and field/dungeon snapshots through a host-owned save store.
+
+This is not a gameplay migration track. It proves that a Godot project can stand beside the console host and consume the same framework without core rule changes.
+
+## Save Boundary
+
+The framework exposes serializer-neutral snapshots. A Godot save file should wrap those snapshots with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
+
+The framework does not prescribe JSON, binary, Godot `Resource`, or any other save format. It only provides stable state objects that a host can store and later use to restore equivalent framework state.
+
+## Non-Goals
+
+- No GodotSharp dependency is added.
+- No Godot project or scene is checked in.
+- No production content is reauthored.
+- No legacy console file is removed.
+- No parity-ledger capability moves to `clean_parity`.
+- No framework public API is changed for Godot-specific concepts.
