@@ -28,6 +28,8 @@ Supporting areas:
 
 The console host depends on the framework. The framework must not depend on the console host, filesystem, Godot, Newtonsoft.Json, the static legacy `Database`, legacy DTOs, or live `Combatant` / `Persona` objects.
 
+Future development should be framework first. Legacy adapters may protect existing behavior, but they should not drive new framework requirements unless the same requirement is useful for an engine-neutral game.
+
 ## What Was Built
 
 ### Content And Catalog Framework
@@ -176,6 +178,14 @@ Still needed:
 - choose which policy knobs belong in ruleset content;
 - keep behavior stable unless a gameplay change is explicitly approved;
 - avoid hiding balance changes inside schema work.
+
+### Optional Mechanics
+
+Some systems still look more mandatory than they should because they came from the legacy prototype's inspirations.
+
+Moon Phase is the current example. It should become optional world/session metadata, not a required framework concept. A host that wants moon phases should be able to register and supply them; a host that does not should not need fake `new_moon` data just to run unrelated systems.
+
+Sacrificial fusion availability should eventually be policy-gated rather than inherently Full Moon-gated. Story progress, key items, difficulty, dungeon state, moon phase, or no gate at all should all be possible host/content choices.
 
 ### Interactive Clean Host
 

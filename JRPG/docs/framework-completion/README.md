@@ -11,10 +11,11 @@ Start here:
 5. [Fusion Independence](fusion-independence.md)
 6. [Field, Dungeon, And Encounter Independence](field-dungeon-encounter-independence.md)
 7. [Ruleset Authority](ruleset-authority.md)
-8. [Host And Godot Boundary](host-and-godot-boundary.md)
-9. [Persistence Product Flow](persistence-product-flow.md)
-10. [Content Authoring Tooling](content-authoring-tooling.md)
-11. [Legacy Retirement Gate](legacy-retirement-gate.md)
+8. [Optional Mechanics](optional-mechanics.md)
+9. [Host And Godot Boundary](host-and-godot-boundary.md)
+10. [Persistence Product Flow](persistence-product-flow.md)
+11. [Content Authoring Tooling](content-authoring-tooling.md)
+12. [Legacy Retirement Gate](legacy-retirement-gate.md)
 
 ## Ground Rule
 
