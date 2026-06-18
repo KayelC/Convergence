@@ -492,3 +492,14 @@ Track T3 adds the first original clean content pack while preserving the prototy
 - Existing legacy/prototype `Data/Jsons` records are not converted or edited. T3 only adds new original clean content.
 - No console consumer switches to this content yet; T4 owns the first clean runtime consumer slice.
 - T3 verification passed with 3 focused content-slice tests, 731 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, and successful clean battle, field, and save demos.
+
+## Track T4 Clean Runtime Consumer Slice
+
+Track T4 adds the first runtime consumer for original clean content.
+
+- `--clean-training-annex-demo` loads only `convergence.training_annex_slice` through the host content source.
+- The demo binds the slice's standard damage, reward, growth, stat, Press Turn, stock-capacity, economy, and moon-phase rulesets.
+- The deterministic runtime loop hydrates `echo_adept`, enters `training_annex`, ascends to floor 2, resolves `ashling_drill`, hydrates `ashling`, uses `annex_tonic` through the clean action executor, runs automated battle to victory, calculates nonzero EXP/Macca rewards, applies EXP through the bound growth service, and validates a post-loop `RuntimeSaveGameSnapshot`.
+- The ordinary interactive console startup, legacy `Database`, compatibility adapters, and production/prototype JSON behavior remain unchanged.
+- No legacy capability is promoted to `clean_parity`, and all `removalAuthorized` flags remain `false`.
+- T4 verification passed with 2 focused Training Annex host tests, 733 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save demos, successful `--clean-training-annex-demo`, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.

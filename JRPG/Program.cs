@@ -22,6 +22,11 @@ namespace JRPGPrototype
                 return await new CleanSaveDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
             }
 
+            if (args.Contains("--clean-training-annex-demo", StringComparer.Ordinal))
+            {
+                return await new CleanTrainingAnnexDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
+            }
+
             IGameIO io = new ConsoleIO();
             ConsoleGameHost host = new ConsoleGameHost(io);
 

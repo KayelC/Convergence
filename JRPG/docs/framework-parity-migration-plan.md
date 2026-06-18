@@ -1614,6 +1614,21 @@ Track T3 creates the first original clean content slice while keeping legacy pro
 - Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and Data/Jsons delta review showing only the new Training Annex slice files.
 - No gameplay rule, parity-ledger status, removal authorization, or archived source changed.
 
+### Track T4 Completion
+
+Track T4 makes the Training Annex slice executable through a clean noninteractive host path.
+
+- `CleanTrainingAnnexDemoHost` adds `--clean-training-annex-demo`.
+- The host reads only `training_annex_slice.*.json`, binds standard rulesets through `RuntimeRulesetBindingResolver`, and does not invoke the legacy `Database`.
+- The deterministic slice covers catalog load, actor hydration, dungeon entry/ascent, encounter resolution, item use with host-owned inventory commit, automated battle, reward calculation, EXP application, and post-loop save validation.
+- `CleanTrainingAnnexDemoHostTests` prove the requested content set, dungeon events, `ashling_drill` hydration, `annex_tonic` consumption, victory outcome, nonzero rewards, progression mutation, save validation, and missing-content failure path.
+- This is runtime coverage for original clean content only. It does not promote a protected legacy capability to `clean_parity`, migrate ordinary interactive consumers, edit prototype JSON, or authorize removal.
+- Focused Track T4 verification passed: 2 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 733 passed, 0 failed, 0 skipped.
+- Build verification passed: framework build reported 0 warnings and 0 errors; nonincremental solution build reported 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field effects completed, clean save restored 2 actors, 1 item stack, and dungeon floor 5, and Training Annex completed with player-team victory, 1 EXP, 14 Macca, and 0 save diagnostics.
+- Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and no modified production/prototype `Data/Jsons` files.
+
 ## Test Strategy
 
 ### Unit Tests

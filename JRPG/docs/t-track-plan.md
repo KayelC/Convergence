@@ -106,7 +106,9 @@ The slice should prove:
 - reward/progression update;
 - save snapshot validation after the loop.
 
-The first consumer may be noninteractive or lightly interactive. It should not replace the ordinary console prototype until parity is proven.
+The first consumer is the noninteractive `--clean-training-annex-demo` host command. It loads only `convergence.training_annex_slice`, binds the slice's standard rulesets, hydrates `echo_adept` and `ashling`, traverses the tiny dungeon segment, uses `annex_tonic` through the clean action executor, runs a deterministic automated battle, applies rewards through the bound growth service, and validates a runtime save snapshot.
+
+It does not replace the ordinary console prototype. It is the first original clean runtime consumer proof, not a parity promotion for legacy systems.
 
 ### Track T5: Archive Candidate Review
 
@@ -183,3 +185,19 @@ Track T3 adds the first original clean content seed without converting prototype
 - Nonincremental solution build passed: 98 warnings, 0 errors.
 - Clean demos passed: battle demo ended in player-team victory, field demo completed, and save demo restored 2 actors, 1 item stack, and dungeon floor 5.
 - Quality gates passed: `git diff --check`, framework forbidden-reference search, and Data/Jsons delta review showing only the new Training Annex slice files.
+
+## Track T4 Completion
+
+Track T4 creates the first clean runtime consumer for original clean content.
+
+- Added `--clean-training-annex-demo` through `CleanTrainingAnnexDemoHost`.
+- The demo loads only `training_annex_slice.*.json`, binds damage, reward, growth, stat, Press Turn, stock-capacity, economy, and moon-phase rulesets through `RuntimeRulesetBindingResolver`, and never falls back to the legacy `Database`.
+- The deterministic flow enters `training_annex`, ascends to floor 2, resolves `ashling_drill`, hydrates `ashling`, damages `echo_adept`, uses `annex_tonic` through `BattleActionExecutor`, commits one host-owned inventory quantity, runs automated battle to victory, calculates nonzero rewards, applies EXP, and validates a `RuntimeSaveGameSnapshot`.
+- `CleanTrainingAnnexDemoHostTests` prove the content request is limited to the Training Annex pack, dungeon events occur in order, item consumption commits exactly once, battle wins without faulting, progression changes, and save validation succeeds.
+- No production/prototype JSON is edited, no legacy consumer is switched to clean content authority, no parity-ledger capability is promoted to `clean_parity`, and no removal is authorized.
+- Focused Track T4 tests passed: 2 passed, 0 failed, 0 skipped.
+- Full solution tests passed: 733 passed, 0 failed, 0 skipped.
+- Framework build passed: 0 warnings, 0 errors.
+- Nonincremental solution build passed: 98 warnings, 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field completed, clean save restored 2 actors, 1 item stack, and dungeon floor 5, and Training Annex completed with player-team victory, 1 EXP, 14 Macca, and 0 save diagnostics.
+- Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and `git status --short -- Data\Jsons`.
