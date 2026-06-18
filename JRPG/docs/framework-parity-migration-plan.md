@@ -1376,6 +1376,8 @@ Track P began from `c3883e5` on `track-12-recovery`.
 
 Move retained content into approved schemas only after corresponding consumers exist.
 
+Track Q is split into subtracks in [Track Q Production Content Reauthoring Plan](q-track-plan.md). Q1 creates the audit ledger and conversion rules before any production content conversion begins.
+
 ### Per-Family Procedure
 
 1. Freeze legacy record count and identifiers.
@@ -1404,6 +1406,29 @@ Move retained content into approved schemas only after corresponding consumers e
 - Navigator skills require their own support-system contract,
 - special skills require explicit typed behavior or registered handlers,
 - franchise-derived demonstration content should eventually be separated from framework-required examples.
+
+### Track Q1: Audit Ledger And Conversion Rules
+
+Create the Track Q control plane:
+
+- `docs/q-track-plan.md` records the Q1-Q7 subtrack sequence.
+- `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` records each protected legacy content family, clean schema target, future subtrack, report obligation, manual decision bucket, and removal gate.
+- `ProductionContentLedgerTests` makes the ledger executable by requiring exact legacy-file coverage, exact clean-schema-family coverage, historical-only handling for old v2 migration artifacts, and no Q1 conversion or consumer switch.
+
+Q1 performs no production JSON conversion, switches no gameplay consumer, and keeps removal authorization false.
+
+### Track Q1 Completion
+
+Track Q1 completed on `track-12-recovery`.
+
+- Added [Track Q Production Content Reauthoring Plan](q-track-plan.md) as the active Q1-Q7 production data migration reference.
+- Added `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json`, covering 10 production families, 12 protected legacy content files, all 12 clean schema families, 7 mandatory report types, 4 manual-decision buckets, and 3 historical-only migration artifacts.
+- Added `ProductionContentLedgerTests`, proving exact legacy-file coverage, clean-schema-family coverage, historical-only handling for old v2 artifacts, and no Q1 conversion, consumer switch, `clean_parity`, or removal authorization.
+- Recorded known unresolved-reference findings: 56 unresolved base-skill references, 120 unresolved learned-skill references, 1 casing-only skill reference, 1 unresolved dungeon enemy-pool reference, 0 unresolved dungeon boss references, 0 unresolved shop references, and 0 invalid fusion operands.
+- Focused Q1 checks passed: `ProductionContentLedgerTests`, `RecoveryParityLedgerTests`, and `RecoveryDatasetBaselineTests` reported 8 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 713 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy DTO/static database leaks, and `Data/Jsons` had no modified files.
 
 ### Exit Gate
 

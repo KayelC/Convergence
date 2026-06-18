@@ -142,6 +142,8 @@ Track C adds framework definitions, strict deserialization, validation, catalog 
 
 This is a schema and catalog foundation only. It does not migrate `Database`, shop transactions, dungeon traversal, negotiation sessions, equipment ownership, fusion calculation, or economy state. Those systems remain protected by the legacy characterization tests until their dedicated runtime tracks connect real consumers to the clean definitions.
 
+Track Q1 adds the production-content reauthoring plan and ledger before any real content conversion. The ledger accounts for skills, entities, races, ailments, items, equipment, shops, negotiations, encounters, dungeons, fusion recipes, and rulesets, and it keeps old v2 migration outputs as historical evidence only. Production gameplay still reads the legacy `Data/Jsons` files through `Database` until a later Q subtrack converts a family, verifies runtime coverage, and switches the matching consumer.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

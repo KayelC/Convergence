@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "track": "Q1",
+  "branch": "track-12-recovery",
+  "productionJsonUnchanged": true,
+  "consumerSwitchAuthorized": false,
+  "legacyRemovalAuthorized": false,
+  "mandatoryReports": [
+    "record_counts",
+    "id_mapping",
+    "omitted_records",
+    "unresolved_references",
+    "behavior_decisions",
+    "conflicts",
+    "runtime_coverage"
+  ],
+  "knownIntegrityFindings": {
+    "unresolvedBaseSkillReferences": 56,
+    "unresolvedLearnedSkillReferences": 120,
+    "caseMismatchedSkillReferences": 1,
+    "unresolvedDungeonPoolReferences": 1,
+    "unresolvedDungeonBossReferences": 0,
+    "unresolvedShopReferences": 0,
+    "invalidFusionOperands": 0
+  },
+  "historicalEvidence": [
+    {
+      "path": "Data/Jsons/skills_database_v2.json",
+      "role": "historical_only",
+      "authoritative": false,
+      "note": "Old experimental conversion evidence. Q2 must re-evaluate records against the current schema and rules."
+    },
+    {
+      "path": "Data/Jsons/entity_database_v2.json",
+      "role": "historical_only",
+      "authoritative": false,
+      "note": "Old experimental conversion evidence. Q3 must re-evaluate entity defenses and inheritance decisions."
+    },
+    {
+      "path": "ArchiveDocs/Planning/migration_report.md",
+      "role": "historical_only",
+      "authoritative": false,
+      "note": "Archived migration report. It can explain prior omissions but cannot approve Track Q output."
+    }
+  ],
+  "manualDecisionBuckets": [
+    {
+      "id": "physical_affinity_conflicts",
+      "ownerTrack": "Q3",
+      "decisionOwner": "entity-defense reauthoring",
+      "authoritativeDefault": false,
+      "blockingReason": "Legacy Slash, Strike, and Pierce affinities conflict with the clean Physical element."
+    },
+    {
+      "id": "navigator_support_skills",
+      "ownerTrack": "Q2",
+      "decisionOwner": "skill/support-system reauthoring",
+      "authoritativeDefault": false,
+      "blockingReason": "Navigator and support-only skills are not normal demon-stock active skills."
+    },
+    {
+      "id": "special_registered_handlers",
+      "ownerTrack": "Q2",
+      "decisionOwner": "skill/effect reauthoring",
+      "authoritativeDefault": false,
+      "blockingReason": "Special skills need typed effects or registered custom handlers before conversion."
+    },
+    {
+      "id": "demo_vs_production_content",
+      "ownerTrack": "Q7",
+      "decisionOwner": "catalog authority switch",
+      "authoritativeDefault": false,
+      "blockingReason": "Demonstration packs are examples and must not be mistaken for production content."
+    }
+  ],
+  "families": [
+    {
+      "id": "skills",
+      "name": "Production skills and shared effects",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q2",
+      "legacyFiles": ["Data/Jsons/skills_database.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.SkillData", "Logic/Battle/ActionProcessor.cs", "Logic/Battle/Effects"],
+      "cleanSchemaFamilies": ["skills"],
+      "recordCounts": {
+        "skills": 420,
+        "duplicateSkillNameGroups": 3
+      },
+      "idStrategy": "Assign explicit clean ContentId values from approved mappings; display names remain presentation only.",
+      "consumerTargets": ["battle skill execution", "field skill execution", "passive lifecycle", "fusion inheritance"],
+      "manualDecisionBuckets": ["navigator_support_skills", "special_registered_handlers"],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q2" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q2" },
+        { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q2" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q2" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q2" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "entities_and_races",
+      "name": "Production entities, races, defenses, and inheritance policies",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q3",
+      "legacyFiles": ["Data/Jsons/entity_database.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.PersonaData", "Entities/CombatantFactory.cs", "Logic/Fusion/LegacyFusionContentAdapter.cs"],
+      "cleanSchemaFamilies": ["entities", "races"],
+      "recordCounts": {
+        "entities": 304,
+        "duplicateEntityIdGroups": 0
+      },
+      "idStrategy": "Assign local entity and race ContentId values; qualify only during catalog loading.",
+      "consumerTargets": ["actor hydration", "battle enemies", "dungeon encounters", "fusion", "compendium", "negotiation defaults"],
+      "manualDecisionBuckets": ["physical_affinity_conflicts"],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q3" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "ailments",
+      "name": "Production ailment definitions",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q3",
+      "legacyFiles": ["Data/Jsons/status_ailments.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.AilmentData", "Logic/Battle/StatusRegistry.cs"],
+      "cleanSchemaFamilies": ["ailments"],
+      "recordCounts": {
+        "ailments": 11
+      },
+      "idStrategy": "Use explicit ailment ContentId values matching approved lifecycle definitions, not display-name inference.",
+      "consumerTargets": ["ailment application", "status lifecycle", "field cures", "item cures"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q3" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "items",
+      "name": "Production item definitions",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q4",
+      "legacyFiles": ["Data/Jsons/items.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.ItemData", "Logic/Core/InventoryManager.cs", "Logic/Field/FieldServiceEngine.cs"],
+      "cleanSchemaFamilies": ["items"],
+      "recordCounts": {
+        "items": 14
+      },
+      "idStrategy": "Use explicit item ContentId values and typed usage effects; no effect parsing from item descriptions.",
+      "consumerTargets": ["field item use", "battle item use", "shops", "inventory transactions"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "equipment",
+      "name": "Production weapons, armor, boots, and accessories",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q4",
+      "legacyFiles": [
+        "Data/Jsons/weapons.json",
+        "Data/Jsons/armor.json",
+        "Data/Jsons/boots.json",
+        "Data/Jsons/accessories.json"
+      ],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.WeaponData", "JRPGPrototype.Data.ArmorData", "JRPGPrototype.Data.BootData", "JRPGPrototype.Data.AccessoryData", "Logic/Core/InventoryManager.cs"],
+      "cleanSchemaFamilies": ["equipment"],
+      "recordCounts": {
+        "weapons": 26,
+        "armor": 3,
+        "boots": 3,
+        "accessories": 3,
+        "totalEquipment": 35
+      },
+      "idStrategy": "Use explicit equipment ContentId values under one unified equipment family with slot-specific profiles.",
+      "consumerTargets": ["equipment ownership", "equipping", "shop sales", "basic attack profiles", "stat modifiers"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "shops",
+      "name": "Production shop catalogs",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q4",
+      "legacyFiles": ["Data/Jsons/shop_inventory.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.ShopData", "Logic/Field/ShopEngine.cs"],
+      "cleanSchemaFamilies": ["shops"],
+      "recordCounts": {
+        "shopEntries": 30
+      },
+      "idStrategy": "Use explicit shop ContentId values and offer references to clean item/equipment IDs.",
+      "consumerTargets": ["shop buy", "shop sell", "shop presentation"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "negotiations",
+      "name": "Production negotiation questions and familiar dialogue",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q5",
+      "legacyFiles": ["Data/Jsons/questions.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.NegotiationData", "Logic/Battle/Engines/NegotiationEngine.cs"],
+      "cleanSchemaFamilies": ["negotiations"],
+      "recordCounts": {
+        "negotiationPersonalities": 8,
+        "negotiationQuestions": 40,
+        "familiarDialogueSets": 8
+      },
+      "idStrategy": "Use explicit negotiation ContentId values for personalities, questions, answer scores, demands, and familiar dialogue sets.",
+      "consumerTargets": ["negotiation prompts", "demand resolution", "recruitment", "familiar dialogue"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q5" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "fusion_recipes",
+      "name": "Production fusion recipes",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q5",
+      "legacyFiles": ["Data/Jsons/fusion_table.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.FusionRecipeData", "Logic/Fusion/FusionCalculator.cs"],
+      "cleanSchemaFamilies": ["fusionRecipes"],
+      "recordCounts": {
+        "fusionRecipes": 460,
+        "invalidFusionOperands": 0
+      },
+      "idStrategy": "Use explicit fusion recipe ContentId values and typed parent/result selectors.",
+      "consumerTargets": ["fusion planning", "fusion preview", "fusion transaction", "mutation", "accidents"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q5" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "dungeons_and_encounters",
+      "name": "Production dungeon and encounter content",
+      "currentStatus": "legacy_authority",
+      "futureTrack": "Q6",
+      "legacyFiles": ["Data/Jsons/tartarus.json"],
+      "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.DungeonData", "Logic/Field/Dungeon/LegacyDungeonContentAdapter.cs", "Logic/Field/Engines/ExplorationProcessor.cs"],
+      "cleanSchemaFamilies": ["dungeons", "encounters"],
+      "recordCounts": {
+        "dungeons": 1,
+        "dungeonBlocks": 6,
+        "unresolvedDungeonPoolReferences": 1,
+        "unresolvedDungeonBossReferences": 0
+      },
+      "idStrategy": "Use explicit dungeon, block, floor-event, encounter, and formation ContentId values; avoid reversible legacy IDs in final production packs.",
+      "consumerTargets": ["dungeon traversal", "terminal warps", "fixed floor events", "random encounters", "boss requests"],
+      "manualDecisionBuckets": [],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q6" }
+      ],
+      "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    },
+    {
+      "id": "rulesets",
+      "name": "Production ruleset policy bindings",
+      "currentStatus": "code_authority",
+      "futureTrack": "Q6",
+      "legacyFiles": [],
+      "legacyOwners": ["JRPG.Framework/Logic/Battle/ProductionCombatRuleset.cs", "JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs"],
+      "cleanSchemaFamilies": ["rulesets"],
+      "recordCounts": {
+        "legacyRulesetFiles": 0
+      },
+      "idStrategy": "Create ruleset records that bind named policy IDs and immutable parameters only after the matching policies are approved.",
+      "consumerTargets": ["combat policies", "growth policies", "stock capacity", "economy", "rewards", "moon phase"],
+      "manualDecisionBuckets": ["demo_vs_production_content"],
+      "reports": [
+        { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
+        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "conflicts", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q6" }
+      ],
+      "tests": ["ProductionContentLedgerTests"],
+      "productionConverted": false,
+      "consumerSwitched": false,
+      "removalAuthorized": false
+    }
+  ]
+}
