@@ -159,6 +159,8 @@ During ordinary console startup, the clean catalog is loaded as a sidecar after 
 
 Track Q1 started the production-content audit pass. Track Q2 amends the boundary: legacy `Data/Jsons` records are prototype-only evidence, not approved commercial/shippable framework content and not a direct conversion queue. `docs/q-track-plan.md` and `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` now define the original-content policy, manual-decision buckets, legacy file coverage, clean schema targets, and removal gates. Track T3 adds `convergence.training_annex_slice` as original clean catalog content, and Track T4 proves it can run through a clean noninteractive host. `Database` remains the ordinary interactive gameplay authority until a later consumer switch is explicitly verified.
 
+Track T5 reviews archive eligibility after that clean runtime slice. The review records 0 archive candidates and 0 removal authorizations, so `ArchiveDocs/LegacyFramework` remains policy-only and active compatibility code stays in the console host.
+
 ## Runtime Dependency Shape
 
 `Program.cs` belongs to `JRPG.ConsoleHost` and creates the initial legacy services:

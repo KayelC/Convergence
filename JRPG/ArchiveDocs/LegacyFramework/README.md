@@ -4,7 +4,7 @@
 
 This folder is the approved holding area for legacy framework or console-host source material after it is proven obsolete.
 
-No active production source has been moved here yet. As of Track R, every protected legacy capability in `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` still has `removalAuthorized: false`, so moving live compatibility code would break the recovery branch instead of completing the framework.
+No active production source has been moved here yet. As of Track T5, `Convergence.Tests/Fixtures/Parity/archive-candidate-review.t5.json` records 0 archive candidates and 0 removal authorizations. Every protected legacy capability in `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` still has `removalAuthorized: false`, so moving live compatibility code would break the recovery branch instead of completing the framework.
 
 ## Archive Rule
 

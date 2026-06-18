@@ -252,6 +252,15 @@ Track O7 keeps that adapter-first boundary and adds typed presentation records f
 
 Track J does not migrate negotiation, recruitment, EXP/Macca reward ownership, inventory/equipment ownership, production skill reauthoring, or complete AI policy authoring. Those remain Track K and later work.
 
+## Archive Candidate Review
+
+Track T5 confirms that the clean Training Annex runtime slice is a forward-production proof, not a legacy retirement proof.
+
+- No protected gameplay capability is `clean_parity`.
+- No protected gameplay capability has `removalAuthorized: true`.
+- `ArchiveDocs/LegacyFramework` remains policy-only.
+- Legacy console compatibility code remains active until a specific consumer migration proves the old path is unreachable.
+
 ## Extension Mindset
 
 When adding new gameplay content:

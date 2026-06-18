@@ -201,3 +201,19 @@ Track T4 creates the first clean runtime consumer for original clean content.
 - Nonincremental solution build passed: 98 warnings, 0 errors.
 - Demo verification passed: clean battle ended in player-team victory, clean field completed, clean save restored 2 actors, 1 item stack, and dungeon floor 5, and Training Annex completed with player-team victory, 1 EXP, 14 Macca, and 0 save diagnostics.
 - Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and `git status --short -- Data\Jsons`.
+
+## Track T5 Completion
+
+Track T5 reviews archive eligibility after the Training Annex runtime slice and deliberately archives nothing.
+
+- Added `Convergence.Tests/Fixtures/Parity/archive-candidate-review.t5.json` as the machine-readable review record.
+- The review covers all 36 protected recovery capabilities and records the current ledger summary: 3 `clean_foundation`, 32 `parallel_partial`, 1 `legacy_only`, and 0 `clean_parity`.
+- Archive candidate count remains 0 and removal authorization count remains 0.
+- `ArchiveCandidateReviewTests` prove every recovery capability is reviewed, the review matches the current ledger, archive eligibility requires `clean_parity` plus a migrated consumer plus explicit removal authorization, and `ArchiveDocs/LegacyFramework` remains policy-only.
+- Clean demos and the Training Annex runtime slice are recorded as original-content proofs, not as migrated legacy consumers.
+- No production/prototype JSON is edited, no parity-ledger status changes, no `removalAuthorized` flag changes, no runtime behavior changes, and no active source is archived.
+- Focused Track T5 tests passed: 5 passed, 0 failed, 0 skipped.
+- Full solution tests passed: 738 passed, 0 failed, 0 skipped.
+- Build verification passed: framework build reported 0 warnings and 0 errors; nonincremental solution build reported 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field completed, clean save restored 2 actors, 1 item stack, and dungeon floor 5, and Training Annex completed with player-team victory, 1 EXP, 14 Macca, and 0 save diagnostics.
+- Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and `git status --short -- Data\Jsons`.

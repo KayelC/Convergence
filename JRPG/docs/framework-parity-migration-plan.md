@@ -1629,6 +1629,17 @@ Track T4 makes the Training Annex slice executable through a clean noninteractiv
 - Demo verification passed: clean battle ended in player-team victory, clean field effects completed, clean save restored 2 actors, 1 item stack, and dungeon floor 5, and Training Annex completed with player-team victory, 1 EXP, 14 Macca, and 0 save diagnostics.
 - Quality gates passed: `git diff --check`, refined framework forbidden-reference search, and no modified production/prototype `Data/Jsons` files.
 
+### Track T5 Completion
+
+Track T5 is the archive-candidate review gate after the first original clean runtime slice.
+
+- Added `Convergence.Tests/Fixtures/Parity/archive-candidate-review.t5.json` to record the review from `bbede42` on `track-12-recovery`.
+- The review covers all 36 protected recovery capabilities and records 0 `clean_parity` capabilities, 0 archive candidates, and 0 removal authorizations.
+- `ArchiveCandidateReviewTests` keep the archive rule executable: a capability is not eligible unless it has clean parity, a migrated consumer, and explicit removal authorization in the parity ledger.
+- `ArchiveDocs/LegacyFramework` remains policy-only. No active source, project file, dataset, or runtime path moved into the archive.
+- The Training Annex demo remains original clean runtime coverage only; it does not prove any legacy interactive consumer has been replaced.
+- T5 verification passed with 5 focused archive-review tests, 738 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save/Training Annex demos, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.
+
 ## Test Strategy
 
 ### Unit Tests

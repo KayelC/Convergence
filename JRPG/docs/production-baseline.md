@@ -503,3 +503,14 @@ Track T4 adds the first runtime consumer for original clean content.
 - The ordinary interactive console startup, legacy `Database`, compatibility adapters, and production/prototype JSON behavior remain unchanged.
 - No legacy capability is promoted to `clean_parity`, and all `removalAuthorized` flags remain `false`.
 - T4 verification passed with 2 focused Training Annex host tests, 733 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save demos, successful `--clean-training-annex-demo`, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.
+
+## Track T5 Archive Candidate Review
+
+Track T5 reviews whether any legacy surface can be archived after the Training Annex runtime slice.
+
+- The machine-readable review is `Convergence.Tests/Fixtures/Parity/archive-candidate-review.t5.json`.
+- The review covers all 36 protected capabilities and records 0 `clean_parity` capabilities, 0 archive candidates, and 0 removal authorizations.
+- `ArchiveDocs/LegacyFramework` remains policy-only; no active source, project file, dataset, or runtime path moved into the archive.
+- The Training Annex demo remains original clean runtime coverage and does not count as a migrated legacy consumer.
+- All parity-ledger statuses and `removalAuthorized` values remain unchanged.
+- T5 verification passed with 5 focused archive-review tests, 738 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save/Training Annex demos, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.
