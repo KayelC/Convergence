@@ -76,8 +76,9 @@ public sealed class ProductionContentLedgerTests
         JsonElement root = document.RootElement;
 
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
-        Assert.Equal("Q1", RequiredString(root, "track"));
+        Assert.Equal("Q2", RequiredString(root, "track"));
         Assert.Equal("track-12-recovery", RequiredString(root, "branch"));
+        AssertPrototypeOnlyPolicy(root.GetProperty("contentPolicy"));
         Assert.True(root.GetProperty("productionJsonUnchanged").GetBoolean());
         Assert.False(root.GetProperty("consumerSwitchAuthorized").GetBoolean());
         Assert.False(root.GetProperty("legacyRemovalAuthorized").GetBoolean());
@@ -107,15 +108,12 @@ public sealed class ProductionContentLedgerTests
             Assert.NotEmpty(RequiredStrings(family, "consumerTargets"));
             Assert.NotEmpty(RequiredStrings(family, "tests"));
 
-            string futureTrack = RequiredString(family, "futureTrack");
-            Assert.True(
-                futureTrack.Length == 2 && futureTrack[0] == 'Q' && futureTrack[1] is >= '2' and <= '7',
-                $"Family '{id}' has invalid future Track Q owner '{futureTrack}'.");
+            Assert.Equal("future_original_content", RequiredString(family, "futureTrack"));
         }
     }
 
     [Fact]
-    public void ProductionLedger_DoesNotAuthorizeConversionConsumerSwitchOrRemovalInQ1()
+    public void ProductionLedger_MarksLegacyFamiliesPrototypeOnlyWithoutCleanAuthority()
     {
         using JsonDocument document = LoadLedger();
 
@@ -123,9 +121,25 @@ public sealed class ProductionContentLedgerTests
         {
             string id = RequiredString(family, "id");
             Assert.NotEqual("clean_parity", RequiredString(family, "currentStatus"));
-            Assert.False(family.GetProperty("productionConverted").GetBoolean(), $"{id} is marked converted in Q1.");
-            Assert.False(family.GetProperty("consumerSwitched").GetBoolean(), $"{id} switched a consumer in Q1.");
-            Assert.False(family.GetProperty("removalAuthorized").GetBoolean(), $"{id} authorized legacy removal in Q1.");
+            Assert.False(family.GetProperty("productionConverted").GetBoolean(), $"{id} is marked converted in Q2.");
+            Assert.False(family.GetProperty("consumerSwitched").GetBoolean(), $"{id} switched a consumer in Q2.");
+            Assert.False(family.GetProperty("removalAuthorized").GetBoolean(), $"{id} authorized legacy removal in Q2.");
+
+            JsonElement policy = family.GetProperty("legacyContentPolicy");
+            string[] legacyFiles = RequiredStrings(family, "legacyFiles");
+            if (legacyFiles.Length == 0)
+            {
+                Assert.Equal("original_policy_binding_required", RequiredString(policy, "status"));
+            }
+            else
+            {
+                Assert.Equal("prototype_only", RequiredString(policy, "status"));
+            }
+
+            Assert.False(policy.GetProperty("commercialUseApproved").GetBoolean(), $"{id} is marked commercially approved.");
+            Assert.True(policy.GetProperty("directConversionPaused").GetBoolean(), $"{id} is not marked conversion-paused.");
+            Assert.True(policy.GetProperty("originalReplacementRequired").GetBoolean(), $"{id} does not require original replacement.");
+            Assert.False(policy.GetProperty("cleanCatalogAuthorityAllowed").GetBoolean(), $"{id} is marked clean-authoritative.");
         }
     }
 
@@ -155,8 +169,7 @@ public sealed class ProductionContentLedgerTests
                 Assert.False(string.IsNullOrWhiteSpace(RequiredString(report, "status")));
                 string ownerTrack = RequiredString(report, "ownerTrack");
                 Assert.True(
-                    ownerTrack == "Q1" ||
-                    (ownerTrack.Length == 2 && ownerTrack[0] == 'Q' && ownerTrack[1] is >= '2' and <= '7'),
+                    ownerTrack is "Q1" or "future_original_content",
                     $"Family '{familyId}' report '{RequiredString(report, "id")}' has invalid owner track '{ownerTrack}'.");
             }
         }
@@ -170,6 +183,7 @@ public sealed class ProductionContentLedgerTests
 
         foreach (JsonElement decision in decisions)
         {
+            Assert.Equal("future_original_content", RequiredString(decision, "ownerTrack"));
             Assert.False(decision.GetProperty("authoritativeDefault").GetBoolean());
             Assert.False(string.IsNullOrWhiteSpace(RequiredString(decision, "decisionOwner")));
             Assert.False(string.IsNullOrWhiteSpace(RequiredString(decision, "blockingReason")));
@@ -251,6 +265,16 @@ public sealed class ProductionContentLedgerTests
     {
         JsonElement family = Families(root).Single(value => RequiredString(value, "id") == familyId);
         return family.GetProperty("recordCounts").GetProperty(countName).GetInt32();
+    }
+
+    private static void AssertPrototypeOnlyPolicy(JsonElement policy)
+    {
+        Assert.Equal("prototype_only", RequiredString(policy, "legacyDatasetStatus"));
+        Assert.False(policy.GetProperty("commercialUseApproved").GetBoolean());
+        Assert.True(policy.GetProperty("directConversionPaused").GetBoolean());
+        Assert.True(policy.GetProperty("originalReplacementRequired").GetBoolean());
+        Assert.False(policy.GetProperty("cleanCatalogAuthorityAllowed").GetBoolean());
+        Assert.NotEmpty(RequiredStrings(policy, "notes"));
     }
 
     private static string RequiredString(JsonElement element, string propertyName) =>

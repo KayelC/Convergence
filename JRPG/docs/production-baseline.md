@@ -419,17 +419,20 @@ Track P began from `c3883e5` and proved Godot-style integration through test-onl
 - Demo verification passed: the clean battle demo ended in player-team victory, and the clean field demo completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy public-type leakage, and `Data/Jsons` had no modified files.
 
-## Track Q1 Boundary
+## Track Q Boundary
 
-Track Q1 begins the production-content reauthoring phase as an audit and planning pass.
+Track Q1 began as a production-content audit and planning pass. Q2 amends that plan so the legacy datasets are treated as prototype-only evidence, not a conversion queue.
 
-- `docs/q-track-plan.md` now expands Track Q into Q1-Q7 so production data can be converted family-by-family instead of as an unsafe bulk migration.
+- `docs/q-track-plan.md` now defines the Track Q original-content policy and legacy dataset boundary.
 - `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` records every protected legacy content family, every clean schema family, future Q subtracks, required reports, manual-decision buckets, current record counts, and removal gates.
 - Old `skills_database_v2.json`, `entity_database_v2.json`, and `ArchiveDocs/Planning/migration_report.md` are historical evidence only. They are not authoritative production conversion output.
 - Production `Data/Jsons` remains unchanged, no gameplay consumer switches to clean production content, and removal remains unauthorized.
+- Legacy `Data/Jsons` records are prototype-only and not approved as commercial/shippable framework content.
+- Direct conversion from legacy data into clean production packs is paused. Future clean production content must be original authored content with its own schema validation, runtime coverage, and consumer switch.
 - Ledger coverage: 10 production families, 12 protected legacy content files, 12 clean schema families, 7 mandatory report types, 4 manual-decision buckets, and 3 historical-only migration artifacts.
 - Known unresolved-reference findings remain recorded: 56 unresolved base-skill references, 120 unresolved learned-skill references, 1 casing-only skill reference, 1 unresolved dungeon enemy-pool reference, 0 unresolved dungeon boss references, 0 unresolved shop references, and 0 invalid fusion operands.
 - Focused Q1 verification passed: `ProductionContentLedgerTests`, `RecoveryParityLedgerTests`, and `RecoveryDatasetBaselineTests` reported 8 passed, 0 failed, 0 skipped.
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 713 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
 - Demo verification passed: the clean battle demo ended in player-team victory, and the clean field demo completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy DTO/static database leaks, and `Data/Jsons` had no modified files.
+- Q2 verification passed with the same 8 focused checks, 713-test full suite, 98-warning nonincremental build, successful clean battle/field demos, clean whitespace and framework boundary checks, and no `Data/Jsons` modifications.

@@ -148,7 +148,7 @@ The clean catalog now has a definition surface for every retained legacy content
 
 During ordinary console startup, the clean catalog is loaded as a sidecar after the legacy database. Sidecar failures are reported as clean-catalog warnings and do not stop the prototype because the retained legacy datasets remain the gameplay authority until production content is reauthored.
 
-Track Q1 starts the production-content reauthoring phase as an audit pass only. `docs/q-track-plan.md` and `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` now define the required per-family reports, manual-decision buckets, legacy file coverage, clean schema targets, and removal gates. No production JSON file is converted by Q1, and `Database` remains the gameplay authority until a later Q subtrack converts a family and switches its matching consumer.
+Track Q1 started the production-content audit pass. Track Q2 amends the boundary: legacy `Data/Jsons` records are prototype-only evidence, not approved commercial/shippable framework content and not a direct conversion queue. `docs/q-track-plan.md` and `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` now define the original-content policy, manual-decision buckets, legacy file coverage, clean schema targets, and removal gates. No production JSON file is converted by Q2, and `Database` remains the gameplay authority until original clean content exists and a later consumer switch is explicitly verified.
 
 ## Runtime Dependency Shape
 

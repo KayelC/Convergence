@@ -1,7 +1,19 @@
 {
   "schemaVersion": 1,
-  "track": "Q1",
+  "track": "Q2",
   "branch": "track-12-recovery",
+  "contentPolicy": {
+    "legacyDatasetStatus": "prototype_only",
+    "commercialUseApproved": false,
+    "directConversionPaused": true,
+    "originalReplacementRequired": true,
+    "cleanCatalogAuthorityAllowed": false,
+    "notes": [
+      "Legacy Data/Jsons records are retained for prototype characterization only.",
+      "Clean catalog production authority requires original content, not direct conversion of legacy records.",
+      "Q1 counts and integrity findings remain audit evidence."
+    ]
+  },
   "productionJsonUnchanged": true,
   "consumerSwitchAuthorized": false,
   "legacyRemovalAuthorized": false,
@@ -28,46 +40,46 @@
       "path": "Data/Jsons/skills_database_v2.json",
       "role": "historical_only",
       "authoritative": false,
-      "note": "Old experimental conversion evidence. Q2 must re-evaluate records against the current schema and rules."
+      "note": "Old experimental conversion evidence. It is not an approved source for clean production content."
     },
     {
       "path": "Data/Jsons/entity_database_v2.json",
       "role": "historical_only",
       "authoritative": false,
-      "note": "Old experimental conversion evidence. Q3 must re-evaluate entity defenses and inheritance decisions."
+      "note": "Old experimental conversion evidence. It is not an approved source for clean production content."
     },
     {
       "path": "ArchiveDocs/Planning/migration_report.md",
       "role": "historical_only",
       "authoritative": false,
-      "note": "Archived migration report. It can explain prior omissions but cannot approve Track Q output."
+      "note": "Archived migration report. It can explain prior omissions but cannot approve Track Q output or original content."
     }
   ],
   "manualDecisionBuckets": [
     {
       "id": "physical_affinity_conflicts",
-      "ownerTrack": "Q3",
+      "ownerTrack": "future_original_content",
       "decisionOwner": "entity-defense reauthoring",
       "authoritativeDefault": false,
       "blockingReason": "Legacy Slash, Strike, and Pierce affinities conflict with the clean Physical element."
     },
     {
       "id": "navigator_support_skills",
-      "ownerTrack": "Q2",
+      "ownerTrack": "future_original_content",
       "decisionOwner": "skill/support-system reauthoring",
       "authoritativeDefault": false,
       "blockingReason": "Navigator and support-only skills are not normal demon-stock active skills."
     },
     {
       "id": "special_registered_handlers",
-      "ownerTrack": "Q2",
+      "ownerTrack": "future_original_content",
       "decisionOwner": "skill/effect reauthoring",
       "authoritativeDefault": false,
       "blockingReason": "Special skills need typed effects or registered custom handlers before conversion."
     },
     {
       "id": "demo_vs_production_content",
-      "ownerTrack": "Q7",
+      "ownerTrack": "future_original_content",
       "decisionOwner": "catalog authority switch",
       "authoritativeDefault": false,
       "blockingReason": "Demonstration packs are examples and must not be mistaken for production content."
@@ -77,8 +89,15 @@
     {
       "id": "skills",
       "name": "Production skills and shared effects",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q2",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/skills_database.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.SkillData", "Logic/Battle/ActionProcessor.cs", "Logic/Battle/Effects"],
       "cleanSchemaFamilies": ["skills"],
@@ -91,12 +110,12 @@
       "manualDecisionBuckets": ["navigator_support_skills", "special_registered_handlers"],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q2" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q2" },
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
         { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q2" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q2" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q2" }
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -106,8 +125,15 @@
     {
       "id": "entities_and_races",
       "name": "Production entities, races, defenses, and inheritance policies",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q3",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/entity_database.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.PersonaData", "Entities/CombatantFactory.cs", "Logic/Fusion/LegacyFusionContentAdapter.cs"],
       "cleanSchemaFamilies": ["entities", "races"],
@@ -120,12 +146,12 @@
       "manualDecisionBuckets": ["physical_affinity_conflicts"],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q3" },
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
         { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q3" }
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -135,8 +161,15 @@
     {
       "id": "ailments",
       "name": "Production ailment definitions",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q3",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/status_ailments.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.AilmentData", "Logic/Battle/StatusRegistry.cs"],
       "cleanSchemaFamilies": ["ailments"],
@@ -148,12 +181,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q3" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q3" }
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "unresolved_references", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -163,8 +196,15 @@
     {
       "id": "items",
       "name": "Production item definitions",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q4",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/items.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.ItemData", "Logic/Core/InventoryManager.cs", "Logic/Field/FieldServiceEngine.cs"],
       "cleanSchemaFamilies": ["items"],
@@ -176,12 +216,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "unresolved_references", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -191,8 +231,15 @@
     {
       "id": "equipment",
       "name": "Production weapons, armor, boots, and accessories",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q4",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": [
         "Data/Jsons/weapons.json",
         "Data/Jsons/armor.json",
@@ -213,12 +260,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "unresolved_references", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -228,8 +275,15 @@
     {
       "id": "shops",
       "name": "Production shop catalogs",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q4",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/shop_inventory.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.ShopData", "Logic/Field/ShopEngine.cs"],
       "cleanSchemaFamilies": ["shops"],
@@ -241,12 +295,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q4" },
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
         { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q4" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q4" }
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -256,8 +310,15 @@
     {
       "id": "negotiations",
       "name": "Production negotiation questions and familiar dialogue",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q5",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/questions.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.NegotiationData", "Logic/Battle/Engines/NegotiationEngine.cs"],
       "cleanSchemaFamilies": ["negotiations"],
@@ -271,12 +332,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q5" }
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "unresolved_references", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetCounts_PreserveTheRecoveryBaseline", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -286,8 +347,15 @@
     {
       "id": "fusion_recipes",
       "name": "Production fusion recipes",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q5",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/fusion_table.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.FusionRecipeData", "Logic/Fusion/FusionCalculator.cs"],
       "cleanSchemaFamilies": ["fusionRecipes"],
@@ -300,12 +368,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q5" },
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
         { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q5" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q5" }
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -315,8 +383,15 @@
     {
       "id": "dungeons_and_encounters",
       "name": "Production dungeon and encounter content",
-      "currentStatus": "legacy_authority",
-      "futureTrack": "Q6",
+      "currentStatus": "prototype_only_legacy_authority",
+      "legacyContentPolicy": {
+        "status": "prototype_only",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": ["Data/Jsons/tartarus.json"],
       "legacyOwners": ["JRPGPrototype.Data.Database", "JRPGPrototype.Data.DungeonData", "Logic/Field/Dungeon/LegacyDungeonContentAdapter.cs", "Logic/Field/Engines/ExplorationProcessor.cs"],
       "cleanSchemaFamilies": ["dungeons", "encounters"],
@@ -331,12 +406,12 @@
       "manualDecisionBuckets": [],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q6" },
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
         { "id": "unresolved_references", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q6" }
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "ProductionContentLedgerTests"],
       "productionConverted": false,
@@ -346,8 +421,15 @@
     {
       "id": "rulesets",
       "name": "Production ruleset policy bindings",
-      "currentStatus": "code_authority",
-      "futureTrack": "Q6",
+      "currentStatus": "code_authority_original_binding_required",
+      "legacyContentPolicy": {
+        "status": "original_policy_binding_required",
+        "commercialUseApproved": false,
+        "directConversionPaused": true,
+        "originalReplacementRequired": true,
+        "cleanCatalogAuthorityAllowed": false
+      },
+      "futureTrack": "future_original_content",
       "legacyFiles": [],
       "legacyOwners": ["JRPG.Framework/Logic/Battle/ProductionCombatRuleset.cs", "JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs"],
       "cleanSchemaFamilies": ["rulesets"],
@@ -359,12 +441,12 @@
       "manualDecisionBuckets": ["demo_vs_production_content"],
       "reports": [
         { "id": "record_counts", "status": "baseline_recorded", "ownerTrack": "Q1" },
-        { "id": "id_mapping", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "omitted_records", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "unresolved_references", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "behavior_decisions", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "conflicts", "status": "pending", "ownerTrack": "Q6" },
-        { "id": "runtime_coverage", "status": "pending", "ownerTrack": "Q6" }
+        { "id": "id_mapping", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "omitted_records", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "unresolved_references", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "behavior_decisions", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "conflicts", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" },
+        { "id": "runtime_coverage", "status": "suspended_until_original_content", "ownerTrack": "future_original_content" }
       ],
       "tests": ["ProductionContentLedgerTests"],
       "productionConverted": false,

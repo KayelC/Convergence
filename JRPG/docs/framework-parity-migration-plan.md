@@ -774,7 +774,7 @@ Port the strict-parity status lifecycle rules into framework services while keep
 
 ### Data Work
 
-Reauthor the 11 ailment records against the approved ailment schema with explicit triggers, modifiers, recovery, and turn behavior. The clean content pack must not infer behaviour from names or descriptions. Legacy `status_ailments.json` remains untouched until production data migration.
+Reauthor the 11 ailment records against the approved ailment schema with explicit triggers, modifiers, recovery, and turn behavior. The clean content pack must not infer behaviour from names or descriptions. Legacy `status_ailments.json` remains untouched until an original-content replacement and consumer switch are explicitly approved.
 
 ### Tests
 
@@ -1370,25 +1370,24 @@ Track P began from `c3883e5` on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, framework forbidden-reference searches found no Godot/console/filesystem/Newtonsoft/legacy public-type leakage, and `Data/Jsons` had no modified files.
 
-## Track Q: Production Data Reauthoring And Verification
+## Track Q: Original Content Policy And Legacy Dataset Boundary
 
 ### Goal
 
-Move retained content into approved schemas only after corresponding consumers exist.
+Prevent prototype-only legacy content from becoming clean catalog authority by accident.
 
-Track Q is split into subtracks in [Track Q Production Content Reauthoring Plan](q-track-plan.md). Q1 creates the audit ledger and conversion rules before any production content conversion begins.
+Track Q is governed by [Track Q Original Content Policy And Legacy Dataset Boundary](q-track-plan.md). Q1 created the audit ledger. Q2 amends the policy: the retained `Data/Jsons` records are prototype characterization data, not approved production content and not a conversion queue.
 
-### Per-Family Procedure
+### Boundary Procedure
 
 1. Freeze legacy record count and identifiers.
-2. Classify every record as retain, split, replace, defer, or intentionally omit.
-3. Resolve ambiguous mechanics manually; do not infer from prose where the result changes behavior.
-4. Author or convert into the approved schema.
-5. Validate structurally and semantically.
-6. Compare reference graphs and report every omission.
-7. Run representative runtime tests using the converted records.
-8. Switch one real consumer to the new catalog.
-9. Keep the legacy source until the consumer migration is complete.
+2. Treat every legacy family as prototype-only unless an explicit future decision says otherwise.
+3. Preserve Q1 counts, reference findings, and conflict buckets as audit evidence.
+4. Author future clean packs as original content directly in approved schemas.
+5. Validate original packs structurally and semantically.
+6. Run representative runtime tests using the original packs.
+7. Switch a real consumer only after original content and runtime coverage exist.
+8. Keep legacy sources protected until the console prototype no longer needs them and removal is explicitly authorized.
 
 ### Mandatory Reports
 
@@ -1400,18 +1399,20 @@ Track Q is split into subtracks in [Track Q Production Content Reauthoring Plan]
 - conflict list,
 - runtime coverage list.
 
+For Q2, these reports remain obligations for future original-content work. They do not authorize direct legacy-to-clean conversion.
+
 ### Special Cases
 
-- physical affinity conflicts require manual entity decisions,
-- Navigator skills require their own support-system contract,
-- special skills require explicit typed behavior or registered handlers,
-- franchise-derived demonstration content should eventually be separated from framework-required examples.
+- physical affinity conflicts remain prototype audit evidence, not automatic entity decisions,
+- Navigator skills require their own support-system contract before original production authoring,
+- special skills require explicit typed behavior or registered handlers before use in original packs,
+- franchise-derived demonstration or prototype content must stay separate from framework-required examples and future commercial content.
 
 ### Track Q1: Audit Ledger And Conversion Rules
 
 Create the Track Q control plane:
 
-- `docs/q-track-plan.md` records the Q1-Q7 subtrack sequence.
+- `docs/q-track-plan.md` records the original Q audit plan, later amended by Q2.
 - `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json` records each protected legacy content family, clean schema target, future subtrack, report obligation, manual decision bucket, and removal gate.
 - `ProductionContentLedgerTests` makes the ledger executable by requiring exact legacy-file coverage, exact clean-schema-family coverage, historical-only handling for old v2 migration artifacts, and no Q1 conversion or consumer switch.
 
@@ -1421,7 +1422,7 @@ Q1 performs no production JSON conversion, switches no gameplay consumer, and ke
 
 Track Q1 completed on `track-12-recovery`.
 
-- Added [Track Q Production Content Reauthoring Plan](q-track-plan.md) as the active Q1-Q7 production data migration reference.
+- Added [Track Q Original Content Policy And Legacy Dataset Boundary](q-track-plan.md) as the active Track Q reference.
 - Added `Convergence.Tests/Fixtures/ProductionContent/production-content-ledger.json`, covering 10 production families, 12 protected legacy content files, all 12 clean schema families, 7 mandatory report types, 4 manual-decision buckets, and 3 historical-only migration artifacts.
 - Added `ProductionContentLedgerTests`, proving exact legacy-file coverage, clean-schema-family coverage, historical-only handling for old v2 artifacts, and no Q1 conversion, consumer switch, `clean_parity`, or removal authorization.
 - Recorded known unresolved-reference findings: 56 unresolved base-skill references, 120 unresolved learned-skill references, 1 casing-only skill reference, 1 unresolved dungeon enemy-pool reference, 0 unresolved dungeon boss references, 0 unresolved shop references, and 0 invalid fusion operands.
@@ -1430,9 +1431,23 @@ Track Q1 completed on `track-12-recovery`.
 - Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy DTO/static database leaks, and `Data/Jsons` had no modified files.
 
+### Track Q2: Legacy Content Boundary Amendment
+
+Q2 completed on `track-12-recovery` and supersedes the old family-by-family conversion interpretation without changing runtime code or production JSON.
+
+- The production-content ledger now marks legacy dataset families as `prototype_only_legacy_authority`.
+- The root and per-family policy records state that legacy content is not commercially approved, direct conversion is paused, original replacement content is required, clean catalog authority is not allowed, and removal remains unauthorized.
+- Future content work is grouped under `future_original_content` until a dedicated plan authors original packs and switches a real consumer.
+- Old v2 migration artifacts and Q1 integrity counts remain useful evidence, but they are not approved source material for clean production content.
+- No production JSON file, framework API, gameplay consumer, or `Data/Jsons` record changed.
+- Focused Q2 checks passed: `ProductionContentLedgerTests`, `RecoveryParityLedgerTests`, and `RecoveryDatasetBaselineTests` reported 8 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 713 passed, 0 failed, 0 skipped; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: `dotnet run --no-build -- --clean-battle-demo` ended in player-team victory, and `dotnet run --no-build -- --clean-field-demo` completed successfully.
+- Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy DTO/static database leaks, and `Data/Jsons` had no modified files.
+
 ### Exit Gate
 
-All retained production content loads through the new catalog and drives the migrated host. No silent drops or inferred defaults remain.
+Original clean content loads through the catalog and drives migrated hosts. No prototype-only legacy content is silently copied into production authority, and no legacy source is removed before an explicit removal gate.
 
 ## Track R: Persistence, Replay, And Compatibility
 
