@@ -1449,7 +1449,7 @@ Q2 completed on `track-12-recovery` and supersedes the old family-by-family conv
 
 Original clean content loads through the catalog and drives migrated hosts. No prototype-only legacy content is silently copied into production authority, and no legacy source is removed before an explicit removal gate.
 
-## Track R: Persistence, Replay, And Compatibility
+## Track R: Persistence Snapshot Contracts And Host-Owned Save Demo
 
 ### Goal
 
@@ -1476,11 +1476,26 @@ Make mutable game state portable across hosts and future framework versions.
 - no catalog definition duplication,
 - deterministic restore,
 - transaction-safe save points,
-- optional command/event logs for replay tests.
+- optional checkpoint breadcrumbs for diagnostics.
 
 ### Exit Gate
 
-A representative complete session can save, reload, and continue in both headless integration tests and the interactive host.
+A representative clean session can be snapshotted, serialized by a host, restored, validated against a catalog, and resumed into equivalent framework runtime state without placing a save-file format inside the framework.
+
+### Track R Completion
+
+Track R adds serializer-neutral persistence contracts to `JRPG.Framework` and a noninteractive console-host proof command, not an interactive save menu.
+
+- Added `RuntimeSaveGameSnapshot` contract version `1`, aggregating actor snapshots, party/stock state, inventory, equipped items, wallet, field/dungeon progress, Compendium state, typed battle knowledge, session progress, optional host context, and ordered checkpoint entries.
+- Added `RuntimeKnowledgeSnapshot`, `RuntimeSessionProgressSnapshot`, `RuntimeCheckpointLogSnapshot`, `IRuntimeSaveValidator`, aggregated diagnostics, and `RequireValidSnapshot()`.
+- Validation checks duplicate runtime IDs, missing party/stock/form/checkpoint actor references, catalog-backed actor/entity/skill/item/equipment/dungeon/ailment/Compendium references, and malformed checkpoint ordering. Catalog definitions are referenced by qualified ID and are not duplicated into saves.
+- Added `--clean-save-demo` in the console host. The demo loads retained clean packs, builds a representative save snapshot, serializes/deserializes it through host-owned `System.Text.Json` DTOs, validates the restored snapshot, rebuilds actor runtime state, prints ordered proof events, and exits without input.
+- The framework persistence contracts expose no `System.Text.Json`, filesystem, console, Godot, Newtonsoft, `Database`, `Combatant`, `Persona`, `SkillData`, or `ItemData` types. Existing internal schema deserialization remains the only framework JSON implementation surface.
+- The parity ledger now has `persistence_snapshots` as `clean_foundation`; no legacy runtime file is removable, no interactive save/load consumer is migrated, and production `Data/Jsons` remains unchanged.
+- Focused Track R verification passed: `RuntimePersistenceSnapshotTests`, `CleanSaveDemoHostTests`, and the parity-ledger check reported 9 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 721 passed, 0 failed, 0 skipped; `dotnet build JRPG.sln --no-restore --no-incremental /clp:Summary` passed with 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
+- Quality gates passed: `git diff --check` reported no whitespace errors, Track R runtime persistence contracts had no forbidden host/serializer/legacy references, and `Data/Jsons` had no modified files.
 
 ## Track S: Legacy Retirement
 

@@ -13,11 +13,12 @@ The solution is organized around gameplay subsystems with a physical host bounda
 - immutable content definitions;
 - serializer-neutral deserialization contracts, validation, and catalog construction;
 - catalog-surface definitions for equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets;
-- runtime identity, actor-state snapshots, and transaction-safe mutation result contracts;
+- runtime identity, actor-state snapshots, versioned save snapshots, and transaction-safe mutation result contracts;
 - typed action, skill, item, passive, targeting, and effect execution;
 - catalog-backed actor hydration and automated battle orchestration;
 - elemental, ailment, instant-death, knowledge, and Press Turn contracts;
 - typed fusion inheritance evaluation, result resolution, planning, transaction assessment, and Compendium state.
+- serializer-neutral runtime save validation and checkpoint diagnostics.
 
 The framework has no package references and does not access the console, filesystem, Godot, or the legacy static database. JSON implementation details remain internal to the content-loading subsystem.
 
@@ -29,7 +30,7 @@ The framework has no package references and does not access the console, filesys
 - the legacy database, runtime actors, gameplay conductors, and console workflows;
 - `IGameIO`, menu rendering, colors, waits, and debug scenarios;
 - filesystem-backed content acquisition and copied `Data/Jsons` content;
-- the clean battle and field demo policies and presentation.
+- the clean battle, field, and save demo policies and presentation.
 
 The console host references the framework. The framework never references the console host.
 
@@ -40,6 +41,8 @@ Future clean hosts use cancellation-aware asynchronous contracts for content tex
 The existing interactive prototype still uses synchronous `IGameIO`, but Track O1 adds console adapters over the clean host contracts. Those adapters are intentionally narrow: already-simple menus can return typed commands and startup can publish sidecar catalog warnings through the event sink without forcing full battle, fusion, shop, or preview-heavy screens through asynchronous host contracts yet.
 
 Track P proves the same contracts are usable from a Godot-style host without adding GodotSharp or engine types to the framework. The test-only Godot contract adapters model `res://` resource loading, signal-style commands, event consumption, scene-instance mapping, deterministic randomness, and host-owned save snapshots while keeping all Godot responsibilities outside `JRPG.Framework`.
+
+Track R turns the earlier host-owned save proof into framework persistence contracts. The framework now defines versioned runtime save snapshots and validation diagnostics; hosts still choose JSON, binary, Godot resources, cloud slots, or any other save-file format.
 
 ### Runtime State Boundary
 
@@ -89,7 +92,9 @@ Track O10 routes Cathedral fusion and Compendium presentation through typed cons
 
 Track P adds the Godot integration contract proof. It does not introduce a Godot project; it verifies that content loading, command input, event output, clean actor creation, deterministic battle execution, scene mapping, and snapshot save/restore are all possible through engine-neutral framework APIs.
 
-Complete AI/tactics policy, full fusion strategy replacement, Compendium persistence, production save/load services, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
+Track R adds `RuntimeSaveGameSnapshot` version `1`, typed battle knowledge snapshots, session progress, checkpoint breadcrumbs, save validation diagnostics, and `--clean-save-demo`. The demo serializes through console-host-owned DTOs, proving the contract is portable without exposing serializer APIs from `JRPG.Framework`.
+
+Complete AI/tactics policy, full fusion strategy replacement, interactive save/load menus, save-version migration tooling, authored negotiation content, legacy item/equipment/dungeon content reauthoring, and authored ruleset binding remain later migration tracks. The Track E/F/G/H/I/J/K/L/M/N/O policies are named defaults in code, not authored ruleset JSON parameters yet.
 
 ## Layers And Patterns
 

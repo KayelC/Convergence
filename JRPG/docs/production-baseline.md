@@ -436,3 +436,17 @@ Track Q1 began as a production-content audit and planning pass. Q2 amends that p
 - Demo verification passed: the clean battle demo ended in player-team victory, and the clean field demo completed successfully.
 - Quality gates passed: `git diff --check` reported no whitespace errors, the framework forbidden-reference search found no Godot/console/filesystem/Newtonsoft/legacy DTO/static database leaks, and `Data/Jsons` had no modified files.
 - Q2 verification passed with the same 8 focused checks, 713-test full suite, 98-warning nonincremental build, successful clean battle/field demos, clean whitespace and framework boundary checks, and no `Data/Jsons` modifications.
+
+## Track R Boundary
+
+Track R adds framework-owned save/checkpoint contracts and a host-owned JSON proof demo. It does not add interactive save menus, switch production consumers to clean content authority, convert legacy datasets, or authorize removal.
+
+- `JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs` now owns `RuntimeSaveGameSnapshot` contract version `1`, typed knowledge snapshots, session progress, checkpoint logs, save validation diagnostics, and `IRuntimeSaveValidator`.
+- Save snapshots aggregate actors, party/stock, inventory, equipped items, wallet, field/dungeon progress, Compendium entries, battle knowledge, session counters/flags, optional host context, and ordered checkpoint breadcrumbs.
+- Validation uses a `GameDataCatalog` to check duplicate runtime IDs, missing actor references, active-form references, catalog content references, inventory/equipment IDs, dungeon IDs, Compendium species/skills, knowledge targets, and checkpoint ordering. Catalog definitions are never copied into the save.
+- `Host/CleanSaveDemoHost.cs` adds `--clean-save-demo`, which loads retained clean packs, creates a representative snapshot, serializes/deserializes it with console-host-owned `System.Text.Json` DTOs, validates the restored snapshot, rebuilds actor runtime state, prints ordered proof events, and exits without input.
+- The parity ledger records `persistence_snapshots` as `clean_foundation`. Legacy `Combatant`, `Persona`, `PartyManager`, `CompendiumRegistry`, `ConsoleGameHost`, and production JSON remain protected; `removalAuthorized` stays `false`.
+- Focused Track R verification passed: 9 focused persistence/host/ledger checks passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 721 passed, 0 failed, 0 skipped; the nonincremental build passed with 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
+- Quality gates passed: `git diff --check` reported no whitespace errors, Track R runtime contracts had no forbidden host/serializer/legacy references, and `Data/Jsons` had no modified files.

@@ -17,6 +17,11 @@ namespace JRPGPrototype
                 return await new CleanFieldDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
             }
 
+            if (args.Contains("--clean-save-demo", StringComparer.Ordinal))
+            {
+                return await new CleanSaveDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
+            }
+
             IGameIO io = new ConsoleIO();
             ConsoleGameHost host = new ConsoleGameHost(io);
 

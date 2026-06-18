@@ -139,6 +139,19 @@
       "removalAuthorized": false
     },
     {
+      "id": "persistence_snapshots",
+      "name": "Versioned runtime save snapshots and host-owned save proof",
+      "status": "clean_foundation",
+      "legacyOwners": ["Host/ConsoleGameHost.cs", "Entities/Combatant.cs", "Entities/Persona.cs", "Logic/Core/PartyManager.cs", "Logic/Fusion/CompendiumRegistry.cs"],
+      "cleanOwners": ["JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs", "Host/CleanSaveDemoHost.cs"],
+      "decisionDependencies": ["interactive_save_menus", "save_version_migrations", "production_content_authority"],
+      "tests": ["RuntimePersistenceSnapshotTests", "CleanSaveDemoHostTests"],
+      "futureTrack": "R",
+      "removalFiles": ["Host/ConsoleGameHost.cs", "Entities/Combatant.cs", "Entities/Persona.cs", "Logic/Core/PartyManager.cs", "Logic/Fusion/CompendiumRegistry.cs"],
+      "consumerMigrated": false,
+      "removalAuthorized": false
+    },
+    {
       "id": "combat_math",
       "name": "Damage, accuracy, critical, initiative, reward, and instant-death math",
       "status": "parallel_partial",

@@ -148,7 +148,11 @@ Track Q1 adds the production-content audit ledger before any real content conver
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.
 
-This is not a gameplay migration yet. The interactive console still mutates `Combatant`, `Persona`, `InventoryManager`, `PartyManager`, `StatusRegistry`, and the Cathedral services. The new runtime snapshots are save/presentation/replay contracts for later tracks, and only resource mutation has a transaction result service so far.
+This is not full legacy removal. The interactive console still mutates `Combatant`, `Persona`, `InventoryManager`, `PartyManager`, `StatusRegistry`, and the Cathedral services. The runtime snapshots are the portable state boundary, and Tracks E through O progressively moved rule and presentation surfaces onto framework adapters without deleting the live console objects.
+
+Track R adds the first complete framework save/checkpoint contract over those runtime snapshots. `RuntimeSaveGameSnapshot` version `1` stores actors, party/stock, inventory, equipped items, wallet, field/dungeon progress, Compendium state, battle knowledge, session progress, optional host context, and checkpoint breadcrumbs by value while referencing catalog content by qualified IDs. `IRuntimeSaveValidator` checks the save against a `GameDataCatalog` and reports stable diagnostics for duplicate runtime IDs, missing actor links, missing catalog content, malformed knowledge targets, and invalid checkpoint ordering.
+
+The save-file format remains host-owned. `--clean-save-demo` proves a console host can serialize the framework snapshot through `System.Text.Json`, deserialize it, validate it, rebuild framework runtime actor state, and exit without input. The ordinary interactive console still has no save/load menu in Track R.
 
 ## Clean Stat And Growth Foundation
 

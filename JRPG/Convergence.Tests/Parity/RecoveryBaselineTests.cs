@@ -42,6 +42,7 @@ public sealed class RecoveryParityLedgerTests
         "negotiation_and_recruitment",
         "party_operations",
         "passive_lifecycle",
+        "persistence_snapshots",
         "persona_and_demon_stock",
         "press_turn",
         "resource_recalculation",

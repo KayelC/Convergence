@@ -1,12 +1,12 @@
 # Godot Integration Contract
 
-> **Status: Track P contract proof.** This document defines how a Godot host consumes `JRPG.Framework` without making the framework depend on Godot.
+> **Status: Track P/R contract proof.** This document defines how a Godot host consumes `JRPG.Framework` without making the framework depend on Godot.
 
 ## Purpose
 
 Track P proves that Godot integration is adapter work. The framework remains an engine-neutral class library that owns content validation, catalogs, runtime rules, transitions, and immutable results. A Godot project owns resource acquisition, nodes, scenes, input, presentation scheduling, asset IDs, and save-file format.
 
-No GodotSharp package or Godot project is required in this repository for Track P. The proof lives in test-only Godot-shaped adapters that use fake `res://` paths, signal-style commands, event sinks, scene-instance handles, and host-owned save snapshots.
+No GodotSharp package or Godot project is required in this repository for Track P. The proof lives in test-only Godot-shaped adapters that use fake `res://` paths, signal-style commands, event sinks, scene-instance handles, and host-owned save snapshots. Track R extends the same boundary with framework-owned save snapshot contracts and a console-host JSON proof.
 
 ## Host Responsibilities
 
@@ -29,7 +29,8 @@ The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`
 - actor hydration from catalog definitions;
 - skill, item, passive, status, action, battle, dungeon, party/stock, economy, fusion, and Compendium rule services;
 - ordered events and diagnostics expressed as serializer-neutral records;
-- runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonProgressSnapshot`.
+- runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonProgressSnapshot`;
+- versioned persistence snapshots such as `RuntimeSaveGameSnapshot`, `RuntimeKnowledgeSnapshot`, `RuntimeSessionProgressSnapshot`, and checkpoint logs.
 
 Framework APIs remain plain .NET contracts. JSON DTOs, `JsonElement`, console types, filesystem access, Newtonsoft, legacy DTOs, and Godot types must not appear in public framework signatures.
 
@@ -49,9 +50,11 @@ This is not a gameplay migration track. It proves that a Godot project can stand
 
 ## Save Boundary
 
-The framework exposes serializer-neutral snapshots. A Godot save file should wrap those snapshots with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
+The framework exposes serializer-neutral snapshots. Track R formalizes the aggregate save boundary as `RuntimeSaveGameSnapshot` contract version `1`. A Godot save file should wrap that snapshot with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
 
-The framework does not prescribe JSON, binary, Godot `Resource`, or any other save format. It only provides stable state objects that a host can store and later use to restore equivalent framework state.
+The framework does not prescribe JSON, binary, Godot `Resource`, or any other save format. It only provides stable state objects and `IRuntimeSaveValidator`, which checks restored snapshots against a `GameDataCatalog` without duplicating catalog definitions into the save.
+
+`--clean-save-demo` is the console-host proof: it serializes a representative `RuntimeSaveGameSnapshot` using host-owned `System.Text.Json` DTOs, deserializes it, validates it, rebuilds runtime actor state, and exits without input. A Godot host would replace those DTOs with its own save envelope while preserving the same framework snapshot and validation boundary.
 
 ## Non-Goals
 
@@ -61,3 +64,4 @@ The framework does not prescribe JSON, binary, Godot `Resource`, or any other sa
 - No legacy console file is removed.
 - No parity-ledger capability moves to `clean_parity`.
 - No framework public API is changed for Godot-specific concepts.
+- No save-slot UI, cloud-save policy, or save-version migration system is added.
