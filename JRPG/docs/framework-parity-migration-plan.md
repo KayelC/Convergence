@@ -1497,15 +1497,23 @@ Track R adds serializer-neutral persistence contracts to `JRPG.Framework` and a 
 - Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
 - Quality gates passed: `git diff --check` reported no whitespace errors, Track R runtime persistence contracts had no forbidden host/serializer/legacy references, and `Data/Jsons` had no modified files.
 
-## Track S: Legacy Retirement
+## Track S: Legacy Retirement And Archive Gate
 
 ### Goal
 
-Remove only code and data proven obsolete by completed consumer migrations.
+Move only code and data proven obsolete by completed consumer migrations out of the active runtime and into `ArchiveDocs/LegacyFramework`.
 
-### Per-File Removal Checklist
+Track S is not a declaration that the framework is finished. The architecture is ready to continue production on, but the framework still has incomplete gameplay authority in areas such as full AI/tactics policy, production content authority, authored ruleset binding, interactive save/load, and later feature work. Track S only retires specific legacy files when their replacement is already proven.
 
-Before deleting a legacy file:
+### Archive-First Policy
+
+Old code should not be deleted outright. When a file is eligible for retirement, preserve it under `ArchiveDocs/LegacyFramework/<track-or-gate>/<original-relative-path>`, then remove it from active project compilation, runtime loading, tests, and documentation references.
+
+No active legacy source is archived merely because a framework service exists. Adapter-backed systems remain active until the consumer has migrated and the parity ledger authorizes retirement.
+
+### Per-File Archive Checklist
+
+Before archiving a legacy file:
 
 1. Name every behavior it owns.
 2. Link the framework replacement.
@@ -1513,12 +1521,14 @@ Before deleting a legacy file:
 4. Confirm no production references remain.
 5. Confirm no retained dataset depends on its shape.
 6. Run the interactive host workflow it previously supported.
-7. Review the deletion as a focused change.
-8. Update active documentation and archive useful historical notes.
+7. Promote the matching parity-ledger capability to `clean_parity`, with `consumerMigrated: true` and `removalAuthorized: true`.
+8. Move the file into `ArchiveDocs/LegacyFramework` with its original relative path preserved.
+9. Review the archive/removal from active code as a focused change.
+10. Update active documentation and archive useful historical notes.
 
-### Removal Order
+### Archive Order
 
-Remove leaf adapters and duplicate implementations before central models:
+Archive leaf adapters and duplicate implementations before central models:
 
 1. name/string inference helpers,
 2. duplicate effect implementations,
@@ -1534,11 +1544,12 @@ Remove leaf adapters and duplicate implementations before central models:
 - deleting datasets because schemas exist,
 - deleting tests solely to make a new architecture pass,
 - converting the application into a library before an interactive host replaces it,
-- mixing several subsystem retirements into one commit.
+- mixing several subsystem retirements into one commit,
+- moving active compatibility code into the archive while `removalAuthorized` is still `false`.
 
 ### Exit Gate
 
-The framework and host retain all approved capabilities, all parity tests pass, legacy searches are clean, and the old path is unreachable because every consumer has migrated, not because files were deleted first.
+The framework and host retain all approved capabilities, all parity tests pass, legacy searches are clean for the retired surface, and the old path is unreachable because every consumer has migrated. Retired files are preserved under `ArchiveDocs/LegacyFramework` instead of being deleted outright.
 
 ## Test Strategy
 

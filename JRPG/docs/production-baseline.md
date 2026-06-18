@@ -450,3 +450,12 @@ Track R adds framework-owned save/checkpoint contracts and a host-owned JSON pro
 - Full verification passed: `dotnet test JRPG.sln --no-restore` reported 721 passed, 0 failed, 0 skipped; the nonincremental build passed with 98 warnings and 0 errors.
 - Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
 - Quality gates passed: `git diff --check` reported no whitespace errors, Track R runtime contracts had no forbidden host/serializer/legacy references, and `Data/Jsons` had no modified files.
+
+## Track S Archive Policy
+
+Track S will archive obsolete legacy source instead of deleting it outright. The archive home is `ArchiveDocs/LegacyFramework`.
+
+- No active production source is archived at the start of Track S because the parity ledger still has `removalAuthorized: false` for every protected legacy capability.
+- A file can move into the archive only after its capability reaches `clean_parity`, its consumer is migrated, tests prove the replacement, and the ledger explicitly authorizes retirement.
+- The current framework architecture is ready for future production work, but the framework itself is not feature-complete. Remaining development includes production content authority, authored ruleset binding, interactive save/load, and future gameplay systems.
+- Archive-first retirement preserves historical code while keeping active build/runtime references honest.

@@ -29,6 +29,10 @@ Documents belong here when they are:
 
 Generated fusion implementation walkthroughs from the legacy console architecture. The corresponding source and tests remain the implementation authority.
 
+### LegacyFramework
+
+Retirement holding area for legacy framework or console-host source files after a capability reaches `clean_parity` and its parity-ledger entry explicitly authorizes removal from active code. No active source has been moved there yet.
+
 ## Reusing Archived Material
 
 Do not move an archived document back into `docs` unchanged. Extract the still-relevant decision, verify it against current code and goals, discuss it where necessary, and publish a smaller active document with a clear status.
