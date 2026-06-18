@@ -459,3 +459,13 @@ Track S will archive obsolete legacy source instead of deleting it outright. The
 - A file can move into the archive only after its capability reaches `clean_parity`, its consumer is migrated, tests prove the replacement, and the ledger explicitly authorizes retirement.
 - The current framework architecture is ready for future production work, but the framework itself is not feature-complete. Remaining development includes production content authority, authored ruleset binding, interactive save/load, and future gameplay systems.
 - Archive-first retirement preserves historical code while keeping active build/runtime references honest.
+
+## Track T Boundary
+
+Track T begins the build-forward phase after the archive gate. Its active reference is `docs/t-track-plan.md`.
+
+- T1 records the current framework gap map and the T1-T5 sequence without changing runtime behavior.
+- The next priority is framework completion through authored ruleset binding, original clean content, and a clean runtime consumer slice.
+- The legacy prototype datasets remain prototype-only evidence; new production content must be original clean content.
+- No active source is archived in T1, and all `removalAuthorized` flags remain `false`.
+- T1 verification passed with 4 focused roadmap tests, 725 full-suite tests, a 0-warning framework build, a 98-warning nonincremental solution build, successful clean battle/field/save demos, clean whitespace and framework-boundary checks, and no `Data/Jsons` modifications.

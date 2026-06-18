@@ -1551,6 +1551,39 @@ Archive leaf adapters and duplicate implementations before central models:
 
 The framework and host retain all approved capabilities, all parity tests pass, legacy searches are clean for the retired surface, and the old path is unreachable because every consumer has migrated. Retired files are preserved under `ArchiveDocs/LegacyFramework` instead of being deleted outright.
 
+## Track T: Framework Completion Roadmap And First Production Vertical Slice
+
+### Goal
+
+Continue production on the new architecture without pretending the framework is finished and without archiving active compatibility code.
+
+Track T is governed by [Track T Framework Completion Roadmap](t-track-plan.md). It starts with a framework completion audit, then moves toward authored ruleset binding, a small original clean content pack, a clean runtime consumer slice, and only then a narrow archive-candidate review.
+
+### Required Boundaries
+
+- Legacy `Data/Jsons` remains prototype-only evidence, not a clean production conversion queue.
+- `ArchiveDocs/LegacyFramework` remains policy-only until a specific capability reaches `clean_parity`, `consumerMigrated: true`, and `removalAuthorized: true`.
+- Framework completion work must advance reusable rules, state, content, or host contracts.
+- The console host remains the compatibility/demo host while clean production slices mature.
+
+### Track T1 Completion Target
+
+The roadmap exists, identifies the current framework gaps, and records the next sequence without modifying production JSON, archiving source, or changing runtime behavior.
+
+### Track T1 Completion
+
+Track T1 establishes the build-forward lane without changing runtime behavior or moving legacy source.
+
+- `docs/t-track-plan.md` now records the active T1-T5 sequence: completion audit, authored ruleset binding, original clean content vertical slice, clean runtime consumer slice, and archive candidate review.
+- The active documentation index, architecture overview, and production baseline link to the Track T roadmap.
+- `FrameworkCompletionRoadmapTests` enforce the key guardrails: the Track T policy exists, `ArchiveDocs/LegacyFramework` remains policy-only, and the recovery parity ledger authorizes no removals before clean parity.
+- Focused Track T tests passed: 4 passed, 0 failed, 0 skipped.
+- Full verification passed: `dotnet test JRPG.sln --no-restore` reported 725 passed, 0 failed, 0 skipped.
+- Build verification passed: the framework project built with 0 warnings and 0 errors; the nonincremental solution build passed with 98 warnings and 0 errors.
+- Demo verification passed: clean battle ended in player-team victory, clean field effects completed successfully, and clean save restored 2 actors, 1 item stack, and dungeon floor 5.
+- Quality gates passed: `git diff --check`, framework forbidden-reference search, and `git status --short -- Data/Jsons`.
+- No production JSON, gameplay rule, parity-ledger removal authorization, or archived source changed.
+
 ## Test Strategy
 
 ### Unit Tests

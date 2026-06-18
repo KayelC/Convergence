@@ -98,6 +98,8 @@ Complete AI/tactics policy, full fusion strategy replacement, interactive save/l
 
 Track S is an archive gate, not a proof that the framework is finished. Legacy files may move to `ArchiveDocs/LegacyFramework` only after the parity ledger marks the corresponding capability `clean_parity`, `consumerMigrated: true`, and `removalAuthorized: true`. Until then, the console adapters and legacy datasets remain active compatibility code while production continues on the new architecture.
 
+Track T is the build-forward lane after that archive gate. It keeps active legacy code in place while the framework gains missing production authority through authored ruleset binding, original clean content, and an end-to-end clean runtime slice.
+
 ## Layers And Patterns
 
 ### Conductors
