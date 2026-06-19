@@ -12,6 +12,7 @@ internal enum CleanTrainingAnnexPlayCommand
 {
     InspectSession,
     InspectActor,
+    RecalculateResources,
     ValidateStartupSnapshot,
     Exit
 }
@@ -25,8 +26,10 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int EnemyActorCount,
     IReadOnlyList<ContentId> ActorEntityIds,
     IReadOnlyList<ContentId> ActorInstanceIds,
+    IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     int ActiveSkillCount,
     int PassiveSkillCount,
+    bool ResourceRecalculationApplied,
     bool StartupSnapshotValidated,
     int StartupSnapshotDiagnosticCount,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
@@ -108,7 +111,11 @@ internal sealed class CleanTrainingAnnexPlayHost
 
         TrainingAnnexActorRoster roster = rosterResult.RequireRoster();
         CatalogBattleActor player = roster.Player.Actor;
+        GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver()
+            .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
+            .RequireService();
         var commands = new List<CleanTrainingAnnexPlayCommand>();
+        bool resourceRecalculationApplied = false;
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
 
@@ -134,6 +141,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 LastSummary = CreateSummary(
                     request,
                     roster,
+                    resourceRecalculationApplied,
                     snapshotValidated,
                     snapshotDiagnosticCount,
                     commands);
@@ -151,6 +159,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectActor:
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.RecalculateResources:
+                    resourceRecalculationApplied = await RecalculatePlayerResourcesAsync(
+                        roster.Player,
+                        growthServices.ResourceGrowthPolicy,
+                        cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
@@ -173,6 +187,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         LastSummary = CreateSummary(
                             request,
                             roster,
+                            resourceRecalculationApplied,
                             snapshotValidated,
                             snapshotDiagnosticCount,
                             commands);
@@ -195,6 +210,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.InspectActor,
                     "Inspect Actors"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.RecalculateResources,
+                    "Recalculate Resources"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                     "Validate Startup Snapshot"),
@@ -222,12 +240,13 @@ internal sealed class CleanTrainingAnnexPlayHost
     private async ValueTask PrintActorAsync(TrainingAnnexRuntimeActor runtimeActor, CancellationToken cancellationToken)
     {
         CatalogBattleActor actor = runtimeActor.Actor;
+        RuntimeActorSnapshot snapshot = runtimeActor.RuntimeState.ToSnapshot();
         string resources = string.Join(
             ", ",
-            actor.State.Resources.Values.Select(resource => $"{resource.Id} {resource.Current}/{resource.Maximum}"));
+            snapshot.Resources.Select(resource => $"{resource.ResourceId} {resource.Current}/{resource.Maximum}"));
         string stats = string.Join(
             ", ",
-            actor.Entity.Stats.Select(pair => $"{pair.Key} {pair.Value}"));
+            snapshot.Stats.EffectiveStats.Select(pair => $"{pair.Key} {pair.Value}"));
         string activeSkills = string.Join(", ", actor.ActiveSkills.Select(skill => skill.DisplayName));
         string passiveSkills = string.Join(
             ", ",
@@ -236,7 +255,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 .Select(skill => skill.DisplayName));
 
         await _eventSink.PublishAsync(
-            $"{runtimeActor.Role}: {actor.Entity.DisplayName}; instance {actor.State.InstanceId}; level {runtimeActor.Level}; resources: {resources}.",
+            $"{runtimeActor.Role}: {actor.Entity.DisplayName}; instance {snapshot.Identity.InstanceId}; level {runtimeActor.Level}; resources: {resources}.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync($"Stats: {stats}.", cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync($"Active skills: {activeSkills}.", cancellationToken).ConfigureAwait(false);
@@ -248,6 +267,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static CleanTrainingAnnexPlaySummary CreateSummary(
         ContentPackTextRequest request,
         TrainingAnnexActorRoster roster,
+        bool resourceRecalculationApplied,
         bool snapshotValidated,
         int snapshotDiagnosticCount,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
@@ -261,11 +281,53 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.AllActors.Count,
             roster.Enemies.Count,
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
-            roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
+            roster.AllActors.Select(actor => ContentId.Parse(actor.RuntimeState.InstanceId.ToString())).ToArray(),
+            roster.Player.RuntimeState.ToSnapshot().Resources,
             player.ActiveSkills.Count,
             player.SkillLoadout.Count(skill => skill.Activation == SkillActivation.Passive),
+            resourceRecalculationApplied,
             snapshotValidated,
             snapshotDiagnosticCount,
             commands.ToArray());
+    }
+
+    private async ValueTask<bool> RecalculatePlayerResourcesAsync(
+        TrainingAnnexRuntimeActor player,
+        IResourceGrowthPolicy resourceGrowthPolicy,
+        CancellationToken cancellationToken)
+    {
+        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        RuntimeResourceSnapshot beforeHp = before.Resources.Single(resource =>
+            resource.ResourceId == TrainingAnnexHostSupport.Hp);
+        RuntimeMutationResult mutation = new RuntimeResourceTransactionService().AddResource(
+            player.RuntimeState,
+            TrainingAnnexHostSupport.Hp,
+            -10);
+        if (!mutation.Applied)
+        {
+            foreach (RuntimeMutationDiagnostic diagnostic in mutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return false;
+        }
+
+        ResourceRecalculationResult recalculated = resourceGrowthPolicy.Recalculate(
+            new ResourceRecalculationRequest(
+                mutation.After.Resources,
+                mutation.After.BaseResourceValues,
+                mutation.After.Stats.EffectiveStats,
+                ResourceCurrentAdjustmentMode.PreserveCurrent));
+        RuntimeResourceSnapshot afterHp = recalculated.GetRequired(TrainingAnnexHostSupport.Hp);
+        await _eventSink.PublishAsync(
+            $"Resource recalculation: {player.Actor.Entity.DisplayName} hp {beforeHp.Current}/{beforeHp.Maximum} -> {afterHp.Current}/{afterHp.Maximum}.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Resource policy: standard_growth preserved current hp and recalculated maximum {afterHp.Maximum}.",
+            cancellationToken).ConfigureAwait(false);
+        return true;
     }
 }

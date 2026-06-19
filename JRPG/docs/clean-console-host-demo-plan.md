@@ -193,6 +193,18 @@ Implemented after the initial shell:
 
 This proves the clean actor-model path for the original slice, but it does not yet replace every protected legacy actor category.
 
+### Phase 1-03 Resource Recalculation Extension
+
+Implemented after the actor roster extension:
+
+- `TrainingAnnexHostSupport` now binds the clean `standard_growth` ruleset when creating the Training Annex runtime actor roster.
+- Training Annex actor HP/SP initialization uses the framework `StandardResourceGrowthPolicy` through a clean resource initialization policy.
+- The clean play host stores framework runtime actor snapshots for the roster instead of treating catalog battle actors as the whole session state.
+- The interactive menu now includes `Recalculate Resources`, which applies a small HP transaction to Echo Adept and reruns the framework resource-growth policy with preserve-current semantics.
+- Startup snapshot validation uses the current clean runtime actor snapshots, so resource changes are covered by save validation.
+
+This proves clean resource initialization and a first resource update in the interactive Training Annex session. It does not retire legacy `GrowthProcessor` or legacy `Combatant` resource behavior.
+
 ## Iteration 2: Optional Mechanic Baseline
 
 ### Goal

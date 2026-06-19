@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Host;
 using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.Host;
@@ -13,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -67,23 +68,33 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.ActorInstanceIds);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
+        RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
+            resource.ResourceId == ContentId.Parse("hp"));
+        RuntimeResourceSnapshot sp = Assert.Single(summary.PlayerResources, resource =>
+            resource.ResourceId == ContentId.Parse("sp"));
+        Assert.Equal(70, hp.Current);
+        Assert.Equal(80, hp.Maximum);
+        Assert.Equal(28, sp.Current);
+        Assert.Equal(28, sp.Maximum);
+        Assert.True(summary.ResourceRecalculationApplied);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.InspectSession,
                 CleanTrainingAnnexPlayCommand.InspectActor,
+                CleanTrainingAnnexPlayCommand.RecalculateResources,
                 CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                 CleanTrainingAnnexPlayCommand.Exit
             ],
             summary.Commands);
 
-        Assert.Equal(4, io.Menus.Count);
+        Assert.Equal(5, io.Menus.Count);
         foreach (GameIoMenuCall menu in io.Menus)
         {
             Assert.Equal("Training Annex Clean Session", menu.Header);
             Assert.Equal(
-                ["Inspect Session", "Inspect Actors", "Validate Startup Snapshot", "Exit"],
+                ["Inspect Session", "Inspect Actors", "Recalculate Resources", "Validate Startup Snapshot", "Exit"],
                 menu.Options);
         }
         io.AssertConsumed();
@@ -95,12 +106,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Hydrated clean actor roster with 4 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons.", text, StringComparison.Ordinal);
         Assert.Contains("Actor roster: 4 actor(s).", text, StringComparison.Ordinal);
-        Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources:", text, StringComparison.Ordinal);
-        Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources:", text, StringComparison.Ordinal);
-        Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources:", text, StringComparison.Ordinal);
-        Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources:", text, StringComparison.Ordinal);
+        Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 28/28.", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources: hp 65/65, sp 29/29.", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources: hp 75/75, sp 22/22.", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources: hp 100/100, sp 27/27.", text, StringComparison.Ordinal);
         Assert.Contains("Active skills: Frost Tip, Echo Strike.", text, StringComparison.Ordinal);
         Assert.Contains("Passive skills: Steady Breath.", text, StringComparison.Ordinal);
+        Assert.Contains("Resource recalculation: Echo Adept hp 80/80 -> 70/80.", text, StringComparison.Ordinal);
+        Assert.Contains("Resource policy: standard_growth preserved current hp and recalculated maximum 80.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("Clean Training Annex session exited.", text, StringComparison.Ordinal);
     }

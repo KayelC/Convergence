@@ -134,7 +134,7 @@ Goal: build the smallest independent clean loop first.
 | Pass | Capability | Current Status | Goal |
 | ---: | --- | --- | --- |
 | 01 | `interactive_boot` | `parallel_partial` | Add a clean interactive entry that does not load legacy `Database`. |
-| 02 | `actor_models` | `clean_foundation` | Prove clean runtime actors can represent the playable demo actor and enemies. |
+| 02 | `actor_models` | `parallel_partial` | Prove clean runtime actors can represent the playable demo actor and enemies. |
 | 03 | `resource_recalculation` | `parallel_partial` | Make clean HP/SP initialization and updates authoritative in the clean demo. |
 | 04 | `stat_composition` | `parallel_partial` | Make clean stats and equipment/stat modifiers visible in the clean demo. |
 | 05 | `growth_and_levels` | `parallel_partial` | Apply EXP and level/progression through framework services in the clean demo. |
@@ -287,7 +287,29 @@ Phase 1-02 result:
 - Startup snapshot validation now covers the clean actor roster, not only the player actor.
 - This is `parallel_partial`, not `clean_parity`: the original clean slice proves the framework actor path, but protected legacy actor categories such as Human, Persona User, Wild Card, and Operator are still legacy/adapter-owned.
 
-### 03. `stat_composition`
+### 03. `resource_recalculation`
+
+Current status: `parallel_partial`.
+
+Full parity target:
+
+- framework owns HP/SP max calculation and current-resource policy;
+- actor hydration and level-up/resource changes use the same policy;
+- no legacy `GrowthProcessor` path is needed for clean actors.
+
+Clean console proof:
+
+- item use, battle damage, recovery, and reward/level flow leave valid resource snapshots.
+
+Phase 1-03 result:
+
+- The clean Training Annex play host now binds the catalog `standard_growth` ruleset before actor roster creation.
+- Training Annex actor HP/SP initialization uses `StandardResourceGrowthPolicy` through `TrainingAnnexResourceInitializationPolicy`, not the older demo-only battle initializer.
+- The play host keeps a framework `RuntimeActorStateSet` for each clean runtime actor and validates save snapshots from those runtime snapshots.
+- The new `Recalculate Resources` command applies a clean runtime HP transaction to Echo Adept and reruns the framework resource policy with preserve-current semantics.
+- This is still `parallel_partial`: the clean Training Annex path uses the framework resource policy directly, but protected legacy console consumers still retain their adapter-backed `GrowthProcessor`/`Combatant` resource paths.
+
+### 04. `stat_composition`
 
 Current status: `parallel_partial`.
 
@@ -301,7 +323,7 @@ Clean console proof:
 
 - inspect/status menu shows clean stat values from runtime snapshots.
 
-### 04. `growth_and_levels`
+### 05. `growth_and_levels`
 
 Current status: `parallel_partial`.
 
@@ -314,20 +336,6 @@ Full parity target:
 Clean console proof:
 
 - victory changes EXP/progression in the clean session.
-
-### 05. `resource_recalculation`
-
-Current status: `parallel_partial`.
-
-Full parity target:
-
-- framework owns HP/SP max calculation and current-resource policy;
-- actor hydration and level-up/resource changes use the same policy;
-- no legacy `GrowthProcessor` path is needed for clean actors.
-
-Clean console proof:
-
-- item use, battle damage, recovery, and reward/level flow leave valid resource snapshots.
 
 ### 06. `active_and_reserve_party`
 

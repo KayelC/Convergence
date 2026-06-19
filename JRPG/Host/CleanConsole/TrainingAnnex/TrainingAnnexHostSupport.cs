@@ -10,7 +10,11 @@ using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 
-internal sealed record TrainingAnnexRuntimeActor(string Role, int Level, CatalogBattleActor Actor);
+internal sealed record TrainingAnnexRuntimeActor(
+    string Role,
+    int Level,
+    CatalogBattleActor Actor,
+    RuntimeActorStateSet RuntimeState);
 
 internal sealed record TrainingAnnexActorRoster
 {
@@ -130,10 +134,16 @@ internal static class TrainingAnnexHostSupport
         ArgumentNullException.ThrowIfNull(catalog);
 
         var diagnostics = new List<string>();
+        GrowthRulesetServices? growthServices = BindGrowthServices(catalog, diagnostics);
+        if (growthServices is null)
+        {
+            return new TrainingAnnexActorRosterResult(null, diagnostics);
+        }
+
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,
-            new DemoBattleActorInitializationPolicy());
+            new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy));
 
         CatalogBattleActorCreationResult playerResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("echo_adept"),
@@ -156,7 +166,7 @@ internal static class TrainingAnnexHostSupport
                 continue;
             }
 
-            enemies.Add(new TrainingAnnexRuntimeActor("Enemy", request.Level, enemyResult.RequireActor()));
+            enemies.Add(CreateRuntimeActor("Enemy", request.Level, enemyResult.RequireActor()));
         }
 
         if (diagnostics.Count > 0 || playerResult.Actor is null)
@@ -166,7 +176,7 @@ internal static class TrainingAnnexHostSupport
 
         return new TrainingAnnexActorRosterResult(
             new TrainingAnnexActorRoster(
-                new TrainingAnnexRuntimeActor("Player", 3, playerResult.RequireActor()),
+                CreateRuntimeActor("Player", 3, playerResult.RequireActor()),
                 enemies));
     }
 
@@ -185,7 +195,8 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeActorSnapshot CreateActorSnapshot(
         CatalogBattleActor actor,
         RuntimeInstanceId instanceId,
-        RuntimeProgressionSnapshot? progression = null)
+        RuntimeProgressionSnapshot? progression = null,
+        IReadOnlyDictionary<ContentId, decimal>? baseResourceValues = null)
     {
         RuntimeProgressionSnapshot resolvedProgression =
             progression ?? InitialProgression(actor.Entity, actor.Entity.BaseLevel);
@@ -209,22 +220,16 @@ internal static class TrainingAnnexHostSupport
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
-            BaseResourceValues(actor.State));
+            baseResourceValues ?? BaseResourceValues(actor.State));
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(TrainingAnnexActorRoster roster)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
-        RuntimeActorSnapshot playerSnapshot = CreateActorSnapshot(
-            roster.Player.Actor,
-            RuntimeInstanceId.Parse(roster.Player.Actor.State.InstanceId.ToString()),
-            new RuntimeProgressionSnapshot(roster.Player.Level, 0, 0, roster.Player.Level - 1));
+        RuntimeActorSnapshot playerSnapshot = roster.Player.RuntimeState.ToSnapshot();
         IReadOnlyList<RuntimeActorSnapshot> enemySnapshots = roster.Enemies
-            .Select(enemy => CreateActorSnapshot(
-                enemy.Actor,
-                RuntimeInstanceId.Parse(enemy.Actor.State.InstanceId.ToString()),
-                new RuntimeProgressionSnapshot(enemy.Level, 0, 0, 0)))
+            .Select(enemy => enemy.RuntimeState.ToSnapshot())
             .ToArray();
         RuntimeActorReferenceSnapshot playerReference = Reference(playerSnapshot);
         return BuildStartupSaveSnapshot([playerSnapshot, .. enemySnapshots], playerReference);
@@ -298,6 +303,13 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
         new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);
 
+    public static IReadOnlyDictionary<ContentId, decimal> InitialBaseResourceValues(int level) =>
+        new Dictionary<ContentId, decimal>
+        {
+            [Hp] = 40 + level * 5,
+            [Sp] = 10 + level * 2
+        };
+
     private static RuntimeDungeonFixedFloorSnapshot ToRuntimeFixedFloor(DungeonFixedFloorDefinition fixedFloor) =>
         new(
             fixedFloor.Floor,
@@ -312,6 +324,36 @@ internal static class TrainingAnnexHostSupport
             fixedFloor.EncounterId ?? fixedFloor.TransitionRuleId ?? fixedFloor.BarrierRuleId,
             fixedFloor.HasTerminal,
             fixedFloor.Description);
+
+    private static GrowthRulesetServices? BindGrowthServices(GameDataCatalog catalog, List<string> diagnostics)
+    {
+        RulesetBindingResult<GrowthRulesetServices> growth = new RuntimeRulesetBindingResolver()
+            .BindGrowthServices(catalog, Qualified("standard_growth"));
+        if (growth.IsSuccess)
+        {
+            return growth.RequireService();
+        }
+
+        foreach (RulesetBindingDiagnostic diagnostic in growth.Diagnostics)
+        {
+            diagnostics.Add($"[growth:{diagnostic.Code}] {diagnostic.Message}");
+        }
+
+        return null;
+    }
+
+    private static TrainingAnnexRuntimeActor CreateRuntimeActor(
+        string role,
+        int level,
+        CatalogBattleActor actor)
+    {
+        RuntimeActorSnapshot snapshot = CreateActorSnapshot(
+            actor,
+            RuntimeInstanceId.Parse(actor.State.InstanceId.ToString()),
+            new RuntimeProgressionSnapshot(level, 0, 0, role == "Player" ? level - 1 : 0),
+            InitialBaseResourceValues(level));
+        return new TrainingAnnexRuntimeActor(role, level, actor, RuntimeActorStateSet.FromSnapshot(snapshot));
+    }
 
     private static IReadOnlyList<CatalogBattleActorCreationRequest> CreateEnemyActorRequests(
         GameDataCatalog catalog,
@@ -368,6 +410,30 @@ internal static class TrainingAnnexHostSupport
         string value = id.ToString();
         int separator = value.LastIndexOf(':');
         return separator >= 0 ? value[(separator + 1)..] : value;
+    }
+}
+
+internal sealed class TrainingAnnexResourceInitializationPolicy(IResourceGrowthPolicy resourceGrowthPolicy)
+    : IBattleActorInitializationPolicy
+{
+    public BattleActorInitialization Initialize(EntityDefinition entity, int level)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ResourceRecalculationResult resources = resourceGrowthPolicy.Recalculate(new ResourceRecalculationRequest(
+            [
+                new RuntimeResourceSnapshot(TrainingAnnexHostSupport.Hp, 0, 0),
+                new RuntimeResourceSnapshot(TrainingAnnexHostSupport.Sp, 0, 0)
+            ],
+            TrainingAnnexHostSupport.InitialBaseResourceValues(level),
+            entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+            ResourceCurrentAdjustmentMode.LevelUpDelta));
+
+        return new BattleActorInitialization(
+            TrainingAnnexHostSupport.Hp,
+            resources.Resources.Select(resource => new BattleResourceState(
+                resource.ResourceId,
+                resource.Current,
+                resource.Maximum)));
     }
 }
 
