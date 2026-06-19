@@ -69,6 +69,7 @@ public sealed class CleanTrainingAnnexDemoHostTests
         Assert.Contains("[catalog] Sample counts: 3 races, 5 entities, 10 skills, 5 items, 3 encounters.", text, StringComparison.Ordinal);
         Assert.Contains("[ruleset] Bound standard Training Annex rulesets.", text, StringComparison.Ordinal);
         Assert.Contains("[dungeon] EncounterRequested floor 2.", text, StringComparison.Ordinal);
+        Assert.Contains("[encounter] Host trigger annex_scene_trigger selected Ashling Drill.", text, StringComparison.Ordinal);
         Assert.Contains("[encounter] Resolved Ashling Drill: Ashling.", text, StringComparison.Ordinal);
         Assert.Contains("[item] Annex Tonic:", text, StringComparison.Ordinal);
         Assert.Contains("SkillSelected: echo_adept selected Frost Tip.", text, StringComparison.Ordinal);

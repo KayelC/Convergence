@@ -5,7 +5,7 @@
 Start here:
 
 1. [Data Map](data-map.md)
-2. [Original Example Content](original-example-content.md)
+2. [Original Example Content](original-example-content.md) — initial neutral pack completed; runtime coverage remains
 3. [Clean Consumer Independence](clean-consumer-independence.md)
 4. [Battle And Skill Independence](battle-and-skill-independence.md)
 5. [Fusion Independence](fusion-independence.md)

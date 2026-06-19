@@ -569,6 +569,17 @@ public sealed class RuntimeFieldDungeonService : IRuntimeFieldDungeonService
                     [bossId]);
             }
 
+            if (fixedFloor.Kind == RuntimeDungeonFloorKind.Battle && fixedFloor.EventId is ContentId encounterId)
+            {
+                return new RuntimeDungeonFloorSnapshot(
+                    progress.CurrentFloor,
+                    block.DisplayName,
+                    RuntimeDungeonFloorKind.Battle,
+                    fixedFloor.Description,
+                    fixedFloor.HasTerminal,
+                    [encounterId]);
+            }
+
             return new RuntimeDungeonFloorSnapshot(
                 progress.CurrentFloor,
                 block.DisplayName,

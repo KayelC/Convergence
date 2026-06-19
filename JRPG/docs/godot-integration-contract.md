@@ -17,9 +17,12 @@ A Godot host must provide these adapters around the existing framework contracts
 - Presentation: consume framework events through event sinks and map them to UI, animation, audio, waits, and scene transitions.
 - Randomness: provide an `IRandomSource` seeded or unseeded according to the host's run mode.
 - Scene identity: map framework `RuntimeInstanceId` or battle instance IDs to host-owned node/scene handles.
+- Encounter triggers: own placed enemy scenes, patrols, touch/attack triggers, spawn points, and scripted battle triggers; when an encounter actually begins, pass the chosen encounter or formation into the framework for battle resolution.
 - Persistence: store framework snapshots inside the Godot save format alongside host-owned scene, asset, and UI state.
 
 The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`, `res://`, animation players, save-file layout, or Godot signals.
+
+Godot exploration should not be forced into the console demo's floor-transition battle model. Floor-triggered encounters are useful for deterministic tests and text demos, while production Godot scenes should be free to use visible enemy entities, trigger volumes, scripted bosses, or other host-owned encounter-start rules.
 
 ## Framework Responsibilities
 
@@ -28,6 +31,7 @@ The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`
 - content definitions, validation, catalog loading, and qualified IDs;
 - actor hydration from catalog definitions;
 - skill, item, passive, status, action, battle, dungeon, party/stock, economy, fusion, and Compendium rule services;
+- encounter resolution once the host has selected an encounter, including battle setup, outcome, rewards, and state updates;
 - ordered events and diagnostics expressed as serializer-neutral records;
 - runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonProgressSnapshot`;
 - versioned persistence snapshots such as `RuntimeSaveGameSnapshot`, `RuntimeKnowledgeSnapshot`, `RuntimeSessionProgressSnapshot`, and checkpoint logs.
@@ -41,6 +45,7 @@ Framework APIs remain plain .NET contracts. JSON DTOs, `JsonElement`, console ty
 - loading the retained reference and clean battle demo packs from fake `res://` resources while preserving logical document paths;
 - building a `GameDataCatalog` through explicit registrations;
 - creating clean battle actors through `CatalogBattleActorFactory`;
+- planning host-triggered encounters through `CatalogEncounterStartPlanner` without passing Godot scene handles into the framework;
 - mapping actor instance IDs to host-owned scene handles;
 - reading selected and cancelled signal-style commands through `IHostCommandSource<TCommand>`;
 - running deterministic clean battle execution and consuming ordered framework events;

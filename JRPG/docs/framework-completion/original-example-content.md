@@ -1,5 +1,7 @@
 # Problem: Original Example Content
 
+> **Status: Initial content pack completed.** The framework now has a neutral, original Training Annex sample pack. Future work should exercise more of that pack through clean runtime consumers rather than keep treating the pack itself as missing.
+
 ## Current State
 
 The framework has clean content contracts and one small original slice: `convergence.training_annex_slice`.
@@ -30,6 +32,8 @@ The project needs neutral, open-source-safe example content that exercises frame
 
 The Training Annex sample is the first answer to that problem. It is deliberately plain and concept-driven; it should remain easy to inspect and safe to replace.
 
+This problem is no longer blocked on creating a generic reference pack. The remaining issue is coverage: not every sample record is exercised by a clean runtime/demo path yet.
+
 ## Current Sample Data
 
 The active sample pack uses generic placeholders:
@@ -47,6 +51,10 @@ The active sample pack uses generic placeholders:
 - fusion recipes: `ashling_bramble_shell`, `spirit_beast_construct_rank`;
 - rulesets: standard policies already supported by the framework.
 
+The dungeon records are sample content, not a mandate that production exploration must start encounters on every floor transition. Fixed battle floors are useful for scripted events and regression tests. Production-facing hosts, especially Godot, should be able to start encounters from visible enemy entities, trigger volumes, patrols, or scripted scene events.
+
+The first bridge for that exists now: `CatalogEncounterStartPlanner` lets a host-owned trigger choose an encounter ID and receive battle actor creation requests without placing scene objects inside the framework.
+
 ## Decisions Still Needed
 
 - How flavorful should the neutral example pack be?
@@ -58,9 +66,8 @@ The active sample pack uses generic placeholders:
 
 Use the expanded Training Annex as the reviewable framework sample pack.
 
-The next implementation step should be a clean, non-legacy consumer that uses more of this sample content directly:
+The next implementation step should be a clean, non-legacy consumer pass that uses more of this sample content directly:
 
-1. exercise `mixed_drill` and `shell_check`;
-2. use `cleanse_drop`, `revival_pin`, and `focus_tea`;
-3. demonstrate `focus_call`, `soften_guard`, and `toxin_touch`;
-4. prove shop/equipment/negotiation/fusion sample records through small host flows when those presentation paths are ready.
+1. keep exercising `mixed_drill`, `shell_check`, `cleanse_drop`, `revival_pin`, `focus_tea`, `focus_call`, `soften_guard`, and `toxin_touch` through clean tests and demos;
+2. grow the host-owned encounter-start proof toward a small interactive scene/trigger loop;
+3. prove shop/equipment/negotiation/fusion sample records through small host flows when those presentation paths are ready.

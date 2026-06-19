@@ -277,9 +277,12 @@ Exit condition:
 
 Goal: grow the Training Annex from a technical demo into a small owned testbed.
 
+Status: initial content-pack expansion completed.
+
 Work:
 
-- add a few original skills, enemies, items, and encounters;
+- added a few original skills, enemies, items, and encounters;
+- added neutral ailment, equipment, shop, negotiation, dungeon, ruleset, and concept-level fusion records;
 - keep the content small enough to review;
 - prove each addition through catalog tests and runtime demo coverage;
 - avoid converting legacy content directly.
@@ -287,6 +290,18 @@ Work:
 Exit condition:
 
 - the clean slice has enough content variety to exercise ailments, buffs/debuffs, fusion or recruitment decisions, rewards, and dungeon traversal without relying on prototype data.
+
+Current result:
+
+- `convergence.training_annex_slice` now contains three races, five entities, ten skills, three ailments, five items, four equipment records, one shop, one negotiation set, three encounters, one dungeon, two concept-level fusion recipes, and standard ruleset bindings.
+- Catalog and runtime tests prove the expanded pack loads, qualifies IDs, rejects local lookups, binds standard rulesets, exercises additional skills/items, carries fixed battle encounter IDs through the dungeon state machine, and can build battle actor requests from a host-owned encounter trigger.
+- `--clean-training-annex-demo` still runs without GUI or legacy fallback. It now uses a host trigger to select `ashling_drill`, but it still only exercises part of the expanded pack at runtime.
+
+Design note:
+
+- The current floor-triggered encounter flow is a deterministic console/demo convenience.
+- The production-facing dungeon model should support host-scene/entity-triggered encounters. Godot should be able to own placed enemies, patrols, trigger volumes, and scene objects, then ask the framework to resolve a chosen encounter when contact or interaction occurs.
+- Fixed encounter floors remain valid for scripted events, bosses, tutorials, and tests, but they are not the required exploration model.
 
 ### Phase 3: Build A Small Interactive Clean Loop
 
@@ -342,10 +357,10 @@ The next implementation pass should not be another broad migration.
 
 Recommended next work:
 
-1. expand the Training Annex clean content by a very small amount;
-2. add one new behavior category, such as an ailment or buff/debuff;
-3. extend the clean runtime demo and tests to prove that behavior;
-4. update this document with the result.
+1. make the host-owned encounter-start proof more scene-like, with explicit host scene/trigger state instead of a scripted demo shortcut;
+2. prove shop/equipment/negotiation/fusion sample records through tiny clean host flows when each is ready;
+3. keep optional-mechanic cleanup, especially Moon Phase decoupling, in view before deepening sample rulesets;
+4. grow the interactive clean loop only after the encounter-start boundary is clear.
 
 That keeps momentum inside the new architecture while restoring ownership of the content and design.
 

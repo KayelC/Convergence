@@ -69,6 +69,7 @@ public sealed class FieldDungeonStateMachineTests
     public void FloorEvaluation_PreservesLobbyFixedFloorsBossDefeatAndUnknownMap()
     {
         ContentId chimera = Id("chimera");
+        ContentId fixedEncounter = Id("fixed_drill");
         RuntimeDungeonContentSnapshot content = Content(
             new RuntimeDungeonBlockSnapshot(
                 Id("thebel"),
@@ -78,6 +79,7 @@ public sealed class FieldDungeonStateMachineTests
                 [Id("pixie")],
                 [
                     new RuntimeDungeonFixedFloorSnapshot(5, RuntimeDungeonFloorKind.Boss, chimera, description: "A guardian waits."),
+                    new RuntimeDungeonFixedFloorSnapshot(6, RuntimeDungeonFloorKind.Battle, fixedEncounter, description: "A fixed drill starts."),
                     new RuntimeDungeonFixedFloorSnapshot(10, RuntimeDungeonFloorKind.SafeRoom, hasTerminal: true, description: "The air here is calm.")
                 ]));
         RuntimeFieldDungeonService service = Service();
@@ -85,6 +87,7 @@ public sealed class FieldDungeonStateMachineTests
         RuntimeDungeonTransitionResult lobby = service.ProcessCurrentFloor(content, new RuntimeDungeonProgressSnapshot(Id("tartarus")));
         RuntimeDungeonTransitionResult terminal = service.ProcessCurrentFloor(content, new RuntimeDungeonProgressSnapshot(Id("tartarus"), currentFloor: 10));
         RuntimeDungeonTransitionResult boss = service.ProcessCurrentFloor(content, new RuntimeDungeonProgressSnapshot(Id("tartarus"), currentFloor: 5));
+        RuntimeDungeonTransitionResult fixedBattle = service.ProcessCurrentFloor(content, new RuntimeDungeonProgressSnapshot(Id("tartarus"), currentFloor: 6));
         RuntimeDungeonTransitionResult defeated = service.ProcessCurrentFloor(
             content,
             boss.After.MarkBossDefeated(chimera));
@@ -96,6 +99,11 @@ public sealed class FieldDungeonStateMachineTests
         Assert.Contains(terminal.Events, ev => ev.Kind == RuntimeDungeonEventKind.TerminalUnlocked);
         Assert.Equal(RuntimeDungeonFloorKind.Boss, boss.Floor!.Kind);
         Assert.Equal([chimera], boss.Floor.EnemyIds);
+        Assert.Equal(RuntimeDungeonFloorKind.Battle, fixedBattle.Floor!.Kind);
+        Assert.Equal([fixedEncounter], fixedBattle.Floor.EnemyIds);
+        Assert.Contains(fixedBattle.Events, ev =>
+            ev.Kind == RuntimeDungeonEventKind.EncounterRequested &&
+            ev.EnemyIds.SequenceEqual(fixedBattle.Floor.EnemyIds));
         Assert.Equal(RuntimeDungeonFloorKind.Empty, defeated.Floor!.Kind);
         Assert.Contains("guardian has been defeated", defeated.Floor.Description, StringComparison.Ordinal);
         Assert.Equal(RuntimeDungeonFloorKind.Empty, unknown.Floor!.Kind);

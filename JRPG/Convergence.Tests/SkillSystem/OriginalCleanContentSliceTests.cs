@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
@@ -202,6 +203,209 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexSlice_DungeonContentRunsThroughRuntimeStateMachine()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeDungeonContentSnapshot content = ToRuntimeDungeonContent(
+            catalog.GetRequiredDungeon(Qualified("training_annex")));
+        var service = new RuntimeFieldDungeonService(new SequenceRandomSource(1, 1));
+        var progress = new RuntimeDungeonProgressSnapshot(Qualified("training_annex"));
+
+        RuntimeDungeonTransitionResult entered = service.EnterDungeon(content, progress);
+        RuntimeDungeonTransitionResult firstBattle = service.Ascend(content, entered.After);
+        RuntimeDungeonTransitionResult safeRoom = service.Ascend(content, firstBattle.After);
+        RuntimeDungeonTransitionResult shellCheck = service.Ascend(content, safeRoom.After);
+        RuntimeDungeonTransitionResult barrier = service.Ascend(content, shellCheck.After);
+        RuntimeDungeonTransitionResult blocked = service.Ascend(content, barrier.After);
+        RuntimeDungeonTransitionResult returned = service.RequestDungeonExit(barrier.After);
+
+        Assert.Equal(RuntimeDungeonFloorKind.SafeRoom, entered.Floor!.Kind);
+        Assert.Contains(entered.Events, ev => ev.Kind == RuntimeDungeonEventKind.DungeonEntered);
+        Assert.Equal(RuntimeDungeonFloorKind.Battle, firstBattle.Floor!.Kind);
+        Assert.Equal([Qualified("mixed_drill")], firstBattle.Floor.EnemyIds);
+        Assert.Contains(firstBattle.Events, ev => ev.Kind == RuntimeDungeonEventKind.EncounterRequested);
+        Assert.Equal(RuntimeDungeonFloorKind.SafeRoom, safeRoom.Floor!.Kind);
+        Assert.Equal([1, 3], safeRoom.After.UnlockedTerminals);
+        Assert.Contains(safeRoom.Events, ev => ev.Kind == RuntimeDungeonEventKind.TerminalUnlocked && ev.Floor == 3);
+        Assert.Equal(RuntimeDungeonFloorKind.Battle, shellCheck.Floor!.Kind);
+        Assert.Equal([Qualified("shell_check")], shellCheck.Floor.EnemyIds);
+        Assert.Equal(RuntimeDungeonFloorKind.BlockEnd, barrier.Floor!.Kind);
+        Assert.Equal(RuntimeDungeonTransitionCode.BarrierBlocked, blocked.Code);
+        Assert.Equal(5, blocked.After.CurrentFloor);
+        Assert.Equal(1, returned.After.CurrentFloor);
+    }
+
+    [Fact]
+    public void TrainingAnnexSlice_HostSceneEncounterTriggerBuildsBattleActorRequests()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var planner = new CatalogEncounterStartPlanner(catalog);
+
+        EncounterStartPlanResult result = planner.Plan(new EncounterStartRequest(
+            Qualified("mixed_drill"),
+            Id("enemy_team"),
+            Id("visible_enemy")));
+        EncounterStartPlanResult localLookup = planner.Plan(new EncounterStartRequest(
+            Id("mixed_drill"),
+            Id("enemy_team"),
+            Id("visible_enemy")));
+        EncounterStartPlanResult qualifiedPrefix = planner.Plan(new EncounterStartRequest(
+            Qualified("mixed_drill"),
+            Id("enemy_team"),
+            Qualified("visible_enemy")));
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        EncounterStartPlan plan = result.RequirePlan();
+        Assert.Equal(Qualified("mixed_drill"), plan.Encounter.Id);
+        Assert.Equal(Id("standard_reward"), plan.Formation.RewardPolicyId);
+        Assert.Equal(
+            [Qualified("ashling"), Qualified("bramble_runner")],
+            plan.ActorRequests.Select(request => request.EntityId));
+        Assert.Equal([2, 3], plan.ActorRequests.Select(request => request.Level));
+        Assert.All(plan.ActorRequests, request => Assert.Equal(Id("enemy_team"), request.TeamId));
+        Assert.Equal(
+            [Id("visible_enemy_ashling_1"), Id("visible_enemy_bramble_runner_2")],
+            plan.ActorRequests.Select(request => request.InstanceId));
+
+        var factory = new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy());
+        CatalogBattleActor[] actors = plan.ActorRequests
+            .Select(request => factory.Create(request).RequireActor())
+            .ToArray();
+        Assert.Equal([Qualified("ashling"), Qualified("bramble_runner")], actors.Select(actor => actor.Entity.Id));
+        Assert.All(actors, actor => Assert.Equal(Id("enemy_team"), actor.State.TeamId));
+        Assert.All(actors, actor => Assert.NotEmpty(actor.ActiveSkills));
+
+        Assert.False(localLookup.IsSuccess);
+        Assert.Contains(localLookup.Diagnostics, diagnostic =>
+            diagnostic.Code == EncounterStartDiagnosticCode.EncounterIdNotQualified);
+        Assert.False(qualifiedPrefix.IsSuccess);
+        Assert.Contains(qualifiedPrefix.Diagnostics, diagnostic =>
+            diagnostic.Code == EncounterStartDiagnosticCode.InstanceIdPrefixMustBeLocal);
+    }
+
+    [Fact]
+    public void TrainingAnnexSlice_AdditionalSkillsAndItemsExecuteThroughSharedEffectRuntime()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var services = new BattleExecutionServices(
+            catalog,
+            new TestDamagePolicy(),
+            new NeverInstantDeathPolicy(),
+            new AlwaysAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new FlatPowerPolicy(),
+            new FirstBattleTargetPolicy());
+        var skills = new SkillExecutor(services);
+        var items = new ItemExecutor(services);
+        RuntimeActorState actor = Actor("echo", "player", 60, 100, 8, 20);
+        RuntimeActorState enemy = Actor("ashling", "enemy", 30, 60, 10, 10);
+        RuntimeActorState ally = Actor("ally", "player", 30, 60, 10, 10);
+        EffectExecutionEnvironment battle = new(Id("battle"));
+        EffectExecutionEnvironment field = new(Id("field"));
+
+        SkillExecutionResult poison = skills.Execute(new SkillExecutionRequest(
+            catalog.GetRequiredSkill(Qualified("toxin_touch")),
+            enemy,
+            [actor, enemy, ally],
+            battle,
+            [actor.InstanceId]));
+        Assert.Equal(EffectExecutionOutcome.Success, Assert.Single(poison.Effects).Outcome);
+        Assert.True(actor.HasAilment(Qualified("sample_poison")));
+
+        SkillExecutionResult buff = skills.Execute(new SkillExecutionRequest(
+            catalog.GetRequiredSkill(Qualified("focus_call")),
+            actor,
+            [actor, enemy, ally],
+            battle,
+            [actor.InstanceId]));
+        SkillExecutionResult debuff = skills.Execute(new SkillExecutionRequest(
+            catalog.GetRequiredSkill(Qualified("soften_guard")),
+            actor,
+            [actor, enemy, ally],
+            battle,
+            [enemy.InstanceId]));
+        actor.SetResource(Id("sp"), 5);
+        ItemExecutionResult focusTea = items.Execute(new ItemExecutionRequest(
+            catalog.GetRequiredItem(Qualified("focus_tea")),
+            actor,
+            [actor, enemy, ally],
+            field,
+            [actor.InstanceId]));
+        ItemExecutionResult cleanse = items.Execute(new ItemExecutionRequest(
+            catalog.GetRequiredItem(Qualified("cleanse_drop")),
+            actor,
+            [actor, enemy, ally],
+            field,
+            [actor.InstanceId]));
+        ally.SetResource(Id("hp"), 0);
+        ItemExecutionResult revive = items.Execute(new ItemExecutionRequest(
+            catalog.GetRequiredItem(Qualified("revival_pin")),
+            actor,
+            [actor, enemy, ally],
+            field,
+            [ally.InstanceId]));
+
+        Assert.Equal(1, actor.StatStages[Id("attack")].Stage);
+        Assert.Equal(-1, enemy.StatStages[Id("defense")].Stage);
+        Assert.Equal(13, actor.GetRequiredResource(Id("sp")).Current);
+        Assert.False(actor.HasAilment(Qualified("sample_poison")));
+        Assert.False(ally.IsDefeated);
+        Assert.Equal(30, ally.GetRequiredResource(Id("hp")).Current);
+        Assert.All([focusTea, cleanse, revive], result =>
+            Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.Consumption));
+        Assert.All([buff, debuff], result =>
+            Assert.Equal(SkillExecutionStatus.Executed, result.Status));
+    }
+
+    [Fact]
+    public void TrainingAnnexSlice_ExercisesShopEquipmentNegotiationAndFusionRecords()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        ShopCatalogDefinition shop = catalog.GetRequiredShop(Qualified("training_supply"));
+        EquipmentDefinition armor = catalog.GetRequiredEquipment(Qualified("padded_jacket"));
+        EquipmentDefinition boots = catalog.GetRequiredEquipment(Qualified("light_steps"));
+        EquipmentDefinition accessory = catalog.GetRequiredEquipment(Qualified("focus_charm"));
+        NegotiationDefinition negotiation = catalog.GetRequiredNegotiation(Qualified("steady_sample"));
+        FusionRecipeDefinition shellRecipe = catalog.GetRequiredFusionRecipe(Qualified("ashling_bramble_shell"));
+        FusionRecipeDefinition rankRecipe = catalog.GetRequiredFusionRecipe(Qualified("spirit_beast_construct_rank"));
+        EncounterDefinition mixed = catalog.GetRequiredEncounter(Qualified("mixed_drill"));
+        EncounterDefinition boss = catalog.GetRequiredEncounter(Qualified("shell_check"));
+
+        Assert.Equal(
+            [ShopContentKind.Item, ShopContentKind.Item, ShopContentKind.Equipment, ShopContentKind.Equipment],
+            shop.Offers.Select(offer => offer.ContentKind).ToArray());
+        Assert.All(shop.Offers, offer => Assert.IsType<FixedShopPriceDefinition>(offer.Price));
+        Assert.Equal(EquipmentSlot.Armor, armor.Slot);
+        Assert.NotNull(armor.Armor);
+        Assert.Equal(EquipmentSlot.Boots, boots.Slot);
+        Assert.NotNull(boots.Boots);
+        Assert.Equal(EquipmentSlot.Accessory, accessory.Slot);
+        Assert.Contains(accessory.Accessory!.StatModifiers, modifier => modifier.StatId == Id("magic") && modifier.Value == 1);
+
+        Assert.Equal(Id("sample_macca"), Assert.Single(negotiation.Demands).DemandId);
+        NegotiationQuestionDefinition question = Assert.Single(negotiation.Questions);
+        Assert.Equal(3, question.Answers.Count);
+
+        EncounterFormationDefinition mixedFormation = Assert.Single(mixed.Formations);
+        Assert.False(mixedFormation.IsBoss);
+        Assert.Equal([Qualified("ashling"), Qualified("bramble_runner")], mixedFormation.Members.Select(member => member.EntityId));
+        EncounterFormationDefinition bossFormation = Assert.Single(boss.Formations);
+        Assert.True(bossFormation.IsBoss);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(bossFormation.Members).EntityId);
+
+        Assert.Equal(
+            [Qualified("ashling"), Qualified("bramble_runner")],
+            shellRecipe.Parents.Select(parent => parent.Id));
+        Assert.Equal(FusionResultOperationKind.CreateEntity, shellRecipe.Result.Operation);
+        Assert.Equal(Qualified("ward_shell"), shellRecipe.Result.ResultEntityId);
+        Assert.Equal(Id("standard_accident"), shellRecipe.AccidentPolicyId);
+        Assert.Equal(Id("standard_mutation"), shellRecipe.MutationPolicyId);
+        Assert.Equal(FusionResultOperationKind.RankOffset, rankRecipe.Result.Operation);
+        Assert.Equal(1, rankRecipe.Result.RankOffset);
+        Assert.Equal(Qualified("annex_construct"), rankRecipe.Result.ResultRaceId);
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_ManifestUsesOnlyTheOriginalSliceDocuments()
     {
         string root = FindJsonRoot();
@@ -322,10 +526,111 @@ public sealed class OriginalCleanContentSliceTests
         return Path.Combine(root, "Data", "Jsons");
     }
 
-    private sealed class SequenceRandomSource : IRandomSource
+    private static RuntimeDungeonContentSnapshot ToRuntimeDungeonContent(DungeonDefinition dungeon) =>
+        new(
+            dungeon.Id,
+            dungeon.DisplayName,
+            dungeon.Blocks.Select(block => new RuntimeDungeonBlockSnapshot(
+                block.Id,
+                block.DisplayName,
+                block.StartFloor,
+                block.EndFloor,
+                block.EncounterPoolIds,
+                block.FixedFloors.Select(ToRuntimeFixedFloor))));
+
+    private static RuntimeDungeonFixedFloorSnapshot ToRuntimeFixedFloor(DungeonFixedFloorDefinition floor) =>
+        new(
+            floor.Floor,
+            floor.Kind switch
+            {
+                DungeonFixedFloorKind.SafeRoom => RuntimeDungeonFloorKind.SafeRoom,
+                DungeonFixedFloorKind.Boss => RuntimeDungeonFloorKind.Boss,
+                DungeonFixedFloorKind.BlockEnd => RuntimeDungeonFloorKind.BlockEnd,
+                DungeonFixedFloorKind.Battle => RuntimeDungeonFloorKind.Battle,
+                _ => RuntimeDungeonFloorKind.Empty
+            },
+            floor.EncounterId,
+            floor.HasTerminal,
+            floor.Description);
+
+    private static RuntimeActorState Actor(string id, decimal hp, decimal maxHp, decimal sp, decimal maxSp) =>
+        Actor(id, "team", hp, maxHp, sp, maxSp);
+
+    private static RuntimeActorState Actor(string id, string teamId, decimal hp, decimal maxHp, decimal sp, decimal maxSp) =>
+        new(
+            Id(id),
+            Id($"entity_{id}"),
+            Id(teamId),
+            Id("hp"),
+            new CombatDefenseProfile(),
+            [new BattleResourceState(Id("hp"), hp, maxHp), new BattleResourceState(Id("sp"), sp, maxSp)]);
+
+    private sealed class SequenceRandomSource(params int[] values) : IRandomSource
     {
-        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+        private readonly Queue<int> _values = new(values);
+
+        public int NextInt32(int minimumInclusive, int maximumExclusive)
+        {
+            if (_values.Count == 0)
+            {
+                return minimumInclusive;
+            }
+
+            int value = _values.Dequeue();
+            Assert.InRange(value, minimumInclusive, maximumExclusive - 1);
+            return value;
+        }
 
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class TestDamagePolicy : IDamageExecutionPolicy
+    {
+        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) =>
+            [new DamageHitResolution(true, request.Effect.Power)];
+    }
+
+    private sealed class NeverInstantDeathPolicy : IInstantDeathExecutionPolicy
+    {
+        public bool ShouldDefeat(InstantDeathPolicyRequest request) => false;
+    }
+
+    private sealed class AlwaysAilmentPolicy : IAilmentApplicationPolicy
+    {
+        public bool ShouldApply(AilmentApplicationPolicyRequest request) => true;
+    }
+
+    private sealed class AlwaysChancePolicy : IChanceExecutionPolicy
+    {
+        public bool Roll(ChancePolicyRequest request) => true;
+    }
+
+    private sealed class FlatPowerPolicy : IPowerAmountPolicy
+    {
+        public decimal Resolve(PowerAmountDefinition amount, AmountResolutionContext context) => amount.Power;
+    }
+
+    private sealed class FirstBattleTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public IReadOnlyList<BattleActorState> Select(
+            IReadOnlyList<BattleActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
+    }
+
+    private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level)
+        {
+            decimal vitality = entity.Stats.GetValueOrDefault(Id("vitality"));
+            decimal magic = entity.Stats.GetValueOrDefault(Id("magic"));
+            decimal hp = 40 + level * 5 + vitality * 3;
+            decimal sp = 10 + level * 2 + magic * 2;
+            return new BattleActorInitialization(Id("hp"),
+            [
+                new BattleResourceState(Id("hp"), hp, hp),
+                new BattleResourceState(Id("sp"), sp, sp)
+            ]);
+        }
     }
 }

@@ -164,17 +164,27 @@ internal sealed class CleanTrainingAnnexDemoHost
                 .ConfigureAwait(false);
         }
 
-        ContentId encounterId = ascended.Events
-            .FirstOrDefault(dungeonEvent => dungeonEvent.Kind == RuntimeDungeonEventKind.EncounterRequested)
-            ?.EnemyIds
-            .FirstOrDefault() ?? throw new InvalidOperationException("Training Annex floor did not request an encounter.");
-        EncounterDefinition encounter = catalog.GetRequiredEncounter(encounterId);
-        EncounterMemberDefinition member = AssertSingleMember(encounter);
-        CatalogBattleActorCreationResult ashlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
-            member.EntityId,
-            ContentId.Parse("ashling"),
-            EnemyTeam,
-            member.Level));
+        ContentId hostTriggerId = ContentId.Parse("annex_scene_trigger");
+        EncounterStartPlanResult encounterStart = new CatalogEncounterStartPlanner(catalog).Plan(
+            new EncounterStartRequest(
+                Qualified("ashling_drill"),
+                EnemyTeam,
+                hostTriggerId));
+        if (!encounterStart.IsSuccess)
+        {
+            await PrintEncounterDiagnosticsAsync(encounterStart.Diagnostics, cancellationToken).ConfigureAwait(false);
+            return 4;
+        }
+
+        EncounterStartPlan encounterPlan = encounterStart.RequirePlan();
+        EncounterDefinition encounter = encounterPlan.Encounter;
+        await PrintAsync(
+            sequence++,
+            "encounter",
+            $"Host trigger {hostTriggerId} selected {encounter.DisplayName}.",
+            cancellationToken).ConfigureAwait(false);
+        CatalogBattleActorCreationRequest ashlingRequest = AssertSingleActorRequest(encounterPlan);
+        CatalogBattleActorCreationResult ashlingResult = actorFactory.Create(ashlingRequest);
         if (!ashlingResult.IsSuccess)
         {
             await PrintActorDiagnosticsAsync(ashlingResult.Diagnostics, cancellationToken).ConfigureAwait(false);
@@ -239,7 +249,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         }
 
         BattleRewardResult reward = rewardService.Calculate(new BattleRewardRequest(
-            [EnemyRewardSnapshot(ashling.Entity, member.Level)],
+            [EnemyRewardSnapshot(ashling.Entity, ashlingRequest.Level)],
             [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveForm: false)]));
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             InitialProgression(echo.Entity, 3),
@@ -271,11 +281,11 @@ internal sealed class CleanTrainingAnnexDemoHost
             cancellationToken).ConfigureAwait(false);
         if (!validation.IsValid)
         {
-            LastSummary = CreateSummary(request, dungeonEvents, encounterId, ashling.Entity.Id, inventory, itemUse, battle, reward, growth, validation);
+            LastSummary = CreateSummary(request, dungeonEvents, encounter.Id, ashling.Entity.Id, inventory, itemUse, battle, reward, growth, validation);
             return 6;
         }
 
-        LastSummary = CreateSummary(request, dungeonEvents, encounterId, ashling.Entity.Id, inventory, itemUse, battle, reward, growth, validation);
+        LastSummary = CreateSummary(request, dungeonEvents, encounter.Id, ashling.Entity.Id, inventory, itemUse, battle, reward, growth, validation);
         await PrintAsync(sequence, "outcome", "Training Annex runtime slice completed successfully.", cancellationToken)
             .ConfigureAwait(false);
         return 0;
@@ -376,11 +386,8 @@ internal sealed class CleanTrainingAnnexDemoHost
             fixedFloor.HasTerminal,
             fixedFloor.Description);
 
-    private static EncounterMemberDefinition AssertSingleMember(EncounterDefinition encounter)
-    {
-        EncounterFormationDefinition formation = encounter.Formations.Single();
-        return formation.Members.Single();
-    }
+    private static CatalogBattleActorCreationRequest AssertSingleActorRequest(EncounterStartPlan plan) =>
+        plan.ActorRequests.Single();
 
     private static BattleRewardEnemySnapshot EnemyRewardSnapshot(EntityDefinition entity, int level) =>
         new(
@@ -512,6 +519,17 @@ internal sealed class CleanTrainingAnnexDemoHost
         CancellationToken cancellationToken)
     {
         foreach (CatalogBattleActorDiagnostic diagnostic in diagnostics)
+        {
+            await _eventSink.PublishAsync($"[{diagnostic.Code}] {diagnostic.Message}", cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask PrintEncounterDiagnosticsAsync(
+        IEnumerable<EncounterStartDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        foreach (EncounterStartDiagnostic diagnostic in diagnostics)
         {
             await _eventSink.PublishAsync($"[{diagnostic.Code}] {diagnostic.Message}", cancellationToken)
                 .ConfigureAwait(false);
