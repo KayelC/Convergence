@@ -12,6 +12,7 @@ internal enum CleanTrainingAnnexPlayCommand
 {
     InspectSession,
     InspectActor,
+    ResolveStats,
     RecalculateResources,
     ValidateStartupSnapshot,
     Exit
@@ -27,8 +28,10 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<ContentId> ActorEntityIds,
     IReadOnlyList<ContentId> ActorInstanceIds,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
+    IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
     int ActiveSkillCount,
     int PassiveSkillCount,
+    bool StatResolutionPreviewed,
     bool ResourceRecalculationApplied,
     bool StartupSnapshotValidated,
     int StartupSnapshotDiagnosticCount,
@@ -111,10 +114,16 @@ internal sealed class CleanTrainingAnnexPlayHost
 
         TrainingAnnexActorRoster roster = rosterResult.RequireRoster();
         CatalogBattleActor player = roster.Player.Actor;
-        GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver()
+        var rulesetResolver = new RuntimeRulesetBindingResolver();
+        GrowthRulesetServices growthServices = rulesetResolver
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
+        IStatResolutionPolicy statPolicy = rulesetResolver
+            .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
+            .RequireService();
         var commands = new List<CleanTrainingAnnexPlayCommand>();
+        IReadOnlyList<StatResolutionResult> statPreview = [];
+        bool statResolutionPreviewed = false;
         bool resourceRecalculationApplied = false;
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
@@ -141,6 +150,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                 LastSummary = CreateSummary(
                     request,
                     roster,
+                    statPreview,
+                    statResolutionPreviewed,
                     resourceRecalculationApplied,
                     snapshotValidated,
                     snapshotDiagnosticCount,
@@ -159,6 +170,13 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectActor:
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.ResolveStats:
+                    statPreview = await ResolvePlayerStatsAsync(
+                        roster.Player,
+                        statPolicy,
+                        cancellationToken).ConfigureAwait(false);
+                    statResolutionPreviewed = true;
                     break;
                 case CleanTrainingAnnexPlayCommand.RecalculateResources:
                     resourceRecalculationApplied = await RecalculatePlayerResourcesAsync(
@@ -187,6 +205,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                         LastSummary = CreateSummary(
                             request,
                             roster,
+                            statPreview,
+                            statResolutionPreviewed,
                             resourceRecalculationApplied,
                             snapshotValidated,
                             snapshotDiagnosticCount,
@@ -210,6 +230,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.InspectActor,
                     "Inspect Actors"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.ResolveStats,
+                    "Resolve Stats"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.RecalculateResources,
                     "Recalculate Resources"),
@@ -244,7 +267,10 @@ internal sealed class CleanTrainingAnnexPlayHost
         string resources = string.Join(
             ", ",
             snapshot.Resources.Select(resource => $"{resource.ResourceId} {resource.Current}/{resource.Maximum}"));
-        string stats = string.Join(
+        string baseStats = string.Join(
+            ", ",
+            snapshot.Stats.BaseStats.Select(pair => $"{pair.Key} {pair.Value}"));
+        string effectiveStats = string.Join(
             ", ",
             snapshot.Stats.EffectiveStats.Select(pair => $"{pair.Key} {pair.Value}"));
         string activeSkills = string.Join(", ", actor.ActiveSkills.Select(skill => skill.DisplayName));
@@ -257,7 +283,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"{runtimeActor.Role}: {actor.Entity.DisplayName}; instance {snapshot.Identity.InstanceId}; level {runtimeActor.Level}; resources: {resources}.",
             cancellationToken).ConfigureAwait(false);
-        await _eventSink.PublishAsync($"Stats: {stats}.", cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync($"Base stats: {baseStats}.", cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync($"Effective stats: {effectiveStats}.", cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync($"Active skills: {activeSkills}.", cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
             $"Passive skills: {(string.IsNullOrWhiteSpace(passiveSkills) ? "none" : passiveSkills)}.",
@@ -267,6 +294,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static CleanTrainingAnnexPlaySummary CreateSummary(
         ContentPackTextRequest request,
         TrainingAnnexActorRoster roster,
+        IReadOnlyList<StatResolutionResult> statPreview,
+        bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
         bool snapshotValidated,
         int snapshotDiagnosticCount,
@@ -283,12 +312,55 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
             roster.AllActors.Select(actor => ContentId.Parse(actor.RuntimeState.InstanceId.ToString())).ToArray(),
             roster.Player.RuntimeState.ToSnapshot().Resources,
+            statPreview.ToArray(),
             player.ActiveSkills.Count,
             player.SkillLoadout.Count(skill => skill.Activation == SkillActivation.Passive),
+            statResolutionPreviewed,
             resourceRecalculationApplied,
             snapshotValidated,
             snapshotDiagnosticCount,
             commands.ToArray());
+    }
+
+    private async ValueTask<IReadOnlyList<StatResolutionResult>> ResolvePlayerStatsAsync(
+        TrainingAnnexRuntimeActor player,
+        IStatResolutionPolicy statPolicy,
+        CancellationToken cancellationToken)
+    {
+        RuntimeActorSnapshot snapshot = player.RuntimeState.ToSnapshot();
+        RuntimeStatStageSnapshot attackStage = new(StandardProgressionIds.Attack, 1);
+        IEnumerable<KeyValuePair<ContentId, decimal>> activeFormStats =
+            snapshot.Identity.ActorKindId == StandardProgressionIds.Demon
+                ? snapshot.Stats.BaseStats
+                : [];
+        var results = new List<StatResolutionResult>();
+        var messages = new List<string>();
+
+        foreach (ContentId statId in StandardProgressionIds.CoreStats)
+        {
+            StatResolutionResult unmodified = statPolicy.Resolve(new StatResolutionRequest(
+                snapshot.Identity.ActorKindId,
+                statId,
+                snapshot.Stats.BaseStats,
+                activeFormStats));
+            StatResolutionResult boosted = statPolicy.Resolve(new StatResolutionRequest(
+                snapshot.Identity.ActorKindId,
+                statId,
+                snapshot.Stats.BaseStats,
+                activeFormStats,
+                statStages: [attackStage]));
+            results.Add(boosted);
+            messages.Add($"{statId} {unmodified.FinalValue}->{boosted.FinalValue}");
+        }
+
+        await _eventSink.PublishAsync(
+            $"Stat policy: standard_stat resolved {player.Actor.Entity.DisplayName} with attack stage +1.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Resolved stats: {string.Join(", ", messages)}.",
+            cancellationToken).ConfigureAwait(false);
+
+        return results.ToArray();
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(

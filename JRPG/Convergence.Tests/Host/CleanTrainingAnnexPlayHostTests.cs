@@ -14,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 5);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -76,6 +76,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(80, hp.Maximum);
         Assert.Equal(28, sp.Current);
         Assert.Equal(28, sp.Maximum);
+        Assert.True(summary.StatResolutionPreviewed);
+        Assert.Equal(8, Resolved(summary, "strength").FinalValue);
+        Assert.Equal(5, Resolved(summary, "magic").FinalValue);
+        Assert.Equal(5, Resolved(summary, "vitality").FinalValue);
+        Assert.Equal(5, Resolved(summary, "agility").FinalValue);
+        Assert.Equal(4, Resolved(summary, "luck").FinalValue);
         Assert.True(summary.ResourceRecalculationApplied);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
@@ -83,18 +89,26 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [
                 CleanTrainingAnnexPlayCommand.InspectSession,
                 CleanTrainingAnnexPlayCommand.InspectActor,
+                CleanTrainingAnnexPlayCommand.ResolveStats,
                 CleanTrainingAnnexPlayCommand.RecalculateResources,
                 CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                 CleanTrainingAnnexPlayCommand.Exit
             ],
             summary.Commands);
 
-        Assert.Equal(5, io.Menus.Count);
+        Assert.Equal(6, io.Menus.Count);
         foreach (GameIoMenuCall menu in io.Menus)
         {
             Assert.Equal("Training Annex Clean Session", menu.Header);
             Assert.Equal(
-                ["Inspect Session", "Inspect Actors", "Recalculate Resources", "Validate Startup Snapshot", "Exit"],
+                [
+                    "Inspect Session",
+                    "Inspect Actors",
+                    "Resolve Stats",
+                    "Recalculate Resources",
+                    "Validate Startup Snapshot",
+                    "Exit"
+                ],
                 menu.Options);
         }
         io.AssertConsumed();
@@ -110,8 +124,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources: hp 65/65, sp 29/29.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources: hp 75/75, sp 22/22.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources: hp 100/100, sp 27/27.", text, StringComparison.Ordinal);
+        Assert.Contains("Base stats: strength 6, magic 4, vitality 5, agility 5, luck 4.", text, StringComparison.Ordinal);
+        Assert.Contains("Effective stats: strength 6, magic 4, vitality 5, agility 5, luck 4.", text, StringComparison.Ordinal);
         Assert.Contains("Active skills: Frost Tip, Echo Strike.", text, StringComparison.Ordinal);
         Assert.Contains("Passive skills: Steady Breath.", text, StringComparison.Ordinal);
+        Assert.Contains("Stat policy: standard_stat resolved Echo Adept with attack stage +1.", text, StringComparison.Ordinal);
+        Assert.Contains("Resolved stats: strength 6->8, magic 4->5, vitality 5->5, agility 5->5, luck 4->4.", text, StringComparison.Ordinal);
         Assert.Contains("Resource recalculation: Echo Adept hp 80/80 -> 70/80.", text, StringComparison.Ordinal);
         Assert.Contains("Resource policy: standard_growth preserved current hp and recalculated maximum 80.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
@@ -141,6 +159,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static ContentId Qualified(string localId) =>
         ContentId.Parse($"convergence.training_annex_slice:{localId}");
+
+    private static StatResolutionResult Resolved(CleanTrainingAnnexPlaySummary summary, string statId) =>
+        Assert.Single(summary.PlayerResolvedStats, result => result.StatId == ContentId.Parse(statId));
 
     private static string FindRepositoryRoot()
     {

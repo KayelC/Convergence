@@ -205,6 +205,18 @@ Implemented after the actor roster extension:
 
 This proves clean resource initialization and a first resource update in the interactive Training Annex session. It does not retire legacy `GrowthProcessor` or legacy `Combatant` resource behavior.
 
+### Phase 1-04 Stat Composition Extension
+
+Implemented after resource initialization:
+
+- The clean play host now binds the catalog `standard_stat` ruleset.
+- The interactive menu includes `Resolve Stats`.
+- `Resolve Stats` previews Echo Adept stat composition through framework `StandardStatResolutionPolicy`, using a runtime `attack +1` stat-stage sample.
+- The preview shows the approved modifier-track aliases: `attack` affects Strength and Magic, not Vitality, Agility, or Luck.
+- Actor inspection now prints base stats and effective runtime stats separately.
+
+This proves that the clean shell can display and evaluate framework-owned stat composition without legacy `StatProcessor`. It does not yet prove clean equipment stat impact, because the current Training Annex actors are authored as `demon` and the standard policy intentionally resolves demon stats from active-form stats. Equipment impact remains planned for the equipment pass.
+
 ## Iteration 2: Optional Mechanic Baseline
 
 ### Goal

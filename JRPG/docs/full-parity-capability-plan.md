@@ -323,6 +323,15 @@ Clean console proof:
 
 - inspect/status menu shows clean stat values from runtime snapshots.
 
+Phase 1-04 result:
+
+- The clean Training Annex play host now binds the catalog `standard_stat` ruleset through `RuntimeRulesetBindingResolver`.
+- The interactive menu includes `Resolve Stats`, which previews Echo Adept stat composition through `StandardStatResolutionPolicy` instead of legacy `StatProcessor`.
+- The preview applies a runtime `attack +1` stage and proves the current standard aliases: Strength and Magic are boosted, while Vitality, Agility, and Luck remain unchanged.
+- Actor inspection now separates base stats from effective runtime stats.
+- Equipment stat impact is not forced in this pass because the current Training Annex actors are authored as `demon`, and the standard stat policy intentionally resolves demon stats from active-form stats rather than accessory modifiers. Clean equipment/stat impact remains owned by pass `equipment_ownership`.
+- This remains `parallel_partial`: the clean Training Annex shell exposes framework stat composition, but broader production equipment/stat consumers are still protected compatibility paths.
+
 ### 05. `growth_and_levels`
 
 Current status: `parallel_partial`.
