@@ -1,13 +1,15 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
+using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
+
+using static JRPGPrototype.Host.CleanConsole.TrainingAnnex.TrainingAnnexHostSupport;
 
 namespace JRPGPrototype.Host;
 
@@ -33,15 +35,6 @@ internal sealed record CleanTrainingAnnexDemoSummary(
 
 internal sealed class CleanTrainingAnnexDemoHost
 {
-    private const string Pack = "convergence.training_annex_slice";
-
-    private static readonly ContentId Battle = ContentId.Parse("battle");
-    private static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
-    private static readonly ContentId NewMoon = ContentId.Parse("new_moon");
-    private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
-    private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
-    private static readonly ContentId Hp = ContentId.Parse("hp");
-
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
 
@@ -67,7 +60,7 @@ internal sealed class CleanTrainingAnnexDemoHost
     public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
         LastSummary = null;
-        ContentPackTextRequest request = TrainingAnnexRequest();
+        ContentPackTextRequest request = CreateContentRequest();
         ContentPackTextBundle bundle;
         try
         {
@@ -87,7 +80,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         }
 
         CatalogLoadResult load = new SkillSystemCatalogLoader().Load(
-            new SkillSystemCatalogLoadRequest(BuildRegistrations(), [bundle]));
+            new SkillSystemCatalogLoadRequest(TrainingAnnexHostSupport.BuildRegistrations(), [bundle]));
         if (!load.IsSuccess || load.Catalog is null)
         {
             foreach (CatalogLoadDiagnostic diagnostic in load.Diagnostics)
@@ -111,7 +104,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             .ConfigureAwait(false);
 
         var resolver = new RuntimeRulesetBindingResolver();
-        var random = new MinimumRandomSource();
+        var random = new TrainingAnnexMinimumRandomSource();
         ProductionCombatRuleset damageRuleset = resolver.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
@@ -152,7 +145,7 @@ internal sealed class CleanTrainingAnnexDemoHost
 
         var dungeonService = new RuntimeFieldDungeonService(random);
         DungeonDefinition dungeon = catalog.GetRequiredDungeon(Qualified("training_annex"));
-        RuntimeDungeonContentSnapshot runtimeDungeon = ToRuntimeDungeonContent(dungeon);
+        RuntimeDungeonContentSnapshot runtimeDungeon = TrainingAnnexHostSupport.ToRuntimeDungeonContent(dungeon);
         RuntimeDungeonProgressSnapshot progress = new(dungeon.Id);
         RuntimeDungeonTransitionResult entered = dungeonService.EnterDungeon(runtimeDungeon, progress);
         RuntimeDungeonTransitionResult ascended = dungeonService.Ascend(runtimeDungeon, entered.After);
@@ -195,7 +188,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         await PrintAsync(sequence++, "encounter", $"Resolved {encounter.DisplayName}: {ashling.Entity.DisplayName}.", cancellationToken)
             .ConfigureAwait(false);
 
-        BattleExecutionServices executionServices = CreateExecutionServices(catalog);
+        BattleExecutionServices executionServices = TrainingAnnexHostSupport.CreateExecutionServices(catalog);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),
@@ -291,101 +284,6 @@ internal sealed class CleanTrainingAnnexDemoHost
         return 0;
     }
 
-    private static ContentPackTextRequest TrainingAnnexRequest() =>
-        new(
-            "training_annex_slice.manifest.json",
-            [
-                "training_annex_slice.races.json",
-                "training_annex_slice.ailments.json",
-                "training_annex_slice.skills.json",
-                "training_annex_slice.entities.json",
-                "training_annex_slice.items.json",
-                "training_annex_slice.equipment.json",
-                "training_annex_slice.shops.json",
-                "training_annex_slice.negotiations.json",
-                "training_annex_slice.encounters.json",
-                "training_annex_slice.dungeons.json",
-                "training_annex_slice.fusion.json",
-                "training_annex_slice.rulesets.json"
-            ]);
-
-    private static SkillSystemRegistrationSnapshot BuildRegistrations() =>
-        new SkillSystemRegistrationBuilder()
-            .RegisterContext("battle", "field")
-            .RegisterResource("hp", "sp")
-            .RegisterStat("strength", "magic", "vitality", "agility", "luck")
-            .RegisterModifierTrack("attack", "defense")
-            .RegisterEntityKind("demon")
-            .RegisterAlignment("neutral")
-            .RegisterNegotiationPersonality("steady_sample")
-            .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
-            .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterBattleKind("normal_battle")
-            .RegisterMoonPhase("new_moon")
-            .RegisterShopCategory("training_supply")
-            .RegisterNegotiationDemand("sample_macca")
-            .RegisterEncounterEnvironment("training_annex")
-            .RegisterPolicy(
-                "standard_damage",
-                "standard_reward",
-                "standard_growth",
-                "standard_stat",
-                "standard_press_turn",
-                "standard_stock_capacity",
-                "standard_economy",
-                "standard_moon_phase",
-                "return_to_lobby",
-                "training_barrier",
-                "standard_accident",
-                "standard_mutation")
-            .SupportEffect<DamageEffectDefinition>()
-            .SupportEffect<RestoreResourceEffectDefinition>()
-            .SupportEffect<ReduceResourceEffectDefinition>()
-            .SupportEffect<RemoveAilmentEffectDefinition>()
-            .SupportEffect<ReviveEffectDefinition>()
-            .SupportEffect<ApplyAilmentEffectDefinition>()
-            .SupportEffect<ModifyStatStageEffectDefinition>()
-            .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
-            .SupportAilmentBehavior<SkipAilmentTurnBehaviorDefinition>()
-            .Build();
-
-    private static BattleExecutionServices CreateExecutionServices(GameDataCatalog catalog) =>
-        new(
-            catalog,
-            new DemoDamageExecutionPolicy(),
-            new DemoInstantDeathPolicy(),
-            new DemoAilmentPolicy(),
-            new DemoChancePolicy(),
-            new DemoPowerAmountPolicy(),
-            new DemoRandomTargetPolicy());
-
-    private static RuntimeDungeonContentSnapshot ToRuntimeDungeonContent(DungeonDefinition dungeon) =>
-        new(
-            dungeon.Id,
-            dungeon.DisplayName,
-            dungeon.Blocks.Select(block => new RuntimeDungeonBlockSnapshot(
-                block.Id,
-                block.DisplayName,
-                block.StartFloor,
-                block.EndFloor,
-                block.EncounterPoolIds,
-                block.FixedFloors.Select(ToRuntimeFixedFloor))));
-
-    private static RuntimeDungeonFixedFloorSnapshot ToRuntimeFixedFloor(DungeonFixedFloorDefinition fixedFloor) =>
-        new(
-            fixedFloor.Floor,
-            fixedFloor.Kind switch
-            {
-                DungeonFixedFloorKind.Battle => RuntimeDungeonFloorKind.Battle,
-                DungeonFixedFloorKind.Boss => RuntimeDungeonFloorKind.Boss,
-                DungeonFixedFloorKind.BlockEnd or DungeonFixedFloorKind.Barrier => RuntimeDungeonFloorKind.BlockEnd,
-                DungeonFixedFloorKind.SafeRoom or DungeonFixedFloorKind.Terminal => RuntimeDungeonFloorKind.SafeRoom,
-                _ => RuntimeDungeonFloorKind.Empty
-            },
-            fixedFloor.EncounterId ?? fixedFloor.TransitionRuleId ?? fixedFloor.BarrierRuleId,
-            fixedFloor.HasTerminal,
-            fixedFloor.Description);
-
     private static CatalogBattleActorCreationRequest AssertSingleActorRequest(EncounterStartPlan plan) =>
         plan.ActorRequests.Single();
 
@@ -398,21 +296,6 @@ internal sealed class CleanTrainingAnnexDemoHost
             entity.Stats.GetValueOrDefault(ContentId.Parse("vitality")),
             entity.Stats.GetValueOrDefault(ContentId.Parse("agility")),
             entity.Stats.GetValueOrDefault(ContentId.Parse("luck")));
-
-    private static RuntimeProgressionSnapshot InitialProgression(EntityDefinition entity, int level) =>
-        new(level, 0, 0, entity.EntityKindId == StandardProgressionIds.Demon ? 0 : level - 1);
-
-    private static RuntimeStatBlockSnapshot ActorStats(EntityDefinition entity) =>
-        new(entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
-            entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)));
-
-    private static IReadOnlyList<RuntimeResourceSnapshot> RuntimeResources(RuntimeActorState state) =>
-        state.Resources.Values
-            .Select(resource => new RuntimeResourceSnapshot(resource.Id, resource.Current, resource.Maximum))
-            .ToArray();
-
-    private static IReadOnlyDictionary<ContentId, decimal> BaseResourceValues(RuntimeActorState state) =>
-        state.Resources.Values.ToDictionary(resource => resource.Id, resource => resource.Maximum);
 
     private static RuntimeSaveGameSnapshot BuildSaveSnapshot(
         GameDataCatalog catalog,
@@ -480,9 +363,6 @@ internal sealed class CleanTrainingAnnexDemoHost
             baseResources);
     }
 
-    private static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
-        new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);
-
     private static CleanTrainingAnnexDemoSummary CreateSummary(
         ContentPackTextRequest request,
         IReadOnlyList<RuntimeDungeonEvent> dungeonEvents,
@@ -542,15 +422,6 @@ internal sealed class CleanTrainingAnnexDemoHost
         string message,
         CancellationToken cancellationToken) =>
         _eventSink.PublishAsync($"{sequence:D3} [{kind}] {message}", cancellationToken);
-
-    private static ContentId Qualified(string localId) => ContentId.Parse($"{Pack}:{localId}");
-
-    private sealed class MinimumRandomSource : IRandomSource
-    {
-        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
-
-        public decimal NextUnitDecimal() => 0m;
-    }
 
     private sealed class DemoItemActionInventory(IDictionary<ContentId, int> quantities) : IItemActionInventory
     {

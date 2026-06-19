@@ -250,15 +250,20 @@ They are not deleted. They can explain how the project got here, but they should
 The active documentation order is now:
 
 1. this document;
-2. the Skill System GDD for approved skill design;
-3. Architecture and Gameplay Systems for implementation reference;
-4. subsystem docs for local orientation;
-5. Project Vision for long-term direction;
-6. archived plans only as history.
+2. the Full Parity Capability Plan when choosing implementation work;
+3. the Repository Architecture Proposal when changing physical file layout;
+4. the Clean Console Host Demo Plan when implementing proof-harness details for the framework-first console demo;
+5. the Skill System GDD for approved skill design;
+6. Architecture and Gameplay Systems for implementation reference;
+7. subsystem docs for local orientation;
+8. Project Vision for long-term direction;
+9. archived plans only as history.
 
 ## Plan Moving Forward
 
 Future work should use numbered, named phases or explicitly approved plan files. Do not casually invent new lettered tracks.
+
+The active implementation spine is now [Full Parity Capability Plan](full-parity-capability-plan.md). The clean console host is the proof harness for that plan, not a separate competing roadmap.
 
 ### Phase 1: Rebuild Ownership
 
@@ -298,6 +303,7 @@ Current result:
 - `convergence.training_annex_slice` now contains three races, five entities, ten skills, three ailments, five items, four equipment records, one shop, one negotiation set, three encounters, one dungeon, two concept-level fusion recipes, and standard ruleset bindings.
 - Catalog and runtime tests prove the expanded pack loads, qualifies IDs, rejects local lookups, binds standard rulesets, exercises additional skills/items, carries fixed battle encounter IDs through the dungeon state machine, and can build battle actor requests from a host-owned encounter trigger.
 - `--clean-training-annex-demo` still runs without GUI or legacy fallback. It now uses a host trigger to select `ashling_drill`, but it still only exercises part of the expanded pack at runtime.
+- `--clean-training-annex-play` starts the first clean interactive session shell. It lives under `Host/CleanConsole/TrainingAnnex/`, loads only the Training Annex pack, hydrates Echo Adept from the catalog, lets the host inspect session/actor state, validates a startup save snapshot, and exits without legacy `Database` startup.
 
 Design note:
 
@@ -311,6 +317,7 @@ Goal: let a player interact with clean framework content without entering the le
 
 Work:
 
+- follow the numbered [Clean Console Host Demo Plan](clean-console-host-demo-plan.md);
 - create a clean-host flow over original clean content;
 - use framework commands and snapshots directly;
 - keep the console host as the first simple host, not the final Godot UI;
@@ -326,6 +333,7 @@ Goal: replace compatibility adapters with clean consumer authority only where pr
 
 Work:
 
+- follow the [Full Parity Capability Plan](full-parity-capability-plan.md);
 - choose one capability;
 - define the intended behavior in active docs;
 - add original clean content if needed;

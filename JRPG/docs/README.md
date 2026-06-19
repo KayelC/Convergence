@@ -7,19 +7,25 @@ This directory contains the active documentation for the `track-12-recovery` bra
 Use active documents in this order:
 
 1. [Framework State And Roadmap](framework-state-and-roadmap.md) is the current project map and forward plan.
-2. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
-3. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
-4. Current source code and automated tests define implemented behavior.
-5. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
-6. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
-7. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
+2. [Full Parity Capability Plan](full-parity-capability-plan.md) is the active capability-by-capability implementation spine.
+3. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
+4. [Repository Architecture Proposal](repository-architecture-proposal.md) maps the current file layout and proposed declutter architecture.
+5. [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) defines the proof-harness details for the new framework-first console demo.
+6. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+7. Current source code and automated tests define implemented behavior.
+8. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+9. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
+10. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
 Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 
 ## Active Documents
 
 - [Framework State And Roadmap](framework-state-and-roadmap.md)
+- [Full Parity Capability Plan](full-parity-capability-plan.md)
 - [Framework Completion Problems](framework-completion/README.md)
+- [Repository Architecture Proposal](repository-architecture-proposal.md)
+- [Clean Console Host Demo Plan](clean-console-host-demo-plan.md)
 - [Godot Integration Contract](godot-integration-contract.md)
 - [Project Vision](project-vision.md)
 - [Skill System GDD](skill-system-gdd.md)

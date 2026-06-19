@@ -1,4 +1,5 @@
 using JRPGPrototype.Host;
+using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Services;
 
 namespace JRPGPrototype
@@ -25,6 +26,11 @@ namespace JRPGPrototype
             if (args.Contains("--clean-training-annex-demo", StringComparer.Ordinal))
             {
                 return await new CleanTrainingAnnexDemoHost(Console.Out).RunAsync().ConfigureAwait(false);
+            }
+
+            if (args.Contains("--clean-training-annex-play", StringComparer.Ordinal))
+            {
+                return await new CleanTrainingAnnexPlayHost(new ConsoleIO()).RunAsync().ConfigureAwait(false);
             }
 
             IGameIO io = new ConsoleIO();
