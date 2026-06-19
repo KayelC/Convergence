@@ -217,6 +217,8 @@ Still needed:
 
 - interactive save/load menus;
 - save slot policy;
+- save policy layer for manual saves, autosaves, and suspend saves;
+- suspend-save consume-after-load behavior;
 - migration policy for future save versions;
 - host-owned save format decisions.
 
@@ -350,6 +352,23 @@ Work:
 Exit condition:
 
 - archived code is truly unreachable, preserved for history, and no longer competing with the framework.
+
+## Priority Review Backlog
+
+This section is for ranking before implementation. Do not treat `TBD` items as approved next work. The point is to stop introducing new work invisibly and make the owner choose what matters first.
+
+| Feature / Problem | Current Status | Priority |
+| --- | --- | --- |
+| Host-owned encounter-start proof made more scene-like | First framework bridge exists through `CatalogEncounterStartPlanner`; still scripted in the demo | TBD |
+| Interactive clean runtime loop | Noninteractive demos exist; no player-driven clean loop yet | TBD |
+| Shop/equipment clean host flow | Content and framework services exist; sample records are not yet demonstrated in a clean host flow | TBD |
+| Negotiation clean host flow | Content and framework services exist; sample record is not yet demonstrated in a clean host flow | TBD |
+| Fusion clean host flow | Concept recipes and services exist; sample flow is not yet demonstrated independently of legacy Cathedral presentation | TBD |
+| Optional mechanic decoupling, especially Moon Phase | Design issue documented; implementation not started | TBD |
+| Save policy and suspend saves | Snapshot/validation contracts exist; save kind, suspend rules, and consume-after-load policy are not implemented | TBD |
+| Content authoring tooling/templates | Validation exists; authoring remains raw JSON | TBD |
+| Real Godot adapter/project | Contract proof exists; no Godot project or production adapter yet | TBD |
+| Legacy retirement gate | Guardrails exist; no capability currently authorized for archive/removal | TBD |
 
 ## Immediate Next Recommendation
 
