@@ -179,7 +179,7 @@ public sealed class GodotIntegrationContractTests
 
         RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(frost, level: 5);
         var fieldSnapshot = new RuntimeFieldSnapshot(
-            RuntimeFieldLocation.Dungeon,
+            new RuntimeNavigationSnapshot(Id("tartarus_floor_7")),
             new RuntimeDungeonProgressSnapshot(
                 Id("tartarus"),
                 currentFloor: 7,
@@ -200,8 +200,10 @@ public sealed class GodotIntegrationContractTests
         Assert.Equal(actorSnapshot.Identity, roundTripActor.Identity);
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.ResourceId), roundTripActor.Resources.Select(resource => resource.ResourceId));
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.Current), roundTripActor.Resources.Select(resource => resource.Current));
-        Assert.Equal(fieldSnapshot.Location, restored.Field.Location);
-        Assert.Equal(7, restored.Field.DungeonProgress.CurrentFloor);
+        Assert.Equal(
+            fieldSnapshot.Navigation.CurrentLocationId,
+            restored.Field.Navigation.CurrentLocationId);
+        Assert.Equal(7, restored.Field.DungeonProgress!.CurrentFloor);
         Assert.Equal([1, 5, 7], restored.Field.DungeonProgress.UnlockedTerminals);
         Assert.True(restored.SceneHandles.ContainsKey(RuntimeInstanceId.Parse("frost")));
     }

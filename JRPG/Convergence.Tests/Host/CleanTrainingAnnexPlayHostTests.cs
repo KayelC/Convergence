@@ -14,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 5, 6);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 6, 0, 7);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -91,6 +91,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.LevelUpCount);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
+        Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
+        Assert.Equal(
+            [Qualified("staging_area"), Qualified("training_annex_entrance"), Qualified("staging_area")],
+            summary.LocationHistory);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.InspectSession,
@@ -98,25 +102,46 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 CleanTrainingAnnexPlayCommand.ResolveStats,
                 CleanTrainingAnnexPlayCommand.RecalculateResources,
                 CleanTrainingAnnexPlayCommand.ApplyVictoryExperience,
+                CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
+                CleanTrainingAnnexPlayCommand.InspectSession,
                 CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
+                CleanTrainingAnnexPlayCommand.ReturnToStagingArea,
+                CleanTrainingAnnexPlayCommand.InspectSession,
                 CleanTrainingAnnexPlayCommand.Exit
             ],
             summary.Commands);
 
-        Assert.Equal(7, io.Menus.Count);
-        foreach (GameIoMenuCall menu in io.Menus)
+        Assert.Equal(11, io.Menus.Count);
+        foreach (GameIoMenuCall menu in io.Menus.Where((_, index) => index is <= 5 or >= 9))
         {
-            Assert.Equal("Training Annex Clean Session", menu.Header);
+            Assert.Equal("Training Annex Clean Session - Staging Area", menu.Header);
             Assert.Equal(
-                [
+            [
                     "Inspect Session",
                     "Inspect Actors",
                     "Resolve Stats",
-                    "Recalculate Resources",
-                    "Apply Victory EXP",
-                    "Validate Startup Snapshot",
-                    "Exit"
-                ],
+                "Recalculate Resources",
+                "Apply Victory EXP",
+                "Validate Startup Snapshot",
+                "Enter Training Annex",
+                "Exit"
+            ],
+                menu.Options);
+        }
+        foreach (GameIoMenuCall menu in io.Menus.Skip(6).Take(3))
+        {
+            Assert.Equal("Training Annex Clean Session - Training Annex Entrance", menu.Header);
+            Assert.Equal(
+            [
+                "Inspect Session",
+                "Inspect Actors",
+                "Resolve Stats",
+                "Recalculate Resources",
+                "Apply Victory EXP",
+                "Validate Startup Snapshot",
+                "Return to Staging Area",
+                "Exit"
+            ],
                 menu.Options);
         }
         io.AssertConsumed();
@@ -126,7 +151,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("without legacy Database startup", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated clean actor roster with 4 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
-        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons.", text, StringComparison.Ordinal);
+        Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
+        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
+        Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
+        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: not active.", text, StringComparison.Ordinal);
+        Assert.Contains("Field navigation: returned to Staging Area; location Staging Area (convergence.training_annex_slice:staging_area).", text, StringComparison.Ordinal);
         Assert.Contains("Actor roster: 4 actor(s).", text, StringComparison.Ordinal);
         Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 28/28.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources: hp 65/65, sp 29/29.", text, StringComparison.Ordinal);

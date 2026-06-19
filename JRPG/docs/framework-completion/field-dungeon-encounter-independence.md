@@ -2,11 +2,13 @@
 
 ## Current State
 
-The framework has field and dungeon state-machine services. The Training Annex demo proves a tiny noninteractive dungeon traversal and encounter resolution.
+The framework has an optional generic navigation service plus separate field and dungeon state-machine services. Navigation uses arbitrary `ContentId` locations and injected access policy; it does not assume a city/dungeon split or prescribe how the host presents travel. The Training Annex demo separately proves a tiny noninteractive dungeon traversal and encounter resolution.
 
 It now also has a small host-owned encounter-start planner. A host can select an encounter by ID from scene state, receive catalog actor-creation requests, hydrate those actors through the existing catalog battle actor factory, and then run battle resolution.
 
 The ordinary console field loop still owns most player-facing flow, menu presentation, legacy dungeon content, encounter hydration, and battle handoff.
+
+The clean Training Annex play shell uses a list only because it is a console host. A Godot doorway/area trigger, VN hotspot, map cursor, or script can issue the same generic transition request. Scene movement and visual transitions stay host-owned.
 
 The current clean demos are intentionally text-first. They can treat floor transitions as immediate encounter triggers because they are repeatable framework proofs, not final exploration design.
 

@@ -194,4 +194,5 @@ public sealed class FieldDungeonStateMachineTests
 
         public decimal NextUnitDecimal() => 0m;
     }
+
 }

@@ -135,8 +135,13 @@ internal sealed class CleanSaveDemoHost
         await _eventSink.PublishAsync(
             $"003 [validate] Restored snapshot validated with {after.Diagnostics.Count} diagnostic(s).",
             cancellationToken);
+        string fieldSummary = restored.Field?.DungeonProgress is RuntimeDungeonProgressSnapshot dungeonProgress
+            ? $"floor {dungeonProgress.CurrentFloor}"
+            : restored.Field is null
+                ? "no field state"
+                : $"location {restored.Field.Navigation.CurrentLocationId}";
         await _eventSink.PublishAsync(
-            $"004 [restore] Restored {restoredActors.Length} actor(s), {restored.Inventory.ItemQuantities.Count} item stack(s), floor {restored.Field.DungeonProgress.CurrentFloor}.",
+            $"004 [restore] Restored {restoredActors.Length} actor(s), {restored.Inventory.ItemQuantities.Count} item stack(s), {fieldSummary}.",
             cancellationToken);
         await _eventSink.PublishAsync("005 [outcome] Clean save demo completed successfully.", cancellationToken);
         return 0;
@@ -183,7 +188,7 @@ internal sealed class CleanSaveDemoHost
             ]),
             new RuntimeWalletSnapshot(1234),
             new RuntimeFieldSnapshot(
-                RuntimeFieldLocation.Dungeon,
+                new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:tartarus_floor_5")),
                 new RuntimeDungeonProgressSnapshot(
                     ContentId.Parse("convergence.catalog_surface_sample:tartarus_sample"),
                     currentFloor: 5,
@@ -477,24 +482,33 @@ internal static class CleanSaveJsonCodec
             Enum.Parse<EquipmentSlot>(pair.Key),
             Id(pair.Value))));
 
-    private static HostFieldDto ToDto(RuntimeFieldSnapshot snapshot) =>
-        new(
-            snapshot.Location.ToString(),
-            snapshot.DungeonProgress.DungeonId.ToString(),
-            snapshot.DungeonProgress.CurrentFloor,
-            snapshot.DungeonProgress.MaxFloorReached,
-            snapshot.DungeonProgress.UnlockedTerminals.ToArray(),
-            snapshot.DungeonProgress.DefeatedBossIds.Select(id => id.ToString()).ToArray());
+    private static HostFieldDto? ToDto(RuntimeFieldSnapshot? snapshot) =>
+        snapshot is null
+            ? null
+            : new HostFieldDto(
+                snapshot.Navigation.CurrentLocationId.ToString(),
+                snapshot.DungeonProgress is null
+                    ? null
+                    : new HostDungeonProgressDto(
+                        snapshot.DungeonProgress.DungeonId.ToString(),
+                        snapshot.DungeonProgress.CurrentFloor,
+                        snapshot.DungeonProgress.MaxFloorReached,
+                        snapshot.DungeonProgress.UnlockedTerminals.ToArray(),
+                        snapshot.DungeonProgress.DefeatedBossIds.Select(id => id.ToString()).ToArray()));
 
-    private static RuntimeFieldSnapshot FromDto(HostFieldDto dto) =>
-        new(
-            Enum.Parse<RuntimeFieldLocation>(dto.Location),
-            new RuntimeDungeonProgressSnapshot(
-                Id(dto.DungeonId),
-                dto.CurrentFloor,
-                dto.MaxFloorReached,
-                dto.UnlockedTerminals,
-                dto.DefeatedBossIds.Select(Id)));
+    private static RuntimeFieldSnapshot? FromDto(HostFieldDto? dto) =>
+        dto is null
+            ? null
+            : new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(Id(dto.LocationId)),
+                dto.DungeonProgress is null
+                    ? null
+                    : new RuntimeDungeonProgressSnapshot(
+                        Id(dto.DungeonProgress.DungeonId),
+                        dto.DungeonProgress.CurrentFloor,
+                        dto.DungeonProgress.MaxFloorReached,
+                        dto.DungeonProgress.UnlockedTerminals,
+                        dto.DungeonProgress.DefeatedBossIds.Select(Id)));
 
     private static HostCompendiumDto ToDto(CompendiumStateSnapshot snapshot) =>
         new(snapshot.Entries.Select(entry => new HostCompendiumEntryDto(
@@ -568,7 +582,7 @@ internal static class CleanSaveJsonCodec
         HostInventoryDto Inventory,
         HostEquipmentDto Equipment,
         int Macca,
-        HostFieldDto Field,
+        HostFieldDto? Field,
         HostCompendiumDto Compendium,
         HostKnowledgeDto Knowledge,
         HostSessionDto Session,
@@ -623,7 +637,8 @@ internal static class CleanSaveJsonCodec
     private sealed record HostPartyStockDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveForm, HostReferenceDto[] PersonaStock, HostReferenceDto[] DemonStock, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
     private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);
-    private sealed record HostFieldDto(string Location, string DungeonId, int CurrentFloor, int MaxFloorReached, int[] UnlockedTerminals, string[] DefeatedBossIds);
+    private sealed record HostFieldDto(string LocationId, HostDungeonProgressDto? DungeonProgress);
+    private sealed record HostDungeonProgressDto(string DungeonId, int CurrentFloor, int MaxFloorReached, int[] UnlockedTerminals, string[] DefeatedBossIds);
     private sealed record HostCompendiumDto(HostCompendiumEntryDto[] Entries);
     private sealed record HostCompendiumEntryDto(string SpeciesId, string DisplayName, int Level, Dictionary<string, int> Stats, string[] SkillIds, long Experience, long LifetimeExperience);
     private sealed record HostKnowledgeDto(HostElementalKnowledgeDto[] ElementalAffinities, HostAilmentKnowledgeDto[] AilmentResistances, HostInstantDeathKnowledgeDto[] InstantDeathResistances);

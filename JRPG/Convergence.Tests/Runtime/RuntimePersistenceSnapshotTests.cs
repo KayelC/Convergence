@@ -24,7 +24,9 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot restored = RuntimeActorStateSet.FromSnapshot(valid.Actors[0]).ToSnapshot();
         Assert.Equal(Id("convergence.clean_battle_demo:frost_duelist_demo"), restored.Identity.EntityDefinitionId);
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), valid.Inventory.ItemQuantities.Keys.Single());
-        Assert.Equal(Id("convergence.catalog_surface_sample:tartarus_sample"), valid.Field.DungeonProgress.DungeonId);
+        Assert.Equal(
+            Id("convergence.catalog_surface_sample:tartarus_sample"),
+            valid.Field!.DungeonProgress!.DungeonId);
         Assert.Equal(2, valid.Checkpoints.Entries.Count);
     }
 
@@ -84,7 +86,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, Id("missing.pack:missing_armor"))
             ]),
             field: new RuntimeFieldSnapshot(
-                RuntimeFieldLocation.Dungeon,
+                new RuntimeNavigationSnapshot(Id("missing_location")),
                 new RuntimeDungeonProgressSnapshot(Id("missing.pack:missing_dungeon"))),
             compendium: new CompendiumStateSnapshot(
             [
@@ -120,12 +122,32 @@ public sealed class RuntimePersistenceSnapshotTests
     [Fact]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion()
     {
-        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(contractVersion: 2);
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            contractVersion: RuntimeSaveGameSnapshot.CurrentContractVersion + 1);
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, LoadCatalog());
 
         RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(RuntimeSaveValidationCode.ContractVersionUnsupported, diagnostic.Code);
         Assert.Equal("$.contractVersion", diagnostic.Path);
+    }
+
+    [Fact]
+    public void RuntimeSaveSnapshot_AllowsNavigationAndDungeonModulesToBeOmittedIndependently()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot noField = CreateSaveSnapshot(includeDefaultField: false);
+        RuntimeSaveGameSnapshot navigationOnly = CreateSaveSnapshot(
+            field: new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(Id("host_owned_location"))));
+
+        RuntimeSaveValidationResult noFieldResult = new RuntimeSaveValidator().Validate(noField, catalog);
+        RuntimeSaveValidationResult navigationOnlyResult =
+            new RuntimeSaveValidator().Validate(navigationOnly, catalog);
+
+        Assert.True(noFieldResult.IsValid);
+        Assert.Null(noField.Field);
+        Assert.True(navigationOnlyResult.IsValid);
+        Assert.Equal(Id("host_owned_location"), navigationOnly.Field!.Navigation.CurrentLocationId);
+        Assert.Null(navigationOnly.Field.DungeonProgress);
     }
 
     [Fact]
@@ -183,7 +205,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeFieldSnapshot? field = null,
         CompendiumStateSnapshot? compendium = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
-        int contractVersion = RuntimeSaveGameSnapshot.CurrentContractVersion)
+        int contractVersion = RuntimeSaveGameSnapshot.CurrentContractVersion,
+        bool includeDefaultField = true)
     {
         RuntimeActorSnapshot frost = CreateActor(
             RuntimeInstanceId.Parse("frost"),
@@ -225,14 +248,16 @@ public sealed class RuntimePersistenceSnapshotTests
                     Id("convergence.catalog_surface_sample:shortsword_sample"))
             ]),
             new RuntimeWalletSnapshot(1234),
-            field ?? new RuntimeFieldSnapshot(
-                RuntimeFieldLocation.Dungeon,
-                new RuntimeDungeonProgressSnapshot(
-                    Id("convergence.catalog_surface_sample:tartarus_sample"),
-                    currentFloor: 5,
-                    maxFloorReached: 10,
-                    unlockedTerminals: [1, 5],
-                    defeatedBossIds: [Id("convergence.catalog_surface_sample:thebel_training_sample")])),
+            field ?? (includeDefaultField
+                ? new RuntimeFieldSnapshot(
+                    new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:tartarus_floor_5")),
+                    new RuntimeDungeonProgressSnapshot(
+                        Id("convergence.catalog_surface_sample:tartarus_sample"),
+                        currentFloor: 5,
+                        maxFloorReached: 10,
+                        unlockedTerminals: [1, 5],
+                        defeatedBossIds: [Id("convergence.catalog_surface_sample:thebel_training_sample")]))
+                : null),
             compendium ?? new CompendiumStateSnapshot(
             [
                 new CompendiumEntrySnapshot(

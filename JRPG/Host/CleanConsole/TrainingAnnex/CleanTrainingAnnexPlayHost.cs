@@ -16,6 +16,8 @@ internal enum CleanTrainingAnnexPlayCommand
     RecalculateResources,
     ApplyVictoryExperience,
     ValidateStartupSnapshot,
+    EnterTrainingAnnex,
+    ReturnToStagingArea,
     Exit
 }
 
@@ -39,6 +41,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int LevelUpCount,
     bool StartupSnapshotValidated,
     int StartupSnapshotDiagnosticCount,
+    ContentId FinalLocationId,
+    IReadOnlyList<ContentId> LocationHistory,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
 
 internal sealed class CleanTrainingAnnexPlayHost
@@ -125,6 +129,10 @@ internal sealed class CleanTrainingAnnexPlayHost
         IStatResolutionPolicy statPolicy = rulesetResolver
             .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
             .RequireService();
+        var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
+        RuntimeFieldSnapshot field = new(
+            new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
+        var locationHistory = new List<ContentId> { field.Navigation.CurrentLocationId };
         var commands = new List<CleanTrainingAnnexPlayCommand>();
         IReadOnlyList<StatResolutionResult> statPreview = [];
         bool statResolutionPreviewed = false;
@@ -145,11 +153,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"Hydrated clean actor roster with {roster.AllActors.Count} actor(s): {roster.Enemies.Count} enemy model(s).",
             cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync("Field location: Staging Area.", cancellationToken)
+            .ConfigureAwait(false);
 
         while (true)
         {
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> result =
-                await _commandSource.ReadAsync(CreateMenu(), cancellationToken).ConfigureAwait(false);
+                await _commandSource.ReadAsync(
+                    CreateMenu(field.Navigation.CurrentLocationId),
+                    cancellationToken).ConfigureAwait(false);
             if (!result.IsSelected || result.Command == CleanTrainingAnnexPlayCommand.Exit)
             {
                 commands.Add(CleanTrainingAnnexPlayCommand.Exit);
@@ -163,6 +175,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     levelUpCount,
                     snapshotValidated,
                     snapshotDiagnosticCount,
+                    field,
+                    locationHistory,
                     commands);
                 await _eventSink.PublishAsync("Clean Training Annex session exited.", cancellationToken)
                     .ConfigureAwait(false);
@@ -174,7 +188,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             switch (command)
             {
                 case CleanTrainingAnnexPlayCommand.InspectSession:
-                    await PrintSessionAsync(catalog, cancellationToken).ConfigureAwait(false);
+                    await PrintSessionAsync(catalog, field, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectActor:
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
@@ -202,7 +216,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster),
+                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster, field),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -228,20 +242,55 @@ internal sealed class CleanTrainingAnnexPlayHost
                             levelUpCount,
                             snapshotValidated,
                             snapshotDiagnosticCount,
+                            field,
+                            locationHistory,
                             commands);
                         return 5;
                     }
                     break;
+                case CleanTrainingAnnexPlayCommand.EnterTrainingAnnex:
+                {
+                    RuntimeNavigationResult navigationResult = navigation.Navigate(
+                        field.Navigation,
+                        TrainingAnnexHostSupport.EnterTrainingAnnexTransition);
+                    field = await ApplyNavigationAsync(
+                        field,
+                        navigationResult,
+                        "entered Training Annex",
+                        cancellationToken).ConfigureAwait(false);
+                    if (navigationResult.Applied)
+                    {
+                        locationHistory.Add(field.Navigation.CurrentLocationId);
+                    }
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.ReturnToStagingArea:
+                {
+                    RuntimeNavigationResult navigationResult = navigation.Navigate(
+                        field.Navigation,
+                        TrainingAnnexHostSupport.LeaveTrainingAnnexTransition);
+                    field = await ApplyNavigationAsync(
+                        field,
+                        navigationResult,
+                        "returned to Staging Area",
+                        cancellationToken).ConfigureAwait(false);
+                    if (navigationResult.Applied)
+                    {
+                        locationHistory.Add(field.Navigation.CurrentLocationId);
+                    }
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
         }
     }
 
-    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu() =>
-        new(
-            "Training Annex Clean Session",
-            [
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu(
+        ContentId locationId)
+    {
+        var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>
+        {
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.InspectSession,
                     "Inspect Session"),
@@ -259,16 +308,60 @@ internal sealed class CleanTrainingAnnexPlayHost
                     "Apply Victory EXP"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
-                    "Validate Startup Snapshot"),
-                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.Exit,
-                    "Exit")
-            ]);
+                    "Validate Startup Snapshot")
+        };
 
-    private ValueTask PrintSessionAsync(GameDataCatalog catalog, CancellationToken cancellationToken) =>
+        options.Add(locationId == TrainingAnnexHostSupport.StagingArea
+            ? new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
+                "Enter Training Annex")
+            : new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.ReturnToStagingArea,
+                "Return to Staging Area"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.Exit,
+            "Exit"));
+
+        string locationLabel = FieldLabel(locationId);
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            $"Training Annex Clean Session - {locationLabel}",
+            options);
+    }
+
+    private ValueTask PrintSessionAsync(
+        GameDataCatalog catalog,
+        RuntimeFieldSnapshot field,
+        CancellationToken cancellationToken) =>
         _eventSink.PublishAsync(
-            $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons.",
+            $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons. Location: {FieldLabel(field.Navigation.CurrentLocationId)} ({field.Navigation.CurrentLocationId}); dungeon state: {(field.DungeonProgress is null ? "not active" : field.DungeonProgress.DungeonId.ToString())}.",
             cancellationToken);
+
+    private async ValueTask<RuntimeFieldSnapshot> ApplyNavigationAsync(
+        RuntimeFieldSnapshot field,
+        RuntimeNavigationResult navigation,
+        string appliedDescription,
+        CancellationToken cancellationToken)
+    {
+        if (!navigation.Applied)
+        {
+            await _eventSink.PublishAsync(
+                $"Field navigation rejected: {navigation.Message}",
+                cancellationToken).ConfigureAwait(false);
+            return field;
+        }
+
+        await _eventSink.PublishAsync(
+            $"Field navigation: {appliedDescription}; location {FieldLabel(navigation.After.CurrentLocationId)} ({navigation.After.CurrentLocationId}).",
+            cancellationToken).ConfigureAwait(false);
+        return new RuntimeFieldSnapshot(navigation.After, field.DungeonProgress);
+    }
+
+    private static string FieldLabel(ContentId locationId) =>
+        locationId == TrainingAnnexHostSupport.StagingArea
+            ? "Staging Area"
+            : locationId == TrainingAnnexHostSupport.TrainingAnnexEntrance
+                ? "Training Annex Entrance"
+                : locationId.ToString();
 
     private async ValueTask PrintActorsAsync(TrainingAnnexActorRoster roster, CancellationToken cancellationToken)
     {
@@ -322,6 +415,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         int levelUpCount,
         bool snapshotValidated,
         int snapshotDiagnosticCount,
+        RuntimeFieldSnapshot field,
+        IReadOnlyList<ContentId> locationHistory,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
@@ -346,6 +441,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             levelUpCount,
             snapshotValidated,
             snapshotDiagnosticCount,
+            field.Navigation.CurrentLocationId,
+            locationHistory.ToArray(),
             commands.ToArray());
     }
 

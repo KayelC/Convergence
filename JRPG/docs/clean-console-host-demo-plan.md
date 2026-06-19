@@ -268,6 +268,18 @@ Implemented after the growth extension:
 
 This proves the clean Training Annex loop does not need a fake moon/cycle mechanic. It does not implement a replacement clean Moon Phase system, and it does not change legacy Full Moon negotiation or fusion behavior.
 
+### Phase 1-07 Field Navigation Extension
+
+Implemented as the first part of Iteration 3:
+
+- Replaced the reviewed `City`/`Dungeon` draft with `RuntimeNavigationService`, arbitrary `ContentId` locations, explicit transitions, and an injected policy.
+- The clean Training Annex play host starts at a host-owned staging-area ID and presents `Enter Training Annex` / `Return to Staging Area` as console-only controls over generic transition requests.
+- The current navigation snapshot is shown by session inspection, carried into save validation, and recorded in the scripted host result.
+- Source mismatches and policy rejections leave the before-state unchanged; each direction is an explicit transition.
+- Save contract v2 makes field state and dungeon progress independently optional.
+
+This pass does not prescribe menus, scene movement, spatial maps, floor traversal, terminals, barriers, encounter triggers, or battles. Those remain host presentation or later optional capability passes.
+
 ## Iteration 3: Field And Dungeon Interaction Loop
 
 ### Goal

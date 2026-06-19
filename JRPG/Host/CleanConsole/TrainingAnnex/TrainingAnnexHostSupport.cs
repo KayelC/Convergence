@@ -59,6 +59,16 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
     public static readonly ContentId Hp = ContentId.Parse("hp");
     public static readonly ContentId Sp = ContentId.Parse("sp");
+    public static readonly ContentId StagingArea = Qualified("staging_area");
+    public static readonly ContentId TrainingAnnexEntrance = Qualified("training_annex_entrance");
+    public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
+        ContentId.Parse("enter_training_annex"),
+        StagingArea,
+        TrainingAnnexEntrance);
+    public static readonly RuntimeNavigationTransition LeaveTrainingAnnexTransition = new(
+        ContentId.Parse("leave_training_annex"),
+        TrainingAnnexEntrance,
+        StagingArea);
 
     public static ContentPackTextRequest CreateContentRequest() =>
         new(
@@ -220,7 +230,9 @@ internal static class TrainingAnnexHostSupport
             baseResourceValues ?? BaseResourceValues(actor.State));
     }
 
-    public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(TrainingAnnexActorRoster roster)
+    public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
+        TrainingAnnexActorRoster roster,
+        RuntimeFieldSnapshot? field = null)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
@@ -229,7 +241,7 @@ internal static class TrainingAnnexHostSupport
             .Select(enemy => enemy.RuntimeState.ToSnapshot())
             .ToArray();
         RuntimeActorReferenceSnapshot playerReference = Reference(playerSnapshot);
-        return BuildStartupSaveSnapshot([playerSnapshot, .. enemySnapshots], playerReference);
+        return BuildStartupSaveSnapshot([playerSnapshot, .. enemySnapshots], playerReference, field);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -261,9 +273,7 @@ internal static class TrainingAnnexHostSupport
             new RuntimeInventorySnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeWalletSnapshot(0),
-            field ?? new RuntimeFieldSnapshot(
-                RuntimeFieldLocation.City,
-                new RuntimeDungeonProgressSnapshot(Qualified("training_annex"))),
+            field,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeSessionProgressSnapshot(),
@@ -439,4 +449,22 @@ internal sealed class TrainingAnnexMinimumRandomSource : IRandomSource
     public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
 
     public decimal NextUnitDecimal() => 0m;
+}
+
+internal sealed class TrainingAnnexNavigationPolicy : IRuntimeNavigationPolicy
+{
+    public RuntimeNavigationPolicyDecision Evaluate(RuntimeNavigationPolicyRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        bool isKnownTransition =
+            request.Transition == TrainingAnnexHostSupport.EnterTrainingAnnexTransition ||
+            request.Transition == TrainingAnnexHostSupport.LeaveTrainingAnnexTransition;
+        return isKnownTransition
+            ? new RuntimeNavigationPolicyDecision(true)
+            : new RuntimeNavigationPolicyDecision(
+                false,
+                ContentId.Parse("unsupported_transition"),
+                $"Transition '{request.Transition.Id}' is not available in the Training Annex host.");
+    }
 }

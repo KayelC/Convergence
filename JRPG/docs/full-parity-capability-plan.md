@@ -139,7 +139,7 @@ Goal: build the smallest independent clean loop first.
 | 04 | `stat_composition` | `parallel_partial` | Make clean stats and equipment/stat modifiers visible in the clean demo. |
 | 05 | `growth_and_levels` | `parallel_partial` | Apply EXP and level/progression through framework services in the clean demo. |
 | 06 | `moon_phase` | `legacy_only` | Decouple optional moon/session mechanics from clean runtime paths that do not use them. |
-| 07 | `field_navigation` | `parallel_partial` | Let the clean demo move through a small field/dungeon loop. |
+| 07 | `field_navigation` | `parallel_partial` | Provide optional generic location transitions while hosts own how travel is requested and presented. |
 | 08 | `dungeon_traversal` | `parallel_partial` | Use clean dungeon state for floor/room/terminal/exit decisions. |
 | 09 | `encounters` | `parallel_partial` | Start encounters from host-owned triggers over clean encounter definitions. |
 | 10 | `field_items_and_skills` | `parallel_partial` | Use clean items/field skills through framework execution and host-owned inventory. |
@@ -391,6 +391,17 @@ Full parity target:
 Clean console proof:
 
 - player navigates clean Training Annex menus over framework state.
+
+Phase 1-07 result:
+
+> **Correction before commit:** the first 1-07 draft modeled navigation as a fixed `City`/`Dungeon` switch. Review identified that as an inappropriate universal framework assumption, so it was replaced rather than preserved.
+
+- The framework now has generic `ContentId` locations, explicit source/destination transitions, immutable transition results/events, and an injected `IRuntimeNavigationPolicy`.
+- The framework applies navigation only when a host requests it. It does not render menus, move scene objects, define spatial controls, or assume cities and dungeons exist.
+- The Training Annex console list is only a presentation adapter over two host-owned transitions: staging area to Annex entrance and back. A Godot trigger, VN hotspot, or script can issue the same requests.
+- `RuntimeFieldSnapshot` holds generic navigation and optional dungeon progress. Save contract v2 allows the entire field module to be absent, navigation without a dungeon, or navigation combined with the optional dungeon module.
+- Source mismatch and policy rejection preserve state. Reverse travel requires its own explicit transition.
+- This remains `parallel_partial`: 1-07 proves the generic navigation boundary, while dungeon traversal and encounter triggers remain independent passes 1-08 and 1-09.
 
 ### 08. `dungeon_traversal`
 

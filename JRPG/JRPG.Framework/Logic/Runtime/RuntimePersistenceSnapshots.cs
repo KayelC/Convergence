@@ -180,7 +180,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 1;
+    public const int CurrentContractVersion = 2;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -189,7 +189,7 @@ public sealed record RuntimeSaveGameSnapshot
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
         RuntimeWalletSnapshot wallet,
-        RuntimeFieldSnapshot field,
+        RuntimeFieldSnapshot? field,
         CompendiumStateSnapshot compendium,
         RuntimeKnowledgeSnapshot knowledge,
         RuntimeSessionProgressSnapshot session,
@@ -209,7 +209,7 @@ public sealed record RuntimeSaveGameSnapshot
         Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
-        Field = field ?? throw new ArgumentNullException(nameof(field));
+        Field = field;
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         Knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
         Session = session ?? throw new ArgumentNullException(nameof(session));
@@ -224,7 +224,7 @@ public sealed record RuntimeSaveGameSnapshot
     public RuntimeInventorySnapshot Inventory { get; }
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeWalletSnapshot Wallet { get; }
-    public RuntimeFieldSnapshot Field { get; }
+    public RuntimeFieldSnapshot? Field { get; }
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimeKnowledgeSnapshot Knowledge { get; }
     public RuntimeSessionProgressSnapshot Session { get; }
@@ -278,7 +278,10 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidatePartyReferences(snapshot.PartyStock, actors, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
         ValidateEquipment(snapshot.Equipment, catalog, diagnostics);
-        ValidateField(snapshot.Field, catalog, diagnostics);
+        if (snapshot.Field is not null)
+        {
+            ValidateField(snapshot.Field, catalog, diagnostics);
+        }
         ValidateCompendium(snapshot.Compendium, catalog, diagnostics);
         ValidateKnowledge(snapshot.Knowledge, actors, catalog, diagnostics);
         ValidateCheckpoints(snapshot.Checkpoints, actors, diagnostics);
@@ -422,7 +425,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        if (!catalog.Dungeons.ContainsKey(field.DungeonProgress.DungeonId))
+        if (field.DungeonProgress is not null &&
+            !catalog.Dungeons.ContainsKey(field.DungeonProgress.DungeonId))
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                 RuntimeSaveValidationCode.MissingCatalogDungeon,

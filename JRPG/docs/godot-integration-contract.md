@@ -17,6 +17,7 @@ A Godot host must provide these adapters around the existing framework contracts
 - Presentation: consume framework events through event sinks and map them to UI, animation, audio, waits, and scene transitions.
 - Randomness: provide an `IRandomSource` seeded or unseeded according to the host's run mode.
 - Scene identity: map framework `RuntimeInstanceId` or battle instance IDs to host-owned node/scene handles.
+- Navigation input: translate doorway triggers, map selections, VN hotspots, or scripts into generic `RuntimeNavigationTransition` requests. Godot still owns movement and scene changes.
 - Encounter triggers: own placed enemy scenes, patrols, touch/attack triggers, spawn points, and scripted battle triggers; when an encounter actually begins, pass the chosen encounter or formation into the framework for battle resolution.
 - Persistence: store framework snapshots inside the Godot save format alongside host-owned scene, asset, and UI state.
 
@@ -34,6 +35,7 @@ Godot exploration should not be forced into the console demo's floor-transition 
 - encounter resolution once the host has selected an encounter, including battle setup, outcome, rewards, and state updates;
 - ordered events and diagnostics expressed as serializer-neutral records;
 - runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonProgressSnapshot`;
+- optional generic navigation through `ContentId` locations, explicit transitions, and a host-supplied `IRuntimeNavigationPolicy`;
 - versioned persistence snapshots such as `RuntimeSaveGameSnapshot`, `RuntimeKnowledgeSnapshot`, `RuntimeSessionProgressSnapshot`, and checkpoint logs.
 
 Framework APIs remain plain .NET contracts. JSON DTOs, `JsonElement`, console types, filesystem access, Newtonsoft, legacy DTOs, and Godot types must not appear in public framework signatures.
@@ -55,7 +57,7 @@ This is not a gameplay migration track. It proves that a Godot project can stand
 
 ## Save Boundary
 
-The framework exposes serializer-neutral snapshots. Track R formalizes the aggregate save boundary as `RuntimeSaveGameSnapshot` contract version `1`. A Godot save file should wrap that snapshot with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
+The framework exposes serializer-neutral snapshots. Phase 1-07 advances the pre-release aggregate save boundary to `RuntimeSaveGameSnapshot` contract version `2`: field state may be absent, generic navigation may exist without a dungeon, and dungeon progress may be attached only when that optional module is used. A Godot save file should wrap that snapshot with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
 
 The framework does not prescribe JSON, binary, Godot `Resource`, or any other save format. It only provides stable state objects and `IRuntimeSaveValidator`, which checks restored snapshots against a `GameDataCatalog` without duplicating catalog definitions into the save.
 

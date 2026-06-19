@@ -3,12 +3,6 @@ using JRPGPrototype.Hosting;
 
 namespace JRPGPrototype.Logic.Runtime;
 
-public enum RuntimeFieldLocation
-{
-    City,
-    Dungeon
-}
-
 public enum RuntimeDungeonFloorKind
 {
     Empty,
@@ -146,9 +140,19 @@ public sealed record RuntimeDungeonProgressSnapshot
     public bool IsBossDefeated(ContentId bossId) => DefeatedBossIds.Contains(bossId);
 }
 
-public sealed record RuntimeFieldSnapshot(
-    RuntimeFieldLocation Location,
-    RuntimeDungeonProgressSnapshot DungeonProgress);
+public sealed record RuntimeFieldSnapshot
+{
+    public RuntimeFieldSnapshot(
+        RuntimeNavigationSnapshot navigation,
+        RuntimeDungeonProgressSnapshot? dungeonProgress = null)
+    {
+        Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        DungeonProgress = dungeonProgress;
+    }
+
+    public RuntimeNavigationSnapshot Navigation { get; }
+    public RuntimeDungeonProgressSnapshot? DungeonProgress { get; }
+}
 
 public sealed record RuntimeDungeonFixedFloorSnapshot
 {

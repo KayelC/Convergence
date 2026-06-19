@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Convergence.Tests.Runtime;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Host;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
@@ -25,7 +26,9 @@ public sealed class CleanSaveDemoHostTests
             snapshot.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
             restored.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
         Assert.Equal(snapshot.Wallet.Macca, restored.Wallet.Macca);
-        Assert.Equal(snapshot.Field.DungeonProgress.CurrentFloor, restored.Field.DungeonProgress.CurrentFloor);
+        Assert.Equal(
+            snapshot.Field!.DungeonProgress!.CurrentFloor,
+            restored.Field!.DungeonProgress!.CurrentFloor);
         Assert.Equal(snapshot.Compendium.Entries.Select(entry => entry.SpeciesId), restored.Compendium.Entries.Select(entry => entry.SpeciesId));
         Assert.Equal(snapshot.Knowledge.ElementalAffinities.Select(entry => entry.EntityId), restored.Knowledge.ElementalAffinities.Select(entry => entry.EntityId));
         Assert.Equal(
@@ -42,7 +45,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v1", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v2", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), floor 5.", text, StringComparison.Ordinal);
@@ -53,6 +56,27 @@ public sealed class CleanSaveDemoHostTests
     public void CleanSaveJsonCodec_RejectsMalformedHostOwnedJson()
     {
         Assert.Throws<JsonException>(() => CleanSaveJsonCodec.Deserialize("{"));
+    }
+
+    [Fact]
+    public void HostOwnedJsonRoundTrip_PreservesOptionalNavigationAndDungeonState()
+    {
+        RuntimeSaveGameSnapshot noField = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+            includeDefaultField: false);
+        RuntimeSaveGameSnapshot navigationOnly = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+            field: new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(ContentId.Parse("host_owned_location"))));
+
+        RuntimeSaveGameSnapshot restoredNoField = CleanSaveJsonCodec.Deserialize(
+            CleanSaveJsonCodec.Serialize(noField));
+        RuntimeSaveGameSnapshot restoredNavigationOnly = CleanSaveJsonCodec.Deserialize(
+            CleanSaveJsonCodec.Serialize(navigationOnly));
+
+        Assert.Null(restoredNoField.Field);
+        Assert.Equal(
+            ContentId.Parse("host_owned_location"),
+            restoredNavigationOnly.Field!.Navigation.CurrentLocationId);
+        Assert.Null(restoredNavigationOnly.Field.DungeonProgress);
     }
 
     private static string FindRepositoryRoot()

@@ -264,7 +264,9 @@ internal sealed class CleanTrainingAnnexDemoHost
             growth,
             inventory,
             reward,
-            new RuntimeFieldSnapshot(RuntimeFieldLocation.Dungeon, ascended.After));
+            new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(Qualified("training_annex_floor_2")),
+                ascended.After));
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(save, catalog);
         await PrintAsync(
             sequence++,
