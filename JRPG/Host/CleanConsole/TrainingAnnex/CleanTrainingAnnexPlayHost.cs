@@ -21,6 +21,10 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<string> RequestedDocumentPaths,
     ContentId PlayerEntityId,
     int PlayerLevel,
+    int ActorCount,
+    int EnemyActorCount,
+    IReadOnlyList<ContentId> ActorEntityIds,
+    IReadOnlyList<ContentId> ActorInstanceIds,
     int ActiveSkillCount,
     int PassiveSkillCount,
     bool StartupSnapshotValidated,
@@ -91,19 +95,19 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         GameDataCatalog catalog = load.Catalog;
-        CatalogBattleActorCreationResult actorResult = CreatePlayer(catalog);
-        if (!actorResult.IsSuccess)
+        TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
+        if (!rosterResult.IsSuccess)
         {
-            foreach (CatalogBattleActorDiagnostic diagnostic in actorResult.Diagnostics)
+            foreach (string diagnostic in rosterResult.Diagnostics)
             {
-                await _eventSink.PublishAsync($"[{diagnostic.Code}] {diagnostic.Message}", cancellationToken)
-                    .ConfigureAwait(false);
+                await _eventSink.PublishAsync(diagnostic, cancellationToken).ConfigureAwait(false);
             }
 
             return 4;
         }
 
-        CatalogBattleActor player = actorResult.RequireActor();
+        TrainingAnnexActorRoster roster = rosterResult.RequireRoster();
+        CatalogBattleActor player = roster.Player.Actor;
         var commands = new List<CleanTrainingAnnexPlayCommand>();
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
@@ -116,6 +120,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"Hydrated {player.Entity.DisplayName} at level {player.Entity.BaseLevel}.",
             cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Hydrated clean actor roster with {roster.AllActors.Count} actor(s): {roster.Enemies.Count} enemy model(s).",
+            cancellationToken).ConfigureAwait(false);
 
         while (true)
         {
@@ -126,7 +133,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 commands.Add(CleanTrainingAnnexPlayCommand.Exit);
                 LastSummary = CreateSummary(
                     request,
-                    player,
+                    roster,
                     snapshotValidated,
                     snapshotDiagnosticCount,
                     commands);
@@ -143,11 +150,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                     await PrintSessionAsync(catalog, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectActor:
-                    await PrintActorAsync(player, cancellationToken).ConfigureAwait(false);
+                    await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(player),
+                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -165,7 +172,7 @@ internal sealed class CleanTrainingAnnexPlayHost
 
                         LastSummary = CreateSummary(
                             request,
-                            player,
+                            roster,
                             snapshotValidated,
                             snapshotDiagnosticCount,
                             commands);
@@ -178,19 +185,6 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
     }
 
-    private static CatalogBattleActorCreationResult CreatePlayer(GameDataCatalog catalog)
-    {
-        var actorFactory = new CatalogBattleActorFactory(
-            catalog,
-            catalog,
-            new DemoBattleActorInitializationPolicy());
-        return actorFactory.Create(new CatalogBattleActorCreationRequest(
-            TrainingAnnexHostSupport.Qualified("echo_adept"),
-            ContentId.Parse("echo_adept"),
-            TrainingAnnexHostSupport.PlayerTeam,
-            3));
-    }
-
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu() =>
         new(
             "Training Annex Clean Session",
@@ -200,7 +194,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     "Inspect Session"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.InspectActor,
-                    "Inspect Actor"),
+                    "Inspect Actors"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                     "Validate Startup Snapshot"),
@@ -214,8 +208,20 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons.",
             cancellationToken);
 
-    private async ValueTask PrintActorAsync(CatalogBattleActor actor, CancellationToken cancellationToken)
+    private async ValueTask PrintActorsAsync(TrainingAnnexActorRoster roster, CancellationToken cancellationToken)
     {
+        await _eventSink.PublishAsync(
+            $"Actor roster: {roster.AllActors.Count} actor(s).",
+            cancellationToken).ConfigureAwait(false);
+        foreach (TrainingAnnexRuntimeActor actor in roster.AllActors)
+        {
+            await PrintActorAsync(actor, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask PrintActorAsync(TrainingAnnexRuntimeActor runtimeActor, CancellationToken cancellationToken)
+    {
+        CatalogBattleActor actor = runtimeActor.Actor;
         string resources = string.Join(
             ", ",
             actor.State.Resources.Values.Select(resource => $"{resource.Id} {resource.Current}/{resource.Maximum}"));
@@ -230,7 +236,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 .Select(skill => skill.DisplayName));
 
         await _eventSink.PublishAsync(
-            $"Actor: {actor.Entity.DisplayName}; level {actor.Entity.BaseLevel}; resources: {resources}.",
+            $"{runtimeActor.Role}: {actor.Entity.DisplayName}; instance {actor.State.InstanceId}; level {runtimeActor.Level}; resources: {resources}.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync($"Stats: {stats}.", cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync($"Active skills: {activeSkills}.", cancellationToken).ConfigureAwait(false);
@@ -241,18 +247,25 @@ internal sealed class CleanTrainingAnnexPlayHost
 
     private static CleanTrainingAnnexPlaySummary CreateSummary(
         ContentPackTextRequest request,
-        CatalogBattleActor player,
+        TrainingAnnexActorRoster roster,
         bool snapshotValidated,
         int snapshotDiagnosticCount,
-        IReadOnlyList<CleanTrainingAnnexPlayCommand> commands) =>
-        new(
+        IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
+    {
+        CatalogBattleActor player = roster.Player.Actor;
+        return new(
             [request.ManifestPath],
             request.DocumentPaths,
             player.Entity.Id,
-            player.Entity.BaseLevel,
+            roster.Player.Level,
+            roster.AllActors.Count,
+            roster.Enemies.Count,
+            roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
+            roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
             player.ActiveSkills.Count,
             player.SkillLoadout.Count(skill => skill.Activation == SkillActivation.Passive),
             snapshotValidated,
             snapshotDiagnosticCount,
             commands.ToArray());
+    }
 }

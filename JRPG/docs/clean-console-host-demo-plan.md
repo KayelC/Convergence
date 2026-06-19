@@ -181,6 +181,18 @@ This command routes before legacy `ConsoleGameHost` construction and does not ca
 - `CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_MissingContentReportsFailureWithoutReadingCommands`;
 - existing `CleanTrainingAnnexDemoHostTests` remain green after the shared-support extraction.
 
+### Phase 1-02 Actor Roster Extension
+
+Implemented after the initial shell:
+
+- `TrainingAnnexHostSupport` now builds a clean actor roster from the catalog.
+- The roster contains Echo Adept plus the unique enemy models required by the Training Annex encounters: Ashling, Bramble Runner, and Ward Shell.
+- Enemy actor creation requests are derived from clean encounter definitions, not from legacy data or hand-authored console objects.
+- `Inspect Actors` shows the clean player/enemy roster, instance IDs, levels, resources, stats, active skills, and passives.
+- Startup snapshot validation includes the actor roster.
+
+This proves the clean actor-model path for the original slice, but it does not yet replace every protected legacy actor category.
+
 ## Iteration 2: Optional Mechanic Baseline
 
 ### Goal

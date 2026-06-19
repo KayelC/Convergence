@@ -47,6 +47,24 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(source.DocumentRequests, summary.RequestedDocumentPaths);
         Assert.Equal(Qualified("echo_adept"), summary.PlayerEntityId);
         Assert.Equal(3, summary.PlayerLevel);
+        Assert.Equal(4, summary.ActorCount);
+        Assert.Equal(3, summary.EnemyActorCount);
+        Assert.Equal(
+            [
+                Qualified("echo_adept"),
+                Qualified("ashling"),
+                Qualified("bramble_runner"),
+                Qualified("ward_shell")
+            ],
+            summary.ActorEntityIds);
+        Assert.Equal(
+            [
+                ContentId.Parse("echo_adept"),
+                ContentId.Parse("enemy_ashling"),
+                ContentId.Parse("enemy_bramble_runner"),
+                ContentId.Parse("enemy_ward_shell")
+            ],
+            summary.ActorInstanceIds);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         Assert.True(summary.StartupSnapshotValidated);
@@ -65,7 +83,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         {
             Assert.Equal("Training Annex Clean Session", menu.Header);
             Assert.Equal(
-                ["Inspect Session", "Inspect Actor", "Validate Startup Snapshot", "Exit"],
+                ["Inspect Session", "Inspect Actors", "Validate Startup Snapshot", "Exit"],
                 menu.Options);
         }
         io.AssertConsumed();
@@ -74,8 +92,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Clean Training Annex session booted.", text, StringComparison.Ordinal);
         Assert.Contains("without legacy Database startup", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
+        Assert.Contains("Hydrated clean actor roster with 4 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons.", text, StringComparison.Ordinal);
-        Assert.Contains("Actor: Echo Adept; level 3; resources:", text, StringComparison.Ordinal);
+        Assert.Contains("Actor roster: 4 actor(s).", text, StringComparison.Ordinal);
+        Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources:", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources:", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources:", text, StringComparison.Ordinal);
+        Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources:", text, StringComparison.Ordinal);
         Assert.Contains("Active skills: Frost Tip, Echo Strike.", text, StringComparison.Ordinal);
         Assert.Contains("Passive skills: Steady Breath.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);

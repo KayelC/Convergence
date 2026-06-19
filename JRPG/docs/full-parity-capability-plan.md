@@ -267,7 +267,7 @@ Phase 1-01 result:
 
 ### 02. `actor_models`
 
-Current status: `clean_foundation`.
+Current status: `parallel_partial`.
 
 Full parity target:
 
@@ -278,6 +278,14 @@ Full parity target:
 Clean console proof:
 
 - Training Annex playable actor and enemies are hydrated only from `GameDataCatalog`.
+
+Phase 1-02 result:
+
+- The clean Training Annex play host now builds a clean actor roster through `TrainingAnnexHostSupport`.
+- Echo Adept plus Ashling, Bramble Runner, and Ward Shell are hydrated as framework `CatalogBattleActor` / runtime actor state from the clean catalog and encounter definitions.
+- Actor inspection now shows player/enemy role, instance ID, level, resources, stats, active skills, and passives.
+- Startup snapshot validation now covers the clean actor roster, not only the player actor.
+- This is `parallel_partial`, not `clean_parity`: the original clean slice proves the framework actor path, but protected legacy actor categories such as Human, Persona User, Wild Card, and Operator are still legacy/adapter-owned.
 
 ### 03. `stat_composition`
 

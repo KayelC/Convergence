@@ -303,7 +303,7 @@ Current result:
 - `convergence.training_annex_slice` now contains three races, five entities, ten skills, three ailments, five items, four equipment records, one shop, one negotiation set, three encounters, one dungeon, two concept-level fusion recipes, and standard ruleset bindings.
 - Catalog and runtime tests prove the expanded pack loads, qualifies IDs, rejects local lookups, binds standard rulesets, exercises additional skills/items, carries fixed battle encounter IDs through the dungeon state machine, and can build battle actor requests from a host-owned encounter trigger.
 - `--clean-training-annex-demo` still runs without GUI or legacy fallback. It now uses a host trigger to select `ashling_drill`, but it still only exercises part of the expanded pack at runtime.
-- `--clean-training-annex-play` starts the first clean interactive session shell. It lives under `Host/CleanConsole/TrainingAnnex/`, loads only the Training Annex pack, hydrates Echo Adept from the catalog, lets the host inspect session/actor state, validates a startup save snapshot, and exits without legacy `Database` startup.
+- `--clean-training-annex-play` starts the first clean interactive session shell. It lives under `Host/CleanConsole/TrainingAnnex/`, loads only the Training Annex pack, hydrates Echo Adept and the Training Annex enemy roster from the catalog, lets the host inspect session/actor state, validates a startup save snapshot, and exits without legacy `Database` startup.
 
 Design note:
 
