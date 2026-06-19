@@ -135,8 +135,8 @@ internal sealed class CleanSaveDemoHost
         await _eventSink.PublishAsync(
             $"003 [validate] Restored snapshot validated with {after.Diagnostics.Count} diagnostic(s).",
             cancellationToken);
-        string fieldSummary = restored.Field?.DungeonProgress is RuntimeDungeonProgressSnapshot dungeonProgress
-            ? $"floor {dungeonProgress.CurrentFloor}"
+        string fieldSummary = restored.Field?.DungeonTraversal is RuntimeDungeonTraversalSnapshot dungeonTraversal
+            ? $"dungeon node {dungeonTraversal.CurrentNodeId}"
             : restored.Field is null
                 ? "no field state"
                 : $"location {restored.Field.Navigation.CurrentLocationId}";
@@ -189,11 +189,19 @@ internal sealed class CleanSaveDemoHost
             new RuntimeWalletSnapshot(1234),
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:tartarus_floor_5")),
-                new RuntimeDungeonProgressSnapshot(
+                new RuntimeDungeonTraversalSnapshot(
                     ContentId.Parse("convergence.catalog_surface_sample:tartarus_sample"),
-                    currentFloor: 5,
-                    maxFloorReached: 10,
-                    unlockedTerminals: [1, 5],
+                    ContentId.Parse("convergence.catalog_surface_sample:floor_5"),
+                    visitedNodeIds:
+                    [
+                        ContentId.Parse("convergence.catalog_surface_sample:floor_1"),
+                        ContentId.Parse("convergence.catalog_surface_sample:floor_5")
+                    ],
+                    unlockedCheckpointIds:
+                    [
+                        ContentId.Parse("convergence.catalog_surface_sample:terminal_1"),
+                        ContentId.Parse("convergence.catalog_surface_sample:terminal_5")
+                    ],
                     defeatedBossIds: [ContentId.Parse("convergence.catalog_surface_sample:thebel_training_sample")])),
             new CompendiumStateSnapshot(
             [
@@ -487,28 +495,28 @@ internal static class CleanSaveJsonCodec
             ? null
             : new HostFieldDto(
                 snapshot.Navigation.CurrentLocationId.ToString(),
-                snapshot.DungeonProgress is null
+                snapshot.DungeonTraversal is null
                     ? null
-                    : new HostDungeonProgressDto(
-                        snapshot.DungeonProgress.DungeonId.ToString(),
-                        snapshot.DungeonProgress.CurrentFloor,
-                        snapshot.DungeonProgress.MaxFloorReached,
-                        snapshot.DungeonProgress.UnlockedTerminals.ToArray(),
-                        snapshot.DungeonProgress.DefeatedBossIds.Select(id => id.ToString()).ToArray()));
+                    : new HostDungeonTraversalDto(
+                        snapshot.DungeonTraversal.DungeonId.ToString(),
+                        snapshot.DungeonTraversal.CurrentNodeId.ToString(),
+                        snapshot.DungeonTraversal.VisitedNodeIds.Select(id => id.ToString()).ToArray(),
+                        snapshot.DungeonTraversal.UnlockedCheckpointIds.Select(id => id.ToString()).ToArray(),
+                        snapshot.DungeonTraversal.DefeatedBossIds.Select(id => id.ToString()).ToArray()));
 
     private static RuntimeFieldSnapshot? FromDto(HostFieldDto? dto) =>
         dto is null
             ? null
             : new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Id(dto.LocationId)),
-                dto.DungeonProgress is null
+                dto.DungeonTraversal is null
                     ? null
-                    : new RuntimeDungeonProgressSnapshot(
-                        Id(dto.DungeonProgress.DungeonId),
-                        dto.DungeonProgress.CurrentFloor,
-                        dto.DungeonProgress.MaxFloorReached,
-                        dto.DungeonProgress.UnlockedTerminals,
-                        dto.DungeonProgress.DefeatedBossIds.Select(Id)));
+                    : new RuntimeDungeonTraversalSnapshot(
+                        Id(dto.DungeonTraversal.DungeonId),
+                        Id(dto.DungeonTraversal.CurrentNodeId),
+                        dto.DungeonTraversal.VisitedNodeIds.Select(Id),
+                        dto.DungeonTraversal.UnlockedCheckpointIds.Select(Id),
+                        dto.DungeonTraversal.DefeatedBossIds.Select(Id)));
 
     private static HostCompendiumDto ToDto(CompendiumStateSnapshot snapshot) =>
         new(snapshot.Entries.Select(entry => new HostCompendiumEntryDto(
@@ -637,8 +645,8 @@ internal static class CleanSaveJsonCodec
     private sealed record HostPartyStockDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveForm, HostReferenceDto[] PersonaStock, HostReferenceDto[] DemonStock, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
     private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);
-    private sealed record HostFieldDto(string LocationId, HostDungeonProgressDto? DungeonProgress);
-    private sealed record HostDungeonProgressDto(string DungeonId, int CurrentFloor, int MaxFloorReached, int[] UnlockedTerminals, string[] DefeatedBossIds);
+    private sealed record HostFieldDto(string LocationId, HostDungeonTraversalDto? DungeonTraversal);
+    private sealed record HostDungeonTraversalDto(string DungeonId, string CurrentNodeId, string[] VisitedNodeIds, string[] UnlockedCheckpointIds, string[] DefeatedBossIds);
     private sealed record HostCompendiumDto(HostCompendiumEntryDto[] Entries);
     private sealed record HostCompendiumEntryDto(string SpeciesId, string DisplayName, int Level, Dictionary<string, int> Stats, string[] SkillIds, long Experience, long LifetimeExperience);
     private sealed record HostKnowledgeDto(HostElementalKnowledgeDto[] ElementalAffinities, HostAilmentKnowledgeDto[] AilmentResistances, HostInstantDeathKnowledgeDto[] InstantDeathResistances);

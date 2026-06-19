@@ -144,14 +144,14 @@ public sealed record RuntimeFieldSnapshot
 {
     public RuntimeFieldSnapshot(
         RuntimeNavigationSnapshot navigation,
-        RuntimeDungeonProgressSnapshot? dungeonProgress = null)
+        RuntimeDungeonTraversalSnapshot? dungeonTraversal = null)
     {
         Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        DungeonProgress = dungeonProgress;
+        DungeonTraversal = dungeonTraversal;
     }
 
     public RuntimeNavigationSnapshot Navigation { get; }
-    public RuntimeDungeonProgressSnapshot? DungeonProgress { get; }
+    public RuntimeDungeonTraversalSnapshot? DungeonTraversal { get; }
 }
 
 public sealed record RuntimeDungeonFixedFloorSnapshot

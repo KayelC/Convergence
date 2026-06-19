@@ -26,7 +26,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), valid.Inventory.ItemQuantities.Keys.Single());
         Assert.Equal(
             Id("convergence.catalog_surface_sample:tartarus_sample"),
-            valid.Field!.DungeonProgress!.DungeonId);
+            valid.Field!.DungeonTraversal!.DungeonId);
         Assert.Equal(2, valid.Checkpoints.Entries.Count);
     }
 
@@ -87,7 +87,9 @@ public sealed class RuntimePersistenceSnapshotTests
             ]),
             field: new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Id("missing_location")),
-                new RuntimeDungeonProgressSnapshot(Id("missing.pack:missing_dungeon"))),
+                new RuntimeDungeonTraversalSnapshot(
+                    Id("missing.pack:missing_dungeon"),
+                    Id("missing_node"))),
             compendium: new CompendiumStateSnapshot(
             [
                 new CompendiumEntrySnapshot(Id("missing.pack:missing_species"), "Missing", 1, skillIds: [Id("missing.pack:missing_skill")])
@@ -147,7 +149,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Null(noField.Field);
         Assert.True(navigationOnlyResult.IsValid);
         Assert.Equal(Id("host_owned_location"), navigationOnly.Field!.Navigation.CurrentLocationId);
-        Assert.Null(navigationOnly.Field.DungeonProgress);
+        Assert.Null(navigationOnly.Field.DungeonTraversal);
     }
 
     [Fact]
@@ -251,11 +253,19 @@ public sealed class RuntimePersistenceSnapshotTests
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
                     new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:tartarus_floor_5")),
-                    new RuntimeDungeonProgressSnapshot(
+                    new RuntimeDungeonTraversalSnapshot(
                         Id("convergence.catalog_surface_sample:tartarus_sample"),
-                        currentFloor: 5,
-                        maxFloorReached: 10,
-                        unlockedTerminals: [1, 5],
+                        Id("convergence.catalog_surface_sample:floor_5"),
+                        visitedNodeIds:
+                        [
+                            Id("convergence.catalog_surface_sample:floor_1"),
+                            Id("convergence.catalog_surface_sample:floor_5")
+                        ],
+                        unlockedCheckpointIds:
+                        [
+                            Id("convergence.catalog_surface_sample:terminal_1"),
+                            Id("convergence.catalog_surface_sample:terminal_5")
+                        ],
                         defeatedBossIds: [Id("convergence.catalog_surface_sample:thebel_training_sample")]))
                 : null),
             compendium ?? new CompendiumStateSnapshot(

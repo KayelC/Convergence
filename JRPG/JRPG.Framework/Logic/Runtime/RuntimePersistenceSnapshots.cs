@@ -425,14 +425,14 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        if (field.DungeonProgress is not null &&
-            !catalog.Dungeons.ContainsKey(field.DungeonProgress.DungeonId))
+        if (field.DungeonTraversal is not null &&
+            !catalog.Dungeons.ContainsKey(field.DungeonTraversal.DungeonId))
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                 RuntimeSaveValidationCode.MissingCatalogDungeon,
-                $"Dungeon '{field.DungeonProgress.DungeonId}' is not present in the catalog.",
-                ContentId: field.DungeonProgress.DungeonId,
-                Path: "$.field.dungeonProgress.dungeonId"));
+                $"Dungeon '{field.DungeonTraversal.DungeonId}' is not present in the catalog.",
+                ContentId: field.DungeonTraversal.DungeonId,
+                Path: "$.field.dungeonTraversal.dungeonId"));
         }
     }
 

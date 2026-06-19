@@ -180,11 +180,11 @@ public sealed class GodotIntegrationContractTests
         RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(frost, level: 5);
         var fieldSnapshot = new RuntimeFieldSnapshot(
             new RuntimeNavigationSnapshot(Id("tartarus_floor_7")),
-            new RuntimeDungeonProgressSnapshot(
+            new RuntimeDungeonTraversalSnapshot(
                 Id("tartarus"),
-                currentFloor: 7,
-                maxFloorReached: 10,
-                unlockedTerminals: [1, 5, 7],
+                Id("floor_7"),
+                visitedNodeIds: [Id("floor_1"), Id("floor_5"), Id("floor_7")],
+                unlockedCheckpointIds: [Id("terminal_1"), Id("terminal_5"), Id("terminal_7")],
                 defeatedBossIds: [Id("demo_guardian")]));
         var saveStore = new GodotSaveSnapshotStore();
         saveStore.Save(
@@ -203,8 +203,10 @@ public sealed class GodotIntegrationContractTests
         Assert.Equal(
             fieldSnapshot.Navigation.CurrentLocationId,
             restored.Field.Navigation.CurrentLocationId);
-        Assert.Equal(7, restored.Field.DungeonProgress!.CurrentFloor);
-        Assert.Equal([1, 5, 7], restored.Field.DungeonProgress.UnlockedTerminals);
+        Assert.Equal(Id("floor_7"), restored.Field.DungeonTraversal!.CurrentNodeId);
+        Assert.Equal(
+            [Id("terminal_1"), Id("terminal_5"), Id("terminal_7")],
+            restored.Field.DungeonTraversal.UnlockedCheckpointIds);
         Assert.True(restored.SceneHandles.ContainsKey(RuntimeInstanceId.Parse("frost")));
     }
 

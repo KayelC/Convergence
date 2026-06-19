@@ -14,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 6, 0, 7);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 7, 0, 7);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -95,6 +95,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(
             [Qualified("staging_area"), Qualified("training_annex_entrance"), Qualified("staging_area")],
             summary.LocationHistory);
+        Assert.Equal(Qualified("training_annex_entrance"), summary.FinalDungeonNodeId);
+        Assert.Equal([Qualified("training_annex_entrance")], summary.VisitedDungeonNodeIds);
+        Assert.Empty(summary.UnlockedCheckpointIds);
+        Assert.False(summary.BarrierRejected);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.InspectSession,
@@ -139,6 +143,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Recalculate Resources",
                 "Apply Victory EXP",
                 "Validate Startup Snapshot",
+                "Enter Review Hall",
                 "Return to Staging Area",
                 "Exit"
             ],
@@ -154,7 +159,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
-        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: not active.", text, StringComparison.Ordinal);
+        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: convergence.training_annex_slice:training_annex_entrance.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: returned to Staging Area; location Staging Area (convergence.training_annex_slice:staging_area).", text, StringComparison.Ordinal);
         Assert.Contains("Actor roster: 4 actor(s).", text, StringComparison.Ordinal);
         Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 28/28.", text, StringComparison.Ordinal);
@@ -174,6 +179,51 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Level-up events: 4.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("Clean Training Annex session exited.", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_TraversesGenericDungeonNodesWithoutStartingEncounter()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 8, 6, 6, 7, 7, 7, 7);
+        using var output = new StringWriter();
+        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var host = new CleanTrainingAnnexPlayHost(
+            source,
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
+        Assert.Equal(Qualified("training_annex_entrance"), summary.FinalDungeonNodeId);
+        Assert.Equal(
+            [Qualified("training_annex_entrance"), Qualified("review_hall"), Qualified("review_alcove")],
+            summary.VisitedDungeonNodeIds);
+        Assert.Equal([Qualified("review_checkpoint")], summary.UnlockedCheckpointIds);
+        Assert.True(summary.BarrierRejected);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
+                CleanTrainingAnnexPlayCommand.EnterReviewHall,
+                CleanTrainingAnnexPlayCommand.InspectTrainingBarrier,
+                CleanTrainingAnnexPlayCommand.EnterReviewAlcove,
+                CleanTrainingAnnexPlayCommand.UnlockReviewCheckpoint,
+                CleanTrainingAnnexPlayCommand.ReturnToReviewHall,
+                CleanTrainingAnnexPlayCommand.ReturnToAnnexEntrance,
+                CleanTrainingAnnexPlayCommand.ReturnToStagingArea,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        string text = output.ToString();
+        Assert.Contains("Dungeon traversal: Training Annex Entrance -> Review Hall.", text, StringComparison.Ordinal);
+        Assert.Contains("Dungeon traversal rejected: The sample barrier is sealed.", text, StringComparison.Ordinal);
+        Assert.Contains("Dungeon traversal: Review Hall -> Review Alcove.", text, StringComparison.Ordinal);
+        Assert.Contains("Dungeon checkpoint unlocked: convergence.training_annex_slice:review_checkpoint.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("EncounterRequested", text, StringComparison.Ordinal);
+        io.AssertConsumed();
     }
 
     [Fact]

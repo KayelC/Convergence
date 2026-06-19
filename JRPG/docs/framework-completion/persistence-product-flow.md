@@ -23,7 +23,7 @@ Generic persistence examples:
 - actor snapshots;
 - party/stock snapshots;
 - inventory/equipment/wallet snapshots;
-- field/dungeon progress;
+- optional generic navigation and dungeon traversal state;
 - Compendium entries;
 - battle knowledge;
 - session flags and counters;

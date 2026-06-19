@@ -399,7 +399,7 @@ Phase 1-07 result:
 - The framework now has generic `ContentId` locations, explicit source/destination transitions, immutable transition results/events, and an injected `IRuntimeNavigationPolicy`.
 - The framework applies navigation only when a host requests it. It does not render menus, move scene objects, define spatial controls, or assume cities and dungeons exist.
 - The Training Annex console list is only a presentation adapter over two host-owned transitions: staging area to Annex entrance and back. A Godot trigger, VN hotspot, or script can issue the same requests.
-- `RuntimeFieldSnapshot` holds generic navigation and optional dungeon progress. Save contract v2 allows the entire field module to be absent, navigation without a dungeon, or navigation combined with the optional dungeon module.
+- `RuntimeFieldSnapshot` holds generic navigation and optional dungeon traversal state. Save contract v2 allows the entire field module to be absent, navigation without a dungeon, or navigation combined with the optional dungeon module.
 - Source mismatch and policy rejection preserve state. Reverse travel requires its own explicit transition.
 - This remains `parallel_partial`: 1-07 proves the generic navigation boundary, while dungeon traversal and encounter triggers remain independent passes 1-08 and 1-09.
 
@@ -414,7 +414,18 @@ Full parity target:
 
 Clean console proof:
 
-- player enters, moves, returns, and triggers encounter from clean dungeon state.
+- player enters, moves between arbitrary nodes, unlocks a checkpoint, receives a barrier rejection, and returns without traversal itself starting an encounter.
+
+Phase 1-08 result:
+
+- `RuntimeDungeonTraversalService` models arbitrary dungeon nodes with `ContentId` values. A node may represent a room, corridor, floor, scene, landmark, or any other host-defined place.
+- Every move is an explicit source/destination transition checked by an injected `IRuntimeDungeonTraversalPolicy`; the framework has no hidden map, route, barrier, or progression assumptions.
+- The traversal snapshot owns the current dungeon/node, visited nodes, unlocked checkpoints, and defeated boss IDs. Results and ordered events are immutable and deterministic.
+- Checkpoint unlocks and boss-defeat registration are idempotent. Barrier behavior is demonstrated as a policy rejection that preserves the original state.
+- The Training Annex console host presents node choices as lists, but a Godot doorway, collision trigger, scene script, or VN hotspot can request the same transition.
+- Leaving the Annex is coordinated through the separate generic navigation service. Dungeon traversal does not automatically change outer-world location.
+- The generic service never selects or starts encounters. The existing floor-oriented `RuntimeFieldDungeonService` remains an optional compatibility/sample module; host/entity-triggered encounters remain Phase 1-09.
+- This remains `parallel_partial`: the generic framework mechanic and clean host proof exist, while the protected legacy dungeon consumer remains active and encounter authority is still separate.
 
 ### 09. `encounters`
 

@@ -2,9 +2,9 @@
 
 ## Current State
 
-The framework has an optional generic navigation service plus separate field and dungeon state-machine services. Navigation uses arbitrary `ContentId` locations and injected access policy; it does not assume a city/dungeon split or prescribe how the host presents travel. The Training Annex demo separately proves a tiny noninteractive dungeon traversal and encounter resolution.
+The framework has an optional generic outer-navigation service plus a separate optional generic dungeon-traversal service. Both use arbitrary `ContentId` identities and injected access policy; neither assumes a city/dungeon split, floor topology, menu, scene model, or spatial controls. Dungeon traversal owns logical current/visited nodes, checkpoints, and defeated-boss flags, but never selects or starts an encounter. The older floor-oriented state machine remains an optional compatibility/sample module. The Training Annex demo separately proves a tiny noninteractive authored-floor traversal and encounter resolution.
 
-It now also has a small host-owned encounter-start planner. A host can select an encounter by ID from scene state, receive catalog actor-creation requests, hydrate those actors through the existing catalog battle actor factory, and then run battle resolution.
+It also has a small host-owned encounter-start planner. A host can select an encounter by ID from a placed scene entity, patrol, interaction, script, or optional floor rule; receive catalog actor-creation requests; hydrate those actors through the existing catalog battle actor factory; and then run battle resolution.
 
 The ordinary console field loop still owns most player-facing flow, menu presentation, legacy dungeon content, encounter hydration, and battle handoff.
 

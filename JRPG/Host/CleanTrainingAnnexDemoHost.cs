@@ -266,7 +266,11 @@ internal sealed class CleanTrainingAnnexDemoHost
             reward,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Qualified("training_annex_floor_2")),
-                ascended.After));
+                new RuntimeDungeonTraversalSnapshot(
+                    dungeon.Id,
+                    Qualified("annex_floor_2"),
+                    visitedNodeIds: [Qualified("annex_entrance"), Qualified("annex_floor_2")],
+                    unlockedCheckpointIds: [Qualified("annex_lobby_checkpoint")])));
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(save, catalog);
         await PrintAsync(
             sequence++,

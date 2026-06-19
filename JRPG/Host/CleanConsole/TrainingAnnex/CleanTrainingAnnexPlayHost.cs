@@ -18,6 +18,12 @@ internal enum CleanTrainingAnnexPlayCommand
     ValidateStartupSnapshot,
     EnterTrainingAnnex,
     ReturnToStagingArea,
+    EnterReviewHall,
+    EnterReviewAlcove,
+    ReturnToReviewHall,
+    ReturnToAnnexEntrance,
+    InspectTrainingBarrier,
+    UnlockReviewCheckpoint,
     Exit
 }
 
@@ -43,6 +49,10 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int StartupSnapshotDiagnosticCount,
     ContentId FinalLocationId,
     IReadOnlyList<ContentId> LocationHistory,
+    ContentId? FinalDungeonNodeId,
+    IReadOnlyList<ContentId> VisitedDungeonNodeIds,
+    IReadOnlyList<ContentId> UnlockedCheckpointIds,
+    bool BarrierRejected,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
 
 internal sealed class CleanTrainingAnnexPlayHost
@@ -130,6 +140,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
             .RequireService();
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
+        var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
         var locationHistory = new List<ContentId> { field.Navigation.CurrentLocationId };
@@ -141,6 +152,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         int levelUpCount = 0;
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
+        bool barrierRejected = false;
 
         await _eventSink.PublishAsync("Clean Training Annex session booted.", cancellationToken)
             .ConfigureAwait(false);
@@ -160,7 +172,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         {
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> result =
                 await _commandSource.ReadAsync(
-                    CreateMenu(field.Navigation.CurrentLocationId),
+                    CreateMenu(field),
                     cancellationToken).ConfigureAwait(false);
             if (!result.IsSelected || result.Command == CleanTrainingAnnexPlayCommand.Exit)
             {
@@ -177,6 +189,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     snapshotDiagnosticCount,
                     field,
                     locationHistory,
+                    barrierRejected,
                     commands);
                 await _eventSink.PublishAsync("Clean Training Annex session exited.", cancellationToken)
                     .ConfigureAwait(false);
@@ -244,6 +257,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             snapshotDiagnosticCount,
                             field,
                             locationHistory,
+                            barrierRejected,
                             commands);
                         return 5;
                     }
@@ -261,6 +275,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                     if (navigationResult.Applied)
                     {
                         locationHistory.Add(field.Navigation.CurrentLocationId);
+                        field = new RuntimeFieldSnapshot(
+                            field.Navigation,
+                            field.DungeonTraversal ?? new RuntimeDungeonTraversalSnapshot(
+                                TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                                TrainingAnnexHostSupport.TrainingAnnexEntrance));
                     }
                     break;
                 }
@@ -280,6 +299,58 @@ internal sealed class CleanTrainingAnnexPlayHost
                     }
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.EnterReviewHall:
+                    field = await ApplyDungeonTraversalAsync(
+                        field,
+                        dungeonTraversal.Traverse(
+                            RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.EnterReviewHallTransition),
+                        cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.EnterReviewAlcove:
+                    field = await ApplyDungeonTraversalAsync(
+                        field,
+                        dungeonTraversal.Traverse(
+                            RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.EnterReviewAlcoveTransition),
+                        cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.ReturnToReviewHall:
+                    field = await ApplyDungeonTraversalAsync(
+                        field,
+                        dungeonTraversal.Traverse(
+                            RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.ReturnToReviewHallTransition),
+                        cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.ReturnToAnnexEntrance:
+                    field = await ApplyDungeonTraversalAsync(
+                        field,
+                        dungeonTraversal.Traverse(
+                            RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.ReturnToEntranceTransition),
+                        cancellationToken).ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.InspectTrainingBarrier:
+                {
+                    RuntimeDungeonTraversalResult traversal = dungeonTraversal.Traverse(
+                        RequireDungeonTraversal(field),
+                        TrainingAnnexHostSupport.InspectBarrierTransition);
+                    field = await ApplyDungeonTraversalAsync(
+                        field,
+                        traversal,
+                        cancellationToken).ConfigureAwait(false);
+                    barrierRejected = traversal.Code == RuntimeDungeonTraversalCode.PolicyRejected;
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.UnlockReviewCheckpoint:
+                    field = await ApplyDungeonStateChangeAsync(
+                        field,
+                        dungeonTraversal.UnlockCheckpoint(
+                            RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.ReviewCheckpoint),
+                        cancellationToken).ConfigureAwait(false);
+                    break;
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
@@ -287,7 +358,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu(
-        ContentId locationId)
+        RuntimeFieldSnapshot field)
     {
         var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>
         {
@@ -311,18 +382,55 @@ internal sealed class CleanTrainingAnnexPlayHost
                     "Validate Startup Snapshot")
         };
 
-        options.Add(locationId == TrainingAnnexHostSupport.StagingArea
-            ? new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+        ContentId locationId = field.Navigation.CurrentLocationId;
+        if (locationId == TrainingAnnexHostSupport.StagingArea)
+        {
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                 CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
-                "Enter Training Annex")
-            : new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                "Enter Training Annex"));
+        }
+        else if (field.DungeonTraversal?.CurrentNodeId == TrainingAnnexHostSupport.TrainingAnnexEntrance)
+        {
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.EnterReviewHall,
+                "Enter Review Hall"));
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                 CleanTrainingAnnexPlayCommand.ReturnToStagingArea,
                 "Return to Staging Area"));
+        }
+        else if (field.DungeonTraversal?.CurrentNodeId == TrainingAnnexHostSupport.ReviewHall)
+        {
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.EnterReviewAlcove,
+                "Enter Review Alcove"));
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.ReturnToAnnexEntrance,
+                "Return to Annex Entrance"));
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.InspectTrainingBarrier,
+                "Inspect Sealed Wing"));
+        }
+        else if (field.DungeonTraversal?.CurrentNodeId == TrainingAnnexHostSupport.ReviewAlcove)
+        {
+            string checkpointLabel = field.DungeonTraversal.IsCheckpointUnlocked(
+                TrainingAnnexHostSupport.ReviewCheckpoint)
+                ? "Review Checkpoint (Unlocked)"
+                : "Unlock Review Checkpoint";
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.UnlockReviewCheckpoint,
+                checkpointLabel));
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.ReturnToReviewHall,
+                "Return to Review Hall"));
+        }
+
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.Exit,
             "Exit"));
 
-        string locationLabel = FieldLabel(locationId);
+        string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
+            ? FieldLabel(locationId)
+            : DungeonNodeLabel(field.DungeonTraversal?.CurrentNodeId);
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             $"Training Annex Clean Session - {locationLabel}",
             options);
@@ -333,7 +441,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeFieldSnapshot field,
         CancellationToken cancellationToken) =>
         _eventSink.PublishAsync(
-            $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons. Location: {FieldLabel(field.Navigation.CurrentLocationId)} ({field.Navigation.CurrentLocationId}); dungeon state: {(field.DungeonProgress is null ? "not active" : field.DungeonProgress.DungeonId.ToString())}.",
+            $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons. Location: {FieldLabel(field.Navigation.CurrentLocationId)} ({field.Navigation.CurrentLocationId}); dungeon state: {(field.DungeonTraversal is null ? "not active" : field.DungeonTraversal.CurrentNodeId.ToString())}.",
             cancellationToken);
 
     private async ValueTask<RuntimeFieldSnapshot> ApplyNavigationAsync(
@@ -353,8 +461,57 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"Field navigation: {appliedDescription}; location {FieldLabel(navigation.After.CurrentLocationId)} ({navigation.After.CurrentLocationId}).",
             cancellationToken).ConfigureAwait(false);
-        return new RuntimeFieldSnapshot(navigation.After, field.DungeonProgress);
+        return new RuntimeFieldSnapshot(navigation.After, field.DungeonTraversal);
     }
+
+    private async ValueTask<RuntimeFieldSnapshot> ApplyDungeonTraversalAsync(
+        RuntimeFieldSnapshot field,
+        RuntimeDungeonTraversalResult traversal,
+        CancellationToken cancellationToken)
+    {
+        if (!traversal.Applied)
+        {
+            await _eventSink.PublishAsync(
+                $"Dungeon traversal rejected: {traversal.Message}",
+                cancellationToken).ConfigureAwait(false);
+            return field;
+        }
+
+        await _eventSink.PublishAsync(
+            $"Dungeon traversal: {DungeonNodeLabel(traversal.Before.CurrentNodeId)} -> {DungeonNodeLabel(traversal.After.CurrentNodeId)}.",
+            cancellationToken).ConfigureAwait(false);
+        return new RuntimeFieldSnapshot(field.Navigation, traversal.After);
+    }
+
+    private async ValueTask<RuntimeFieldSnapshot> ApplyDungeonStateChangeAsync(
+        RuntimeFieldSnapshot field,
+        RuntimeDungeonStateChangeResult change,
+        CancellationToken cancellationToken)
+    {
+        if (!change.Applied)
+        {
+            await _eventSink.PublishAsync(
+                "Dungeon state unchanged: checkpoint was already unlocked.",
+                cancellationToken).ConfigureAwait(false);
+            return field;
+        }
+
+        RuntimeDungeonTraversalEvent dungeonEvent = RequireSingleEvent(change.Events);
+        await _eventSink.PublishAsync(
+            $"Dungeon checkpoint unlocked: {dungeonEvent.ContentId}.",
+            cancellationToken).ConfigureAwait(false);
+        return new RuntimeFieldSnapshot(field.Navigation, change.After);
+    }
+
+    private static RuntimeDungeonTraversalSnapshot RequireDungeonTraversal(RuntimeFieldSnapshot field) =>
+        field.DungeonTraversal ?? throw new InvalidOperationException(
+            "The Training Annex dungeon traversal state is not active.");
+
+    private static RuntimeDungeonTraversalEvent RequireSingleEvent(
+        IReadOnlyList<RuntimeDungeonTraversalEvent> events) =>
+        events.Count == 1
+            ? events[0]
+            : throw new InvalidOperationException("Expected one dungeon state event.");
 
     private static string FieldLabel(ContentId locationId) =>
         locationId == TrainingAnnexHostSupport.StagingArea
@@ -362,6 +519,15 @@ internal sealed class CleanTrainingAnnexPlayHost
             : locationId == TrainingAnnexHostSupport.TrainingAnnexEntrance
                 ? "Training Annex Entrance"
                 : locationId.ToString();
+
+    private static string DungeonNodeLabel(ContentId? nodeId) =>
+        nodeId == TrainingAnnexHostSupport.TrainingAnnexEntrance
+            ? "Training Annex Entrance"
+            : nodeId == TrainingAnnexHostSupport.ReviewHall
+                ? "Review Hall"
+                : nodeId == TrainingAnnexHostSupport.ReviewAlcove
+                    ? "Review Alcove"
+                    : nodeId?.ToString() ?? "Unknown Dungeon Node";
 
     private async ValueTask PrintActorsAsync(TrainingAnnexActorRoster roster, CancellationToken cancellationToken)
     {
@@ -417,6 +583,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         int snapshotDiagnosticCount,
         RuntimeFieldSnapshot field,
         IReadOnlyList<ContentId> locationHistory,
+        bool barrierRejected,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
@@ -443,6 +610,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             snapshotDiagnosticCount,
             field.Navigation.CurrentLocationId,
             locationHistory.ToArray(),
+            field.DungeonTraversal?.CurrentNodeId,
+            field.DungeonTraversal?.VisitedNodeIds ?? [],
+            field.DungeonTraversal?.UnlockedCheckpointIds ?? [],
+            barrierRejected,
             commands.ToArray());
     }
 

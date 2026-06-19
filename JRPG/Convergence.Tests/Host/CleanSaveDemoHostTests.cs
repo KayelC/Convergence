@@ -27,8 +27,8 @@ public sealed class CleanSaveDemoHostTests
             restored.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
         Assert.Equal(snapshot.Wallet.Macca, restored.Wallet.Macca);
         Assert.Equal(
-            snapshot.Field!.DungeonProgress!.CurrentFloor,
-            restored.Field!.DungeonProgress!.CurrentFloor);
+            snapshot.Field!.DungeonTraversal!.CurrentNodeId,
+            restored.Field!.DungeonTraversal!.CurrentNodeId);
         Assert.Equal(snapshot.Compendium.Entries.Select(entry => entry.SpeciesId), restored.Compendium.Entries.Select(entry => entry.SpeciesId));
         Assert.Equal(snapshot.Knowledge.ElementalAffinities.Select(entry => entry.EntityId), restored.Knowledge.ElementalAffinities.Select(entry => entry.EntityId));
         Assert.Equal(
@@ -48,7 +48,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Contains("[save] Created runtime save snapshot v2", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
-        Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), floor 5.", text, StringComparison.Ordinal);
+        Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);
         Assert.Contains("[outcome] Clean save demo completed successfully.", text, StringComparison.Ordinal);
     }
 
@@ -76,7 +76,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             ContentId.Parse("host_owned_location"),
             restoredNavigationOnly.Field!.Navigation.CurrentLocationId);
-        Assert.Null(restoredNavigationOnly.Field.DungeonProgress);
+        Assert.Null(restoredNavigationOnly.Field.DungeonTraversal);
     }
 
     private static string FindRepositoryRoot()

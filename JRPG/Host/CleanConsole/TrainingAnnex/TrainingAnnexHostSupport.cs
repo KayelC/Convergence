@@ -61,6 +61,11 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId Sp = ContentId.Parse("sp");
     public static readonly ContentId StagingArea = Qualified("staging_area");
     public static readonly ContentId TrainingAnnexEntrance = Qualified("training_annex_entrance");
+    public static readonly ContentId TrainingAnnexDungeon = Qualified("training_annex");
+    public static readonly ContentId ReviewHall = Qualified("review_hall");
+    public static readonly ContentId ReviewAlcove = Qualified("review_alcove");
+    public static readonly ContentId SealedWing = Qualified("sealed_wing");
+    public static readonly ContentId ReviewCheckpoint = Qualified("review_checkpoint");
     public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
         ContentId.Parse("enter_training_annex"),
         StagingArea,
@@ -69,6 +74,31 @@ internal static class TrainingAnnexHostSupport
         ContentId.Parse("leave_training_annex"),
         TrainingAnnexEntrance,
         StagingArea);
+    public static readonly RuntimeDungeonTraversalTransition EnterReviewHallTransition = new(
+        ContentId.Parse("enter_review_hall"),
+        TrainingAnnexDungeon,
+        TrainingAnnexEntrance,
+        ReviewHall);
+    public static readonly RuntimeDungeonTraversalTransition ReturnToEntranceTransition = new(
+        ContentId.Parse("return_to_annex_entrance"),
+        TrainingAnnexDungeon,
+        ReviewHall,
+        TrainingAnnexEntrance);
+    public static readonly RuntimeDungeonTraversalTransition EnterReviewAlcoveTransition = new(
+        ContentId.Parse("enter_review_alcove"),
+        TrainingAnnexDungeon,
+        ReviewHall,
+        ReviewAlcove);
+    public static readonly RuntimeDungeonTraversalTransition ReturnToReviewHallTransition = new(
+        ContentId.Parse("return_to_review_hall"),
+        TrainingAnnexDungeon,
+        ReviewAlcove,
+        ReviewHall);
+    public static readonly RuntimeDungeonTraversalTransition InspectBarrierTransition = new(
+        ContentId.Parse("pass_training_barrier"),
+        TrainingAnnexDungeon,
+        ReviewHall,
+        SealedWing);
 
     public static ContentPackTextRequest CreateContentRequest() =>
         new(
@@ -463,6 +493,34 @@ internal sealed class TrainingAnnexNavigationPolicy : IRuntimeNavigationPolicy
         return isKnownTransition
             ? new RuntimeNavigationPolicyDecision(true)
             : new RuntimeNavigationPolicyDecision(
+                false,
+                ContentId.Parse("unsupported_transition"),
+                $"Transition '{request.Transition.Id}' is not available in the Training Annex host.");
+    }
+}
+
+internal sealed class TrainingAnnexDungeonPolicy : IRuntimeDungeonTraversalPolicy
+{
+    public RuntimeDungeonTraversalPolicyDecision Evaluate(RuntimeDungeonTraversalPolicyRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.Transition == TrainingAnnexHostSupport.InspectBarrierTransition)
+        {
+            return new RuntimeDungeonTraversalPolicyDecision(
+                false,
+                ContentId.Parse("training_barrier"),
+                "The sample barrier is sealed.");
+        }
+
+        bool isKnownTransition =
+            request.Transition == TrainingAnnexHostSupport.EnterReviewHallTransition ||
+            request.Transition == TrainingAnnexHostSupport.ReturnToEntranceTransition ||
+            request.Transition == TrainingAnnexHostSupport.EnterReviewAlcoveTransition ||
+            request.Transition == TrainingAnnexHostSupport.ReturnToReviewHallTransition;
+        return isKnownTransition
+            ? new RuntimeDungeonTraversalPolicyDecision(true)
+            : new RuntimeDungeonTraversalPolicyDecision(
                 false,
                 ContentId.Parse("unsupported_transition"),
                 $"Transition '{request.Transition.Id}' is not available in the Training Annex host.");

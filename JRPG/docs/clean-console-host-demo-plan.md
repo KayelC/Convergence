@@ -276,9 +276,20 @@ Implemented as the first part of Iteration 3:
 - The clean Training Annex play host starts at a host-owned staging-area ID and presents `Enter Training Annex` / `Return to Staging Area` as console-only controls over generic transition requests.
 - The current navigation snapshot is shown by session inspection, carried into save validation, and recorded in the scripted host result.
 - Source mismatches and policy rejections leave the before-state unchanged; each direction is an explicit transition.
-- Save contract v2 makes field state and dungeon progress independently optional.
+- Save contract v2 makes field state and dungeon traversal independently optional.
 
 This pass does not prescribe menus, scene movement, spatial maps, floor traversal, terminals, barriers, encounter triggers, or battles. Those remain host presentation or later optional capability passes.
+
+### Phase 1-08 Dungeon Traversal Extension
+
+Implemented as the second part of Iteration 3:
+
+- Added `RuntimeDungeonTraversalService` with arbitrary dungeon/node IDs, immutable visited-node state, explicit transitions, and an injected access policy.
+- Added optional checkpoint and defeated-boss state without assuming floors, stairs, terminals, scenes, or a particular dungeon layout.
+- The clean Training Annex play host demonstrates entrance, review hall, review alcove, an unlockable checkpoint, an explicitly rejected barrier transition, and the return path.
+- Console rows are presentation only. A Godot host may issue the same requests from doorways, collision areas, scene scripts, or world interactions.
+- Traversal results do not select or start encounters. Encounter entities and host-owned encounter triggers remain Phase 1-09.
+- The existing floor-oriented `RuntimeFieldDungeonService` remains available as an optional compatibility/sample service, not the required model for framework users.
 
 ## Iteration 3: Field And Dungeon Interaction Loop
 
@@ -289,21 +300,23 @@ Let the player move through a tiny Training Annex flow without relying on automa
 ### Work
 
 - Add an interactive field menu for the clean demo.
-- Show the current location/floor/session state.
+- Show the current outer location and optional dungeon-node/session state.
 - Let the player enter the Training Annex.
-- Let the player move between known demo locations/floors.
+- Let the player move between known demo locations/nodes.
 - Represent host-owned interaction points:
   - inspect room;
   - interact with encounter trigger;
   - return to entrance;
   - exit.
-- Use the framework dungeon/field state machine for legal transitions.
+- Use generic navigation and dungeon traversal services for legal transitions.
 - Use the encounter-start planner when the host chooses a specific encounter trigger.
 
 ### Framework Use
 
-- `RuntimeFieldDungeonService`;
-- `RuntimeDungeonProgressSnapshot`;
+- `RuntimeNavigationService`;
+- `RuntimeDungeonTraversalService`;
+- `RuntimeDungeonTraversalSnapshot`;
+- optional `RuntimeFieldDungeonService` for authored floor samples;
 - `CatalogEncounterStartPlanner`;
 - host-owned scene/trigger IDs.
 
@@ -318,7 +331,7 @@ Let the player move through a tiny Training Annex flow without relying on automa
 
 - scripted player choices move through the clean dungeon loop;
 - encounter trigger creates the expected actor creation requests;
-- fixed battle floors preserve authored encounter IDs;
+- optional fixed battle floors preserve authored encounter IDs when the floor module is used;
 - host-owned trigger selection does not force every floor ascent into battle.
 
 ## Iteration 4: Clean Item And Field Action Loop
