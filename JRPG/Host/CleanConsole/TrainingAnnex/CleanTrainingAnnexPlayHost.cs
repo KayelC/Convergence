@@ -14,6 +14,7 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectActor,
     ResolveStats,
     RecalculateResources,
+    ApplyVictoryExperience,
     ValidateStartupSnapshot,
     Exit
 }
@@ -28,11 +29,14 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<ContentId> ActorEntityIds,
     IReadOnlyList<ContentId> ActorInstanceIds,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
+    RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
     int ActiveSkillCount,
     int PassiveSkillCount,
     bool StatResolutionPreviewed,
     bool ResourceRecalculationApplied,
+    bool GrowthApplied,
+    int LevelUpCount,
     bool StartupSnapshotValidated,
     int StartupSnapshotDiagnosticCount,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
@@ -125,6 +129,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<StatResolutionResult> statPreview = [];
         bool statResolutionPreviewed = false;
         bool resourceRecalculationApplied = false;
+        bool growthApplied = false;
+        int levelUpCount = 0;
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
 
@@ -153,6 +159,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
+                    growthApplied,
+                    levelUpCount,
                     snapshotValidated,
                     snapshotDiagnosticCount,
                     commands);
@@ -184,6 +192,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                         growthServices.ResourceGrowthPolicy,
                         cancellationToken).ConfigureAwait(false);
                     break;
+                case CleanTrainingAnnexPlayCommand.ApplyVictoryExperience:
+                    LevelGrowthResult growth = await ApplyVictoryExperienceAsync(
+                        roster.Player,
+                        growthServices,
+                        cancellationToken).ConfigureAwait(false);
+                    growthApplied = growth.Applied;
+                    levelUpCount = growth.LevelUps.Count;
+                    break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
                         TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster),
@@ -208,6 +224,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
+                            growthApplied,
+                            levelUpCount,
                             snapshotValidated,
                             snapshotDiagnosticCount,
                             commands);
@@ -236,6 +254,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.RecalculateResources,
                     "Recalculate Resources"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.ApplyVictoryExperience,
+                    "Apply Victory EXP"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                     "Validate Startup Snapshot"),
@@ -297,11 +318,14 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
+        bool growthApplied,
+        int levelUpCount,
         bool snapshotValidated,
         int snapshotDiagnosticCount,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
+        RuntimeActorSnapshot playerSnapshot = roster.Player.RuntimeState.ToSnapshot();
         return new(
             [request.ManifestPath],
             request.DocumentPaths,
@@ -311,12 +335,15 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.Enemies.Count,
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
             roster.AllActors.Select(actor => ContentId.Parse(actor.RuntimeState.InstanceId.ToString())).ToArray(),
-            roster.Player.RuntimeState.ToSnapshot().Resources,
+            playerSnapshot.Resources,
+            playerSnapshot.Progression,
             statPreview.ToArray(),
             player.ActiveSkills.Count,
             player.SkillLoadout.Count(skill => skill.Activation == SkillActivation.Passive),
             statResolutionPreviewed,
             resourceRecalculationApplied,
+            growthApplied,
+            levelUpCount,
             snapshotValidated,
             snapshotDiagnosticCount,
             commands.ToArray());
@@ -361,6 +388,51 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancellationToken).ConfigureAwait(false);
 
         return results.ToArray();
+    }
+
+    private async ValueTask<LevelGrowthResult> ApplyVictoryExperienceAsync(
+        TrainingAnnexRuntimeActor player,
+        GrowthRulesetServices growthServices,
+        CancellationToken cancellationToken)
+    {
+        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        long requiredExperience = growthServices.ExperienceCurve.GetRequiredExperience(before.Progression.Level);
+        long award = Math.Max(0, requiredExperience - before.Progression.Experience);
+        LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
+            before.Progression,
+            before.Stats,
+            before.Identity.ActorKindId,
+            award,
+            new TrainingAnnexMinimumRandomSource(),
+            resources: before.Resources,
+            baseResourceValues: before.BaseResourceValues));
+        RuntimeMutationResult mutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
+            player.RuntimeState,
+            growth);
+        if (!mutation.Applied)
+        {
+            foreach (RuntimeMutationDiagnostic diagnostic in mutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return growth;
+        }
+
+        RuntimeActorSnapshot after = mutation.After;
+        await _eventSink.PublishAsync(
+            $"Victory EXP: awarded {award} EXP through standard_growth.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Growth result: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; stat points {before.Progression.UnspentStatPoints}->{after.Progression.UnspentStatPoints}.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Level-up events: {(growth.LevelUps.Count == 0 ? "none" : string.Join(", ", growth.LevelUps.Select(levelUp => levelUp.Level.ToString())))}.",
+            cancellationToken).ConfigureAwait(false);
+
+        return growth;
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(

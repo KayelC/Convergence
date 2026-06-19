@@ -217,6 +217,17 @@ Implemented after resource initialization:
 
 This proves that the clean shell can display and evaluate framework-owned stat composition without legacy `StatProcessor`. It does not yet prove clean equipment stat impact, because the current Training Annex actors are authored as `demon` and the standard policy intentionally resolves demon stats from active-form stats. Equipment impact remains planned for the equipment pass.
 
+### Phase 1-05 Growth And Level Extension
+
+Implemented after stat composition:
+
+- The framework now includes `RuntimeProgressionTransactionService` for applying a `LevelGrowthResult` to mutable runtime actor state.
+- The clean play host now includes `Apply Victory EXP`.
+- `Apply Victory EXP` uses the catalog-bound `standard_growth` services to calculate the current level requirement, apply EXP, store the result back into Echo Adept's runtime snapshot, and keep startup save validation aligned with the changed state.
+- The current Training Annex proof advances Echo Adept from level 3 to level 4, changes lifetime EXP from 0 to 40, and increases unspent stat points from 2 to 3.
+
+This proves framework-owned growth progression inside the clean interactive shell. It does not retire legacy `GrowthProcessor`, and it does not demonstrate humanoid HP/SP random growth because Echo Adept is currently authored as `demon`.
+
 ## Iteration 2: Optional Mechanic Baseline
 
 ### Goal

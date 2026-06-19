@@ -130,6 +130,34 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     [Fact]
+    public void RuntimeProgressionTransactions_ApplyGrowthResultToActorSnapshot()
+    {
+        RuntimeActorStateSet actor = RuntimeActorStateSet.FromSnapshot(CreateCompleteSnapshot());
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        var growth = new LevelGrowthResult(
+            ProgressionMutationStatus.Applied,
+            new RuntimeProgressionSnapshot(15, 10, 930, 4),
+            new RuntimeStatBlockSnapshot(
+                [new KeyValuePair<ContentId, decimal>(Id("strength"), 11)],
+                [new KeyValuePair<ContentId, decimal>(Id("strength"), 14)]),
+            [new RuntimeResourceSnapshot(Id("hp"), 82, 130)],
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 130)],
+            [new LevelUpEvent(15, statPointsAwarded: 1)]);
+
+        RuntimeMutationResult result = new RuntimeProgressionTransactionService().ApplyLevelGrowth(actor, growth);
+
+        Assert.True(result.Applied);
+        Assert.Equal(before.Progression.Level, result.Before.Progression.Level);
+        Assert.Equal(15, result.After.Progression.Level);
+        Assert.Equal(10, actor.ToSnapshot().Progression.Experience);
+        Assert.Equal(930, actor.ToSnapshot().Progression.LifetimeExperience);
+        Assert.Equal(4, actor.ToSnapshot().Progression.UnspentStatPoints);
+        Assert.Equal(11, actor.ToSnapshot().Stats.BaseStats[Id("strength")]);
+        Assert.Equal(82, actor.ToSnapshot().Resources.Single(resource => resource.ResourceId == Id("hp")).Current);
+        Assert.Equal(130, actor.ToSnapshot().BaseResourceValues[Id("hp")]);
+    }
+
+    [Fact]
     public void RuntimeSnapshotContracts_ExposeNoHostOrLegacyTypes()
     {
         Type[] runtimeTypes = typeof(RuntimeActorSnapshot).Assembly.GetExportedTypes()

@@ -79,7 +79,8 @@ public enum RuntimeMutationStatus
 public enum RuntimeMutationErrorCode
 {
     MissingResource,
-    ResourceValueOutOfRange
+    ResourceValueOutOfRange,
+    ProgressionMutationRejected
 }
 
 public sealed record RuntimeActorIdentitySnapshot
@@ -465,6 +466,25 @@ public sealed record RuntimeActorSnapshot
             BattleStatus,
             BattleActivations,
             BaseResourceValues);
+
+    public RuntimeActorSnapshot WithProgression(
+        RuntimeProgressionSnapshot progression,
+        RuntimeStatBlockSnapshot stats,
+        IEnumerable<RuntimeResourceSnapshot>? resources = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null) =>
+        new(
+            Identity,
+            Ownership,
+            Deployment,
+            progression,
+            resources ?? Resources,
+            stats,
+            Skills,
+            Forms,
+            Equipment,
+            BattleStatus,
+            BattleActivations,
+            baseResourceValues ?? BaseResourceValues);
 }
 
 public sealed class RuntimeActorStateSet
@@ -567,6 +587,36 @@ public sealed class RuntimeResourceTransactionService
             before,
             before,
             [new RuntimeMutationDiagnostic(code, message, path)]);
+}
+
+public sealed class RuntimeProgressionTransactionService
+{
+    public RuntimeMutationResult ApplyLevelGrowth(RuntimeActorStateSet actor, LevelGrowthResult growth)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(growth);
+
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        if (!growth.Applied)
+        {
+            return new RuntimeMutationResult(
+                RuntimeMutationStatus.Rejected,
+                before,
+                before,
+                growth.Diagnostics.Select(diagnostic => new RuntimeMutationDiagnostic(
+                    RuntimeMutationErrorCode.ProgressionMutationRejected,
+                    diagnostic.Message,
+                    "$.progression")));
+        }
+
+        RuntimeActorSnapshot after = before.WithProgression(
+            growth.Progression,
+            growth.Stats,
+            growth.Resources.Count > 0 ? growth.Resources : before.Resources,
+            growth.BaseResourceValues.Count > 0 ? growth.BaseResourceValues : before.BaseResourceValues);
+        actor.ReplaceSnapshot(after);
+        return new RuntimeMutationResult(RuntimeMutationStatus.Applied, before, after);
+    }
 }
 
 internal static class RuntimeSnapshotCollections

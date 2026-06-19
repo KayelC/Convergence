@@ -14,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 5);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 5, 6);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -76,6 +76,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(80, hp.Maximum);
         Assert.Equal(28, sp.Current);
         Assert.Equal(28, sp.Maximum);
+        Assert.Equal(4, summary.PlayerProgression.Level);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.Equal(40, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(3, summary.PlayerProgression.UnspentStatPoints);
         Assert.True(summary.StatResolutionPreviewed);
         Assert.Equal(8, Resolved(summary, "strength").FinalValue);
         Assert.Equal(5, Resolved(summary, "magic").FinalValue);
@@ -83,6 +87,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(5, Resolved(summary, "agility").FinalValue);
         Assert.Equal(4, Resolved(summary, "luck").FinalValue);
         Assert.True(summary.ResourceRecalculationApplied);
+        Assert.True(summary.GrowthApplied);
+        Assert.Equal(1, summary.LevelUpCount);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
         Assert.Equal(
@@ -91,12 +97,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 CleanTrainingAnnexPlayCommand.InspectActor,
                 CleanTrainingAnnexPlayCommand.ResolveStats,
                 CleanTrainingAnnexPlayCommand.RecalculateResources,
+                CleanTrainingAnnexPlayCommand.ApplyVictoryExperience,
                 CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
                 CleanTrainingAnnexPlayCommand.Exit
             ],
             summary.Commands);
 
-        Assert.Equal(6, io.Menus.Count);
+        Assert.Equal(7, io.Menus.Count);
         foreach (GameIoMenuCall menu in io.Menus)
         {
             Assert.Equal("Training Annex Clean Session", menu.Header);
@@ -106,6 +113,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     "Inspect Actors",
                     "Resolve Stats",
                     "Recalculate Resources",
+                    "Apply Victory EXP",
                     "Validate Startup Snapshot",
                     "Exit"
                 ],
@@ -132,6 +140,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Resolved stats: strength 6->8, magic 4->5, vitality 5->5, agility 5->5, luck 4->4.", text, StringComparison.Ordinal);
         Assert.Contains("Resource recalculation: Echo Adept hp 80/80 -> 70/80.", text, StringComparison.Ordinal);
         Assert.Contains("Resource policy: standard_growth preserved current hp and recalculated maximum 80.", text, StringComparison.Ordinal);
+        Assert.Contains("Victory EXP: awarded 40 EXP through standard_growth.", text, StringComparison.Ordinal);
+        Assert.Contains("Growth result: Echo Adept level 3->4; exp 0->0; lifetime 0->40; stat points 2->3.", text, StringComparison.Ordinal);
+        Assert.Contains("Level-up events: 4.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("Clean Training Annex session exited.", text, StringComparison.Ordinal);
     }

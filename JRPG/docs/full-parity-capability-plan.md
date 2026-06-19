@@ -346,6 +346,15 @@ Clean console proof:
 
 - victory changes EXP/progression in the clean session.
 
+Phase 1-05 result:
+
+- The framework now has `RuntimeProgressionTransactionService`, which applies a `LevelGrowthResult` to a `RuntimeActorStateSet` with before/after mutation evidence.
+- The clean Training Annex play host now includes `Apply Victory EXP`.
+- `Apply Victory EXP` calculates the current level requirement through the catalog-bound `standard_growth` services, applies that EXP through `StandardLevelGrowthPolicy`, and stores the resulting progression back into Echo Adept's runtime snapshot.
+- The scripted clean play test proves Echo Adept advances from level 3 to level 4, lifetime EXP changes from 0 to 40, unspent stat points change from 2 to 3, and startup save validation sees the updated runtime snapshot.
+- Because the Training Annex actor is currently authored as `demon`, this pass does not roll humanoid base HP/SP growth. That is current standard-policy behavior, not an omission.
+- This remains `parallel_partial`: clean runtime progression now exists in the Training Annex shell, but protected legacy `GrowthProcessor` consumers remain in place.
+
 ### 06. `active_and_reserve_party`
 
 Current status: `parallel_partial`.
