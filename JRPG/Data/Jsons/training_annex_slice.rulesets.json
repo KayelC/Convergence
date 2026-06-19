@@ -53,13 +53,6 @@
       "description": "Binds the slice to the standard economy policy.",
       "category": "economy",
       "policyId": "standard_economy"
-    },
-    {
-      "id": "standard_moon_phase",
-      "displayName": "Training Annex Moon Phase",
-      "description": "Binds the slice to the standard moon-phase policy.",
-      "category": "moon_phase",
-      "policyId": "standard_moon_phase"
     }
   ]
 }

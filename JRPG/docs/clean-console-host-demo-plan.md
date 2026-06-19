@@ -256,6 +256,18 @@ Moon Phase is the immediate example. The clean Training Annex demo should not ne
 - content using moon-phase conditions still requires explicit registration/metadata;
 - legacy Full Moon behavior remains characterized.
 
+### Phase 1-06 Optional Moon Phase Decoupling
+
+Implemented after the growth extension:
+
+- The Training Annex ruleset document no longer includes `standard_moon_phase`.
+- `TrainingAnnexHostSupport` no longer registers `new_moon` or the moon-phase policy for the neutral sample pack.
+- Training Annex save/session snapshots now omit `MoonPhaseId` instead of writing fake `new_moon` metadata.
+- Clean automated battle and encounter requests accept a missing moon phase when the active content does not use moon-phase conditions.
+- Existing moon-phase condition support remains available for opt-in content, and the legacy console `MoonPhaseSystem` remains characterized.
+
+This proves the clean Training Annex loop does not need a fake moon/cycle mechanic. It does not implement a replacement clean Moon Phase system, and it does not change legacy Full Moon negotiation or fusion behavior.
+
 ## Iteration 3: Field And Dungeon Interaction Loop
 
 ### Goal

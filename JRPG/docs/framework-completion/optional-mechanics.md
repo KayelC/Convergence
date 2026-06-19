@@ -9,7 +9,8 @@ Moon Phase is the clearest example:
 - legacy console gameplay has a static `MoonPhaseSystem`;
 - legacy negotiation can be blocked at Full Moon;
 - legacy fusion accident and sacrificial-fusion gates use moon phase;
-- clean sample/demo paths still register and pass `new_moon` in places that do not truly need a moon system;
+- older clean demo paths still register and pass `new_moon` in places that do not truly need a moon system;
+- the Training Annex path has been decoupled and now omits moon metadata unless future content opts in;
 - the ruleset surface includes `standard_moon_phase`, which makes Moon Phase look like part of the baseline framework.
 
 Some clean APIs already point in the right direction. `EffectExecutionEnvironment` treats moon phase as optional metadata, and conditions can evaluate false when metadata is absent.
@@ -86,14 +87,14 @@ Reasons:
 - removing it now would mix modular framework cleanup with legacy behavior deletion;
 - the archive gate still requires clean parity and explicit removal authorization.
 
-The next useful change is decoupling, not deletion.
+The next useful change for any remaining moon-dependent compatibility path is decoupling, not deletion.
 
 ## Recommended Next Step
 
 When this problem is implemented, keep it narrow:
 
-1. make clean battle/demo/runtime requests accept missing moon phase wherever the mechanic is not used;
-2. remove `standard_moon_phase` from neutral sample content that does not demonstrate a moon mechanic;
+1. keep clean battle/demo/runtime requests accepting missing moon phase wherever the mechanic is not used;
+2. keep neutral sample content free of `standard_moon_phase` unless it demonstrates a moon mechanic;
 3. keep `MoonPhaseCondition` available for games that opt in;
 4. make fusion availability use a named policy/gate instead of hardcoding Full Moon in framework-facing services;
 5. leave legacy console moon behavior intact until its owning consumer is replaced.

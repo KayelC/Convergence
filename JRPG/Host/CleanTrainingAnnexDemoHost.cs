@@ -120,7 +120,6 @@ internal sealed class CleanTrainingAnnexDemoHost
         resolver.BindPressTurnFactory(catalog, Qualified("standard_press_turn")).RequireService();
         resolver.BindStockCapacityPolicy(catalog, Qualified("standard_stock_capacity")).RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
-        resolver.BindMoonPhaseRuleset(catalog, Qualified("standard_moon_phase")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
             .ConfigureAwait(false);
 
@@ -202,7 +201,7 @@ internal sealed class CleanTrainingAnnexDemoHost
                 new ItemBattleActionCommand(tonic, [echo.State.InstanceId]),
                 echo.State,
                 [echo.State, ashling.State],
-                new EffectExecutionEnvironment(Battle, NormalBattle, NewMoon),
+                new EffectExecutionEnvironment(Battle, NormalBattle),
                 new DemoItemActionInventory(inventory)),
             cancellationToken).ConfigureAwait(false);
         await PrintAsync(
@@ -220,7 +219,7 @@ internal sealed class CleanTrainingAnnexDemoHost
                 [echo, ashling],
                 Battle,
                 NormalBattle,
-                NewMoon,
+                null,
                 10));
         foreach (BattleRuntimeEvent battleEvent in battle.Events)
         {
@@ -323,7 +322,6 @@ internal sealed class CleanTrainingAnnexDemoHost
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeSessionProgressSnapshot(
-                NewMoon,
                 counters:
                 [
                     new KeyValuePair<ContentId, long>(ContentId.Parse("training_annex_runs"), 1),

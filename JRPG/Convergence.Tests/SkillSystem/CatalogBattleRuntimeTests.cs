@@ -150,6 +150,23 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_AllowsMissingMoonPhaseWhenContentDoesNotUseMoonConditions()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        var runner = new AutomatedBattleRunner(executor, new DeterministicBattleActionSelector(executor), services);
+
+        AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
+            [frost, ember], Battle, NormalBattle, null, 10));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.Equal(PlayerTeam, result.WinningTeamId);
+    }
+
+    [Fact]
     public void Runner_HonorsRoundLimitWithDraw()
     {
         GameDataCatalog catalog = LoadDemoCatalog();

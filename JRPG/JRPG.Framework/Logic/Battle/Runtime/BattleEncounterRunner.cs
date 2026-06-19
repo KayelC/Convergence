@@ -77,7 +77,7 @@ public sealed record BattleEncounterRequest
         IEnumerable<BattleEncounterParticipant> participants,
         ContentId contextId,
         ContentId battleKindId,
-        ContentId moonPhaseId,
+        ContentId? moonPhaseId,
         int roundLimit)
     {
         Participants = Array.AsReadOnly(
@@ -91,7 +91,7 @@ public sealed record BattleEncounterRequest
     public IReadOnlyList<BattleEncounterParticipant> Participants { get; }
     public ContentId ContextId { get; }
     public ContentId BattleKindId { get; }
-    public ContentId MoonPhaseId { get; }
+    public ContentId? MoonPhaseId { get; }
     public int RoundLimit { get; }
 }
 

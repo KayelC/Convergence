@@ -4,9 +4,9 @@
 
 The framework has ruleset definitions and a binding resolver for standard policy IDs.
 
-The current clean Training Annex slice binds standard rulesets for damage, rewards, growth, stats, Press Turn, stock capacity, economy, and moon phase.
+The current clean Training Annex slice binds standard rulesets for damage, rewards, growth, stats, Press Turn, stock capacity, and economy.
 
-Moon Phase is now flagged as a design concern rather than a settled baseline. It should become an optional host capability, not a required framework pillar. See [Optional Mechanics](optional-mechanics.md).
+Moon Phase is now flagged as a design concern rather than a settled baseline. Training Annex no longer binds a moon-phase ruleset, and Moon Phase should remain an optional host capability rather than a required framework pillar. See [Optional Mechanics](optional-mechanics.md).
 
 Many runtime services still rely on named default configurations rather than fully authored ruleset parameters.
 

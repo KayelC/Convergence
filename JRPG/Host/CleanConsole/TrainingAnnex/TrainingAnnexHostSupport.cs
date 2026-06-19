@@ -55,7 +55,6 @@ internal static class TrainingAnnexHostSupport
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
     public static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
-    public static readonly ContentId NewMoon = ContentId.Parse("new_moon");
     public static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     public static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
     public static readonly ContentId Hp = ContentId.Parse("hp");
@@ -91,7 +90,6 @@ internal static class TrainingAnnexHostSupport
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterBattleKind("normal_battle")
-            .RegisterMoonPhase("new_moon")
             .RegisterShopCategory("training_supply")
             .RegisterNegotiationDemand("sample_macca")
             .RegisterEncounterEnvironment("training_annex")
@@ -103,7 +101,6 @@ internal static class TrainingAnnexHostSupport
                 "standard_press_turn",
                 "standard_stock_capacity",
                 "standard_economy",
-                "standard_moon_phase",
                 "return_to_lobby",
                 "training_barrier",
                 "standard_accident",
@@ -269,7 +266,7 @@ internal static class TrainingAnnexHostSupport
                 new RuntimeDungeonProgressSnapshot(Qualified("training_annex"))),
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),
-            new RuntimeSessionProgressSnapshot(NewMoon),
+            new RuntimeSessionProgressSnapshot(),
             new RuntimeCheckpointLogSnapshot(
             [
                 new RuntimeCheckpointEntrySnapshot(

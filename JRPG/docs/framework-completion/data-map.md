@@ -13,7 +13,7 @@ Use generic placeholder content for tests and demos. Downstream games should rep
 | Family | What It Represents | Current Slice | Placeholder Direction |
 | --- | --- | --- | --- |
 | Packs and manifests | Pack identity, version, document list, dependencies | Training Annex has one pack | `convergence.framework_example` with small self-contained documents |
-| Rulesets | Named policy choices for damage, rewards, growth, stats, Press Turn, stock, economy, moon phase | Eight standard Training Annex rulesets; fusion recipes reference registered host policy IDs separately | `standard_damage`, `standard_reward`, `standard_growth`, etc. |
+| Rulesets | Named policy choices for damage, rewards, growth, stats, Press Turn, stock, economy, and optional mechanics | Seven standard Training Annex rulesets; moon phase is absent because the sample does not use a moon mechanic; fusion recipes reference registered host policy IDs separately | `standard_damage`, `standard_reward`, `standard_growth`, etc. |
 | Races / classifications | Broad entity families used by entities, fusion, negotiation, and presentation | `annex_spirit`, `annex_beast`, `annex_construct` | `sample_spirit`, `sample_beast`, `sample_construct` |
 | Entities | Playable actors, enemies, recruitables, fusion-eligible templates | `echo_adept`, `ashling`, `bramble_runner`, `ward_shell`, `annex_mentor` | `sample_guardian`, `sample_wisp`, `sample_brute` |
 | Skills | Active and passive behavior definitions | Damage, recovery, cure, ailment, buff/debuff, and passive examples | physical hit, fire spell, ice spell, heal, poison, buff, passive boost |

@@ -355,92 +355,85 @@ Phase 1-05 result:
 - Because the Training Annex actor is currently authored as `demon`, this pass does not roll humanoid base HP/SP growth. That is current standard-policy behavior, not an omission.
 - This remains `parallel_partial`: clean runtime progression now exists in the Training Annex shell, but protected legacy `GrowthProcessor` consumers remain in place.
 
-### 06. `active_and_reserve_party`
+### 06. `moon_phase`
+
+Current status: `legacy_only`.
+
+Full parity target:
+
+- moon/cycle data is optional host/session metadata;
+- content that uses moon conditions declares that dependency;
+- unrelated systems run without fake moon phase values;
+- sacrificial fusion gates become policy-owned instead of hardcoded Full Moon assumptions.
+
+Clean console proof:
+
+- clean Training Annex loop runs without moon phase when no moon mechanic is used.
+
+Phase 1-06 result:
+
+- Training Annex no longer carries a `standard_moon_phase` ruleset.
+- Training Annex catalog loading no longer registers moon phase IDs or the moon-phase policy.
+- Training Annex runtime save/session snapshots omit `MoonPhaseId` instead of storing fake `new_moon` metadata.
+- Clean automated battle and encounter requests now accept a missing moon phase, while existing moon-phase conditions still evaluate false unless a host supplies moon metadata.
+- Legacy `MoonPhaseSystem`, Full Moon negotiation blocking, and legacy fusion Full Moon characterization remain untouched.
+- This remains `legacy_only` for the protected moon-phase capability: the old moon mechanic has not been reimplemented as a clean optional feature; it has only been decoupled from clean paths that do not use it.
+
+### 07. `field_navigation`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- party membership is represented by framework party snapshots;
-- active/reserve changes use framework transition results;
-- clean consumer does not mutate legacy party lists.
+- clean field/session navigation is framework state plus host commands;
+- legacy `FieldConductor` is not part of the clean demo path.
 
 Clean console proof:
 
-- only needed once the clean demo has more than one party actor.
+- player navigates clean Training Annex menus over framework state.
 
-### 07. `persona_and_demon_stock`
+### 08. `dungeon_traversal`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- owned stock is framework runtime state;
-- stock capacity and active form rules are framework-owned;
-- no `Combatant`/`Persona` stock list is needed by the clean consumer.
+- dungeon progress, floor/room transitions, terminals, barriers, exits, and boss flags are framework-owned;
+- host scene/trigger state chooses when to ask for an encounter.
 
 Clean console proof:
 
-- only needed if recruitment/fusion/summon features enter the clean demo.
+- player enters, moves, returns, and triggers encounter from clean dungeon state.
 
-### 08. `party_operations`
+### 09. `encounters`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- summon, return, swap, dismiss, replace, and consume operations use framework transitions;
-- failed commands return diagnostics without mutation;
-- presentation is host-owned.
+- encounter definitions and formations hydrate runtime actors through framework services;
+- host-owned triggers can select encounters without relying on forced floor battles;
+- random encounters remain optional policy, not mandatory exploration design.
 
 Clean console proof:
 
-- only needed after clean stock exists.
+- host trigger starts `ashling_drill` or another original clean encounter.
 
-### 09. `persistence_snapshots`
-
-Current status: `clean_foundation`.
-
-Full parity target:
-
-- framework snapshot and validator cover the clean session;
-- save policy defines manual/autosave/suspend behavior;
-- host owns actual storage and serialization;
-- loading restores equivalent framework runtime state.
-
-Clean console proof:
-
-- clean demo can save, load, and optionally consume a suspend save.
-
-### 10. `combat_math`
+### 10. `field_items_and_skills`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- clean battle uses framework combat rules directly;
-- numeric policies are ruleset-bound where approved;
-- no legacy `CombatMath` or `DamageHandler` is required by clean battle.
+- field item and skill usage use framework execution environments;
+- battle-only conditions evaluate correctly outside battle;
+- inventory consumption is transaction-safe.
 
 Clean console proof:
 
-- Training Annex battle damage/accuracy/critical/reward values come from framework services.
+- clean field item/skill works in the Training Annex loop.
 
-### 11. `press_turn`
-
-Current status: `parallel_partial`.
-
-Full parity target:
-
-- clean battle loop consumes typed action outcomes through framework Press Turn rules;
-- host only presents the current turn state;
-- legacy battle conductor is not in the clean battle path.
-
-Clean console proof:
-
-- player commands visibly affect Press Turn state in the clean battle loop.
-
-### 12. `battle_actions`
+### 11. `battle_actions`
 
 Current status: `parallel_partial`.
 
@@ -454,7 +447,7 @@ Clean console proof:
 
 - clean battle command menu uses `BattleActionExecutor` or framework encounter command ports.
 
-### 13. `typed_effects`
+### 12. `typed_effects`
 
 Current status: `parallel_partial`.
 
@@ -468,7 +461,35 @@ Clean console proof:
 
 - demo skills/items use typed effects only.
 
-### 14. `ailment_lifecycle`
+### 13. `combat_math`
+
+Current status: `parallel_partial`.
+
+Full parity target:
+
+- clean battle uses framework combat rules directly;
+- numeric policies are ruleset-bound where approved;
+- no legacy `CombatMath` or `DamageHandler` is required by clean battle.
+
+Clean console proof:
+
+- Training Annex battle damage/accuracy/critical/reward values come from framework services.
+
+### 14. `press_turn`
+
+Current status: `parallel_partial`.
+
+Full parity target:
+
+- clean battle loop consumes typed action outcomes through framework Press Turn rules;
+- host only presents the current turn state;
+- legacy battle conductor is not in the clean battle path.
+
+Clean console proof:
+
+- player commands visibly affect Press Turn state in the clean battle loop.
+
+### 15. `ailment_lifecycle`
 
 Current status: `parallel_partial`.
 
@@ -482,7 +503,7 @@ Clean console proof:
 
 - optional first ailment sample can apply, tick, recover, and display outcome.
 
-### 15. `passive_lifecycle`
+### 16. `passive_lifecycle`
 
 Current status: `parallel_partial`.
 
@@ -496,7 +517,7 @@ Clean console proof:
 
 - Training Annex passive recovery or modifier runs through clean lifecycle.
 
-### 16. `enemy_ai_and_tactics`
+### 17. `enemy_ai_and_tactics`
 
 Current status: `parallel_partial`.
 
@@ -510,7 +531,7 @@ Clean console proof:
 
 - demo enemy chooses deterministic legal actions without legacy `BehaviorEngine`.
 
-### 17. `battle_knowledge`
+### 18. `battle_knowledge`
 
 Current status: `parallel_partial`.
 
@@ -523,20 +544,6 @@ Full parity target:
 Clean console proof:
 
 - clean battle discovers and reuses a known weakness/resistance.
-
-### 18. `negotiation_and_recruitment`
-
-Current status: `parallel_partial`.
-
-Full parity target:
-
-- framework owns negotiation state, prompts, demand outcomes, recruitment validation, and result diagnostics;
-- original clean negotiation content exists;
-- clean host presents prompts without legacy `questions.json`.
-
-Clean console proof:
-
-- only after owner confirms negotiation is part of the clean framework sample.
 
 ### 19. `battle_rewards`
 
@@ -552,7 +559,22 @@ Clean console proof:
 
 - Training Annex victory applies nonzero rewards and records session progress.
 
-### 20. `inventory_quantities`
+### 20. `persistence_snapshots`
+
+Current status: `clean_foundation`.
+
+Full parity target:
+
+- framework snapshot and validator cover the clean session;
+- save policy defines manual/autosave/suspend behavior;
+- host owns actual storage and serialization;
+- loading restores equivalent framework runtime state.
+
+Clean console proof:
+
+- clean demo can save, load, and optionally consume a suspend save.
+
+### 21. `inventory_quantities`
 
 Current status: `parallel_partial`.
 
@@ -565,7 +587,7 @@ Clean console proof:
 
 - clean item use consumes inventory only on meaningful success.
 
-### 21. `equipment_ownership`
+### 22. `equipment_ownership`
 
 Current status: `parallel_partial`.
 
@@ -578,7 +600,7 @@ Clean console proof:
 
 - player buys or equips sample equipment and sees stat/action impact.
 
-### 22. `economy`
+### 23. `economy`
 
 Current status: `parallel_partial`.
 
@@ -591,7 +613,7 @@ Clean console proof:
 
 - clean shop or reward loop changes wallet state.
 
-### 23. `shops`
+### 24. `shops`
 
 Current status: `parallel_partial`.
 
@@ -604,7 +626,7 @@ Clean console proof:
 
 - Training Annex shop sells at least one clean item/equipment record.
 
-### 24. `hospital`
+### 25. `hospital`
 
 Current status: `parallel_partial`.
 
@@ -617,74 +639,61 @@ Clean console proof:
 
 - optional clean recovery facility demonstrates restoration if still desired.
 
-### 25. `field_items_and_skills`
+### 26. `active_and_reserve_party`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- field item and skill usage use framework execution environments;
-- battle-only conditions evaluate correctly outside battle;
-- inventory consumption is transaction-safe.
+- party membership is represented by framework party snapshots;
+- active/reserve changes use framework transition results;
+- clean consumer does not mutate legacy party lists.
 
 Clean console proof:
 
-- clean field item/skill works in the Training Annex loop.
+- only needed once the clean demo has more than one party actor.
 
-### 26. `field_navigation`
+### 27. `persona_and_demon_stock`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- clean field/session navigation is framework state plus host commands;
-- legacy `FieldConductor` is not part of the clean demo path.
+- owned stock is framework runtime state;
+- stock capacity and active form rules are framework-owned;
+- no `Combatant`/`Persona` stock list is needed by the clean consumer.
 
 Clean console proof:
 
-- player navigates clean Training Annex menus over framework state.
+- only needed if recruitment/fusion/summon features enter the clean demo.
 
-### 27. `dungeon_traversal`
+### 28. `party_operations`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- dungeon progress, floor/room transitions, terminals, barriers, exits, and boss flags are framework-owned;
-- host scene/trigger state chooses when to ask for an encounter.
+- summon, return, swap, dismiss, replace, and consume operations use framework transitions;
+- failed commands return diagnostics without mutation;
+- presentation is host-owned.
 
 Clean console proof:
 
-- player enters, moves, returns, and triggers encounter from clean dungeon state.
+- only needed after clean stock exists.
 
-### 28. `encounters`
+### 29. `negotiation_and_recruitment`
 
 Current status: `parallel_partial`.
 
 Full parity target:
 
-- encounter definitions and formations hydrate runtime actors through framework services;
-- host-owned triggers can select encounters without relying on forced floor battles;
-- random encounters remain optional policy, not mandatory exploration design.
+- framework owns negotiation state, prompts, demand outcomes, recruitment validation, and result diagnostics;
+- original clean negotiation content exists;
+- clean host presents prompts without legacy `questions.json`.
 
 Clean console proof:
 
-- host trigger starts `ashling_drill` or another original clean encounter.
-
-### 29. `moon_phase`
-
-Current status: `legacy_only`.
-
-Full parity target:
-
-- moon/cycle data is optional host/session metadata;
-- content that uses moon conditions declares that dependency;
-- unrelated systems run without fake moon phase values;
-- sacrificial fusion gates become policy-owned instead of hardcoded Full Moon assumptions.
-
-Clean console proof:
-
-- clean Training Annex loop runs without moon phase when no moon mechanic is used.
+- only after owner confirms negotiation is part of the clean framework sample.
 
 ### 30. `fusion_result_calculation`
 

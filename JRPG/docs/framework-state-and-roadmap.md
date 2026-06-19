@@ -187,6 +187,8 @@ Moon Phase is the current example. It should become optional world/session metad
 
 Sacrificial fusion availability should eventually be policy-gated rather than inherently Full Moon-gated. Story progress, key items, difficulty, dungeon state, moon phase, or no gate at all should all be possible host/content choices.
 
+Phase 1-06 applies the first concrete version of this rule to the Training Annex path. The neutral Training Annex pack no longer declares a moon-phase ruleset, its clean host registrations omit moon phase IDs, its save/session snapshot stores no fake `MoonPhaseId`, and clean automated battle can run with missing moon metadata when content does not use moon-phase conditions. This is decoupling, not a replacement Moon Phase feature.
+
 ### Interactive Clean Host
 
 The Training Annex slice is noninteractive. It proves the clean runtime can run, not that the final player-facing loop exists.
@@ -303,7 +305,7 @@ Current result:
 - `convergence.training_annex_slice` now contains three races, five entities, ten skills, three ailments, five items, four equipment records, one shop, one negotiation set, three encounters, one dungeon, two concept-level fusion recipes, and standard ruleset bindings.
 - Catalog and runtime tests prove the expanded pack loads, qualifies IDs, rejects local lookups, binds standard rulesets, exercises additional skills/items, carries fixed battle encounter IDs through the dungeon state machine, and can build battle actor requests from a host-owned encounter trigger.
 - `--clean-training-annex-demo` still runs without GUI or legacy fallback. It now uses a host trigger to select `ashling_drill`, but it still only exercises part of the expanded pack at runtime.
-- `--clean-training-annex-play` starts the first clean interactive session shell. It lives under `Host/CleanConsole/TrainingAnnex/`, loads only the Training Annex pack, hydrates Echo Adept and the Training Annex enemy roster from the catalog, initializes HP/SP through the framework `standard_growth` resource policy, lets the host inspect session/actor state, previews `standard_stat` stat composition with a runtime `attack +1` stage, recalculates Echo Adept resources through the same policy, applies a clean victory EXP/level progression step, validates a startup save snapshot, and exits without legacy `Database` startup.
+- `--clean-training-annex-play` starts the first clean interactive session shell. It lives under `Host/CleanConsole/TrainingAnnex/`, loads only the Training Annex pack, hydrates Echo Adept and the Training Annex enemy roster from the catalog, initializes HP/SP through the framework `standard_growth` resource policy, lets the host inspect session/actor state, previews `standard_stat` stat composition with a runtime `attack +1` stage, recalculates Echo Adept resources through the same policy, applies a clean victory EXP/level progression step, validates a startup save snapshot without moon metadata, and exits without legacy `Database` startup.
 
 Design note:
 
@@ -372,7 +374,7 @@ This section is for ranking before implementation. Do not treat `TBD` items as a
 | Shop/equipment clean host flow | Content and framework services exist; sample records are not yet demonstrated in a clean host flow | TBD |
 | Negotiation clean host flow | Content and framework services exist; sample record is not yet demonstrated in a clean host flow | TBD |
 | Fusion clean host flow | Concept recipes and services exist; sample flow is not yet demonstrated independently of legacy Cathedral presentation | TBD |
-| Optional mechanic decoupling, especially Moon Phase | Design issue documented; implementation not started | TBD |
+| Optional mechanic decoupling, especially Moon Phase | Training Annex no longer requires fake moon metadata; broader optional-mechanic policy remains unfinished | TBD |
 | Save policy and suspend saves | Snapshot/validation contracts exist; save kind, suspend rules, and consume-after-load policy are not implemented | TBD |
 | Content authoring tooling/templates | Validation exists; authoring remains raw JSON | TBD |
 | Real Godot adapter/project | Contract proof exists; no Godot project or production adapter yet | TBD |

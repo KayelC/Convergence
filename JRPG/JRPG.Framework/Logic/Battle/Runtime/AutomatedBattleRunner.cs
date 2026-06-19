@@ -38,7 +38,7 @@ public sealed record BattleActionSelectionRequest(
     IReadOnlyList<CatalogBattleActor> Participants,
     ContentId ContextId,
     ContentId BattleKindId,
-    ContentId MoonPhaseId,
+    ContentId? MoonPhaseId,
     ElementalAffinityKnowledge Knowledge);
 
 public interface IBattleActionSelector
@@ -245,7 +245,7 @@ public sealed record AutomatedBattleRequest
         IEnumerable<CatalogBattleActor> participants,
         ContentId contextId,
         ContentId battleKindId,
-        ContentId moonPhaseId,
+        ContentId? moonPhaseId,
         int roundLimit)
     {
         Participants = Array.AsReadOnly(participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
@@ -258,7 +258,7 @@ public sealed record AutomatedBattleRequest
     public IReadOnlyList<CatalogBattleActor> Participants { get; }
     public ContentId ContextId { get; }
     public ContentId BattleKindId { get; }
-    public ContentId MoonPhaseId { get; }
+    public ContentId? MoonPhaseId { get; }
     public int RoundLimit { get; }
 }
 

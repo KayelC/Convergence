@@ -32,7 +32,8 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(3, catalog.Encounters.Count);
         Assert.Single(catalog.Dungeons);
         Assert.Equal(2, catalog.FusionRecipes.Count);
-        Assert.Equal(8, catalog.Rulesets.Count);
+        Assert.Equal(7, catalog.Rulesets.Count);
+        Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);
 
         Assert.All(catalog.Skills.Keys, AssertPackQualified);
         Assert.All(catalog.Entities.Keys, AssertPackQualified);
@@ -197,9 +198,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.NotNull(resolver.BindPressTurnFactory(
             catalog,
             Qualified("standard_press_turn")).RequireService());
-        Assert.Equal(StandardRulesetPolicyIds.StandardMoonPhase, resolver.BindMoonPhaseRuleset(
-            catalog,
-            Qualified("standard_moon_phase")).RequireService().PolicyId);
+        Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);
     }
 
     [Fact]
@@ -491,7 +490,6 @@ public sealed class OriginalCleanContentSliceTests
                 "standard_press_turn",
                 "standard_stock_capacity",
                 "standard_economy",
-                "standard_moon_phase",
                 "return_to_lobby",
                 "training_barrier",
                 "standard_accident",
