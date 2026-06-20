@@ -4,6 +4,8 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Host;
 using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
 using System.Text.Json;
@@ -311,16 +313,30 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.PreparedBattleStarted);
         Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
         Assert.Equal(ContentId.Parse("player_team"), summary.PreparedBattleWinningTeamId);
-        Assert.Equal(5, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
-        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
-        Assert.Equal(5, summary.ExecutedBattleEffectEvidence.Count(effect =>
+        Assert.Equal(3, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
+        Assert.Equal(1, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(3, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("frost_tip"), DamageElement.Ice)));
-        Assert.Equal(2, summary.ExecutedBattleEffectEvidence.Count(effect =>
+        Assert.Equal(1, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(64, Resource(summary, "hp").Current);
-        Assert.Equal(23, Resource(summary, "sp").Current);
+        Assert.Equal(67, Resource(summary, "hp").Current);
+        Assert.Equal(25, Resource(summary, "sp").Current);
         Assert.True(summary.PreparedBattleEventCount > 0);
+        TrainingAnnexCombatResolutionEvidence frost = summary.CombatResolutionEvidence.First(
+            evidence => evidence.SourceActionId == Qualified("frost_tip") && evidence.Value == 23m);
+        Assert.Equal(DamageElement.Ice, frost.DamageElement);
+        Assert.Equal(8, frost.Power);
+        Assert.Equal(100, frost.Accuracy);
+        Assert.Equal(CriticalMode.Never, frost.CriticalMode);
+        Assert.True(frost.Hit);
+        Assert.False(frost.IsCritical);
+        Assert.Equal(ElementalAffinity.Weak, frost.ResolvedAffinity);
+        Assert.Equal(PressTurnOutcome.Weakness, frost.PressTurnOutcome);
+        Assert.NotNull(summary.PreparedBattleRewardPreview);
+        Assert.Equal(1, summary.PreparedBattleRewardPreview!.TotalExperience);
+        Assert.Equal(14, summary.PreparedBattleRewardPreview.TotalMacca);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
 
         string text = output.ToString();
         Assert.Contains("Clean battle started: Ashling Drill.", text, StringComparison.Ordinal);
@@ -353,7 +369,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(1, summary.CancelledBattleCommandSelections);
-        Assert.Equal(72, Resource(summary, "hp").Current);
+        Assert.Equal(67, Resource(summary, "hp").Current);
+        TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == Qualified("practice_blade"));
+        Assert.Equal(DamageElement.Physical, attack.DamageElement);
+        Assert.Equal(12, attack.Power);
+        Assert.Equal(95, attack.Accuracy);
+        Assert.Equal(23, attack.Value);
         Assert.Contains(
             "Battle action executed: Echo Adept used Practice Blade.",
             output.ToString(),
@@ -380,7 +403,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(72, Resource(summary, "hp").Current);
+        Assert.Equal(67, Resource(summary, "hp").Current);
         Assert.Contains(
             "Battle action executed: Echo Adept used Annex Tonic.",
             output.ToString(),
@@ -418,7 +441,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             effect.SourceActionId == ContentId.Parse("guard"));
         Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
             effect.SourceActionId == ContentId.Parse("pass"));
-        Assert.Equal(56, Resource(summary, "hp").Current);
+        Assert.Equal(55, Resource(summary, "hp").Current);
 
         string text = output.ToString();
         Assert.Contains("Battle action executed: Echo Adept used Analyze.", text, StringComparison.Ordinal);
@@ -481,15 +504,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
         Assert.Equal(ContentId.Parse("player_team"), summary.PreparedBattleWinningTeamId);
-        Assert.Equal(5, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
-        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
-        Assert.Equal(5, summary.ExecutedBattleEffectEvidence.Count(effect =>
+        Assert.Equal(3, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
+        Assert.Equal(1, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(3, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("frost_tip"), DamageElement.Ice)));
-        Assert.Equal(2, summary.ExecutedBattleEffectEvidence.Count(effect =>
+        Assert.Equal(1, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(64, Resource(summary, "hp").Current);
-        Assert.Equal(23, Resource(summary, "sp").Current);
+        Assert.Equal(67, Resource(summary, "hp").Current);
+        Assert.Equal(25, Resource(summary, "sp").Current);
         Assert.Contains("Renamed Frost Tip", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -543,6 +566,159 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task TrainingAnnexExecutionServices_UseOneCatalogBoundProductionCombatRuleset()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+            .BindProductionCombatRuleset(
+                catalog,
+                Qualified("standard_damage"),
+                new SequenceRandomSource())
+            .RequireService();
+
+        BattleExecutionServices services =
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, ruleset);
+
+        Assert.Same(ruleset, services.DamagePolicy);
+        Assert.Same(ruleset, services.InstantDeathPolicy);
+        Assert.Same(ruleset, services.AilmentPolicy);
+        Assert.Same(ruleset, services.ChancePolicy);
+        Assert.Same(ruleset, services.PowerAmountPolicy);
+        Assert.Equal(1.5m, ruleset.Config.WeakDamageMultiplier);
+        Assert.Equal(0.5m, ruleset.Config.ResistDamageMultiplier);
+    }
+
+    [Fact]
+    public async Task TrainingAnnexBoundRuleset_UsesStrengthForPhysicalAndMagicForMagicalDamage()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+            .BindProductionCombatRuleset(
+                catalog,
+                Qualified("standard_damage"),
+                new SequenceRandomSource())
+            .RequireService();
+        EntityDefinition attacker = catalog.GetRequiredEntity(Qualified("echo_adept"));
+        EntityDefinition target = catalog.GetRequiredEntity(Qualified("bramble_runner"));
+
+        ProductionDamageResolutionHit physical = Assert.Single(ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                CombatProfile(attacker),
+                CombatProfile(target),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                Power: 10,
+                Accuracy: 100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))).Hits);
+        ProductionDamageResolutionHit magical = Assert.Single(ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                CombatProfile(attacker),
+                CombatProfile(target),
+                DamageElement.Ice,
+                ElementalAffinity.Normal,
+                Power: 8,
+                Accuracy: 100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))).Hits);
+
+        Assert.Equal(18, physical.Damage);
+        Assert.Equal(13, magical.Damage);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_AuthoredAccuracyCanMissThroughBoundCombatRuleset()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new CombatEffectMutatingContentPackTextSource(
+                ContentRoot(),
+                "frost_tip",
+                accuracy: 5),
+            new SequenceRandomSource(0.99m, 0m, 0m));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexCombatResolutionEvidence miss = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == Qualified("frost_tip"));
+        Assert.Equal(5, miss.Accuracy);
+        Assert.False(miss.Hit);
+        Assert.Equal(EffectExecutionOutcome.Failure, miss.Outcome);
+        Assert.Equal(PressTurnOutcome.Miss, miss.PressTurnOutcome);
+        Assert.Null(miss.Value);
+        Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
+        io.AssertConsumed();
+    }
+
+    [Theory]
+    [InlineData("echo_strike", 1, DamageElement.Physical, true, PressTurnOutcome.Critical)]
+    [InlineData("frost_tip", 0, DamageElement.Ice, false, PressTurnOutcome.Weakness)]
+    public async Task CleanTrainingAnnexPlay_CriticalPolicyUsesTypedDamageElement(
+        string skillId,
+        int skillMenuIndex,
+        DamageElement element,
+        bool expectedCritical,
+        PressTurnOutcome expectedOutcome)
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, skillMenuIndex, 0,
+            -1,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new CombatEffectMutatingContentPackTextSource(
+                ContentRoot(),
+                skillId,
+                criticalChance: 100),
+            new SequenceRandomSource(0m, 0m, 0m, 0m, 0m));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexCombatResolutionEvidence resolution = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == Qualified(skillId));
+        Assert.Equal(element, resolution.DamageElement);
+        Assert.Equal(CriticalMode.Chance, resolution.CriticalMode);
+        Assert.Equal(expectedCritical, resolution.IsCritical);
+        Assert.Equal(expectedOutcome, resolution.PressTurnOutcome);
+        io.AssertConsumed();
+    }
+
+    [Theory]
+    [InlineData("standard_damage", "standard_reward", "damage")]
+    [InlineData("standard_reward", "standard_damage", "reward")]
+    public async Task CleanTrainingAnnexPlay_InvalidCombatBindingFailsWithoutFallback(
+        string rulesetId,
+        string policyId,
+        string diagnosticCategory)
+    {
+        var io = new ScriptedGameIO();
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new RulesetPolicyMutatingContentPackTextSource(ContentRoot(), rulesetId, policyId));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(4, exitCode);
+        Assert.Null(host.LastSummary);
+        Assert.Empty(io.Menus);
+        Assert.Contains($"[{diagnosticCategory}:UnsupportedPolicy]", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CleanTrainingAnnexShell_DoesNotReferenceLegacyEffectInputs()
     {
         string root = Path.Combine(FindRepositoryRoot(), "Host", "CleanConsole", "TrainingAnnex");
@@ -555,6 +731,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             "Database[",
             "Database.LoadData",
             "ActionProcessor",
+            "DemoDamageExecutionPolicy",
+            "DemoInstantDeathPolicy",
+            "DemoAilmentPolicy",
+            "DemoChancePolicy",
+            "DemoPowerAmountPolicy",
             "EffectText",
             "effect string"
         ];
@@ -690,6 +871,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
     private static RuntimeResourceSnapshot Resource(CleanTrainingAnnexPlaySummary summary, string resourceId) =>
         Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse(resourceId));
 
+    private static ProductionCombatantProfile CombatProfile(EntityDefinition entity) =>
+        new(
+            entity.BaseLevel,
+            new ProductionCombatStats(
+                entity.Stats.GetValueOrDefault(ContentId.Parse("strength")),
+                entity.Stats.GetValueOrDefault(ContentId.Parse("magic")),
+                entity.Stats.GetValueOrDefault(ContentId.Parse("vitality")),
+                entity.Stats.GetValueOrDefault(ContentId.Parse("agility")),
+                entity.Stats.GetValueOrDefault(ContentId.Parse("luck"))));
+
     private static bool IsDamage(
         TrainingAnnexTypedEffectEvidence effect,
         ContentId sourceActionId,
@@ -719,11 +910,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
         return load.RequireCatalog();
     }
 
-    private static CleanTrainingAnnexPlayHost CreateHost(ScriptedGameIO io, StringWriter output) =>
+    private static CleanTrainingAnnexPlayHost CreateHost(
+        ScriptedGameIO io,
+        StringWriter output,
+        IContentPackTextSource? source = null,
+        IRandomSource? randomSource = null) =>
         new(
-            new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons")),
+            source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
-            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
+            randomSource);
+
+    private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
 
     private static string FindRepositoryRoot()
     {
@@ -820,6 +1018,103 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 }
             }
         }
+    }
+
+    private sealed class CombatEffectMutatingContentPackTextSource(
+        string root,
+        string skillId,
+        int? accuracy = null,
+        int? criticalChance = null) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                if (path.EndsWith(".skills.json", StringComparison.Ordinal))
+                {
+                    text = MutateSkill(text);
+                }
+
+                documents.Add(new ContentDocumentText(path, path, text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private string MutateSkill(string json)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skills JSON could not be parsed.");
+            JsonArray skills = rootNode["skills"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex skills document has no skills array.");
+            JsonObject skill = skills
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == skillId) ??
+                throw new InvalidOperationException($"Training Annex skill '{skillId}' was not found.");
+            JsonObject effect = skill["effects"]?.AsArray()[0]?.AsObject() ??
+                throw new InvalidOperationException($"Training Annex skill '{skillId}' has no first effect.");
+            if (accuracy is int authoredAccuracy)
+            {
+                effect["accuracy"] = authoredAccuracy;
+            }
+            if (criticalChance is int authoredCriticalChance)
+            {
+                effect["critical"] = new JsonObject
+                {
+                    ["mode"] = "chance",
+                    ["chance"] = authoredCriticalChance
+                };
+            }
+
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    private sealed class RulesetPolicyMutatingContentPackTextSource(
+        string root,
+        string rulesetId,
+        string policyId) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                if (path.EndsWith(".rulesets.json", StringComparison.Ordinal))
+                {
+                    JsonObject rootNode = JsonNode.Parse(text)?.AsObject() ??
+                        throw new InvalidOperationException("Training Annex rulesets JSON could not be parsed.");
+                    JsonObject ruleset = rootNode["rulesets"]?.AsArray()
+                        .Select(node => node?.AsObject())
+                        .Single(node => node?["id"]?.GetValue<string>() == rulesetId) ??
+                        throw new InvalidOperationException($"Training Annex ruleset '{rulesetId}' was not found.");
+                    ruleset["policyId"] = policyId;
+                    text = rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                }
+
+                documents.Add(new ContentDocumentText(path, path, text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class SequenceRandomSource(params decimal[] values) : IRandomSource
+    {
+        private readonly Queue<decimal> _values = new(values);
+
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => _values.Count == 0 ? 0m : _values.Dequeue();
     }
 
     private sealed class FailingContentSource : IContentPackTextSource

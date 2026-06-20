@@ -187,7 +187,8 @@ internal sealed class CleanTrainingAnnexDemoHost
         await PrintAsync(sequence++, "encounter", $"Resolved {encounter.DisplayName}: {ashling.Entity.DisplayName}.", cancellationToken)
             .ConfigureAwait(false);
 
-        BattleExecutionServices executionServices = TrainingAnnexHostSupport.CreateExecutionServices(catalog);
+        BattleExecutionServices executionServices =
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, damageRuleset);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),

@@ -13,6 +13,8 @@ internal sealed record TrainingAnnexManualBattleSummary(
     ContentId? WinningTeamId,
     IReadOnlyList<ContentId> ExecutedActionIds,
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence,
+    IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
+    BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
 
@@ -24,6 +26,21 @@ internal sealed record TrainingAnnexTypedEffectEvidence(
     ContentId? ResourceId = null,
     ContentId? RelatedContentId = null);
 
+internal sealed record TrainingAnnexCombatResolutionEvidence(
+    ContentId SourceActionId,
+    int EffectIndex,
+    ContentId? TargetId,
+    DamageElement? DamageElement,
+    int? Power,
+    int? Accuracy,
+    CriticalMode? CriticalMode,
+    bool? Hit,
+    bool IsCritical,
+    ElementalAffinity? ResolvedAffinity,
+    decimal? Value,
+    EffectExecutionOutcome Outcome,
+    PressTurnOutcome PressTurnOutcome);
+
 internal sealed class TrainingAnnexBattleActionAdapter
 {
     private static readonly ContentId GuardAction = ContentId.Parse("guard");
@@ -34,17 +51,20 @@ internal sealed class TrainingAnnexBattleActionAdapter
     private readonly IHostEventSink<string> _events;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
     private readonly BattleExecutionServices _services;
+    private readonly IBattleRewardService _rewardService;
 
     public TrainingAnnexBattleActionAdapter(
         GameDataCatalog catalog,
         IHostEventSink<string> events,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
-        BattleExecutionServices services)
+        BattleExecutionServices services,
+        IBattleRewardService rewardService)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _events = events ?? throw new ArgumentNullException(nameof(events));
         _commands = commands ?? throw new ArgumentNullException(nameof(commands));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
     }
 
     public async ValueTask<TrainingAnnexManualBattleSummary> RunAsync(
@@ -99,14 +119,43 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 : $"Clean battle ended: {result.Outcome}.",
             cancellationToken).ConfigureAwait(false);
 
+        BattleRewardResult? rewardPreview = result.Outcome == BattleEncounterOutcome.Victory &&
+            result.WinningTeamId == TrainingAnnexHostSupport.PlayerTeam
+                ? CalculateRewardPreview(player, prepared)
+                : null;
+
         return new TrainingAnnexManualBattleSummary(
             true,
             result.Outcome,
             result.WinningTeamId,
             turnHandler.ExecutedActionIds,
             turnHandler.ExecutedEffectEvidence,
+            turnHandler.CombatResolutionEvidence,
+            rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
+    }
+
+    private BattleRewardResult CalculateRewardPreview(
+        TrainingAnnexRuntimeActor player,
+        PreparedEncounter prepared)
+    {
+        BattleRewardEnemySnapshot[] enemies = prepared.StartPlan.ActorRequests
+            .Zip(prepared.Actors, (request, actor) => new BattleRewardEnemySnapshot(
+                actor.Entity.Id,
+                request.Level,
+                actor.Entity.Stats.GetValueOrDefault(StandardProgressionIds.Strength),
+                actor.Entity.Stats.GetValueOrDefault(StandardProgressionIds.Magic),
+                actor.Entity.Stats.GetValueOrDefault(StandardProgressionIds.Vitality),
+                actor.Entity.Stats.GetValueOrDefault(StandardProgressionIds.Agility),
+                actor.Entity.Stats.GetValueOrDefault(StandardProgressionIds.Luck)))
+            .ToArray();
+        return _rewardService.Calculate(new BattleRewardRequest(
+            enemies,
+            [new BattleRewardRecipientSnapshot(
+                player.Actor.Entity.Id,
+                IsAlive: !player.Actor.State.IsDefeated,
+                HasActiveForm: false)]));
     }
 
     private static void SynchronizeActionResources(TrainingAnnexRuntimeActor actor)
@@ -145,6 +194,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly TrainingAnnexItemActionInventory _inventory;
         private readonly List<ContentId> _executedActionIds = [];
         private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
+        private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
 
         public TrainingAnnexManualBattleTurnHandler(
             GameDataCatalog catalog,
@@ -166,6 +216,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
         public IReadOnlyList<ContentId> ExecutedActionIds => _executedActionIds;
         public IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence => _executedEffectEvidence;
+        public IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence =>
+            _combatResolutionEvidence;
         public int CancelledSelections { get; private set; }
 
         public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
@@ -445,6 +497,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             ContentId actionId = ActionId(command);
             _executedActionIds.Add(actionId);
             _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
+            _combatResolutionEvidence.AddRange(BuildCombatResolutionEvidence(command, actionId, execution));
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
                 cancellationToken).ConfigureAwait(false);
@@ -642,6 +695,57 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     .ToArray() ?? [],
                 AnalyzeBattleActionCommand => [new TrainingAnnexTypedEffectEvidence(actionId, 0, "analyze")],
                 _ => []
+            };
+
+        private static IReadOnlyList<TrainingAnnexCombatResolutionEvidence> BuildCombatResolutionEvidence(
+            BattleActionCommand command,
+            ContentId actionId,
+            BattleActionExecutionResult execution) =>
+            execution.Effects
+                .Select(effect => BuildCombatResolutionEvidence(command, actionId, effect))
+                .ToArray();
+
+        private static TrainingAnnexCombatResolutionEvidence BuildCombatResolutionEvidence(
+            BattleActionCommand command,
+            ContentId actionId,
+            EffectExecutionResult result)
+        {
+            DamageEffectDefinition? damage = DamageEffect(command, result.EffectIndex);
+            bool? hit = damage is null || result.Outcome == EffectExecutionOutcome.Skipped
+                ? null
+                : !(result.Outcome == EffectExecutionOutcome.Failure &&
+                    result.PressTurnOutcome == PressTurnOutcome.Miss);
+            return new TrainingAnnexCombatResolutionEvidence(
+                actionId,
+                result.EffectIndex,
+                result.TargetId,
+                damage?.Element,
+                damage?.Power,
+                damage?.Accuracy,
+                damage?.Critical.Mode,
+                hit,
+                result.IsCritical,
+                result.ResolvedAffinity,
+                result.Value,
+                result.Outcome,
+                result.PressTurnOutcome);
+        }
+
+        private static DamageEffectDefinition? DamageEffect(BattleActionCommand command, int effectIndex) =>
+            command switch
+            {
+                BasicAttackBattleActionCommand basic when effectIndex == 0 => new DamageEffectDefinition(
+                    basic.BasicAttack.Element,
+                    basic.BasicAttack.Power,
+                    basic.BasicAttack.Accuracy,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1)),
+                SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count =>
+                    skill.Skill.Effects[effectIndex] as DamageEffectDefinition,
+                ItemBattleActionCommand item when item.Item.Usage is not null &&
+                    effectIndex >= 0 && effectIndex < item.Item.Usage.Effects.Count =>
+                    item.Item.Usage.Effects[effectIndex] as DamageEffectDefinition,
+                _ => null
             };
 
         private static TrainingAnnexTypedEffectEvidence TypedEffectEvidence(

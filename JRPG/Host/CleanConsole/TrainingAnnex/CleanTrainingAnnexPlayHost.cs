@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
@@ -79,6 +80,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     ContentId? PreparedBattleWinningTeamId,
     IReadOnlyList<ContentId> ExecutedBattleActionIds,
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedBattleEffectEvidence,
+    IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
+    BattleRewardResult? PreparedBattleRewardPreview,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
@@ -91,23 +94,27 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
+    private readonly IRandomSource _randomSource;
 
     public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
         : this(
             new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
             new GameIoEventSink(io),
-            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io))
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
+            new TrainingAnnexMinimumRandomSource())
     {
     }
 
     internal CleanTrainingAnnexPlayHost(
         IContentPackTextSource contentSource,
         IHostEventSink<string> eventSink,
-        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource)
+        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
+        IRandomSource? randomSource = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
+        _randomSource = randomSource ?? new TrainingAnnexMinimumRandomSource();
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -150,6 +157,35 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         GameDataCatalog catalog = load.Catalog;
+        var rulesetResolver = new RuntimeRulesetBindingResolver();
+        RulesetBindingResult<ProductionCombatRuleset> combatBinding =
+            rulesetResolver.BindProductionCombatRuleset(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_damage"),
+                _randomSource);
+        if (!combatBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("damage", combatBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        ProductionCombatRuleset combatRuleset = combatBinding.RequireService();
+        RulesetBindingResult<IBattleRewardService> rewardBinding =
+            rulesetResolver.BindBattleRewardService(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_reward"),
+                combatRuleset);
+        if (!rewardBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("reward", rewardBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        IBattleRewardService rewardService = rewardBinding.RequireService();
+        BattleExecutionServices executionServices =
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
         if (!rosterResult.IsSuccess)
         {
@@ -163,7 +199,6 @@ internal sealed class CleanTrainingAnnexPlayHost
 
         TrainingAnnexActorRoster roster = rosterResult.RequireRoster();
         CatalogBattleActor player = roster.Player.Actor;
-        var rulesetResolver = new RuntimeRulesetBindingResolver();
         GrowthRulesetServices growthServices = rulesetResolver
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
@@ -179,7 +214,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 catalog,
                 new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy)));
         var fieldActions = new TrainingAnnexFieldActionAdapter(
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog));
+            executionServices);
         var inventory = new TrainingAnnexItemActionInventory(new RuntimeInventorySnapshot(
             [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
         RuntimeFieldSnapshot field = new(
@@ -203,6 +238,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         var preparedEncounterActorInstanceIds = new List<ContentId>();
         var executedBattleActionIds = new List<ContentId>();
         var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
+        var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
+        BattleRewardResult? preparedBattleRewardPreview = null;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
         var executedFieldActionIds = new List<ContentId>();
@@ -252,6 +289,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleWinningTeamId,
                     executedBattleActionIds,
                     executedBattleEffectEvidence,
+                    combatResolutionEvidence,
+                    preparedBattleRewardPreview,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
                     inventory.Snapshot,
@@ -333,6 +372,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             preparedBattleWinningTeamId,
                             executedBattleActionIds,
                             executedBattleEffectEvidence,
+                            combatResolutionEvidence,
+                            preparedBattleRewardPreview,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
                             inventory.Snapshot,
@@ -470,7 +511,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             catalog,
                             _eventSink,
                             _commandSource,
-                            TrainingAnnexHostSupport.CreateExecutionServices(catalog))
+                            executionServices,
+                            rewardService)
                         .RunAsync(
                             roster.Player,
                             preparedEncounter,
@@ -482,6 +524,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleWinningTeamId = battle.WinningTeamId;
                     executedBattleActionIds.AddRange(battle.ExecutedActionIds);
                     executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
+                    combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
+                    preparedBattleRewardPreview = battle.RewardPreview;
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
                     break;
@@ -967,6 +1011,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         ContentId? preparedBattleWinningTeamId,
         IReadOnlyList<ContentId> executedBattleActionIds,
         IReadOnlyList<TrainingAnnexTypedEffectEvidence> executedBattleEffectEvidence,
+        IReadOnlyList<TrainingAnnexCombatResolutionEvidence> combatResolutionEvidence,
+        BattleRewardResult? preparedBattleRewardPreview,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
@@ -1010,12 +1056,27 @@ internal sealed class CleanTrainingAnnexPlayHost
             preparedBattleWinningTeamId,
             executedBattleActionIds.ToArray(),
             executedBattleEffectEvidence.ToArray(),
+            combatResolutionEvidence.ToArray(),
+            preparedBattleRewardPreview,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
             inventory,
             executedFieldActionIds.ToArray(),
             cancelledFieldTargetSelections,
             commands.ToArray());
+    }
+
+    private async ValueTask PublishRulesetDiagnosticsAsync(
+        string category,
+        IEnumerable<RulesetBindingDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        foreach (RulesetBindingDiagnostic diagnostic in diagnostics)
+        {
+            await _eventSink.PublishAsync(
+                $"[{category}:{diagnostic.Code}] {diagnostic.Message}",
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async ValueTask<IReadOnlyList<StatResolutionResult>> ResolvePlayerStatsAsync(

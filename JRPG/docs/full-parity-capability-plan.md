@@ -537,6 +537,14 @@ Clean console proof:
 
 - Training Annex battle damage/accuracy/critical/reward values come from framework services.
 
+Phase 2-13 result:
+
+- The Training Annex session binds `standard_damage` once through `RuntimeRulesetBindingResolver` and supplies the resulting `ProductionCombatRuleset` to damage, instant-death, ailment, chance, and power execution policies. Only deterministic target selection remains host-owned.
+- `standard_reward` binds to the same combat ruleset. A successful manual battle records a non-mutating reward preview; applying EXP and Macca remains Phase 2-19.
+- The clean battle summary records authored power/accuracy/critical mode beside the resolved hit, critical, affinity, value, effect outcome, and Press Turn outcome. Tests prove ruleset-bound Weak damage, misses, physical criticals, and magical critical rejection.
+- Missing or incompatible combat/reward rulesets stop startup with typed binding diagnostics. There is no fallback to the temporary demo policies or legacy `CombatMath`/`DamageHandler`.
+- This remains `parallel_partial`: the original clean battle now owns its combat policy path, but lifecycle-owned status interactions and reward application remain later Phase 2 passes.
+
 ### 14. `press_turn`
 
 Current status: `parallel_partial`.

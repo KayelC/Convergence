@@ -396,7 +396,7 @@ Let the player use clean items or field actions through the framework.
 
 ## Iteration 5: Manual Clean Battle Loop
 
-Status: Phase 2-11 implemented.
+Status: Phase 2-13 implemented through the current manual battle boundary.
 
 ### Goal
 
@@ -441,6 +441,14 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - Tests prove Practice Blade, Frost Tip, Echo Strike, Ash Spark, Annex Tonic, and Analyze are driven by typed framework definitions. Guard and Pass intentionally produce no effect evidence.
 - A test-only content source renames display text and descriptions while preserving battle behavior and typed-effect evidence, protecting against name/description-driven action logic.
 - No Training Annex content JSON changed.
+
+### Phase 2-13 Result
+
+- The manual and noninteractive Training Annex battle paths now bind the catalog `standard_damage` record to `ProductionCombatRuleset`; they no longer use the temporary demo damage, instant-death, ailment, chance, or power policies.
+- The same combat ruleset instance resolves damage, accuracy, criticals, affinities, ailments, instant death, chance checks, power amounts, and the `standard_reward` preview.
+- Combat-resolution evidence exposes authored power/accuracy/critical mode and resolved hit, critical, affinity, value, effect, and Press Turn outcomes for host presentation and tests.
+- Victory calculates but does not apply a reward preview. Reward mutation remains Iteration 6 / Phase 2-19.
+- Invalid combat or reward binding stops the session without legacy or demo fallback. No Training Annex JSON changed.
 
 ### Non-Goals
 

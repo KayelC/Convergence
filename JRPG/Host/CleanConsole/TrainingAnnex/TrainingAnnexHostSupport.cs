@@ -3,6 +3,7 @@ using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Fusion;
@@ -166,15 +167,17 @@ internal static class TrainingAnnexHostSupport
             .SupportAilmentBehavior<SkipAilmentTurnBehaviorDefinition>()
             .Build();
 
-    public static BattleExecutionServices CreateExecutionServices(GameDataCatalog catalog) =>
+    public static BattleExecutionServices CreateExecutionServices(
+        GameDataCatalog catalog,
+        ProductionCombatRuleset combatRuleset) =>
         new(
             catalog,
-            new DemoDamageExecutionPolicy(),
-            new DemoInstantDeathPolicy(),
-            new DemoAilmentPolicy(),
-            new DemoChancePolicy(),
-            new DemoPowerAmountPolicy(),
-            new DemoRandomTargetPolicy());
+            combatRuleset,
+            combatRuleset,
+            combatRuleset,
+            combatRuleset,
+            combatRuleset,
+            new TrainingAnnexFirstTargetSelectionPolicy());
 
     public static TrainingAnnexActorRosterResult CreateActorRoster(GameDataCatalog catalog)
     {
@@ -489,6 +492,15 @@ internal sealed class TrainingAnnexMinimumRandomSource : IRandomSource
     public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
 
     public decimal NextUnitDecimal() => 0m;
+}
+
+internal sealed class TrainingAnnexFirstTargetSelectionPolicy : IRandomTargetSelectionPolicy
+{
+    public IReadOnlyList<BattleActorState> Select(
+        IReadOnlyList<BattleActorState> candidates,
+        TargetCountDefinition count,
+        SkillExecutionRequest request) =>
+        Array.AsReadOnly(candidates.Take(count.Minimum).ToArray());
 }
 
 internal sealed class TrainingAnnexNavigationPolicy : IRuntimeNavigationPolicy
