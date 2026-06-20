@@ -12,8 +12,17 @@ internal sealed record TrainingAnnexManualBattleSummary(
     BattleEncounterOutcome Outcome,
     ContentId? WinningTeamId,
     IReadOnlyList<ContentId> ExecutedActionIds,
+    IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence,
     int CancelledSelections,
     int EventCount);
+
+internal sealed record TrainingAnnexTypedEffectEvidence(
+    ContentId SourceActionId,
+    int EffectIndex,
+    string EffectKind,
+    DamageElement? DamageElement = null,
+    ContentId? ResourceId = null,
+    ContentId? RelatedContentId = null);
 
 internal sealed class TrainingAnnexBattleActionAdapter
 {
@@ -95,6 +104,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             result.Outcome,
             result.WinningTeamId,
             turnHandler.ExecutedActionIds,
+            turnHandler.ExecutedEffectEvidence,
             turnHandler.CancelledSelections,
             result.Events.Count);
     }
@@ -134,6 +144,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
         private readonly List<ContentId> _executedActionIds = [];
+        private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
 
         public TrainingAnnexManualBattleTurnHandler(
             GameDataCatalog catalog,
@@ -154,6 +165,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         }
 
         public IReadOnlyList<ContentId> ExecutedActionIds => _executedActionIds;
+        public IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence => _executedEffectEvidence;
         public int CancelledSelections { get; private set; }
 
         public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
@@ -432,6 +444,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
             ContentId actionId = ActionId(command);
             _executedActionIds.Add(actionId);
+            _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
                 cancellationToken).ConfigureAwait(false);
@@ -612,6 +625,80 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 PassBattleActionCommand => PassAction,
                 AnalyzeBattleActionCommand => AnalyzeAction,
                 _ => ContentId.Parse(command.Kind.ToString().ToLowerInvariant())
+            };
+
+        private static IReadOnlyList<TrainingAnnexTypedEffectEvidence> TypedEffectEvidence(
+            BattleActionCommand command,
+            ContentId actionId) =>
+            command switch
+            {
+                BasicAttackBattleActionCommand basic =>
+                    [new TrainingAnnexTypedEffectEvidence(actionId, 0, "damage", basic.BasicAttack.Element)],
+                SkillBattleActionCommand skill => skill.Skill.Effects
+                    .Select((effect, index) => TypedEffectEvidence(actionId, index, effect))
+                    .ToArray(),
+                ItemBattleActionCommand item => item.Item.Usage?.Effects
+                    .Select((effect, index) => TypedEffectEvidence(actionId, index, effect))
+                    .ToArray() ?? [],
+                AnalyzeBattleActionCommand => [new TrainingAnnexTypedEffectEvidence(actionId, 0, "analyze")],
+                _ => []
+            };
+
+        private static TrainingAnnexTypedEffectEvidence TypedEffectEvidence(
+            ContentId actionId,
+            int index,
+            EffectDefinition effect) =>
+            effect switch
+            {
+                DamageEffectDefinition damage =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "damage", damage.Element),
+                InstantKillEffectDefinition =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "instant_kill"),
+                ApplyAilmentEffectDefinition apply =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "apply_ailment", RelatedContentId: apply.AilmentId),
+                RestoreResourceEffectDefinition restore =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "restore_resource", ResourceId: restore.ResourceId),
+                RemoveAilmentEffectDefinition remove =>
+                    new TrainingAnnexTypedEffectEvidence(
+                        actionId,
+                        index,
+                        "remove_ailment",
+                        RelatedContentId: remove.AilmentIds.FirstOrDefault()),
+                ReviveEffectDefinition revive =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "revive", ResourceId: revive.ResourceId),
+                ModifyStatStageEffectDefinition modify =>
+                    new TrainingAnnexTypedEffectEvidence(
+                        actionId,
+                        index,
+                        "modify_stat_stage",
+                        RelatedContentId: modify.ModifierTrackIds.FirstOrDefault()),
+                GrantChargeEffectDefinition =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "grant_charge"),
+                GrantShieldEffectDefinition =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "grant_shield"),
+                OverrideAffinityEffectDefinition affinity =>
+                    new TrainingAnnexTypedEffectEvidence(
+                        actionId,
+                        index,
+                        "override_affinity",
+                        affinity.Elements.FirstOrDefault()),
+                RemoveStatusEffectDefinition remove =>
+                    new TrainingAnnexTypedEffectEvidence(
+                        actionId,
+                        index,
+                        "remove_status",
+                        RelatedContentId: remove.StatusIds.FirstOrDefault()),
+                ReduceResourceEffectDefinition reduce =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "reduce_resource", ResourceId: reduce.ResourceId),
+                SetResourceEffectDefinition set =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "set_resource", ResourceId: set.ResourceId),
+                AnalyzeEffectDefinition =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "analyze"),
+                EscapeEffectDefinition escape =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "escape", RelatedContentId: escape.EligibilityRuleId),
+                CustomEffectDefinition custom =>
+                    new TrainingAnnexTypedEffectEvidence(actionId, index, "custom", RelatedContentId: custom.HandlerId),
+                _ => throw new InvalidOperationException($"Unsupported typed effect '{effect.GetType().Name}'.")
             };
 
         private static string ActionLabel(BattleActionCommand command) =>

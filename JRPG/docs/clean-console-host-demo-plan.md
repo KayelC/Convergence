@@ -435,6 +435,13 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - The host synchronizes clean runtime actor resources before and after battle so the session summary reflects battle damage, skill costs, item healing, and inventory consumption.
 - This is not the final battle loop: richer Press Turn display, lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and rewards remain later iterations.
 
+### Phase 2-12 Result
+
+- The manual battle summary now exposes typed-effect evidence for executed battle commands, recording source action ID, effect index, effect kind, and typed operands.
+- Tests prove Practice Blade, Frost Tip, Echo Strike, Ash Spark, Annex Tonic, and Analyze are driven by typed framework definitions. Guard and Pass intentionally produce no effect evidence.
+- A test-only content source renames display text and descriptions while preserving battle behavior and typed-effect evidence, protecting against name/description-driven action logic.
+- No Training Annex content JSON changed.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;

@@ -515,6 +515,14 @@ Clean console proof:
 
 - demo skills/items use typed effects only.
 
+Phase 2-12 result:
+
+- The clean Training Annex battle summary now records host-level typed-effect evidence for executed battle commands: source action ID, effect index, schema-style effect kind, and typed operands such as damage element or resource ID.
+- Practice Blade, Frost Tip, Echo Strike, Ash Spark, Annex Tonic, and Analyze are proven through this evidence. Guard and Pass remain effectless framework commands.
+- Tests mutate Training Annex display names/descriptions through a test-only content source and prove battle outcome, resources, inventory, action IDs, and typed-effect evidence remain unchanged.
+- The shell-facing Training Annex content is checked as concrete typed definitions, including damage, restore, cure, buff/debuff, ailment, and passive trigger effects.
+- This remains `parallel_partial`: the demo still needs richer Press Turn UX, lifecycle/passive integration, battle knowledge persistence, AI/tactics policy, escape/swaps, and reward application before full battle parity.
+
 ### 13. `combat_math`
 
 Current status: `parallel_partial`.

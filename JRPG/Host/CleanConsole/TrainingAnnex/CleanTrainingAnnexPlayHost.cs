@@ -78,6 +78,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     BattleEncounterOutcome? PreparedBattleOutcome,
     ContentId? PreparedBattleWinningTeamId,
     IReadOnlyList<ContentId> ExecutedBattleActionIds,
+    IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedBattleEffectEvidence,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
@@ -201,6 +202,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var preparedEncounterIds = new List<ContentId>();
         var preparedEncounterActorInstanceIds = new List<ContentId>();
         var executedBattleActionIds = new List<ContentId>();
+        var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
         var executedFieldActionIds = new List<ContentId>();
@@ -249,6 +251,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleOutcome,
                     preparedBattleWinningTeamId,
                     executedBattleActionIds,
+                    executedBattleEffectEvidence,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
                     inventory.Snapshot,
@@ -329,6 +332,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             preparedBattleOutcome,
                             preparedBattleWinningTeamId,
                             executedBattleActionIds,
+                            executedBattleEffectEvidence,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
                             inventory.Snapshot,
@@ -477,6 +481,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleOutcome = battle.Outcome;
                     preparedBattleWinningTeamId = battle.WinningTeamId;
                     executedBattleActionIds.AddRange(battle.ExecutedActionIds);
+                    executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
                     break;
@@ -961,6 +966,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleEncounterOutcome? preparedBattleOutcome,
         ContentId? preparedBattleWinningTeamId,
         IReadOnlyList<ContentId> executedBattleActionIds,
+        IReadOnlyList<TrainingAnnexTypedEffectEvidence> executedBattleEffectEvidence,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
@@ -1003,6 +1009,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             preparedBattleOutcome,
             preparedBattleWinningTeamId,
             executedBattleActionIds.ToArray(),
+            executedBattleEffectEvidence.ToArray(),
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
             inventory,

@@ -6,6 +6,8 @@ using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace Convergence.Tests.Host;
@@ -311,6 +313,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(ContentId.Parse("player_team"), summary.PreparedBattleWinningTeamId);
         Assert.Equal(5, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(5, summary.ExecutedBattleEffectEvidence.Count(effect =>
+            IsDamage(effect, Qualified("frost_tip"), DamageElement.Ice)));
+        Assert.Equal(2, summary.ExecutedBattleEffectEvidence.Count(effect =>
+            IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(64, Resource(summary, "hp").Current);
         Assert.Equal(23, Resource(summary, "sp").Current);
@@ -342,6 +348,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
         Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
         Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsDamage(effect, Qualified("practice_blade"), DamageElement.Physical));
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(1, summary.CancelledBattleCommandSelections);
         Assert.Equal(72, Resource(summary, "hp").Current);
         Assert.Contains(
@@ -365,6 +375,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.PreparedBattleStarted);
         Assert.Contains(Qualified("annex_tonic"), summary.ExecutedBattleActionIds);
         Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsResourceEffect(effect, Qualified("annex_tonic"), "restore_resource", "hp"));
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(72, Resource(summary, "hp").Current);
         Assert.Contains(
@@ -396,6 +410,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(ContentId.Parse("guard"), summary.ExecutedBattleActionIds);
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
         Assert.Equal(3, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == ContentId.Parse("analyze") &&
+            effect.EffectIndex == 0 &&
+            effect.EffectKind == "analyze");
+        Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == ContentId.Parse("guard"));
+        Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == ContentId.Parse("pass"));
         Assert.Equal(56, Resource(summary, "hp").Current);
 
         string text = output.ToString();
@@ -419,6 +441,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.PreparedBattleStarted);
         Assert.DoesNotContain(Qualified("frost_tip"), summary.ExecutedBattleActionIds);
         Assert.DoesNotContain(Qualified("echo_strike"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("frost_tip"));
+        Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("echo_strike"));
+        Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("annex_tonic"));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(2, summary.CancelledBattleCommandSelections);
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
@@ -427,6 +455,118 @@ public sealed class CleanTrainingAnnexPlayHostTests
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_DisplayTextChangesDoNotChangeTypedBattleBehavior()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            13);
+        using var output = new StringWriter();
+        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        var host = new CleanTrainingAnnexPlayHost(
+            new DisplayTextMutatingContentPackTextSource(root),
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
+        Assert.Equal(ContentId.Parse("player_team"), summary.PreparedBattleWinningTeamId);
+        Assert.Equal(5, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
+        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(5, summary.ExecutedBattleEffectEvidence.Count(effect =>
+            IsDamage(effect, Qualified("frost_tip"), DamageElement.Ice)));
+        Assert.Equal(2, summary.ExecutedBattleEffectEvidence.Count(effect =>
+            IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(64, Resource(summary, "hp").Current);
+        Assert.Equal(23, Resource(summary, "sp").Current);
+        Assert.Contains("Renamed Frost Tip", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShellFacingContentUsesConcreteTypedEffects()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+
+        var echo = Assert.IsType<DamageEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("echo_strike")).Effects));
+        Assert.Equal(DamageElement.Physical, echo.Element);
+
+        var frost = Assert.IsType<DamageEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("frost_tip")).Effects));
+        Assert.Equal(DamageElement.Ice, frost.Element);
+
+        var ash = Assert.IsType<DamageEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("ash_spark")).Effects));
+        Assert.Equal(DamageElement.Fire, ash.Element);
+
+        var mend = Assert.IsType<RestoreResourceEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("mend")).Effects));
+        Assert.Equal(ContentId.Parse("hp"), mend.ResourceId);
+
+        var item = Assert.IsType<RestoreResourceEffectDefinition>(
+            Assert.Single(catalog.GetRequiredItem(Qualified("annex_tonic")).Usage!.Effects));
+        Assert.Equal(ContentId.Parse("hp"), item.ResourceId);
+
+        var clear = Assert.IsType<RemoveAilmentEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("clear_toxin")).Effects));
+        Assert.Equal([Qualified("sample_poison")], clear.AilmentIds);
+
+        Assert.IsType<ModifyStatStageEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("focus_call")).Effects));
+        Assert.IsType<ModifyStatStageEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("soften_guard")).Effects));
+
+        var toxin = Assert.IsType<ApplyAilmentEffectDefinition>(
+            Assert.Single(catalog.GetRequiredSkill(Qualified("toxin_touch")).Effects));
+        Assert.Equal(Qualified("sample_poison"), toxin.AilmentId);
+
+        var passive = Assert.Single(catalog.GetRequiredSkill(Qualified("steady_breath")).Triggers);
+        var passiveRestore = Assert.IsType<RestoreResourceEffectDefinition>(Assert.Single(passive.Effects));
+        Assert.Equal(ContentId.Parse("hp"), passiveRestore.ResourceId);
+
+        IEnumerable<EffectDefinition> allShellFacingEffects = catalog.Skills.Values
+            .SelectMany(skill => skill.Effects.Concat(skill.Triggers.SelectMany(trigger => trigger.Effects)))
+            .Concat(catalog.Items.Values.SelectMany(item => item.Usage?.Effects ?? []));
+        Assert.DoesNotContain(allShellFacingEffects, effect => effect is CustomEffectDefinition);
+    }
+
+    [Fact]
+    public void CleanTrainingAnnexShell_DoesNotReferenceLegacyEffectInputs()
+    {
+        string root = Path.Combine(FindRepositoryRoot(), "Host", "CleanConsole", "TrainingAnnex");
+        string[] banned =
+        [
+            "SkillData",
+            "ItemData",
+            "JRPGPrototype.Data.Database",
+            "Database.",
+            "Database[",
+            "Database.LoadData",
+            "ActionProcessor",
+            "EffectText",
+            "effect string"
+        ];
+
+        foreach (string file in Directory.EnumerateFiles(root, "*.cs"))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string term in banned)
+            {
+                Assert.DoesNotContain(term, text, StringComparison.Ordinal);
+            }
+        }
     }
 
     [Fact]
@@ -550,6 +690,35 @@ public sealed class CleanTrainingAnnexPlayHostTests
     private static RuntimeResourceSnapshot Resource(CleanTrainingAnnexPlaySummary summary, string resourceId) =>
         Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse(resourceId));
 
+    private static bool IsDamage(
+        TrainingAnnexTypedEffectEvidence effect,
+        ContentId sourceActionId,
+        DamageElement element) =>
+        effect.SourceActionId == sourceActionId &&
+        effect.EffectIndex == 0 &&
+        effect.EffectKind == "damage" &&
+        effect.DamageElement == element;
+
+    private static bool IsResourceEffect(
+        TrainingAnnexTypedEffectEvidence effect,
+        ContentId sourceActionId,
+        string effectKind,
+        string resourceId) =>
+        effect.SourceActionId == sourceActionId &&
+        effect.EffectIndex == 0 &&
+        effect.EffectKind == effectKind &&
+        effect.ResourceId == ContentId.Parse(resourceId);
+
+    private static async Task<GameDataCatalog> LoadTrainingAnnexCatalogAsync()
+    {
+        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        var source = new RecordingContentPackTextSource(root);
+        ContentPackTextBundle bundle = await source.ReadAsync(TrainingAnnexHostSupport.CreateContentRequest());
+        CatalogLoadResult load = new SkillSystemCatalogLoader().Load(
+            new SkillSystemCatalogLoadRequest(TrainingAnnexHostSupport.BuildRegistrations(), [bundle]));
+        return load.RequireCatalog();
+    }
+
     private static CleanTrainingAnnexPlayHost CreateHost(ScriptedGameIO io, StringWriter output) =>
         new(
             new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons")),
@@ -592,6 +761,64 @@ public sealed class CleanTrainingAnnexPlayHostTests
             }
 
             return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class DisplayTextMutatingContentPackTextSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                documents.Add(new ContentDocumentText(path, path, MutateDisplayText(text)));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private static string MutateDisplayText(string json)
+        {
+            JsonNode node = JsonNode.Parse(json) ??
+                throw new InvalidOperationException("Training Annex JSON could not be parsed.");
+            Mutate(node);
+            return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static void Mutate(JsonNode node)
+        {
+            if (node is JsonObject obj)
+            {
+                foreach (string key in obj.Select(pair => pair.Key).ToArray())
+                {
+                    if (key == "displayName" && obj[key]?.GetValue<string>() is string displayName)
+                    {
+                        obj[key] = $"Renamed {displayName}";
+                    }
+                    else if (key == "description" && obj[key]?.GetValue<string>() is not null)
+                    {
+                        obj[key] = "Renamed description.";
+                    }
+                    else if (obj[key] is JsonNode child)
+                    {
+                        Mutate(child);
+                    }
+                }
+            }
+            else if (node is JsonArray array)
+            {
+                foreach (JsonNode? child in array)
+                {
+                    if (child is not null)
+                    {
+                        Mutate(child);
+                    }
+                }
+            }
         }
     }
 
