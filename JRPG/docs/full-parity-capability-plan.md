@@ -441,6 +441,17 @@ Clean console proof:
 
 - host trigger starts `ashling_drill` or another original clean encounter.
 
+Phase 1-09 result:
+
+- `CatalogEncounterPreparationService` accepts an explicit `RuntimeEncounterTriggerRequest`, resolves the selected catalog encounter/formation, and hydrates its members through `ICatalogBattleActorFactory` in authored order.
+- The request carries a logical host trigger ID, qualified encounter ID, opponent team, local runtime-instance prefix, and optional explicit formation index. It contains no menu, scene, collision, floor, or Godot type.
+- Preparation returns immutable result collections containing ordered, battle-ready actors, diagnostics, and trigger/actor/prepared events. The actor states are intentionally mutable for the upcoming battle. Planning or actor-creation failure rejects the complete preparation result without exposing a partial encounter.
+- Traversal never calls encounter preparation. The Training Annex host prepares `ashling_drill` only when the player explicitly activates its host-owned Review Hall trigger.
+- The sample host consumes that trigger after successful preparation. Other hosts may respawn it, gate it behind progression, or call it repeatedly; trigger lifecycle is not a framework rule.
+- Random encounters remain opt-in. A developer may implement a host/ruleset policy that chooses when and which encounter request to submit; the framework performs no hidden random encounter roll.
+- The prepared actors are ready for a host-owned battle handoff. Interactive clean battle execution remains the later `battle_actions`/battle-loop capability rather than being smuggled into traversal.
+- This remains `parallel_partial`: original clean encounter preparation now exists, but the protected legacy encounter consumer and its hydration adapter are still active.
+
 ### 10. `field_items_and_skills`
 
 Current status: `parallel_partial`.
@@ -454,6 +465,17 @@ Full parity target:
 Clean console proof:
 
 - clean field item/skill works in the Training Annex loop.
+
+Phase 1-10 result:
+
+- The clean Training Annex host now exposes separate inventory, item-selection, field-skill-selection, and target-selection menus. These are console presentation over framework commands, not framework UI.
+- Annex Tonic and Mend execute through `BattleActionExecutor` in a typed `field` execution environment, reusing `ItemExecutor`, `SkillExecutor`, targeting, conditions, effects, and cost handling.
+- Host inventory is represented by `RuntimeInventorySnapshot`. A console adapter implements `IItemActionInventory` with `InventoryTransitionService` reservations; successful meaningful item execution commits one item, while rejection or execution failure rolls the reservation back.
+- Target selection completes before assessment, reservation, cost commitment, or effect mutation. Canceling target selection changes nothing.
+- Using Annex Tonic at full HP is rejected as `NoApplicableEffect` and consumes nothing. A successful use restores HP and consumes exactly one. Mend restores HP and commits its authored SP cost.
+- The console adapter synchronizes clean persistent actor resource snapshots with the action state before and after execution. Effect and consumption rules remain framework-owned.
+- No legacy `ItemData`, `SkillData`, effect strings, `ActionProcessor`, field parser, or `Database` participates in this clean path.
+- This remains `parallel_partial`: the original clean consumer exists, while protected ordinary-console field item/skill consumers still use compatibility paths.
 
 ### 11. `battle_actions`
 

@@ -20,6 +20,8 @@ A Godot host must provide these adapters around the existing framework contracts
 - Navigation input: translate doorway triggers, map selections, VN hotspots, or scripts into generic `RuntimeNavigationTransition` requests. Godot still owns movement and scene changes.
 - Dungeon traversal input: translate room doors, corridor exits, scene portals, barriers, checkpoints, and boss interactions into `RuntimeDungeonTraversalTransition` or state-change requests. Node IDs are framework identities, not Godot scene paths.
 - Encounter triggers: own placed enemy scenes, patrols, touch/attack triggers, spawn points, and scripted battle triggers; when an encounter actually begins, pass the chosen encounter or formation into the framework for battle resolution.
+- Encounter preparation: translate the chosen scene interaction into `RuntimeEncounterTriggerRequest`. `CatalogEncounterPreparationService` returns ordered runtime actors; keep Node handles, positions, despawn/respawn rules, and trigger-consumed state in Godot.
+- Field actions: present inventory, skills, and targets through Godot UI, then submit typed item/skill commands with `EffectExecutionEnvironment("field")`. Keep inventory state in the host, implement reservation through `IItemActionInventory`, and commit consumption only when framework execution requests it.
 - Persistence: store framework snapshots inside the Godot save format alongside host-owned scene, asset, and UI state.
 
 The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`, `res://`, animation players, save-file layout, or Godot signals.

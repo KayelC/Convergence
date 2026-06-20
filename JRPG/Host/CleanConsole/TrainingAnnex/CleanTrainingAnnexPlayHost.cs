@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Services;
@@ -24,6 +25,13 @@ internal enum CleanTrainingAnnexPlayCommand
     ReturnToAnnexEntrance,
     InspectTrainingBarrier,
     UnlockReviewCheckpoint,
+    ActivateAshlingEncounterTrigger,
+    OpenInventory,
+    OpenFieldSkills,
+    UseAnnexTonic,
+    UseMend,
+    TargetPlayer,
+    Back,
     Exit
 }
 
@@ -53,6 +61,12 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<ContentId> VisitedDungeonNodeIds,
     IReadOnlyList<ContentId> UnlockedCheckpointIds,
     bool BarrierRejected,
+    bool EncounterTriggerConsumed,
+    IReadOnlyList<ContentId> PreparedEncounterIds,
+    IReadOnlyList<ContentId> PreparedEncounterActorInstanceIds,
+    RuntimeInventorySnapshot Inventory,
+    IReadOnlyList<ContentId> ExecutedFieldActionIds,
+    int CancelledFieldTargetSelections,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
 
 internal sealed class CleanTrainingAnnexPlayHost
@@ -141,6 +155,16 @@ internal sealed class CleanTrainingAnnexPlayHost
             .RequireService();
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var encounterPreparation = new CatalogEncounterPreparationService(
+            new CatalogEncounterStartPlanner(catalog),
+            new CatalogBattleActorFactory(
+                catalog,
+                catalog,
+                new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy)));
+        var fieldActions = new TrainingAnnexFieldActionAdapter(
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog));
+        var inventory = new TrainingAnnexItemActionInventory(new RuntimeInventorySnapshot(
+            [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
         var locationHistory = new List<ContentId> { field.Navigation.CurrentLocationId };
@@ -153,6 +177,11 @@ internal sealed class CleanTrainingAnnexPlayHost
         bool snapshotValidated = false;
         int snapshotDiagnosticCount = -1;
         bool barrierRejected = false;
+        bool encounterTriggerConsumed = false;
+        var preparedEncounterIds = new List<ContentId>();
+        var preparedEncounterActorInstanceIds = new List<ContentId>();
+        var executedFieldActionIds = new List<ContentId>();
+        int cancelledFieldTargetSelections = 0;
 
         await _eventSink.PublishAsync("Clean Training Annex session booted.", cancellationToken)
             .ConfigureAwait(false);
@@ -172,7 +201,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         {
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> result =
                 await _commandSource.ReadAsync(
-                    CreateMenu(field),
+                    CreateMenu(field, encounterTriggerConsumed),
                     cancellationToken).ConfigureAwait(false);
             if (!result.IsSelected || result.Command == CleanTrainingAnnexPlayCommand.Exit)
             {
@@ -190,6 +219,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                     field,
                     locationHistory,
                     barrierRejected,
+                    encounterTriggerConsumed,
+                    preparedEncounterIds,
+                    preparedEncounterActorInstanceIds,
+                    inventory.Snapshot,
+                    executedFieldActionIds,
+                    cancelledFieldTargetSelections,
                     commands);
                 await _eventSink.PublishAsync("Clean Training Annex session exited.", cancellationToken)
                     .ConfigureAwait(false);
@@ -258,6 +293,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                             field,
                             locationHistory,
                             barrierRejected,
+                            encounterTriggerConsumed,
+                            preparedEncounterIds,
+                            preparedEncounterActorInstanceIds,
+                            inventory.Snapshot,
+                            executedFieldActionIds,
+                            cancelledFieldTargetSelections,
                             commands);
                         return 5;
                     }
@@ -351,6 +392,108 @@ internal sealed class CleanTrainingAnnexPlayHost
                             TrainingAnnexHostSupport.ReviewCheckpoint),
                         cancellationToken).ConfigureAwait(false);
                     break;
+                case CleanTrainingAnnexPlayCommand.ActivateAshlingEncounterTrigger:
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    EncounterPreparationResult preparation = encounterPreparation.Prepare(
+                        TrainingAnnexHostSupport.ReviewHallAshlingTrigger);
+                    encounterTriggerConsumed = await PresentEncounterPreparationAsync(
+                        preparation,
+                        cancellationToken).ConfigureAwait(false);
+                    if (preparation.IsSuccess)
+                    {
+                        PreparedEncounter prepared = preparation.RequirePreparedEncounter();
+                        preparedEncounterIds.Add(prepared.Encounter.Id);
+                        preparedEncounterActorInstanceIds.AddRange(
+                            prepared.Actors.Select(actor => actor.State.InstanceId));
+                    }
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.OpenInventory:
+                {
+                    await PrintInventoryAsync(catalog, inventory.Snapshot, cancellationToken)
+                        .ConfigureAwait(false);
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> itemSelection =
+                        await _commandSource.ReadAsync(
+                            CreateItemMenu(catalog, inventory.Snapshot),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!itemSelection.IsSelected || itemSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        break;
+                    }
+
+                    commands.Add(itemSelection.Command);
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
+                        await _commandSource.ReadAsync(
+                            CreateTargetMenu(roster.Player),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        cancelledFieldTargetSelections++;
+                        await _eventSink.PublishAsync(
+                            "Field item target selection canceled; inventory and actor state are unchanged.",
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+
+                    commands.Add(targetSelection.Command);
+                    ItemDefinition item = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
+                    TrainingAnnexFieldActionResult action = await fieldActions.UseItemAsync(
+                        roster.Player,
+                        item,
+                        inventory,
+                        cancellationToken).ConfigureAwait(false);
+                    await PresentFieldActionAsync(action, item.DisplayName, inventory.Snapshot, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (action.Applied)
+                    {
+                        executedFieldActionIds.Add(action.ActionId);
+                    }
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.OpenFieldSkills:
+                {
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> skillSelection =
+                        await _commandSource.ReadAsync(
+                            CreateFieldSkillMenu(catalog, roster.Player),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!skillSelection.IsSelected || skillSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        break;
+                    }
+
+                    commands.Add(skillSelection.Command);
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
+                        await _commandSource.ReadAsync(
+                            CreateTargetMenu(roster.Player),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        cancelledFieldTargetSelections++;
+                        await _eventSink.PublishAsync(
+                            "Field skill target selection canceled; resources are unchanged.",
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+
+                    commands.Add(targetSelection.Command);
+                    SkillDefinition skill = catalog.GetRequiredSkill(TrainingAnnexHostSupport.Mend);
+                    TrainingAnnexFieldActionResult action = await fieldActions.UseSkillAsync(
+                        roster.Player,
+                        skill,
+                        cancellationToken).ConfigureAwait(false);
+                    await PresentFieldActionAsync(action, skill.DisplayName, inventory.Snapshot, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (action.Applied)
+                    {
+                        executedFieldActionIds.Add(action.ActionId);
+                    }
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
@@ -358,7 +501,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu(
-        RuntimeFieldSnapshot field)
+        RuntimeFieldSnapshot field,
+        bool encounterTriggerConsumed)
     {
         var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>
         {
@@ -409,6 +553,13 @@ internal sealed class CleanTrainingAnnexPlayHost
             options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                 CleanTrainingAnnexPlayCommand.InspectTrainingBarrier,
                 "Inspect Sealed Wing"));
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.ActivateAshlingEncounterTrigger,
+                encounterTriggerConsumed
+                    ? "Ashling Encounter Trigger (Resolved)"
+                    : "Activate Ashling Encounter Trigger",
+                !encounterTriggerConsumed,
+                "Host-owned trigger for the ashling_drill catalog encounter."));
         }
         else if (field.DungeonTraversal?.CurrentNodeId == TrainingAnnexHostSupport.ReviewAlcove)
         {
@@ -425,6 +576,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenInventory,
+            "Inventory"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenFieldSkills,
+            "Field Skills"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.Exit,
             "Exit"));
 
@@ -434,6 +591,106 @@ internal sealed class CleanTrainingAnnexPlayHost
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             $"Training Annex Clean Session - {locationLabel}",
             options);
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateItemMenu(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory)
+    {
+        ItemDefinition tonic = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
+        int quantity = inventory.GetQuantity(tonic.Id);
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            "Clean Inventory",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.UseAnnexTonic,
+                    $"{tonic.DisplayName} x{quantity}",
+                    quantity > 0,
+                    tonic.Description),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateFieldSkillMenu(
+        GameDataCatalog catalog,
+        TrainingAnnexRuntimeActor player)
+    {
+        SkillDefinition mend = catalog.GetRequiredSkill(TrainingAnnexHostSupport.Mend);
+        int level = player.RuntimeState.ToSnapshot().Progression.Level;
+        bool known = player.Actor.SkillLoadout.Any(skill => skill.Id == mend.Id) ||
+            player.Actor.Entity.SkillUnlocks.Any(unlock =>
+                unlock.SkillId == mend.Id && unlock.Level <= level);
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            "Clean Field Skills",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.UseMend,
+                    mend.DisplayName,
+                    known,
+                    mend.Description),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateTargetMenu(
+        TrainingAnnexRuntimeActor player) =>
+        new(
+            "Select Field Target",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.TargetPlayer,
+                    player.Actor.Entity.DisplayName),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
+
+    private ValueTask PrintInventoryAsync(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory,
+        CancellationToken cancellationToken)
+    {
+        ItemDefinition tonic = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
+        return _eventSink.PublishAsync(
+            $"Inventory: {tonic.DisplayName} x{inventory.GetQuantity(tonic.Id)}.",
+            cancellationToken);
+    }
+
+    private async ValueTask PresentFieldActionAsync(
+        TrainingAnnexFieldActionResult action,
+        string displayName,
+        RuntimeInventorySnapshot inventory,
+        CancellationToken cancellationToken)
+    {
+        if (!action.Assessment.CanExecute)
+        {
+            string diagnostics = string.Join(
+                "; ",
+                action.Assessment.Diagnostics.Select(diagnostic => diagnostic.Message));
+            await _eventSink.PublishAsync(
+                $"Field action rejected: {displayName}; {diagnostics}",
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (!action.Applied || action.Execution is null)
+        {
+            string diagnostics = string.Join(
+                "; ",
+                action.Execution?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []);
+            await _eventSink.PublishAsync(
+                $"Field action failed: {displayName}; {diagnostics}",
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await _eventSink.PublishAsync(
+            $"Field action executed: {displayName}; HP {action.HpBefore.Current}->{action.HpAfter.Current}/{action.HpAfter.Maximum}; SP {action.SpBefore.Current}->{action.SpAfter.Current}/{action.SpAfter.Maximum}; inventory {TrainingAnnexHostSupport.AnnexTonic} x{inventory.GetQuantity(TrainingAnnexHostSupport.AnnexTonic)}.",
+            cancellationToken).ConfigureAwait(false);
     }
 
     private ValueTask PrintSessionAsync(
@@ -513,6 +770,36 @@ internal sealed class CleanTrainingAnnexPlayHost
             ? events[0]
             : throw new InvalidOperationException("Expected one dungeon state event.");
 
+    private async ValueTask<bool> PresentEncounterPreparationAsync(
+        EncounterPreparationResult preparation,
+        CancellationToken cancellationToken)
+    {
+        if (!preparation.IsSuccess)
+        {
+            foreach (EncounterPreparationDiagnostic diagnostic in preparation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"Encounter preparation rejected [{diagnostic.Code}]: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return false;
+        }
+
+        PreparedEncounter prepared = preparation.RequirePreparedEncounter();
+        string actors = string.Join(
+            ", ",
+            prepared.Actors.Select(actor =>
+                $"{actor.Entity.DisplayName} ({actor.State.InstanceId})"));
+        await _eventSink.PublishAsync(
+            $"Encounter trigger {prepared.TriggerId} prepared {prepared.Encounter.DisplayName}: {actors}.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            "Encounter actors are ready for a host-owned battle handoff; traversal did not start this encounter.",
+            cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     private static string FieldLabel(ContentId locationId) =>
         locationId == TrainingAnnexHostSupport.StagingArea
             ? "Staging Area"
@@ -584,6 +871,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeFieldSnapshot field,
         IReadOnlyList<ContentId> locationHistory,
         bool barrierRejected,
+        bool encounterTriggerConsumed,
+        IReadOnlyList<ContentId> preparedEncounterIds,
+        IReadOnlyList<ContentId> preparedEncounterActorInstanceIds,
+        RuntimeInventorySnapshot inventory,
+        IReadOnlyList<ContentId> executedFieldActionIds,
+        int cancelledFieldTargetSelections,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
@@ -614,6 +907,12 @@ internal sealed class CleanTrainingAnnexPlayHost
             field.DungeonTraversal?.VisitedNodeIds ?? [],
             field.DungeonTraversal?.UnlockedCheckpointIds ?? [],
             barrierRejected,
+            encounterTriggerConsumed,
+            preparedEncounterIds.ToArray(),
+            preparedEncounterActorInstanceIds.ToArray(),
+            inventory,
+            executedFieldActionIds.ToArray(),
+            cancelledFieldTargetSelections,
             commands.ToArray());
     }
 

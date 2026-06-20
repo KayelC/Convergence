@@ -66,6 +66,8 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId ReviewAlcove = Qualified("review_alcove");
     public static readonly ContentId SealedWing = Qualified("sealed_wing");
     public static readonly ContentId ReviewCheckpoint = Qualified("review_checkpoint");
+    public static readonly ContentId AnnexTonic = Qualified("annex_tonic");
+    public static readonly ContentId Mend = Qualified("mend");
     public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
         ContentId.Parse("enter_training_annex"),
         StagingArea,
@@ -99,6 +101,11 @@ internal static class TrainingAnnexHostSupport
         TrainingAnnexDungeon,
         ReviewHall,
         SealedWing);
+    public static readonly RuntimeEncounterTriggerRequest ReviewHallAshlingTrigger = new(
+        ContentId.Parse("review_hall_ashling_trigger"),
+        Qualified("ashling_drill"),
+        EnemyTeam,
+        ContentId.Parse("review_hall_trigger"));
 
     public static ContentPackTextRequest CreateContentRequest() =>
         new(

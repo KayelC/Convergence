@@ -14,7 +14,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
-        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 7, 0, 7);
+        var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 7, 0, 9);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -99,6 +99,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal([Qualified("training_annex_entrance")], summary.VisitedDungeonNodeIds);
         Assert.Empty(summary.UnlockedCheckpointIds);
         Assert.False(summary.BarrierRejected);
+        Assert.False(summary.EncounterTriggerConsumed);
+        Assert.Empty(summary.PreparedEncounterIds);
+        Assert.Empty(summary.PreparedEncounterActorInstanceIds);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Empty(summary.ExecutedFieldActionIds);
+        Assert.Equal(0, summary.CancelledFieldTargetSelections);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.InspectSession,
@@ -128,6 +134,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Apply Victory EXP",
                 "Validate Startup Snapshot",
                 "Enter Training Annex",
+                "Inventory",
+                "Field Skills",
                 "Exit"
             ],
                 menu.Options);
@@ -145,6 +153,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Validate Startup Snapshot",
                 "Enter Review Hall",
                 "Return to Staging Area",
+                "Inventory",
+                "Field Skills",
                 "Exit"
             ],
                 menu.Options);
@@ -184,7 +194,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_TraversesGenericDungeonNodesWithoutStartingEncounter()
     {
-        var io = new ScriptedGameIO().QueueMenu(6, 6, 8, 6, 6, 7, 7, 7, 7);
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 8, 6, 6, 7, 7, 7, 9);
         using var output = new StringWriter();
         var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
         var host = new CleanTrainingAnnexPlayHost(
@@ -203,6 +213,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.VisitedDungeonNodeIds);
         Assert.Equal([Qualified("review_checkpoint")], summary.UnlockedCheckpointIds);
         Assert.True(summary.BarrierRejected);
+        Assert.False(summary.EncounterTriggerConsumed);
+        Assert.Empty(summary.PreparedEncounterIds);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
@@ -223,6 +235,145 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Dungeon traversal: Review Hall -> Review Alcove.", text, StringComparison.Ordinal);
         Assert.Contains("Dungeon checkpoint unlocked: convergence.training_annex_slice:review_checkpoint.", text, StringComparison.Ordinal);
         Assert.DoesNotContain("EncounterRequested", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_HostTriggerExplicitlyPreparesCatalogEncounterActors()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 7, 7, 9);
+        using var output = new StringWriter();
+        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var host = new CleanTrainingAnnexPlayHost(
+            source,
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.EncounterTriggerConsumed);
+        Assert.Equal([Qualified("ashling_drill")], summary.PreparedEncounterIds);
+        Assert.Equal(
+            [ContentId.Parse("review_hall_trigger_ashling_1")],
+            summary.PreparedEncounterActorInstanceIds);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.EnterTrainingAnnex,
+                CleanTrainingAnnexPlayCommand.EnterReviewHall,
+                CleanTrainingAnnexPlayCommand.ActivateAshlingEncounterTrigger,
+                CleanTrainingAnnexPlayCommand.ReturnToAnnexEntrance,
+                CleanTrainingAnnexPlayCommand.ReturnToStagingArea,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Encounter trigger review_hall_ashling_trigger prepared Ashling Drill: Ashling (review_hall_trigger_ashling_1).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Encounter actors are ready for a host-owned battle handoff; traversal did not start this encounter.",
+            text,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Battle started", text, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal("Activate Ashling Encounter Trigger", io.Menus[2].Options[9]);
+        Assert.Equal("Ashling Encounter Trigger (Resolved)", io.Menus[3].Options[9]);
+        Assert.True(io.Menus[3].DisabledOptions[9]);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FieldItemUsesSharedExecutorAndCommitsOneReservedItem()
+    {
+        var io = new ScriptedGameIO().QueueMenu(3, 7, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal([Qualified("annex_tonic")], summary.ExecutedFieldActionIds);
+        Assert.Equal(0, summary.CancelledFieldTargetSelections);
+        Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.RecalculateResources,
+                CleanTrainingAnnexPlayCommand.OpenInventory,
+                CleanTrainingAnnexPlayCommand.UseAnnexTonic,
+                CleanTrainingAnnexPlayCommand.TargetPlayer,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+        Assert.Contains(
+            "Field action executed: Annex Tonic; HP 70->80/80; SP 28->28/28; inventory convergence.training_annex_slice:annex_tonic x0.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NoEffectItemDoesNotConsumeInventory()
+    {
+        var io = new ScriptedGameIO().QueueMenu(7, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Empty(summary.ExecutedFieldActionIds);
+        Assert.Contains("would have no effect", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_TargetCancellationDoesNotMutateOrReserveInventory()
+    {
+        var io = new ScriptedGameIO().QueueMenu(7, 0, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Empty(summary.ExecutedFieldActionIds);
+        Assert.Equal(1, summary.CancelledFieldTargetSelections);
+        Assert.Contains(
+            "Field item target selection canceled; inventory and actor state are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FieldSkillUsesTypedEffectsAndCommitsSkillCost()
+    {
+        var io = new ScriptedGameIO().QueueMenu(4, 3, 8, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal([Qualified("mend")], summary.ExecutedFieldActionIds);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
+        Assert.Equal(26, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
+        Assert.Contains(
+            "Field action executed: Mend; HP 70->80/80; SP 28->26/28; inventory convergence.training_annex_slice:annex_tonic x1.",
+            output.ToString(),
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -252,6 +403,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static StatResolutionResult Resolved(CleanTrainingAnnexPlaySummary summary, string statId) =>
         Assert.Single(summary.PlayerResolvedStats, result => result.StatId == ContentId.Parse(statId));
+
+    private static CleanTrainingAnnexPlayHost CreateHost(ScriptedGameIO io, StringWriter output) =>
+        new(
+            new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons")),
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
 
     private static string FindRepositoryRoot()
     {

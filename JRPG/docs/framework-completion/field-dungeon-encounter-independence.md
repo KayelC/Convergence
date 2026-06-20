@@ -4,7 +4,7 @@
 
 The framework has an optional generic outer-navigation service plus a separate optional generic dungeon-traversal service. Both use arbitrary `ContentId` identities and injected access policy; neither assumes a city/dungeon split, floor topology, menu, scene model, or spatial controls. Dungeon traversal owns logical current/visited nodes, checkpoints, and defeated-boss flags, but never selects or starts an encounter. The older floor-oriented state machine remains an optional compatibility/sample module. The Training Annex demo separately proves a tiny noninteractive authored-floor traversal and encounter resolution.
 
-It also has a small host-owned encounter-start planner. A host can select an encounter by ID from a placed scene entity, patrol, interaction, script, or optional floor rule; receive catalog actor-creation requests; hydrate those actors through the existing catalog battle actor factory; and then run battle resolution.
+It also has a host-requested encounter preparation boundary. A host can select an encounter and formation by ID from a placed scene entity, patrol, interaction, script, optional random policy, or optional floor rule. `CatalogEncounterPreparationService` validates the catalog formation and hydrates ordered runtime actors through the existing catalog battle actor factory. The host then decides whether and how to begin battle.
 
 The ordinary console field loop still owns most player-facing flow, menu presentation, legacy dungeon content, encounter hydration, and battle handoff.
 
@@ -42,20 +42,29 @@ Generic field/dungeon examples:
 
 ## Decisions Still Needed
 
-- What is the minimum host-triggered encounter contract? For example: scene instance ID, encounter ID, formation override, battlefield context, and post-battle resolution.
 - Is the framework sample dungeon floor-based, node-based, room-based, or host-defined for the next demo layer?
-- Should random encounters remain a framework sample policy, a host policy, or both behind an optional adapter?
 - What is the minimum interactive traversal loop?
-- Should field actions and dungeon actions share one command surface?
+
+Resolved in Phase 1-09:
+
+- the minimum preparation request is a logical trigger ID, qualified encounter ID, opponent team ID, local actor-instance prefix, and optional explicit formation index;
+- trigger position, scene handles, respawn state, battlefield presentation, and post-battle scene mutation remain host-owned;
+- random encounter timing/selection is optional host or ruleset policy that submits the same explicit request, never mandatory traversal behavior.
+
+Resolved in Phase 1-10:
+
+- field items and field skills use the shared typed action facade with a `field` execution environment;
+- dungeon traversal remains a separate optional command surface, so a developer may expose either module without the other;
+- hosts own inventory and presentation, while framework reservations, assessment, targeting, effects, costs, and consumption decisions remain reusable.
 
 ## Recommended Next Step
 
 Keep the current floor-triggered Training Annex flow as a deterministic test/demo path.
 
-The first host-owned encounter-start proof now exists through `CatalogEncounterStartPlanner` and the Training Annex demo. The next production-facing dungeon pass should make that model more scene-like:
+The host-owned encounter-start proof now exists through `CatalogEncounterPreparationService` and the interactive Training Annex host. The next battle-facing pass should consume its prepared actors:
 
 1. represent a placed enemy or encounter trigger outside the framework as host scene state;
-2. ask the framework to resolve a chosen encounter by ID when that host trigger fires;
+2. ask the framework to prepare a chosen encounter by ID when that host trigger fires;
 3. return battle outcome, rewards, defeat/escape state, and any persistence updates without the framework knowing about Godot nodes or scene files;
 4. eventually replace the text demo's floor-ascent encounter shortcut with an interactive clean host loop.
 

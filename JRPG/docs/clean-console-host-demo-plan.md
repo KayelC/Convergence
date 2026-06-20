@@ -291,6 +291,17 @@ Implemented as the second part of Iteration 3:
 - Traversal results do not select or start encounters. Encounter entities and host-owned encounter triggers remain Phase 1-09.
 - The existing floor-oriented `RuntimeFieldDungeonService` remains available as an optional compatibility/sample service, not the required model for framework users.
 
+### Phase 1-09 Host-Owned Encounter Trigger Extension
+
+Implemented as the third part of Iteration 3:
+
+- Added `CatalogEncounterPreparationService`, which combines catalog encounter planning with ordered runtime actor hydration.
+- Added a generic `RuntimeEncounterTriggerRequest` carrying only logical IDs and an optional explicit formation index.
+- Added a Review Hall Ashling trigger to the clean Training Annex host. Moving into the hall does not activate it; the player must select the trigger explicitly.
+- Successful preparation yields an Ashling actor with a trigger-specific runtime ID and disables that sample trigger. The host still owns whether triggers are one-shot, repeatable, respawned, scripted, or randomly selected.
+- The console prints the prepared formation but does not begin an interactive battle yet. Battle command/execution integration remains the later battle-loop capability.
+- Godot may invoke the same service from an enemy body, patrol, `Area3D`, interaction prompt, or script without passing a Node or scene path into the framework.
+
 ## Iteration 3: Field And Dungeon Interaction Loop
 
 ### Goal
@@ -310,6 +321,7 @@ Let the player move through a tiny Training Annex flow without relying on automa
   - exit.
 - Use generic navigation and dungeon traversal services for legal transitions.
 - Use the encounter-start planner when the host chooses a specific encounter trigger.
+- Hydrate the selected formation through `CatalogEncounterPreparationService` only after that explicit host request.
 
 ### Framework Use
 
@@ -318,6 +330,7 @@ Let the player move through a tiny Training Annex flow without relying on automa
 - `RuntimeDungeonTraversalSnapshot`;
 - optional `RuntimeFieldDungeonService` for authored floor samples;
 - `CatalogEncounterStartPlanner`;
+- `CatalogEncounterPreparationService`;
 - host-owned scene/trigger IDs.
 
 ### Non-Goals
@@ -333,8 +346,11 @@ Let the player move through a tiny Training Annex flow without relying on automa
 - encounter trigger creates the expected actor creation requests;
 - optional fixed battle floors preserve authored encounter IDs when the floor module is used;
 - host-owned trigger selection does not force every floor ascent into battle.
+- explicit trigger preparation creates ordered catalog actors with trigger-specific runtime IDs.
 
 ## Iteration 4: Clean Item And Field Action Loop
+
+Status: Phase 1-10 implemented.
 
 ### Goal
 
@@ -354,6 +370,15 @@ Let the player use clean items or field actions through the framework.
 - `BattleActionExecutor` where appropriate;
 - resource-management services;
 - runtime actor state.
+
+### Phase 1-10 Result
+
+- The interactive Training Annex host now has clean Inventory and Field Skills surfaces with explicit item/skill and target selection.
+- Annex Tonic and Mend execute through the shared `BattleActionExecutor` with `EffectExecutionEnvironment("field")`.
+- The host owns a `RuntimeInventorySnapshot`; its `IItemActionInventory` adapter uses framework reservation/commit/rollback transitions.
+- Target cancellation occurs before action assessment or reservation.
+- Full-HP tonic use is rejected without consumption, successful tonic use consumes one, and Mend commits its SP cost.
+- Runtime resource state is synchronized around execution so progression/save snapshots remain the persistent clean state.
 
 ### Non-Goals
 
