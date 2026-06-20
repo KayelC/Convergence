@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Host;
 using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -287,6 +288,148 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.EncounterTriggerConsumed);
+        Assert.True(summary.PreparedBattleStarted);
+        Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
+        Assert.Equal(ContentId.Parse("player_team"), summary.PreparedBattleWinningTeamId);
+        Assert.Equal(5, summary.ExecutedBattleActionIds.Count(id => id == Qualified("frost_tip")));
+        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(64, Resource(summary, "hp").Current);
+        Assert.Equal(23, Resource(summary, "sp").Current);
+        Assert.True(summary.PreparedBattleEventCount > 0);
+
+        string text = output.ToString();
+        Assert.Contains("Clean battle started: Ashling Drill.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle action executed: Echo Adept used Frost Tip.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle action executed: Ashling used Ash Spark.", text, StringComparison.Ordinal);
+        Assert.Contains("Clean battle ended: Victory; winner player_team.", text, StringComparison.Ordinal);
+        Assert.Equal("Start Prepared Battle", io.Menus[3].Options[10]);
+        Assert.Equal("Prepared Battle (Resolved)", io.Menus[^1].Options[10]);
+        Assert.True(io.Menus[^1].DisabledOptions[10]);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BasicAttackUsesPracticeBlade()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.PreparedBattleStarted);
+        Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
+        Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
+        Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Equal(1, summary.CancelledBattleCommandSelections);
+        Assert.Equal(72, Resource(summary, "hp").Current);
+        Assert.Contains(
+            "Battle action executed: Echo Adept used Practice Blade.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleItemCommitsOneReservedTonicAfterMeaningfulSuccess()
+    {
+        var io = new ScriptedGameIO().QueueMenu(3, 6, 6, 9, 10, 2, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.PreparedBattleStarted);
+        Assert.Contains(Qualified("annex_tonic"), summary.ExecutedBattleActionIds);
+        Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(72, Resource(summary, "hp").Current);
+        Assert.Contains(
+            "Battle action executed: Echo Adept used Annex Tonic.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleGuardPassAndAnalyzeUseFrameworkCommands()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            5, 0,
+            3,
+            4, 4,
+            -1,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.PreparedBattleStarted);
+        Assert.Contains(ContentId.Parse("analyze"), summary.ExecutedBattleActionIds);
+        Assert.Contains(ContentId.Parse("guard"), summary.ExecutedBattleActionIds);
+        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
+        Assert.Equal(3, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
+        Assert.Equal(56, Resource(summary, "hp").Current);
+
+        string text = output.ToString();
+        Assert.Contains("Battle action executed: Echo Adept used Analyze.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle action executed: Echo Adept used Guard.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle action executed: Echo Adept used Pass.", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleBackSelectionDoesNotExecuteSkillOrConsumeItem()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 4, 4, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.PreparedBattleStarted);
+        Assert.DoesNotContain(Qualified("frost_tip"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(Qualified("echo_strike"), summary.ExecutedBattleActionIds);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(2, summary.CancelledBattleCommandSelections);
+        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
+        Assert.Contains(
+            "Battle action executed: Echo Adept used Pass.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_FieldItemUsesSharedExecutorAndCommitsOneReservedItem()
     {
         var io = new ScriptedGameIO().QueueMenu(3, 7, 0, 0, 9);
@@ -403,6 +546,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static StatResolutionResult Resolved(CleanTrainingAnnexPlaySummary summary, string statId) =>
         Assert.Single(summary.PlayerResolvedStats, result => result.StatId == ContentId.Parse(statId));
+
+    private static RuntimeResourceSnapshot Resource(CleanTrainingAnnexPlaySummary summary, string resourceId) =>
+        Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse(resourceId));
 
     private static CleanTrainingAnnexPlayHost CreateHost(ScriptedGameIO io, StringWriter output) =>
         new(

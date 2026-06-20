@@ -26,11 +26,21 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectTrainingBarrier,
     UnlockReviewCheckpoint,
     ActivateAshlingEncounterTrigger,
+    StartPreparedBattle,
     OpenInventory,
     OpenFieldSkills,
+    BattleAttack,
+    OpenBattleSkills,
+    OpenBattleItems,
+    BattleGuard,
+    BattlePass,
+    BattleAnalyze,
     UseAnnexTonic,
+    UseFrostTip,
+    UseEchoStrike,
     UseMend,
     TargetPlayer,
+    TargetEnemy,
     Back,
     Exit
 }
@@ -64,6 +74,12 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     bool EncounterTriggerConsumed,
     IReadOnlyList<ContentId> PreparedEncounterIds,
     IReadOnlyList<ContentId> PreparedEncounterActorInstanceIds,
+    bool PreparedBattleStarted,
+    BattleEncounterOutcome? PreparedBattleOutcome,
+    ContentId? PreparedBattleWinningTeamId,
+    IReadOnlyList<ContentId> ExecutedBattleActionIds,
+    int CancelledBattleCommandSelections,
+    int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
     IReadOnlyList<ContentId> ExecutedFieldActionIds,
     int CancelledFieldTargetSelections,
@@ -178,8 +194,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         int snapshotDiagnosticCount = -1;
         bool barrierRejected = false;
         bool encounterTriggerConsumed = false;
+        PreparedEncounter? preparedEncounter = null;
+        bool preparedBattleStarted = false;
+        BattleEncounterOutcome? preparedBattleOutcome = null;
+        ContentId? preparedBattleWinningTeamId = null;
         var preparedEncounterIds = new List<ContentId>();
         var preparedEncounterActorInstanceIds = new List<ContentId>();
+        var executedBattleActionIds = new List<ContentId>();
+        int cancelledBattleCommandSelections = 0;
+        int preparedBattleEventCount = 0;
         var executedFieldActionIds = new List<ContentId>();
         int cancelledFieldTargetSelections = 0;
 
@@ -201,7 +224,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         {
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> result =
                 await _commandSource.ReadAsync(
-                    CreateMenu(field, encounterTriggerConsumed),
+                    CreateMenu(field, encounterTriggerConsumed, preparedBattleStarted),
                     cancellationToken).ConfigureAwait(false);
             if (!result.IsSelected || result.Command == CleanTrainingAnnexPlayCommand.Exit)
             {
@@ -222,6 +245,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                     encounterTriggerConsumed,
                     preparedEncounterIds,
                     preparedEncounterActorInstanceIds,
+                    preparedBattleStarted,
+                    preparedBattleOutcome,
+                    preparedBattleWinningTeamId,
+                    executedBattleActionIds,
+                    cancelledBattleCommandSelections,
+                    preparedBattleEventCount,
                     inventory.Snapshot,
                     executedFieldActionIds,
                     cancelledFieldTargetSelections,
@@ -296,6 +325,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                             encounterTriggerConsumed,
                             preparedEncounterIds,
                             preparedEncounterActorInstanceIds,
+                            preparedBattleStarted,
+                            preparedBattleOutcome,
+                            preparedBattleWinningTeamId,
+                            executedBattleActionIds,
+                            cancelledBattleCommandSelections,
+                            preparedBattleEventCount,
                             inventory.Snapshot,
                             executedFieldActionIds,
                             cancelledFieldTargetSelections,
@@ -402,11 +437,48 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     if (preparation.IsSuccess)
                     {
-                        PreparedEncounter prepared = preparation.RequirePreparedEncounter();
-                        preparedEncounterIds.Add(prepared.Encounter.Id);
+                        preparedEncounter = preparation.RequirePreparedEncounter();
+                        preparedEncounterIds.Add(preparedEncounter.Encounter.Id);
                         preparedEncounterActorInstanceIds.AddRange(
-                            prepared.Actors.Select(actor => actor.State.InstanceId));
+                            preparedEncounter.Actors.Select(actor => actor.State.InstanceId));
                     }
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.StartPreparedBattle:
+                {
+                    if (preparedEncounter is null)
+                    {
+                        await _eventSink.PublishAsync(
+                            "No prepared encounter is available for battle.",
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+
+                    if (preparedBattleStarted)
+                    {
+                        await _eventSink.PublishAsync(
+                            "Prepared battle has already been resolved.",
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+
+                    var battle = await new TrainingAnnexBattleActionAdapter(
+                            catalog,
+                            _eventSink,
+                            _commandSource,
+                            TrainingAnnexHostSupport.CreateExecutionServices(catalog))
+                        .RunAsync(
+                            roster.Player,
+                            preparedEncounter,
+                            inventory,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    preparedBattleStarted = battle.Started;
+                    preparedBattleOutcome = battle.Outcome;
+                    preparedBattleWinningTeamId = battle.WinningTeamId;
+                    executedBattleActionIds.AddRange(battle.ExecutedActionIds);
+                    cancelledBattleCommandSelections += battle.CancelledSelections;
+                    preparedBattleEventCount += battle.EventCount;
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.OpenInventory:
@@ -502,7 +574,8 @@ internal sealed class CleanTrainingAnnexPlayHost
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateMenu(
         RuntimeFieldSnapshot field,
-        bool encounterTriggerConsumed)
+        bool encounterTriggerConsumed,
+        bool preparedBattleStarted)
     {
         var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>
         {
@@ -560,6 +633,16 @@ internal sealed class CleanTrainingAnnexPlayHost
                     : "Activate Ashling Encounter Trigger",
                 !encounterTriggerConsumed,
                 "Host-owned trigger for the ashling_drill catalog encounter."));
+            if (encounterTriggerConsumed)
+            {
+                options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.StartPreparedBattle,
+                    preparedBattleStarted
+                        ? "Prepared Battle (Resolved)"
+                        : "Start Prepared Battle",
+                    !preparedBattleStarted,
+                    "Runs the prepared encounter through clean battle actions."));
+            }
         }
         else if (field.DungeonTraversal?.CurrentNodeId == TrainingAnnexHostSupport.ReviewAlcove)
         {
@@ -874,6 +957,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         bool encounterTriggerConsumed,
         IReadOnlyList<ContentId> preparedEncounterIds,
         IReadOnlyList<ContentId> preparedEncounterActorInstanceIds,
+        bool preparedBattleStarted,
+        BattleEncounterOutcome? preparedBattleOutcome,
+        ContentId? preparedBattleWinningTeamId,
+        IReadOnlyList<ContentId> executedBattleActionIds,
+        int cancelledBattleCommandSelections,
+        int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
         IReadOnlyList<ContentId> executedFieldActionIds,
         int cancelledFieldTargetSelections,
@@ -910,6 +999,12 @@ internal sealed class CleanTrainingAnnexPlayHost
             encounterTriggerConsumed,
             preparedEncounterIds.ToArray(),
             preparedEncounterActorInstanceIds.ToArray(),
+            preparedBattleStarted,
+            preparedBattleOutcome,
+            preparedBattleWinningTeamId,
+            executedBattleActionIds.ToArray(),
+            cancelledBattleCommandSelections,
+            preparedBattleEventCount,
             inventory,
             executedFieldActionIds.ToArray(),
             cancelledFieldTargetSelections,

@@ -449,7 +449,7 @@ Phase 1-09 result:
 - Traversal never calls encounter preparation. The Training Annex host prepares `ashling_drill` only when the player explicitly activates its host-owned Review Hall trigger.
 - The sample host consumes that trigger after successful preparation. Other hosts may respawn it, gate it behind progression, or call it repeatedly; trigger lifecycle is not a framework rule.
 - Random encounters remain opt-in. A developer may implement a host/ruleset policy that chooses when and which encounter request to submit; the framework performs no hidden random encounter roll.
-- The prepared actors are ready for a host-owned battle handoff. Interactive clean battle execution remains the later `battle_actions`/battle-loop capability rather than being smuggled into traversal.
+- The prepared actors are ready for a host-owned battle handoff. Phase 2-11 now consumes that handoff through explicit clean battle actions; traversal still does not start battle by itself.
 - This remains `parallel_partial`: original clean encounter preparation now exists, but the protected legacy encounter consumer and its hydration adapter are still active.
 
 ### 10. `field_items_and_skills`
@@ -490,6 +490,16 @@ Full parity target:
 Clean console proof:
 
 - clean battle command menu uses `BattleActionExecutor` or framework encounter command ports.
+
+Phase 2-11 result:
+
+- The clean Training Annex play host now exposes `Start Prepared Battle` after the host-owned Ashling encounter trigger succeeds. The trigger still only prepares actors; battle starts only through the explicit command.
+- The manual battle slice runs through `BattleEncounterRunner` with a host-side turn handler over `BattleActionExecutor`. Player commands produce concrete framework commands for Practice Blade basic attack, battle skills, Annex Tonic, guard, pass, and analyze.
+- Practice Blade supplies the clean `BasicAttackBattleActionCommand` weapon profile. Frost Tip, Echo Strike, and level-unlocked Mend are selected from the actor's clean loadout/unlocks, filtered by `battle` availability.
+- Annex Tonic reuses the reservation-backed `IItemActionInventory` path. Meaningful battle item execution commits one item; target/menu cancellation performs no assessment, reservation, turn consumption, or mutation.
+- Demo enemies use deterministic authored-skill selection for this pass: first executable battle skill, otherwise pass. No legacy `ActionProcessor`, `SkillData`, `ItemData`, effect string, or `Database` participates.
+- Persistent clean actor resources are synchronized before and after the battle so the session summary/save-facing state reflects battle damage, costs, healing, and defeat state.
+- This remains `parallel_partial`: richer Press Turn presentation, ailment/passive lifecycle, battle knowledge persistence, AI/tactics policy, escape, swaps, and rewards remain later Phase 2 passes.
 
 ### 12. `typed_effects`
 

@@ -396,6 +396,8 @@ Let the player use clean items or field actions through the framework.
 
 ## Iteration 5: Manual Clean Battle Loop
 
+Status: Phase 2-11 implemented.
+
 ### Goal
 
 Replace the Training Annex automated battle with a player-driven clean battle loop.
@@ -421,8 +423,17 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - `SkillExecutor`;
 - `ItemExecutor`;
 - `PressTurnEngine`;
-- battle lifecycle services;
-- battle knowledge stores.
+- no-op battle lifecycle port for this first slice.
+
+### Phase 2-11 Result
+
+- `--clean-training-annex-play` now offers `Start Prepared Battle` after the Review Hall Ashling encounter trigger prepares actors.
+- Battle command menus are host presentation only. They select clean framework commands for Practice Blade attack, battle skills, Annex Tonic, guard, pass, and analyze.
+- The battle itself runs through `BattleEncounterRunner`; selected actions execute through `BattleActionExecutor`, `SkillExecutor`, and `ItemExecutor`.
+- Enemy behavior is deliberately deterministic for this slice: first executable authored battle skill, otherwise pass.
+- Annex Tonic uses the same reservation-backed host inventory path as field items, and Back/cancel paths perform no mutation.
+- The host synchronizes clean runtime actor resources before and after battle so the session summary reflects battle damage, skill costs, item healing, and inventory consumption.
+- This is not the final battle loop: richer Press Turn display, lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and rewards remain later iterations.
 
 ### Non-Goals
 
