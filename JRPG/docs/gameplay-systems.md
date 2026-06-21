@@ -146,6 +146,8 @@ Track Q1 adds the production-content audit ledger before any real content conver
 
 Phase 2-13 makes the Training Annex clean battle a direct catalog-ruleset consumer. Damage, accuracy, criticals, affinities, ailment and instant-death checks, chance rolls, and power amounts share one bound `ProductionCombatRuleset`; victory calculates a reward preview but Phase 2-19 still owns applying rewards.
 
+Phase 2-14 makes the same clean battle a catalog-bound Press Turn consumer. `standard_press_turn` must bind successfully before the Training Annex play session starts, and the bound factory is supplied to `BattleEncounterRunner`. The clean host records/presents icon counts before player commands and after committed actions, including Weak/Critical chaining, Miss/Null penalties, Repel/Absorb phase termination, Pass conversion, and normal consumption. This remains host presentation over framework rules, not a legacy `BattleConductor` dependency.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

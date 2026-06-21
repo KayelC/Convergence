@@ -499,7 +499,7 @@ Phase 2-11 result:
 - Annex Tonic reuses the reservation-backed `IItemActionInventory` path. Meaningful battle item execution commits one item; target/menu cancellation performs no assessment, reservation, turn consumption, or mutation.
 - Demo enemies use deterministic authored-skill selection for this pass: first executable battle skill, otherwise pass. No legacy `ActionProcessor`, `SkillData`, `ItemData`, effect string, or `Database` participates.
 - Persistent clean actor resources are synchronized before and after the battle so the session summary/save-facing state reflects battle damage, costs, healing, and defeat state.
-- This remains `parallel_partial`: richer Press Turn presentation, ailment/passive lifecycle, battle knowledge persistence, AI/tactics policy, escape, swaps, and rewards remain later Phase 2 passes.
+- This remains `parallel_partial`: ailment/passive lifecycle, battle knowledge persistence, AI/tactics policy, escape, swaps, and rewards remain later Phase 2 passes.
 
 ### 12. `typed_effects`
 
@@ -521,7 +521,7 @@ Phase 2-12 result:
 - Practice Blade, Frost Tip, Echo Strike, Ash Spark, Annex Tonic, and Analyze are proven through this evidence. Guard and Pass remain effectless framework commands.
 - Tests mutate Training Annex display names/descriptions through a test-only content source and prove battle outcome, resources, inventory, action IDs, and typed-effect evidence remain unchanged.
 - The shell-facing Training Annex content is checked as concrete typed definitions, including damage, restore, cure, buff/debuff, ailment, and passive trigger effects.
-- This remains `parallel_partial`: the demo still needs richer Press Turn UX, lifecycle/passive integration, battle knowledge persistence, AI/tactics policy, escape/swaps, and reward application before full battle parity.
+- This remains `parallel_partial`: the demo still needs lifecycle/passive integration, battle knowledge persistence, AI/tactics policy, escape/swaps, and reward application before full battle parity.
 
 ### 13. `combat_math`
 
@@ -558,6 +558,15 @@ Full parity target:
 Clean console proof:
 
 - player commands visibly affect Press Turn state in the clean battle loop.
+
+Phase 2-14 result:
+
+- `--clean-training-annex-play` now binds `standard_press_turn` from the Training Annex ruleset document before the session starts. Missing, wrong-category, or unsupported Press Turn rulesets stop startup with binding diagnostics instead of falling back to an implicit engine.
+- The prepared Ashling battle passes the bound `PressTurnEngine` factory into `BattleEncounterRunner`; the host no longer assumes a hard-coded turn engine for that clean path.
+- The manual battle summary records host-side Press Turn evidence for each committed action: actor, action, before icons, turn-consumption kind, resolved Press Turn outcome, and after icons.
+- The clean console output presents current and updated icon counts while suppressing unrelated framework structural events.
+- This remains `parallel_partial`: clean original-content battles now expose and consume Press Turns, but lifecycle/passives, battle knowledge persistence, richer AI/tactics, escape/swaps, and reward application remain later Phase 2 passes.
+- Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786` with no skips; framework build remained `0` warnings; solution build remained at `98` legacy warnings; clean battle, field, save, and Training Annex demos passed; `Data/Jsons` was unchanged.
 
 ### 15. `ailment_lifecycle`
 

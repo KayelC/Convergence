@@ -433,7 +433,7 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - Enemy behavior is deliberately deterministic for this slice: first executable authored battle skill, otherwise pass.
 - Annex Tonic uses the same reservation-backed host inventory path as field items, and Back/cancel paths perform no mutation.
 - The host synchronizes clean runtime actor resources before and after battle so the session summary reflects battle damage, skill costs, item healing, and inventory consumption.
-- This is not the final battle loop: richer Press Turn display, lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and rewards remain later iterations.
+- This is not the final battle loop: lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and reward application remain later iterations.
 
 ### Phase 2-12 Result
 
@@ -449,6 +449,15 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - Combat-resolution evidence exposes authored power/accuracy/critical mode and resolved hit, critical, affinity, value, effect, and Press Turn outcomes for host presentation and tests.
 - Victory calculates but does not apply a reward preview. Reward mutation remains Iteration 6 / Phase 2-19.
 - Invalid combat or reward binding stops the session without legacy or demo fallback. No Training Annex JSON changed.
+
+### Phase 2-14 Result
+
+- The manual Training Annex battle now binds `standard_press_turn` from the catalog before startup and passes the bound factory into `BattleEncounterRunner`.
+- Missing, wrong-category, or unsupported Press Turn rulesets stop the session with `[press_turn:...]` diagnostics instead of silently constructing a default engine.
+- The battle summary records Press Turn evidence for committed actions: actor, action, before icons, consumption kind, resolved outcome, and after icons.
+- The clean console host prints current icons before player command selection and updated icons after committed turns. This is presentation only; framework `PressTurnEngine` and `BattleEncounterRunner` still own the rules.
+- No Training Annex JSON changed.
+- Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
 ### Non-Goals
 

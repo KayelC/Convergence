@@ -102,6 +102,8 @@ Track T is the build-forward lane after that archive gate. It keeps active legac
 
 Phase 2-13 removes the temporary combat-policy boundary from the original Training Annex consumer. The host binds `standard_damage` once, shares that `ProductionCombatRuleset` across typed effect execution, and binds `standard_reward` to the same policy for a non-mutating reward preview. Ruleset failures stop startup instead of selecting demo or legacy fallbacks.
 
+Phase 2-14 removes the last implicit Press Turn assumption from the original Training Annex battle consumer. The play host binds `standard_press_turn` from catalog ruleset content, injects the resulting `PressTurnEngine` factory into `BattleEncounterRunner`, and records/presents before-and-after icon state for committed clean actions. The framework still owns turn economy; the host only displays the state.
+
 ## Layers And Patterns
 
 ### Conductors

@@ -1,6 +1,7 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
@@ -14,6 +15,7 @@ internal sealed record TrainingAnnexManualBattleSummary(
     IReadOnlyList<ContentId> ExecutedActionIds,
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence,
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
+    IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
     BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
@@ -41,6 +43,16 @@ internal sealed record TrainingAnnexCombatResolutionEvidence(
     EffectExecutionOutcome Outcome,
     PressTurnOutcome PressTurnOutcome);
 
+internal sealed record TrainingAnnexPressTurnEvidence(
+    ContentId ActorId,
+    ContentId? ActionId,
+    int BeforeFullIcons,
+    int BeforeBlinkingIcons,
+    ActionTurnConsumptionKind TurnConsumptionKind,
+    PressTurnOutcome? PressTurnOutcome,
+    int AfterFullIcons,
+    int AfterBlinkingIcons);
+
 internal sealed class TrainingAnnexBattleActionAdapter
 {
     private static readonly ContentId GuardAction = ContentId.Parse("guard");
@@ -52,19 +64,22 @@ internal sealed class TrainingAnnexBattleActionAdapter
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
     private readonly BattleExecutionServices _services;
     private readonly IBattleRewardService _rewardService;
+    private readonly Func<PressTurnEngine> _pressTurnFactory;
 
     public TrainingAnnexBattleActionAdapter(
         GameDataCatalog catalog,
         IHostEventSink<string> events,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
         BattleExecutionServices services,
-        IBattleRewardService rewardService)
+        IBattleRewardService rewardService,
+        Func<PressTurnEngine> pressTurnFactory)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _events = events ?? throw new ArgumentNullException(nameof(events));
         _commands = commands ?? throw new ArgumentNullException(nameof(commands));
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
+        _pressTurnFactory = pressTurnFactory ?? throw new ArgumentNullException(nameof(pressTurnFactory));
     }
 
     public async ValueTask<TrainingAnnexManualBattleSummary> RunAsync(
@@ -83,6 +98,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         BattleEncounterParticipant[] participants = actors
             .Select(actor => new BattleEncounterParticipant(actor.State, actor.Entity.DisplayName))
             .ToArray();
+        var pressTurns = new TrainingAnnexPressTurnTracker();
 
         var turnHandler = new TrainingAnnexManualBattleTurnHandler(
             _catalog,
@@ -91,12 +107,15 @@ internal sealed class TrainingAnnexBattleActionAdapter
             new BattleActionExecutor(new SkillExecutor(_services), new ItemExecutor(_services), _services),
             actors,
             player,
-            inventory);
+            inventory,
+            pressTurns);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
             NoopBattleEncounterLifecyclePort.Instance,
             turnHandler,
-            new LastTeamStandingCompletionPolicy());
+            new LastTeamStandingCompletionPolicy(),
+            events: new TrainingAnnexPressTurnEventSink(_events, pressTurns),
+            pressTurnFactory: _pressTurnFactory);
 
         await _events.PublishAsync(
             $"Clean battle started: {prepared.Encounter.DisplayName}.",
@@ -131,6 +150,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             turnHandler.ExecutedActionIds,
             turnHandler.ExecutedEffectEvidence,
             turnHandler.CombatResolutionEvidence,
+            pressTurns.Evidence,
             rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
@@ -192,6 +212,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
+        private readonly TrainingAnnexPressTurnTracker _pressTurns;
         private readonly List<ContentId> _executedActionIds = [];
         private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
         private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
@@ -203,7 +224,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IBattleActionExecutor actions,
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
-            TrainingAnnexItemActionInventory inventory)
+            TrainingAnnexItemActionInventory inventory,
+            TrainingAnnexPressTurnTracker pressTurns)
         {
             _catalog = catalog;
             _events = events;
@@ -212,6 +234,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _actors = actors;
             _player = player;
             _inventory = inventory;
+            _pressTurns = pressTurns;
         }
 
         public IReadOnlyList<ContentId> ExecutedActionIds => _executedActionIds;
@@ -245,6 +268,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         {
             while (true)
             {
+                await PublishCurrentPressTurnAsync(request, cancellationToken).ConfigureAwait(false);
                 HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
                     await _commands.ReadAsync(CreateBattleCommandMenu(actor), cancellationToken)
                         .ConfigureAwait(false);
@@ -498,6 +522,12 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _executedActionIds.Add(actionId);
             _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
             _combatResolutionEvidence.AddRange(BuildCombatResolutionEvidence(command, actionId, execution));
+            _pressTurns.RecordBefore(
+                actor.State.InstanceId,
+                actionId,
+                request.FullPressTurnIcons,
+                request.BlinkingPressTurnIcons,
+                execution.TurnConsumption);
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
                 cancellationToken).ConfigureAwait(false);
@@ -521,6 +551,13 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     request.Encounter.BattleKindId,
                     request.Encounter.MoonPhaseId),
                 command is ItemBattleActionCommand ? _inventory : null);
+
+        private ValueTask PublishCurrentPressTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken) =>
+            _events.PublishAsync(
+                $"Press Turn before command: {request.FullPressTurnIcons} full, {request.BlinkingPressTurnIcons} blinking.",
+                cancellationToken);
 
         private IReadOnlyList<SkillDefinition> KnownBattleSkills(CatalogBattleActor actor)
         {
@@ -869,5 +906,85 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
             return events;
         }
+    }
+}
+
+internal sealed class TrainingAnnexPressTurnTracker
+{
+    private readonly List<TrainingAnnexPressTurnEvidence> _evidence = [];
+
+    public IReadOnlyList<TrainingAnnexPressTurnEvidence> Evidence => _evidence.ToArray();
+
+    public void RecordBefore(
+        ContentId actorId,
+        ContentId actionId,
+        int beforeFullIcons,
+        int beforeBlinkingIcons,
+        ActionTurnConsumption turnConsumption)
+    {
+        _evidence.Add(new TrainingAnnexPressTurnEvidence(
+            actorId,
+            actionId,
+            beforeFullIcons,
+            beforeBlinkingIcons,
+            turnConsumption.Kind,
+            turnConsumption.PressTurn?.Outcome,
+            AfterFullIcons: -1,
+            AfterBlinkingIcons: -1));
+    }
+
+    public bool TryRecordAfter(ContentId? actorId, int afterFullIcons, int afterBlinkingIcons)
+    {
+        int index = _evidence.FindIndex(record =>
+            record.AfterFullIcons < 0 &&
+            (actorId is null || record.ActorId == actorId));
+        if (index < 0)
+        {
+            return false;
+        }
+
+        _evidence[index] = _evidence[index] with
+        {
+            AfterFullIcons = afterFullIcons,
+            AfterBlinkingIcons = afterBlinkingIcons
+        };
+        return true;
+    }
+}
+
+internal sealed class TrainingAnnexPressTurnEventSink(
+    IHostEventSink<string> events,
+    TrainingAnnexPressTurnTracker tracker) : IBattleEncounterEventSink
+{
+    public async ValueTask PublishAsync(
+        BattleEncounterEvent battleEvent,
+        CancellationToken cancellationToken = default)
+    {
+        if (battleEvent.Kind != BattleEncounterEventKind.PressTurnChanged ||
+            !TryParsePressTurnCounts(battleEvent.Message, out int fullIcons, out int blinkingIcons))
+        {
+            return;
+        }
+
+        tracker.TryRecordAfter(battleEvent.ActorId, fullIcons, blinkingIcons);
+        await events.PublishAsync(
+            $"Press Turn updated: {fullIcons} full, {blinkingIcons} blinking.",
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool TryParsePressTurnCounts(string message, out int fullIcons, out int blinkingIcons)
+    {
+        fullIcons = 0;
+        blinkingIcons = 0;
+        const string prefix = "Press Turn: ";
+        if (!message.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string[] parts = message[prefix.Length..].TrimEnd('.').Split(", ");
+        return parts.Length == 2 &&
+               int.TryParse(parts[0].Replace(" full", "", StringComparison.Ordinal), out fullIcons) &&
+               int.TryParse(parts[1].Replace(" blinking", "", StringComparison.Ordinal), out blinkingIcons);
     }
 }

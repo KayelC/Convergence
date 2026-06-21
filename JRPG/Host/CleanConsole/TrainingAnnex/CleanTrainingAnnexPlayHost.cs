@@ -3,6 +3,7 @@ using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
@@ -81,6 +82,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<ContentId> ExecutedBattleActionIds,
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedBattleEffectEvidence,
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
+    IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
     BattleRewardResult? PreparedBattleRewardPreview,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
@@ -184,6 +186,18 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         IBattleRewardService rewardService = rewardBinding.RequireService();
+        RulesetBindingResult<Func<PressTurnEngine>> pressTurnBinding =
+            rulesetResolver.BindPressTurnFactory(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_press_turn"));
+        if (!pressTurnBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("press_turn", pressTurnBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        Func<PressTurnEngine> pressTurnFactory = pressTurnBinding.RequireService();
         BattleExecutionServices executionServices =
             TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
@@ -239,6 +253,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var executedBattleActionIds = new List<ContentId>();
         var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
         var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
+        var pressTurnEvidence = new List<TrainingAnnexPressTurnEvidence>();
         BattleRewardResult? preparedBattleRewardPreview = null;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
@@ -290,6 +305,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleActionIds,
                     executedBattleEffectEvidence,
                     combatResolutionEvidence,
+                    pressTurnEvidence,
                     preparedBattleRewardPreview,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
@@ -373,6 +389,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             executedBattleActionIds,
                             executedBattleEffectEvidence,
                             combatResolutionEvidence,
+                            pressTurnEvidence,
                             preparedBattleRewardPreview,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
@@ -512,7 +529,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             _eventSink,
                             _commandSource,
                             executionServices,
-                            rewardService)
+                            rewardService,
+                            pressTurnFactory)
                         .RunAsync(
                             roster.Player,
                             preparedEncounter,
@@ -525,6 +543,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleActionIds.AddRange(battle.ExecutedActionIds);
                     executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
                     combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
+                    pressTurnEvidence.AddRange(battle.PressTurnEvidence);
                     preparedBattleRewardPreview = battle.RewardPreview;
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
@@ -1012,6 +1031,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<ContentId> executedBattleActionIds,
         IReadOnlyList<TrainingAnnexTypedEffectEvidence> executedBattleEffectEvidence,
         IReadOnlyList<TrainingAnnexCombatResolutionEvidence> combatResolutionEvidence,
+        IReadOnlyList<TrainingAnnexPressTurnEvidence> pressTurnEvidence,
         BattleRewardResult? preparedBattleRewardPreview,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
@@ -1057,6 +1077,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             executedBattleActionIds.ToArray(),
             executedBattleEffectEvidence.ToArray(),
             combatResolutionEvidence.ToArray(),
+            pressTurnEvidence.ToArray(),
             preparedBattleRewardPreview,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
