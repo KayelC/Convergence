@@ -148,6 +148,8 @@ Phase 2-13 makes the Training Annex clean battle a direct catalog-ruleset consum
 
 Phase 2-14 makes the same clean battle a catalog-bound Press Turn consumer. `standard_press_turn` must bind successfully before the Training Annex play session starts, and the bound factory is supplied to `BattleEncounterRunner`. The clean host records/presents icon counts before player commands and after committed actions, including Weak/Critical chaining, Miss/Null penalties, Repel/Absorb phase termination, Pass conversion, and normal consumption. This remains host presentation over framework rules, not a legacy `BattleConductor` dependency.
 
+Phase 2-15 connects that clean Training Annex battle to framework status lifecycle. The clean host now records ailment application and cure evidence from typed actions, lets `BattleStatusLifecycleService` process turn-start restrictions and turn-end ailment triggers/recovery/duration ticks, and presents lifecycle resource/status events. This pass intentionally suppresses passive trigger dispatch so passive lifecycle remains the next separate capability.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

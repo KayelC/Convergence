@@ -459,6 +459,14 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - No Training Annex JSON changed.
 - Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Phase 2-15 Implementation Note
+
+- The manual Training Annex battle now uses a host lifecycle port backed by framework `BattleStatusLifecycleService` instead of the previous no-op lifecycle port.
+- The battle summary records lifecycle evidence for action-applied ailments, action cures, poison turn-end resource ticks, stun/skip restrictions, natural recovery, removal, and expiry.
+- Toxin Touch and Clear Toxin are available in the clean battle skill shell when the actor knows them. The checked-in Training Annex JSON is unchanged; focused tests use in-memory content variants to prove the lifecycle paths.
+- Passive trigger dispatch is deliberately suppressed in this pass so passive lifecycle remains Iteration/Phase 2-16 work.
+- Verification: focused Training Annex tests passed `32/32`; lifecycle-focused tests passed `39/39`; full suite passed `789/789`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;

@@ -104,6 +104,8 @@ Phase 2-13 removes the temporary combat-policy boundary from the original Traini
 
 Phase 2-14 removes the last implicit Press Turn assumption from the original Training Annex battle consumer. The play host binds `standard_press_turn` from catalog ruleset content, injects the resulting `PressTurnEngine` factory into `BattleEncounterRunner`, and records/presents before-and-after icon state for committed clean actions. The framework still owns turn economy; the host only displays the state.
 
+Phase 2-15 starts consuming framework status lifecycle from the original Training Annex battle path. The play host now uses a `BattleStatusLifecycleService`-backed lifecycle port for ailment application evidence, turn-start restrictions, turn-end poison ticks, cure/removal, recovery, and expiry. Passive dispatch remains intentionally disabled in that port until the separate passive lifecycle phase.
+
 ## Layers And Patterns
 
 ### Conductors

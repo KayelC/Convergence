@@ -582,6 +582,14 @@ Clean console proof:
 
 - optional first ailment sample can apply, tick, recover, and display outcome.
 
+Phase 2-15 implementation note:
+
+- `--clean-training-annex-play` now routes the prepared manual battle through `BattleStatusLifecycleService` via a Training Annex lifecycle port instead of the previous no-op lifecycle port.
+- The clean battle summary records lifecycle evidence for action-owned ailment application/removal and framework turn-start/turn-end events such as poison resource ticks, skip restrictions, recovery, removal, and expiry.
+- Toxin Touch and Clear Toxin are recognized by the clean battle skill shell when an actor actually knows those skills. The default Training Annex JSON remains unchanged; focused tests use test-only in-memory content variants to exercise poison, stun, and cure paths.
+- Passive trigger dispatch is intentionally suppressed inside this 2-15 lifecycle port so Phase 2-16 remains the owner of passive lifecycle proof.
+- Verification: focused Training Annex tests passed `32/32`; lifecycle-focused tests passed `39/39`; full suite passed `789/789`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
+
 ### 16. `passive_lifecycle`
 
 Current status: `parallel_partial`.

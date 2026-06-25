@@ -514,7 +514,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
             effect.SourceActionId == ContentId.Parse("guard"));
         Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
             effect.SourceActionId == ContentId.Parse("pass"));
-        Assert.Equal(55, Resource(summary, "hp").Current);
+        Assert.Equal(48, Resource(summary, "hp").Current);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.GuardCleared);
 
         string text = output.ToString();
         Assert.Contains("Battle action executed: Echo Adept used Analyze.", text, StringComparison.Ordinal);
@@ -824,6 +827,156 @@ public sealed class CleanTrainingAnnexPlayHostTests
         io.AssertConsumed();
     }
 
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_PoisonAppliesAndTicksThroughFrameworkLifecycle()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexAilmentContentPackTextSource(
+                ContentRoot(),
+                playerBaseSkillIds:
+                [
+                    "frost_tip",
+                    "echo_strike",
+                    "steady_breath",
+                    "toxin_touch"
+                ]),
+            new SequenceRandomSource(
+                units: [0m, 0m, 0m, 0m],
+                ints: [99]));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(Qualified("toxin_touch"), summary.ExecutedBattleActionIds);
+        Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("toxin_touch") &&
+            effect.EffectKind == "apply_ailment" &&
+            effect.RelatedContentId == Qualified("sample_poison"));
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            IsLifecycle(
+                evidence,
+                ContentId.Parse("review_hall_trigger_ashling_1"),
+                BattleStatusLifecycleEventKind.AilmentApplied,
+                Qualified("sample_poison"),
+                Qualified("toxin_touch")));
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            evidence.RelatedContentId == ContentId.Parse("hp") &&
+            evidence.Value == -2m);
+        Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered);
+        Assert.Contains(
+            "Lifecycle resource changed: hp -2.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_StunSkipsEnemyTurnAndExpiresThroughFrameworkLifecycle()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexAilmentContentPackTextSource(
+                ContentRoot(),
+                playerBaseSkillIds:
+                [
+                    "frost_tip",
+                    "echo_strike",
+                    "steady_breath",
+                    "toxin_touch"
+                ],
+                toxinAilmentId: "sample_stun"),
+            new SequenceRandomSource(units: [0m], ints: [99]));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            IsLifecycle(
+                evidence,
+                ContentId.Parse("review_hall_trigger_ashling_1"),
+                BattleStatusLifecycleEventKind.AilmentApplied,
+                Qualified("sample_stun"),
+                Qualified("toxin_touch")));
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.TurnRestricted &&
+            evidence.RelatedContentId == Qualified("sample_stun") &&
+            evidence.TurnStartOutcome == BattleTurnStartOutcome.Skip);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.AilmentRemoved &&
+            evidence.RelatedContentId == Qualified("sample_stun"));
+        Assert.DoesNotContain(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        Assert.Contains("Ashling turn restriction: Skip.", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ClearToxinRemovesPoisonBeforeTurnEndTick()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            4, 4,
+            1, 2, 0,
+            -1,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexAilmentContentPackTextSource(
+                ContentRoot(),
+                playerBaseSkillIds:
+                [
+                    "frost_tip",
+                    "echo_strike",
+                    "steady_breath",
+                    "clear_toxin"
+                ],
+                ashlingBaseSkillIds: ["toxin_touch"]),
+            new SequenceRandomSource(units: [0m, 0m], ints: [99]));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            IsLifecycle(
+                evidence,
+                ContentId.Parse("echo_adept"),
+                BattleStatusLifecycleEventKind.AilmentApplied,
+                Qualified("sample_poison"),
+                Qualified("toxin_touch")));
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            IsLifecycle(
+                evidence,
+                ContentId.Parse("echo_adept"),
+                BattleStatusLifecycleEventKind.AilmentRemoved,
+                Qualified("sample_poison"),
+                Qualified("clear_toxin")));
+        Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            evidence.RelatedContentId == ContentId.Parse("hp") &&
+            evidence.Value < 0);
+        Assert.Equal(Resource(summary, "hp").Maximum, Resource(summary, "hp").Current);
+        Assert.Contains(Qualified("clear_toxin"), summary.ExecutedBattleActionIds);
+        io.AssertConsumed();
+    }
+
     [Theory]
     [InlineData("standard_damage", "standard_reward", "damage")]
     [InlineData("standard_reward", "standard_damage", "reward")]
@@ -1052,6 +1205,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
         effect.EffectKind == effectKind &&
         effect.ResourceId == ContentId.Parse(resourceId);
 
+    private static bool IsLifecycle(
+        TrainingAnnexLifecycleEvidence evidence,
+        ContentId actorId,
+        BattleStatusLifecycleEventKind kind,
+        ContentId relatedId,
+        ContentId sourceActionId) =>
+        evidence.ActorId == actorId &&
+        evidence.EventKind == kind &&
+        evidence.RelatedContentId == relatedId &&
+        evidence.SourceActionId == sourceActionId;
+
     private static async Task<GameDataCatalog> LoadTrainingAnnexCatalogAsync()
     {
         string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
@@ -1263,6 +1427,94 @@ public sealed class CleanTrainingAnnexPlayHostTests
         }
     }
 
+    private sealed class TrainingAnnexAilmentContentPackTextSource(
+        string root,
+        IReadOnlyList<string>? playerBaseSkillIds = null,
+        IReadOnlyList<string>? ashlingBaseSkillIds = null,
+        string? toxinAilmentId = null) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                if (path.EndsWith(".entities.json", StringComparison.Ordinal))
+                {
+                    text = MutateEntities(text);
+                }
+                else if (path.EndsWith(".skills.json", StringComparison.Ordinal) &&
+                         toxinAilmentId is not null)
+                {
+                    text = MutateToxinTouch(text);
+                }
+
+                documents.Add(new ContentDocumentText(path, path, text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private string MutateEntities(string json)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex entities JSON could not be parsed.");
+            JsonArray entities = rootNode["entities"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex entities document has no entities array.");
+            if (playerBaseSkillIds is not null)
+            {
+                ReplaceBaseSkills(entities, "echo_adept", playerBaseSkillIds);
+            }
+            if (ashlingBaseSkillIds is not null)
+            {
+                ReplaceBaseSkills(entities, "ashling", ashlingBaseSkillIds);
+            }
+
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private string MutateToxinTouch(string json)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skills JSON could not be parsed.");
+            JsonObject skill = rootNode["skills"]?.AsArray()
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == "toxin_touch") ??
+                throw new InvalidOperationException("Training Annex skill 'toxin_touch' was not found.");
+            JsonObject effect = skill["effects"]?.AsArray()[0]?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skill 'toxin_touch' has no first effect.");
+            effect["ailmentId"] = toxinAilmentId;
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static void ReplaceBaseSkills(
+            JsonArray entities,
+            string entityId,
+            IReadOnlyList<string> baseSkillIds)
+        {
+            JsonObject entity = entities
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == entityId) ??
+                throw new InvalidOperationException($"Training Annex entity '{entityId}' was not found.");
+            entity["baseSkillIds"] = new JsonArray(baseSkillIds.Select(skillId => JsonValue.Create(skillId)).ToArray());
+            if (entity["skillUnlocks"] is JsonArray unlocks)
+            {
+                var promoted = new HashSet<string>(baseSkillIds, StringComparer.Ordinal);
+                for (int index = unlocks.Count - 1; index >= 0; index--)
+                {
+                    if (unlocks[index]?.AsObject()["skillId"]?.GetValue<string>() is string skillId &&
+                        promoted.Contains(skillId))
+                    {
+                        unlocks.RemoveAt(index);
+                    }
+                }
+            }
+        }
+    }
+
     private sealed class RulesetPolicyMutatingContentPackTextSource(
         string root,
         string rulesetId,
@@ -1365,13 +1617,29 @@ public sealed class CleanTrainingAnnexPlayHostTests
         }
     }
 
-    private sealed class SequenceRandomSource(params decimal[] values) : IRandomSource
+    private sealed class SequenceRandomSource : IRandomSource
     {
-        private readonly Queue<decimal> _values = new(values);
+        private readonly Queue<decimal> _units;
+        private readonly Queue<int> _ints;
 
-        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+        public SequenceRandomSource(params decimal[] values)
+            : this(values, [])
+        {
+        }
 
-        public decimal NextUnitDecimal() => _values.Count == 0 ? 0m : _values.Dequeue();
+        public SequenceRandomSource(IEnumerable<decimal> units, IEnumerable<int> ints)
+        {
+            _units = new Queue<decimal>(units);
+            _ints = new Queue<int>(ints);
+        }
+
+        public int NextInt32(int minimumInclusive, int maximumExclusive)
+        {
+            int value = _ints.Count == 0 ? minimumInclusive : _ints.Dequeue();
+            return Math.Clamp(value, minimumInclusive, maximumExclusive - 1);
+        }
+
+        public decimal NextUnitDecimal() => _units.Count == 0 ? 0m : _units.Dequeue();
     }
 
     private sealed class FailingContentSource : IContentPackTextSource

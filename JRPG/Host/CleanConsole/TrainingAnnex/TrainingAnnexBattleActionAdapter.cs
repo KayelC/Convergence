@@ -16,6 +16,7 @@ internal sealed record TrainingAnnexManualBattleSummary(
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence,
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
     IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
+    IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
@@ -53,6 +54,15 @@ internal sealed record TrainingAnnexPressTurnEvidence(
     int AfterFullIcons,
     int AfterBlinkingIcons);
 
+internal sealed record TrainingAnnexLifecycleEvidence(
+    ContentId ActorId,
+    BattleStatusLifecycleEventKind EventKind,
+    ContentId? RelatedContentId = null,
+    decimal? Value = null,
+    string? Detail = null,
+    BattleTurnStartOutcome? TurnStartOutcome = null,
+    ContentId? SourceActionId = null);
+
 internal sealed class TrainingAnnexBattleActionAdapter
 {
     private static readonly ContentId GuardAction = ContentId.Parse("guard");
@@ -65,6 +75,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
     private readonly BattleExecutionServices _services;
     private readonly IBattleRewardService _rewardService;
     private readonly Func<PressTurnEngine> _pressTurnFactory;
+    private readonly IBattleStatusLifecycleService _statusLifecycle;
 
     public TrainingAnnexBattleActionAdapter(
         GameDataCatalog catalog,
@@ -72,7 +83,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
         BattleExecutionServices services,
         IBattleRewardService rewardService,
-        Func<PressTurnEngine> pressTurnFactory)
+        Func<PressTurnEngine> pressTurnFactory,
+        IBattleStatusLifecycleService statusLifecycle)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _events = events ?? throw new ArgumentNullException(nameof(events));
@@ -80,6 +92,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
         _pressTurnFactory = pressTurnFactory ?? throw new ArgumentNullException(nameof(pressTurnFactory));
+        _statusLifecycle = statusLifecycle ?? throw new ArgumentNullException(nameof(statusLifecycle));
     }
 
     public async ValueTask<TrainingAnnexManualBattleSummary> RunAsync(
@@ -99,6 +112,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             .Select(actor => new BattleEncounterParticipant(actor.State, actor.Entity.DisplayName))
             .ToArray();
         var pressTurns = new TrainingAnnexPressTurnTracker();
+        var lifecycle = new TrainingAnnexLifecycleTracker();
+        var lifecyclePort = new TrainingAnnexBattleLifecyclePort(_statusLifecycle, _services, lifecycle);
 
         var turnHandler = new TrainingAnnexManualBattleTurnHandler(
             _catalog,
@@ -108,10 +123,11 @@ internal sealed class TrainingAnnexBattleActionAdapter
             actors,
             player,
             inventory,
-            pressTurns);
+            pressTurns,
+            lifecycle);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
-            NoopBattleEncounterLifecyclePort.Instance,
+            lifecyclePort,
             turnHandler,
             new LastTeamStandingCompletionPolicy(),
             events: new TrainingAnnexPressTurnEventSink(_events, pressTurns),
@@ -151,6 +167,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             turnHandler.ExecutedEffectEvidence,
             turnHandler.CombatResolutionEvidence,
             pressTurns.Evidence,
+            lifecycle.Evidence,
             rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
@@ -213,6 +230,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
         private readonly TrainingAnnexPressTurnTracker _pressTurns;
+        private readonly TrainingAnnexLifecycleTracker _lifecycle;
         private readonly List<ContentId> _executedActionIds = [];
         private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
         private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
@@ -225,7 +243,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
             TrainingAnnexItemActionInventory inventory,
-            TrainingAnnexPressTurnTracker pressTurns)
+            TrainingAnnexPressTurnTracker pressTurns,
+            TrainingAnnexLifecycleTracker lifecycle)
         {
             _catalog = catalog;
             _events = events;
@@ -235,6 +254,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _player = player;
             _inventory = inventory;
             _pressTurns = pressTurns;
+            _lifecycle = lifecycle;
         }
 
         public IReadOnlyList<ContentId> ExecutedActionIds => _executedActionIds;
@@ -522,6 +542,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _executedActionIds.Add(actionId);
             _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
             _combatResolutionEvidence.AddRange(BuildCombatResolutionEvidence(command, actionId, execution));
+            _lifecycle.RecordActionEffects(actor.State.InstanceId, actionId, command, execution);
             _pressTurns.RecordBefore(
                 actor.State.InstanceId,
                 actionId,
@@ -587,6 +608,10 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.EchoStrike),
                 CleanTrainingAnnexPlayCommand.UseMend =>
                     skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.Mend),
+                CleanTrainingAnnexPlayCommand.UseToxinTouch =>
+                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.ToxinTouch),
+                CleanTrainingAnnexPlayCommand.UseClearToxin =>
+                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.ClearToxin),
                 _ => null
             };
 
@@ -659,7 +684,11 @@ internal sealed class TrainingAnnexBattleActionAdapter
                             ? CleanTrainingAnnexPlayCommand.UseEchoStrike
                             : skill.Id == TrainingAnnexHostSupport.Mend
                                 ? CleanTrainingAnnexPlayCommand.UseMend
-                                : CleanTrainingAnnexPlayCommand.Back;
+                                : skill.Id == TrainingAnnexHostSupport.ToxinTouch
+                                    ? CleanTrainingAnnexPlayCommand.UseToxinTouch
+                                    : skill.Id == TrainingAnnexHostSupport.ClearToxin
+                                        ? CleanTrainingAnnexPlayCommand.UseClearToxin
+                                        : CleanTrainingAnnexPlayCommand.Back;
                 options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     command,
                     skill.DisplayName,
@@ -909,6 +938,201 @@ internal sealed class TrainingAnnexBattleActionAdapter
     }
 }
 
+internal sealed class TrainingAnnexLifecycleTracker
+{
+    private readonly List<TrainingAnnexLifecycleEvidence> _evidence = [];
+
+    public IReadOnlyList<TrainingAnnexLifecycleEvidence> Evidence => _evidence.ToArray();
+
+    public void RecordStatusEvents(
+        IEnumerable<BattleStatusLifecycleEvent> events,
+        BattleTurnStartOutcome? turnStartOutcome = null)
+    {
+        foreach (BattleStatusLifecycleEvent statusEvent in events)
+        {
+            _evidence.Add(new TrainingAnnexLifecycleEvidence(
+                statusEvent.ActorId,
+                statusEvent.Kind,
+                statusEvent.RelatedId,
+                statusEvent.Value,
+                statusEvent.Detail,
+                turnStartOutcome));
+        }
+    }
+
+    public void RecordActionEffects(
+        ContentId actorId,
+        ContentId actionId,
+        BattleActionCommand command,
+        BattleActionExecutionResult execution)
+    {
+        foreach (EffectExecutionResult result in execution.Effects
+                     .Where(result => result.Outcome == EffectExecutionOutcome.Success))
+        {
+            EffectDefinition? definition = EffectDefinition(command, result.EffectIndex);
+            if (definition is ApplyAilmentEffectDefinition apply)
+            {
+                _evidence.Add(new TrainingAnnexLifecycleEvidence(
+                    result.TargetId ?? actorId,
+                    BattleStatusLifecycleEventKind.AilmentApplied,
+                    apply.AilmentId,
+                    SourceActionId: actionId));
+            }
+            else if (definition is RemoveAilmentEffectDefinition remove &&
+                     result.Value is decimal removedCount &&
+                     removedCount > 0)
+            {
+                _evidence.Add(new TrainingAnnexLifecycleEvidence(
+                    result.TargetId ?? actorId,
+                    BattleStatusLifecycleEventKind.AilmentRemoved,
+                    remove.AilmentIds.FirstOrDefault(),
+                    removedCount,
+                    result.Detail,
+                    SourceActionId: actionId));
+            }
+        }
+    }
+
+    private static EffectDefinition? EffectDefinition(BattleActionCommand command, int effectIndex) =>
+        command switch
+        {
+            SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count =>
+                skill.Skill.Effects[effectIndex],
+            ItemBattleActionCommand item when item.Item.Usage is not null &&
+                effectIndex >= 0 &&
+                effectIndex < item.Item.Usage.Effects.Count =>
+                item.Item.Usage.Effects[effectIndex],
+            _ => null
+        };
+}
+
+internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyclePort
+{
+    private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
+
+    private readonly IBattleStatusLifecycleService _lifecycle;
+    private readonly BattleExecutionServices _services;
+    private readonly TrainingAnnexLifecycleTracker _tracker;
+
+    public TrainingAnnexBattleLifecyclePort(
+        IBattleStatusLifecycleService lifecycle,
+        BattleExecutionServices services,
+        TrainingAnnexLifecycleTracker tracker)
+    {
+        _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
+        _services = WithoutPassiveTriggers(services ?? throw new ArgumentNullException(nameof(services)));
+        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+        BattleEncounterLifecycleRequest request,
+        CancellationToken cancellationToken = default) =>
+        new(Array.Empty<BattleEncounterEvent>());
+
+    public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+        BattleEncounterTurnLifecycleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        BattleTurnStartLifecycleResult result = _lifecycle.ProcessTurnStart(new(
+            request.Actor.State,
+            request.CanReturnToStock));
+        _tracker.RecordStatusEvents(result.Events, result.Outcome);
+        return new ValueTask<BattleTurnStartLifecycleResult>(result);
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+        BattleEncounterTurnLifecycleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        RuntimeActorState[] participants = request.Participants
+            .Select(participant => participant.State)
+            .ToArray();
+        BattleTurnEndLifecycleResult result = _lifecycle.ProcessTurnEnd(
+            new BattleTurnEndLifecycleRequest(
+                request.Actor.State,
+                participants,
+                request.Encounter.ContextId,
+                OwnerTurnEnd,
+                request.Encounter.BattleKindId,
+                request.Encounter.MoonPhaseId),
+            _services);
+        _tracker.RecordStatusEvents(result.Events);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+        BattleEncounterLifecycleRequest request,
+        ContentId teamId,
+        CancellationToken cancellationToken = default) =>
+        new(Array.Empty<BattleEncounterEvent>());
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+        BattleEncounterLifecycleRequest request,
+        BattleEncounterOutcome outcome,
+        CancellationToken cancellationToken = default) =>
+        new(Array.Empty<BattleEncounterEvent>());
+
+    private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
+        IEnumerable<BattleStatusLifecycleEvent> events) =>
+        Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
+            0,
+            statusEvent.Kind == BattleStatusLifecycleEventKind.ResourceChanged
+                ? BattleEncounterEventKind.ResourceChanged
+                : BattleEncounterEventKind.StatusChanged,
+            StatusMessage(statusEvent),
+            statusEvent.ActorId,
+            SourceId: statusEvent.RelatedId,
+            Value: statusEvent.Value)).ToArray());
+
+    private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>
+        statusEvent.Kind switch
+        {
+            BattleStatusLifecycleEventKind.ResourceChanged when statusEvent.RelatedId is ContentId resource =>
+                $"Lifecycle resource changed: {resource} {statusEvent.Value:+0.##;-0.##;0}.",
+            BattleStatusLifecycleEventKind.AilmentRecovered =>
+                $"Lifecycle ailment recovered: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.AilmentExpired =>
+                $"Lifecycle ailment expired: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.AilmentRemoved =>
+                $"Lifecycle ailment removed: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.StatusExpired =>
+                $"Lifecycle status expired: {statusEvent.RelatedId}.",
+            _ => $"Lifecycle status changed: {statusEvent.Kind}."
+        };
+
+    private static BattleExecutionServices WithoutPassiveTriggers(BattleExecutionServices services) =>
+        new(
+            services.Ailments,
+            services.DamagePolicy,
+            services.InstantDeathPolicy,
+            services.AilmentPolicy,
+            services.ChancePolicy,
+            services.PowerAmountPolicy,
+            services.RandomTargetPolicy,
+            services.FormulaHandlers,
+            services.EscapeRuleHandlers,
+            services.CustomConditionHandlers,
+            services.CustomEffectHandlers,
+            services.HpResourceId,
+            services.SpResourceId,
+            services.EffectExecutors,
+            services.RuleModifiers,
+            services.PassiveEventPolicies,
+            NoopPassiveTriggerDispatcher.Instance,
+            services.OwnerWouldBeDefeatedEventId,
+            services.RuntimeRandomTargetPolicy);
+
+    private sealed class NoopPassiveTriggerDispatcher : IPassiveTriggerDispatcher
+    {
+        public static NoopPassiveTriggerDispatcher Instance { get; } = new();
+
+        public PassiveTriggerDispatchResult Dispatch(
+            PassiveTriggerDispatchRequest request,
+            BattleExecutionServices services) =>
+            PassiveTriggerDispatchResult.Empty;
+    }
+}
+
 internal sealed class TrainingAnnexPressTurnTracker
 {
     private readonly List<TrainingAnnexPressTurnEvidence> _evidence = [];
@@ -960,16 +1184,22 @@ internal sealed class TrainingAnnexPressTurnEventSink(
         BattleEncounterEvent battleEvent,
         CancellationToken cancellationToken = default)
     {
-        if (battleEvent.Kind != BattleEncounterEventKind.PressTurnChanged ||
-            !TryParsePressTurnCounts(battleEvent.Message, out int fullIcons, out int blinkingIcons))
+        if (battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged &&
+            TryParsePressTurnCounts(battleEvent.Message, out int fullIcons, out int blinkingIcons))
         {
+            tracker.TryRecordAfter(battleEvent.ActorId, fullIcons, blinkingIcons);
+            await events.PublishAsync(
+                $"Press Turn updated: {fullIcons} full, {blinkingIcons} blinking.",
+                cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        tracker.TryRecordAfter(battleEvent.ActorId, fullIcons, blinkingIcons);
-        await events.PublishAsync(
-            $"Press Turn updated: {fullIcons} full, {blinkingIcons} blinking.",
-            cancellationToken).ConfigureAwait(false);
+        if (battleEvent.Kind is BattleEncounterEventKind.StatusChanged or
+            BattleEncounterEventKind.ResourceChanged or
+            BattleEncounterEventKind.TurnRestricted)
+        {
+            await events.PublishAsync(battleEvent.Message, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static bool TryParsePressTurnCounts(string message, out int fullIcons, out int blinkingIcons)

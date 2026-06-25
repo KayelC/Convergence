@@ -41,6 +41,8 @@ internal enum CleanTrainingAnnexPlayCommand
     UseFrostTip,
     UseEchoStrike,
     UseMend,
+    UseToxinTouch,
+    UseClearToxin,
     TargetPlayer,
     TargetEnemy,
     Back,
@@ -83,6 +85,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedBattleEffectEvidence,
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
     IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
+    IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     BattleRewardResult? PreparedBattleRewardPreview,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
@@ -254,6 +257,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
         var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
         var pressTurnEvidence = new List<TrainingAnnexPressTurnEvidence>();
+        var lifecycleEvidence = new List<TrainingAnnexLifecycleEvidence>();
         BattleRewardResult? preparedBattleRewardPreview = null;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
@@ -306,6 +310,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleEffectEvidence,
                     combatResolutionEvidence,
                     pressTurnEvidence,
+                    lifecycleEvidence,
                     preparedBattleRewardPreview,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
@@ -390,6 +395,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             executedBattleEffectEvidence,
                             combatResolutionEvidence,
                             pressTurnEvidence,
+                            lifecycleEvidence,
                             preparedBattleRewardPreview,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
@@ -530,7 +536,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             _commandSource,
                             executionServices,
                             rewardService,
-                            pressTurnFactory)
+                            pressTurnFactory,
+                            new BattleStatusLifecycleService(_randomSource))
                         .RunAsync(
                             roster.Player,
                             preparedEncounter,
@@ -544,6 +551,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
                     combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
                     pressTurnEvidence.AddRange(battle.PressTurnEvidence);
+                    lifecycleEvidence.AddRange(battle.LifecycleEvidence);
                     preparedBattleRewardPreview = battle.RewardPreview;
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
@@ -1032,6 +1040,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexTypedEffectEvidence> executedBattleEffectEvidence,
         IReadOnlyList<TrainingAnnexCombatResolutionEvidence> combatResolutionEvidence,
         IReadOnlyList<TrainingAnnexPressTurnEvidence> pressTurnEvidence,
+        IReadOnlyList<TrainingAnnexLifecycleEvidence> lifecycleEvidence,
         BattleRewardResult? preparedBattleRewardPreview,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
@@ -1078,6 +1087,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             executedBattleEffectEvidence.ToArray(),
             combatResolutionEvidence.ToArray(),
             pressTurnEvidence.ToArray(),
+            lifecycleEvidence.ToArray(),
             preparedBattleRewardPreview,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,

@@ -314,6 +314,10 @@ Phase 2-14 binds the interactive shell to catalog-authored `standard_press_turn`
 
 Phase 2-14 verification: focused Training Annex tests passed `29/29`, the full suite passed `786/786`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
+Phase 2-15 implementation note: the Training Annex manual battle now routes through a host lifecycle port backed by `BattleStatusLifecycleService`, records lifecycle evidence for ailment application, cures, poison ticks, turn restrictions, recovery, removal, and expiry, and recognizes Toxin Touch / Clear Toxin when the actor knows those skills. Passive dispatch is intentionally suppressed until Phase 2-16.
+
+Phase 2-15 verification: focused Training Annex tests passed `32/32`, lifecycle-focused tests passed `39/39`, the full suite passed `789/789`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
+
 Design note:
 
 - The current floor-triggered encounter flow is a deterministic console/demo convenience.

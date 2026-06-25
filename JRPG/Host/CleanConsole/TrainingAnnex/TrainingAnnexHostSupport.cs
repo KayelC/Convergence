@@ -72,6 +72,8 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId FrostTip = Qualified("frost_tip");
     public static readonly ContentId EchoStrike = Qualified("echo_strike");
     public static readonly ContentId Mend = Qualified("mend");
+    public static readonly ContentId ToxinTouch = Qualified("toxin_touch");
+    public static readonly ContentId ClearToxin = Qualified("clear_toxin");
     public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
         ContentId.Parse("enter_training_annex"),
         StagingArea,
