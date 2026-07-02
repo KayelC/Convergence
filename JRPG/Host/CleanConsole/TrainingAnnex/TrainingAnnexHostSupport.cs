@@ -165,6 +165,8 @@ internal static class TrainingAnnexHostSupport
             .SupportEffect<ReviveEffectDefinition>()
             .SupportEffect<ApplyAilmentEffectDefinition>()
             .SupportEffect<ModifyStatStageEffectDefinition>()
+            .SupportCondition<EffectElementConditionDefinition>()
+            .SupportModifier<NumericRuleModifierDefinition>()
             .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
             .SupportAilmentBehavior<SkipAilmentTurnBehaviorDefinition>()
             .Build();

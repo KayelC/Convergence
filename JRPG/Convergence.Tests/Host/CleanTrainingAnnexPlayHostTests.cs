@@ -320,8 +320,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(67, Resource(summary, "hp").Current);
+        Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(25, Resource(summary, "sp").Current);
+        Assert.Equal(3, summary.LifecycleEvidence.Count(evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
+            evidence.RelatedContentId == Qualified("steady_breath") &&
+            evidence.Detail == "owner_turn_end"));
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            evidence.RelatedContentId == ContentId.Parse("hp") &&
+            evidence.Value == 3m);
         Assert.True(summary.PreparedBattleEventCount > 0);
         TrainingAnnexCombatResolutionEvidence frost = summary.CombatResolutionEvidence.First(
             evidence => evidence.SourceActionId == Qualified("frost_tip") && evidence.Value == 23m);
@@ -514,7 +524,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             effect.SourceActionId == ContentId.Parse("guard"));
         Assert.DoesNotContain(summary.ExecutedBattleEffectEvidence, effect =>
             effect.SourceActionId == ContentId.Parse("pass"));
-        Assert.Equal(48, Resource(summary, "hp").Current);
+        Assert.Equal(57, Resource(summary, "hp").Current);
         Assert.Contains(summary.LifecycleEvidence, evidence =>
             evidence.ActorId == ContentId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.GuardCleared);
@@ -549,6 +559,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(2, summary.CancelledBattleCommandSelections);
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
+        Assert.Equal(2, summary.LifecycleEvidence.Count(evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
+            evidence.RelatedContentId == Qualified("steady_breath")));
         Assert.DoesNotContain(summary.PressTurnEvidence, evidence =>
             evidence.ActionId == Qualified("frost_tip") ||
             evidence.ActionId == Qualified("echo_strike") ||
@@ -591,8 +605,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.ExecutedBattleEffectEvidence.Count(effect =>
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire)));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(67, Resource(summary, "hp").Current);
+        Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(25, Resource(summary, "sp").Current);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
+            evidence.RelatedContentId == Qualified("steady_breath"));
         Assert.Contains("Renamed Frost Tip", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -835,7 +853,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            new TrainingAnnexAilmentContentPackTextSource(
+            new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
                 playerBaseSkillIds:
                 [
@@ -870,8 +888,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
             evidence.RelatedContentId == ContentId.Parse("hp") &&
             evidence.Value == -2m);
-        Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
-            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered);
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
+            evidence.RelatedContentId == Qualified("steady_breath") &&
+            evidence.Detail == "owner_turn_end");
         Assert.Contains(
             "Lifecycle resource changed: hp -2.",
             output.ToString(),
@@ -887,7 +908,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            new TrainingAnnexAilmentContentPackTextSource(
+            new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
                 playerBaseSkillIds:
                 [
@@ -937,7 +958,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            new TrainingAnnexAilmentContentPackTextSource(
+            new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
                 playerBaseSkillIds:
                 [
@@ -974,6 +995,62 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.Value < 0);
         Assert.Equal(Resource(summary, "hp").Maximum, Resource(summary, "hp").Current);
         Assert.Contains(Qualified("clear_toxin"), summary.ExecutedBattleActionIds);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleStartPassiveDispatchesOnceThroughFrameworkLifecycle()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                steadyBreathEventId: "battle_start"));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexLifecycleEvidence activation = Assert.Single(summary.LifecycleEvidence, evidence =>
+            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
+            evidence.RelatedContentId == Qualified("steady_breath"));
+        Assert.Equal("battle_start", activation.Detail);
+        Assert.DoesNotContain(summary.ExecutedBattleActionIds, id => id == ContentId.Parse("pass"));
+        Assert.Contains(
+            $"Lifecycle passive triggered: {Qualified("steady_breath")}.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_PassiveRuleModifierUsesTypedElementNotDisplayText()
+    {
+        var io = new ScriptedGameIO().QueueMenu(1, 6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                steadyBreathDisplayName: "Unrelated Label",
+                steadyBreathPhysicalDamageMultiplier: 2m));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == Qualified("practice_blade"));
+        Assert.Equal(DamageElement.Physical, attack.DamageElement);
+        Assert.Equal(46m, attack.Value);
+        Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
+        Assert.Contains("Passive skills: Unrelated Label.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -1427,11 +1504,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         }
     }
 
-    private sealed class TrainingAnnexAilmentContentPackTextSource(
+    private sealed class TrainingAnnexLifecycleContentPackTextSource(
         string root,
         IReadOnlyList<string>? playerBaseSkillIds = null,
         IReadOnlyList<string>? ashlingBaseSkillIds = null,
-        string? toxinAilmentId = null) : IContentPackTextSource
+        string? toxinAilmentId = null,
+        string? steadyBreathEventId = null,
+        string? steadyBreathDisplayName = null,
+        decimal? steadyBreathPhysicalDamageMultiplier = null) : IContentPackTextSource
     {
         public async ValueTask<ContentPackTextBundle> ReadAsync(
             ContentPackTextRequest request,
@@ -1446,10 +1526,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 {
                     text = MutateEntities(text);
                 }
-                else if (path.EndsWith(".skills.json", StringComparison.Ordinal) &&
-                         toxinAilmentId is not null)
+                else if (path.EndsWith(".skills.json", StringComparison.Ordinal))
                 {
-                    text = MutateToxinTouch(text);
+                    if (toxinAilmentId is not null)
+                    {
+                        text = MutateToxinTouch(text);
+                    }
+                    if (steadyBreathEventId is not null ||
+                        steadyBreathDisplayName is not null ||
+                        steadyBreathPhysicalDamageMultiplier is not null)
+                    {
+                        text = MutateSteadyBreath(text);
+                    }
                 }
 
                 documents.Add(new ContentDocumentText(path, path, text));
@@ -1487,6 +1575,44 @@ public sealed class CleanTrainingAnnexPlayHostTests
             JsonObject effect = skill["effects"]?.AsArray()[0]?.AsObject() ??
                 throw new InvalidOperationException("Training Annex skill 'toxin_touch' has no first effect.");
             effect["ailmentId"] = toxinAilmentId;
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private string MutateSteadyBreath(string json)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skills JSON could not be parsed.");
+            JsonObject skill = rootNode["skills"]?.AsArray()
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == "steady_breath") ??
+                throw new InvalidOperationException("Training Annex skill 'steady_breath' was not found.");
+            if (steadyBreathEventId is not null)
+            {
+                JsonObject trigger = skill["triggers"]?.AsArray()[0]?.AsObject() ??
+                    throw new InvalidOperationException("Training Annex skill 'steady_breath' has no first trigger.");
+                trigger["event"] = steadyBreathEventId;
+            }
+            if (steadyBreathDisplayName is not null)
+            {
+                skill["displayName"] = steadyBreathDisplayName;
+                skill["description"] = "Text deliberately unrelated to its typed modifier.";
+            }
+            if (steadyBreathPhysicalDamageMultiplier is decimal multiplier)
+            {
+                skill["modifiers"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["type"] = "damage_dealt",
+                        ["operation"] = "multiply",
+                        ["value"] = multiplier,
+                        ["when"] = new JsonObject
+                        {
+                            ["type"] = "effect_element_is",
+                            ["elementId"] = "physical"
+                        }
+                    });
+            }
+
             return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
 

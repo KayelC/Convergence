@@ -604,6 +604,16 @@ Clean console proof:
 
 - Training Annex passive recovery or modifier runs through clean lifecycle.
 
+Phase 2-16 implementation note:
+
+- `--clean-training-annex-play` now uses the real framework passive dispatcher during battle startup and owner turn end; the temporary 2-15 no-op dispatcher has been removed.
+- The existing `Steady Breath` content trigger restores HP through `PassiveTriggerDispatcher`, the shared typed effect pipeline, and `BattleStatusLifecycleService` after committed owner actions.
+- Battle-start passives use the same dispatcher, while `BattleEncounterRunner` remains responsible for resetting per-battle activation counts before startup dispatch.
+- Passive activations are exposed as typed lifecycle evidence and `PassiveActivated` encounter events. Back/cancel selections do not dispatch owner-turn-end passives because they do not commit a turn.
+- A test-only passive modifier doubles only Physical damage through `EffectElementConditionDefinition` after its display name and description are replaced, proving the clean path does not infer passive behavior from text.
+- Status remains `parallel_partial`: the clean slice proves framework-owned triggers and modifiers, but broader passive content, defeat-prevention presentation in the clean host, and the remaining Phase 2 battle capabilities are still pending. Legacy removal remains unauthorized.
+- Verification: focused Training Annex/passive/lifecycle tests passed `53/53`; the full suite passed `791/791`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
+
 ### 17. `enemy_ai_and_tactics`
 
 Current status: `parallel_partial`.

@@ -1008,6 +1008,7 @@ internal sealed class TrainingAnnexLifecycleTracker
 
 internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyclePort
 {
+    private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
 
     private readonly IBattleStatusLifecycleService _lifecycle;
@@ -1020,19 +1021,44 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         TrainingAnnexLifecycleTracker tracker)
     {
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
-        _services = WithoutPassiveTriggers(services ?? throw new ArgumentNullException(nameof(services)));
+        _services = services ?? throw new ArgumentNullException(nameof(services));
         _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
         BattleEncounterLifecycleRequest request,
-        CancellationToken cancellationToken = default) =>
-        new(Array.Empty<BattleEncounterEvent>());
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RuntimeActorState[] participants = request.Participants
+            .Select(participant => participant.State)
+            .ToArray();
+        var events = new List<BattleEncounterEvent>();
+        foreach (RuntimeActorState actor in participants)
+        {
+            PassiveTriggerDispatchResult dispatch = _services.PassiveTriggers.Dispatch(
+                new PassiveTriggerDispatchRequest(
+                    BattleStart,
+                    actor,
+                    participants,
+                    [actor],
+                    request.Encounter.ContextId,
+                    request.Encounter.BattleKindId,
+                    request.Encounter.MoonPhaseId),
+                _services);
+            BattleStatusLifecycleEvent[] statusEvents = MapPassiveActivations(actor, dispatch);
+            _tracker.RecordStatusEvents(statusEvents);
+            events.AddRange(MapStatusEvents(statusEvents));
+        }
+
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.AsReadOnly(events.ToArray()));
+    }
 
     public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
         BattleEncounterTurnLifecycleRequest request,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         BattleTurnStartLifecycleResult result = _lifecycle.ProcessTurnStart(new(
             request.Actor.State,
             request.CanReturnToStock));
@@ -1044,6 +1070,7 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         BattleEncounterTurnLifecycleRequest request,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         RuntimeActorState[] participants = request.Participants
             .Select(participant => participant.State)
             .ToArray();
@@ -1076,13 +1103,19 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         IEnumerable<BattleStatusLifecycleEvent> events) =>
         Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
             0,
-            statusEvent.Kind == BattleStatusLifecycleEventKind.ResourceChanged
-                ? BattleEncounterEventKind.ResourceChanged
-                : BattleEncounterEventKind.StatusChanged,
+            EncounterEventKind(statusEvent.Kind),
             StatusMessage(statusEvent),
             statusEvent.ActorId,
             SourceId: statusEvent.RelatedId,
             Value: statusEvent.Value)).ToArray());
+
+    private static BattleEncounterEventKind EncounterEventKind(BattleStatusLifecycleEventKind kind) =>
+        kind switch
+        {
+            BattleStatusLifecycleEventKind.ResourceChanged => BattleEncounterEventKind.ResourceChanged,
+            BattleStatusLifecycleEventKind.PassiveTriggered => BattleEncounterEventKind.PassiveActivated,
+            _ => BattleEncounterEventKind.StatusChanged
+        };
 
     private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>
         statusEvent.Kind switch
@@ -1095,41 +1128,41 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
                 $"Lifecycle ailment expired: {statusEvent.RelatedId}.",
             BattleStatusLifecycleEventKind.AilmentRemoved =>
                 $"Lifecycle ailment removed: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.PassiveTriggered =>
+                $"Lifecycle passive triggered: {statusEvent.RelatedId}.",
             BattleStatusLifecycleEventKind.StatusExpired =>
                 $"Lifecycle status expired: {statusEvent.RelatedId}.",
             _ => $"Lifecycle status changed: {statusEvent.Kind}."
         };
 
-    private static BattleExecutionServices WithoutPassiveTriggers(BattleExecutionServices services) =>
-        new(
-            services.Ailments,
-            services.DamagePolicy,
-            services.InstantDeathPolicy,
-            services.AilmentPolicy,
-            services.ChancePolicy,
-            services.PowerAmountPolicy,
-            services.RandomTargetPolicy,
-            services.FormulaHandlers,
-            services.EscapeRuleHandlers,
-            services.CustomConditionHandlers,
-            services.CustomEffectHandlers,
-            services.HpResourceId,
-            services.SpResourceId,
-            services.EffectExecutors,
-            services.RuleModifiers,
-            services.PassiveEventPolicies,
-            NoopPassiveTriggerDispatcher.Instance,
-            services.OwnerWouldBeDefeatedEventId,
-            services.RuntimeRandomTargetPolicy);
-
-    private sealed class NoopPassiveTriggerDispatcher : IPassiveTriggerDispatcher
+    private static BattleStatusLifecycleEvent[] MapPassiveActivations(
+        RuntimeActorState actor,
+        PassiveTriggerDispatchResult dispatch)
     {
-        public static NoopPassiveTriggerDispatcher Instance { get; } = new();
+        var events = new List<BattleStatusLifecycleEvent>();
+        foreach (PassiveTriggerExecutionResult activation in dispatch.Activations
+                     .Where(activation => activation.Outcome == PassiveTriggerOutcome.Executed))
+        {
+            events.Add(new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.PassiveTriggered,
+                actor.InstanceId,
+                activation.SkillId,
+                Detail: activation.EventId.ToString()));
+            foreach (EffectExecutionResult effect in activation.Effects)
+            {
+                if (effect.RelatedId is ContentId relatedId && effect.Value is decimal value)
+                {
+                    events.Add(new BattleStatusLifecycleEvent(
+                        BattleStatusLifecycleEventKind.ResourceChanged,
+                        effect.TargetId ?? actor.InstanceId,
+                        RelatedId: relatedId,
+                        Value: value,
+                        Detail: effect.Detail));
+                }
+            }
+        }
 
-        public PassiveTriggerDispatchResult Dispatch(
-            PassiveTriggerDispatchRequest request,
-            BattleExecutionServices services) =>
-            PassiveTriggerDispatchResult.Empty;
+        return events.ToArray();
     }
 }
 
@@ -1194,7 +1227,8 @@ internal sealed class TrainingAnnexPressTurnEventSink(
             return;
         }
 
-        if (battleEvent.Kind is BattleEncounterEventKind.StatusChanged or
+        if (battleEvent.Kind is BattleEncounterEventKind.PassiveActivated or
+            BattleEncounterEventKind.StatusChanged or
             BattleEncounterEventKind.ResourceChanged or
             BattleEncounterEventKind.TurnRestricted)
         {

@@ -467,6 +467,16 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - Passive trigger dispatch is deliberately suppressed in this pass so passive lifecycle remains Iteration/Phase 2-16 work.
 - Verification: focused Training Annex tests passed `32/32`; lifecycle-focused tests passed `39/39`; full suite passed `789/789`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Phase 2-16 Result
+
+- The Training Annex battle lifecycle port now uses the framework `PassiveTriggerDispatcher`; the temporary no-op passive boundary from 2-15 is gone.
+- `Steady Breath` executes its authored `owner_turn_end` trigger through the shared typed effect pipeline and restores HP after committed actions.
+- The lifecycle port also dispatches authored `battle_start` passive events, while `BattleEncounterRunner` resets per-battle activation counts before dispatch.
+- Passive activations are recorded in lifecycle evidence and published as `PassiveActivated` encounter events. Canceled command and target selections still perform no mutation, turn consumption, or passive dispatch.
+- Test-only content proves typed Physical damage modifiers still apply when passive display text is unrelated, guarding against text-driven behavior.
+- No Training Annex JSON or framework public API changed.
+- Verification: focused Training Annex/passive/lifecycle tests passed `53/53`; the full suite passed `791/791`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;

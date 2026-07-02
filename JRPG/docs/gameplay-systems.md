@@ -150,6 +150,8 @@ Phase 2-14 makes the same clean battle a catalog-bound Press Turn consumer. `sta
 
 Phase 2-15 connects that clean Training Annex battle to framework status lifecycle. The clean host now records ailment application and cure evidence from typed actions, lets `BattleStatusLifecycleService` process turn-start restrictions and turn-end ailment triggers/recovery/duration ticks, and presents lifecycle resource/status events. This pass intentionally suppresses passive trigger dispatch so passive lifecycle remains the next separate capability.
 
+Phase 2-16 removes that suppression. The original-content clean battle now dispatches authored `battle_start` and `owner_turn_end` passive events through `PassiveTriggerDispatcher`; `Steady Breath` restores HP through the same typed effect executor used by active actions. Typed rule modifiers are resolved from passive definitions and conditions rather than names or descriptions, and canceled selections do not activate passives because no turn is committed.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

@@ -318,6 +318,10 @@ Phase 2-15 implementation note: the Training Annex manual battle now routes thro
 
 Phase 2-15 verification: focused Training Annex tests passed `32/32`, lifecycle-focused tests passed `39/39`, the full suite passed `789/789`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
+Phase 2-16 implementation note: the clean Training Annex lifecycle port now uses the real passive dispatcher for battle-start and owner-turn-end events. The authored `Steady Breath` passive restores HP after committed actions, passive activations are exposed through typed lifecycle/encounter events, and a test-only renamed passive proves Physical-only rule modifiers are definition-driven rather than text-driven. Cancellation remains mutation-free. This capability stays `parallel_partial` until broader passive content and the remaining clean battle capabilities are completed.
+
+Phase 2-16 verification: focused Training Annex/passive/lifecycle tests passed `53/53`, the full suite passed `791/791`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
+
 Design note:
 
 - The current floor-triggered encounter flow is a deterministic console/demo convenience.

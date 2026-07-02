@@ -106,6 +106,8 @@ Phase 2-14 removes the last implicit Press Turn assumption from the original Tra
 
 Phase 2-15 starts consuming framework status lifecycle from the original Training Annex battle path. The play host now uses a `BattleStatusLifecycleService`-backed lifecycle port for ailment application evidence, turn-start restrictions, turn-end poison ticks, cure/removal, recovery, and expiry. Passive dispatch remains intentionally disabled in that port until the separate passive lifecycle phase.
 
+Phase 2-16 completes that lifecycle port's passive boundary. The host no longer substitutes a no-op dispatcher: battle-start and owner-turn-end events use the loaded actor's `BattlePassiveCollection`, framework `PassiveTriggerDispatcher`, typed conditions/modifiers, and shared effect executors. The host only maps resulting lifecycle and encounter events for presentation; activation ordering, recursion protection, per-battle limits, and modifier resolution remain framework-owned.
+
 ## Layers And Patterns
 
 ### Conductors
