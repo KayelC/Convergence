@@ -628,6 +628,17 @@ Clean console proof:
 
 - demo enemy chooses deterministic legal actions without legacy `BehaviorEngine`.
 
+Phase 2-17 implementation note:
+
+- The Training Annex manual battle no longer contains its own loop over enemy skills. It injects framework `DeterministicBattleActionSelector` through the `IBattleActionSelector` contract.
+- The selector evaluates typed active-skill definitions in authored loadout order, resolves targets from typed targeting, and uses the same `SkillExecutor.Assess` path that execution uses. Unavailable, invalid-target, and unaffordable skills are not legal candidates.
+- Equal-scored legal skills preserve authored order. If no legal skill exists, the selector returns a typed Pass decision and the action executes through `BattleActionExecutor`.
+- The clean battle summary records immutable AI decision evidence: actor instance/entity IDs, selected/pass status, action ID, target IDs, and assessment success. Display names are presentation only.
+- Turn-start lifecycle restrictions run before strategy selection. A skipped actor produces no AI decision or action.
+- Enemy knowledge is intentionally empty and session-local in this pass. Learning and persistence remain Phase 2-18 rather than being hidden inside the AI implementation.
+- Status remains `parallel_partial`: the original-content enemy path is framework-selected, but configurable tactics/direct-control switching and the protected legacy `BehaviorEngine` consumer are still active work. No removal is authorized.
+- Verification: focused Training Annex/framework-selector tests passed `38/38`; the full suite passed `794/794`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
+
 ### 18. `battle_knowledge`
 
 Current status: `parallel_partial`.

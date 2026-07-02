@@ -108,6 +108,8 @@ Phase 2-15 starts consuming framework status lifecycle from the original Trainin
 
 Phase 2-16 completes that lifecycle port's passive boundary. The host no longer substitutes a no-op dispatcher: battle-start and owner-turn-end events use the loaded actor's `BattlePassiveCollection`, framework `PassiveTriggerDispatcher`, typed conditions/modifiers, and shared effect executors. The host only maps resulting lifecycle and encounter events for presentation; activation ordering, recursion protection, per-battle limits, and modifier resolution remain framework-owned.
 
+Phase 2-17 removes enemy skill-choice rules from the Training Annex host. The clean consumer injects framework `IBattleActionSelector`/`DeterministicBattleActionSelector`, which filters typed catalog skills through shared execution assessment and preserves authored order for equal scores. The host still decides that the player is directly controlled and enemies use the strategy, and it only presents/records the typed decision. Persistent knowledge and configurable tactics remain separate later capabilities.
+
 ## Layers And Patterns
 
 ### Conductors

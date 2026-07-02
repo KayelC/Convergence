@@ -86,6 +86,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
     IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
+    IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
     BattleRewardResult? PreparedBattleRewardPreview,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
@@ -258,6 +259,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
         var pressTurnEvidence = new List<TrainingAnnexPressTurnEvidence>();
         var lifecycleEvidence = new List<TrainingAnnexLifecycleEvidence>();
+        var aiDecisionEvidence = new List<TrainingAnnexAiDecisionEvidence>();
         BattleRewardResult? preparedBattleRewardPreview = null;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
@@ -311,6 +313,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     combatResolutionEvidence,
                     pressTurnEvidence,
                     lifecycleEvidence,
+                    aiDecisionEvidence,
                     preparedBattleRewardPreview,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
@@ -396,6 +399,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             combatResolutionEvidence,
                             pressTurnEvidence,
                             lifecycleEvidence,
+                            aiDecisionEvidence,
                             preparedBattleRewardPreview,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
@@ -552,6 +556,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
                     pressTurnEvidence.AddRange(battle.PressTurnEvidence);
                     lifecycleEvidence.AddRange(battle.LifecycleEvidence);
+                    aiDecisionEvidence.AddRange(battle.AiDecisionEvidence);
                     preparedBattleRewardPreview = battle.RewardPreview;
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
@@ -1041,6 +1046,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexCombatResolutionEvidence> combatResolutionEvidence,
         IReadOnlyList<TrainingAnnexPressTurnEvidence> pressTurnEvidence,
         IReadOnlyList<TrainingAnnexLifecycleEvidence> lifecycleEvidence,
+        IReadOnlyList<TrainingAnnexAiDecisionEvidence> aiDecisionEvidence,
         BattleRewardResult? preparedBattleRewardPreview,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
@@ -1088,6 +1094,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             combatResolutionEvidence.ToArray(),
             pressTurnEvidence.ToArray(),
             lifecycleEvidence.ToArray(),
+            aiDecisionEvidence.ToArray(),
             preparedBattleRewardPreview,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,

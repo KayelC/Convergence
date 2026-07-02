@@ -152,6 +152,8 @@ Phase 2-15 connects that clean Training Annex battle to framework status lifecyc
 
 Phase 2-16 removes that suppression. The original-content clean battle now dispatches authored `battle_start` and `owner_turn_end` passive events through `PassiveTriggerDispatcher`; `Steady Breath` restores HP through the same typed effect executor used by active actions. Typed rule modifiers are resolved from passive definitions and conditions rather than names or descriptions, and canceled selections do not activate passives because no turn is committed.
 
+Phase 2-17 routes original-content enemy turns through framework `DeterministicBattleActionSelector`. It considers only battle-available typed skills that pass `SkillExecutor.Assess`, selects typed targets, preserves authored loadout order for ties, and returns Pass when no legal command exists. Lifecycle restrictions are resolved first. The clean host records and presents the decision but does not own the selection rule. Battle knowledge is deliberately not persisted or learned until Phase 2-18.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

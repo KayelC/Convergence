@@ -322,6 +322,10 @@ Phase 2-16 implementation note: the clean Training Annex lifecycle port now uses
 
 Phase 2-16 verification: focused Training Annex/passive/lifecycle tests passed `53/53`, the full suite passed `791/791`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
+Phase 2-17 implementation note: the Training Annex enemy path now delegates typed skill selection to framework `DeterministicBattleActionSelector`. Shared assessment filters illegal candidates, equal scores preserve authored order, Pass is returned when nothing can execute, lifecycle Skip bypasses strategy selection, and immutable AI decision evidence is retained by the clean session. Knowledge remains empty/session-local until Phase 2-18, and configurable tactics/direct-control switching remains unfinished.
+
+Phase 2-17 verification: focused Training Annex/framework-selector tests passed `38/38`, the full suite passed `794/794`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
+
 Design note:
 
 - The current floor-triggered encounter flow is a deterministic console/demo convenience.

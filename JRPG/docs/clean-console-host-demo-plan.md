@@ -477,11 +477,21 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - No Training Annex JSON or framework public API changed.
 - Verification: focused Training Annex/passive/lifecycle tests passed `53/53`; the full suite passed `791/791`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Phase 2-17 Result
+
+- Enemy turns in `--clean-training-annex-play` now use framework `IBattleActionSelector` and `DeterministicBattleActionSelector`; the previous host-owned first-executable-skill loop has been removed.
+- Candidate legality comes from shared `SkillExecutor.Assess`, targeting is typed, equal scores retain authored loadout order, and no legal skill produces a typed Pass action.
+- The session summary exposes immutable AI decision evidence for tests and future presentation adapters.
+- Turn-start lifecycle restrictions still precede strategy selection, so Skip prevents both decision and execution.
+- The host currently gives the selector an empty per-battle affinity-knowledge store. Phase 2-18 will own learning and persistence.
+- No Training Annex JSON or framework public API changed.
+- Verification: focused Training Annex/framework-selector tests passed `38/38`; the full suite passed `794/794`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;
 - no legacy `SkillData`;
-- no full AI/tactics design;
+- no configurable tactics/direct-control switching yet;
 - no negotiation inside battle yet.
 
 ### Tests

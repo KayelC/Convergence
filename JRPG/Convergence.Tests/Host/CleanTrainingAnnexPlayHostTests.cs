@@ -407,6 +407,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(1, summary.CancelledBattleCommandSelections);
         Assert.Equal(67, Resource(summary, "hp").Current);
+        TrainingAnnexAiDecisionEvidence ai = Assert.Single(summary.AiDecisionEvidence);
+        Assert.Equal(ContentId.Parse("review_hall_trigger_ashling_1"), ai.ActorInstanceId);
+        Assert.Equal(Qualified("ashling"), ai.ActorEntityId);
+        Assert.Equal(BattleActionSelectionStatus.Selected, ai.Status);
+        Assert.Equal(Qualified("ash_spark"), ai.SelectedActionId);
+        Assert.Equal([ContentId.Parse("echo_adept")], ai.TargetIds);
+        Assert.True(ai.AssessmentCanExecute);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)ai.TargetIds).Add(ContentId.Parse("unexpected")));
         TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
             summary.CombatResolutionEvidence,
             evidence => evidence.SourceActionId == Qualified("practice_blade"));
@@ -427,6 +436,92 @@ public sealed class CleanTrainingAnnexPlayHostTests
             "Battle action executed: Echo Adept used Practice Blade.",
             output.ToString(),
             StringComparison.Ordinal);
+        Assert.Contains(
+            "Framework AI selected: Ashling -> Ash Spark.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FrameworkAiPreservesAuthoredSkillOrderForEqualScores()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                ashlingBaseSkillIds: ["toxin_touch", "ash_spark"]));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexAiDecisionEvidence ai = Assert.Single(summary.AiDecisionEvidence);
+        Assert.Equal(BattleActionSelectionStatus.Selected, ai.Status);
+        Assert.Equal(Qualified("toxin_touch"), ai.SelectedActionId);
+        Assert.True(ai.AssessmentCanExecute);
+        Assert.Contains(Qualified("toxin_touch"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FrameworkAiSkipsUnaffordableSkillUsingSharedAssessment()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                ashlingBaseSkillIds: ["toxin_touch", "ash_spark"],
+                unaffordableSkillId: "toxin_touch"));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexAiDecisionEvidence ai = Assert.Single(summary.AiDecisionEvidence);
+        Assert.Equal(BattleActionSelectionStatus.Selected, ai.Status);
+        Assert.Equal(Qualified("ash_spark"), ai.SelectedActionId);
+        Assert.True(ai.AssessmentCanExecute);
+        Assert.DoesNotContain(Qualified("toxin_touch"), summary.ExecutedBattleActionIds);
+        Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FrameworkAiPassesWhenNoAuthoredSkillIsExecutable()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                ashlingBaseSkillIds: ["toxin_touch"],
+                unaffordableSkillId: "toxin_touch"));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(2, summary.AiDecisionEvidence.Count);
+        Assert.All(summary.AiDecisionEvidence, ai =>
+        {
+            Assert.Equal(BattleActionSelectionStatus.Pass, ai.Status);
+            Assert.Equal(ContentId.Parse("pass"), ai.SelectedActionId);
+            Assert.Empty(ai.TargetIds);
+            Assert.Null(ai.AssessmentCanExecute);
+        });
+        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
+        Assert.DoesNotContain(Qualified("toxin_touch"), summary.ExecutedBattleActionIds);
+        Assert.Contains("Framework AI selected: Ashling -> Pass.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -940,6 +1035,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.AilmentRemoved &&
             evidence.RelatedContentId == Qualified("sample_stun"));
+        Assert.DoesNotContain(summary.AiDecisionEvidence, evidence =>
+            evidence.ActorInstanceId == ContentId.Parse("review_hall_trigger_ashling_1"));
         Assert.DoesNotContain(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
         Assert.Contains("Ashling turn restriction: Skip.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
@@ -1511,7 +1608,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string? toxinAilmentId = null,
         string? steadyBreathEventId = null,
         string? steadyBreathDisplayName = null,
-        decimal? steadyBreathPhysicalDamageMultiplier = null) : IContentPackTextSource
+        decimal? steadyBreathPhysicalDamageMultiplier = null,
+        string? unaffordableSkillId = null) : IContentPackTextSource
     {
         public async ValueTask<ContentPackTextBundle> ReadAsync(
             ContentPackTextRequest request,
@@ -1537,6 +1635,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
                         steadyBreathPhysicalDamageMultiplier is not null)
                     {
                         text = MutateSteadyBreath(text);
+                    }
+                    if (unaffordableSkillId is not null)
+                    {
+                        text = MakeSkillUnaffordable(text, unaffordableSkillId);
                     }
                 }
 
@@ -1613,6 +1715,20 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     });
             }
 
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static string MakeSkillUnaffordable(string json, string skillId)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skills JSON could not be parsed.");
+            JsonObject skill = rootNode["skills"]?.AsArray()
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == skillId) ??
+                throw new InvalidOperationException($"Training Annex skill '{skillId}' was not found.");
+            JsonObject amount = skill["costs"]?.AsArray()[0]?["amount"]?.AsObject() ??
+                throw new InvalidOperationException($"Training Annex skill '{skillId}' has no first cost amount.");
+            amount["value"] = 999;
             return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
 

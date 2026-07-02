@@ -17,6 +17,7 @@ internal sealed record TrainingAnnexManualBattleSummary(
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
     IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
+    IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
     BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
@@ -62,6 +63,33 @@ internal sealed record TrainingAnnexLifecycleEvidence(
     string? Detail = null,
     BattleTurnStartOutcome? TurnStartOutcome = null,
     ContentId? SourceActionId = null);
+
+internal sealed record TrainingAnnexAiDecisionEvidence
+{
+    public TrainingAnnexAiDecisionEvidence(
+        ContentId actorInstanceId,
+        ContentId actorEntityId,
+        BattleActionSelectionStatus status,
+        ContentId selectedActionId,
+        IEnumerable<ContentId> targetIds,
+        bool? assessmentCanExecute)
+    {
+        ActorInstanceId = actorInstanceId;
+        ActorEntityId = actorEntityId;
+        Status = status;
+        SelectedActionId = selectedActionId;
+        TargetIds = Array.AsReadOnly(
+            targetIds?.ToArray() ?? throw new ArgumentNullException(nameof(targetIds)));
+        AssessmentCanExecute = assessmentCanExecute;
+    }
+
+    public ContentId ActorInstanceId { get; }
+    public ContentId ActorEntityId { get; }
+    public BattleActionSelectionStatus Status { get; }
+    public ContentId SelectedActionId { get; }
+    public IReadOnlyList<ContentId> TargetIds { get; }
+    public bool? AssessmentCanExecute { get; }
+}
 
 internal sealed class TrainingAnnexBattleActionAdapter
 {
@@ -114,12 +142,16 @@ internal sealed class TrainingAnnexBattleActionAdapter
         var pressTurns = new TrainingAnnexPressTurnTracker();
         var lifecycle = new TrainingAnnexLifecycleTracker();
         var lifecyclePort = new TrainingAnnexBattleLifecyclePort(_statusLifecycle, _services, lifecycle);
+        var skillExecutor = new SkillExecutor(_services);
+        var enemySelector = new DeterministicBattleActionSelector(skillExecutor);
 
         var turnHandler = new TrainingAnnexManualBattleTurnHandler(
             _catalog,
             _events,
             _commands,
-            new BattleActionExecutor(new SkillExecutor(_services), new ItemExecutor(_services), _services),
+            new BattleActionExecutor(skillExecutor, new ItemExecutor(_services), _services),
+            enemySelector,
+            new ElementalAffinityKnowledge(),
             actors,
             player,
             inventory,
@@ -168,6 +200,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             turnHandler.CombatResolutionEvidence,
             pressTurns.Evidence,
             lifecycle.Evidence,
+            turnHandler.AiDecisionEvidence,
             rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
@@ -226,6 +259,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IHostEventSink<string> _events;
         private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
         private readonly IBattleActionExecutor _actions;
+        private readonly IBattleActionSelector _enemySelector;
+        private readonly ElementalAffinityKnowledge _enemyKnowledge;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
@@ -234,12 +269,15 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly List<ContentId> _executedActionIds = [];
         private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
         private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
+        private readonly List<TrainingAnnexAiDecisionEvidence> _aiDecisionEvidence = [];
 
         public TrainingAnnexManualBattleTurnHandler(
             GameDataCatalog catalog,
             IHostEventSink<string> events,
             IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
             IBattleActionExecutor actions,
+            IBattleActionSelector enemySelector,
+            ElementalAffinityKnowledge enemyKnowledge,
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
             TrainingAnnexItemActionInventory inventory,
@@ -250,6 +288,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _events = events;
             _commands = commands;
             _actions = actions;
+            _enemySelector = enemySelector ?? throw new ArgumentNullException(nameof(enemySelector));
+            _enemyKnowledge = enemyKnowledge ?? throw new ArgumentNullException(nameof(enemyKnowledge));
             _actors = actors;
             _player = player;
             _inventory = inventory;
@@ -261,6 +301,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
         public IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedEffectEvidence => _executedEffectEvidence;
         public IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence =>
             _combatResolutionEvidence;
+        public IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence =>
+            _aiDecisionEvidence.ToArray();
         public int CancelledSelections { get; private set; }
 
         public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
@@ -339,33 +381,52 @@ internal sealed class TrainingAnnexBattleActionAdapter
             CatalogBattleActor actor,
             CancellationToken cancellationToken)
         {
-            foreach (SkillDefinition skill in actor.ActiveSkills.Where(IsBattleAvailable))
+            BattleActionSelection selection = _enemySelector.Select(new BattleActionSelectionRequest(
+                actor,
+                _actors,
+                request.Encounter.ContextId,
+                request.Encounter.BattleKindId,
+                request.Encounter.MoonPhaseId,
+                _enemyKnowledge));
+            if (selection.Status == BattleActionSelectionStatus.Selected && selection.Skill is SkillDefinition skill)
             {
-                ContentId? target = FirstEligibleTarget(actor.State, request.Participants, skill.Targeting);
-                if (target is null && skill.Targeting?.Selection == TargetSelection.Single)
-                {
-                    continue;
-                }
-
                 var command = new SkillBattleActionCommand(
                     skill,
-                    target is ContentId selected ? [selected] : []);
-                BattleActionExecutionRequest actionRequest = CreateActionRequest(request, actor, command);
-                if (!_actions.Assess(actionRequest).CanExecute)
-                {
-                    continue;
-                }
-
+                    selection.SelectedTargetIds);
+                RecordAiDecision(actor, selection, skill.Id);
+                await PublishAiDecisionAsync(actor, skill.DisplayName, cancellationToken).ConfigureAwait(false);
                 return await ExecuteCommandAsync(request, actor, command, cancellationToken)
                     .ConfigureAwait(false);
             }
 
+            RecordAiDecision(actor, selection, PassAction);
+            await PublishAiDecisionAsync(actor, "Pass", cancellationToken).ConfigureAwait(false);
             return await ExecuteCommandAsync(
                 request,
                 actor,
                 new PassBattleActionCommand(),
                 cancellationToken).ConfigureAwait(false);
         }
+
+        private void RecordAiDecision(
+            CatalogBattleActor actor,
+            BattleActionSelection selection,
+            ContentId actionId) =>
+            _aiDecisionEvidence.Add(new TrainingAnnexAiDecisionEvidence(
+                actor.State.InstanceId,
+                actor.Entity.Id,
+                selection.Status,
+                actionId,
+                selection.SelectedTargetIds,
+                selection.Assessment?.CanExecute));
+
+        private ValueTask PublishAiDecisionAsync(
+            CatalogBattleActor actor,
+            string actionLabel,
+            CancellationToken cancellationToken) =>
+            _events.PublishAsync(
+                $"Framework AI selected: {actor.Entity.DisplayName} -> {actionLabel}.",
+                cancellationToken);
 
         private async ValueTask<BattleActionCommand?> SelectBasicAttackAsync(
             BattleEncounterTurnRequest request,
