@@ -157,7 +157,7 @@ Goal: replace automated demo combat with a real clean battle loop.
 | 15 | `ailment_lifecycle` | `parallel_partial` | Add one clean ailment/status loop if still desired for the sample. |
 | 16 | `passive_lifecycle` | `parallel_partial` | Prove passives through clean battle/turn lifecycle, not legacy startup parsing. |
 | 17 | `enemy_ai_and_tactics` | `parallel_partial` | Add a minimal clean AI policy for demo enemies. |
-| 18 | `battle_knowledge` | `parallel_partial` | Persist and use clean battle knowledge in the demo session. |
+| 18 | `battle_knowledge` | `parallel_partial` | Split persistent player knowledge from per-encounter AI knowledge, then save only player discoveries. |
 | 19 | `battle_rewards` | `parallel_partial` | Apply clean rewards after battle through ruleset-bound services. |
 
 ### Phase 3: Save And Runtime Session
@@ -647,11 +647,14 @@ Full parity target:
 
 - elemental, ailment, and instant-death knowledge live in framework snapshots;
 - analyze/discovery updates are clean runtime events;
-- persistence includes knowledge state.
+- persistence includes player-owned knowledge state;
+- AI/encounter knowledge is scoped to the current battle unless a host explicitly supplies a special persistent source, such as a boss or scripted encounter.
 
 Clean console proof:
 
-- clean battle discovers and reuses a known weakness/resistance.
+- player actions and Analyze update persistent player knowledge for future UI hints;
+- enemy AI learns within one battle but starts a fresh random encounter without prior discoveries;
+- clean battle can reuse each knowledge scope through the correct consumer: UI/player-facing state reads player knowledge, enemy tactics read encounter-local AI knowledge.
 
 Phase 2-18 implementation note:
 
@@ -662,6 +665,15 @@ Phase 2-18 implementation note:
 - No Training Annex JSON, framework public API, legacy `BattleKnowledge`, or production `Data/Jsons` file changed.
 - Status remains `parallel_partial`: original clean content now learns and reuses knowledge, but legacy battle consumers still have their protected knowledge path and no removal is authorized.
 - Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
+
+Phase 2-18 design correction required before Phase 2-19:
+
+- The implementation above proved the storage, evidence, save, and selector plumbing, but it currently gives enemy AI the same session knowledge store that is saved for the player.
+- Approved design intent: random encounters start with fresh AI/encounter knowledge; the AI may learn only during that battle. Player knowledge persists across battles and saves, and later presentation/UI uses it for target and skill-selection hints.
+- The correction must introduce two explicit scopes in the clean host/runtime path: persistent player battle knowledge and per-battle encounter AI knowledge.
+- Player-owned actions, Analyze, and player-facing discovery events update persistent player knowledge. Enemy observations update only encounter-local AI knowledge unless a future host deliberately injects persistent knowledge for a special encounter.
+- Save snapshots include player battle knowledge only. Encounter AI knowledge is discarded when the battle ends.
+- Required regression tests: battle one discovers Ashling's Ice weakness and saves it for later UI-facing state; battle two starts enemy AI knowledge blank; enemy AI can still learn within battle two; no Training Annex content JSON or legacy battle path changes.
 
 ### 19. `battle_rewards`
 

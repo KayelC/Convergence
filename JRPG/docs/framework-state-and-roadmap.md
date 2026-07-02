@@ -328,6 +328,8 @@ Phase 2-17 verification: focused Training Annex/framework-selector tests passed 
 
 Phase 2-18 implementation note: the Training Annex play session now owns framework elemental, ailment, and instant-death knowledge stores for the duration of the session. Typed damage results learn elemental affinity, Analyze learns all three defense channels from the target profile/catalog, the enemy selector consumes the same elemental store, and the save-facing summary carries the resulting `RuntimeKnowledgeSnapshot`. This remains `parallel_partial` because legacy battle consumers still keep their protected knowledge path.
 
+Phase 2-18 design correction: the current implementation proved the plumbing but must be split before Phase 2-19. Player battle knowledge is persistent and save-facing; enemy/AI knowledge is per-encounter and discarded after random battles. Later UI should read player knowledge for discovered weakness/resistance hints, while AI strategy reads only the current encounter's tactical discoveries unless a host explicitly injects special persistent knowledge for a boss or scripted encounter.
+
 Phase 2-18 verification: focused Training Annex tests passed `39/39`, the full suite passed `796/796`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
 Design note:

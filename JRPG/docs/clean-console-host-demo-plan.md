@@ -496,6 +496,15 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - No Training Annex content JSON or framework public API changed.
 - Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Phase 2-18 Ownership Correction
+
+The result above intentionally remains `parallel_partial`. It proved the framework can learn, summarize, validate, save, and reuse battle knowledge, but the approved design now separates two scopes:
+
+- player battle knowledge persists across encounters and saves;
+- enemy/AI encounter knowledge starts fresh for each random battle and is discarded when the battle ends.
+
+The next amendment must split the clean Training Annex knowledge state before Phase 2-19 reward application is built on top of the battle-completion path. Player actions and Analyze update persistent player knowledge for later UI hints. Enemy observations update only the encounter-local AI store, unless a future host deliberately supplies persistent knowledge for a special boss or scripted encounter.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;
