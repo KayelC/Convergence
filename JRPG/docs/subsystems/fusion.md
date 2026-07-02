@@ -90,6 +90,8 @@ After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a str
 
 Track N intentionally fixes the previous shallow-copy behavior: registered entries deep-clone active Persona skill lists, stat modifiers, learn tables, affinities, and growth fields. Recalled clones can be modified without mutating the stored Compendium entry.
 
+Future knowledge integration: once clean battle UI and clean Compendium ownership are connected, registered or owned familiar entities may seed the player's battle knowledge snapshot. A demon recruited, fused, recalled, or registered in the Compendium can therefore reveal its known affinities/resistances immediately when encountered later, without granting that memory to ordinary enemy AI.
+
 ## Important State And Invariants
 
 - Interactive fusion still requires `Database.FusionRecipes` and `Database.Personas`; the legacy content adapter is the only layer that reads them for framework fusion services.

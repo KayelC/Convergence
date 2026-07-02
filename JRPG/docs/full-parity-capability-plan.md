@@ -649,12 +649,14 @@ Full parity target:
 - analyze/discovery updates are clean runtime events;
 - persistence includes player-owned knowledge state;
 - AI/encounter knowledge is scoped to the current battle unless a host explicitly supplies a special persistent source, such as a boss or scripted encounter.
+- future ownership/Compendium imports may update player knowledge before battle presentation: if the player has owned, recruited, fused, recalled, or registered a species/entity, the framework should be able to seed known affinities/resistances into the player knowledge base for UI hints without granting that memory to ordinary enemy AI.
 
 Clean console proof:
 
 - player actions and Analyze update persistent player knowledge for future UI hints;
 - enemy AI learns within one battle but starts a fresh random encounter without prior discoveries;
 - clean battle can reuse each knowledge scope through the correct consumer: UI/player-facing state reads player knowledge, enemy tactics read encounter-local AI knowledge.
+- deferred proof: owning or registering a familiar entity in the Compendium can seed player-facing battle knowledge before target selection, so a later encounter can immediately show discovered affinity icons for that familiar entity.
 
 Phase 2-18 implementation note:
 
@@ -893,10 +895,12 @@ Full parity target:
 
 - registration, recall, pricing, snapshot isolation, persistence, and stock checks are framework-owned;
 - clean content identifies species/entities explicitly.
+- Compendium/ownership state can optionally seed player battle knowledge for familiar entities: recruited, fused, recalled, or previously registered entities may expose known elemental affinities, ailment resistances, and instant-death channels to the player's knowledge snapshot.
 
 Clean console proof:
 
 - optional after fusion/recruitment design approval.
+- future proof after battle-knowledge UI exists: register or own a sample entity, encounter that entity later, and show known weakness/resistance hints without requiring Analyze or a fresh attack in that battle.
 
 ### 36. `console_presentation`
 

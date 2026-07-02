@@ -80,6 +80,7 @@ Each phase:
 - Active party state comes from `PartyManager`; enemies are a local list owned by the conductor.
 - `_sessionRecruitedIds` prevents repeated recruitment of the same entity in a single encounter and is validated by the framework recruitment transaction service before the console adapter mutates live stock.
 - `BattleKnowledge` persists across battles for the session.
+- Future clean battle knowledge may also be seeded from player ownership or Compendium state. If the player has previously owned, recruited, fused, recalled, or registered a familiar entity, target presentation can show known defenses immediately while ordinary enemy AI still uses fresh encounter-local knowledge.
 - `StatusRegistry.ProcessTurnStart` is the authority for ailment-driven action restrictions.
 - `CombatMath.GetEffectiveAffinity` delegates to the clean resolver through the legacy adapter. Shields precede breaks and affinity; Almighty/None normalize to Normal; guarding normalizes Weak; rigid-body physical states normalize physical resistance.
 

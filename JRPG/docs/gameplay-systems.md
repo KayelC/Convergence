@@ -156,6 +156,8 @@ Phase 2-17 routes original-content enemy turns through framework `DeterministicB
 
 Phase 2-18 gives the Training Annex clean battle scoped knowledge. Player damage effects learn elemental affinity from resolved typed effect results, Analyze learns elemental/ailment/instant-death defenses from the target's typed profile, and the save-facing summary carries the resulting player `RuntimeKnowledgeSnapshot`. Enemy AI receives a separate encounter-local elemental store, can learn and adjust during the current battle, and discards that knowledge afterward unless a future host intentionally supplies special persistent knowledge.
 
+Future player-knowledge import should connect clean ownership and Compendium state to battle presentation. If the player has previously owned, recruited, fused, recalled, or registered a familiar entity, the player's knowledge snapshot may be seeded with that entity's known defenses so target hover/selection can immediately show discovered weakness or resistance icons. This is player-facing memory only and does not change ordinary enemy AI's fresh per-encounter knowledge.
+
 ## Clean Runtime State Foundation
 
 Track D adds a framework runtime-state surface beside the legacy `Combatant` and `Persona` models. It gives actor identity, controller/team/owner relationships, active/reserve/deployed state, progression, resources, stats, skill loadouts, active form references, persona/demon stock references, equipment slots, battle statuses, analysis, and passive activation counts typed snapshot homes.

@@ -159,6 +159,8 @@ Still needed:
 - real fusion and Compendium content;
 - balance review and naming/lore ownership.
 
+Future battle-knowledge import: once clean recruitment/fusion/Compendium ownership is approved, owned or registered familiar entities should be able to seed the player's battle knowledge snapshot. This lets future UI show known weakness/resistance hints for a demon the player has previously recruited, fused, recalled, or registered, without giving ordinary enemy AI persistent memory.
+
 ### Clean Consumer Authority
 
 Many systems have framework services, but ordinary interactive play still reaches them through console compatibility adapters or still relies on legacy execution.
@@ -327,6 +329,8 @@ Phase 2-17 implementation note: the Training Annex enemy path now delegates type
 Phase 2-17 verification: focused Training Annex/framework-selector tests passed `38/38`, the full suite passed `794/794`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
 Phase 2-18 implementation note: the Training Annex play session now owns framework elemental, ailment, and instant-death knowledge stores with explicit scopes. Player battle knowledge is persistent and save-facing; player damage and Analyze discoveries update that store for later UI hints. Enemy/AI knowledge is created fresh for each manual battle, feeds framework `DeterministicBattleActionSelector` only inside that battle, and is discarded after ordinary encounters. This remains `parallel_partial` because legacy battle consumers still keep their protected knowledge path.
+
+Future design hook: persistent player knowledge may also be seeded from clean ownership/Compendium state. If the player has owned, recruited, fused, recalled, or registered a familiar entity, the framework should be able to import that entity's known defenses into the player's knowledge base before battle presentation. This remains separate from encounter AI knowledge.
 
 Phase 2-18 verification: focused Training Annex tests passed `39/39`, the full suite passed `796/796`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 

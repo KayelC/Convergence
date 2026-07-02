@@ -497,6 +497,10 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - No Training Annex content JSON or framework public API changed.
 - Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Future Knowledge Import
+
+Later, after clean ownership/recruitment/fusion/Compendium flows are approved, the player knowledge base should be able to import known defenses from familiar entities. If the player has owned, recruited, fused, recalled, or registered a species/entity, a later encounter with that familiar enemy can immediately show known affinity/resistance hints in the battle UI. This imports into persistent player knowledge only; ordinary enemy AI still receives fresh encounter-local knowledge unless a host deliberately creates a special boss/scripted memory source.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;
@@ -676,6 +680,7 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - Select inherited skills.
 - Commit transaction.
 - Register/recall a simple Compendium entry if approved.
+- Demonstrate optional player-knowledge import from a registered/owned familiar entity, so later target selection can show known weakness/resistance hints without a fresh Analyze action.
 
 ### Framework Use
 
@@ -697,6 +702,7 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - inheritance policy is respected;
 - transaction is atomic;
 - Compendium snapshots remain immutable.
+- player battle knowledge can be seeded from owned/registered familiar entity data without seeding ordinary enemy AI knowledge.
 
 ## Iteration 11: Content Authoring Comfort Pass
 
