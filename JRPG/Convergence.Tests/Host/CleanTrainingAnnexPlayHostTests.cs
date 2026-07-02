@@ -343,6 +343,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(frost.IsCritical);
         Assert.Equal(ElementalAffinity.Weak, frost.ResolvedAffinity);
         Assert.Equal(PressTurnOutcome.Weakness, frost.PressTurnOutcome);
+        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+            IsElementalKnowledge(
+                evidence,
+                Qualified("frost_tip"),
+                Qualified("ashling"),
+                DamageElement.Ice,
+                ElementalAffinity.Weak));
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Element == DamageElement.Ice &&
+            knowledge.Affinity == ElementalAffinity.Weak);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
             evidence.ActorId == ContentId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
@@ -378,6 +389,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Press Turn before command: 1 full, 0 blinking.", text, StringComparison.Ordinal);
         Assert.Contains("Press Turn updated: 0 full, 1 blinking.", text, StringComparison.Ordinal);
         Assert.Contains("Battle action executed: Echo Adept used Frost Tip.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle knowledge updated: 1 discovery.", text, StringComparison.Ordinal);
         Assert.Contains("Battle action executed: Ashling used Ash Spark.", text, StringComparison.Ordinal);
         Assert.Contains("Clean battle ended: Victory; winner player_team.", text, StringComparison.Ordinal);
         Assert.Equal("Start Prepared Battle", io.Menus[3].Options[10]);
@@ -522,6 +534,95 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
         Assert.DoesNotContain(Qualified("toxin_touch"), summary.ExecutedBattleActionIds);
         Assert.Contains("Framework AI selected: Ashling -> Pass.", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_AnalyzeLearnsAllDefenseChannelsAndValidatesSaveKnowledge()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 5, 0, -1, 5, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.StartupSnapshotValidated);
+        Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
+        Assert.Contains(ContentId.Parse("analyze"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+            IsElementalKnowledge(
+                evidence,
+                ContentId.Parse("analyze"),
+                Qualified("ashling"),
+                DamageElement.Fire,
+                ElementalAffinity.Resist));
+        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+            IsAilmentKnowledge(
+                evidence,
+                ContentId.Parse("analyze"),
+                Qualified("ashling"),
+                Qualified("sample_poison"),
+                ResistanceLevel.Normal));
+        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+            IsInstantDeathKnowledge(
+                evidence,
+                ContentId.Parse("analyze"),
+                Qualified("ashling"),
+                InstantDeathChannel.Light,
+                ResistanceLevel.Normal));
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Element == DamageElement.Ice &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.Contains(summary.BattleKnowledge.AilmentResistances, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.AilmentId == Qualified("sample_poison") &&
+            knowledge.Resistance == ResistanceLevel.Normal);
+        Assert.Contains(summary.BattleKnowledge.InstantDeathResistances, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Channel == InstantDeathChannel.Dark &&
+            knowledge.Resistance == ResistanceLevel.Normal);
+        Assert.Contains("Battle knowledge updated:", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FrameworkAiReusesDiscoveredElementalResistance()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 4, 4, 4, 4, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new TrainingAnnexLifecycleContentPackTextSource(
+                ContentRoot(),
+                ashlingBaseSkillIds: ["ash_spark", "echo_strike"],
+                affinityEntityId: "echo_adept",
+                affinityElementId: "fire",
+                affinity: "resist"));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [Qualified("ash_spark"), Qualified("echo_strike")],
+            summary.AiDecisionEvidence.Select(evidence => evidence.SelectedActionId).Take(2));
+        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+            IsElementalKnowledge(
+                evidence,
+                Qualified("ash_spark"),
+                Qualified("echo_adept"),
+                DamageElement.Fire,
+                ElementalAffinity.Resist));
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("echo_adept") &&
+            knowledge.Element == DamageElement.Fire &&
+            knowledge.Affinity == ElementalAffinity.Resist);
+        Assert.Contains("Framework AI selected: Ashling -> Ash Spark.", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Framework AI selected: Ashling -> Echo Strike.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -1379,6 +1480,42 @@ public sealed class CleanTrainingAnnexPlayHostTests
         effect.EffectKind == effectKind &&
         effect.ResourceId == ContentId.Parse(resourceId);
 
+    private static bool IsElementalKnowledge(
+        TrainingAnnexBattleKnowledgeEvidence evidence,
+        ContentId sourceActionId,
+        ContentId targetEntityId,
+        DamageElement element,
+        ElementalAffinity affinity) =>
+        evidence.SourceActionId == sourceActionId &&
+        evidence.TargetEntityId == targetEntityId &&
+        evidence.Channel == TrainingAnnexBattleKnowledgeChannel.ElementalAffinity &&
+        evidence.Element == element &&
+        evidence.Affinity == affinity;
+
+    private static bool IsAilmentKnowledge(
+        TrainingAnnexBattleKnowledgeEvidence evidence,
+        ContentId sourceActionId,
+        ContentId targetEntityId,
+        ContentId ailmentId,
+        ResistanceLevel resistance) =>
+        evidence.SourceActionId == sourceActionId &&
+        evidence.TargetEntityId == targetEntityId &&
+        evidence.Channel == TrainingAnnexBattleKnowledgeChannel.AilmentResistance &&
+        evidence.AilmentId == ailmentId &&
+        evidence.Resistance == resistance;
+
+    private static bool IsInstantDeathKnowledge(
+        TrainingAnnexBattleKnowledgeEvidence evidence,
+        ContentId sourceActionId,
+        ContentId targetEntityId,
+        InstantDeathChannel channel,
+        ResistanceLevel resistance) =>
+        evidence.SourceActionId == sourceActionId &&
+        evidence.TargetEntityId == targetEntityId &&
+        evidence.Channel == TrainingAnnexBattleKnowledgeChannel.InstantDeathResistance &&
+        evidence.InstantDeathChannel == channel &&
+        evidence.Resistance == resistance;
+
     private static bool IsLifecycle(
         TrainingAnnexLifecycleEvidence evidence,
         ContentId actorId,
@@ -1609,7 +1746,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string? steadyBreathEventId = null,
         string? steadyBreathDisplayName = null,
         decimal? steadyBreathPhysicalDamageMultiplier = null,
-        string? unaffordableSkillId = null) : IContentPackTextSource
+        string? unaffordableSkillId = null,
+        string? affinityEntityId = null,
+        string? affinityElementId = null,
+        string? affinity = null) : IContentPackTextSource
     {
         public async ValueTask<ContentPackTextBundle> ReadAsync(
             ContentPackTextRequest request,
@@ -1661,6 +1801,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
             if (ashlingBaseSkillIds is not null)
             {
                 ReplaceBaseSkills(entities, "ashling", ashlingBaseSkillIds);
+            }
+            if (affinityEntityId is not null &&
+                affinityElementId is not null &&
+                affinity is not null)
+            {
+                ReplaceElementalAffinity(entities, affinityEntityId, affinityElementId, affinity);
             }
 
             return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
@@ -1754,6 +1900,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     }
                 }
             }
+        }
+
+        private static void ReplaceElementalAffinity(
+            JsonArray entities,
+            string entityId,
+            string elementId,
+            string affinity)
+        {
+            JsonObject entity = entities
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == entityId) ??
+                throw new InvalidOperationException($"Training Annex entity '{entityId}' was not found.");
+            JsonObject affinities = entity["elementalAffinities"]?.AsObject() ??
+                throw new InvalidOperationException($"Training Annex entity '{entityId}' has no elemental affinities.");
+            affinities[elementId] = affinity;
         }
     }
 

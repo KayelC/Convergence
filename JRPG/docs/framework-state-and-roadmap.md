@@ -326,6 +326,10 @@ Phase 2-17 implementation note: the Training Annex enemy path now delegates type
 
 Phase 2-17 verification: focused Training Annex/framework-selector tests passed `38/38`, the full suite passed `794/794`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 
+Phase 2-18 implementation note: the Training Annex play session now owns framework elemental, ailment, and instant-death knowledge stores for the duration of the session. Typed damage results learn elemental affinity, Analyze learns all three defense channels from the target profile/catalog, the enemy selector consumes the same elemental store, and the save-facing summary carries the resulting `RuntimeKnowledgeSnapshot`. This remains `parallel_partial` because legacy battle consumers still keep their protected knowledge path.
+
+Phase 2-18 verification: focused Training Annex tests passed `39/39`, the full suite passed `796/796`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
+
 Design note:
 
 - The current floor-triggered encounter flow is a deterministic console/demo convenience.

@@ -653,6 +653,16 @@ Clean console proof:
 
 - clean battle discovers and reuses a known weakness/resistance.
 
+Phase 2-18 implementation note:
+
+- `--clean-training-annex-play` now owns a session-level battle knowledge state over the framework `ElementalAffinityKnowledge`, `AilmentResistanceKnowledge`, and `InstantDeathResistanceKnowledge` stores.
+- Damage actions learn elemental affinity from typed `EffectExecutionResult` data. Analyze learns elemental, ailment, and instant-death channels from the target's typed defense profile and catalog ailments.
+- The clean battle summary exposes knowledge evidence plus a `RuntimeKnowledgeSnapshot`, and the Training Annex save-snapshot validation path includes that learned knowledge.
+- Framework enemy selection now receives the session elemental-knowledge store instead of a fresh empty store. Tests force Ashling to learn that Echo Adept resists Fire, then verify the selector switches to a different legal skill on a later turn.
+- No Training Annex JSON, framework public API, legacy `BattleKnowledge`, or production `Data/Jsons` file changed.
+- Status remains `parallel_partial`: original clean content now learns and reuses knowledge, but legacy battle consumers still have their protected knowledge path and no removal is authorized.
+- Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
+
 ### 19. `battle_rewards`
 
 Current status: `parallel_partial`.

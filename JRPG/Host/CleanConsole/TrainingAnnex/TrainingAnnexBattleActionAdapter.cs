@@ -18,6 +18,7 @@ internal sealed record TrainingAnnexManualBattleSummary(
     IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
+    IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence,
     BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
@@ -64,6 +65,26 @@ internal sealed record TrainingAnnexLifecycleEvidence(
     BattleTurnStartOutcome? TurnStartOutcome = null,
     ContentId? SourceActionId = null);
 
+internal enum TrainingAnnexBattleKnowledgeChannel
+{
+    ElementalAffinity,
+    AilmentResistance,
+    InstantDeathResistance
+}
+
+internal sealed record TrainingAnnexBattleKnowledgeEvidence(
+    ContentId SourceActionId,
+    int EffectIndex,
+    ContentId TargetInstanceId,
+    ContentId TargetEntityId,
+    TrainingAnnexBattleKnowledgeChannel Channel,
+    DamageElement? Element = null,
+    ContentId? AilmentId = null,
+    InstantDeathChannel? InstantDeathChannel = null,
+    ElementalAffinity? Affinity = null,
+    ResistanceLevel? Resistance = null,
+    bool WasNewDiscovery = false);
+
 internal sealed record TrainingAnnexAiDecisionEvidence
 {
     public TrainingAnnexAiDecisionEvidence(
@@ -89,6 +110,259 @@ internal sealed record TrainingAnnexAiDecisionEvidence
     public ContentId SelectedActionId { get; }
     public IReadOnlyList<ContentId> TargetIds { get; }
     public bool? AssessmentCanExecute { get; }
+}
+
+internal sealed class TrainingAnnexBattleKnowledgeState
+{
+    public ElementalAffinityKnowledge ElementalAffinities { get; } = new();
+    public AilmentResistanceKnowledge AilmentResistances { get; } = new();
+    public InstantDeathResistanceKnowledge InstantDeathResistances { get; } = new();
+
+    public RuntimeKnowledgeSnapshot ToSnapshot() =>
+        new(
+            ElementalAffinities.Snapshot()
+                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
+                .ThenBy(entry => entry.Key.Element.ToString(), StringComparer.Ordinal)
+                .Select(entry => new RuntimeElementalAffinityKnowledgeSnapshot(
+                    entry.Key.EntityId,
+                    entry.Key.Element,
+                    entry.Value)),
+            AilmentResistances.Snapshot()
+                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
+                .ThenBy(entry => entry.Key.AilmentId.ToString(), StringComparer.Ordinal)
+                .Select(entry => new RuntimeAilmentResistanceKnowledgeSnapshot(
+                    entry.Key.EntityId,
+                    entry.Key.AilmentId,
+                    entry.Value)),
+            InstantDeathResistances.Snapshot()
+                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
+                .ThenBy(entry => entry.Key.Channel.ToString(), StringComparer.Ordinal)
+                .Select(entry => new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                    entry.Key.EntityId,
+                    entry.Key.Channel,
+                    entry.Value)));
+
+    public IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> LearnFromExecution(
+        BattleActionCommand command,
+        ContentId actionId,
+        BattleActionExecutionResult execution,
+        IReadOnlyList<CatalogBattleActor> actors,
+        GameDataCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(execution);
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        var evidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
+        foreach (EffectExecutionResult effect in execution.Effects)
+        {
+            if (effect.TargetId is not ContentId targetId)
+            {
+                continue;
+            }
+
+            CatalogBattleActor? target = actors.FirstOrDefault(actor => actor.State.InstanceId == targetId);
+            if (target is null)
+            {
+                continue;
+            }
+
+            if (command is AnalyzeBattleActionCommand analyze &&
+                effect.Outcome == EffectExecutionOutcome.Success)
+            {
+                evidence.AddRange(LearnFromAnalyze(actionId, effect.EffectIndex, target, analyze.Layers, catalog));
+                continue;
+            }
+
+            if (DamageElementFor(command, effect.EffectIndex) is DamageElement element &&
+                element != DamageElement.Almighty &&
+                effect.ResolvedAffinity is ElementalAffinity affinity)
+            {
+                evidence.Add(LearnElemental(actionId, effect.EffectIndex, target, element, affinity));
+            }
+
+            if (AilmentIdFor(command, effect.EffectIndex) is ContentId ailmentId &&
+                effect.Outcome is EffectExecutionOutcome.Success or EffectExecutionOutcome.Failure)
+            {
+                evidence.Add(LearnAilment(
+                    actionId,
+                    effect.EffectIndex,
+                    target,
+                    ailmentId,
+                    target.State.DefenseProfile.GetAilmentResistance(ailmentId)));
+            }
+
+            if (InstantDeathChannelFor(command, effect.EffectIndex) is InstantDeathChannel channel &&
+                effect.Outcome is EffectExecutionOutcome.Success or EffectExecutionOutcome.Failure)
+            {
+                evidence.Add(LearnInstantDeath(
+                    actionId,
+                    effect.EffectIndex,
+                    target,
+                    channel,
+                    target.State.DefenseProfile.GetInstantDeathResistance(channel)));
+            }
+        }
+
+        return evidence;
+    }
+
+    private IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> LearnFromAnalyze(
+        ContentId actionId,
+        int effectIndex,
+        CatalogBattleActor target,
+        IReadOnlyList<AnalysisLayer> layers,
+        GameDataCatalog catalog)
+    {
+        bool full = layers.Contains(AnalysisLayer.Full);
+        var evidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
+
+        if (full || layers.Contains(AnalysisLayer.Affinities))
+        {
+            foreach (DamageElement element in Enum.GetValues<DamageElement>()
+                         .Where(element => element != DamageElement.Almighty))
+            {
+                evidence.Add(LearnElemental(
+                    actionId,
+                    effectIndex,
+                    target,
+                    element,
+                    target.State.DefenseProfile.GetElementalAffinity(element)));
+            }
+        }
+
+        if (full || layers.Contains(AnalysisLayer.Ailments))
+        {
+            foreach (ContentId ailmentId in catalog.Ailments.Keys.OrderBy(id => id.ToString(), StringComparer.Ordinal))
+            {
+                evidence.Add(LearnAilment(
+                    actionId,
+                    effectIndex,
+                    target,
+                    ailmentId,
+                    target.State.DefenseProfile.GetAilmentResistance(ailmentId)));
+            }
+        }
+
+        if (full)
+        {
+            foreach (InstantDeathChannel channel in Enum.GetValues<InstantDeathChannel>())
+            {
+                evidence.Add(LearnInstantDeath(
+                    actionId,
+                    effectIndex,
+                    target,
+                    channel,
+                    target.State.DefenseProfile.GetInstantDeathResistance(channel)));
+            }
+        }
+
+        return evidence;
+    }
+
+    private TrainingAnnexBattleKnowledgeEvidence LearnElemental(
+        ContentId actionId,
+        int effectIndex,
+        CatalogBattleActor target,
+        DamageElement element,
+        ElementalAffinity affinity)
+    {
+        bool changed = !ElementalAffinities.TryGet(target.Entity.Id, element, out ElementalAffinity existing) ||
+            existing != affinity;
+        ElementalAffinities.Learn(target.Entity.Id, element, affinity);
+        return new TrainingAnnexBattleKnowledgeEvidence(
+            actionId,
+            effectIndex,
+            target.State.InstanceId,
+            target.Entity.Id,
+            TrainingAnnexBattleKnowledgeChannel.ElementalAffinity,
+            Element: element,
+            Affinity: affinity,
+            WasNewDiscovery: changed);
+    }
+
+    private TrainingAnnexBattleKnowledgeEvidence LearnAilment(
+        ContentId actionId,
+        int effectIndex,
+        CatalogBattleActor target,
+        ContentId ailmentId,
+        ResistanceLevel resistance)
+    {
+        bool changed = !AilmentResistances.TryGet(target.Entity.Id, ailmentId, out ResistanceLevel existing) ||
+            existing != resistance;
+        AilmentResistances.Learn(target.Entity.Id, ailmentId, resistance);
+        return new TrainingAnnexBattleKnowledgeEvidence(
+            actionId,
+            effectIndex,
+            target.State.InstanceId,
+            target.Entity.Id,
+            TrainingAnnexBattleKnowledgeChannel.AilmentResistance,
+            AilmentId: ailmentId,
+            Resistance: resistance,
+            WasNewDiscovery: changed);
+    }
+
+    private TrainingAnnexBattleKnowledgeEvidence LearnInstantDeath(
+        ContentId actionId,
+        int effectIndex,
+        CatalogBattleActor target,
+        InstantDeathChannel channel,
+        ResistanceLevel resistance)
+    {
+        bool changed = !InstantDeathResistances.TryGet(target.Entity.Id, channel, out ResistanceLevel existing) ||
+            existing != resistance;
+        InstantDeathResistances.Learn(target.Entity.Id, channel, resistance);
+        return new TrainingAnnexBattleKnowledgeEvidence(
+            actionId,
+            effectIndex,
+            target.State.InstanceId,
+            target.Entity.Id,
+            TrainingAnnexBattleKnowledgeChannel.InstantDeathResistance,
+            InstantDeathChannel: channel,
+            Resistance: resistance,
+            WasNewDiscovery: changed);
+    }
+
+    private static DamageElement? DamageElementFor(BattleActionCommand command, int effectIndex) =>
+        command switch
+        {
+            BasicAttackBattleActionCommand basic when effectIndex == 0 => basic.BasicAttack.Element,
+            SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count &&
+                skill.Skill.Effects[effectIndex] is DamageEffectDefinition damage => damage.Element,
+            ItemBattleActionCommand item when item.Item.Usage is not null &&
+                effectIndex >= 0 && effectIndex < item.Item.Usage.Effects.Count &&
+                item.Item.Usage.Effects[effectIndex] is DamageEffectDefinition damage => damage.Element,
+            _ => null
+        };
+
+    private static ContentId? AilmentIdFor(BattleActionCommand command, int effectIndex) =>
+        command switch
+        {
+            SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count &&
+                skill.Skill.Effects[effectIndex] is ApplyAilmentEffectDefinition ailment => ailment.AilmentId,
+            ItemBattleActionCommand item when item.Item.Usage is not null &&
+                effectIndex >= 0 && effectIndex < item.Item.Usage.Effects.Count &&
+                item.Item.Usage.Effects[effectIndex] is ApplyAilmentEffectDefinition ailment => ailment.AilmentId,
+            _ => null
+        };
+
+    private static InstantDeathChannel? InstantDeathChannelFor(BattleActionCommand command, int effectIndex)
+    {
+        InstantKillEffectDefinition? instant = command switch
+        {
+            SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count =>
+                skill.Skill.Effects[effectIndex] as InstantKillEffectDefinition,
+            ItemBattleActionCommand item when item.Item.Usage is not null &&
+                effectIndex >= 0 && effectIndex < item.Item.Usage.Effects.Count =>
+                item.Item.Usage.Effects[effectIndex] as InstantKillEffectDefinition,
+            _ => null
+        };
+
+        return instant?.ResistanceCheck is ChannelInstantDeathResistanceCheckDefinition channel
+            ? channel.Channel
+            : null;
+    }
 }
 
 internal sealed class TrainingAnnexBattleActionAdapter
@@ -127,11 +401,13 @@ internal sealed class TrainingAnnexBattleActionAdapter
         TrainingAnnexRuntimeActor player,
         PreparedEncounter prepared,
         TrainingAnnexItemActionInventory inventory,
+        TrainingAnnexBattleKnowledgeState battleKnowledge,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(prepared);
         ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(battleKnowledge);
 
         SynchronizeActionResources(player);
 
@@ -151,7 +427,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands,
             new BattleActionExecutor(skillExecutor, new ItemExecutor(_services), _services),
             enemySelector,
-            new ElementalAffinityKnowledge(),
+            battleKnowledge,
             actors,
             player,
             inventory,
@@ -201,6 +477,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             pressTurns.Evidence,
             lifecycle.Evidence,
             turnHandler.AiDecisionEvidence,
+            turnHandler.BattleKnowledgeEvidence,
             rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
@@ -260,7 +537,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
         private readonly IBattleActionExecutor _actions;
         private readonly IBattleActionSelector _enemySelector;
-        private readonly ElementalAffinityKnowledge _enemyKnowledge;
+        private readonly TrainingAnnexBattleKnowledgeState _battleKnowledge;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
@@ -270,6 +547,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly List<TrainingAnnexTypedEffectEvidence> _executedEffectEvidence = [];
         private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
         private readonly List<TrainingAnnexAiDecisionEvidence> _aiDecisionEvidence = [];
+        private readonly List<TrainingAnnexBattleKnowledgeEvidence> _battleKnowledgeEvidence = [];
 
         public TrainingAnnexManualBattleTurnHandler(
             GameDataCatalog catalog,
@@ -277,7 +555,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
             IBattleActionExecutor actions,
             IBattleActionSelector enemySelector,
-            ElementalAffinityKnowledge enemyKnowledge,
+            TrainingAnnexBattleKnowledgeState battleKnowledge,
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
             TrainingAnnexItemActionInventory inventory,
@@ -289,7 +567,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands = commands;
             _actions = actions;
             _enemySelector = enemySelector ?? throw new ArgumentNullException(nameof(enemySelector));
-            _enemyKnowledge = enemyKnowledge ?? throw new ArgumentNullException(nameof(enemyKnowledge));
+            _battleKnowledge = battleKnowledge ?? throw new ArgumentNullException(nameof(battleKnowledge));
             _actors = actors;
             _player = player;
             _inventory = inventory;
@@ -303,6 +581,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _combatResolutionEvidence;
         public IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence =>
             _aiDecisionEvidence.ToArray();
+        public IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence =>
+            _battleKnowledgeEvidence.ToArray();
         public int CancelledSelections { get; private set; }
 
         public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
@@ -387,7 +667,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _enemyKnowledge));
+                _battleKnowledge.ElementalAffinities));
             if (selection.Status == BattleActionSelectionStatus.Selected && selection.Skill is SkillDefinition skill)
             {
                 var command = new SkillBattleActionCommand(
@@ -603,6 +883,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _executedActionIds.Add(actionId);
             _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
             _combatResolutionEvidence.AddRange(BuildCombatResolutionEvidence(command, actionId, execution));
+            IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> learned =
+                _battleKnowledge.LearnFromExecution(command, actionId, execution, _actors, _catalog);
+            _battleKnowledgeEvidence.AddRange(learned);
             _lifecycle.RecordActionEffects(actor.State.InstanceId, actionId, command, execution);
             _pressTurns.RecordBefore(
                 actor.State.InstanceId,
@@ -613,6 +896,12 @@ internal sealed class TrainingAnnexBattleActionAdapter
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
                 cancellationToken).ConfigureAwait(false);
+            if (learned.Count > 0)
+            {
+                await _events.PublishAsync(
+                    $"Battle knowledge updated: {learned.Count} discover{(learned.Count == 1 ? "y" : "ies")}.",
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             return BattleEncounterCommandResult.Executed(
                 execution.TurnConsumption,

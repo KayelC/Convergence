@@ -487,6 +487,15 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - No Training Annex JSON or framework public API changed.
 - Verification: focused Training Annex/framework-selector tests passed `38/38`; the full suite passed `794/794`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
 
+### Phase 2-18 Result
+
+- The Training Annex play session now keeps one battle-knowledge state for the whole session instead of creating a fresh empty elemental store inside battle.
+- Executed typed actions can update knowledge: damage records elemental affinity, Analyze records elemental/ailment/instant-death channels, and attempted ailment or instant-death effects can record their typed resistance channels when present.
+- Enemy AI receives the same session elemental knowledge used by persistence. A regression test makes Ashling discover Fire resistance and then change its next selected skill through framework `DeterministicBattleActionSelector`.
+- The session summary includes knowledge evidence and a `RuntimeKnowledgeSnapshot`; snapshot validation includes that learned knowledge.
+- No Training Annex content JSON or framework public API changed.
+- Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
+
 ### Non-Goals
 
 - no legacy `ActionProcessor`;
