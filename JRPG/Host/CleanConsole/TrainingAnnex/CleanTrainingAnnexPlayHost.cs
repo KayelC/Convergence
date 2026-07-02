@@ -88,7 +88,9 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
     IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence,
+    IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> EncounterAiKnowledgeEvidence,
     RuntimeKnowledgeSnapshot BattleKnowledge,
+    RuntimeKnowledgeSnapshot EncounterAiKnowledge,
     BattleRewardResult? PreparedBattleRewardPreview,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
@@ -262,8 +264,10 @@ internal sealed class CleanTrainingAnnexPlayHost
         var pressTurnEvidence = new List<TrainingAnnexPressTurnEvidence>();
         var lifecycleEvidence = new List<TrainingAnnexLifecycleEvidence>();
         var aiDecisionEvidence = new List<TrainingAnnexAiDecisionEvidence>();
-        var battleKnowledge = new TrainingAnnexBattleKnowledgeState();
+        var playerBattleKnowledge = new TrainingAnnexBattleKnowledgeState();
         var battleKnowledgeEvidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
+        var encounterAiKnowledgeEvidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
+        var lastEncounterAiKnowledge = new RuntimeKnowledgeSnapshot();
         BattleRewardResult? preparedBattleRewardPreview = null;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
@@ -319,7 +323,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                     lifecycleEvidence,
                     aiDecisionEvidence,
                     battleKnowledgeEvidence,
-                    battleKnowledge.ToSnapshot(),
+                    encounterAiKnowledgeEvidence,
+                    playerBattleKnowledge.ToSnapshot(),
+                    lastEncounterAiKnowledge,
                     preparedBattleRewardPreview,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
@@ -365,7 +371,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster, field, battleKnowledge.ToSnapshot()),
+                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster, field, playerBattleKnowledge.ToSnapshot()),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -407,7 +413,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                             lifecycleEvidence,
                             aiDecisionEvidence,
                             battleKnowledgeEvidence,
-                            battleKnowledge.ToSnapshot(),
+                            encounterAiKnowledgeEvidence,
+                            playerBattleKnowledge.ToSnapshot(),
+                            lastEncounterAiKnowledge,
                             preparedBattleRewardPreview,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
@@ -554,7 +562,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             roster.Player,
                             preparedEncounter,
                             inventory,
-                            battleKnowledge,
+                            playerBattleKnowledge,
                             cancellationToken)
                         .ConfigureAwait(false);
                     preparedBattleStarted = battle.Started;
@@ -567,6 +575,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     lifecycleEvidence.AddRange(battle.LifecycleEvidence);
                     aiDecisionEvidence.AddRange(battle.AiDecisionEvidence);
                     battleKnowledgeEvidence.AddRange(battle.BattleKnowledgeEvidence);
+                    encounterAiKnowledgeEvidence.AddRange(battle.EncounterAiKnowledgeEvidence);
+                    lastEncounterAiKnowledge = battle.EncounterAiKnowledge;
                     preparedBattleRewardPreview = battle.RewardPreview;
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
@@ -1058,7 +1068,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexLifecycleEvidence> lifecycleEvidence,
         IReadOnlyList<TrainingAnnexAiDecisionEvidence> aiDecisionEvidence,
         IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> battleKnowledgeEvidence,
+        IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> encounterAiKnowledgeEvidence,
         RuntimeKnowledgeSnapshot battleKnowledge,
+        RuntimeKnowledgeSnapshot encounterAiKnowledge,
         BattleRewardResult? preparedBattleRewardPreview,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
@@ -1108,7 +1120,9 @@ internal sealed class CleanTrainingAnnexPlayHost
             lifecycleEvidence.ToArray(),
             aiDecisionEvidence.ToArray(),
             battleKnowledgeEvidence.ToArray(),
+            encounterAiKnowledgeEvidence.ToArray(),
             battleKnowledge,
+            encounterAiKnowledge,
             preparedBattleRewardPreview,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,

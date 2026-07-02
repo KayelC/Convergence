@@ -19,6 +19,8 @@ internal sealed record TrainingAnnexManualBattleSummary(
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
     IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence,
+    IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> EncounterAiKnowledgeEvidence,
+    RuntimeKnowledgeSnapshot EncounterAiKnowledge,
     BattleRewardResult? RewardPreview,
     int CancelledSelections,
     int EventCount);
@@ -401,15 +403,16 @@ internal sealed class TrainingAnnexBattleActionAdapter
         TrainingAnnexRuntimeActor player,
         PreparedEncounter prepared,
         TrainingAnnexItemActionInventory inventory,
-        TrainingAnnexBattleKnowledgeState battleKnowledge,
+        TrainingAnnexBattleKnowledgeState playerBattleKnowledge,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(prepared);
         ArgumentNullException.ThrowIfNull(inventory);
-        ArgumentNullException.ThrowIfNull(battleKnowledge);
+        ArgumentNullException.ThrowIfNull(playerBattleKnowledge);
 
         SynchronizeActionResources(player);
+        var encounterAiKnowledge = new TrainingAnnexBattleKnowledgeState();
 
         CatalogBattleActor[] actors = [player.Actor, .. prepared.Actors];
         BattleEncounterParticipant[] participants = actors
@@ -427,7 +430,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands,
             new BattleActionExecutor(skillExecutor, new ItemExecutor(_services), _services),
             enemySelector,
-            battleKnowledge,
+            playerBattleKnowledge,
+            encounterAiKnowledge,
             actors,
             player,
             inventory,
@@ -478,6 +482,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             lifecycle.Evidence,
             turnHandler.AiDecisionEvidence,
             turnHandler.BattleKnowledgeEvidence,
+            turnHandler.EncounterAiKnowledgeEvidence,
+            encounterAiKnowledge.ToSnapshot(),
             rewardPreview,
             turnHandler.CancelledSelections,
             result.Events.Count);
@@ -537,7 +543,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
         private readonly IBattleActionExecutor _actions;
         private readonly IBattleActionSelector _enemySelector;
-        private readonly TrainingAnnexBattleKnowledgeState _battleKnowledge;
+        private readonly TrainingAnnexBattleKnowledgeState _playerBattleKnowledge;
+        private readonly TrainingAnnexBattleKnowledgeState _encounterAiKnowledge;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly TrainingAnnexRuntimeActor _player;
         private readonly TrainingAnnexItemActionInventory _inventory;
@@ -548,6 +555,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly List<TrainingAnnexCombatResolutionEvidence> _combatResolutionEvidence = [];
         private readonly List<TrainingAnnexAiDecisionEvidence> _aiDecisionEvidence = [];
         private readonly List<TrainingAnnexBattleKnowledgeEvidence> _battleKnowledgeEvidence = [];
+        private readonly List<TrainingAnnexBattleKnowledgeEvidence> _encounterAiKnowledgeEvidence = [];
 
         public TrainingAnnexManualBattleTurnHandler(
             GameDataCatalog catalog,
@@ -555,7 +563,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
             IBattleActionExecutor actions,
             IBattleActionSelector enemySelector,
-            TrainingAnnexBattleKnowledgeState battleKnowledge,
+            TrainingAnnexBattleKnowledgeState playerBattleKnowledge,
+            TrainingAnnexBattleKnowledgeState encounterAiKnowledge,
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
             TrainingAnnexItemActionInventory inventory,
@@ -567,7 +576,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands = commands;
             _actions = actions;
             _enemySelector = enemySelector ?? throw new ArgumentNullException(nameof(enemySelector));
-            _battleKnowledge = battleKnowledge ?? throw new ArgumentNullException(nameof(battleKnowledge));
+            _playerBattleKnowledge = playerBattleKnowledge ?? throw new ArgumentNullException(nameof(playerBattleKnowledge));
+            _encounterAiKnowledge = encounterAiKnowledge ?? throw new ArgumentNullException(nameof(encounterAiKnowledge));
             _actors = actors;
             _player = player;
             _inventory = inventory;
@@ -583,6 +593,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _aiDecisionEvidence.ToArray();
         public IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence =>
             _battleKnowledgeEvidence.ToArray();
+        public IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> EncounterAiKnowledgeEvidence =>
+            _encounterAiKnowledgeEvidence.ToArray();
         public int CancelledSelections { get; private set; }
 
         public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
@@ -667,7 +679,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _battleKnowledge.ElementalAffinities));
+                _encounterAiKnowledge.ElementalAffinities));
             if (selection.Status == BattleActionSelectionStatus.Selected && selection.Skill is SkillDefinition skill)
             {
                 var command = new SkillBattleActionCommand(
@@ -883,9 +895,20 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _executedActionIds.Add(actionId);
             _executedEffectEvidence.AddRange(TypedEffectEvidence(command, actionId));
             _combatResolutionEvidence.AddRange(BuildCombatResolutionEvidence(command, actionId, execution));
+            bool playerOwnedAction = actor.State.TeamId == TrainingAnnexHostSupport.PlayerTeam;
+            TrainingAnnexBattleKnowledgeState knowledge = playerOwnedAction
+                ? _playerBattleKnowledge
+                : _encounterAiKnowledge;
             IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> learned =
-                _battleKnowledge.LearnFromExecution(command, actionId, execution, _actors, _catalog);
-            _battleKnowledgeEvidence.AddRange(learned);
+                knowledge.LearnFromExecution(command, actionId, execution, _actors, _catalog);
+            if (playerOwnedAction)
+            {
+                _battleKnowledgeEvidence.AddRange(learned);
+            }
+            else
+            {
+                _encounterAiKnowledgeEvidence.AddRange(learned);
+            }
             _lifecycle.RecordActionEffects(actor.State.InstanceId, actionId, command, execution);
             _pressTurns.RecordBefore(
                 actor.State.InstanceId,
@@ -896,7 +919,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
                 cancellationToken).ConfigureAwait(false);
-            if (learned.Count > 0)
+            if (playerOwnedAction && learned.Count > 0)
             {
                 await _events.PublishAsync(
                     $"Battle knowledge updated: {learned.Count} discover{(learned.Count == 1 ? "y" : "ies")}.",

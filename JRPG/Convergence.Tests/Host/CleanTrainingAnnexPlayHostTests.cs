@@ -610,19 +610,30 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(
             [Qualified("ash_spark"), Qualified("echo_strike")],
             summary.AiDecisionEvidence.Select(evidence => evidence.SelectedActionId).Take(2));
-        Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
+        Assert.DoesNotContain(summary.BattleKnowledgeEvidence, evidence =>
             IsElementalKnowledge(
                 evidence,
                 Qualified("ash_spark"),
                 Qualified("echo_adept"),
                 DamageElement.Fire,
                 ElementalAffinity.Resist));
-        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+        Assert.Contains(summary.EncounterAiKnowledgeEvidence, evidence =>
+            IsElementalKnowledge(
+                evidence,
+                Qualified("ash_spark"),
+                Qualified("echo_adept"),
+                DamageElement.Fire,
+                ElementalAffinity.Resist));
+        Assert.DoesNotContain(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("echo_adept") &&
+            knowledge.Element == DamageElement.Fire);
+        Assert.Contains(summary.EncounterAiKnowledge.ElementalAffinities, knowledge =>
             knowledge.EntityId == Qualified("echo_adept") &&
             knowledge.Element == DamageElement.Fire &&
             knowledge.Affinity == ElementalAffinity.Resist);
         Assert.Contains("Framework AI selected: Ashling -> Ash Spark.", output.ToString(), StringComparison.Ordinal);
         Assert.Contains("Framework AI selected: Ashling -> Echo Strike.", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Battle knowledge updated:", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 

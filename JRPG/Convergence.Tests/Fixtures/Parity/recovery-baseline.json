@@ -248,7 +248,7 @@
       "status": "parallel_partial",
       "legacyOwners": ["Logic/Battle/Engines/BattleKnowledge.cs"],
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Engines/CombatKnowledgeStores.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs"],
-      "decisionDependencies": ["knowledge_persistence", "player_vs_encounter_knowledge_scope"],
+      "decisionDependencies": ["knowledge_persistence"],
       "tests": ["CombatVocabularyTests", "CatalogBattleRuntimeTests.Runner_ExecutesDeterministicKnowledgePassiveAndPressTurnLifecycle", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "RuntimePersistenceSnapshotTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_AnalyzeLearnsAllDefenseChannelsAndValidatesSaveKnowledge", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiReusesDiscoveredElementalResistance"],
       "futureTrack": "J",
       "removalFiles": ["Logic/Battle/Engines/BattleKnowledge.cs"],

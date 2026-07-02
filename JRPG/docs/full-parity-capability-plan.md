@@ -658,22 +658,15 @@ Clean console proof:
 
 Phase 2-18 implementation note:
 
-- `--clean-training-annex-play` now owns a session-level battle knowledge state over the framework `ElementalAffinityKnowledge`, `AilmentResistanceKnowledge`, and `InstantDeathResistanceKnowledge` stores.
-- Damage actions learn elemental affinity from typed `EffectExecutionResult` data. Analyze learns elemental, ailment, and instant-death channels from the target's typed defense profile and catalog ailments.
-- The clean battle summary exposes knowledge evidence plus a `RuntimeKnowledgeSnapshot`, and the Training Annex save-snapshot validation path includes that learned knowledge.
-- Framework enemy selection now receives the session elemental-knowledge store instead of a fresh empty store. Tests force Ashling to learn that Echo Adept resists Fire, then verify the selector switches to a different legal skill on a later turn.
+- `--clean-training-annex-play` now owns persistent player battle knowledge over the framework `ElementalAffinityKnowledge`, `AilmentResistanceKnowledge`, and `InstantDeathResistanceKnowledge` stores.
+- Each manual battle creates a fresh encounter AI knowledge state. Enemy strategy reads only that encounter-local elemental store, so ordinary enemy learning is discarded when the battle ends.
+- Player-owned damage actions learn elemental affinity from typed `EffectExecutionResult` data. Player Analyze learns elemental, ailment, and instant-death channels from the target's typed defense profile and catalog ailments.
+- Enemy-owned observations update encounter AI evidence and the last-encounter AI snapshot only. They are not written to the player/save-facing `RuntimeKnowledgeSnapshot`.
+- The clean battle summary exposes player knowledge evidence, encounter AI knowledge evidence, the persistent player `RuntimeKnowledgeSnapshot`, and the last encounter AI snapshot for tests.
+- Framework enemy selection now receives encounter-local AI knowledge. Tests force Ashling to learn that Echo Adept resists Fire, verify the selector switches to a different legal skill within that battle, and verify that discovery is absent from saved player knowledge.
 - No Training Annex JSON, framework public API, legacy `BattleKnowledge`, or production `Data/Jsons` file changed.
 - Status remains `parallel_partial`: original clean content now learns and reuses knowledge, but legacy battle consumers still have their protected knowledge path and no removal is authorized.
 - Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
-
-Phase 2-18 design correction required before Phase 2-19:
-
-- The implementation above proved the storage, evidence, save, and selector plumbing, but it currently gives enemy AI the same session knowledge store that is saved for the player.
-- Approved design intent: random encounters start with fresh AI/encounter knowledge; the AI may learn only during that battle. Player knowledge persists across battles and saves, and later presentation/UI uses it for target and skill-selection hints.
-- The correction must introduce two explicit scopes in the clean host/runtime path: persistent player battle knowledge and per-battle encounter AI knowledge.
-- Player-owned actions, Analyze, and player-facing discovery events update persistent player knowledge. Enemy observations update only encounter-local AI knowledge unless a future host deliberately injects persistent knowledge for a special encounter.
-- Save snapshots include player battle knowledge only. Encounter AI knowledge is discarded when the battle ends.
-- Required regression tests: battle one discovers Ashling's Ice weakness and saves it for later UI-facing state; battle two starts enemy AI knowledge blank; enemy AI can still learn within battle two; no Training Annex content JSON or legacy battle path changes.
 
 ### 19. `battle_rewards`
 

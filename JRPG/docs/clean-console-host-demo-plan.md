@@ -489,21 +489,13 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 
 ### Phase 2-18 Result
 
-- The Training Annex play session now keeps one battle-knowledge state for the whole session instead of creating a fresh empty elemental store inside battle.
-- Executed typed actions can update knowledge: damage records elemental affinity, Analyze records elemental/ailment/instant-death channels, and attempted ailment or instant-death effects can record their typed resistance channels when present.
-- Enemy AI receives the same session elemental knowledge used by persistence. A regression test makes Ashling discover Fire resistance and then change its next selected skill through framework `DeterministicBattleActionSelector`.
-- The session summary includes knowledge evidence and a `RuntimeKnowledgeSnapshot`; snapshot validation includes that learned knowledge.
+- The Training Annex play session now keeps persistent player battle knowledge for player-facing discoveries and save validation.
+- Each clean manual battle creates fresh encounter AI knowledge. Enemy observations update that encounter-local store only, so ordinary random-encounter AI learning is discarded after battle.
+- Executed player typed actions can update persistent player knowledge: damage records elemental affinity, Analyze records elemental/ailment/instant-death channels, and attempted ailment or instant-death effects can record their typed resistance channels when present.
+- Enemy AI receives encounter-local elemental knowledge. A regression test makes Ashling discover Fire resistance, change its next selected skill through framework `DeterministicBattleActionSelector`, and leave that discovery out of the saved player knowledge snapshot.
+- The session summary includes player knowledge evidence, encounter AI knowledge evidence, a player `RuntimeKnowledgeSnapshot`, and a last-encounter AI snapshot for tests. Snapshot validation includes player knowledge only.
 - No Training Annex content JSON or framework public API changed.
 - Verification: focused Training Annex tests passed `39/39`; the full suite passed `796/796`; the framework build stayed at `0` warnings and the solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
-
-### Phase 2-18 Ownership Correction
-
-The result above intentionally remains `parallel_partial`. It proved the framework can learn, summarize, validate, save, and reuse battle knowledge, but the approved design now separates two scopes:
-
-- player battle knowledge persists across encounters and saves;
-- enemy/AI encounter knowledge starts fresh for each random battle and is discarded when the battle ends.
-
-The next amendment must split the clean Training Annex knowledge state before Phase 2-19 reward application is built on top of the battle-completion path. Player actions and Analyze update persistent player knowledge for later UI hints. Enemy observations update only the encounter-local AI store, unless a future host deliberately supplies persistent knowledge for a special boss or scripted encounter.
 
 ### Non-Goals
 
