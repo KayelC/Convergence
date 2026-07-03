@@ -67,6 +67,8 @@ The framework does not prescribe JSON, binary, Godot `Resource`, or any other sa
 
 `--clean-save-demo` is the console-host proof: it serializes a representative `RuntimeSaveGameSnapshot` using host-owned `System.Text.Json` DTOs, deserializes it, validates it, rebuilds runtime actor state, and exits without input. A Godot host would replace those DTOs with its own save envelope while preserving the same framework snapshot and validation boundary.
 
+Phase 3-20 adds serializer-neutral save policy records and a Training Annex clean-host proof for manual and suspend saves. A Godot host can use the same `RuntimeSavePolicyService` to ask whether saving/loading is allowed in a field, dungeon, menu, or other host-defined context, and whether a suspend save should be consumed after successful restore. Godot still owns the save slot, file/resource format, scene metadata, and deletion/consumption action.
+
 ## Non-Goals
 
 - No GodotSharp dependency is added.
@@ -75,4 +77,4 @@ The framework does not prescribe JSON, binary, Godot `Resource`, or any other sa
 - No legacy console file is removed.
 - No parity-ledger capability moves to `clean_parity`.
 - No framework public API is changed for Godot-specific concepts.
-- No save-slot UI, cloud-save policy, or save-version migration system is added.
+- No permanent save-slot UI, cloud-save policy, battle-save policy, or save-version migration system is added.

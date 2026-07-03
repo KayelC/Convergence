@@ -329,6 +329,31 @@ internal static class CleanSaveJsonCodec
         return FromDto(dto);
     }
 
+    public static string SerializeRecord(RuntimeSaveRecord record) =>
+        JsonSerializer.Serialize(ToDto(record), Options);
+
+    public static RuntimeSaveRecord DeserializeRecord(string json)
+    {
+        HostSaveRecordDto dto = JsonSerializer.Deserialize<HostSaveRecordDto>(json, Options)
+            ?? throw new InvalidOperationException("Save JSON did not contain a save record.");
+        return FromDto(dto);
+    }
+
+    private static HostSaveRecordDto ToDto(RuntimeSaveRecord record) =>
+        new(
+            record.Kind.ToString(),
+            record.Context.ContextId.ToString(),
+            record.Context.HasPendingHostAction,
+            record.Sequence,
+            ToDto(record.Snapshot));
+
+    private static RuntimeSaveRecord FromDto(HostSaveRecordDto dto) =>
+        new(
+            Enum.Parse<RuntimeSaveKind>(dto.Kind),
+            FromDto(dto.Snapshot),
+            new RuntimeSaveContextSnapshot(Id(dto.ContextId), dto.ContextHasPendingHostAction),
+            dto.Sequence);
+
     private static HostSaveGameDto ToDto(RuntimeSaveGameSnapshot snapshot) =>
         new(
             snapshot.ContractVersion,
@@ -581,6 +606,13 @@ internal static class CleanSaveJsonCodec
     private static ContentId Id(string value) => ContentId.Parse(value);
 
     private static RuntimeInstanceId Instance(string value) => RuntimeInstanceId.Parse(value);
+
+    private sealed record HostSaveRecordDto(
+        string Kind,
+        string ContextId,
+        bool ContextHasPendingHostAction,
+        long Sequence,
+        HostSaveGameDto Snapshot);
 
     private sealed record HostSaveGameDto(
         int ContractVersion,

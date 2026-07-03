@@ -101,6 +101,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.Wallet.Macca);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
+        Assert.Equal(0, summary.ManualSaveCount);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.Equal(0, summary.SuspendSaveCount);
+        Assert.Equal(0, summary.SuspendLoadCount);
+        Assert.False(summary.SuspendSaveConsumed);
+        Assert.False(summary.HasManualSave);
+        Assert.False(summary.HasSuspendSave);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
         Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
         Assert.Equal(
             [Qualified("staging_area"), Qualified("training_annex_entrance"), Qualified("staging_area")],
@@ -146,7 +154,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Enter Training Annex",
                 "Inventory",
                 "Field Skills",
-                "Exit"
+                "Exit",
+                "Save / Load"
             ],
                 menu.Options);
         }
@@ -165,7 +174,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Return to Staging Area",
                 "Inventory",
                 "Field Skills",
-                "Exit"
+                "Exit",
+                "Save / Load"
             ],
                 menu.Options);
         }
@@ -1455,6 +1465,169 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualSaveLoadRestoresProgressionInventoryWalletFieldAndKnowledge()
+    {
+        var io = new ScriptedGameIO().QueueMenu(10, 0, 4, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(0, summary.SuspendSaveCount);
+        Assert.Equal(0, summary.SuspendLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.False(summary.HasSuspendSave);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
+        Assert.Equal(3, summary.PlayerProgression.Level);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(2, summary.PlayerProgression.UnspentStatPoints);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
+        Assert.Empty(summary.BattleKnowledge.ElementalAffinities);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenSaveLoad,
+                CleanTrainingAnnexPlayCommand.ManualSave,
+                CleanTrainingAnnexPlayCommand.ApplyVictoryExperience,
+                CleanTrainingAnnexPlayCommand.OpenSaveLoad,
+                CleanTrainingAnnexPlayCommand.ManualLoad,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        string text = output.ToString();
+        Assert.Contains("Manual save created in field_menu (sequence 0).", text, StringComparison.Ordinal);
+        Assert.Contains("Manual save restored from field_menu (sequence 0).", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_SuspendLoadConsumesSlotOnlyAfterSuccessfulRestore()
+    {
+        var io = new ScriptedGameIO().QueueMenu(10, 2, 10, 3, 10, 4, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualSaveCount);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.Equal(1, summary.SuspendSaveCount);
+        Assert.Equal(1, summary.SuspendLoadCount);
+        Assert.True(summary.SuspendSaveConsumed);
+        Assert.False(summary.HasSuspendSave);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
+
+        GameIoMenuCall finalSaveMenu = Assert.Single(io.Menus.Where(menu =>
+            menu.Header == "Clean Save / Load").Skip(2));
+        Assert.True(finalSaveMenu.DisabledOptions[3]);
+        Assert.Contains(
+            "Suspend save consumed after successful restore.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_SaveWhilePreparedEncounterPendingIsRejectedWithoutSlotMutation()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 14, 0, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.True(summary.EncounterTriggerConsumed);
+        Assert.False(summary.PreparedBattleStarted);
+        Assert.Equal(0, summary.ManualSaveCount);
+        Assert.False(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            "Manual save rejected [PendingHostAction]",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_MalformedManualSaveJsonDoesNotMutateCurrentSession()
+    {
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.SetRaw(RuntimeSaveKind.Manual, "{");
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Equal(3, summary.PlayerProgression.Level);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Contains(
+            "Manual load rejected: save JSON could not be read",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_PostVictoryRewardStateSurvivesManualSaveLoad()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            14, 0,
+            11, 0, 0,
+            14, 1,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
+        Assert.Equal(1, summary.PlayerProgression.Experience);
+        Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(70, Resource(summary, "hp").Current);
+        Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
+        Assert.Contains(ContentId.Parse("ashling_drill_cleared"), summary.SessionProgress.Flags);
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Element == DamageElement.Ice &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.Contains(
+            "Manual save restored from dungeon_menu",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_MissingContentReportsFailureWithoutReadingCommands()
     {
         var io = new ScriptedGameIO();
@@ -1574,12 +1747,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         ScriptedGameIO io,
         StringWriter output,
         IContentPackTextSource? source = null,
-        IRandomSource? randomSource = null) =>
+        IRandomSource? randomSource = null,
+        TrainingAnnexSaveSlotStore? saveSlots = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
             new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
-            randomSource);
+            randomSource,
+            saveSlots);
 
     private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
 

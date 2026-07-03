@@ -55,6 +55,9 @@ internal static class TrainingAnnexHostSupport
     public const string PackId = "convergence.training_annex_slice";
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
+    public static readonly ContentId FieldMenuSaveContext = ContentId.Parse("field_menu");
+    public static readonly ContentId DungeonMenuSaveContext = ContentId.Parse("dungeon_menu");
+    public static readonly ContentId BattleSaveContext = ContentId.Parse("battle");
     public static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
     public static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     public static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
@@ -283,7 +286,8 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
-        RuntimeSessionProgressSnapshot? session = null)
+        RuntimeSessionProgressSnapshot? session = null,
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
@@ -299,7 +303,8 @@ internal static class TrainingAnnexHostSupport
             knowledge,
             inventory,
             wallet,
-            session);
+            session,
+            hostContext);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -308,14 +313,23 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
-        RuntimeSessionProgressSnapshot? session = null)
+        RuntimeSessionProgressSnapshot? session = null,
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
     {
         RuntimeActorSnapshot actorSnapshot = CreateActorSnapshot(
             actor,
             RuntimeInstanceId.Parse("echo_adept"),
             new RuntimeProgressionSnapshot(actor.Entity.BaseLevel, 0, 0, actor.Entity.BaseLevel - 1));
         RuntimeActorReferenceSnapshot actorReference = Reference(actorSnapshot);
-        return BuildStartupSaveSnapshot([actorSnapshot], actorReference, field, knowledge, inventory, wallet, session);
+        return BuildStartupSaveSnapshot(
+            [actorSnapshot],
+            actorReference,
+            field,
+            knowledge,
+            inventory,
+            wallet,
+            session,
+            hostContext);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -325,10 +339,20 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
-        RuntimeSessionProgressSnapshot? session = null)
+        RuntimeSessionProgressSnapshot? session = null,
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
     {
         RuntimeActorSnapshot playerSnapshot = actors.First(actor =>
             actor.Identity.InstanceId == playerReference.InstanceId);
+        var hostContextEntries = new List<KeyValuePair<ContentId, string>>
+        {
+            new(ContentId.Parse("host_mode"), "clean_training_annex_play")
+        };
+        if (hostContext is not null)
+        {
+            hostContextEntries.AddRange(hostContext);
+        }
+
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("0.1.0"),
             actors,
@@ -352,7 +376,7 @@ internal static class TrainingAnnexHostSupport
                     playerSnapshot.Identity.InstanceId,
                     Qualified("training_annex"))
             ]),
-            hostContext: [new KeyValuePair<ContentId, string>(ContentId.Parse("host_mode"), "clean_training_annex_play")]);
+            hostContext: hostContextEntries);
     }
 
     public static ContentId Qualified(string localId) => ContentId.Parse($"{PackId}:{localId}");

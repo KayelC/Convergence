@@ -153,6 +153,91 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSavePolicy_AllowsManualAndSuspendOnlyInRegisteredStableContexts()
+    {
+        var service = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
+            manualAllowedContextIds: [Id("field_menu"), Id("dungeon_menu")],
+            suspendAllowedContextIds: [Id("field_menu"), Id("dungeon_menu")]));
+
+        RuntimeSavePolicyAssessment manual = service.AssessSave(
+            RuntimeSaveKind.Manual,
+            new RuntimeSaveContextSnapshot(Id("field_menu")));
+        RuntimeSavePolicyAssessment suspend = service.AssessSave(
+            RuntimeSaveKind.Suspend,
+            new RuntimeSaveContextSnapshot(Id("dungeon_menu")));
+        RuntimeSavePolicyAssessment battle = service.AssessSave(
+            RuntimeSaveKind.Manual,
+            new RuntimeSaveContextSnapshot(Id("battle")));
+        RuntimeSavePolicyAssessment pending = service.AssessSave(
+            RuntimeSaveKind.Suspend,
+            new RuntimeSaveContextSnapshot(Id("field_menu"), hasPendingHostAction: true));
+
+        Assert.True(manual.IsAllowed);
+        Assert.True(suspend.IsAllowed);
+        Assert.False(battle.IsAllowed);
+        Assert.Contains(battle.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.ContextNotAllowed &&
+            diagnostic.ContextId == Id("battle"));
+        Assert.False(pending.IsAllowed);
+        Assert.Contains(pending.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.PendingHostAction);
+    }
+
+    [Fact]
+    public void RuntimeSavePolicy_AssessesLoadRecordsAndSuspendConsumption()
+    {
+        var service = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
+            manualAllowedContextIds: [Id("field_menu")],
+            suspendAllowedContextIds: [Id("field_menu")]));
+        var context = new RuntimeSaveContextSnapshot(Id("field_menu"));
+        RuntimeSaveRecord manual = new(RuntimeSaveKind.Manual, CreateSaveSnapshot(), context, sequence: 3);
+        RuntimeSaveRecord suspend = new(RuntimeSaveKind.Suspend, CreateSaveSnapshot(), context, sequence: 4);
+
+        RuntimeSavePolicyAssessment missing = service.AssessLoad(null, RuntimeSaveKind.Manual, context);
+        RuntimeSavePolicyAssessment mismatch = service.AssessLoad(manual, RuntimeSaveKind.Suspend, context);
+        RuntimeSavePolicyAssessment suspendLoad = service.AssessLoad(suspend, RuntimeSaveKind.Suspend, context);
+        RuntimeSavePolicyAssessment manualLoad = service.AssessLoad(manual, RuntimeSaveKind.Manual, context);
+
+        Assert.False(missing.IsAllowed);
+        Assert.Contains(missing.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.MissingSaveRecord);
+        Assert.False(mismatch.IsAllowed);
+        Assert.Contains(mismatch.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.SaveKindMismatch);
+        Assert.True(suspendLoad.IsAllowed);
+        Assert.True(suspendLoad.ConsumeAfterSuccessfulRestore);
+        Assert.True(manualLoad.IsAllowed);
+        Assert.False(manualLoad.ConsumeAfterSuccessfulRestore);
+    }
+
+    [Fact]
+    public void RuntimeSavePolicy_DefensivelyCopiesOptionsAndRecordsMetadata()
+    {
+        List<ContentId> manualContexts = [Id("field_menu")];
+        List<ContentId> suspendContexts = [Id("dungeon_menu")];
+        RuntimeSavePolicyOptions options = new(manualContexts, suspendContexts);
+        RuntimeSaveRecord record = new(
+            RuntimeSaveKind.Manual,
+            CreateSaveSnapshot(),
+            new RuntimeSaveContextSnapshot(Id("field_menu")),
+            sequence: 7);
+        manualContexts.Add(Id("battle"));
+        suspendContexts.Clear();
+
+        Assert.Equal([Id("field_menu")], options.ManualAllowedContextIds);
+        Assert.Equal([Id("dungeon_menu")], options.SuspendAllowedContextIds);
+        Assert.Equal(RuntimeSaveKind.Manual, record.Kind);
+        Assert.Equal(Id("field_menu"), record.Context.ContextId);
+        Assert.Equal(7, record.Sequence);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeSaveRecord(
+                RuntimeSaveKind.Manual,
+                CreateSaveSnapshot(),
+                new RuntimeSaveContextSnapshot(Id("field_menu")),
+                sequence: -1));
+    }
+
+    [Fact]
     public void RuntimePersistenceContracts_ExposeNoHostSerializerOrLegacyTypes()
     {
         Type[] runtimeTypes = typeof(RuntimeSaveGameSnapshot).Assembly.GetExportedTypes()

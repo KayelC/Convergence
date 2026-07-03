@@ -562,6 +562,8 @@ Make the loop feel complete after battle.
 
 ## Iteration 7: Save Policy And Suspend Save
 
+Status: Phase 3-20 implemented for the Training Annex clean play host.
+
 ### Goal
 
 Add a framework-owned save policy layer and a small host-owned persistence flow for the clean demo.
@@ -589,7 +591,7 @@ The framework already has snapshots and validation. This iteration decides when 
 
 - `RuntimeSaveGameSnapshot`;
 - `IRuntimeSaveValidator`;
-- new save policy contracts if approved.
+- `RuntimeSaveKind`, `RuntimeSaveContextSnapshot`, `RuntimeSavePolicyOptions`, `RuntimeSaveRecord`, and `RuntimeSavePolicyService`.
 
 ### Non-Goals
 
@@ -605,6 +607,16 @@ The framework already has snapshots and validation. This iteration decides when 
 - loading a suspend save consumes or invalidates it according to policy;
 - invalid snapshots fail validation;
 - host-owned JSON remains outside framework public APIs.
+
+### Phase 3-20 Result
+
+- The framework now exposes manual and suspend save policy concepts without serializer, filesystem, console, or Godot dependencies.
+- `--clean-training-annex-play` has a `Save / Load` menu with `Manual Save`, `Manual Load`, `Suspend Save`, `Suspend Load`, and `Back`.
+- Demo storage is intentionally in-memory: one manual slot and one suspend slot. The host stores raw JSON records to prove the restore path really deserializes before validation.
+- Manual load preserves its slot. Suspend load consumes its slot only after JSON read, policy assessment, snapshot validation, and session restore all succeed.
+- Saving or loading while a prepared encounter is pending is rejected so the demo cannot persist a half-handoff battle state.
+- Restore rebuilds the clean Training Annex session from the snapshot and host context: actor runtime snapshots, resources, inventory, wallet, field/dungeon state, session counters/flags, persistent player knowledge, and the resolved Ashling drill menu state.
+- This is still a clean-demo product flow, not a legacy save/load retrofit and not a permanent filesystem slot system.
 
 ## Iteration 8: Shop And Equipment Demo Flow
 

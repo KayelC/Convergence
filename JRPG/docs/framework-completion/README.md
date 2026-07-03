@@ -13,7 +13,7 @@ Start here:
 7. [Ruleset Authority](ruleset-authority.md)
 8. [Optional Mechanics](optional-mechanics.md)
 9. [Host And Godot Boundary](host-and-godot-boundary.md)
-10. [Persistence Product Flow](persistence-product-flow.md) - includes save policy and suspend-save backlog
+10. [Persistence Product Flow](persistence-product-flow.md) - save policy, suspend-save behavior, and remaining host-storage work
 11. [Content Authoring Tooling](content-authoring-tooling.md)
 12. [Legacy Retirement Gate](legacy-retirement-gate.md)
 

@@ -707,6 +707,14 @@ Clean console proof:
 
 - clean demo can save, load, and optionally consume a suspend save.
 
+Phase 3-20 result:
+
+- `JRPG.Framework` now has serializer-neutral save policy contracts for `Manual` and `Suspend` records, save contexts, pending-host-action rejection, allowed-context checks, and suspend-load consumption instructions.
+- `--clean-training-annex-play` exposes a host-owned `Save / Load` submenu with one in-memory manual slot and one in-memory suspend slot. The host serializes `RuntimeSaveRecord` through its own JSON codec, validates the restored snapshot against the live catalog, and applies restored runtime state only after deserialize, policy, validation, and Training Annex session restore all succeed.
+- Manual load keeps the manual slot. Suspend load consumes the suspend slot only after successful restore. Malformed JSON, missing slots, context rejection, validation errors, and pending Ashling battle handoff attempts leave the current session unchanged.
+- Restored Training Annex state includes actor runtime snapshots, resources synchronized back into clean battle actors, inventory, wallet, generic field/dungeon state, session counters/flags, host-owned prepared-battle menu state, and persistent player battle knowledge.
+- This remains `clean_foundation`: the framework now has the policy and snapshot foundation plus one clean consumer proof, but permanent filesystem slots, save migration helpers, autosaves, battle saves, Godot save resources, and legacy prototype save/load remain outside this phase.
+
 ### 21. `inventory_quantities`
 
 Current status: `parallel_partial`.

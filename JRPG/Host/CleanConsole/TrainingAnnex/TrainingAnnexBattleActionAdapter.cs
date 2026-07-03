@@ -120,6 +120,29 @@ internal sealed class TrainingAnnexBattleKnowledgeState
     public AilmentResistanceKnowledge AilmentResistances { get; } = new();
     public InstantDeathResistanceKnowledge InstantDeathResistances { get; } = new();
 
+    public static TrainingAnnexBattleKnowledgeState FromSnapshot(RuntimeKnowledgeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var state = new TrainingAnnexBattleKnowledgeState();
+        foreach (RuntimeElementalAffinityKnowledgeSnapshot entry in snapshot.ElementalAffinities)
+        {
+            state.ElementalAffinities.Learn(entry.EntityId, entry.Element, entry.Affinity);
+        }
+
+        foreach (RuntimeAilmentResistanceKnowledgeSnapshot entry in snapshot.AilmentResistances)
+        {
+            state.AilmentResistances.Learn(entry.EntityId, entry.AilmentId, entry.Resistance);
+        }
+
+        foreach (RuntimeInstantDeathResistanceKnowledgeSnapshot entry in snapshot.InstantDeathResistances)
+        {
+            state.InstantDeathResistances.Learn(entry.EntityId, entry.Channel, entry.Resistance);
+        }
+
+        return state;
+    }
+
     public RuntimeKnowledgeSnapshot ToSnapshot() =>
         new(
             ElementalAffinities.Snapshot()

@@ -31,6 +31,11 @@ internal enum CleanTrainingAnnexPlayCommand
     StartPreparedBattle,
     OpenInventory,
     OpenFieldSkills,
+    OpenSaveLoad,
+    ManualSave,
+    ManualLoad,
+    SuspendSave,
+    SuspendLoad,
     BattleAttack,
     OpenBattleSkills,
     OpenBattleItems,
@@ -96,6 +101,14 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int AppliedBattleRewardLevelUpCount,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
+    int ManualSaveCount,
+    int ManualLoadCount,
+    int SuspendSaveCount,
+    int SuspendLoadCount,
+    bool SuspendSaveConsumed,
+    bool HasManualSave,
+    bool HasSuspendSave,
+    int SaveDiagnosticCount,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
@@ -105,10 +118,17 @@ internal sealed record CleanTrainingAnnexPlaySummary(
 
 internal sealed class CleanTrainingAnnexPlayHost
 {
+    private static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
+    private static readonly ContentId AshlingTriggerConsumedHostKey = ContentId.Parse("ashling_trigger_consumed");
+    private static readonly ContentId PreparedBattleStartedHostKey = ContentId.Parse("prepared_battle_started");
+    private static readonly ContentId PreparedBattleOutcomeHostKey = ContentId.Parse("prepared_battle_outcome");
+    private static readonly ContentId PreparedBattleWinningTeamHostKey = ContentId.Parse("prepared_battle_winning_team");
+
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
     private readonly IRandomSource _randomSource;
+    private readonly TrainingAnnexSaveSlotStore _saveSlots;
 
     public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
         : this(
@@ -123,12 +143,14 @@ internal sealed class CleanTrainingAnnexPlayHost
         IContentPackTextSource contentSource,
         IHostEventSink<string> eventSink,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
-        IRandomSource? randomSource = null)
+        IRandomSource? randomSource = null,
+        TrainingAnnexSaveSlotStore? saveSlots = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
         _randomSource = randomSource ?? new TrainingAnnexMinimumRandomSource();
+        _saveSlots = saveSlots ?? new TrainingAnnexSaveSlotStore();
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -244,6 +266,17 @@ internal sealed class CleanTrainingAnnexPlayHost
         var economy = new EconomyTransactionService();
         var inventory = new TrainingAnnexItemActionInventory(new RuntimeInventorySnapshot(
             [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
+        var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
+            manualAllowedContextIds:
+            [
+                TrainingAnnexHostSupport.FieldMenuSaveContext,
+                TrainingAnnexHostSupport.DungeonMenuSaveContext
+            ],
+            suspendAllowedContextIds:
+            [
+                TrainingAnnexHostSupport.FieldMenuSaveContext,
+                TrainingAnnexHostSupport.DungeonMenuSaveContext
+            ]));
         RuntimeWalletSnapshot wallet = new(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
@@ -278,6 +311,13 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? preparedBattleRewardPreview = null;
         BattleRewardResult? appliedBattleReward = null;
         int appliedBattleRewardLevelUpCount = 0;
+        long saveSequence = 0;
+        int manualSaveCount = 0;
+        int manualLoadCount = 0;
+        int suspendSaveCount = 0;
+        int suspendLoadCount = 0;
+        bool suspendSaveConsumed = false;
+        int saveDiagnosticCount = 0;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
         var executedFieldActionIds = new List<ContentId>();
@@ -340,6 +380,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                     appliedBattleRewardLevelUpCount,
                     wallet,
                     sessionProgress,
+                    manualSaveCount,
+                    manualLoadCount,
+                    suspendSaveCount,
+                    suspendLoadCount,
+                    suspendSaveConsumed,
+                    _saveSlots.Has(RuntimeSaveKind.Manual),
+                    _saveSlots.Has(RuntimeSaveKind.Suspend),
+                    saveDiagnosticCount,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
                     inventory.Snapshot,
@@ -440,6 +488,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                             appliedBattleRewardLevelUpCount,
                             wallet,
                             sessionProgress,
+                            manualSaveCount,
+                            manualLoadCount,
+                            suspendSaveCount,
+                            suspendLoadCount,
+                            suspendSaveConsumed,
+                            _saveSlots.Has(RuntimeSaveKind.Manual),
+                            _saveSlots.Has(RuntimeSaveKind.Suspend),
+                            saveDiagnosticCount,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
                             inventory.Snapshot,
@@ -712,6 +768,110 @@ internal sealed class CleanTrainingAnnexPlayHost
                     }
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.OpenSaveLoad:
+                {
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> saveSelection =
+                        await _commandSource.ReadAsync(
+                            CreateSaveLoadMenu(_saveSlots),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!saveSelection.IsSelected || saveSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        break;
+                    }
+
+                    commands.Add(saveSelection.Command);
+                    if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualSave
+                        or CleanTrainingAnnexPlayCommand.SuspendSave)
+                    {
+                        RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualSave
+                            ? RuntimeSaveKind.Manual
+                            : RuntimeSaveKind.Suspend;
+                        TrainingAnnexSaveActionResult save = await SaveCurrentSessionAsync(
+                            kind,
+                            savePolicy,
+                            catalog,
+                            roster,
+                            field,
+                            playerBattleKnowledge.ToSnapshot(),
+                            inventory.Snapshot,
+                            wallet,
+                            sessionProgress,
+                            encounterTriggerConsumed,
+                            preparedBattleStarted,
+                            preparedBattleOutcome,
+                            preparedBattleWinningTeamId,
+                            preparedEncounter is not null && !preparedBattleStarted,
+                            saveSequence,
+                            cancellationToken).ConfigureAwait(false);
+                        saveDiagnosticCount += save.DiagnosticCount;
+                        if (save.Applied)
+                        {
+                            saveSequence++;
+                            if (kind == RuntimeSaveKind.Manual)
+                            {
+                                manualSaveCount++;
+                            }
+                            else
+                            {
+                                suspendSaveCount++;
+                            }
+                        }
+                    }
+                    else if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualLoad
+                             or CleanTrainingAnnexPlayCommand.SuspendLoad)
+                    {
+                        RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualLoad
+                            ? RuntimeSaveKind.Manual
+                            : RuntimeSaveKind.Suspend;
+                        TrainingAnnexLoadActionResult loadResult = await LoadCurrentSessionAsync(
+                            kind,
+                            savePolicy,
+                            catalog,
+                            roster,
+                            field,
+                            preparedEncounter is not null && !preparedBattleStarted,
+                            cancellationToken).ConfigureAwait(false);
+                        saveDiagnosticCount += loadResult.DiagnosticCount;
+                        if (loadResult.Restored is TrainingAnnexRestoredSession restored)
+                        {
+                            roster = restored.Roster;
+                            field = restored.Field;
+                            inventory = new TrainingAnnexItemActionInventory(restored.Inventory);
+                            wallet = restored.Wallet;
+                            sessionProgress = restored.SessionProgress;
+                            playerBattleKnowledge = restored.PlayerBattleKnowledge;
+                            locationHistory.Clear();
+                            locationHistory.Add(field.Navigation.CurrentLocationId);
+                            encounterTriggerConsumed = restored.EncounterTriggerConsumed;
+                            preparedEncounter = null;
+                            preparedBattleStarted = restored.PreparedBattleStarted;
+                            preparedBattleOutcome = restored.PreparedBattleOutcome;
+                            preparedBattleWinningTeamId = restored.PreparedBattleWinningTeamId;
+                            preparedEncounterIds.Clear();
+                            preparedEncounterIds.AddRange(restored.PreparedEncounterIds);
+                            preparedEncounterActorInstanceIds.Clear();
+                            if (!restored.PreparedBattleStarted)
+                            {
+                                preparedBattleRewardPreview = null;
+                                appliedBattleReward = null;
+                                appliedBattleRewardLevelUpCount = 0;
+                            }
+
+                            if (kind == RuntimeSaveKind.Manual)
+                            {
+                                manualLoadCount++;
+                            }
+                            else
+                            {
+                                suspendLoadCount++;
+                            }
+
+                            suspendSaveConsumed |= loadResult.ConsumedRecord;
+                        }
+                    }
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
@@ -813,6 +973,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.Exit,
             "Exit"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenSaveLoad,
+            "Save / Load"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? FieldLabel(locationId)
@@ -821,6 +984,32 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Training Annex Clean Session - {locationLabel}",
             options);
     }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateSaveLoadMenu(
+        TrainingAnnexSaveSlotStore saveSlots) =>
+        new(
+            "Clean Save / Load",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.ManualSave,
+                    "Manual Save"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.ManualLoad,
+                    "Manual Load",
+                    saveSlots.Has(RuntimeSaveKind.Manual),
+                    "Load the manual Training Annex demo slot."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.SuspendSave,
+                    "Suspend Save"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.SuspendLoad,
+                    "Suspend Load",
+                    saveSlots.Has(RuntimeSaveKind.Suspend),
+                    "Load and consume the suspend Training Annex demo slot."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateItemMenu(
         GameDataCatalog catalog,
@@ -877,6 +1066,324 @@ internal sealed class CleanTrainingAnnexPlayHost
                     CleanTrainingAnnexPlayCommand.Back,
                     "Back")
             ]);
+
+    private async ValueTask<TrainingAnnexSaveActionResult> SaveCurrentSessionAsync(
+        RuntimeSaveKind kind,
+        IRuntimeSavePolicyService savePolicy,
+        GameDataCatalog catalog,
+        TrainingAnnexActorRoster roster,
+        RuntimeFieldSnapshot field,
+        RuntimeKnowledgeSnapshot knowledge,
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        RuntimeSessionProgressSnapshot session,
+        bool encounterTriggerConsumed,
+        bool preparedBattleStarted,
+        BattleEncounterOutcome? preparedBattleOutcome,
+        ContentId? preparedBattleWinningTeamId,
+        bool hasPendingHostAction,
+        long sequence,
+        CancellationToken cancellationToken)
+    {
+        RuntimeSaveContextSnapshot context = CurrentSaveContext(field, hasPendingHostAction);
+        RuntimeSavePolicyAssessment assessment = savePolicy.AssessSave(kind, context);
+        if (!assessment.IsAllowed)
+        {
+            await PublishSavePolicyDiagnosticsAsync($"{KindLabel(kind)} save", assessment, cancellationToken)
+                .ConfigureAwait(false);
+            return new TrainingAnnexSaveActionResult(false, assessment.Diagnostics.Count);
+        }
+
+        RuntimeSaveGameSnapshot snapshot = BuildCurrentSaveSnapshot(
+            roster,
+            field,
+            knowledge,
+            inventory,
+            wallet,
+            session,
+            encounterTriggerConsumed,
+            preparedBattleStarted,
+            preparedBattleOutcome,
+            preparedBattleWinningTeamId);
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(snapshot, catalog);
+        if (!validation.IsValid)
+        {
+            await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} save", validation, cancellationToken)
+                .ConfigureAwait(false);
+            return new TrainingAnnexSaveActionResult(false, validation.Diagnostics.Count);
+        }
+
+        _saveSlots.Save(new RuntimeSaveRecord(kind, validation.RequireValidSnapshot(), context, sequence));
+        await _eventSink.PublishAsync(
+            $"{KindLabel(kind)} save created in {context.ContextId} (sequence {sequence}).",
+            cancellationToken).ConfigureAwait(false);
+        return new TrainingAnnexSaveActionResult(true, 0);
+    }
+
+    private async ValueTask<TrainingAnnexLoadActionResult> LoadCurrentSessionAsync(
+        RuntimeSaveKind kind,
+        IRuntimeSavePolicyService savePolicy,
+        GameDataCatalog catalog,
+        TrainingAnnexActorRoster roster,
+        RuntimeFieldSnapshot field,
+        bool hasPendingHostAction,
+        CancellationToken cancellationToken)
+    {
+        RuntimeSaveContextSnapshot context = CurrentSaveContext(field, hasPendingHostAction);
+        RuntimeSaveRecord? record = null;
+        string? json = _saveSlots.GetRaw(kind);
+        if (json is not null)
+        {
+            try
+            {
+                record = CleanSaveJsonCodec.DeserializeRecord(json);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                await _eventSink.PublishAsync(
+                    $"{KindLabel(kind)} load rejected: save JSON could not be read ({exception.Message}).",
+                    cancellationToken).ConfigureAwait(false);
+                return new TrainingAnnexLoadActionResult(null, 1, false);
+            }
+        }
+
+        RuntimeSavePolicyAssessment assessment = savePolicy.AssessLoad(record, kind, context);
+        if (!assessment.IsAllowed)
+        {
+            await PublishSavePolicyDiagnosticsAsync($"{KindLabel(kind)} load", assessment, cancellationToken)
+                .ConfigureAwait(false);
+            return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
+        }
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(record!.Snapshot, catalog);
+        if (!validation.IsValid)
+        {
+            await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} load", validation, cancellationToken)
+                .ConfigureAwait(false);
+            return new TrainingAnnexLoadActionResult(null, validation.Diagnostics.Count, false);
+        }
+
+        TrainingAnnexSessionRestoreResult restore =
+            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster);
+        if (restore.Restored is null)
+        {
+            foreach (string diagnostic in restore.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"{KindLabel(kind)} load rejected: {diagnostic}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return new TrainingAnnexLoadActionResult(null, restore.Diagnostics.Count, false);
+        }
+
+        bool consume = assessment.ConsumeAfterSuccessfulRestore;
+        if (consume)
+        {
+            _saveSlots.Consume(kind);
+        }
+
+        await _eventSink.PublishAsync(
+            $"{KindLabel(kind)} save restored from {record.Context.ContextId} (sequence {record.Sequence}).",
+            cancellationToken).ConfigureAwait(false);
+        if (consume)
+        {
+            await _eventSink.PublishAsync(
+                "Suspend save consumed after successful restore.",
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return new TrainingAnnexLoadActionResult(restore.Restored, 0, consume);
+    }
+
+    private static RuntimeSaveContextSnapshot CurrentSaveContext(
+        RuntimeFieldSnapshot field,
+        bool hasPendingHostAction) =>
+        new(
+            field.DungeonTraversal is null
+                ? TrainingAnnexHostSupport.FieldMenuSaveContext
+                : TrainingAnnexHostSupport.DungeonMenuSaveContext,
+            hasPendingHostAction);
+
+    private static RuntimeSaveGameSnapshot BuildCurrentSaveSnapshot(
+        TrainingAnnexActorRoster roster,
+        RuntimeFieldSnapshot field,
+        RuntimeKnowledgeSnapshot knowledge,
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        RuntimeSessionProgressSnapshot session,
+        bool encounterTriggerConsumed,
+        bool preparedBattleStarted,
+        BattleEncounterOutcome? preparedBattleOutcome,
+        ContentId? preparedBattleWinningTeamId)
+    {
+        var hostContext = new List<KeyValuePair<ContentId, string>>
+        {
+            new(AshlingTriggerConsumedHostKey, encounterTriggerConsumed.ToString()),
+            new(PreparedBattleStartedHostKey, preparedBattleStarted.ToString())
+        };
+        if (preparedBattleOutcome is BattleEncounterOutcome outcome)
+        {
+            hostContext.Add(new KeyValuePair<ContentId, string>(
+                PreparedBattleOutcomeHostKey,
+                outcome.ToString()));
+        }
+
+        if (preparedBattleWinningTeamId is ContentId winningTeam)
+        {
+            hostContext.Add(new KeyValuePair<ContentId, string>(
+                PreparedBattleWinningTeamHostKey,
+                winningTeam.ToString()));
+        }
+
+        return TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
+            roster,
+            field,
+            knowledge,
+            inventory,
+            wallet,
+            session,
+            hostContext);
+    }
+
+    private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
+        RuntimeSaveGameSnapshot snapshot,
+        TrainingAnnexActorRoster currentRoster)
+    {
+        Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
+            .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
+        if (!TryRestoreActor(currentRoster.Player, actors, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
+        {
+            return TrainingAnnexSessionRestoreResult.Failed(playerDiagnostic);
+        }
+
+        var enemies = new List<TrainingAnnexRuntimeActor>();
+        foreach (TrainingAnnexRuntimeActor enemy in currentRoster.Enemies)
+        {
+            if (!TryRestoreActor(enemy, actors, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
+            {
+                return TrainingAnnexSessionRestoreResult.Failed(enemyDiagnostic);
+            }
+
+            enemies.Add(restoredEnemy);
+        }
+
+        TrainingAnnexActorRoster roster = new(player, enemies);
+        foreach (TrainingAnnexRuntimeActor actor in roster.AllActors)
+        {
+            SynchronizeCatalogActorState(actor);
+        }
+
+        RuntimeFieldSnapshot field = snapshot.Field ??
+            new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
+        bool ashlingCleared = snapshot.Session.Flags.Contains(AshlingDrillClearedFlag);
+        bool triggerConsumed = HostFlag(snapshot, AshlingTriggerConsumedHostKey) || ashlingCleared;
+        bool battleStarted = HostFlag(snapshot, PreparedBattleStartedHostKey) || ashlingCleared;
+        BattleEncounterOutcome? outcome = HostEnum<BattleEncounterOutcome>(
+            snapshot,
+            PreparedBattleOutcomeHostKey) ?? (ashlingCleared ? BattleEncounterOutcome.Victory : null);
+        ContentId? winningTeam = HostContentId(snapshot, PreparedBattleWinningTeamHostKey) ??
+            (ashlingCleared ? TrainingAnnexHostSupport.PlayerTeam : null);
+        IReadOnlyList<ContentId> preparedEncounterIds = triggerConsumed
+            ? [TrainingAnnexHostSupport.ReviewHallAshlingTrigger.EncounterId]
+            : [];
+
+        return new TrainingAnnexSessionRestoreResult(
+            new TrainingAnnexRestoredSession(
+                roster,
+                field,
+                snapshot.Inventory,
+                snapshot.Wallet,
+                snapshot.Session,
+                TrainingAnnexBattleKnowledgeState.FromSnapshot(snapshot.Knowledge),
+                triggerConsumed,
+                battleStarted,
+                outcome,
+                winningTeam,
+                preparedEncounterIds),
+            []);
+    }
+
+    private static bool TryRestoreActor(
+        TrainingAnnexRuntimeActor current,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        out TrainingAnnexRuntimeActor restored,
+        out string? diagnostic)
+    {
+        if (!actors.TryGetValue(current.RuntimeState.InstanceId, out RuntimeActorSnapshot? snapshot))
+        {
+            restored = current;
+            diagnostic = $"Saved session has no actor '{current.RuntimeState.InstanceId}'.";
+            return false;
+        }
+
+        restored = current with
+        {
+            Level = snapshot.Progression.Level,
+            RuntimeState = RuntimeActorStateSet.FromSnapshot(snapshot)
+        };
+        diagnostic = null;
+        return true;
+    }
+
+    private static void SynchronizeCatalogActorState(TrainingAnnexRuntimeActor actor)
+    {
+        RuntimeActorSnapshot snapshot = actor.RuntimeState.ToSnapshot();
+        actor.Actor.State.IsActive = snapshot.Deployment.IsActive;
+        foreach (RuntimeResourceSnapshot resource in snapshot.Resources)
+        {
+            actor.Actor.State.SetResource(resource.ResourceId, resource.Current);
+        }
+    }
+
+    private async ValueTask PublishSavePolicyDiagnosticsAsync(
+        string actionLabel,
+        RuntimeSavePolicyAssessment assessment,
+        CancellationToken cancellationToken)
+    {
+        foreach (RuntimeSavePolicyDiagnostic diagnostic in assessment.Diagnostics)
+        {
+            await _eventSink.PublishAsync(
+                $"{actionLabel} rejected [{diagnostic.Code}]: {diagnostic.Message}",
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask PublishSaveValidationDiagnosticsAsync(
+        string actionLabel,
+        RuntimeSaveValidationResult validation,
+        CancellationToken cancellationToken)
+    {
+        foreach (RuntimeSaveValidationDiagnostic diagnostic in validation.Diagnostics)
+        {
+            await _eventSink.PublishAsync(
+                $"{actionLabel} rejected [{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static bool HostFlag(RuntimeSaveGameSnapshot snapshot, ContentId key) =>
+        snapshot.HostContext.TryGetValue(key, out string? value) &&
+        bool.TryParse(value, out bool result) &&
+        result;
+
+    private static TEnum? HostEnum<TEnum>(RuntimeSaveGameSnapshot snapshot, ContentId key)
+        where TEnum : struct
+    {
+        return snapshot.HostContext.TryGetValue(key, out string? value) &&
+            Enum.TryParse(value, out TEnum result)
+                ? result
+                : null;
+    }
+
+    private static ContentId? HostContentId(RuntimeSaveGameSnapshot snapshot, ContentId key) =>
+        snapshot.HostContext.TryGetValue(key, out string? value) &&
+        ContentId.TryParse(value, out ContentId contentId)
+            ? contentId
+            : null;
+
+    private static string KindLabel(RuntimeSaveKind kind) =>
+        kind == RuntimeSaveKind.Manual ? "Manual" : "Suspend";
 
     private ValueTask PrintInventoryAsync(
         GameDataCatalog catalog,
@@ -1121,6 +1628,14 @@ internal sealed class CleanTrainingAnnexPlayHost
         int appliedBattleRewardLevelUpCount,
         RuntimeWalletSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
+        int manualSaveCount,
+        int manualLoadCount,
+        int suspendSaveCount,
+        int suspendLoadCount,
+        bool suspendSaveConsumed,
+        bool hasManualSave,
+        bool hasSuspendSave,
+        int saveDiagnosticCount,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
@@ -1177,6 +1692,14 @@ internal sealed class CleanTrainingAnnexPlayHost
             appliedBattleRewardLevelUpCount,
             wallet,
             sessionProgress,
+            manualSaveCount,
+            manualLoadCount,
+            suspendSaveCount,
+            suspendLoadCount,
+            suspendSaveConsumed,
+            hasManualSave,
+            hasSuspendSave,
+            saveDiagnosticCount,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
             inventory,
@@ -1189,6 +1712,45 @@ internal sealed class CleanTrainingAnnexPlayHost
         bool Applied,
         LevelGrowthResult Growth,
         RuntimeWalletSnapshot Wallet);
+
+    private sealed record TrainingAnnexSaveActionResult(
+        bool Applied,
+        int DiagnosticCount);
+
+    private sealed record TrainingAnnexLoadActionResult(
+        TrainingAnnexRestoredSession? Restored,
+        int DiagnosticCount,
+        bool ConsumedRecord);
+
+    private sealed record TrainingAnnexSessionRestoreResult
+    {
+        public TrainingAnnexSessionRestoreResult(
+            TrainingAnnexRestoredSession? restored,
+            IEnumerable<string>? diagnostics = null)
+        {
+            Restored = restored;
+            Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
+        }
+
+        public TrainingAnnexRestoredSession? Restored { get; }
+        public IReadOnlyList<string> Diagnostics { get; }
+
+        public static TrainingAnnexSessionRestoreResult Failed(string? diagnostic) =>
+            new(null, [diagnostic ?? "Saved session could not be restored."]);
+    }
+
+    private sealed record TrainingAnnexRestoredSession(
+        TrainingAnnexActorRoster Roster,
+        RuntimeFieldSnapshot Field,
+        RuntimeInventorySnapshot Inventory,
+        RuntimeWalletSnapshot Wallet,
+        RuntimeSessionProgressSnapshot SessionProgress,
+        TrainingAnnexBattleKnowledgeState PlayerBattleKnowledge,
+        bool EncounterTriggerConsumed,
+        bool PreparedBattleStarted,
+        BattleEncounterOutcome? PreparedBattleOutcome,
+        ContentId? PreparedBattleWinningTeamId,
+        IReadOnlyList<ContentId> PreparedEncounterIds);
 
     private async ValueTask PublishRulesetDiagnosticsAsync(
         string category,
@@ -1357,7 +1919,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             before.MoonPhaseId,
             before.ElapsedTicks,
             counters,
-            before.Flags.Append(ContentId.Parse("ashling_drill_cleared")).Distinct());
+            before.Flags.Append(AshlingDrillClearedFlag).Distinct());
     }
 
     private static void AddCounter(Dictionary<ContentId, long> counters, ContentId id, long value)

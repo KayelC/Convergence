@@ -59,6 +59,33 @@ public sealed class CleanSaveDemoHostTests
     }
 
     [Fact]
+    public void HostOwnedJsonRoundTrip_PreservesSaveRecordMetadata()
+    {
+        RuntimeSaveRecord record = new(
+            RuntimeSaveKind.Suspend,
+            RuntimePersistenceSnapshotTests.CreateSaveSnapshot(),
+            new RuntimeSaveContextSnapshot(ContentId.Parse("dungeon_menu")),
+            sequence: 42);
+
+        string json = CleanSaveJsonCodec.SerializeRecord(record);
+        RuntimeSaveRecord restored = CleanSaveJsonCodec.DeserializeRecord(json);
+
+        Assert.Contains("\"kind\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(RuntimeSaveKind.Suspend, restored.Kind);
+        Assert.Equal(ContentId.Parse("dungeon_menu"), restored.Context.ContextId);
+        Assert.False(restored.Context.HasPendingHostAction);
+        Assert.Equal(42, restored.Sequence);
+        Assert.Equal(record.Snapshot.ContractVersion, restored.Snapshot.ContractVersion);
+        Assert.Equal(record.Snapshot.Wallet.Macca, restored.Snapshot.Wallet.Macca);
+    }
+
+    [Fact]
+    public void CleanSaveJsonCodec_RejectsMalformedHostOwnedSaveRecordJson()
+    {
+        Assert.Throws<JsonException>(() => CleanSaveJsonCodec.DeserializeRecord("{"));
+    }
+
+    [Fact]
     public void HostOwnedJsonRoundTrip_PreservesOptionalNavigationAndDungeonState()
     {
         RuntimeSaveGameSnapshot noField = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
