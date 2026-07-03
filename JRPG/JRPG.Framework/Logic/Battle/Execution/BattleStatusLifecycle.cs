@@ -1,6 +1,7 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -50,7 +51,7 @@ public enum BattleStatusLifecycleEventKind
 
 public sealed record BattleStatusLifecycleEvent(
     BattleStatusLifecycleEventKind Kind,
-    ContentId ActorId,
+    RuntimeInstanceId ActorId,
     ContentId? RelatedId = null,
     decimal? Value = null,
     string? Detail = null);
@@ -462,7 +463,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 
     private static void AddEffectEvents(
         List<BattleStatusLifecycleEvent> events,
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         IReadOnlyList<EffectExecutionResult> effects)
     {
         foreach (EffectExecutionResult effect in effects.Where(effect => effect.Outcome == EffectExecutionOutcome.Success))
@@ -481,7 +482,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 
     private static void AddEffectEvent(
         List<BattleStatusLifecycleEvent> events,
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         EffectExecutionResult result,
         EffectDefinition definition)
     {

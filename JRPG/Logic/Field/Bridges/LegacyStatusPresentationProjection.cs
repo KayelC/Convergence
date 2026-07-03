@@ -81,7 +81,8 @@ internal sealed record LegacyStatusPresentationProjection(
             [
                 new KeyValuePair<ContentId, decimal>(Hp, entity.BaseHP),
                 new KeyValuePair<ContentId, decimal>(Sp, entity.BaseSP)
-            ]);
+            ],
+            Hp);
 
         return new LegacyStatusPresentationProjection(
             snapshot,

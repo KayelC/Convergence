@@ -6,6 +6,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Host;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -160,7 +161,7 @@ public sealed class SharedEffectsRuntimeTests
                     2)
             ]);
         RuntimeActorState actor = new(
-            Id("actor"), Id("entity_actor"), Team, Hp, new CombatDefenseProfile(),
+            RuntimeInstanceId.Parse("actor"), Id("entity_actor"), Team, Hp, new CombatDefenseProfile(),
             [new BattleResourceState(Hp, 100, 100), new BattleResourceState(Sp, 20, 20)],
             passiveSkills: [passive]);
         RuntimeActorState target = Actor("target", 50, 100, 20, 20);
@@ -327,7 +328,7 @@ public sealed class SharedEffectsRuntimeTests
         decimal sp,
         decimal maxSp) =>
         new(
-            Id(id), Id($"entity_{id}"), Team, Hp, new CombatDefenseProfile(),
+            RuntimeInstanceId.Parse(id), Id($"entity_{id}"), Team, Hp, new CombatDefenseProfile(),
             [new BattleResourceState(Hp, hp, maxHp), new BattleResourceState(Sp, sp, maxSp)]);
 
     private static BattleExecutionServices Services(IAilmentDefinitionRepository ailments) =>
@@ -489,8 +490,8 @@ public sealed class SharedEffectsRuntimeTests
 
     private sealed class FirstBattleTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
     }

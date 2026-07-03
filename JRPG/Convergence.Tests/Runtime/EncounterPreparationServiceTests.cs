@@ -21,14 +21,14 @@ public sealed class EncounterPreparationServiceTests
             Id("placed_enemy_01"),
             Qualified("drill"),
             Id("enemy_team"),
-            Id("placed_enemy_01")));
+            RuntimeInstanceId.Parse("placed_enemy_01")));
 
         Assert.True(result.IsSuccess);
         PreparedEncounter prepared = result.RequirePreparedEncounter();
         Assert.Equal(Id("placed_enemy_01"), prepared.TriggerId);
         Assert.Equal(Qualified("drill"), prepared.Encounter.Id);
         Assert.Equal(
-            [Id("placed_enemy_01_ashling_1"), Id("placed_enemy_01_ashling_2")],
+            [RuntimeInstanceId.Parse("placed_enemy_01_ashling_1"), RuntimeInstanceId.Parse("placed_enemy_01_ashling_2")],
             prepared.Actors.Select(actor => actor.State.InstanceId));
         Assert.All(prepared.Actors, actor => Assert.Equal(Qualified("ashling"), actor.Entity.Id));
         Assert.Equal(
@@ -69,7 +69,7 @@ public sealed class EncounterPreparationServiceTests
             Id("boss_scene_trigger"),
             Qualified("choice"),
             Id("enemy_team"),
-            Id("boss_scene"),
+            RuntimeInstanceId.Parse("boss_scene"),
             FormationIndex: 1)).RequirePreparedEncounter();
 
         Assert.True(prepared.Formation.IsBoss);
@@ -87,7 +87,7 @@ public sealed class EncounterPreparationServiceTests
             Id("missing_trigger"),
             Qualified("missing"),
             Id("enemy_team"),
-            Id("missing_trigger")));
+            RuntimeInstanceId.Parse("missing_trigger")));
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.PreparedEncounter);
@@ -114,7 +114,7 @@ public sealed class EncounterPreparationServiceTests
             Id("mixed_trigger"),
             Qualified("mixed"),
             Id("enemy_team"),
-            Id("mixed_trigger")));
+            RuntimeInstanceId.Parse("mixed_trigger")));
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.PreparedEncounter);

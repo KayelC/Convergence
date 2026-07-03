@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -84,13 +85,13 @@ internal static class RuntimeTargetResolver
     }
 
     private static IReadOnlyList<RuntimeActorState> ResolveSelected(
-        IEnumerable<ContentId> selectedTargetIds,
+        IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<RuntimeActorState> eligible)
     {
         var byId = eligible.ToDictionary(target => target.InstanceId);
         var targets = new List<RuntimeActorState>();
-        var seen = new HashSet<ContentId>();
-        foreach (ContentId selectedId in selectedTargetIds)
+        var seen = new HashSet<RuntimeInstanceId>();
+        foreach (RuntimeInstanceId selectedId in selectedTargetIds)
         {
             if (seen.Add(selectedId) && byId.TryGetValue(selectedId, out RuntimeActorState? target))
             {

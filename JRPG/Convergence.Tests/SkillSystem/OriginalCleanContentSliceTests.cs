@@ -243,15 +243,15 @@ public sealed class OriginalCleanContentSliceTests
         EncounterStartPlanResult result = planner.Plan(new EncounterStartRequest(
             Qualified("mixed_drill"),
             Id("enemy_team"),
-            Id("visible_enemy")));
+            RuntimeInstanceId.Parse("visible_enemy")));
         EncounterStartPlanResult localLookup = planner.Plan(new EncounterStartRequest(
             Id("mixed_drill"),
             Id("enemy_team"),
-            Id("visible_enemy")));
+            RuntimeInstanceId.Parse("visible_enemy")));
         EncounterStartPlanResult qualifiedPrefix = planner.Plan(new EncounterStartRequest(
             Qualified("mixed_drill"),
             Id("enemy_team"),
-            Qualified("visible_enemy")));
+            RuntimeInstanceId.Parse("scene:visible_enemy")));
 
         Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(diagnostic => diagnostic.Message)));
         EncounterStartPlan plan = result.RequirePlan();
@@ -263,7 +263,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal([2, 3], plan.ActorRequests.Select(request => request.Level));
         Assert.All(plan.ActorRequests, request => Assert.Equal(Id("enemy_team"), request.TeamId));
         Assert.Equal(
-            [Id("visible_enemy_ashling_1"), Id("visible_enemy_bramble_runner_2")],
+            [RuntimeInstanceId.Parse("visible_enemy_ashling_1"), RuntimeInstanceId.Parse("visible_enemy_bramble_runner_2")],
             plan.ActorRequests.Select(request => request.InstanceId));
 
         var factory = new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy());
@@ -277,9 +277,9 @@ public sealed class OriginalCleanContentSliceTests
         Assert.False(localLookup.IsSuccess);
         Assert.Contains(localLookup.Diagnostics, diagnostic =>
             diagnostic.Code == EncounterStartDiagnosticCode.EncounterIdNotQualified);
-        Assert.False(qualifiedPrefix.IsSuccess);
-        Assert.Contains(qualifiedPrefix.Diagnostics, diagnostic =>
-            diagnostic.Code == EncounterStartDiagnosticCode.InstanceIdPrefixMustBeLocal);
+        Assert.True(qualifiedPrefix.IsSuccess);
+        Assert.All(qualifiedPrefix.RequirePlan().ActorRequests, request =>
+            Assert.StartsWith("scene:visible_enemy_", request.InstanceId.ToString()));
     }
 
     [Fact]
@@ -556,7 +556,7 @@ public sealed class OriginalCleanContentSliceTests
 
     private static RuntimeActorState Actor(string id, string teamId, decimal hp, decimal maxHp, decimal sp, decimal maxSp) =>
         new(
-            Id(id),
+            RuntimeInstanceId.Parse(id),
             Id($"entity_{id}"),
             Id(teamId),
             Id("hp"),
@@ -610,8 +610,8 @@ public sealed class OriginalCleanContentSliceTests
 
     private sealed class FirstBattleTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
     }

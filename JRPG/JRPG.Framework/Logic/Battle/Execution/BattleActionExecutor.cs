@@ -79,13 +79,13 @@ public sealed record BattleActionDiagnostic(
     BattleActionDiagnosticCode Code,
     string Message,
     int? EffectIndex = null,
-    ContentId? TargetId = null);
+    RuntimeInstanceId? TargetId = null);
 
 public sealed record BattleActionEvent(
     BattleActionEventKind Kind,
     string Message,
-    ContentId? ActorId = null,
-    ContentId? TargetId = null,
+    RuntimeInstanceId? ActorId = null,
+    RuntimeInstanceId? TargetId = null,
     ContentId? SourceId = null,
     decimal? Value = null);
 
@@ -104,7 +104,7 @@ public sealed record BasicAttackBattleActionCommand : BattleActionCommand
     public BasicAttackBattleActionCommand(
         EquipmentBasicAttackDefinition basicAttack,
         TargetingDefinition targeting,
-        IEnumerable<ContentId>? selectedTargetIds = null,
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null,
         ContentId? actionId = null)
         : base(BattleActionKind.BasicAttack)
     {
@@ -116,13 +116,13 @@ public sealed record BasicAttackBattleActionCommand : BattleActionCommand
 
     public EquipmentBasicAttackDefinition BasicAttack { get; }
     public TargetingDefinition Targeting { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
     public ContentId ActionId { get; }
 }
 
 public sealed record SkillBattleActionCommand : BattleActionCommand
 {
-    public SkillBattleActionCommand(SkillDefinition skill, IEnumerable<ContentId>? selectedTargetIds = null)
+    public SkillBattleActionCommand(SkillDefinition skill, IEnumerable<RuntimeInstanceId>? selectedTargetIds = null)
         : base(BattleActionKind.Skill)
     {
         Skill = skill ?? throw new ArgumentNullException(nameof(skill));
@@ -130,12 +130,12 @@ public sealed record SkillBattleActionCommand : BattleActionCommand
     }
 
     public SkillDefinition Skill { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
 }
 
 public sealed record ItemBattleActionCommand : BattleActionCommand
 {
-    public ItemBattleActionCommand(ItemDefinition item, IEnumerable<ContentId>? selectedTargetIds = null, int quantity = 1)
+    public ItemBattleActionCommand(ItemDefinition item, IEnumerable<RuntimeInstanceId>? selectedTargetIds = null, int quantity = 1)
         : base(BattleActionKind.Item)
     {
         if (quantity <= 0)
@@ -149,7 +149,7 @@ public sealed record ItemBattleActionCommand : BattleActionCommand
     }
 
     public ItemDefinition Item { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
     public int Quantity { get; }
 }
 
@@ -159,14 +159,14 @@ public sealed record PassBattleActionCommand() : BattleActionCommand(BattleActio
 
 public sealed record AnalyzeBattleActionCommand : BattleActionCommand
 {
-    public AnalyzeBattleActionCommand(ContentId targetId, IEnumerable<AnalysisLayer> layers)
+    public AnalyzeBattleActionCommand(RuntimeInstanceId targetId, IEnumerable<AnalysisLayer> layers)
         : base(BattleActionKind.Analyze)
     {
         TargetId = targetId;
         Layers = Array.AsReadOnly((layers ?? throw new ArgumentNullException(nameof(layers))).ToArray());
     }
 
-    public ContentId TargetId { get; }
+    public RuntimeInstanceId TargetId { get; }
     public IReadOnlyList<AnalysisLayer> Layers { get; }
 }
 
@@ -296,7 +296,7 @@ public sealed record BattleActionAssessment
     internal BattleActionAssessment(
         BattleActionKind kind,
         IEnumerable<BattleActionDiagnostic>? diagnostics = null,
-        IEnumerable<ContentId>? targetIds = null,
+        IEnumerable<RuntimeInstanceId>? targetIds = null,
         ActionTurnConsumption? turnConsumption = null,
         SkillExecutionAssessment? skillAssessment = null,
         ItemExecutionAssessment? itemAssessment = null,
@@ -314,7 +314,7 @@ public sealed record BattleActionAssessment
     public BattleActionKind Kind { get; }
     public bool CanExecute => Diagnostics.Count == 0;
     public IReadOnlyList<BattleActionDiagnostic> Diagnostics { get; }
-    public IReadOnlyList<ContentId> TargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
     public ActionTurnConsumption TurnConsumption { get; init; }
     public SkillExecutionAssessment? SkillAssessment { get; }
     public ItemExecutionAssessment? ItemAssessment { get; }
@@ -563,7 +563,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         BattleActionKind kind,
         ContentId sourceId,
         TargetingDefinition targeting,
-        IEnumerable<ContentId> selectedTargetIds,
+        IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<EffectDefinition> effects)
     {
         var action = new EffectActionExecutionRequest(
@@ -607,7 +607,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         transition.Applied
             ? new BattleActionAssessment(
                 kind,
-                targetIds: transition.AffectedInstanceIds.Select(id => ContentId.Parse(id.ToString().Replace(':', '_'))),
+                targetIds: transition.AffectedInstanceIds,
                 partyStockTransition: transition)
             : new BattleActionAssessment(
                 kind,
@@ -736,7 +736,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         BattleActionKind kind,
         ContentId sourceId,
         TargetingDefinition targeting,
-        IEnumerable<ContentId> selectedTargetIds,
+        IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<EffectDefinition> effects,
         ActionTurnConsumptionKind defaultTurnKind)
     {
@@ -867,7 +867,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             diagnostic.TargetId);
 
     private static IReadOnlyList<BattleActionEvent> EffectEvents(
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         ContentId sourceId,
         IEnumerable<EffectExecutionResult> effects) =>
         Array.AsReadOnly(effects.Select(effect => new BattleActionEvent(

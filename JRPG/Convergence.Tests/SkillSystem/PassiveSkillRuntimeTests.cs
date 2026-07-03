@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -47,9 +48,9 @@ public sealed class PassiveSkillRuntimeTests
             "skill_system_redesign.skills.sample.json");
         SkillDefinition iceBoost = Assert.Single(
             new SkillSystemJsonDeserializer().DeserializeSkills(File.ReadAllText(path), path).Records);
-        BattleActorState actor = Actor("actor", PlayerTeam, passiveSkills: [iceBoost]);
-        BattleActorState iceTarget = Actor("ice_target", EnemyTeam);
-        BattleActorState fireTarget = Actor("fire_target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, passiveSkills: [iceBoost]);
+        RuntimeActorState iceTarget = Actor("ice_target", EnemyTeam);
+        RuntimeActorState fireTarget = Actor("fire_target", EnemyTeam);
         BattleExecutionServices services = Services(damage: _ => [new DamageHitResolution(true, 20)]);
         var executor = new SkillExecutor(services);
 
@@ -101,8 +102,8 @@ public sealed class PassiveSkillRuntimeTests
                     0.5m,
                     new EffectElementConditionDefinition(DamageElement.Physical))
             ]);
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 100, passiveSkills: [armsMaster]);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 100, passiveSkills: [armsMaster]);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         SkillDefinition mixedSkill = new(
             ContentId.Parse("mixed_skill"),
             "Mixed Skill",
@@ -134,8 +135,8 @@ public sealed class PassiveSkillRuntimeTests
             modifiers: [new AilmentResistanceRuleModifierDefinition(Poison, ResistanceLevel.Resistant)]);
         var defense = new CombatDefenseProfile(
             ailmentResistances: [new KeyValuePair<ContentId, ResistanceLevel>(Poison, ResistanceLevel.Vulnerable)]);
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam, defense: defense, passiveSkills: [resistPoison]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, defense: defense, passiveSkills: [resistPoison]);
         SkillDefinition poisonSkill = new(
             ContentId.Parse("poison_skill"),
             "Poison Skill",
@@ -177,7 +178,7 @@ public sealed class PassiveSkillRuntimeTests
                     battleStart,
                     [new ModifyStatStageEffectDefinition([attack], 1)])
             ]);
-        BattleActorState actor = Actor(
+        RuntimeActorState actor = Actor(
             "actor",
             PlayerTeam,
             hp: 50,
@@ -211,9 +212,9 @@ public sealed class PassiveSkillRuntimeTests
         SkillDefinition second = PassiveSkill(
             "second",
             triggers: [new PassiveTriggerDefinition(eventId, [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(3))])]);
-        BattleActorState owner = Actor("owner", PlayerTeam, passiveSkills: [first, second]);
-        BattleActorState targetA = Actor("target_a", PlayerTeam, hp: 50);
-        BattleActorState targetB = Actor("target_b", PlayerTeam, hp: 50);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: [first, second]);
+        RuntimeActorState targetA = Actor("target_a", PlayerTeam, hp: 50);
+        RuntimeActorState targetB = Actor("target_b", PlayerTeam, hp: 50);
 
         PassiveTriggerDispatchResult result = Dispatch(
             eventId,
@@ -242,7 +243,7 @@ public sealed class PassiveSkillRuntimeTests
         SkillDefinition passive = PassiveSkill(
             "regenerate",
             triggers: [new PassiveTriggerDefinition(eventId, [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])]);
-        BattleActorState owner = Actor("owner", PlayerTeam, hp: 50, passiveSkills: [passive]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, hp: 50, passiveSkills: [passive]);
         BattleExecutionServices services = Services();
 
         owner.Passives.Disable(passive.Id);
@@ -266,7 +267,7 @@ public sealed class PassiveSkillRuntimeTests
         SkillDefinition passive = PassiveSkill(
             "recursive_passive",
             triggers: [new PassiveTriggerDefinition(eventId, [new CustomEffectDefinition(handlerId)])]);
-        BattleActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
         var handler = new RedispatchingEffectHandler(eventId);
         BattleExecutionServices services = Services(
             customEffects: [new KeyValuePair<ContentId, ICustomEffectHandler>(handlerId, handler)]);
@@ -295,9 +296,9 @@ public sealed class PassiveSkillRuntimeTests
                         new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))
                     ])
             ]);
-        BattleActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
-        BattleActorState first = Actor("first", PlayerTeam, hp: 50);
-        BattleActorState second = Actor("second", PlayerTeam, hp: 50);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
+        RuntimeActorState first = Actor("first", PlayerTeam, hp: 50);
+        RuntimeActorState second = Actor("second", PlayerTeam, hp: 50);
         BattleExecutionServices services = Services(
             customEffects:
             [
@@ -330,8 +331,8 @@ public sealed class PassiveSkillRuntimeTests
                     ContentId.Parse("owner_would_be_defeated"),
                     [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
             ]);
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [endure]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [endure]);
         BattleExecutionServices services = Services(damage: _ => [new DamageHitResolution(true, 20)]);
         var executor = new SkillExecutor(services);
         SkillDefinition attack = ActiveDamageSkill("attack", DamageElement.Physical);
@@ -356,7 +357,7 @@ public sealed class PassiveSkillRuntimeTests
             modifiers: [new ElementalAffinityRuleModifierDefinition(DamageElement.Fire, ElementalAffinity.Null)]);
         var defense = new CombatDefenseProfile(
             [new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Fire, ElementalAffinity.Weak)]);
-        BattleActorState owner = Actor("owner", PlayerTeam, defense: defense, passiveSkills: [nullFire]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, defense: defense, passiveSkills: [nullFire]);
         BattleExecutionServices services = Services();
         var conditionContext = new BattleConditionContext(
             owner,
@@ -387,7 +388,7 @@ public sealed class PassiveSkillRuntimeTests
         IEnumerable<SkillDefinition> passives,
         BattleExecutionServices services)
     {
-        BattleActorState owner = Actor("owner", PlayerTeam, passiveSkills: passives);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: passives);
         var conditions = new BattleConditionContext(
             owner,
             owner,
@@ -405,9 +406,9 @@ public sealed class PassiveSkillRuntimeTests
 
     private static PassiveTriggerDispatchResult Dispatch(
         ContentId eventId,
-        BattleActorState owner,
-        IEnumerable<BattleActorState> participants,
-        IEnumerable<BattleActorState> targets,
+        RuntimeActorState owner,
+        IEnumerable<RuntimeActorState> participants,
+        IEnumerable<RuntimeActorState> targets,
         BattleExecutionServices services) =>
         services.PassiveTriggers.Dispatch(
             new PassiveTriggerDispatchRequest(
@@ -456,12 +457,12 @@ public sealed class PassiveSkillRuntimeTests
 
     private static SkillExecutionRequest Request(
         SkillDefinition skill,
-        BattleActorState actor,
-        IEnumerable<BattleActorState> participants,
-        BattleActorState target) =>
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        RuntimeActorState target) =>
         new(skill, actor, participants, Battle, NormalBattle, NewMoon, [target.InstanceId]);
 
-    private static BattleActorState Actor(
+    private static RuntimeActorState Actor(
         string id,
         ContentId team,
         decimal hp = 100,
@@ -469,7 +470,7 @@ public sealed class PassiveSkillRuntimeTests
         CombatDefenseProfile? defense = null,
         IEnumerable<SkillDefinition>? passiveSkills = null) =>
         new(
-            ContentId.Parse(id),
+            RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
             team,
             Hp,
@@ -552,8 +553,8 @@ public sealed class PassiveSkillRuntimeTests
 
     private sealed class FirstTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             Array.AsReadOnly(candidates.Take(count.Minimum).ToArray());

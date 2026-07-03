@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -24,16 +25,16 @@ public sealed class BattleStatusLifecycleTests
     public void TurnStart_MapsDeterministicBehavioursAndClearsGuard()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
-        BattleActorState skip = Actor("skip");
+        RuntimeActorState skip = Actor("skip");
         skip.SetGuarding(true);
         skip.ApplyAilment(Ailment("skip", new SkipAilmentTurnBehaviorDefinition()), Turns(3));
-        BattleActorState limited = Actor("limited");
+        RuntimeActorState limited = Actor("limited");
         limited.ApplyAilment(Ailment(
             "bind",
             new LimitedActionsAilmentTurnBehaviorDefinition([ContentId.Parse("basic_attack")])), Turns(3));
-        BattleActorState forced = Actor("forced");
+        RuntimeActorState forced = Actor("forced");
         forced.ApplyAilment(Ailment("rage", new ForcedBasicAttackAilmentTurnBehaviorDefinition()), Turns(3));
-        BattleActorState confused = Actor("confused");
+        RuntimeActorState confused = Actor("confused");
         confused.ApplyAilment(Ailment("charm", new ConfusedActionAilmentTurnBehaviorDefinition()), Turns(3));
 
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(skip)).Outcome);
@@ -47,18 +48,18 @@ public sealed class BattleStatusLifecycleTests
     public void TurnStart_UsesDeterministicChanceSkipAndFearRolls()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(49, 50, 10, 10, 20, 60));
-        BattleActorState panicSkip = Actor("panic_skip");
+        RuntimeActorState panicSkip = Actor("panic_skip");
         panicSkip.ApplyAilment(Ailment("panic", new ChanceSkipAilmentTurnBehaviorDefinition(50)), Turns(3));
-        BattleActorState panicAct = Actor("panic_act");
+        RuntimeActorState panicAct = Actor("panic_act");
         panicAct.ApplyAilment(Ailment("panic", new ChanceSkipAilmentTurnBehaviorDefinition(50)), Turns(3));
         var fear = new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(40, 15, DemonFleeOutcome.ReturnToStock);
-        BattleActorState demonFear = Actor("demon_fear");
+        RuntimeActorState demonFear = Actor("demon_fear");
         demonFear.ApplyAilment(Ailment("fear", fear), Turns(3));
-        BattleActorState humanFear = Actor("human_fear");
+        RuntimeActorState humanFear = Actor("human_fear");
         humanFear.ApplyAilment(Ailment("fear", fear), Turns(3));
-        BattleActorState skipFear = Actor("skip_fear");
+        RuntimeActorState skipFear = Actor("skip_fear");
         skipFear.ApplyAilment(Ailment("fear", fear), Turns(3));
-        BattleActorState actFear = Actor("act_fear");
+        RuntimeActorState actFear = Actor("act_fear");
         actFear.ApplyAilment(Ailment("fear", fear), Turns(3));
 
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(panicSkip)).Outcome);
@@ -73,7 +74,7 @@ public sealed class BattleStatusLifecycleTests
     public void AilmentApplication_EnforcesGuardImmunityChanceAndMajorExclusivity()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(99, 0));
-        BattleActorState guarded = Actor("guarded");
+        RuntimeActorState guarded = Actor("guarded");
         guarded.SetGuarding(true);
         BattleAilmentApplicationResult guardedResult = service.TryApplyAilment(new(
             Actor("attacker"),
@@ -82,13 +83,13 @@ public sealed class BattleStatusLifecycleTests
             100));
         var immuneDefense = new CombatDefenseProfile(
             ailmentResistances: [new KeyValuePair<ContentId, ResistanceLevel>(Poison, ResistanceLevel.Immune)]);
-        BattleActorState immune = Actor("immune", defense: immuneDefense);
+        RuntimeActorState immune = Actor("immune", defense: immuneDefense);
         BattleAilmentApplicationResult immuneResult = service.TryApplyAilment(new(
             Actor("attacker"),
             immune,
             Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
             100));
-        BattleActorState target = Actor("target");
+        RuntimeActorState target = Actor("target");
         target.ApplyAilment(Ailment("sleep", new SkipAilmentTurnBehaviorDefinition()), Turns(3));
         BattleAilmentApplicationResult missed = service.TryApplyAilment(new(
             Actor("attacker"),
@@ -114,11 +115,11 @@ public sealed class BattleStatusLifecycleTests
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(0));
         BattleExecutionServices services = Services();
-        BattleActorState poisoned = Actor("poisoned", hp: 1);
+        RuntimeActorState poisoned = Actor("poisoned", hp: 1);
         poisoned.ApplyAilment(PoisonAilment(), Turns(3));
-        BattleActorState sleeping = Actor("sleeping", hp: 50, sp: 40);
+        RuntimeActorState sleeping = Actor("sleeping", hp: 50, sp: 40);
         sleeping.ApplyAilment(SleepAilment(), Turns(3));
-        BattleActorState recovering = Actor("recovering", luck: 40);
+        RuntimeActorState recovering = Actor("recovering", luck: 40);
         recovering.ApplyAilment(Ailment(
             "fear",
             new NormalAilmentTurnBehaviorDefinition(),
@@ -147,7 +148,7 @@ public sealed class BattleStatusLifecycleTests
     public void TurnEnd_SuspendsReserveActorTicksDamageAndRecovery()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(0));
-        BattleActorState reserve = Actor("reserve", hp: 50, isActive: false);
+        RuntimeActorState reserve = Actor("reserve", hp: 50, isActive: false);
         reserve.ApplyAilment(PoisonAilment(), Turns(3));
 
         BattleTurnEndLifecycleResult result = service.ProcessTurnEnd(
@@ -163,7 +164,7 @@ public sealed class BattleStatusLifecycleTests
     public void Cleanup_ClearsTransientAndEncounterStatusesWithoutRemovingAilments()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
-        BattleActorState actor = Actor("actor");
+        RuntimeActorState actor = Actor("actor");
         actor.SetGuarding(true);
         actor.GrantShield(ShieldKind.Physical, Turns(1));
         actor.GrantCharge(ChargeKind.Physical, 2, Turns(1));
@@ -214,7 +215,7 @@ public sealed class BattleStatusLifecycleTests
             trigger => trigger.EventId == OwnerTurnEnd);
     }
 
-    private static BattleActorState Actor(
+    private static RuntimeActorState Actor(
         string id,
         decimal hp = 100,
         decimal sp = 100,
@@ -222,7 +223,7 @@ public sealed class BattleStatusLifecycleTests
         CombatDefenseProfile? defense = null,
         bool isActive = true) =>
         new(
-            ContentId.Parse(id),
+            RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
             PlayerTeam,
             Hp,
@@ -379,8 +380,8 @@ public sealed class BattleStatusLifecycleTests
 
     private sealed class FirstTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             candidates.Take(count.Maximum).ToArray();

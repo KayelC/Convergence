@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -62,6 +63,40 @@ public sealed class BattlePassiveCollection
     public bool Disable(ContentId skillId) => SetEnabled(skillId, false);
 
     public void ResetBattleActivations() => _activationCounts.Clear();
+
+    internal IReadOnlyList<RuntimePassiveActivationSnapshot> CaptureActivations() =>
+        Array.AsReadOnly(_activationCounts
+            .OrderBy(pair => pair.Key.SkillId.ToString(), StringComparer.Ordinal)
+            .ThenBy(pair => pair.Key.EventId.ToString(), StringComparer.Ordinal)
+            .ThenBy(pair => pair.Key.TriggerIndex)
+            .Select(pair => new RuntimePassiveActivationSnapshot(
+                pair.Key.SkillId,
+                pair.Key.EventId,
+                pair.Key.TriggerIndex,
+                pair.Value))
+            .ToArray());
+
+    internal void RestoreActivations(IEnumerable<RuntimePassiveActivationSnapshot> activations)
+    {
+        _activationCounts.Clear();
+        foreach (RuntimePassiveActivationSnapshot activation in
+                 activations ?? throw new ArgumentNullException(nameof(activations)))
+        {
+            if (!_entries.Any(entry => entry.Skill.Id == activation.SkillId))
+            {
+                throw new ArgumentException(
+                    $"Passive activation references unloaded skill '{activation.SkillId}'.",
+                    nameof(activations));
+            }
+
+            _activationCounts.Add(
+                new PassiveActivationKey(
+                    activation.SkillId,
+                    activation.TriggerIndex,
+                    activation.EventId),
+                activation.ActivationCount);
+        }
+    }
 
     internal IEnumerable<SkillDefinition> EnabledSkills =>
         _entries.Where(entry => entry.IsEnabled).Select(entry => entry.Skill);
@@ -305,7 +340,7 @@ public sealed record PassiveTriggerExecutionResult(
     ContentId SkillId,
     int TriggerIndex,
     ContentId EventId,
-    ContentId TargetId,
+    RuntimeInstanceId TargetId,
     PassiveTriggerOutcome Outcome,
     IReadOnlyList<EffectExecutionResult> Effects);
 
@@ -534,7 +569,7 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         ContentId skillId,
         int triggerIndex,
         ContentId eventId,
-        ContentId targetId,
+        RuntimeInstanceId targetId,
         PassiveTriggerOutcome outcome) =>
         new(skillId, triggerIndex, eventId, targetId, outcome, []);
 

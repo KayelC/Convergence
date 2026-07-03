@@ -53,7 +53,7 @@ namespace JRPGPrototype.Logic.Battle
                     new EffectExecutionEnvironment(BattleContext, LegacyBattleKind, LegacyMoonPhase)));
         }
 
-        public ContentId GetRuntimeActorId(Combatant combatant) => RuntimeId(combatant);
+        public RuntimeInstanceId GetRuntimeActorId(Combatant combatant) => RuntimeId(combatant);
 
         public BattleActionExecutionResult ExecutePass(Combatant actor)
         {
@@ -151,7 +151,7 @@ namespace JRPGPrototype.Logic.Battle
             return state;
         }
 
-        private static ContentId RuntimeId(Combatant combatant, string? suffix = null)
+        private static RuntimeInstanceId RuntimeId(Combatant combatant, string? suffix = null)
         {
             string raw = !string.IsNullOrWhiteSpace(combatant.SourceId)
                 ? combatant.SourceId
@@ -167,7 +167,7 @@ namespace JRPGPrototype.Logic.Battle
                 .Select(character => char.IsLetterOrDigit(character) ? character : '_')
                 .ToArray())
                 .Trim('_');
-            return ContentId.Parse(string.IsNullOrWhiteSpace(normalized) ? "combatant" : normalized);
+            return RuntimeInstanceId.Parse(string.IsNullOrWhiteSpace(normalized) ? "combatant" : normalized);
         }
 
         private static IBattleActionExecutor CreateActionExecutor()
@@ -207,8 +207,8 @@ namespace JRPGPrototype.Logic.Battle
 
         private sealed class LegacyRandomTargetPolicy : IRandomTargetSelectionPolicy
         {
-            public IReadOnlyList<BattleActorState> Select(
-                IReadOnlyList<BattleActorState> candidates,
+            public IReadOnlyList<RuntimeActorState> Select(
+                IReadOnlyList<RuntimeActorState> candidates,
                 TargetCountDefinition count,
                 SkillExecutionRequest request) =>
                 Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());

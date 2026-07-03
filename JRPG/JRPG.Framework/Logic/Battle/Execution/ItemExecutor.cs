@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -34,7 +35,7 @@ public sealed record ItemExecutionDiagnostic(
     ItemExecutionDiagnosticCode Code,
     string Message,
     int? EffectIndex = null,
-    ContentId? TargetId = null);
+    RuntimeInstanceId? TargetId = null);
 
 public sealed record ItemExecutionRequest
 {
@@ -43,7 +44,7 @@ public sealed record ItemExecutionRequest
         RuntimeActorState actor,
         IEnumerable<RuntimeActorState> participants,
         EffectExecutionEnvironment environment,
-        IEnumerable<ContentId>? selectedTargetIds = null)
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null)
     {
         Item = item ?? throw new ArgumentNullException(nameof(item));
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
@@ -57,7 +58,7 @@ public sealed record ItemExecutionRequest
     public RuntimeActorState Actor { get; }
     public IReadOnlyList<RuntimeActorState> Participants { get; }
     public EffectExecutionEnvironment Environment { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
 }
 
 public sealed record ItemExecutionAssessment
@@ -73,7 +74,7 @@ public sealed record ItemExecutionAssessment
 
     public bool CanExecute => Diagnostics.Count == 0 && Targets is not null;
     public IReadOnlyList<ItemExecutionDiagnostic> Diagnostics { get; }
-    public IReadOnlyList<ContentId> TargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
     internal ResolvedRuntimeTargetSet? Targets { get; }
 }
 

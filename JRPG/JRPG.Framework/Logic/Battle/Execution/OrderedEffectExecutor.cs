@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -25,7 +26,7 @@ internal sealed class OrderedEffectExecutor
         ResolvedRuntimeTargetSet targets)
     {
         var results = new List<EffectExecutionResult>();
-        var stoppedTargets = new HashSet<ContentId>();
+        var stoppedTargets = new HashSet<RuntimeInstanceId>();
         IReadOnlyList<RuntimeActorState?> executionTargets = targets.IsUntargeted
             ? Array.AsReadOnly<RuntimeActorState?>([null])
             : Array.AsReadOnly(targets.Targets.Cast<RuntimeActorState?>().ToArray());

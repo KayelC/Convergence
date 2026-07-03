@@ -122,9 +122,7 @@ internal sealed class CleanSaveDemoHost
             return 4;
         }
 
-        RuntimeActorSnapshot[] restoredActors = restored.Actors
-            .Select(actor => RuntimeActorStateSet.FromSnapshot(actor).ToSnapshot())
-            .ToArray();
+        RuntimeActorSnapshot[] restoredActors = restored.Actors.ToArray();
 
         await _eventSink.PublishAsync(
             $"001 [save] Created runtime save snapshot v{restored.ContractVersion} with {restoredActors.Length} actor(s).",
@@ -258,7 +256,8 @@ internal sealed class CleanSaveDemoHost
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
-            [new KeyValuePair<ContentId, decimal>(ContentId.Parse("hp"), 40)]);
+            [new KeyValuePair<ContentId, decimal>(ContentId.Parse("hp"), 40)],
+            ContentId.Parse("hp"));
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
         new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);
@@ -403,6 +402,7 @@ internal static class CleanSaveJsonCodec
             actor.Progression.Experience,
             actor.Progression.LifetimeExperience,
             actor.Progression.UnspentStatPoints,
+            actor.VitalResourceId.ToString(),
             actor.Resources.Select(resource => new HostResourceDto(resource.ResourceId.ToString(), resource.Current, resource.Maximum)).ToArray(),
             actor.BaseResourceValues.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
             actor.Stats.BaseStats.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
@@ -415,10 +415,10 @@ internal static class CleanSaveJsonCodec
             actor.Equipment.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
-            actor.BattleStatus.StatStages.Select(stage => new HostStatStageDto(stage.ModifierTrackId.ToString(), stage.Stage, stage.RemainingTurns)).ToArray(),
-            actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, charge.RemainingTurns)).ToArray(),
-            actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), shield.RemainingTurns)).ToArray(),
-            actor.BattleStatus.Breaks.Select(breakState => new HostBreakDto(breakState.Element.ToString(), breakState.RemainingTurns)).ToArray(),
+            actor.BattleStatus.StatStages.Select(stage => new HostStatStageDto(stage.ModifierTrackId.ToString(), stage.Stage, ToDto(stage.Duration))).ToArray(),
+            actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, ToDto(charge.Duration))).ToArray(),
+            actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), ToDto(shield.Duration))).ToArray(),
+            actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(affinity.Element.ToString(), affinity.Affinity.ToString(), ToDto(affinity.Duration)!)).ToArray(),
             actor.BattleStatus.IsGuarding,
             actor.BattleStatus.Analysis.Select(analysis => new HostAnalysisDto(analysis.TargetInstanceId.ToString(), analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
             actor.BattleActivations.PassiveActivations.Select(passive => new HostPassiveActivationDto(
@@ -444,10 +444,13 @@ internal static class CleanSaveJsonCodec
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
                 dto.Statuses.Select(FromDto),
-                dto.StatStages.Select(stage => new RuntimeStatStageSnapshot(Id(stage.ModifierTrackId), stage.Stage, stage.RemainingTurns)),
-                dto.Charges.Select(charge => new RuntimeChargeSnapshot(Enum.Parse<ChargeKind>(charge.Kind), charge.Multiplier, charge.RemainingTurns)),
-                dto.Shields.Select(shield => new RuntimeShieldSnapshot(Enum.Parse<ShieldKind>(shield.Kind), shield.RemainingTurns)),
-                dto.Breaks.Select(breakState => new RuntimeBreakSnapshot(Enum.Parse<DamageElement>(breakState.Element), breakState.RemainingTurns)),
+                dto.StatStages.Select(stage => new RuntimeStatStageSnapshot(Id(stage.ModifierTrackId), stage.Stage, FromDto(stage.Duration))),
+                dto.Charges.Select(charge => new RuntimeChargeSnapshot(Enum.Parse<ChargeKind>(charge.Kind), charge.Multiplier, FromDto(charge.Duration))),
+                dto.Shields.Select(shield => new RuntimeShieldSnapshot(Enum.Parse<ShieldKind>(shield.Kind), FromDto(shield.Duration))),
+                dto.AffinityOverrides.Select(affinity => new RuntimeAffinityOverrideSnapshot(
+                    Enum.Parse<DamageElement>(affinity.Element),
+                    Enum.Parse<ElementalAffinity>(affinity.Affinity),
+                    FromDto(affinity.Duration) ?? throw new InvalidOperationException("Affinity override duration is required."))),
                 dto.IsGuarding,
                 dto.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
                     Instance(analysis.TargetInstanceId),
@@ -457,7 +460,8 @@ internal static class CleanSaveJsonCodec
                 Id(passive.EventId),
                 passive.TriggerIndex,
                 passive.ActivationCount))),
-            ToDecimalDictionary(dto.BaseResourceValues));
+            ToDecimalDictionary(dto.BaseResourceValues),
+            Id(dto.VitalResourceId));
 
     private static HostReferenceDto ToDto(RuntimeActorReferenceSnapshot reference) =>
         new(reference.InstanceId.ToString(), reference.EntityDefinitionId.ToString(), reference.DisplayName);
@@ -466,10 +470,43 @@ internal static class CleanSaveJsonCodec
         new(Instance(dto.InstanceId), Id(dto.EntityDefinitionId), dto.DisplayName);
 
     private static HostTimedStateDto ToDto(RuntimeTimedStateSnapshot timed) =>
-        new(timed.Id.ToString(), timed.RemainingTurns, timed.IsRemovable);
+        new(timed.Id.ToString(), ToDto(timed.Duration)!, timed.IsRemovable);
 
     private static RuntimeTimedStateSnapshot FromDto(HostTimedStateDto dto) =>
-        new(Id(dto.Id), dto.RemainingTurns, dto.IsRemovable);
+        new(Id(dto.Id), FromDto(dto.Duration) ?? throw new InvalidOperationException("Timed status duration is required."), dto.IsRemovable);
+
+    private static HostDurationDto? ToDto(DurationDefinition? duration) => duration switch
+    {
+        null => null,
+        InstantDurationDefinition => new HostDurationDto(DurationKind.Instant.ToString()),
+        TurnDurationDefinition turns => new HostDurationDto(
+            DurationKind.Turns.ToString(),
+            turns.Value,
+            turns.TickEventId.ToString(),
+            turns.SuspendWhileReserve),
+        PhaseDurationDefinition phase => new HostDurationDto(
+            DurationKind.Phase.ToString(),
+            PhaseId: phase.PhaseId.ToString()),
+        BattleDurationDefinition => new HostDurationDto(DurationKind.Battle.ToString()),
+        PermanentDurationDefinition => new HostDurationDto(DurationKind.Permanent.ToString()),
+        _ => throw new InvalidOperationException($"Unsupported duration type '{duration.GetType().Name}'.")
+    };
+
+    private static DurationDefinition? FromDto(HostDurationDto? duration) => duration is null
+        ? null
+        : Enum.Parse<DurationKind>(duration.Kind) switch
+        {
+            DurationKind.Instant => new InstantDurationDefinition(),
+            DurationKind.Turns => new TurnDurationDefinition(
+                duration.Value ?? throw new InvalidOperationException("Turn duration value is required."),
+                Id(duration.TickEventId ?? throw new InvalidOperationException("Turn duration tick event is required.")),
+                duration.SuspendWhileReserve ?? false),
+            DurationKind.Phase => new PhaseDurationDefinition(
+                Id(duration.PhaseId ?? throw new InvalidOperationException("Phase duration ID is required."))),
+            DurationKind.Battle => new BattleDurationDefinition(),
+            DurationKind.Permanent => new PermanentDurationDefinition(),
+            _ => throw new InvalidOperationException($"Unsupported duration kind '{duration.Kind}'.")
+        };
 
     private static HostPartyStockDto ToDto(RuntimePartyStockSnapshot snapshot) =>
         new(
@@ -645,6 +682,7 @@ internal static class CleanSaveJsonCodec
         long Experience,
         long LifetimeExperience,
         int UnspentStatPoints,
+        string VitalResourceId,
         HostResourceDto[] Resources,
         Dictionary<string, decimal> BaseResourceValues,
         Dictionary<string, decimal> BaseStats,
@@ -660,18 +698,24 @@ internal static class CleanSaveJsonCodec
         HostStatStageDto[] StatStages,
         HostChargeDto[] Charges,
         HostShieldDto[] Shields,
-        HostBreakDto[] Breaks,
+        HostAffinityOverrideDto[] AffinityOverrides,
         bool IsGuarding,
         HostAnalysisDto[] Analysis,
         HostPassiveActivationDto[] PassiveActivations);
 
     private sealed record HostResourceDto(string ResourceId, decimal Current, decimal Maximum);
     private sealed record HostReferenceDto(string InstanceId, string EntityDefinitionId, string DisplayName);
-    private sealed record HostTimedStateDto(string Id, int? RemainingTurns, bool IsRemovable);
-    private sealed record HostStatStageDto(string ModifierTrackId, int Stage, int? RemainingTurns);
-    private sealed record HostChargeDto(string Kind, decimal Multiplier, int? RemainingTurns);
-    private sealed record HostShieldDto(string Kind, int? RemainingTurns);
-    private sealed record HostBreakDto(string Element, int? RemainingTurns);
+    private sealed record HostTimedStateDto(string Id, HostDurationDto Duration, bool IsRemovable);
+    private sealed record HostStatStageDto(string ModifierTrackId, int Stage, HostDurationDto? Duration);
+    private sealed record HostChargeDto(string Kind, decimal Multiplier, HostDurationDto? Duration);
+    private sealed record HostShieldDto(string Kind, HostDurationDto? Duration);
+    private sealed record HostAffinityOverrideDto(string Element, string Affinity, HostDurationDto Duration);
+    private sealed record HostDurationDto(
+        string Kind,
+        int? Value = null,
+        string? TickEventId = null,
+        bool? SuspendWhileReserve = null,
+        string? PhaseId = null);
     private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
     private sealed record HostPassiveActivationDto(string SkillId, string EventId, int TriggerIndex, int ActivationCount);
     private sealed record HostPartyStockDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveForm, HostReferenceDto[] PersonaStock, HostReferenceDto[] DemonStock, int MaxActivePartySize);

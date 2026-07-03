@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -213,7 +214,7 @@ public sealed class BattleEncounterRunnerTests
     private static BattleEncounterParticipant Participant(string id, ContentId teamId)
     {
         var state = new RuntimeActorState(
-            Id(id),
+            RuntimeInstanceId.Parse(id),
             Id(id + "_entity"),
             teamId,
             Hp,

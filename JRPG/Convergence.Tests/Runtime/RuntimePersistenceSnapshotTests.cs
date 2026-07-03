@@ -4,6 +4,8 @@ using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -21,7 +23,9 @@ public sealed class RuntimePersistenceSnapshotTests
 
         Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Diagnostics.Select(diagnostic => diagnostic.Message)));
         RuntimeSaveGameSnapshot valid = result.RequireValidSnapshot();
-        RuntimeActorSnapshot restored = RuntimeActorStateSet.FromSnapshot(valid.Actors[0]).ToSnapshot();
+        RuntimeActorSnapshot restored = RuntimeActorState.Restore(
+            valid.Actors[0],
+            CombatDefenseProfile.Empty).ToSnapshot();
         Assert.Equal(Id("convergence.clean_battle_demo:frost_duelist_demo"), restored.Identity.EntityDefinitionId);
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), valid.Inventory.ItemQuantities.Keys.Single());
         Assert.Equal(
@@ -68,7 +72,9 @@ public sealed class RuntimePersistenceSnapshotTests
             RuntimeInstanceId.Parse("frost"),
             Id("missing.pack:missing_entity"),
             learnedSkills: [Id("missing.pack:missing_skill")],
-            ailments: [new RuntimeTimedStateSnapshot(Id("missing.pack:missing_ailment"), 1)]);
+            ailments: [new RuntimeTimedStateSnapshot(
+                Id("missing.pack:missing_ailment"),
+                new TurnDurationDefinition(1, Id("owner_turn_end"), false))]);
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
             actors: [frost, frost],
             partyStock: new RuntimePartyStockSnapshot(
@@ -413,7 +419,8 @@ public sealed class RuntimePersistenceSnapshotTests
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
             new RuntimeBattleActivationSnapshot(),
-            [new KeyValuePair<ContentId, decimal>(Id("hp"), 40)]);
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 40)],
+            Id("hp"));
 
     internal static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
         new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);

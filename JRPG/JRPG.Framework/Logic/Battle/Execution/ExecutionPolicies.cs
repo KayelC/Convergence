@@ -69,8 +69,8 @@ public interface IFormulaAmountHandler
 
 public interface IRandomTargetSelectionPolicy
 {
-    IReadOnlyList<BattleActorState> Select(
-        IReadOnlyList<BattleActorState> candidates,
+    IReadOnlyList<RuntimeActorState> Select(
+        IReadOnlyList<RuntimeActorState> candidates,
         TargetCountDefinition count,
         SkillExecutionRequest request);
 }

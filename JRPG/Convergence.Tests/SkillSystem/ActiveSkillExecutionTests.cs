@@ -3,6 +3,7 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -32,15 +33,15 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_RejectsIndependentPreflightErrorsWithoutSpendingResources()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, hp: 100, sp: 5);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100, sp: 5);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         SkillDefinition skill = ActiveSkill(
             [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
             costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(10))],
             availability: [ContentId.Parse("field")]);
         var executor = new SkillExecutor(Services());
 
-        SkillExecutionResult result = executor.Execute(Request(skill, actor, [actor, target], [ContentId.Parse("missing_target")]));
+        SkillExecutionResult result = executor.Execute(Request(skill, actor, [actor, target], [RuntimeInstanceId.Parse("missing_target")]));
 
         Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == SkillExecutionDiagnosticCode.ContextUnavailable);
@@ -54,8 +55,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_ComposesDamageAndAilmentInAuthoredOrder()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 30);
-        BattleActorState target = Actor(
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 30);
+        RuntimeActorState target = Actor(
             "target",
             EnemyTeam,
             defense: new CombatDefenseProfile([new(DamageElement.Ice, ElementalAffinity.Weak)]));
@@ -85,8 +86,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_FalseConditionSkipsWithoutActivatingStopAction()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam, hp: 100);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 100);
         SkillDefinition skill = ActiveSkill(
         [
             new DamageEffectDefinition(
@@ -111,9 +112,9 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_StopTargetSuppressesLaterEffectsOnlyForFailedTarget()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState first = Actor("first", EnemyTeam, hp: 100);
-        BattleActorState second = Actor("second", EnemyTeam, hp: 50);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState first = Actor("first", EnemyTeam, hp: 100);
+        RuntimeActorState second = Actor("second", EnemyTeam, hp: 50);
         SkillDefinition skill = ActiveSkill(
         [
             new DamageEffectDefinition(
@@ -144,8 +145,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_StopActionEndsAfterOrdinaryFailure()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam, hp: 40);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 40);
         SkillDefinition skill = ActiveSkill(
         [
             new InstantKillEffectDefinition(
@@ -167,8 +168,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_RepelInterruptsActionRegardlessOfFailurePolicy()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, hp: 100);
-        BattleActorState target = Actor(
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100);
+        RuntimeActorState target = Actor(
             "target",
             EnemyTeam,
             defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Repel)]));
@@ -199,8 +200,8 @@ public sealed class ActiveSkillExecutionTests
         PressTurnOutcome expectedPressTurn,
         EffectExecutionOutcome expectedExecution)
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, hp: 100);
-        BattleActorState target = Actor(
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100);
+        RuntimeActorState target = Actor(
             "target",
             EnemyTeam,
             hp: 50,
@@ -224,8 +225,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_ResolvesFormulaCostOnceBeforeCommit()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 20);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         ContentId formulaId = ContentId.Parse("fixed_cost");
         var formula = new CountingFormulaHandler(6);
         SkillDefinition skill = ActiveSkill(
@@ -244,7 +245,7 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_RejectsMissingRuntimeHandlersBeforeCommittingCost()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
         SkillDefinition skill = ActiveSkill(
         [
             new CustomEffectDefinition(
@@ -265,9 +266,9 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_RejectsInvalidRandomPolicyResult()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 20);
-        BattleActorState target = Actor("target", EnemyTeam);
-        BattleActorState outsider = Actor("outsider", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState outsider = Actor("outsider", EnemyTeam);
         SkillDefinition skill = ActiveSkill(
             [new AnalyzeEffectDefinition([AnalysisLayer.Stats])],
             costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(5))],
@@ -289,7 +290,7 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_RejectsEmptySkillAndDuplicateParticipantIdentity()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
         SkillDefinition skill = ActiveSkill(
             [],
             costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(5))],
@@ -306,8 +307,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_AilmentLifecycleUsesAilmentIdentityAndExclusivity()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         ContentId sleep = ContentId.Parse("sleep");
         ContentId mental = ContentId.Parse("mental_state");
         var poison = Ailment(Poison, mental);
@@ -344,12 +345,12 @@ public sealed class ActiveSkillExecutionTests
         ContentId capability = ContentId.Parse("can_cast");
         ContentId attack = ContentId.Parse("attack");
         ContentId customCondition = ContentId.Parse("custom_gate");
-        BattleActorState actor = Actor(
+        RuntimeActorState actor = Actor(
             "actor",
             PlayerTeam,
             skillIds: [knownSkill],
             capabilityIds: [capability]);
-        BattleActorState target = Actor(
+        RuntimeActorState target = Actor(
             "target",
             EnemyTeam,
             defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
@@ -402,8 +403,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_InstantKillUsesHostPolicyAndTypedResistance()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor(
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor(
             "target",
             EnemyTeam,
             defense: new CombatDefenseProfile(
@@ -431,8 +432,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_ResourceAndRevivalEffectsMutateTypedResources()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam, hp: 40, sp: 50);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 40, sp: 50);
         var executor = new SkillExecutor(Services());
 
         SkillExecutionResult restore = ExecuteEffect(
@@ -460,8 +461,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_StatusEffectsUseIndependentTypedStores()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         var executor = new SkillExecutor(Services());
         ContentId attack = ContentId.Parse("attack");
         ContentId mark = ContentId.Parse("marked");
@@ -521,8 +522,8 @@ public sealed class ActiveSkillExecutionTests
     [Fact]
     public void Execute_AnalyzeEscapeAndCustomEffectsRemainHostNeutral()
     {
-        BattleActorState actor = Actor("actor", PlayerTeam, sp: 10);
-        BattleActorState target = Actor("target", EnemyTeam);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam);
         ContentId escapeRule = ContentId.Parse("standard_escape");
         ContentId customHandlerId = ContentId.Parse("restore_actor_sp");
         var customHandler = new MutatingCustomEffectHandler(Sp, 3);
@@ -578,13 +579,13 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
-    public void BattleActorState_DefensivelyCopiesAuthoredRuntimeInputs()
+    public void RuntimeActorState_DefensivelyCopiesAuthoredRuntimeInputs()
     {
         var hp = new BattleResourceState(Hp, 80, 100);
         var skills = new List<ContentId> { ContentId.Parse("agi") };
         var capabilities = new List<ContentId> { ContentId.Parse("can_cast") };
-        var actor = new BattleActorState(
-            ContentId.Parse("actor"),
+        var actor = new RuntimeActorState(
+            RuntimeInstanceId.Parse("actor"),
             ContentId.Parse("actor_entity"),
             PlayerTeam,
             Hp,
@@ -623,8 +624,8 @@ public sealed class ActiveSkillExecutionTests
     private static SkillExecutionResult ExecuteEffect(
         SkillExecutor executor,
         EffectDefinition effect,
-        BattleActorState actor,
-        BattleActorState target,
+        RuntimeActorState actor,
+        RuntimeActorState target,
         TargetLifeState lifeState = TargetLifeState.Alive) =>
         executor.Execute(Request(
             ActiveSkill(
@@ -658,12 +659,12 @@ public sealed class ActiveSkillExecutionTests
 
     private static SkillExecutionRequest Request(
         SkillDefinition skill,
-        BattleActorState actor,
-        IEnumerable<BattleActorState> participants,
-        IEnumerable<ContentId>? selectedTargets = null) =>
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        IEnumerable<RuntimeInstanceId>? selectedTargets = null) =>
         new(skill, actor, participants, Battle, NormalBattle, NewMoon, selectedTargets);
 
-    private static BattleActorState Actor(
+    private static RuntimeActorState Actor(
         string id,
         ContentId team,
         decimal hp = 100,
@@ -672,7 +673,7 @@ public sealed class ActiveSkillExecutionTests
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null) =>
         new(
-            ContentId.Parse(id),
+            RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
             team,
             Hp,
@@ -701,7 +702,7 @@ public sealed class ActiveSkillExecutionTests
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>>? damage = null,
         Func<InstantDeathPolicyRequest, bool>? instantDeath = null,
         IAilmentDefinitionRepository? ailments = null,
-        Func<IReadOnlyList<BattleActorState>, TargetCountDefinition, SkillExecutionRequest, IReadOnlyList<BattleActorState>>? randomTargets = null,
+        Func<IReadOnlyList<RuntimeActorState>, TargetCountDefinition, SkillExecutionRequest, IReadOnlyList<RuntimeActorState>>? randomTargets = null,
         IEnumerable<KeyValuePair<ContentId, IFormulaAmountHandler>>? formulas = null,
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditions = null,
@@ -792,11 +793,11 @@ public sealed class ActiveSkillExecutionTests
     }
 
     private sealed class DelegateRandomTargetPolicy(
-        Func<IReadOnlyList<BattleActorState>, TargetCountDefinition, SkillExecutionRequest, IReadOnlyList<BattleActorState>> select)
+        Func<IReadOnlyList<RuntimeActorState>, TargetCountDefinition, SkillExecutionRequest, IReadOnlyList<RuntimeActorState>> select)
         : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => select(candidates, count, request);
     }
@@ -823,7 +824,7 @@ public sealed class ActiveSkillExecutionTests
         public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context)
         {
             context.Actor.AddResource(resourceId, amount);
-            return new EffectExecutionResult(999, ContentId.Parse("forged_target"), EffectExecutionOutcome.Success, Value: amount);
+            return new EffectExecutionResult(999, RuntimeInstanceId.Parse("forged_target"), EffectExecutionOutcome.Success, Value: amount);
         }
     }
 

@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -49,13 +50,13 @@ public sealed record SkillExecutionDiagnostic(
     SkillExecutionDiagnosticCode Code,
     string Message,
     int? EffectIndex = null,
-    ContentId? TargetId = null);
+    RuntimeInstanceId? TargetId = null);
 
 public sealed record EffectExecutionResult
 {
     public EffectExecutionResult(
         int EffectIndex,
-        ContentId? TargetId,
+        RuntimeInstanceId? TargetId,
         EffectExecutionOutcome Outcome,
         PressTurnOutcome PressTurnOutcome = PressTurnOutcome.Normal,
         bool IsCritical = false,
@@ -82,7 +83,7 @@ public sealed record EffectExecutionResult
     }
 
     public int EffectIndex { get; init; }
-    public ContentId? TargetId { get; init; }
+    public RuntimeInstanceId? TargetId { get; init; }
     public EffectExecutionOutcome Outcome { get; init; }
     public PressTurnOutcome PressTurnOutcome { get; init; }
     public bool IsCritical { get; init; }
@@ -120,7 +121,7 @@ public sealed record EffectActionExecutionRequest
         IEnumerable<RuntimeActorState> participants,
         EffectExecutionEnvironment environment,
         TargetingDefinition targeting,
-        IEnumerable<ContentId>? selectedTargetIds = null,
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null,
         SkillDefinition? skill = null,
         ItemDefinition? item = null)
     {
@@ -140,7 +141,7 @@ public sealed record EffectActionExecutionRequest
     public IReadOnlyList<RuntimeActorState> Participants { get; }
     public EffectExecutionEnvironment Environment { get; }
     public TargetingDefinition Targeting { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
     public SkillDefinition? Skill { get; }
     public ItemDefinition? Item { get; }
     public ContentId ContextId => Environment.ContextId;
@@ -163,7 +164,7 @@ public sealed record SkillExecutionAssessment
 
     public bool CanExecute => Diagnostics.Count == 0 && Targets is not null;
     public IReadOnlyList<SkillExecutionDiagnostic> Diagnostics { get; }
-    public IReadOnlyList<ContentId> TargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
     internal ResolvedTargetSet? Targets { get; }
     internal IReadOnlyList<ResolvedSkillCost> Costs { get; }
 }
@@ -236,7 +237,7 @@ public sealed record SkillExecutionRequest
         ContentId contextId,
         ContentId? battleKindId,
         ContentId? moonPhaseId,
-        IEnumerable<ContentId>? selectedTargetIds = null)
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null)
     {
         ArgumentNullException.ThrowIfNull(skill);
         ArgumentNullException.ThrowIfNull(actor);
@@ -258,14 +259,14 @@ public sealed record SkillExecutionRequest
     public ContentId ContextId { get; }
     public ContentId? BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
 
     public SkillExecutionRequest(
         SkillDefinition skill,
         RuntimeActorState actor,
         IEnumerable<RuntimeActorState> participants,
         EffectExecutionEnvironment environment,
-        IEnumerable<ContentId>? selectedTargetIds = null)
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null)
         : this(
             skill,
             actor,

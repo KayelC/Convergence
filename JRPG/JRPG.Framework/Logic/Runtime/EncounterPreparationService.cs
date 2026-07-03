@@ -7,7 +7,7 @@ public sealed record RuntimeEncounterTriggerRequest(
     ContentId TriggerId,
     ContentId EncounterId,
     ContentId OpponentTeamId,
-    ContentId InstanceIdPrefix,
+    RuntimeInstanceId InstanceIdPrefix,
     int FormationIndex = 0);
 
 public enum EncounterPreparationDiagnosticCode
@@ -36,7 +36,7 @@ public sealed record EncounterPreparationEvent(
     EncounterPreparationEventKind Kind,
     ContentId TriggerId,
     ContentId EncounterId,
-    ContentId? ActorInstanceId = null,
+    RuntimeInstanceId? ActorInstanceId = null,
     string? Message = null);
 
 public sealed record PreparedEncounter

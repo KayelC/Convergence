@@ -8,6 +8,7 @@ using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Messaging;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Engines;
 
@@ -71,8 +72,8 @@ internal sealed class LegacyStatusLifecycleAdapter
             5,
             95);
 
-        BattleActorState attackerState = CreateState(attacker);
-        BattleActorState targetState = CreateState(target);
+        RuntimeActorState attackerState = CreateState(attacker);
+        RuntimeActorState targetState = CreateState(target);
         AilmentDefinition definition = LegacyAilmentDefinitions.Create(legacyAilment);
         BattleAilmentApplicationResult result = _lifecycle.TryApplyAilment(
             new BattleAilmentApplicationRequest(
@@ -98,7 +99,7 @@ internal sealed class LegacyStatusLifecycleAdapter
 
     public TurnStartResult ProcessTurnStart(Combatant actor)
     {
-        BattleActorState state = CreateState(actor);
+        RuntimeActorState state = CreateState(actor);
         BattleTurnStartLifecycleResult result = _lifecycle.ProcessTurnStart(
             new BattleTurnStartLifecycleRequest(
                 state,
@@ -118,7 +119,7 @@ internal sealed class LegacyStatusLifecycleAdapter
 
     public void ProcessTurnEnd(Combatant actor, IBattleMessenger? messenger)
     {
-        BattleActorState state = CreateState(actor, includeLegacyTurnEndPassives: true);
+        RuntimeActorState state = CreateState(actor, includeLegacyTurnEndPassives: true);
         BattleTurnEndLifecycleResult result = _lifecycle.ProcessTurnEnd(
             new BattleTurnEndLifecycleRequest(
                 state,
@@ -141,7 +142,7 @@ internal sealed class LegacyStatusLifecycleAdapter
         }
 
         int delta = isBuff ? 1 : -1;
-        BattleActorState state = CreateState(target);
+        RuntimeActorState state = CreateState(target);
         foreach (string track in ResolveLegacyTracks(skill))
         {
             _ = _lifecycle.ApplyStatStage(state, ContentId.Parse(ToFrameworkTrack(track)), delta);
@@ -195,11 +196,11 @@ internal sealed class LegacyStatusLifecycleAdapter
         target.Buffs[stat] = Math.Clamp(current + delta, -4, 4);
     }
 
-    private static BattleActorState CreateState(
+    private static RuntimeActorState CreateState(
         Combatant actor,
         bool includeLegacyTurnEndPassives = false)
     {
-        var state = new BattleActorState(
+        var state = new RuntimeActorState(
             LegacyId(actor),
             LegacyEntityId,
             LegacyTeamId,
@@ -285,7 +286,7 @@ internal sealed class LegacyStatusLifecycleAdapter
         ];
     }
 
-    private static void CopyStateBack(Combatant actor, BattleActorState state)
+    private static void CopyStateBack(Combatant actor, RuntimeActorState state)
     {
         actor.CurrentHP = (int)state.GetRequiredResource(HpId).Current;
         actor.CurrentSP = (int)state.GetRequiredResource(SpId).Current;
@@ -356,10 +357,10 @@ internal sealed class LegacyStatusLifecycleAdapter
         }
     }
 
-    private static ContentId LegacyId(Combatant actor)
+    private static RuntimeInstanceId LegacyId(Combatant actor)
     {
         string source = string.IsNullOrWhiteSpace(actor.SourceId) ? actor.Name : actor.SourceId;
-        return ContentId.Parse(ToLocalId(source));
+        return RuntimeInstanceId.Parse(ToLocalId(source));
     }
 
     private static string ToLocalId(string value)
@@ -442,8 +443,8 @@ internal sealed class LegacyStatusLifecycleAdapter
 
     private sealed class OrderedRandomTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             candidates.Take(count.Maximum).ToArray();

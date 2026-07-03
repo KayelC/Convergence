@@ -7,14 +7,13 @@ namespace JRPGPrototype.Logic.Runtime;
 public sealed record EncounterStartRequest(
     ContentId EncounterId,
     ContentId OpponentTeamId,
-    ContentId InstanceIdPrefix,
+    RuntimeInstanceId InstanceIdPrefix,
     int FormationIndex = 0);
 
 public enum EncounterStartDiagnosticCode
 {
     EncounterIdNotQualified,
     EncounterMissing,
-    InstanceIdPrefixMustBeLocal,
     InvalidFormationIndex,
     FormationHasNoMembers,
     InvalidMemberLevel,
@@ -105,14 +104,6 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
             return new EncounterStartPlanResult(null, diagnostics);
         }
 
-        if (request.InstanceIdPrefix.IsQualified)
-        {
-            diagnostics.Add(new EncounterStartDiagnostic(
-                EncounterStartDiagnosticCode.InstanceIdPrefixMustBeLocal,
-                "Encounter actor instance prefixes must be local host-owned IDs.",
-                request.InstanceIdPrefix));
-        }
-
         if (!_encounters.TryGetEncounter(request.EncounterId, out EncounterDefinition? encounter) || encounter is null)
         {
             diagnostics.Add(new EncounterStartDiagnostic(
@@ -181,8 +172,8 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
             []);
     }
 
-    private static ContentId CreateInstanceId(ContentId prefix, ContentId entityId, int index) =>
-        ContentId.Parse($"{prefix}_{LocalId(entityId)}_{index}");
+    private static RuntimeInstanceId CreateInstanceId(RuntimeInstanceId prefix, ContentId entityId, int index) =>
+        RuntimeInstanceId.Parse($"{prefix}_{LocalId(entityId)}_{index}");
 
     private static string LocalId(ContentId id)
     {

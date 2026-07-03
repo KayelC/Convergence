@@ -38,6 +38,66 @@ public sealed class CleanSaveDemoHostTests
     }
 
     [Fact]
+    public void HostOwnedJsonRoundTrip_PreservesCanonicalActorBattleStateAndDurationKinds()
+    {
+        RuntimeActorSnapshot original = RuntimePersistenceSnapshotTests.CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"));
+        var actor = new RuntimeActorSnapshot(
+            original.Identity,
+            original.Ownership,
+            original.Deployment,
+            original.Progression,
+            original.Resources,
+            original.Stats,
+            original.Skills,
+            original.Forms,
+            original.Equipment,
+            new RuntimeBattleStatusSnapshot(
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        ContentId.Parse("focused"),
+                        new PermanentDurationDefinition())
+                ],
+                statStages:
+                [
+                    new RuntimeStatStageSnapshot(
+                        ContentId.Parse("attack"),
+                        2,
+                        new PhaseDurationDefinition(ContentId.Parse("phase_end")))
+                ],
+                affinityOverrides:
+                [
+                    new RuntimeAffinityOverrideSnapshot(
+                        DamageElement.Ice,
+                        ElementalAffinity.Resist,
+                        new BattleDurationDefinition())
+                ],
+                isGuarding: true,
+                analysis:
+                [
+                    new RuntimeAnalysisSnapshot(
+                        RuntimeInstanceId.Parse("enemy_1"),
+                        [AnalysisLayer.Affinities])
+                ]),
+            original.BattleActivations,
+            original.BaseResourceValues,
+            original.VitalResourceId);
+        RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(actors: [actor]);
+
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(CleanSaveJsonCodec.Serialize(snapshot));
+        RuntimeActorSnapshot restoredActor = Assert.Single(restored.Actors);
+
+        Assert.Equal(original.VitalResourceId, restoredActor.VitalResourceId);
+        Assert.IsType<PermanentDurationDefinition>(Assert.Single(restoredActor.BattleStatus.Statuses).Duration);
+        Assert.IsType<PhaseDurationDefinition>(Assert.Single(restoredActor.BattleStatus.StatStages).Duration);
+        Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
+        Assert.True(restoredActor.BattleStatus.IsGuarding);
+        Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);
+    }
+
+    [Fact]
     public void CleanSaveDemo_ValidatesSerializesRestoresAndExitsWithoutInput()
     {
         using var output = new StringWriter();
@@ -45,7 +105,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v2", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v3", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);

@@ -195,7 +195,7 @@ public sealed class GodotIntegrationContractTests
 
         GodotSaveSnapshot restored = saveStore.Load("slot_01");
         RuntimeActorSnapshot restoredActor = Assert.Single(restored.Actors);
-        RuntimeActorSnapshot roundTripActor = RuntimeActorStateSet.FromSnapshot(restoredActor).ToSnapshot();
+        RuntimeActorSnapshot roundTripActor = restoredActor;
 
         Assert.Equal(actorSnapshot.Identity, roundTripActor.Identity);
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.ResourceId), roundTripActor.Resources.Select(resource => resource.ResourceId));
@@ -233,7 +233,7 @@ public sealed class GodotIntegrationContractTests
         new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy()).Create(
             new CatalogBattleActorCreationRequest(
                 Id($"convergence.clean_battle_demo:{entityId}"),
-                Id(instanceId),
+                RuntimeInstanceId.Parse(instanceId),
                 teamId,
                 5)).RequireActor();
 
@@ -269,7 +269,8 @@ public sealed class GodotIntegrationContractTests
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
-            resources.Select(resource => new KeyValuePair<ContentId, decimal>(resource.ResourceId, resource.Maximum)));
+            resources.Select(resource => new KeyValuePair<ContentId, decimal>(resource.ResourceId, resource.Maximum)),
+            state.VitalResourceId);
     }
 
     private static string FindRepositoryRoot()
@@ -381,11 +382,11 @@ public sealed class GodotIntegrationContractTests
     {
         private readonly Dictionary<RuntimeInstanceId, GodotSceneHandle> _handles = [];
 
-        public void Attach(ContentId instanceId, GodotSceneHandle handle) =>
-            _handles[RuntimeInstanceId.Parse(instanceId.ToString())] = handle;
+        public void Attach(RuntimeInstanceId instanceId, GodotSceneHandle handle) =>
+            _handles[instanceId] = handle;
 
-        public bool TryGet(ContentId instanceId, out GodotSceneHandle? handle) =>
-            _handles.TryGetValue(RuntimeInstanceId.Parse(instanceId.ToString()), out handle);
+        public bool TryGet(RuntimeInstanceId instanceId, out GodotSceneHandle? handle) =>
+            _handles.TryGetValue(instanceId, out handle);
 
         public IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> Snapshot() =>
             new ReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle>(new Dictionary<RuntimeInstanceId, GodotSceneHandle>(_handles));
@@ -394,7 +395,7 @@ public sealed class GodotIntegrationContractTests
     private sealed record GodotMappedBattleEvent(
         int Sequence,
         BattleEncounterEventKind Kind,
-        ContentId? ActorId,
+        RuntimeInstanceId? ActorId,
         GodotSceneHandle? ActorHandle,
         string Message);
 
@@ -414,7 +415,7 @@ public sealed class GodotIntegrationContractTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             GodotSceneHandle? actorHandle = null;
-            if (battleEvent.ActorId is ContentId actorId)
+            if (battleEvent.ActorId is RuntimeInstanceId actorId)
             {
                 _sceneRegistry.TryGet(actorId, out actorHandle);
             }
@@ -529,8 +530,8 @@ public sealed class GodotIntegrationContractTests
 
     private sealed class FirstRandomTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
     }

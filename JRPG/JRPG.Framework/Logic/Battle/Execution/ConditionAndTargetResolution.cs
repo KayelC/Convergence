@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -183,10 +184,10 @@ internal static class BattleTargetResolver
                 break;
             case TargetSelection.Random:
                 TargetCountDefinition count = targeting.Count ?? new TargetCountDefinition(1, 1);
-                if (eligible.All(target => target is BattleActorState))
+                if (eligible.All(target => target is RuntimeActorState))
                 {
                     targets = services.RandomTargetPolicy.Select(
-                        Array.AsReadOnly(eligible.Cast<BattleActorState>().ToArray()),
+                        Array.AsReadOnly(eligible.Cast<RuntimeActorState>().ToArray()),
                         count,
                         request);
                 }
@@ -237,8 +238,8 @@ internal static class BattleTargetResolver
     {
         var byId = eligible.ToDictionary(target => target.InstanceId);
         var targets = new List<RuntimeActorState>();
-        var seen = new HashSet<ContentId>();
-        foreach (ContentId selectedId in request.SelectedTargetIds)
+        var seen = new HashSet<RuntimeInstanceId>();
+        foreach (RuntimeInstanceId selectedId in request.SelectedTargetIds)
         {
             if (seen.Add(selectedId) && byId.TryGetValue(selectedId, out RuntimeActorState? target))
             {

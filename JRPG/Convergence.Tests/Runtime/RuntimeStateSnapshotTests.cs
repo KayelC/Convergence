@@ -1,5 +1,7 @@
 using System.Reflection;
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -54,7 +56,7 @@ public sealed class RuntimeStateSnapshotTests
             Id("convergence.demo:late"),
             "Late"));
 
-        RuntimeActorSnapshot roundTrip = RuntimeActorStateSet.FromSnapshot(snapshot).ToSnapshot();
+        RuntimeActorSnapshot roundTrip = Restore(snapshot).ToSnapshot();
 
         Assert.Equal(RuntimeInstanceId.Parse("actor:hero_0001"), roundTrip.Identity.InstanceId);
         Assert.Equal(Id("convergence.demo:hero"), roundTrip.Identity.EntityDefinitionId);
@@ -90,7 +92,10 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(2, Assert.Single(roundTrip.BattleStatus.StatStages).Stage);
         Assert.Equal(2.5m, Assert.Single(roundTrip.BattleStatus.Charges).Multiplier);
         Assert.Equal(ShieldKind.Magical, Assert.Single(roundTrip.BattleStatus.Shields).Kind);
-        Assert.Equal(DamageElement.Fire, Assert.Single(roundTrip.BattleStatus.Breaks).Element);
+        Assert.Equal(DamageElement.Fire, Assert.Single(roundTrip.BattleStatus.AffinityOverrides).Element);
+        Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.Ailments).Duration);
+        Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.AffinityOverrides).Duration);
+        Assert.Equal(Id("hp"), roundTrip.VitalResourceId);
         Assert.True(roundTrip.BattleStatus.IsGuarding);
         Assert.Equal([AnalysisLayer.Stats, AnalysisLayer.Affinities], Assert.Single(roundTrip.BattleStatus.Analysis).Layers);
         Assert.Equal(1, Assert.Single(roundTrip.BattleActivations.PassiveActivations).ActivationCount);
@@ -99,7 +104,7 @@ public sealed class RuntimeStateSnapshotTests
     [Fact]
     public void RuntimeResourceTransactions_ReturnBeforeAfterSnapshotsAndRejectInvalidMutation()
     {
-        RuntimeActorStateSet actor = RuntimeActorStateSet.FromSnapshot(CreateCompleteSnapshot());
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
         var transactions = new RuntimeResourceTransactionService();
         ContentId hp = Id("hp");
 
@@ -132,7 +137,7 @@ public sealed class RuntimeStateSnapshotTests
     [Fact]
     public void RuntimeProgressionTransactions_ApplyGrowthResultToActorSnapshot()
     {
-        RuntimeActorStateSet actor = RuntimeActorStateSet.FromSnapshot(CreateCompleteSnapshot());
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
         RuntimeActorSnapshot before = actor.ToSnapshot();
         var growth = new LevelGrowthResult(
             ProgressionMutationStatus.Applied,
@@ -155,6 +160,45 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(11, actor.ToSnapshot().Stats.BaseStats[Id("strength")]);
         Assert.Equal(82, actor.ToSnapshot().Resources.Single(resource => resource.ResourceId == Id("hp")).Current);
         Assert.Equal(130, actor.ToSnapshot().BaseResourceValues[Id("hp")]);
+    }
+
+    [Fact]
+    public void CanonicalActorState_GrowthResourcesAndBattleLifecycleMutateOneObject()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorState canonicalReference = actor;
+        var resources = new RuntimeResourceTransactionService();
+        var progression = new RuntimeProgressionTransactionService();
+        var lifecycle = new BattleStatusLifecycleService(new FixedRandomSource());
+
+        RuntimeMutationResult resourceResult = resources.SetResource(actor, Id("hp"), 50);
+        var growth = new LevelGrowthResult(
+            ProgressionMutationStatus.Applied,
+            new RuntimeProgressionSnapshot(15, 10, 930, 4),
+            new RuntimeStatBlockSnapshot(
+                [new KeyValuePair<ContentId, decimal>(Id("strength"), 11)],
+                [new KeyValuePair<ContentId, decimal>(Id("strength"), 14)]),
+            [
+                new RuntimeResourceSnapshot(Id("hp"), 60, 130),
+                new RuntimeResourceSnapshot(Id("sp"), 18, 44)
+            ],
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 130)],
+            [new LevelUpEvent(15, statPointsAwarded: 1)]);
+        RuntimeMutationResult growthResult = progression.ApplyLevelGrowth(actor, growth);
+        BattleTurnStartLifecycleResult turnStart = lifecycle.ProcessTurnStart(
+            new BattleTurnStartLifecycleRequest(actor));
+
+        Assert.Same(canonicalReference, actor);
+        Assert.True(resourceResult.Applied);
+        Assert.True(growthResult.Applied);
+        Assert.Equal(15, actor.Progression.Level);
+        Assert.Equal(60, actor.GetRequiredResource(Id("hp")).Current);
+        Assert.False(actor.IsGuarding);
+        Assert.Contains(turnStart.Events, item => item.Kind == BattleStatusLifecycleEventKind.GuardCleared);
+        Assert.Equal(actor.Progression, growthResult.After.Progression);
+        Assert.Equal(
+            actor.GetRequiredResource(Id("hp")).Current,
+            growthResult.After.Resources.Single(resource => resource.ResourceId == Id("hp")).Current);
     }
 
     [Fact]
@@ -252,12 +296,12 @@ public sealed class RuntimeStateSnapshotTests
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, Id("convergence.demo:kevlar_vest"))
             ]),
             new RuntimeBattleStatusSnapshot(
-                ailments: [new RuntimeTimedStateSnapshot(Id("poison"), remainingTurns: 3)],
-                statuses: [new RuntimeTimedStateSnapshot(Id("downed"), remainingTurns: 1, isRemovable: false)],
-                statStages: [new RuntimeStatStageSnapshot(Id("attack"), stage: 2, remainingTurns: 3)],
-                charges: [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, remainingTurns: 1)],
-                shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, remainingTurns: 1)],
-                breaks: [new RuntimeBreakSnapshot(DamageElement.Fire, remainingTurns: 2)],
+                ailments: [new RuntimeTimedStateSnapshot(Id("poison"), Turns(3))],
+                statuses: [new RuntimeTimedStateSnapshot(Id("downed"), Turns(1), isRemovable: false)],
+                statStages: [new RuntimeStatStageSnapshot(Id("attack"), stage: 2, Turns(3))],
+                charges: [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))],
+                shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, Turns(1))],
+                affinityOverrides: [new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Normal, Turns(2))],
                 isGuarding: true,
                 analysis:
                 [
@@ -268,7 +312,39 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeBattleActivationSnapshot(
             [
                 new RuntimePassiveActivationSnapshot(Id("endure"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)
-            ]));
+            ]),
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 120)],
+            Id("hp"));
+    }
+
+    private static RuntimeActorState Restore(RuntimeActorSnapshot snapshot) =>
+        RuntimeActorState.Restore(
+            snapshot,
+            CombatDefenseProfile.Empty,
+            [new SkillDefinition(
+                Id("endure"),
+                "Endure",
+                "Test passive.",
+                SkillActivation.Passive,
+                null,
+                InheritanceGroup.Passive,
+                new SkillInheritanceDefinition(true))],
+            [new AilmentDefinition(
+                Id("poison"),
+                "Poison",
+                "Test ailment.",
+                Turns(3),
+                new NormalAilmentTurnBehaviorDefinition(),
+                new AilmentModifiersDefinition(1, 0, 1, 1, false),
+                new AilmentRecoveryDefinition())]);
+
+    private static TurnDurationDefinition Turns(int value) =>
+        new(value, Id("owner_turn_end"), false);
+
+    private sealed class FixedRandomSource : JRPGPrototype.Hosting.IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+        public decimal NextUnitDecimal() => 0m;
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);

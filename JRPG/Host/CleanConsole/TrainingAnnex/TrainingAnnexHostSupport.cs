@@ -13,9 +13,10 @@ namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 
 internal sealed record TrainingAnnexRuntimeActor(
     string Role,
-    int Level,
-    CatalogBattleActor Actor,
-    RuntimeActorStateSet RuntimeState);
+    CatalogBattleActor Actor)
+{
+    public int Level => Actor.State.Progression.Level;
+}
 
 internal sealed record TrainingAnnexActorRoster
 {
@@ -114,7 +115,7 @@ internal static class TrainingAnnexHostSupport
         ContentId.Parse("review_hall_ashling_trigger"),
         Qualified("ashling_drill"),
         EnemyTeam,
-        ContentId.Parse("review_hall_trigger"));
+        RuntimeInstanceId.Parse("review_hall_trigger"));
 
     public static ContentPackTextRequest CreateContentRequest() =>
         new(
@@ -204,9 +205,12 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult playerResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("echo_adept"),
-            ContentId.Parse("echo_adept"),
+            RuntimeInstanceId.Parse("echo_adept"),
             PlayerTeam,
-            3));
+            3,
+            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Active));
         if (!playerResult.IsSuccess)
         {
             AddActorDiagnostics("player", playerResult.Diagnostics, diagnostics);
@@ -223,7 +227,7 @@ internal static class TrainingAnnexHostSupport
                 continue;
             }
 
-            enemies.Add(CreateRuntimeActor("Enemy", request.Level, enemyResult.RequireActor()));
+            enemies.Add(new TrainingAnnexRuntimeActor("Enemy", enemyResult.RequireActor()));
         }
 
         if (diagnostics.Count > 0 || playerResult.Actor is null)
@@ -233,7 +237,7 @@ internal static class TrainingAnnexHostSupport
 
         return new TrainingAnnexActorRosterResult(
             new TrainingAnnexActorRoster(
-                CreateRuntimeActor("Player", 3, playerResult.RequireActor()),
+                new TrainingAnnexRuntimeActor("Player", playerResult.RequireActor()),
                 enemies));
     }
 
@@ -277,7 +281,8 @@ internal static class TrainingAnnexHostSupport
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
-            baseResourceValues ?? BaseResourceValues(actor.State));
+            baseResourceValues ?? BaseResourceValues(actor.State),
+            actor.State.VitalResourceId);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -291,9 +296,9 @@ internal static class TrainingAnnexHostSupport
     {
         ArgumentNullException.ThrowIfNull(roster);
 
-        RuntimeActorSnapshot playerSnapshot = roster.Player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot playerSnapshot = roster.Player.Actor.State.ToSnapshot();
         IReadOnlyList<RuntimeActorSnapshot> enemySnapshots = roster.Enemies
-            .Select(enemy => enemy.RuntimeState.ToSnapshot())
+            .Select(enemy => enemy.Actor.State.ToSnapshot())
             .ToArray();
         RuntimeActorReferenceSnapshot playerReference = Reference(playerSnapshot);
         return BuildStartupSaveSnapshot(
@@ -439,19 +444,6 @@ internal static class TrainingAnnexHostSupport
         return null;
     }
 
-    private static TrainingAnnexRuntimeActor CreateRuntimeActor(
-        string role,
-        int level,
-        CatalogBattleActor actor)
-    {
-        RuntimeActorSnapshot snapshot = CreateActorSnapshot(
-            actor,
-            RuntimeInstanceId.Parse(actor.State.InstanceId.ToString()),
-            new RuntimeProgressionSnapshot(level, 0, 0, role == "Player" ? level - 1 : 0),
-            InitialBaseResourceValues(level));
-        return new TrainingAnnexRuntimeActor(role, level, actor, RuntimeActorStateSet.FromSnapshot(snapshot));
-    }
-
     private static IReadOnlyList<CatalogBattleActorCreationRequest> CreateEnemyActorRequests(
         GameDataCatalog catalog,
         List<string> diagnostics)
@@ -469,7 +461,7 @@ internal static class TrainingAnnexHostSupport
             EncounterStartPlanResult planResult = planner.Plan(new EncounterStartRequest(
                 encounterId,
                 EnemyTeam,
-                ContentId.Parse($"roster_{LocalId(encounterId)}")));
+                RuntimeInstanceId.Parse($"roster_{LocalId(encounterId)}")));
             if (!planResult.IsSuccess)
             {
                 foreach (EncounterStartDiagnostic diagnostic in planResult.Diagnostics)
@@ -484,7 +476,7 @@ internal static class TrainingAnnexHostSupport
             {
                 requestsByEntity.TryAdd(
                     request.EntityId,
-                    request with { InstanceId = ContentId.Parse($"enemy_{LocalId(request.EntityId)}") });
+                    request with { InstanceId = RuntimeInstanceId.Parse($"enemy_{LocalId(request.EntityId)}") });
             }
         }
 
@@ -530,7 +522,8 @@ internal sealed class TrainingAnnexResourceInitializationPolicy(IResourceGrowthP
             resources.Resources.Select(resource => new BattleResourceState(
                 resource.ResourceId,
                 resource.Current,
-                resource.Maximum)));
+                resource.Maximum)),
+            TrainingAnnexHostSupport.InitialBaseResourceValues(level));
     }
 }
 
@@ -543,8 +536,8 @@ internal sealed class TrainingAnnexMinimumRandomSource : IRandomSource
 
 internal sealed class TrainingAnnexFirstTargetSelectionPolicy : IRandomTargetSelectionPolicy
 {
-    public IReadOnlyList<BattleActorState> Select(
-        IReadOnlyList<BattleActorState> candidates,
+    public IReadOnlyList<RuntimeActorState> Select(
+        IReadOnlyList<RuntimeActorState> candidates,
         TargetCountDefinition count,
         SkillExecutionRequest request) =>
         Array.AsReadOnly(candidates.Take(count.Minimum).ToArray());

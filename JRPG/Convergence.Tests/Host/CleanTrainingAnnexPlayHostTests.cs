@@ -52,7 +52,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(source.ManifestRequests, summary.RequestedManifestPaths);
         Assert.Equal(source.DocumentRequests, summary.RequestedDocumentPaths);
         Assert.Equal(Qualified("echo_adept"), summary.PlayerEntityId);
-        Assert.Equal(3, summary.PlayerLevel);
+        Assert.Equal(4, summary.PlayerLevel);
         Assert.Equal(4, summary.ActorCount);
         Assert.Equal(3, summary.EnemyActorCount);
         Assert.Equal(
@@ -65,10 +65,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.ActorEntityIds);
         Assert.Equal(
             [
-                ContentId.Parse("echo_adept"),
-                ContentId.Parse("enemy_ashling"),
-                ContentId.Parse("enemy_bramble_runner"),
-                ContentId.Parse("enemy_ward_shell")
+                RuntimeInstanceId.Parse("echo_adept"),
+                RuntimeInstanceId.Parse("enemy_ashling"),
+                RuntimeInstanceId.Parse("enemy_bramble_runner"),
+                RuntimeInstanceId.Parse("enemy_ward_shell")
             ],
             summary.ActorInstanceIds);
         Assert.Equal(2, summary.ActiveSkillCount);
@@ -276,7 +276,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.EncounterTriggerConsumed);
         Assert.Equal([Qualified("ashling_drill")], summary.PreparedEncounterIds);
         Assert.Equal(
-            [ContentId.Parse("review_hall_trigger_ashling_1")],
+            [RuntimeInstanceId.Parse("review_hall_trigger_ashling_1")],
             summary.PreparedEncounterActorInstanceIds);
         Assert.Equal(
             [
@@ -338,12 +338,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(25, Resource(summary, "sp").Current);
         Assert.Equal(3, summary.LifecycleEvidence.Count(evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath") &&
             evidence.Detail == "owner_turn_end"));
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
             evidence.RelatedContentId == ContentId.Parse("hp") &&
             evidence.Value == 3m);
@@ -370,7 +370,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.Element == DamageElement.Ice &&
             knowledge.Affinity == ElementalAffinity.Weak);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -379,14 +379,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.AfterFullIcons == 0 &&
             evidence.AfterBlinkingIcons == 1);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
             evidence.BeforeFullIcons == 0 &&
             evidence.BeforeBlinkingIcons == 1 &&
             evidence.AfterFullIcons == 0 &&
             evidence.AfterBlinkingIcons == 0);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1") &&
             evidence.ActionId == Qualified("ash_spark") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -452,14 +452,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.CancelledBattleCommandSelections);
         Assert.Equal(67, Resource(summary, "hp").Current);
         TrainingAnnexAiDecisionEvidence ai = Assert.Single(summary.AiDecisionEvidence);
-        Assert.Equal(ContentId.Parse("review_hall_trigger_ashling_1"), ai.ActorInstanceId);
+        Assert.Equal(RuntimeInstanceId.Parse("review_hall_trigger_ashling_1"), ai.ActorInstanceId);
         Assert.Equal(Qualified("ashling"), ai.ActorEntityId);
         Assert.Equal(BattleActionSelectionStatus.Selected, ai.Status);
         Assert.Equal(Qualified("ash_spark"), ai.SelectedActionId);
-        Assert.Equal([ContentId.Parse("echo_adept")], ai.TargetIds);
+        Assert.Equal([RuntimeInstanceId.Parse("echo_adept")], ai.TargetIds);
         Assert.True(ai.AssessmentCanExecute);
         Assert.Throws<NotSupportedException>(() =>
-            ((IList<ContentId>)ai.TargetIds).Add(ContentId.Parse("unexpected")));
+            ((IList<RuntimeInstanceId>)ai.TargetIds).Add(RuntimeInstanceId.Parse("unexpected")));
         TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
             summary.CombatResolutionEvidence,
             evidence => evidence.SourceActionId == Qualified("practice_blade"));
@@ -468,7 +468,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(95, attack.Accuracy);
         Assert.Equal(23, attack.Value);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("practice_blade") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -690,7 +690,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(67, Resource(summary, "hp").Current);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("annex_tonic") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -765,7 +765,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             effect.SourceActionId == ContentId.Parse("pass"));
         Assert.Equal(57, Resource(summary, "hp").Current);
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.GuardCleared);
 
         string text = output.ToString();
@@ -799,7 +799,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(2, summary.CancelledBattleCommandSelections);
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
         Assert.Equal(2, summary.LifecycleEvidence.Count(evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath")));
         Assert.DoesNotContain(summary.PressTurnEvidence, evidence =>
@@ -847,7 +847,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(25, Resource(summary, "sp").Current);
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath"));
         Assert.Contains("Renamed Frost Tip", output.ToString(), StringComparison.Ordinal);
@@ -990,7 +990,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(PressTurnOutcome.Miss, miss.PressTurnOutcome);
         Assert.Null(miss.Value);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -1038,7 +1038,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(expectedCritical, resolution.IsCritical);
         Assert.Equal(expectedOutcome, resolution.PressTurnOutcome);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified(skillId) &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -1074,7 +1074,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(expectedAffinity, resolution.ResolvedAffinity);
         Assert.Equal(expectedOutcome, resolution.PressTurnOutcome);
         Assert.Contains(summary.PressTurnEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
             evidence.BeforeFullIcons == 1 &&
             evidence.BeforeBlinkingIcons == 0 &&
@@ -1118,17 +1118,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(summary.LifecycleEvidence, evidence =>
             IsLifecycle(
                 evidence,
-                ContentId.Parse("review_hall_trigger_ashling_1"),
+                RuntimeInstanceId.Parse("review_hall_trigger_ashling_1"),
                 BattleStatusLifecycleEventKind.AilmentApplied,
                 Qualified("sample_poison"),
                 Qualified("toxin_touch")));
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
             evidence.RelatedContentId == ContentId.Parse("hp") &&
             evidence.Value == -2m);
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath") &&
             evidence.Detail == "owner_turn_end");
@@ -1166,21 +1166,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(summary.LifecycleEvidence, evidence =>
             IsLifecycle(
                 evidence,
-                ContentId.Parse("review_hall_trigger_ashling_1"),
+                RuntimeInstanceId.Parse("review_hall_trigger_ashling_1"),
                 BattleStatusLifecycleEventKind.AilmentApplied,
                 Qualified("sample_stun"),
                 Qualified("toxin_touch")));
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.TurnRestricted &&
             evidence.RelatedContentId == Qualified("sample_stun") &&
             evidence.TurnStartOutcome == BattleTurnStartOutcome.Skip);
         Assert.Contains(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("review_hall_trigger_ashling_1") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.AilmentRemoved &&
             evidence.RelatedContentId == Qualified("sample_stun"));
         Assert.DoesNotContain(summary.AiDecisionEvidence, evidence =>
-            evidence.ActorInstanceId == ContentId.Parse("review_hall_trigger_ashling_1"));
+            evidence.ActorInstanceId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1"));
         Assert.DoesNotContain(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
         Assert.Contains("Ashling turn restriction: Skip.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
@@ -1218,19 +1218,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(summary.LifecycleEvidence, evidence =>
             IsLifecycle(
                 evidence,
-                ContentId.Parse("echo_adept"),
+                RuntimeInstanceId.Parse("echo_adept"),
                 BattleStatusLifecycleEventKind.AilmentApplied,
                 Qualified("sample_poison"),
                 Qualified("toxin_touch")));
         Assert.Contains(summary.LifecycleEvidence, evidence =>
             IsLifecycle(
                 evidence,
-                ContentId.Parse("echo_adept"),
+                RuntimeInstanceId.Parse("echo_adept"),
                 BattleStatusLifecycleEventKind.AilmentRemoved,
                 Qualified("sample_poison"),
                 Qualified("clear_toxin")));
         Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.ResourceChanged &&
             evidence.RelatedContentId == ContentId.Parse("hp") &&
             evidence.Value < 0);
@@ -1256,7 +1256,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexLifecycleEvidence activation = Assert.Single(summary.LifecycleEvidence, evidence =>
-            evidence.ActorId == ContentId.Parse("echo_adept") &&
+            evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath"));
         Assert.Equal("battle_start", activation.Detail);
@@ -1724,7 +1724,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static bool IsLifecycle(
         TrainingAnnexLifecycleEvidence evidence,
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         BattleStatusLifecycleEventKind kind,
         ContentId relatedId,
         ContentId sourceActionId) =>

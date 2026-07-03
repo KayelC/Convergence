@@ -36,7 +36,7 @@ internal sealed record TrainingAnnexTypedEffectEvidence(
 internal sealed record TrainingAnnexCombatResolutionEvidence(
     ContentId SourceActionId,
     int EffectIndex,
-    ContentId? TargetId,
+    RuntimeInstanceId? TargetId,
     DamageElement? DamageElement,
     int? Power,
     int? Accuracy,
@@ -49,7 +49,7 @@ internal sealed record TrainingAnnexCombatResolutionEvidence(
     PressTurnOutcome PressTurnOutcome);
 
 internal sealed record TrainingAnnexPressTurnEvidence(
-    ContentId ActorId,
+    RuntimeInstanceId ActorId,
     ContentId? ActionId,
     int BeforeFullIcons,
     int BeforeBlinkingIcons,
@@ -59,7 +59,7 @@ internal sealed record TrainingAnnexPressTurnEvidence(
     int AfterBlinkingIcons);
 
 internal sealed record TrainingAnnexLifecycleEvidence(
-    ContentId ActorId,
+    RuntimeInstanceId ActorId,
     BattleStatusLifecycleEventKind EventKind,
     ContentId? RelatedContentId = null,
     decimal? Value = null,
@@ -77,7 +77,7 @@ internal enum TrainingAnnexBattleKnowledgeChannel
 internal sealed record TrainingAnnexBattleKnowledgeEvidence(
     ContentId SourceActionId,
     int EffectIndex,
-    ContentId TargetInstanceId,
+    RuntimeInstanceId TargetInstanceId,
     ContentId TargetEntityId,
     TrainingAnnexBattleKnowledgeChannel Channel,
     DamageElement? Element = null,
@@ -90,11 +90,11 @@ internal sealed record TrainingAnnexBattleKnowledgeEvidence(
 internal sealed record TrainingAnnexAiDecisionEvidence
 {
     public TrainingAnnexAiDecisionEvidence(
-        ContentId actorInstanceId,
+        RuntimeInstanceId actorInstanceId,
         ContentId actorEntityId,
         BattleActionSelectionStatus status,
         ContentId selectedActionId,
-        IEnumerable<ContentId> targetIds,
+        IEnumerable<RuntimeInstanceId> targetIds,
         bool? assessmentCanExecute)
     {
         ActorInstanceId = actorInstanceId;
@@ -106,11 +106,11 @@ internal sealed record TrainingAnnexAiDecisionEvidence
         AssessmentCanExecute = assessmentCanExecute;
     }
 
-    public ContentId ActorInstanceId { get; }
+    public RuntimeInstanceId ActorInstanceId { get; }
     public ContentId ActorEntityId { get; }
     public BattleActionSelectionStatus Status { get; }
     public ContentId SelectedActionId { get; }
-    public IReadOnlyList<ContentId> TargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
     public bool? AssessmentCanExecute { get; }
 }
 
@@ -182,7 +182,7 @@ internal sealed class TrainingAnnexBattleKnowledgeState
         var evidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
         foreach (EffectExecutionResult effect in execution.Effects)
         {
-            if (effect.TargetId is not ContentId targetId)
+            if (effect.TargetId is not RuntimeInstanceId targetId)
             {
                 continue;
             }
@@ -434,7 +434,6 @@ internal sealed class TrainingAnnexBattleActionAdapter
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(playerBattleKnowledge);
 
-        SynchronizeActionResources(player);
         var encounterAiKnowledge = new TrainingAnnexBattleKnowledgeState();
 
         CatalogBattleActor[] actors = [player.Actor, .. prepared.Actors];
@@ -480,8 +479,6 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 roundLimit: 10),
             services,
             cancellationToken).ConfigureAwait(false);
-
-        SynchronizePersistentResources(player);
 
         await _events.PublishAsync(
             result.WinningTeamId is ContentId winner
@@ -532,31 +529,6 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 player.Actor.Entity.Id,
                 IsAlive: !player.Actor.State.IsDefeated,
                 HasActiveForm: false)]));
-    }
-
-    private static void SynchronizeActionResources(TrainingAnnexRuntimeActor actor)
-    {
-        foreach (RuntimeResourceSnapshot resource in actor.RuntimeState.ToSnapshot().Resources)
-        {
-            actor.Actor.State.SetResource(resource.ResourceId, resource.Current);
-        }
-    }
-
-    private static void SynchronizePersistentResources(TrainingAnnexRuntimeActor actor)
-    {
-        var resources = new RuntimeResourceTransactionService();
-        foreach (BattleResourceState resource in actor.Actor.State.Resources.Values)
-        {
-            RuntimeMutationResult result = resources.SetResource(
-                actor.RuntimeState,
-                resource.Id,
-                resource.Current);
-            if (!result.Applied)
-            {
-                throw new InvalidOperationException(
-                    $"Could not synchronize battle resource '{resource.Id}'.");
-            }
-        }
     }
 
     private sealed class TrainingAnnexManualBattleTurnHandler : IBattleEncounterTurnHandler
@@ -748,7 +720,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             CatalogBattleActor actor,
             CancellationToken cancellationToken)
         {
-            ContentId? target = await SelectTargetAsync(
+            RuntimeInstanceId? target = await SelectTargetAsync(
                 "Select Battle Target",
                 request,
                 actor.State,
@@ -797,14 +769,14 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            ContentId? target = await SelectTargetForTargetingAsync(
+            RuntimeInstanceId? target = await SelectTargetForTargetingAsync(
                 request,
                 actor.State,
                 skill.Targeting,
                 cancellationToken).ConfigureAwait(false);
             return target is null && skill.Targeting?.Selection == TargetSelection.Single
                 ? null
-                : new SkillBattleActionCommand(skill, target is ContentId selected ? [selected] : []);
+                : new SkillBattleActionCommand(skill, target is RuntimeInstanceId selected ? [selected] : []);
         }
 
         private async ValueTask<BattleActionCommand?> SelectItemAsync(
@@ -822,7 +794,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            ContentId? target = await SelectTargetForTargetingAsync(
+            RuntimeInstanceId? target = await SelectTargetForTargetingAsync(
                 request,
                 actor.State,
                 tonic.Usage?.Targeting,
@@ -837,7 +809,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             CatalogBattleActor actor,
             CancellationToken cancellationToken)
         {
-            ContentId? target = await SelectTargetAsync(
+            RuntimeInstanceId? target = await SelectTargetAsync(
                 "Select Analyze Target",
                 request,
                 actor.State,
@@ -848,7 +820,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 : new AnalyzeBattleActionCommand(target.Value, [AnalysisLayer.Full]);
         }
 
-        private async ValueTask<ContentId?> SelectTargetForTargetingAsync(
+        private async ValueTask<RuntimeInstanceId?> SelectTargetForTargetingAsync(
             BattleEncounterTurnRequest request,
             RuntimeActorState actor,
             TargetingDefinition? targeting,
@@ -867,7 +839,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 cancellationToken).ConfigureAwait(false);
         }
 
-        private async ValueTask<ContentId?> SelectTargetAsync(
+        private async ValueTask<RuntimeInstanceId?> SelectTargetAsync(
             string prompt,
             BattleEncounterTurnRequest request,
             RuntimeActorState actor,
@@ -978,7 +950,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
         private IReadOnlyList<SkillDefinition> KnownBattleSkills(CatalogBattleActor actor)
         {
-            int level = _player.RuntimeState.ToSnapshot().Progression.Level;
+            int level = _player.Actor.State.ToSnapshot().Progression.Level;
             return actor.SkillLoadout
                 .Concat(actor.Entity.SkillUnlocks
                     .Where(unlock => unlock.Level <= level)
@@ -1011,7 +983,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 _ => null
             };
 
-        private static ContentId? FirstEligibleTarget(
+        private static RuntimeInstanceId? FirstEligibleTarget(
             RuntimeActorState actor,
             IEnumerable<BattleEncounterParticipant> participants,
             TargetingDefinition? targeting)
@@ -1357,7 +1329,7 @@ internal sealed class TrainingAnnexLifecycleTracker
     }
 
     public void RecordActionEffects(
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         ContentId actionId,
         BattleActionCommand command,
         BattleActionExecutionResult execution)
@@ -1569,7 +1541,7 @@ internal sealed class TrainingAnnexPressTurnTracker
     public IReadOnlyList<TrainingAnnexPressTurnEvidence> Evidence => _evidence.ToArray();
 
     public void RecordBefore(
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         ContentId actionId,
         int beforeFullIcons,
         int beforeBlinkingIcons,
@@ -1586,7 +1558,7 @@ internal sealed class TrainingAnnexPressTurnTracker
             AfterBlinkingIcons: -1));
     }
 
-    public bool TryRecordAfter(ContentId? actorId, int afterFullIcons, int afterBlinkingIcons)
+    public bool TryRecordAfter(RuntimeInstanceId? actorId, int afterFullIcons, int afterBlinkingIcons)
     {
         int index = _evidence.FindIndex(record =>
             record.AfterFullIcons < 0 &&

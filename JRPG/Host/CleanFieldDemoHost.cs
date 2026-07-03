@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Host;
 
@@ -117,12 +118,12 @@ internal sealed class CleanFieldDemoHost
         var factory = new CatalogBattleActorFactory(catalog, catalog, new DemoBattleActorInitializationPolicy());
         CatalogBattleActorCreationResult medicResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.shared_effects_demo:field_medic_demo"),
-            ContentId.Parse("field_medic"),
+            RuntimeInstanceId.Parse("field_medic"),
             Party,
             5));
         CatalogBattleActorCreationResult allyResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
-            ContentId.Parse("field_ally"),
+            RuntimeInstanceId.Parse("field_ally"),
             Party,
             5));
         if (!medicResult.IsSuccess || !allyResult.IsSuccess)
@@ -199,7 +200,7 @@ internal sealed class CleanFieldDemoHost
     private async Task<int> ExecuteItemAsync(
         string localId,
         ContentId contextId,
-        ContentId? targetId,
+        RuntimeInstanceId? targetId,
         BattleActionExecutor executor,
         GameDataCatalog catalog,
         IReadOnlyList<RuntimeActorState> participants,
@@ -212,7 +213,7 @@ internal sealed class CleanFieldDemoHost
         ContentId itemId = ContentId.Parse($"convergence.shared_effects_demo:{localId}");
         ItemDefinition item = catalog.GetRequiredItem(itemId);
         BattleActionExecutionResult result = await executor.ExecuteAsync(new BattleActionExecutionRequest(
-            new ItemBattleActionCommand(item, targetId is ContentId selected ? [selected] : []),
+            new ItemBattleActionCommand(item, targetId is RuntimeInstanceId selected ? [selected] : []),
             participants[0],
             participants,
             new EffectExecutionEnvironment(contextId, battleKindId, moonPhaseId),

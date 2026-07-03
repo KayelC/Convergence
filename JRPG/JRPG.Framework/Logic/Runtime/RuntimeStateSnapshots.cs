@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Battle.Execution;
 
 namespace JRPGPrototype.Logic.Runtime;
 
@@ -256,78 +257,87 @@ public sealed record RuntimeEquipmentSnapshot
 
 public sealed record RuntimeTimedStateSnapshot
 {
-    public RuntimeTimedStateSnapshot(ContentId id, int? remainingTurns = null, bool isRemovable = true)
+    public RuntimeTimedStateSnapshot(
+        ContentId id,
+        DurationDefinition duration,
+        bool isRemovable = true)
     {
-        RuntimeSnapshotCollections.ValidateOptionalPositiveTurns(remainingTurns, nameof(remainingTurns));
         Id = id;
-        RemainingTurns = remainingTurns;
+        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
         IsRemovable = isRemovable;
     }
 
     public ContentId Id { get; }
-    public int? RemainingTurns { get; }
+    public DurationDefinition Duration { get; }
     public bool IsRemovable { get; }
 }
 
 public sealed record RuntimeStatStageSnapshot
 {
-    public RuntimeStatStageSnapshot(ContentId modifierTrackId, int stage, int? remainingTurns = null)
+    public RuntimeStatStageSnapshot(
+        ContentId modifierTrackId,
+        int stage,
+        DurationDefinition? duration = null)
     {
-        RuntimeSnapshotCollections.ValidateOptionalPositiveTurns(remainingTurns, nameof(remainingTurns));
         ModifierTrackId = modifierTrackId;
         Stage = stage;
-        RemainingTurns = remainingTurns;
+        Duration = duration;
     }
 
     public ContentId ModifierTrackId { get; }
     public int Stage { get; }
-    public int? RemainingTurns { get; }
+    public DurationDefinition? Duration { get; }
 }
 
 public sealed record RuntimeChargeSnapshot
 {
-    public RuntimeChargeSnapshot(ChargeKind kind, decimal multiplier, int? remainingTurns = null)
+    public RuntimeChargeSnapshot(
+        ChargeKind kind,
+        decimal multiplier,
+        DurationDefinition? duration = null)
     {
         if (multiplier <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(multiplier), "Charge multiplier must be positive.");
         }
 
-        RuntimeSnapshotCollections.ValidateOptionalPositiveTurns(remainingTurns, nameof(remainingTurns));
         Kind = kind;
         Multiplier = multiplier;
-        RemainingTurns = remainingTurns;
+        Duration = duration;
     }
 
     public ChargeKind Kind { get; }
     public decimal Multiplier { get; }
-    public int? RemainingTurns { get; }
+    public DurationDefinition? Duration { get; }
 }
 
 public sealed record RuntimeShieldSnapshot
 {
-    public RuntimeShieldSnapshot(ShieldKind kind, int? remainingTurns = null)
+    public RuntimeShieldSnapshot(ShieldKind kind, DurationDefinition? duration = null)
     {
-        RuntimeSnapshotCollections.ValidateOptionalPositiveTurns(remainingTurns, nameof(remainingTurns));
         Kind = kind;
-        RemainingTurns = remainingTurns;
+        Duration = duration;
     }
 
     public ShieldKind Kind { get; }
-    public int? RemainingTurns { get; }
+    public DurationDefinition? Duration { get; }
 }
 
-public sealed record RuntimeBreakSnapshot
+public sealed record RuntimeAffinityOverrideSnapshot
 {
-    public RuntimeBreakSnapshot(DamageElement element, int? remainingTurns = null)
+    public RuntimeAffinityOverrideSnapshot(
+        DamageElement element,
+        ElementalAffinity affinity,
+        DurationDefinition duration)
     {
-        RuntimeSnapshotCollections.ValidateOptionalPositiveTurns(remainingTurns, nameof(remainingTurns));
         Element = element;
-        RemainingTurns = remainingTurns;
+        Affinity = affinity;
+        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
     }
 
     public DamageElement Element { get; }
-    public int? RemainingTurns { get; }
+    public ElementalAffinity Affinity { get; }
+    public DurationDefinition Duration { get; }
 }
 
 public sealed record RuntimeAnalysisSnapshot
@@ -350,7 +360,7 @@ public sealed record RuntimeBattleStatusSnapshot
         IEnumerable<RuntimeStatStageSnapshot>? statStages = null,
         IEnumerable<RuntimeChargeSnapshot>? charges = null,
         IEnumerable<RuntimeShieldSnapshot>? shields = null,
-        IEnumerable<RuntimeBreakSnapshot>? breaks = null,
+        IEnumerable<RuntimeAffinityOverrideSnapshot>? affinityOverrides = null,
         bool isGuarding = false,
         IEnumerable<RuntimeAnalysisSnapshot>? analysis = null)
     {
@@ -359,7 +369,7 @@ public sealed record RuntimeBattleStatusSnapshot
         StatStages = RuntimeSnapshotCollections.List(statStages);
         Charges = RuntimeSnapshotCollections.List(charges);
         Shields = RuntimeSnapshotCollections.List(shields);
-        Breaks = RuntimeSnapshotCollections.List(breaks);
+        AffinityOverrides = RuntimeSnapshotCollections.List(affinityOverrides);
         IsGuarding = isGuarding;
         Analysis = RuntimeSnapshotCollections.List(analysis);
     }
@@ -369,7 +379,7 @@ public sealed record RuntimeBattleStatusSnapshot
     public IReadOnlyList<RuntimeStatStageSnapshot> StatStages { get; }
     public IReadOnlyList<RuntimeChargeSnapshot> Charges { get; }
     public IReadOnlyList<RuntimeShieldSnapshot> Shields { get; }
-    public IReadOnlyList<RuntimeBreakSnapshot> Breaks { get; }
+    public IReadOnlyList<RuntimeAffinityOverrideSnapshot> AffinityOverrides { get; }
     public bool IsGuarding { get; }
     public IReadOnlyList<RuntimeAnalysisSnapshot> Analysis { get; }
 }
@@ -423,7 +433,8 @@ public sealed record RuntimeActorSnapshot
         RuntimeEquipmentSnapshot equipment,
         RuntimeBattleStatusSnapshot battleStatus,
         RuntimeBattleActivationSnapshot battleActivations,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues,
+        ContentId vitalResourceId)
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         Ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
@@ -437,6 +448,11 @@ public sealed record RuntimeActorSnapshot
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         BattleStatus = battleStatus ?? throw new ArgumentNullException(nameof(battleStatus));
         BattleActivations = battleActivations ?? throw new ArgumentNullException(nameof(battleActivations));
+        VitalResourceId = vitalResourceId;
+        if (!Resources.Any(resource => resource.ResourceId == vitalResourceId))
+        {
+            throw new ArgumentException("The vital resource must exist in the actor resources.", nameof(vitalResourceId));
+        }
     }
 
     public RuntimeActorIdentitySnapshot Identity { get; }
@@ -451,6 +467,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeBattleStatusSnapshot BattleStatus { get; }
     public RuntimeBattleActivationSnapshot BattleActivations { get; }
+    public ContentId VitalResourceId { get; }
 
     public RuntimeActorSnapshot WithResources(IEnumerable<RuntimeResourceSnapshot> resources) =>
         new(
@@ -465,7 +482,8 @@ public sealed record RuntimeActorSnapshot
             Equipment,
             BattleStatus,
             BattleActivations,
-            BaseResourceValues);
+            BaseResourceValues,
+            VitalResourceId);
 
     public RuntimeActorSnapshot WithProgression(
         RuntimeProgressionSnapshot progression,
@@ -484,28 +502,8 @@ public sealed record RuntimeActorSnapshot
             Equipment,
             BattleStatus,
             BattleActivations,
-            baseResourceValues ?? BaseResourceValues);
-}
-
-public sealed class RuntimeActorStateSet
-{
-    private RuntimeActorSnapshot _snapshot;
-
-    private RuntimeActorStateSet(RuntimeActorSnapshot snapshot)
-    {
-        _snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-    }
-
-    public RuntimeInstanceId InstanceId => _snapshot.Identity.InstanceId;
-
-    public static RuntimeActorStateSet FromSnapshot(RuntimeActorSnapshot snapshot) => new(snapshot);
-
-    public RuntimeActorSnapshot ToSnapshot() => _snapshot;
-
-    internal void ReplaceSnapshot(RuntimeActorSnapshot snapshot)
-    {
-        _snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-    }
+            baseResourceValues ?? BaseResourceValues,
+            VitalResourceId);
 }
 
 public sealed record RuntimeMutationDiagnostic(
@@ -536,7 +534,7 @@ public sealed record RuntimeMutationResult
 
 public sealed class RuntimeResourceTransactionService
 {
-    public RuntimeMutationResult AddResource(RuntimeActorStateSet actor, ContentId resourceId, decimal delta)
+    public RuntimeMutationResult AddResource(RuntimeActorState actor, ContentId resourceId, decimal delta)
     {
         ArgumentNullException.ThrowIfNull(actor);
         RuntimeActorSnapshot before = actor.ToSnapshot();
@@ -546,7 +544,7 @@ public sealed class RuntimeResourceTransactionService
             : SetResource(actor, resourceId, resource.Current + delta);
     }
 
-    public RuntimeMutationResult SetResource(RuntimeActorStateSet actor, ContentId resourceId, decimal current)
+    public RuntimeMutationResult SetResource(RuntimeActorState actor, ContentId resourceId, decimal current)
     {
         ArgumentNullException.ThrowIfNull(actor);
         RuntimeActorSnapshot before = actor.ToSnapshot();
@@ -572,9 +570,36 @@ public sealed class RuntimeResourceTransactionService
         }
 
         resources[index] = new RuntimeResourceSnapshot(resourceId, current, existing.Maximum);
-        RuntimeActorSnapshot after = before.WithResources(resources);
-        actor.ReplaceSnapshot(after);
+        actor.ReplaceResources(resources);
+        RuntimeActorSnapshot after = actor.ToSnapshot();
         return new RuntimeMutationResult(RuntimeMutationStatus.Applied, before, after);
+    }
+
+    public RuntimeMutationResult ApplyRecalculation(
+        RuntimeActorState actor,
+        ResourceRecalculationResult recalculation)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(recalculation);
+
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        try
+        {
+            actor.ReplaceResources(recalculation.Resources);
+        }
+        catch (ArgumentException exception)
+        {
+            return Rejected(
+                before,
+                RuntimeMutationErrorCode.ResourceValueOutOfRange,
+                exception.Message,
+                "$.resources");
+        }
+
+        return new RuntimeMutationResult(
+            RuntimeMutationStatus.Applied,
+            before,
+            actor.ToSnapshot());
     }
 
     private static RuntimeMutationResult Rejected(
@@ -591,7 +616,7 @@ public sealed class RuntimeResourceTransactionService
 
 public sealed class RuntimeProgressionTransactionService
 {
-    public RuntimeMutationResult ApplyLevelGrowth(RuntimeActorStateSet actor, LevelGrowthResult growth)
+    public RuntimeMutationResult ApplyLevelGrowth(RuntimeActorState actor, LevelGrowthResult growth)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(growth);
@@ -609,12 +634,12 @@ public sealed class RuntimeProgressionTransactionService
                     "$.progression")));
         }
 
-        RuntimeActorSnapshot after = before.WithProgression(
+        actor.ApplyProgression(
             growth.Progression,
             growth.Stats,
             growth.Resources.Count > 0 ? growth.Resources : before.Resources,
             growth.BaseResourceValues.Count > 0 ? growth.BaseResourceValues : before.BaseResourceValues);
-        actor.ReplaceSnapshot(after);
+        RuntimeActorSnapshot after = actor.ToSnapshot();
         return new RuntimeMutationResult(RuntimeMutationStatus.Applied, before, after);
     }
 }

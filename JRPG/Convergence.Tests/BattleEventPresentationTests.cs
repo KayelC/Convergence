@@ -8,6 +8,7 @@ using JRPGPrototype.Logic.Battle.Messaging;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Core;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Services;
 using Convergence.Tests.TestSupport;
 using Xunit;
@@ -27,7 +28,7 @@ public sealed class BattleEventPresentationTests
                 7,
                 kind,
                 kind.ToString(),
-                ContentId.Parse("actor"));
+                RuntimeInstanceId.Parse("actor"));
 
             BattleEventPresentationResult presentation = adapter.Present(source);
 
@@ -158,7 +159,7 @@ public sealed class BattleEventPresentationTests
     }
 
     private static BattleEncounterEvent Event(int sequence, BattleEncounterEventKind kind) =>
-        new(sequence, kind, kind.ToString(), ContentId.Parse("actor"));
+        new(sequence, kind, kind.ToString(), RuntimeInstanceId.Parse("actor"));
 
     private static BattleEventPresentationKind ExpectedKind(BattleEncounterEventKind kind) =>
         kind switch

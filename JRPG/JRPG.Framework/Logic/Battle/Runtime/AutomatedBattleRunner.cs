@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Runtime;
 
@@ -16,7 +17,7 @@ public sealed record BattleActionSelection
     public BattleActionSelection(
         BattleActionSelectionStatus status,
         SkillDefinition? skill = null,
-        IEnumerable<ContentId>? selectedTargetIds = null,
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds = null,
         SkillExecutionAssessment? assessment = null)
     {
         Status = status;
@@ -27,7 +28,7 @@ public sealed record BattleActionSelection
 
     public BattleActionSelectionStatus Status { get; }
     public SkillDefinition? Skill { get; }
-    public IReadOnlyList<ContentId> SelectedTargetIds { get; }
+    public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
     public SkillExecutionAssessment? Assessment { get; }
 
     public static BattleActionSelection Pass() => new(BattleActionSelectionStatus.Pass);
@@ -59,7 +60,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
     {
         ArgumentNullException.ThrowIfNull(request);
         Candidate? best = null;
-        BattleActorState[] states = request.Participants.Select(participant => participant.State).ToArray();
+        RuntimeActorState[] states = request.Participants.Select(participant => participant.State).ToArray();
 
         for (int loadoutIndex = 0; loadoutIndex < request.Actor.ActiveSkills.Count; loadoutIndex++)
         {
@@ -69,7 +70,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                 continue;
             }
 
-            IReadOnlyList<ContentId> targetIds = SelectTargets(request.Actor.State, states, skill.Targeting);
+            IReadOnlyList<RuntimeInstanceId> targetIds = SelectTargets(request.Actor.State, states, skill.Targeting);
             var executionRequest = new SkillExecutionRequest(
                 skill,
                 request.Actor.State,
@@ -107,9 +108,9 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                 best.Assessment);
     }
 
-    private static IReadOnlyList<ContentId> SelectTargets(
-        BattleActorState actor,
-        IReadOnlyList<BattleActorState> participants,
+    private static IReadOnlyList<RuntimeInstanceId> SelectTargets(
+        RuntimeActorState actor,
+        IReadOnlyList<RuntimeActorState> participants,
         TargetingDefinition? targeting)
     {
         if (targeting is null || targeting.Selection is TargetSelection.None or TargetSelection.All or TargetSelection.Random)
@@ -117,7 +118,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
             return [];
         }
 
-        BattleActorState? target = participants.FirstOrDefault(candidate =>
+        RuntimeActorState? target = participants.FirstOrDefault(candidate =>
             candidate.IsActive &&
             RelationMatches(actor, candidate, targeting.Relation) &&
             (targeting.AllowSelf || targeting.Relation == TargetRelation.Self || candidate.InstanceId != actor.InstanceId) &&
@@ -127,7 +128,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
 
     private static int Score(
         SkillDefinition skill,
-        IReadOnlyList<ContentId> targetIds,
+        IReadOnlyList<RuntimeInstanceId> targetIds,
         IReadOnlyList<CatalogBattleActor> participants,
         ElementalAffinityKnowledge knowledge)
     {
@@ -161,7 +162,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         return score;
     }
 
-    private static bool RelationMatches(BattleActorState actor, BattleActorState candidate, TargetRelation relation) => relation switch
+    private static bool RelationMatches(RuntimeActorState actor, RuntimeActorState candidate, TargetRelation relation) => relation switch
     {
         TargetRelation.Self => actor.InstanceId == candidate.InstanceId,
         TargetRelation.Ally => actor.TeamId == candidate.TeamId,
@@ -171,7 +172,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         _ => false
     };
 
-    private static bool LifeMatches(BattleActorState actor, TargetLifeState lifeState) => lifeState switch
+    private static bool LifeMatches(RuntimeActorState actor, TargetLifeState lifeState) => lifeState switch
     {
         TargetLifeState.Alive => !actor.IsDefeated,
         TargetLifeState.Dead => actor.IsDefeated,
@@ -181,7 +182,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
 
     private sealed record Candidate(
         SkillDefinition Skill,
-        IReadOnlyList<ContentId> TargetIds,
+        IReadOnlyList<RuntimeInstanceId> TargetIds,
         SkillExecutionAssessment Assessment,
         int Score,
         int LoadoutIndex);
@@ -215,8 +216,8 @@ public sealed record BattleRuntimeEvent(
     int Sequence,
     BattleRuntimeEventKind Kind,
     string Message,
-    ContentId? ActorId = null,
-    ContentId? TargetId = null,
+    RuntimeInstanceId? ActorId = null,
+    RuntimeInstanceId? TargetId = null,
     ContentId? SkillId = null,
     decimal? Value = null);
 
@@ -232,7 +233,7 @@ public sealed record BattleActorFinalSnapshot
             actor.State.Resources.ToDictionary(pair => pair.Key, pair => pair.Value.Current));
     }
 
-    public ContentId InstanceId { get; }
+    public RuntimeInstanceId InstanceId { get; }
     public ContentId EntityId { get; }
     public ContentId TeamId { get; }
     public bool IsDefeated { get; }
@@ -568,7 +569,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                     value));
             }
 
-            if (effect.TargetId is ContentId targetId &&
+            if (effect.TargetId is RuntimeInstanceId targetId &&
                 effect.ResolvedAffinity is ElementalAffinity affinity &&
                 skill.Effects.ElementAtOrDefault(effect.EffectIndex) is DamageEffectDefinition damage)
             {
@@ -591,7 +592,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 
     private static void RecordPassives(
         List<BattleEncounterEvent> events,
-        ContentId actorId,
+        RuntimeInstanceId actorId,
         PassiveTriggerDispatchResult dispatch)
     {
         foreach (PassiveTriggerExecutionResult activation in dispatch.Activations)

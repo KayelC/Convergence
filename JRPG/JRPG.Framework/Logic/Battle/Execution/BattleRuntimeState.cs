@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -20,7 +21,7 @@ public sealed class BattleResourceState
 
     public ContentId Id { get; }
     public decimal Current { get; private set; }
-    public decimal Maximum { get; }
+    public decimal Maximum { get; private set; }
 
     internal decimal Set(decimal value)
     {
@@ -31,9 +32,19 @@ public sealed class BattleResourceState
 
     internal decimal Add(decimal value) => Set(Current + value);
 
+    internal void Replace(decimal current, decimal maximum)
+    {
+        if (maximum < 0 || current < 0 || current > maximum)
+        {
+            throw new ArgumentOutOfRangeException(nameof(current), "Resource values must satisfy 0 <= current <= maximum.");
+        }
+
+        Current = current;
+        Maximum = maximum;
+    }
+
     internal BattleResourceState Copy() => new(Id, Current, Maximum);
 }
-
 public sealed record ActiveAilmentState(
     AilmentDefinition Definition,
     DurationDefinition Duration,
@@ -43,13 +54,14 @@ public sealed record BattleStatStageState(int Stage, DurationDefinition? Duratio
 public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? Duration);
 public sealed record BattleShieldState(DurationDefinition? Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
+public sealed record BattleOtherStatusState(DurationDefinition Duration, bool IsRemovable = true);
 public sealed record BattleDurationTickResult(
     ContentId Id,
     DurationDefinition PreviousDuration,
     DurationDefinition? CurrentDuration,
     bool Expired);
 
-public class RuntimeActorState
+public sealed class RuntimeActorState
 {
     private readonly Dictionary<ContentId, BattleResourceState> _resources;
     private readonly Dictionary<ContentId, ActiveAilmentState> _ailments = [];
@@ -57,13 +69,17 @@ public class RuntimeActorState
     private readonly Dictionary<ChargeKind, BattleChargeState> _charges = [];
     private readonly Dictionary<ShieldKind, BattleShieldState> _shields = [];
     private readonly Dictionary<DamageElement, BattleAffinityOverrideState> _affinityOverrides = [];
-    private readonly HashSet<ContentId> _otherStatuses = [];
+    private readonly Dictionary<ContentId, BattleOtherStatusState> _otherStatuses = [];
     private readonly HashSet<ContentId> _skillIds;
     private readonly HashSet<ContentId> _capabilityIds;
-    private readonly Dictionary<ContentId, HashSet<AnalysisLayer>> _analysis = [];
+    private readonly Dictionary<RuntimeInstanceId, HashSet<AnalysisLayer>> _analysis = [];
+    private IReadOnlyDictionary<ContentId, decimal> _baseStats;
+    private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
+    private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
+    private bool _isActive;
 
     public RuntimeActorState(
-        ContentId instanceId,
+        RuntimeInstanceId instanceId,
         ContentId entityId,
         ContentId teamId,
         ContentId vitalResourceId,
@@ -73,14 +89,32 @@ public class RuntimeActorState
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
         IEnumerable<SkillDefinition>? passiveSkills = null,
-        bool isActive = true)
+        bool isActive = true,
+        RuntimeActorIdentitySnapshot? identity = null,
+        RuntimeActorOwnershipSnapshot? ownership = null,
+        RuntimeActorDeploymentSnapshot? deployment = null,
+        RuntimeProgressionSnapshot? progression = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
+        RuntimeSkillStateSnapshot? skillState = null,
+        RuntimeFormStockSnapshot? forms = null,
+        RuntimeEquipmentSnapshot? equipment = null)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
         ArgumentNullException.ThrowIfNull(resources);
 
-        InstanceId = instanceId;
-        EntityId = entityId;
-        TeamId = teamId;
+        Identity = identity ?? new RuntimeActorIdentitySnapshot(
+            instanceId,
+            entityId,
+            ContentId.Parse("actor"),
+            entityId.ToString());
+        Ownership = ownership ?? new RuntimeActorOwnershipSnapshot(
+            ContentId.Parse("runtime"),
+            teamId);
+        Deployment = deployment ?? new RuntimeActorDeploymentSnapshot(
+            isActive ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Reserve,
+            isActive);
+        Progression = progression ?? new RuntimeProgressionSnapshot(1, 0, 0, 0);
         VitalResourceId = vitalResourceId;
         DefenseProfile = defenseProfile;
         _resources = resources.ToDictionary(resource => resource.Id, resource => resource.Copy());
@@ -89,21 +123,83 @@ public class RuntimeActorState
             throw new ArgumentException("The vital resource must be present in the resource collection.", nameof(resources));
         }
 
-        Stats = Snapshot(stats);
+        _effectiveStats = Snapshot(stats);
+        _baseStats = Snapshot(baseStats ?? stats);
+        _baseResourceValues = Snapshot(baseResourceValues);
         _skillIds = new HashSet<ContentId>(skillIds ?? []);
         _capabilityIds = new HashSet<ContentId>(capabilityIds ?? []);
+        Skills = skillState ?? new RuntimeSkillStateSnapshot(_skillIds, _skillIds);
+        Forms = forms ?? new RuntimeFormStockSnapshot();
+        Equipment = equipment ?? new RuntimeEquipmentSnapshot();
         Passives = new BattlePassiveCollection(passiveSkills);
-        IsActive = isActive;
+        _isActive = Deployment.IsActive;
     }
 
-    public ContentId InstanceId { get; }
-    public ContentId EntityId { get; }
-    public ContentId TeamId { get; }
+    public static RuntimeActorState Restore(
+        RuntimeActorSnapshot snapshot,
+        CombatDefenseProfile defenseProfile,
+        IEnumerable<SkillDefinition>? passiveSkills = null,
+        IEnumerable<AilmentDefinition>? ailments = null,
+        IEnumerable<ContentId>? capabilityIds = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(defenseProfile);
+        var state = new RuntimeActorState(
+            snapshot.Identity.InstanceId,
+            snapshot.Identity.EntityDefinitionId,
+            snapshot.Ownership.TeamId,
+            snapshot.VitalResourceId,
+            defenseProfile,
+            snapshot.Resources.Select(resource => new BattleResourceState(
+                resource.ResourceId,
+                resource.Current,
+                resource.Maximum)),
+            snapshot.Stats.EffectiveStats,
+            snapshot.Skills.LearnedSkillIds,
+            capabilityIds,
+            passiveSkills,
+            snapshot.Deployment.IsActive,
+            snapshot.Identity,
+            snapshot.Ownership,
+            snapshot.Deployment,
+            snapshot.Progression,
+            snapshot.BaseResourceValues,
+            snapshot.Stats.BaseStats,
+            snapshot.Skills,
+            snapshot.Forms,
+            snapshot.Equipment);
+        state.RestoreBattleStatus(
+            snapshot.BattleStatus,
+            (ailments ?? []).ToDictionary(ailment => ailment.Id));
+        state.RestoreBattleActivations(snapshot.BattleActivations);
+        return state;
+    }
+
+    public RuntimeInstanceId InstanceId => Identity.InstanceId;
+    public ContentId EntityId => Identity.EntityDefinitionId;
+    public ContentId TeamId => Ownership.TeamId;
+    public RuntimeActorIdentitySnapshot Identity { get; }
+    public RuntimeActorOwnershipSnapshot Ownership { get; }
+    public RuntimeActorDeploymentSnapshot Deployment { get; private set; }
+    public RuntimeProgressionSnapshot Progression { get; private set; }
+    public RuntimeSkillStateSnapshot Skills { get; private set; }
+    public RuntimeFormStockSnapshot Forms { get; private set; }
+    public RuntimeEquipmentSnapshot Equipment { get; private set; }
     public ContentId VitalResourceId { get; }
     public CombatDefenseProfile DefenseProfile { get; }
     public BattlePassiveCollection Passives { get; }
-    public IReadOnlyDictionary<ContentId, decimal> Stats { get; }
-    public bool IsActive { get; set; }
+    public IReadOnlyDictionary<ContentId, decimal> BaseStats => _baseStats;
+    public IReadOnlyDictionary<ContentId, decimal> Stats => _effectiveStats;
+    public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues => _baseResourceValues;
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            _isActive = value;
+            Deployment = Deployment with { IsActive = value };
+        }
+    }
     public bool IsGuarding { get; private set; }
     public bool IsDefeated => GetRequiredResource(VitalResourceId).Current <= 0;
     public IReadOnlyDictionary<ContentId, BattleResourceState> Resources =>
@@ -118,7 +214,7 @@ public class RuntimeActorState
         new ReadOnlyDictionary<ShieldKind, BattleShieldState>(_shields);
     public IReadOnlyDictionary<DamageElement, BattleAffinityOverrideState> AffinityOverrides =>
         new ReadOnlyDictionary<DamageElement, BattleAffinityOverrideState>(_affinityOverrides);
-    public IReadOnlySet<ContentId> OtherStatuses => new ReadOnlySet<ContentId>(_otherStatuses);
+    public IReadOnlySet<ContentId> OtherStatuses => new ReadOnlySet<ContentId>(_otherStatuses.Keys);
     public IReadOnlySet<ContentId> SkillIds => new ReadOnlySet<ContentId>(_skillIds);
     public IReadOnlySet<ContentId> CapabilityIds => new ReadOnlySet<ContentId>(_capabilityIds);
 
@@ -151,7 +247,7 @@ public class RuntimeActorState
             activeOverride: activeOverride?.Affinity);
     }
 
-    public IReadOnlySet<AnalysisLayer> GetAnalysis(ContentId targetInstanceId)
+    public IReadOnlySet<AnalysisLayer> GetAnalysis(RuntimeInstanceId targetInstanceId)
     {
         return _analysis.TryGetValue(targetInstanceId, out HashSet<AnalysisLayer>? layers)
             ? new ReadOnlySet<AnalysisLayer>(layers)
@@ -214,7 +310,16 @@ public class RuntimeActorState
     public void OverrideAffinity(DamageElement element, ElementalAffinity affinity, DurationDefinition duration) =>
         _affinityOverrides[element] = new BattleAffinityOverrideState(affinity, duration);
 
-    public void AddOtherStatus(ContentId statusId) => _otherStatuses.Add(statusId);
+    public void AddOtherStatus(ContentId statusId) =>
+        AddOtherStatus(statusId, new PermanentDurationDefinition());
+
+    public void AddOtherStatus(
+        ContentId statusId,
+        DurationDefinition duration,
+        bool isRemovable = true) =>
+        _otherStatuses[statusId] = new BattleOtherStatusState(
+            duration ?? throw new ArgumentNullException(nameof(duration)),
+            isRemovable);
 
     public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId)
     {
@@ -366,7 +471,10 @@ public class RuntimeActorState
         {
             foreach (ContentId statusId in statusIds)
             {
-                _otherStatuses.Remove(statusId);
+                if (_otherStatuses.TryGetValue(statusId, out BattleOtherStatusState? state) && state.IsRemovable)
+                {
+                    _otherStatuses.Remove(statusId);
+                }
             }
         }
 
@@ -374,7 +482,7 @@ public class RuntimeActorState
         return before - after;
     }
 
-    public void Reveal(ContentId targetInstanceId, IEnumerable<AnalysisLayer> layers)
+    public void Reveal(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
     {
         if (!_analysis.TryGetValue(targetInstanceId, out HashSet<AnalysisLayer>? known))
         {
@@ -394,6 +502,149 @@ public class RuntimeActorState
             }
         }
     }
+
+    public RuntimeActorSnapshot ToSnapshot() =>
+        new(
+            Identity,
+            Ownership,
+            Deployment with { IsActive = IsActive },
+            Progression,
+            _resources.Values.Select(resource => new RuntimeResourceSnapshot(
+                resource.Id,
+                resource.Current,
+                resource.Maximum)),
+            new RuntimeStatBlockSnapshot(_baseStats, _effectiveStats),
+            Skills,
+            Forms,
+            Equipment,
+            CaptureBattleStatus(),
+            new RuntimeBattleActivationSnapshot(Passives.CaptureActivations()),
+            _baseResourceValues,
+            VitalResourceId);
+
+    internal void ApplyProgression(
+        RuntimeProgressionSnapshot progression,
+        RuntimeStatBlockSnapshot stats,
+        IEnumerable<RuntimeResourceSnapshot> resources,
+        IEnumerable<KeyValuePair<ContentId, decimal>> baseResourceValues)
+    {
+        ArgumentNullException.ThrowIfNull(progression);
+        ArgumentNullException.ThrowIfNull(stats);
+        ReplaceResources(resources);
+        Progression = progression;
+        _baseStats = Snapshot(stats.BaseStats);
+        _effectiveStats = Snapshot(stats.EffectiveStats);
+        _baseResourceValues = Snapshot(baseResourceValues);
+    }
+
+    internal void ReplaceResources(IEnumerable<RuntimeResourceSnapshot> resources)
+    {
+        RuntimeResourceSnapshot[] replacements =
+            (resources ?? throw new ArgumentNullException(nameof(resources))).ToArray();
+        var replacementIds = replacements.Select(resource => resource.ResourceId).ToHashSet();
+        if (!replacementIds.Contains(VitalResourceId) || replacementIds.Count != replacements.Length)
+        {
+            throw new ArgumentException("Replacement resources must be unique and contain the vital resource.", nameof(resources));
+        }
+
+        _resources.Clear();
+        foreach (RuntimeResourceSnapshot resource in replacements)
+        {
+            _resources.Add(
+                resource.ResourceId,
+                new BattleResourceState(resource.ResourceId, resource.Current, resource.Maximum));
+        }
+    }
+
+    internal void RestoreBattleStatus(
+        RuntimeBattleStatusSnapshot status,
+        IReadOnlyDictionary<ContentId, AilmentDefinition> ailments)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        ArgumentNullException.ThrowIfNull(ailments);
+
+        _ailments.Clear();
+        foreach (RuntimeTimedStateSnapshot ailment in status.Ailments)
+        {
+            _ailments.Add(
+                ailment.Id,
+                new ActiveAilmentState(
+                    ailments[ailment.Id],
+                    ailment.Duration,
+                    ailment.IsRemovable));
+        }
+
+        _otherStatuses.Clear();
+        foreach (RuntimeTimedStateSnapshot other in status.Statuses)
+        {
+            _otherStatuses.Add(other.Id, new BattleOtherStatusState(other.Duration, other.IsRemovable));
+        }
+
+        _statStages.Clear();
+        foreach (RuntimeStatStageSnapshot stage in status.StatStages)
+        {
+            _statStages.Add(stage.ModifierTrackId, new BattleStatStageState(stage.Stage, stage.Duration));
+        }
+
+        _charges.Clear();
+        foreach (RuntimeChargeSnapshot charge in status.Charges)
+        {
+            _charges.Add(charge.Kind, new BattleChargeState(charge.Multiplier, charge.Duration));
+        }
+
+        _shields.Clear();
+        foreach (RuntimeShieldSnapshot shield in status.Shields)
+        {
+            _shields.Add(shield.Kind, new BattleShieldState(shield.Duration));
+        }
+
+        _affinityOverrides.Clear();
+        foreach (RuntimeAffinityOverrideSnapshot affinity in status.AffinityOverrides)
+        {
+            _affinityOverrides.Add(
+                affinity.Element,
+                new BattleAffinityOverrideState(affinity.Affinity, affinity.Duration));
+        }
+
+        IsGuarding = status.IsGuarding;
+        _analysis.Clear();
+        foreach (RuntimeAnalysisSnapshot analysis in status.Analysis)
+        {
+            _analysis.Add(analysis.TargetInstanceId, new HashSet<AnalysisLayer>(analysis.Layers));
+        }
+    }
+
+    internal void RestoreBattleActivations(RuntimeBattleActivationSnapshot activations)
+    {
+        ArgumentNullException.ThrowIfNull(activations);
+        Passives.RestoreActivations(activations.PassiveActivations);
+    }
+
+    private RuntimeBattleStatusSnapshot CaptureBattleStatus() =>
+        new(
+            _ailments.Select(pair => new RuntimeTimedStateSnapshot(
+                pair.Key,
+                pair.Value.Duration,
+                pair.Value.IsRemovable)),
+            _otherStatuses.Select(pair => new RuntimeTimedStateSnapshot(
+                pair.Key,
+                pair.Value.Duration,
+                pair.Value.IsRemovable)),
+            _statStages.Select(pair => new RuntimeStatStageSnapshot(
+                pair.Key,
+                pair.Value.Stage,
+                pair.Value.Duration)),
+            _charges.Select(pair => new RuntimeChargeSnapshot(
+                pair.Key,
+                pair.Value.Multiplier,
+                pair.Value.Duration)),
+            _shields.Select(pair => new RuntimeShieldSnapshot(pair.Key, pair.Value.Duration)),
+            _affinityOverrides.Select(pair => new RuntimeAffinityOverrideSnapshot(
+                pair.Key,
+                pair.Value.Affinity,
+                pair.Value.Duration)),
+            IsGuarding,
+            _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)));
 
     private void RemoveStatStages(Func<int, bool> predicate)
     {
@@ -450,35 +701,5 @@ public class RuntimeActorState
         public bool SetEquals(IEnumerable<T> other) => _values.SetEquals(other);
         public IEnumerator<T> GetEnumerator() => _values.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-}
-
-public sealed class BattleActorState : RuntimeActorState
-{
-    public BattleActorState(
-        ContentId instanceId,
-        ContentId entityId,
-        ContentId teamId,
-        ContentId vitalResourceId,
-        CombatDefenseProfile defenseProfile,
-        IEnumerable<BattleResourceState> resources,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
-        IEnumerable<ContentId>? skillIds = null,
-        IEnumerable<ContentId>? capabilityIds = null,
-        IEnumerable<SkillDefinition>? passiveSkills = null,
-        bool isActive = true)
-        : base(
-            instanceId,
-            entityId,
-            teamId,
-            vitalResourceId,
-            defenseProfile,
-            resources,
-            stats,
-            skillIds,
-            capabilityIds,
-            passiveSkills,
-            isActive)
-    {
     }
 }

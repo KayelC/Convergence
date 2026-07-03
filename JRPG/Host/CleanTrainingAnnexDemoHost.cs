@@ -129,7 +129,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             new DemoBattleActorInitializationPolicy());
         CatalogBattleActorCreationResult echoResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("echo_adept"),
-            ContentId.Parse("echo_adept"),
+            RuntimeInstanceId.Parse("echo_adept"),
             PlayerTeam,
             3));
         if (!echoResult.IsSuccess)
@@ -156,7 +156,7 @@ internal sealed class CleanTrainingAnnexDemoHost
                 .ConfigureAwait(false);
         }
 
-        ContentId hostTriggerId = ContentId.Parse("annex_scene_trigger");
+        RuntimeInstanceId hostTriggerId = RuntimeInstanceId.Parse("annex_scene_trigger");
         EncounterStartPlanResult encounterStart = new CatalogEncounterStartPlanner(catalog).Plan(
             new EncounterStartRequest(
                 Qualified("ashling_drill"),
@@ -365,7 +365,8 @@ internal sealed class CleanTrainingAnnexDemoHost
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
-            baseResources);
+            baseResources,
+            actor.State.VitalResourceId);
     }
 
     private static CleanTrainingAnnexDemoSummary CreateSummary(

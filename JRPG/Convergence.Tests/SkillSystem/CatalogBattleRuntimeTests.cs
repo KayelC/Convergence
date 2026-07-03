@@ -7,6 +7,7 @@ using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -66,7 +67,7 @@ public sealed class CatalogBattleRuntimeTests
             new TestInitializationPolicy());
 
         CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
-            entity.Id, Id("instance"), PlayerTeam, 5)).RequireActor();
+            entity.Id, RuntimeInstanceId.Parse("instance"), PlayerTeam, 5)).RequireActor();
 
         Assert.Equal([first.Id, second.Id, third.Id], actor.SkillLoadout.Select(skill => skill.Id));
     }
@@ -81,15 +82,70 @@ public sealed class CatalogBattleRuntimeTests
             new TestInitializationPolicy());
 
         CatalogBattleActorCreationResult invalid = factory.Create(new CatalogBattleActorCreationRequest(
-            entity.Id, Id("instance"), PlayerTeam, 0));
+            entity.Id, RuntimeInstanceId.Parse("instance"), PlayerTeam, 0));
         CatalogBattleActorCreationResult missingEntity = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:unknown"), Id("instance"), PlayerTeam, 1));
+            Id("test.pack:unknown"), RuntimeInstanceId.Parse("instance"), PlayerTeam, 1));
 
         Assert.Contains(invalid.Diagnostics, diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.InvalidLevel);
         Assert.Contains(invalid.Diagnostics, diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.SkillMissing);
         Assert.Contains(missingEntity.Diagnostics, diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.EntityMissing);
         Assert.False(invalid.IsSuccess);
         Assert.Throws<CatalogBattleActorCreationException>(() => invalid.RequireActor());
+    }
+
+    [Fact]
+    public void ActorFactory_RestoreUsesCompleteSnapshotWithoutReinitializingRuntimeState()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            new ThrowingInitializationPolicy());
+        var snapshot = new RuntimeActorSnapshot(
+            new RuntimeActorIdentitySnapshot(
+                RuntimeInstanceId.Parse("saved:actor_1"),
+                entity.Id,
+                entity.EntityKindId,
+                "Saved Actor"),
+            new RuntimeActorOwnershipSnapshot(Id("host"), PlayerTeam),
+            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Reserve, false, true),
+            new RuntimeProgressionSnapshot(9, 12, 100, 3),
+            [
+                new RuntimeResourceSnapshot(Id("life"), 7, 25),
+                new RuntimeResourceSnapshot(Id("sp"), 4, 11)
+            ],
+            new RuntimeStatBlockSnapshot(
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 5)],
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 8)]),
+            new RuntimeSkillStateSnapshot(),
+            new RuntimeFormStockSnapshot(),
+            new RuntimeEquipmentSnapshot(),
+            new RuntimeBattleStatusSnapshot(
+                statStages: [new RuntimeStatStageSnapshot(Id("attack"), 2, new PhaseDurationDefinition(Id("phase_end")))],
+                affinityOverrides:
+                [
+                    new RuntimeAffinityOverrideSnapshot(
+                        DamageElement.Ice,
+                        ElementalAffinity.Resist,
+                        new BattleDurationDefinition())
+                ],
+                isGuarding: true),
+            new RuntimeBattleActivationSnapshot(),
+            [new KeyValuePair<ContentId, decimal>(Id("life"), 20)],
+            Id("life"));
+
+        CatalogBattleActorCreationResult result = factory.Restore(snapshot);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        RuntimeActorState state = result.RequireActor().State;
+        Assert.Equal(Id("life"), state.VitalResourceId);
+        Assert.Equal(7, state.GetRequiredResource(Id("life")).Current);
+        Assert.Equal(9, state.Progression.Level);
+        Assert.False(state.IsActive);
+        Assert.True(state.Deployment.HasSwappedThisTurn);
+        Assert.True(state.IsGuarding);
+        Assert.IsType<PhaseDurationDefinition>(state.StatStages[Id("attack")].Duration);
+        Assert.IsType<BattleDurationDefinition>(state.AffinityOverrides[DamageElement.Ice].Duration);
     }
 
     [Fact]
@@ -204,9 +260,9 @@ public sealed class CatalogBattleRuntimeTests
             Entity("test.pack:enemy", [attack.Id]));
         var factory = new CatalogBattleActorFactory(entities, skills, new TestInitializationPolicy());
         CatalogBattleActor player = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:player"), Id("player"), PlayerTeam, 1)).RequireActor();
+            Id("test.pack:player"), RuntimeInstanceId.Parse("player"), PlayerTeam, 1)).RequireActor();
         CatalogBattleActor enemy = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:enemy"), Id("enemy"), EnemyTeam, 1)).RequireActor();
+            Id("test.pack:enemy"), RuntimeInstanceId.Parse("enemy"), EnemyTeam, 1)).RequireActor();
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
@@ -331,7 +387,7 @@ public sealed class CatalogBattleRuntimeTests
         new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy()).Create(
             new CatalogBattleActorCreationRequest(
                 Id($"convergence.clean_battle_demo:{entityId}"),
-                Id(instanceId),
+                RuntimeInstanceId.Parse(instanceId),
                 teamId,
                 5)).RequireActor();
 
@@ -447,6 +503,12 @@ public sealed class CatalogBattleRuntimeTests
         }
     }
 
+    private sealed class ThrowingInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level) =>
+            throw new InvalidOperationException("Restore must not invoke creation defaults.");
+    }
+
     private sealed class TestDamagePolicy : IDamageExecutionPolicy
     {
         public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request)
@@ -486,8 +548,8 @@ public sealed class CatalogBattleRuntimeTests
 
     private sealed class FirstRandomTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
     }
@@ -498,6 +560,6 @@ public sealed class CatalogBattleRuntimeTests
             new(
                 BattleActionSelectionStatus.Selected,
                 request.Actor.ActiveSkills[0],
-                [Id("missing_target")]);
+                [RuntimeInstanceId.Parse("missing_target")]);
     }
 }

@@ -19,7 +19,7 @@ public sealed class BattleActionExecutorTests
     public async Task GuardAndPass_ReturnTypedTurnConsumptionWithoutPresentationCoupling()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA);
+        RuntimeActorState actor = Actor("actor", TeamA);
 
         BattleActionExecutionResult guard = await Execute(executor, new GuardBattleActionCommand(), actor, [actor]);
         BattleActionExecutionResult pass = await Execute(executor, new PassBattleActionCommand(), actor, [actor]);
@@ -37,8 +37,8 @@ public sealed class BattleActionExecutorTests
     public async Task BasicAttack_ExecutesTypedDamageAndReturnsPressTurnOutcome()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA);
-        BattleActorState target = Actor(
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
             "target",
             TeamB,
             hp: 40,
@@ -62,8 +62,8 @@ public sealed class BattleActionExecutorTests
     public async Task SkillAction_SharesAssessmentWithExecutionAndCommitsCosts()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA, sp: 10);
-        BattleActorState target = Actor("target", TeamB);
+        RuntimeActorState actor = Actor("actor", TeamA, sp: 10);
+        RuntimeActorState target = Actor("target", TeamB);
         SkillDefinition skill = ActiveSkill(
             "frost",
             [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))],
@@ -84,8 +84,8 @@ public sealed class BattleActionExecutorTests
     public async Task ItemAction_ReservesAndCommitsOnlyWhenConsumptionSucceeds()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA);
-        BattleActorState target = Actor("target", TeamA, hp: 20);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
         ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
         var inventory = new TestItemInventory(medicine.Id, quantity: 1);
 
@@ -103,8 +103,8 @@ public sealed class BattleActionExecutorTests
     public async Task ItemAction_DoesNotReserveWhenAssessmentRejects()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA);
-        BattleActorState target = Actor("target", TeamA, hp: 100);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 100);
         ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
         var inventory = new TestItemInventory(medicine.Id, quantity: 1);
 
@@ -120,8 +120,8 @@ public sealed class BattleActionExecutorTests
     public async Task ItemAction_CancellationOccursBeforeReservation()
     {
         BattleActionExecutor executor = Executor();
-        BattleActorState actor = Actor("actor", TeamA);
-        BattleActorState target = Actor("target", TeamA, hp: 20);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
         ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
         var inventory = new TestItemInventory(medicine.Id, quantity: 1);
         using var cancellation = new CancellationTokenSource();
@@ -140,8 +140,8 @@ public sealed class BattleActionExecutorTests
     {
         ContentId escapeRule = Id("standard_escape");
         BattleActionExecutor executor = Executor(escapeRules: [new(escapeRule, new AlwaysEscapeRule())]);
-        BattleActorState actor = Actor("actor", TeamA);
-        BattleActorState target = Actor("target", TeamB);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
         RuntimePartyStockSnapshot stock = PartyStock();
 
         BattleActionExecutionResult analyze = await Execute(
@@ -202,14 +202,14 @@ public sealed class BattleActionExecutorTests
         return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
     }
 
-    private static BattleActorState Actor(
+    private static RuntimeActorState Actor(
         string id,
         ContentId team,
         decimal hp = 100,
         decimal sp = 20,
         CombatDefenseProfile? defense = null) =>
         new(
-            Id(id),
+            RuntimeInstanceId.Parse(id),
             Id(id + "_entity"),
             team,
             Hp,
@@ -309,8 +309,8 @@ public sealed class BattleActionExecutorTests
 
     private sealed class OrderedRandomTargetPolicy : IRandomTargetSelectionPolicy
     {
-        public IReadOnlyList<BattleActorState> Select(
-            IReadOnlyList<BattleActorState> candidates,
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());

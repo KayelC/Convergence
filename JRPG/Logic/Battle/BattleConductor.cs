@@ -815,7 +815,7 @@ namespace JRPGPrototype.Logic.Battle
             private static readonly ContentId ReturnToStock = ContentId.Parse("return_to_stock");
             private readonly BattleConductor _owner;
             private readonly LegacyBattleEventPresentationAdapter _events;
-            private readonly Dictionary<ContentId, Combatant> _actors = [];
+            private readonly Dictionary<RuntimeInstanceId, Combatant> _actors = [];
 
             public LegacyEncounterAdapter(
                 BattleConductor owner,
@@ -1028,7 +1028,7 @@ namespace JRPGPrototype.Logic.Battle
 
             private EncounterRuntimeActorState ToRuntimeState(Combatant actor)
             {
-                ContentId id = ContentId.Parse(LegacyRuntimeIdentityRegistry.Shared.GetActorId(actor).ToString());
+                RuntimeInstanceId id = LegacyRuntimeIdentityRegistry.Shared.GetActorId(actor);
                 ContentId team = _owner._enemies.Contains(actor) ? EnemyTeam : PlayerTeam;
                 List<ContentId> capabilities = [];
                 if (team == PlayerTeam && actor.Class == ClassType.Demon)

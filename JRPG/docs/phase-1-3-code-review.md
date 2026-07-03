@@ -1,6 +1,6 @@
 # Phase 1-3 Code Review And Forward Direction
 
-> **Status: Active implementation audit.** This report reviews the code as it exists on `track-12-recovery` on 2026-07-03. It is derived from source, tests, builds, and executable demos. It is not a replacement implementation plan and it does not authorize legacy removal.
+> **Status: Active implementation audit with CodeReview-1 resolved.** This report reviews the code as it exists on `track-12-recovery` on 2026-07-03. It is derived from source, tests, builds, and executable demos. The original finding remains below as audit history; its resolution is recorded immediately after it. This document does not authorize legacy removal.
 
 ## Executive Verdict
 
@@ -246,6 +246,21 @@ Level growth or restore can change maximum HP/SP in `RuntimeActorStateSet`, but 
 
 Choose one mutable runtime state authority. Catalog actor data should be immutable definitions/loadout metadata; battle, field, growth, and persistence should operate on one framework runtime actor state or on explicit projections rebuilt from that state.
 
+#### CodeReview-1 resolution
+
+Resolved on 2026-07-03:
+
+- `RuntimeActorState` is now the sole mutable clean actor representation. It owns identity, ownership, deployment, progression, current and maximum resources, base resource values, base/effective stats, skills, forms, equipment, defenses, statuses, analysis, and passive activation counts.
+- `CatalogBattleActor` now contributes immutable entity/loadout metadata and exposes that one state. The duplicate `RuntimeActorStateSet` and `BattleActorState` types were removed.
+- Training Annex field actions, battles, resource transactions, growth transactions, summaries, saves, and restore now read or mutate `CatalogBattleActor.State` directly. The HP/SP synchronization loops were deleted.
+- Actor and target identities now use `RuntimeInstanceId` throughout clean action, effect, lifecycle, encounter, and event contracts. `ContentId` remains the identity type for authored content and host vocabulary.
+- Save contract version `3` records the vital resource explicitly and preserves typed duration variants, affinity overrides, analysis, and passive activation counts. Catalog restore rebuilds a complete actor from the snapshot and catalog definitions without rerunning creation-time initialization policy.
+- Regression tests prove resource, growth, and lifecycle services mutate one object; complete snapshot restore preserves non-resource state; and restore does not silently reapply initialization defaults.
+
+This resolves the first stabilization item. It does not resolve the separate target-selection, restore identity-validation, or recalculation findings below.
+
+CodeReview-1 verification: 809 tests passed with no failures or skips; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v3, and Training Annex demos all exited successfully; framework boundary and obsolete-state searches were empty; and `Data/Jsons` was unchanged.
+
 ### High: the battle target menu always returns the first target
 
 **Evidence**
@@ -487,7 +502,7 @@ For any concept, there must be one authoritative typed state or rule result. Hos
 
 Do not create another roadmap or lettered track. Use the existing phase plan and insert one stabilization checkpoint before Phase 4:
 
-1. **Unify clean actor state authority.**
+1. **Unify clean actor state authority. Completed by CodeReview-1.**
    - Decide the canonical actor runtime representation.
    - Remove current-only copy loops.
    - Prove growth, battle, field use, and restore share one state.

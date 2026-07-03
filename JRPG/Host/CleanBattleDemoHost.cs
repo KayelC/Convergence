@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Host;
 
@@ -73,8 +74,8 @@ internal sealed class DemoPowerAmountPolicy : IPowerAmountPolicy
 
 internal sealed class DemoRandomTargetPolicy : IRandomTargetSelectionPolicy
 {
-    public IReadOnlyList<BattleActorState> Select(
-        IReadOnlyList<BattleActorState> candidates,
+    public IReadOnlyList<RuntimeActorState> Select(
+        IReadOnlyList<RuntimeActorState> candidates,
         TargetCountDefinition count,
         SkillExecutionRequest request) =>
         Array.AsReadOnly(candidates.Take(count.Minimum).ToArray());
@@ -158,12 +159,12 @@ internal sealed class CleanBattleDemoHost
         var factory = new CatalogBattleActorFactory(catalog, catalog, new DemoBattleActorInitializationPolicy());
         CatalogBattleActorCreationResult frostResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"),
-            ContentId.Parse("frost_duelist"),
+            RuntimeInstanceId.Parse("frost_duelist"),
             PlayerTeam,
             5));
         CatalogBattleActorCreationResult emberResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
-            ContentId.Parse("ember_duelist"),
+            RuntimeInstanceId.Parse("ember_duelist"),
             EnemyTeam,
             5));
         if (!frostResult.IsSuccess || !emberResult.IsSuccess)

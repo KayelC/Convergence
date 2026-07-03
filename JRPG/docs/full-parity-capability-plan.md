@@ -934,6 +934,19 @@ Clean console proof:
 
 ## First Recommended Implementation Pass
 
+### CodeReview-1: Canonical Actor State (completed)
+
+The first post-Phase-3 stabilization pass establishes one clean actor state authority:
+
+- `RuntimeActorState` owns persistent and battle-time actor state.
+- `CatalogBattleActor` supplies immutable definition/loadout metadata around that state.
+- Growth, resources, field actions, battles, snapshots, and restore use the same object.
+- Runtime actor/target references use `RuntimeInstanceId`, while content references remain `ContentId`.
+- Save contract version `3` preserves the vital resource, exact duration modes, affinity overrides, analysis, and passive activations.
+- Current-only copy loops and the duplicate `RuntimeActorStateSet`/`BattleActorState` types are removed.
+
+This corrects architectural integrity; it does not by itself promote a protected legacy capability to `clean_parity` or authorize removal.
+
 Do not start with all 36.
 
 Start with:

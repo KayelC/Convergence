@@ -2,28 +2,38 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Runtime;
 
 public sealed record CatalogBattleActorCreationRequest(
     ContentId EntityId,
-    ContentId InstanceId,
+    RuntimeInstanceId InstanceId,
     ContentId TeamId,
-    int Level);
+    int Level,
+    RuntimeProgressionSnapshot? Progression = null,
+    ContentId? ControllerId = null,
+    RuntimeActorDeployment Deployment = RuntimeActorDeployment.Deployed,
+    bool IsActive = true);
 
 public sealed record BattleActorInitialization
 {
-    public BattleActorInitialization(ContentId vitalResourceId, IEnumerable<BattleResourceState> resources)
+    public BattleActorInitialization(
+        ContentId vitalResourceId,
+        IEnumerable<BattleResourceState> resources,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null)
     {
         VitalResourceId = vitalResourceId;
         Resources = Array.AsReadOnly(
             (resources ?? throw new ArgumentNullException(nameof(resources)))
             .Select(resource => resource.Copy())
             .ToArray());
+        BaseResourceValues = new Dictionary<ContentId, decimal>(baseResourceValues ?? []);
     }
 
     public ContentId VitalResourceId { get; }
     public IReadOnlyList<BattleResourceState> Resources { get; }
+    public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
 }
 
 public interface IBattleActorInitializationPolicy
@@ -38,7 +48,11 @@ public enum CatalogBattleActorDiagnosticCode
     EntityMissing,
     SkillMissing,
     InitializationFailed,
-    VitalResourceMissing
+    VitalResourceMissing,
+    SnapshotActorKindMismatch,
+    SnapshotSkillMissing,
+    SnapshotAilmentMissing,
+    SnapshotInvalid
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -51,7 +65,7 @@ public sealed class CatalogBattleActor
 {
     internal CatalogBattleActor(
         EntityDefinition entity,
-        BattleActorState state,
+        RuntimeActorState state,
         IEnumerable<SkillDefinition> loadout)
     {
         Entity = entity;
@@ -62,7 +76,7 @@ public sealed class CatalogBattleActor
     }
 
     public EntityDefinition Entity { get; }
-    public BattleActorState State { get; }
+    public RuntimeActorState State { get; }
     public IReadOnlyList<SkillDefinition> SkillLoadout { get; }
     public IReadOnlyList<SkillDefinition> ActiveSkills { get; }
 }
@@ -98,22 +112,26 @@ public sealed class CatalogBattleActorCreationException : Exception
 public interface ICatalogBattleActorFactory
 {
     CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request);
+    CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot);
 }
 
 public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
 {
     private readonly IEntityDefinitionRepository _entities;
     private readonly ISkillDefinitionRepository _skills;
+    private readonly IAilmentDefinitionRepository? _ailments;
     private readonly IBattleActorInitializationPolicy _initialization;
 
     public CatalogBattleActorFactory(
         IEntityDefinitionRepository entities,
         ISkillDefinitionRepository skills,
-        IBattleActorInitializationPolicy initialization)
+        IBattleActorInitializationPolicy initialization,
+        IAilmentDefinitionRepository? ailments = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _initialization = initialization ?? throw new ArgumentNullException(nameof(initialization));
+        _ailments = ailments ?? entities as IAilmentDefinitionRepository;
     }
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
@@ -201,7 +219,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
-        var state = new BattleActorState(
+        RuntimeProgressionSnapshot progression = request.Progression ??
+            new RuntimeProgressionSnapshot(request.Level, 0, 0, 0);
+        var state = new RuntimeActorState(
             request.InstanceId,
             entity.Id,
             request.TeamId,
@@ -211,8 +231,114 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
             loadout.Select(skill => skill.Id),
             capabilityIds: [],
-            passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive));
+            passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive),
+            isActive: request.IsActive,
+            identity: new RuntimeActorIdentitySnapshot(
+                request.InstanceId,
+                entity.Id,
+                entity.EntityKindId,
+                entity.DisplayName),
+            ownership: new RuntimeActorOwnershipSnapshot(
+                request.ControllerId ?? ContentId.Parse("runtime"),
+                request.TeamId),
+            deployment: new RuntimeActorDeploymentSnapshot(request.Deployment, request.IsActive),
+            progression: progression,
+            baseResourceValues: initialization.BaseResourceValues.Select(pair =>
+                new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+            baseStats: entity.Stats.Select(pair =>
+                new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+            skillState: new RuntimeSkillStateSnapshot(
+                loadout.Select(skill => skill.Id),
+                loadout.Select(skill => skill.Id)));
 
         return new CatalogBattleActorCreationResult(new CatalogBattleActor(entity, state, loadout), diagnostics);
+    }
+
+    public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var diagnostics = new List<CatalogBattleActorDiagnostic>();
+        ContentId entityId = snapshot.Identity.EntityDefinitionId;
+        if (!_entities.TryGetEntity(entityId, out EntityDefinition? entity) || entity is null)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.EntityMissing,
+                $"No entity definition exists for '{entityId}'.",
+                entityId));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
+        if (snapshot.Identity.ActorKindId != entity.EntityKindId)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.SnapshotActorKindMismatch,
+                $"Saved actor kind '{snapshot.Identity.ActorKindId}' does not match entity kind '{entity.EntityKindId}'.",
+                entityId));
+        }
+
+        ContentId[] skillIds = snapshot.Skills.LearnedSkillIds
+            .Concat(snapshot.Skills.EquippedSkillIds)
+            .Distinct()
+            .ToArray();
+        var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
+        foreach (ContentId skillId in skillIds)
+        {
+            if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
+            {
+                resolvedSkills.Add(skillId, skill);
+            }
+            else
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotSkillMissing,
+                    $"Saved actor references missing skill '{skillId}'.",
+                    entityId,
+                    skillId));
+            }
+        }
+
+        var ailments = new Dictionary<ContentId, AilmentDefinition>();
+        foreach (RuntimeTimedStateSnapshot ailment in snapshot.BattleStatus.Ailments)
+        {
+            if (_ailments?.TryGetAilment(ailment.Id, out AilmentDefinition? definition) == true && definition is not null)
+            {
+                ailments.TryAdd(ailment.Id, definition);
+            }
+            else
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotAilmentMissing,
+                    $"Saved actor references missing ailment '{ailment.Id}'.",
+                    entityId));
+            }
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
+        SkillDefinition[] loadout = snapshot.Skills.EquippedSkillIds
+            .Select(skillId => resolvedSkills[skillId])
+            .ToArray();
+        try
+        {
+            RuntimeActorState state = RuntimeActorState.Restore(
+                snapshot,
+                CombatDefenseProfile.FromEntityDefinition(entity),
+                loadout.Where(skill => skill.Activation == SkillActivation.Passive),
+                ailments.Values);
+            return new CatalogBattleActorCreationResult(
+                new CatalogBattleActor(entity, state, loadout),
+                diagnostics);
+        }
+        catch (Exception exception) when (exception is ArgumentException or KeyNotFoundException)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.SnapshotInvalid,
+                exception.Message,
+                entityId));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
     }
 }

@@ -23,7 +23,6 @@ internal sealed class TrainingAnnexFieldActionAdapter
     private static readonly ContentId Sp = ContentId.Parse("sp");
 
     private readonly IBattleActionExecutor _actions;
-    private readonly RuntimeResourceTransactionService _resources = new();
 
     public TrainingAnnexFieldActionAdapter(BattleExecutionServices services)
     {
@@ -62,8 +61,7 @@ internal sealed class TrainingAnnexFieldActionAdapter
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        SynchronizeActionResources(actor);
-        RuntimeActorSnapshot before = actor.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot before = actor.Actor.State.ToSnapshot();
         var request = new BattleActionExecutionRequest(
             command,
             actor.Actor.State,
@@ -75,10 +73,9 @@ internal sealed class TrainingAnnexFieldActionAdapter
         if (assessment.CanExecute)
         {
             execution = await _actions.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
-            SynchronizePersistentResources(actor);
         }
 
-        RuntimeActorSnapshot after = actor.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot after = actor.Actor.State.ToSnapshot();
         return new TrainingAnnexFieldActionResult(
             command switch
             {
@@ -92,30 +89,6 @@ internal sealed class TrainingAnnexFieldActionAdapter
             Resource(after, Hp),
             Resource(before, Sp),
             Resource(after, Sp));
-    }
-
-    private static void SynchronizeActionResources(TrainingAnnexRuntimeActor actor)
-    {
-        foreach (RuntimeResourceSnapshot resource in actor.RuntimeState.ToSnapshot().Resources)
-        {
-            actor.Actor.State.SetResource(resource.ResourceId, resource.Current);
-        }
-    }
-
-    private void SynchronizePersistentResources(TrainingAnnexRuntimeActor actor)
-    {
-        foreach (BattleResourceState resource in actor.Actor.State.Resources.Values)
-        {
-            RuntimeMutationResult result = _resources.SetResource(
-                actor.RuntimeState,
-                resource.Id,
-                resource.Current);
-            if (!result.Applied)
-            {
-                throw new InvalidOperationException(
-                    $"Could not synchronize field action resource '{resource.Id}'.");
-            }
-        }
     }
 
     private static RuntimeResourceSnapshot Resource(RuntimeActorSnapshot snapshot, ContentId resourceId) =>

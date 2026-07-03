@@ -1,6 +1,7 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Runtime;
 
@@ -52,8 +53,8 @@ public sealed record BattleEncounterEvent(
     int Sequence,
     BattleEncounterEventKind Kind,
     string Message,
-    ContentId? ActorId = null,
-    ContentId? TargetId = null,
+    RuntimeInstanceId? ActorId = null,
+    RuntimeInstanceId? TargetId = null,
     ContentId? SourceId = null,
     decimal? Value = null);
 
@@ -67,7 +68,7 @@ public sealed record BattleEncounterParticipant
 
     public RuntimeActorState State { get; }
     public string DisplayName { get; }
-    public ContentId InstanceId => State.InstanceId;
+    public RuntimeInstanceId InstanceId => State.InstanceId;
     public ContentId TeamId => State.TeamId;
 }
 
@@ -371,13 +372,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
 
         var events = new List<BattleEncounterEvent>();
-        var defeatedAnnouncements = new HashSet<ContentId>();
+        var defeatedAnnouncements = new HashSet<RuntimeInstanceId>();
         int sequence = 0;
         async ValueTask AddAsync(
             BattleEncounterEventKind kind,
             string message,
-            ContentId? actor = null,
-            ContentId? target = null,
+            RuntimeInstanceId? actor = null,
+            RuntimeInstanceId? target = null,
             ContentId? source = null,
             decimal? value = null)
         {
@@ -635,8 +636,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
     private static async ValueTask AnnounceNewDefeatsAsync(
         IEnumerable<BattleEncounterParticipant> participants,
-        HashSet<ContentId> announced,
-        Func<BattleEncounterEventKind, string, ContentId?, ContentId?, ContentId?, decimal?, ValueTask> add)
+        HashSet<RuntimeInstanceId> announced,
+        Func<BattleEncounterEventKind, string, RuntimeInstanceId?, RuntimeInstanceId?, ContentId?, decimal?, ValueTask> add)
     {
         foreach (BattleEncounterParticipant participant in participants.Where(participant =>
                      participant.State.IsDefeated && announced.Add(participant.InstanceId)))

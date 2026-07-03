@@ -62,7 +62,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int ActorCount,
     int EnemyActorCount,
     IReadOnlyList<ContentId> ActorEntityIds,
-    IReadOnlyList<ContentId> ActorInstanceIds,
+    IReadOnlyList<RuntimeInstanceId> ActorInstanceIds,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -82,7 +82,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     bool BarrierRejected,
     bool EncounterTriggerConsumed,
     IReadOnlyList<ContentId> PreparedEncounterIds,
-    IReadOnlyList<ContentId> PreparedEncounterActorInstanceIds,
+    IReadOnlyList<RuntimeInstanceId> PreparedEncounterActorInstanceIds,
     bool PreparedBattleStarted,
     BattleEncounterOutcome? PreparedBattleOutcome,
     ContentId? PreparedBattleWinningTeamId,
@@ -255,12 +255,13 @@ internal sealed class CleanTrainingAnnexPlayHost
             .RequireService();
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var actorFactory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy));
         var encounterPreparation = new CatalogEncounterPreparationService(
             new CatalogEncounterStartPlanner(catalog),
-            new CatalogBattleActorFactory(
-                catalog,
-                catalog,
-                new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy)));
+            actorFactory);
         var fieldActions = new TrainingAnnexFieldActionAdapter(
             executionServices);
         var economy = new EconomyTransactionService();
@@ -297,7 +298,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleEncounterOutcome? preparedBattleOutcome = null;
         ContentId? preparedBattleWinningTeamId = null;
         var preparedEncounterIds = new List<ContentId>();
-        var preparedEncounterActorInstanceIds = new List<ContentId>();
+        var preparedEncounterActorInstanceIds = new List<RuntimeInstanceId>();
         var executedBattleActionIds = new List<ContentId>();
         var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
         var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
@@ -791,6 +792,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             kind,
                             savePolicy,
                             catalog,
+                            actorFactory,
                             roster,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
@@ -828,6 +830,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             kind,
                             savePolicy,
                             catalog,
+                            actorFactory,
                             roster,
                             field,
                             preparedEncounter is not null && !preparedBattleStarted,
@@ -1036,7 +1039,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexRuntimeActor player)
     {
         SkillDefinition mend = catalog.GetRequiredSkill(TrainingAnnexHostSupport.Mend);
-        int level = player.RuntimeState.ToSnapshot().Progression.Level;
+        int level = player.Actor.State.ToSnapshot().Progression.Level;
         bool known = player.Actor.SkillLoadout.Any(skill => skill.Id == mend.Id) ||
             player.Actor.Entity.SkillUnlocks.Any(unlock =>
                 unlock.SkillId == mend.Id && unlock.Level <= level);
@@ -1071,6 +1074,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeSaveKind kind,
         IRuntimeSavePolicyService savePolicy,
         GameDataCatalog catalog,
+        ICatalogBattleActorFactory actorFactory,
         TrainingAnnexActorRoster roster,
         RuntimeFieldSnapshot field,
         RuntimeKnowledgeSnapshot knowledge,
@@ -1124,6 +1128,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeSaveKind kind,
         IRuntimeSavePolicyService savePolicy,
         GameDataCatalog catalog,
+        ICatalogBattleActorFactory actorFactory,
         TrainingAnnexActorRoster roster,
         RuntimeFieldSnapshot field,
         bool hasPendingHostAction,
@@ -1164,7 +1169,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         TrainingAnnexSessionRestoreResult restore =
-            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster);
+            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster, actorFactory);
         if (restore.Restored is null)
         {
             foreach (string diagnostic in restore.Diagnostics)
@@ -1248,11 +1253,12 @@ internal sealed class CleanTrainingAnnexPlayHost
 
     private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
         RuntimeSaveGameSnapshot snapshot,
-        TrainingAnnexActorRoster currentRoster)
+        TrainingAnnexActorRoster currentRoster,
+        ICatalogBattleActorFactory actorFactory)
     {
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
-        if (!TryRestoreActor(currentRoster.Player, actors, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
+        if (!TryRestoreActor(currentRoster.Player, actors, actorFactory, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
         {
             return TrainingAnnexSessionRestoreResult.Failed(playerDiagnostic);
         }
@@ -1260,7 +1266,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var enemies = new List<TrainingAnnexRuntimeActor>();
         foreach (TrainingAnnexRuntimeActor enemy in currentRoster.Enemies)
         {
-            if (!TryRestoreActor(enemy, actors, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
+            if (!TryRestoreActor(enemy, actors, actorFactory, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
             {
                 return TrainingAnnexSessionRestoreResult.Failed(enemyDiagnostic);
             }
@@ -1269,10 +1275,6 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         TrainingAnnexActorRoster roster = new(player, enemies);
-        foreach (TrainingAnnexRuntimeActor actor in roster.AllActors)
-        {
-            SynchronizeCatalogActorState(actor);
-        }
 
         RuntimeFieldSnapshot field = snapshot.Field ??
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -1307,33 +1309,28 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static bool TryRestoreActor(
         TrainingAnnexRuntimeActor current,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICatalogBattleActorFactory actorFactory,
         out TrainingAnnexRuntimeActor restored,
         out string? diagnostic)
     {
-        if (!actors.TryGetValue(current.RuntimeState.InstanceId, out RuntimeActorSnapshot? snapshot))
+        if (!actors.TryGetValue(current.Actor.State.InstanceId, out RuntimeActorSnapshot? snapshot))
         {
             restored = current;
-            diagnostic = $"Saved session has no actor '{current.RuntimeState.InstanceId}'.";
+            diagnostic = $"Saved session has no actor '{current.Actor.State.InstanceId}'.";
             return false;
         }
 
-        restored = current with
+        CatalogBattleActorCreationResult result = actorFactory.Restore(snapshot);
+        if (!result.IsSuccess)
         {
-            Level = snapshot.Progression.Level,
-            RuntimeState = RuntimeActorStateSet.FromSnapshot(snapshot)
-        };
+            restored = current;
+            diagnostic = string.Join("; ", result.Diagnostics.Select(item => item.Message));
+            return false;
+        }
+
+        restored = new TrainingAnnexRuntimeActor(current.Role, result.RequireActor());
         diagnostic = null;
         return true;
-    }
-
-    private static void SynchronizeCatalogActorState(TrainingAnnexRuntimeActor actor)
-    {
-        RuntimeActorSnapshot snapshot = actor.RuntimeState.ToSnapshot();
-        actor.Actor.State.IsActive = snapshot.Deployment.IsActive;
-        foreach (RuntimeResourceSnapshot resource in snapshot.Resources)
-        {
-            actor.Actor.State.SetResource(resource.ResourceId, resource.Current);
-        }
     }
 
     private async ValueTask PublishSavePolicyDiagnosticsAsync(
@@ -1566,7 +1563,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private async ValueTask PrintActorAsync(TrainingAnnexRuntimeActor runtimeActor, CancellationToken cancellationToken)
     {
         CatalogBattleActor actor = runtimeActor.Actor;
-        RuntimeActorSnapshot snapshot = runtimeActor.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot snapshot = runtimeActor.Actor.State.ToSnapshot();
         string resources = string.Join(
             ", ",
             snapshot.Resources.Select(resource => $"{resource.ResourceId} {resource.Current}/{resource.Maximum}"));
@@ -1609,7 +1606,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         bool barrierRejected,
         bool encounterTriggerConsumed,
         IReadOnlyList<ContentId> preparedEncounterIds,
-        IReadOnlyList<ContentId> preparedEncounterActorInstanceIds,
+        IReadOnlyList<RuntimeInstanceId> preparedEncounterActorInstanceIds,
         bool preparedBattleStarted,
         BattleEncounterOutcome? preparedBattleOutcome,
         ContentId? preparedBattleWinningTeamId,
@@ -1644,7 +1641,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
-        RuntimeActorSnapshot playerSnapshot = roster.Player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot playerSnapshot = roster.Player.Actor.State.ToSnapshot();
         return new(
             [request.ManifestPath],
             request.DocumentPaths,
@@ -1653,7 +1650,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.AllActors.Count,
             roster.Enemies.Count,
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
-            roster.AllActors.Select(actor => ContentId.Parse(actor.RuntimeState.InstanceId.ToString())).ToArray(),
+            roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),
@@ -1770,7 +1767,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IStatResolutionPolicy statPolicy,
         CancellationToken cancellationToken)
     {
-        RuntimeActorSnapshot snapshot = player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot snapshot = player.Actor.State.ToSnapshot();
         RuntimeStatStageSnapshot attackStage = new(StandardProgressionIds.Attack, 1);
         IEnumerable<KeyValuePair<ContentId, decimal>> activeFormStats =
             snapshot.Identity.ActorKindId == StandardProgressionIds.Demon
@@ -1811,7 +1808,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         GrowthRulesetServices growthServices,
         CancellationToken cancellationToken)
     {
-        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
         long requiredExperience = growthServices.ExperienceCurve.GetRequiredExperience(before.Progression.Level);
         long award = Math.Max(0, requiredExperience - before.Progression.Experience);
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
@@ -1823,7 +1820,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
         RuntimeMutationResult mutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            player.RuntimeState,
+            player.Actor.State,
             growth);
         if (!mutation.Applied)
         {
@@ -1859,7 +1856,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeWalletSnapshot wallet,
         CancellationToken cancellationToken)
     {
-        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             before.Progression,
             before.Stats,
@@ -1869,7 +1866,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
         RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            player.RuntimeState,
+            player.Actor.State,
             growth);
         if (!progressionMutation.Applied)
         {
@@ -1932,11 +1929,11 @@ internal sealed class CleanTrainingAnnexPlayHost
         IResourceGrowthPolicy resourceGrowthPolicy,
         CancellationToken cancellationToken)
     {
-        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
         RuntimeResourceSnapshot beforeHp = before.Resources.Single(resource =>
             resource.ResourceId == TrainingAnnexHostSupport.Hp);
         RuntimeMutationResult mutation = new RuntimeResourceTransactionService().AddResource(
-            player.RuntimeState,
+            player.Actor.State,
             TrainingAnnexHostSupport.Hp,
             -10);
         if (!mutation.Applied)
