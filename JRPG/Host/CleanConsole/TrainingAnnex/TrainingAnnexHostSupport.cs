@@ -280,7 +280,10 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         TrainingAnnexActorRoster roster,
         RuntimeFieldSnapshot? field = null,
-        RuntimeKnowledgeSnapshot? knowledge = null)
+        RuntimeKnowledgeSnapshot? knowledge = null,
+        RuntimeInventorySnapshot? inventory = null,
+        RuntimeWalletSnapshot? wallet = null,
+        RuntimeSessionProgressSnapshot? session = null)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
@@ -289,27 +292,40 @@ internal static class TrainingAnnexHostSupport
             .Select(enemy => enemy.RuntimeState.ToSnapshot())
             .ToArray();
         RuntimeActorReferenceSnapshot playerReference = Reference(playerSnapshot);
-        return BuildStartupSaveSnapshot([playerSnapshot, .. enemySnapshots], playerReference, field, knowledge);
+        return BuildStartupSaveSnapshot(
+            [playerSnapshot, .. enemySnapshots],
+            playerReference,
+            field,
+            knowledge,
+            inventory,
+            wallet,
+            session);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         CatalogBattleActor actor,
         RuntimeFieldSnapshot? field = null,
-        RuntimeKnowledgeSnapshot? knowledge = null)
+        RuntimeKnowledgeSnapshot? knowledge = null,
+        RuntimeInventorySnapshot? inventory = null,
+        RuntimeWalletSnapshot? wallet = null,
+        RuntimeSessionProgressSnapshot? session = null)
     {
         RuntimeActorSnapshot actorSnapshot = CreateActorSnapshot(
             actor,
             RuntimeInstanceId.Parse("echo_adept"),
             new RuntimeProgressionSnapshot(actor.Entity.BaseLevel, 0, 0, actor.Entity.BaseLevel - 1));
         RuntimeActorReferenceSnapshot actorReference = Reference(actorSnapshot);
-        return BuildStartupSaveSnapshot([actorSnapshot], actorReference, field, knowledge);
+        return BuildStartupSaveSnapshot([actorSnapshot], actorReference, field, knowledge, inventory, wallet, session);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         IReadOnlyList<RuntimeActorSnapshot> actors,
         RuntimeActorReferenceSnapshot playerReference,
         RuntimeFieldSnapshot? field = null,
-        RuntimeKnowledgeSnapshot? knowledge = null)
+        RuntimeKnowledgeSnapshot? knowledge = null,
+        RuntimeInventorySnapshot? inventory = null,
+        RuntimeWalletSnapshot? wallet = null,
+        RuntimeSessionProgressSnapshot? session = null)
     {
         RuntimeActorSnapshot playerSnapshot = actors.First(actor =>
             actor.Identity.InstanceId == playerReference.InstanceId);
@@ -320,13 +336,13 @@ internal static class TrainingAnnexHostSupport
                 playerReference,
                 playerSnapshot.Progression.Level,
                 activeParty: [playerReference]),
-            new RuntimeInventorySnapshot(),
+            inventory ?? new RuntimeInventorySnapshot(),
             new RuntimeEquipmentSnapshot(),
-            new RuntimeWalletSnapshot(0),
+            wallet ?? new RuntimeWalletSnapshot(0),
             field,
             new CompendiumStateSnapshot(),
             knowledge ?? new RuntimeKnowledgeSnapshot(),
-            new RuntimeSessionProgressSnapshot(),
+            session ?? new RuntimeSessionProgressSnapshot(),
             new RuntimeCheckpointLogSnapshot(
             [
                 new RuntimeCheckpointEntrySnapshot(

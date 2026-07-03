@@ -92,6 +92,10 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     RuntimeKnowledgeSnapshot BattleKnowledge,
     RuntimeKnowledgeSnapshot EncounterAiKnowledge,
     BattleRewardResult? PreparedBattleRewardPreview,
+    BattleRewardResult? AppliedBattleReward,
+    int AppliedBattleRewardLevelUpCount,
+    RuntimeWalletSnapshot Wallet,
+    RuntimeSessionProgressSnapshot SessionProgress,
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
@@ -237,8 +241,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                 new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy)));
         var fieldActions = new TrainingAnnexFieldActionAdapter(
             executionServices);
+        var economy = new EconomyTransactionService();
         var inventory = new TrainingAnnexItemActionInventory(new RuntimeInventorySnapshot(
             [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
+        RuntimeWalletSnapshot wallet = new(0);
+        RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
         var locationHistory = new List<ContentId> { field.Navigation.CurrentLocationId };
@@ -269,6 +276,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         var encounterAiKnowledgeEvidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
         var lastEncounterAiKnowledge = new RuntimeKnowledgeSnapshot();
         BattleRewardResult? preparedBattleRewardPreview = null;
+        BattleRewardResult? appliedBattleReward = null;
+        int appliedBattleRewardLevelUpCount = 0;
         int cancelledBattleCommandSelections = 0;
         int preparedBattleEventCount = 0;
         var executedFieldActionIds = new List<ContentId>();
@@ -327,6 +336,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                     playerBattleKnowledge.ToSnapshot(),
                     lastEncounterAiKnowledge,
                     preparedBattleRewardPreview,
+                    appliedBattleReward,
+                    appliedBattleRewardLevelUpCount,
+                    wallet,
+                    sessionProgress,
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
                     inventory.Snapshot,
@@ -371,7 +384,13 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(roster, field, playerBattleKnowledge.ToSnapshot()),
+                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
+                            roster,
+                            field,
+                            playerBattleKnowledge.ToSnapshot(),
+                            inventory.Snapshot,
+                            wallet,
+                            sessionProgress),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -417,6 +436,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                             playerBattleKnowledge.ToSnapshot(),
                             lastEncounterAiKnowledge,
                             preparedBattleRewardPreview,
+                            appliedBattleReward,
+                            appliedBattleRewardLevelUpCount,
+                            wallet,
+                            sessionProgress,
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
                             inventory.Snapshot,
@@ -578,6 +601,28 @@ internal sealed class CleanTrainingAnnexPlayHost
                     encounterAiKnowledgeEvidence.AddRange(battle.EncounterAiKnowledgeEvidence);
                     lastEncounterAiKnowledge = battle.EncounterAiKnowledge;
                     preparedBattleRewardPreview = battle.RewardPreview;
+                    if (battle.RewardPreview is not null && appliedBattleReward is null)
+                    {
+                        TrainingAnnexBattleRewardApplication rewardApplication =
+                            await ApplyPreparedBattleRewardAsync(
+                                roster.Player,
+                                battle.RewardPreview,
+                                growthServices,
+                                economy,
+                                wallet,
+                                cancellationToken).ConfigureAwait(false);
+                        if (rewardApplication.Applied)
+                        {
+                            wallet = rewardApplication.Wallet;
+                            appliedBattleReward = battle.RewardPreview;
+                            appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
+                            growthApplied = true;
+                            levelUpCount += rewardApplication.Growth.LevelUps.Count;
+                            sessionProgress = RecordBattleRewardSessionProgress(
+                                sessionProgress,
+                                battle.RewardPreview);
+                        }
+                    }
                     cancelledBattleCommandSelections += battle.CancelledSelections;
                     preparedBattleEventCount += battle.EventCount;
                     break;
@@ -1072,6 +1117,10 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeKnowledgeSnapshot battleKnowledge,
         RuntimeKnowledgeSnapshot encounterAiKnowledge,
         BattleRewardResult? preparedBattleRewardPreview,
+        BattleRewardResult? appliedBattleReward,
+        int appliedBattleRewardLevelUpCount,
+        RuntimeWalletSnapshot wallet,
+        RuntimeSessionProgressSnapshot sessionProgress,
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
@@ -1124,6 +1173,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             battleKnowledge,
             encounterAiKnowledge,
             preparedBattleRewardPreview,
+            appliedBattleReward,
+            appliedBattleRewardLevelUpCount,
+            wallet,
+            sessionProgress,
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
             inventory,
@@ -1131,6 +1184,11 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancelledFieldTargetSelections,
             commands.ToArray());
     }
+
+    private sealed record TrainingAnnexBattleRewardApplication(
+        bool Applied,
+        LevelGrowthResult Growth,
+        RuntimeWalletSnapshot Wallet);
 
     private async ValueTask PublishRulesetDiagnosticsAsync(
         string category,
@@ -1229,6 +1287,82 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancellationToken).ConfigureAwait(false);
 
         return growth;
+    }
+
+    private async ValueTask<TrainingAnnexBattleRewardApplication> ApplyPreparedBattleRewardAsync(
+        TrainingAnnexRuntimeActor player,
+        BattleRewardResult reward,
+        GrowthRulesetServices growthServices,
+        IEconomyTransactionService economy,
+        RuntimeWalletSnapshot wallet,
+        CancellationToken cancellationToken)
+    {
+        RuntimeActorSnapshot before = player.RuntimeState.ToSnapshot();
+        LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
+            before.Progression,
+            before.Stats,
+            before.Identity.ActorKindId,
+            reward.TotalExperience,
+            _randomSource,
+            resources: before.Resources,
+            baseResourceValues: before.BaseResourceValues));
+        RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
+            player.RuntimeState,
+            growth);
+        if (!progressionMutation.Applied)
+        {
+            foreach (RuntimeMutationDiagnostic diagnostic in progressionMutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+        }
+
+        WalletTransactionResult walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
+        if (!walletMutation.Applied)
+        {
+            foreach (ResourceTransactionDiagnostic diagnostic in walletMutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}]: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+        }
+
+        RuntimeActorSnapshot after = progressionMutation.After;
+        await _eventSink.PublishAsync(
+            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalMacca} Macca.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Macca}->{walletMutation.After.Macca}.",
+            cancellationToken).ConfigureAwait(false);
+
+        return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After);
+    }
+
+    private static RuntimeSessionProgressSnapshot RecordBattleRewardSessionProgress(
+        RuntimeSessionProgressSnapshot before,
+        BattleRewardResult reward)
+    {
+        var counters = before.Counters.ToDictionary(pair => pair.Key, pair => pair.Value);
+        AddCounter(counters, ContentId.Parse("training_annex_victories"), 1);
+        AddCounter(counters, ContentId.Parse("training_annex_exp"), reward.TotalExperience);
+        AddCounter(counters, ContentId.Parse("training_annex_macca"), reward.TotalMacca);
+        return new RuntimeSessionProgressSnapshot(
+            before.MoonPhaseId,
+            before.ElapsedTicks,
+            counters,
+            before.Flags.Append(ContentId.Parse("ashling_drill_cleared")).Distinct());
+    }
+
+    private static void AddCounter(Dictionary<ContentId, long> counters, ContentId id, long value)
+    {
+        counters[id] = counters.GetValueOrDefault(id) + value;
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(

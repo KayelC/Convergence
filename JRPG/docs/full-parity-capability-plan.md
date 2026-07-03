@@ -499,7 +499,7 @@ Phase 2-11 result:
 - Annex Tonic reuses the reservation-backed `IItemActionInventory` path. Meaningful battle item execution commits one item; target/menu cancellation performs no assessment, reservation, turn consumption, or mutation.
 - Demo enemies use deterministic authored-skill selection for this pass: first executable battle skill, otherwise pass. No legacy `ActionProcessor`, `SkillData`, `ItemData`, effect string, or `Database` participates.
 - Persistent clean actor resources are synchronized before and after the battle so the session summary/save-facing state reflects battle damage, costs, healing, and defeat state.
-- This remains `parallel_partial`: ailment/passive lifecycle, battle knowledge persistence, AI/tactics policy, escape, swaps, and rewards remain later Phase 2 passes.
+- This remains `parallel_partial`: ailment/passive lifecycle, battle knowledge persistence, AI/tactics policy, escape, swaps, and reward application still remain later Phase 2 passes at this point in the history.
 
 ### 12. `typed_effects`
 
@@ -540,10 +540,10 @@ Clean console proof:
 Phase 2-13 result:
 
 - The Training Annex session binds `standard_damage` once through `RuntimeRulesetBindingResolver` and supplies the resulting `ProductionCombatRuleset` to damage, instant-death, ailment, chance, and power execution policies. Only deterministic target selection remains host-owned.
-- `standard_reward` binds to the same combat ruleset. A successful manual battle records a non-mutating reward preview; applying EXP and Macca remains Phase 2-19.
+- `standard_reward` binds to the same combat ruleset. A successful manual battle records a reward preview; Phase 2-19 later applies that same result to EXP, Macca, and session progress.
 - The clean battle summary records authored power/accuracy/critical mode beside the resolved hit, critical, affinity, value, effect outcome, and Press Turn outcome. Tests prove ruleset-bound Weak damage, misses, physical criticals, and magical critical rejection.
 - Missing or incompatible combat/reward rulesets stop startup with typed binding diagnostics. There is no fallback to the temporary demo policies or legacy `CombatMath`/`DamageHandler`.
-- This remains `parallel_partial`: the original clean battle now owns its combat policy path, but lifecycle-owned status interactions and reward application remain later Phase 2 passes.
+- This remains `parallel_partial`: the original clean battle now owns its combat policy path, but lifecycle-owned status interactions and reward application still remain later Phase 2 passes at this point in the history.
 
 ### 14. `press_turn`
 
@@ -565,7 +565,7 @@ Phase 2-14 result:
 - The prepared Ashling battle passes the bound `PressTurnEngine` factory into `BattleEncounterRunner`; the host no longer assumes a hard-coded turn engine for that clean path.
 - The manual battle summary records host-side Press Turn evidence for each committed action: actor, action, before icons, turn-consumption kind, resolved Press Turn outcome, and after icons.
 - The clean console output presents current and updated icon counts while suppressing unrelated framework structural events.
-- This remains `parallel_partial`: clean original-content battles now expose and consume Press Turns, but lifecycle/passives, battle knowledge persistence, richer AI/tactics, escape/swaps, and reward application remain later Phase 2 passes.
+- This remains `parallel_partial`: clean original-content battles now expose and consume Press Turns, but lifecycle/passives, battle knowledge persistence, richer AI/tactics, escape/swaps, and reward application still remain later Phase 2 passes at this point in the history.
 - Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786` with no skips; framework build remained `0` warnings; solution build remained at `98` legacy warnings; clean battle, field, save, and Training Annex demos passed; `Data/Jsons` was unchanged.
 
 ### 15. `ailment_lifecycle`
@@ -683,6 +683,14 @@ Full parity target:
 Clean console proof:
 
 - Training Annex victory applies nonzero rewards and records session progress.
+
+Phase 2-19 result:
+
+- The manual Training Annex battle still receives reward totals from the catalog-bound `standard_reward` service.
+- On player victory, the clean play host now commits those totals to runtime state: EXP flows through `standard_growth`, Macca flows through `EconomyTransactionService`, and session counters/flags record the cleared Ashling drill.
+- The post-battle save-facing snapshot includes live inventory, wallet, session progress, field state, and persistent player battle knowledge.
+- Defeat, cancellation, and non-victory outcomes do not apply rewards.
+- This remains `parallel_partial`: rewards are now clean for the Training Annex original-content loop, but legacy battle reward consumers and broader production reward content remain protected.
 
 ### 20. `persistence_snapshots`
 

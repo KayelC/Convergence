@@ -433,7 +433,7 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - Enemy behavior is deliberately deterministic for this slice: first executable authored battle skill, otherwise pass.
 - Annex Tonic uses the same reservation-backed host inventory path as field items, and Back/cancel paths perform no mutation.
 - The host synchronizes clean runtime actor resources before and after battle so the session summary reflects battle damage, skill costs, item healing, and inventory consumption.
-- This is not the final battle loop: lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and reward application remain later iterations.
+- This is not the final battle loop: lifecycle/passives, battle knowledge, AI/tactics, escape, swaps, and reward application still remain later iterations at this point in the history.
 
 ### Phase 2-12 Result
 
@@ -447,7 +447,7 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - The manual and noninteractive Training Annex battle paths now bind the catalog `standard_damage` record to `ProductionCombatRuleset`; they no longer use the temporary demo damage, instant-death, ailment, chance, or power policies.
 - The same combat ruleset instance resolves damage, accuracy, criticals, affinities, ailments, instant death, chance checks, power amounts, and the `standard_reward` preview.
 - Combat-resolution evidence exposes authored power/accuracy/critical mode and resolved hit, critical, affinity, value, effect, and Press Turn outcomes for host presentation and tests.
-- Victory calculates but does not apply a reward preview. Reward mutation remains Iteration 6 / Phase 2-19.
+- Victory calculates a reward preview. Phase 2-19 later turned that preview into committed runtime progression, wallet, and session state.
 - Invalid combat or reward binding stops the session without legacy or demo fallback. No Training Annex JSON changed.
 
 ### Phase 2-14 Result
@@ -517,6 +517,8 @@ Later, after clean ownership/recruitment/fusion/Compendium flows are approved, t
 
 ## Iteration 6: Rewards, Progression, And Session State
 
+Status: Phase 2-19 implemented for the Training Annex original-content loop.
+
 ### Goal
 
 Make the loop feel complete after battle.
@@ -549,6 +551,14 @@ Make the loop feel complete after battle.
 - EXP changes session/progression state;
 - defeat policy is deterministic;
 - post-battle snapshot validates.
+
+### Phase 2-19 Result
+
+- The manual Training Annex battle applies the already-bound `standard_reward` result after player victory.
+- EXP is committed through framework growth policies, Macca is committed through framework economy transactions, and the session progress snapshot records victory, EXP, Macca, and the cleared Ashling drill flag.
+- The summary exposes both the previewed reward and the applied reward so tests can prove the framework result was not merely printed.
+- Post-battle save validation receives live inventory, wallet, session progress, field state, and persistent player battle knowledge.
+- Defeat, cancellation, and non-victory outcomes leave rewards unapplied.
 
 ## Iteration 7: Save Policy And Suspend Save
 

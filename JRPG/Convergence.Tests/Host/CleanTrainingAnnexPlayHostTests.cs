@@ -96,6 +96,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.LevelUpCount);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
+        Assert.Null(summary.PreparedBattleRewardPreview);
+        Assert.Null(summary.AppliedBattleReward);
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Empty(summary.SessionProgress.Counters);
+        Assert.Empty(summary.SessionProgress.Flags);
         Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
         Assert.Equal(
             [Qualified("staging_area"), Qualified("training_annex_entrance"), Qualified("staging_area")],
@@ -382,7 +387,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.NotNull(summary.PreparedBattleRewardPreview);
         Assert.Equal(1, summary.PreparedBattleRewardPreview!.TotalExperience);
         Assert.Equal(14, summary.PreparedBattleRewardPreview.TotalMacca);
-        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.NotNull(summary.AppliedBattleReward);
+        Assert.Equal(1, summary.AppliedBattleReward!.TotalExperience);
+        Assert.Equal(14, summary.AppliedBattleReward.TotalMacca);
+        Assert.Equal(0, summary.AppliedBattleRewardLevelUpCount);
+        Assert.True(summary.GrowthApplied);
+        Assert.Equal(0, summary.LevelUpCount);
+        Assert.Equal(1, summary.PlayerProgression.Experience);
+        Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
+        Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_exp")]);
+        Assert.Equal(14, summary.SessionProgress.Counters[ContentId.Parse("training_annex_macca")]);
+        Assert.Contains(ContentId.Parse("ashling_drill_cleared"), summary.SessionProgress.Flags);
 
         string text = output.ToString();
         Assert.Contains("Clean battle started: Ashling Drill.", text, StringComparison.Ordinal);
@@ -392,6 +409,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Battle knowledge updated: 1 discovery.", text, StringComparison.Ordinal);
         Assert.Contains("Battle action executed: Ashling used Ash Spark.", text, StringComparison.Ordinal);
         Assert.Contains("Clean battle ended: Victory; winner player_team.", text, StringComparison.Ordinal);
+        Assert.Contains("Battle rewards applied: +1 EXP, +14 Macca.", text, StringComparison.Ordinal);
+        Assert.Contains("Reward progression: Echo Adept level 3->3; exp 0->1; lifetime 0->1; wallet 0->14.", text, StringComparison.Ordinal);
         Assert.Equal("Start Prepared Battle", io.Menus[3].Options[10]);
         Assert.Equal("Prepared Battle (Resolved)", io.Menus[^1].Options[10]);
         Assert.True(io.Menus[^1].DisabledOptions[10]);
@@ -411,6 +430,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.True(summary.PreparedBattleStarted);
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
+        Assert.Null(summary.AppliedBattleReward);
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Empty(summary.SessionProgress.Counters);
         Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
         Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
         Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>

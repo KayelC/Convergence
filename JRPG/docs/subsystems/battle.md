@@ -92,6 +92,7 @@ Each phase:
 - Negotiation still uses `Database.NegotiationQuestions`; `NegotiationEngine` maps those legacy records into framework prompts and applies returned costs or familiar gifts.
 - Rewards use enemy levels/stats through `LegacyBattleRewardAdapter`, which delegates to `BattleRewardService` and `ProductionCombatRuleset`.
 - O7 presentation records wrap those negotiation and reward results without changing `questions.json`, reward formulas, recruitment validation, compendium registration, or visible console text.
+- The original-content Training Annex clean path does not use `Database` for rewards. Its manual battle applies the bound `standard_reward` result through framework progression and economy services, then carries the updated wallet/session state into save validation.
 
 ## Extension Points
 
@@ -109,3 +110,4 @@ Each phase:
 - Track K adds framework negotiation/recruitment/reward tests plus console characterization for recruitment and victory reward application. Exhaustive live console battle traversal remains manual and later-track work.
 - Track O6 adds event-presentation tests for deterministic event mapping and visible-output preservation. It does not migrate legacy skill/item execution, AI policy, negotiation, rewards, or production battle content.
 - Track O7 adds negotiation/reward presentation tests for prompt mapping, event color/delay mapping, recruitment outcome display, and victory reward display. It does not migrate authored negotiation content or Cathedral compendium presentation.
+- Phase 2-19 adds Training Annex clean reward application tests. This proves the original clean loop can award EXP/Macca, but it does not remove the legacy reward adapter or switch prototype content to clean catalog authority.
