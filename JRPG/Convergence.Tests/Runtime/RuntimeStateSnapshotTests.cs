@@ -42,21 +42,28 @@ public sealed class RuntimeStateSnapshotTests
             new(Id("sp"), 18, 44)
         ];
         List<ContentId> learnedSkills = [Id("agi"), Id("ice_boost")];
+        List<ContentId> capabilityIds = [Id("analyze"), Id("switch_form")];
         List<RuntimeActorReferenceSnapshot> personaStock =
         [
             new(RuntimeInstanceId.Parse("persona:orpheus_1"), Id("convergence.demo:orpheus"), "Orpheus")
         ];
 
-        RuntimeActorSnapshot snapshot = CreateCompleteSnapshot(resources, learnedSkills, personaStock);
+        RuntimeActorSnapshot snapshot = CreateCompleteSnapshot(
+            resources,
+            learnedSkills,
+            personaStock,
+            capabilityIds);
 
         resources.Add(new RuntimeResourceSnapshot(Id("extra"), 1, 1));
         learnedSkills.Add(Id("late_mutation"));
+        capabilityIds.Add(Id("late_capability"));
         personaStock.Add(new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("persona:late_1"),
             Id("convergence.demo:late"),
             "Late"));
 
-        RuntimeActorSnapshot roundTrip = Restore(snapshot).ToSnapshot();
+        RuntimeActorState restoredState = Restore(snapshot);
+        RuntimeActorSnapshot roundTrip = restoredState.ToSnapshot();
 
         Assert.Equal(RuntimeInstanceId.Parse("actor:hero_0001"), roundTrip.Identity.InstanceId);
         Assert.Equal(Id("convergence.demo:hero"), roundTrip.Identity.EntityDefinitionId);
@@ -81,6 +88,9 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(13, roundTrip.Stats.EffectiveStats[Id("strength")]);
         Assert.Equal([Id("agi"), Id("ice_boost")], roundTrip.Skills.LearnedSkillIds);
         Assert.Equal([Id("agi")], roundTrip.Skills.EquippedSkillIds);
+        Assert.Equal([Id("analyze"), Id("switch_form")], roundTrip.CapabilityIds);
+        Assert.True(restoredState.HasCapability(Id("analyze")));
+        Assert.False(restoredState.HasCapability(Id("late_capability")));
         Assert.Equal(RuntimeInstanceId.Parse("persona:orpheus_1"), roundTrip.Forms.ActiveForm!.InstanceId);
         Assert.Single(roundTrip.Forms.PersonaStock);
         Assert.Single(roundTrip.Forms.DemonStock);
@@ -99,6 +109,11 @@ public sealed class RuntimeStateSnapshotTests
         Assert.True(roundTrip.BattleStatus.IsGuarding);
         Assert.Equal([AnalysisLayer.Stats, AnalysisLayer.Affinities], Assert.Single(roundTrip.BattleStatus.Analysis).Layers);
         Assert.Equal(1, Assert.Single(roundTrip.BattleActivations.PassiveActivations).ActivationCount);
+        RuntimePassiveSkillStateSnapshot passiveState =
+            Assert.Single(roundTrip.BattleActivations.PassiveSkillStates);
+        Assert.Equal(Id("endure"), passiveState.SkillId);
+        Assert.False(passiveState.IsEnabled);
+        Assert.False(Assert.Single(restoredState.Passives.Entries).IsEnabled);
     }
 
     [Fact]
@@ -132,6 +147,25 @@ public sealed class RuntimeStateSnapshotTests
         Assert.False(missing.Applied);
         Assert.Equal(RuntimeMutationErrorCode.MissingResource, Assert.Single(missing.Diagnostics).Code);
         Assert.Equal("$.resources", missing.Diagnostics[0].Path);
+    }
+
+    [Fact]
+    public void RuntimeResourceTransactions_ApplyRecalculationReplacesCurrentAndMaximumValues()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        var recalculation = new ResourceRecalculationResult(
+        [
+            new RuntimeResourceSnapshot(Id("hp"), 72, 150),
+            new RuntimeResourceSnapshot(Id("sp"), 18, 60)
+        ]);
+
+        RuntimeMutationResult result =
+            new RuntimeResourceTransactionService().ApplyRecalculation(actor, recalculation);
+
+        Assert.True(result.Applied);
+        Assert.Equal(120, result.Before.Resources.Single(resource => resource.ResourceId == Id("hp")).Maximum);
+        Assert.Equal(150, result.After.Resources.Single(resource => resource.ResourceId == Id("hp")).Maximum);
+        Assert.Equal(60, actor.GetRequiredResource(Id("sp")).Maximum);
     }
 
     [Fact]
@@ -252,7 +286,8 @@ public sealed class RuntimeStateSnapshotTests
     private static RuntimeActorSnapshot CreateCompleteSnapshot(
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         IEnumerable<ContentId>? learnedSkillIds = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? personaStock = null)
+        IEnumerable<RuntimeActorReferenceSnapshot>? personaStock = null,
+        IEnumerable<ContentId>? capabilityIds = null)
     {
         RuntimeActorReferenceSnapshot activeForm = new(
             RuntimeInstanceId.Parse("persona:orpheus_1"),
@@ -310,11 +345,13 @@ public sealed class RuntimeStateSnapshotTests
                         [AnalysisLayer.Stats, AnalysisLayer.Affinities])
                 ]),
             new RuntimeBattleActivationSnapshot(
-            [
-                new RuntimePassiveActivationSnapshot(Id("endure"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)
-            ]),
+                [
+                    new RuntimePassiveActivationSnapshot(Id("endure"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)
+                ],
+                [new RuntimePassiveSkillStateSnapshot(Id("endure"), IsEnabled: false)]),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 120)],
-            Id("hp"));
+            Id("hp"),
+            capabilityIds ?? [Id("analyze"), Id("switch_form")]);
     }
 
     private static RuntimeActorState Restore(RuntimeActorSnapshot snapshot) =>

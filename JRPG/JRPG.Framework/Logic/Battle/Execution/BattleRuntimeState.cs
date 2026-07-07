@@ -156,7 +156,7 @@ public sealed class RuntimeActorState
                 resource.Maximum)),
             snapshot.Stats.EffectiveStats,
             snapshot.Skills.LearnedSkillIds,
-            capabilityIds,
+            capabilityIds ?? snapshot.CapabilityIds,
             passiveSkills,
             snapshot.Deployment.IsActive,
             snapshot.Identity,
@@ -518,9 +518,12 @@ public sealed class RuntimeActorState
             Forms,
             Equipment,
             CaptureBattleStatus(),
-            new RuntimeBattleActivationSnapshot(Passives.CaptureActivations()),
+            new RuntimeBattleActivationSnapshot(
+                Passives.CaptureActivations(),
+                Passives.CaptureStates()),
             _baseResourceValues,
-            VitalResourceId);
+            VitalResourceId,
+            _capabilityIds.OrderBy(id => id.ToString(), StringComparer.Ordinal));
 
     internal void ApplyProgression(
         RuntimeProgressionSnapshot progression,
@@ -617,6 +620,7 @@ public sealed class RuntimeActorState
     internal void RestoreBattleActivations(RuntimeBattleActivationSnapshot activations)
     {
         ArgumentNullException.ThrowIfNull(activations);
+        Passives.RestoreStates(activations.PassiveSkillStates);
         Passives.RestoreActivations(activations.PassiveActivations);
     }
 

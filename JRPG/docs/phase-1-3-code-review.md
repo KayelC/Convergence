@@ -1,6 +1,6 @@
 # Phase 1-3 Code Review And Forward Direction
 
-> **Status: Active implementation audit with CodeReview-1 resolved.** This report reviews the code as it exists on `track-12-recovery` on 2026-07-03. It is derived from source, tests, builds, and executable demos. The original finding remains below as audit history; its resolution is recorded immediately after it. This document does not authorize legacy removal.
+> **Status: Active implementation audit; CodeReview-1 is complete and ready as of 2026-07-07.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. Separate target-selection, typed-event, and restore-hardening findings are still open. This document does not authorize legacy removal.
 
 ## Executive Verdict
 
@@ -16,14 +16,14 @@ The framework boundary is the strongest part of the implementation:
 - Rules and state are generally expressed through typed definitions, commands, results, policies, and snapshots.
 - Randomness, content text, commands, and event output are injectable.
 
-The clean path is nevertheless still a proof harness rather than a production runtime. Four issues must be corrected before Phase 4 should deepen the clean consumer:
+The clean path is nevertheless still a proof harness rather than a production runtime. The original review identified four high-priority issues before Phase 4:
 
-1. The clean host maintains two mutable actor-state representations and manually synchronizes only parts of them.
+1. The clean host maintained two mutable actor-state representations and manually synchronized only parts of them. **Resolved by CodeReview-1.**
 2. The battle target menu cannot distinguish between multiple actors and always selects the first eligible target.
 3. Phase 3 restore matches actors by runtime ID without confirming that the saved entity is the actor being restored.
-4. The resource recalculation command calculates a result but does not apply that recalculated result to runtime state.
+4. The resource recalculation command calculated a result but did not apply that recalculated result to runtime state. **Resolved by the CodeReview-1 closure.**
 
-The correct next move is a short stabilization pass for these findings, followed by the existing Phase 4 capability order. Starting more feature work before resolving state authority would make later inventory, equipment, party, and persistence work harder to trust.
+CodeReview-1 is now ready: one actor state is authoritative, its complete mutable state round-trips, and recalculation commits to that state. The correct next move remains the existing stabilization order: dynamic command identity and typed event metadata, then Phase 3 restore hardening, before Phase 4 deepens the clean consumer.
 
 ## Audit Scope
 
@@ -248,18 +248,19 @@ Choose one mutable runtime state authority. Catalog actor data should be immutab
 
 #### CodeReview-1 resolution
 
-Resolved on 2026-07-03:
+Initial consolidation completed on 2026-07-03; snapshot and recalculation closure completed on 2026-07-07:
 
-- `RuntimeActorState` is now the sole mutable clean actor representation. It owns identity, ownership, deployment, progression, current and maximum resources, base resource values, base/effective stats, skills, forms, equipment, defenses, statuses, analysis, and passive activation counts.
+- `RuntimeActorState` is now the sole mutable clean actor representation. It owns identity, ownership, deployment, progression, current and maximum resources, base resource values, base/effective stats, skills, capabilities, forms, equipment, defenses, statuses, analysis, passive enablement, and passive activation counts.
 - `CatalogBattleActor` now contributes immutable entity/loadout metadata and exposes that one state. The duplicate `RuntimeActorStateSet` and `BattleActorState` types were removed.
 - Training Annex field actions, battles, resource transactions, growth transactions, summaries, saves, and restore now read or mutate `CatalogBattleActor.State` directly. The HP/SP synchronization loops were deleted.
 - Actor and target identities now use `RuntimeInstanceId` throughout clean action, effect, lifecycle, encounter, and event contracts. `ContentId` remains the identity type for authored content and host vocabulary.
-- Save contract version `3` records the vital resource explicitly and preserves typed duration variants, affinity overrides, analysis, and passive activation counts. Catalog restore rebuilds a complete actor from the snapshot and catalog definitions without rerunning creation-time initialization policy.
+- Save contract version `4` records the vital resource explicitly and preserves typed duration variants, affinity overrides, analysis, capability IDs, passive enablement, and passive activation counts. Catalog restore rebuilds a complete actor from the snapshot and catalog definitions without rerunning creation-time initialization policy.
+- Resource recalculation now commits the policy result through `RuntimeResourceTransactionService.ApplyRecalculation` before the host reports success. Its regression test changes maximum values, so merely printing the policy result can no longer pass.
 - Regression tests prove resource, growth, and lifecycle services mutate one object; complete snapshot restore preserves non-resource state; and restore does not silently reapply initialization defaults.
 
-This resolves the first stabilization item. It does not resolve the separate target-selection, restore identity-validation, or recalculation findings below.
+This resolves the first stabilization item and its recalculation closure. It does not resolve the separate target-selection, typed Press Turn event, or restore identity-validation findings below.
 
-CodeReview-1 verification: 809 tests passed with no failures or skips; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v3, and Training Annex demos all exited successfully; framework boundary and obsolete-state searches were empty; and `Data/Jsons` was unchanged.
+CodeReview-1 final verification: 810 tests passed with no failures or skips; focused closure coverage passed 64 tests; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v4, and Training Annex demos all exited successfully. The closure changes no content files.
 
 ### High: the battle target menu always returns the first target
 
@@ -291,7 +292,7 @@ A structurally valid record can assign an Ashling entity snapshot to the `echo_a
 
 Host restore must verify instance ID, entity definition ID, actor kind, and any host-required roster role before mutation. Prefer a framework restore plan that validates the complete mapping first and applies it atomically second.
 
-### High: resource recalculation is reported as applied without applying the recalculation
+### High (resolved by CodeReview-1 closure): resource recalculation was reported as applied without applying the recalculation
 
 **Evidence**
 
@@ -305,6 +306,10 @@ The current test passes because the recalculated maximum happens to equal the ex
 **Required correction**
 
 Add a resource-recalculation transaction that replaces the resource snapshot after validation. Test a case where the maximum actually changes.
+
+**Resolution**
+
+`RecalculatePlayerResourcesAsync` now applies the returned `ResourceRecalculationResult` to the canonical actor through `RuntimeResourceTransactionService.ApplyRecalculation` and reports success only after that mutation succeeds. The regression test replaces HP and SP maxima with different values and asserts the live actor changed, removing the former false-positive condition.
 
 ### Medium: Press Turn presentation parses framework message text
 
@@ -502,7 +507,7 @@ For any concept, there must be one authoritative typed state or rule result. Hos
 
 Do not create another roadmap or lettered track. Use the existing phase plan and insert one stabilization checkpoint before Phase 4:
 
-1. **Unify clean actor state authority. Completed by CodeReview-1.**
+1. **Unify clean actor state authority. Completed and ready after the CodeReview-1 closure.**
    - Decide the canonical actor runtime representation.
    - Remove current-only copy loops.
    - Prove growth, battle, field use, and restore share one state.

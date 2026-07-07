@@ -21,6 +21,10 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(snapshot.ContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.FrameworkVersion, restored.FrameworkVersion);
         Assert.Equal(snapshot.Actors.Select(actor => actor.Identity.InstanceId), restored.Actors.Select(actor => actor.Identity.InstanceId));
+        Assert.Equal(snapshot.Actors[0].CapabilityIds, restored.Actors[0].CapabilityIds);
+        Assert.Equal(
+            snapshot.Actors[0].BattleActivations.PassiveSkillStates,
+            restored.Actors[0].BattleActivations.PassiveSkillStates);
         Assert.Equal(snapshot.PartyStock.ActiveParty.Select(actor => actor.InstanceId), restored.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             snapshot.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
@@ -81,9 +85,16 @@ public sealed class CleanSaveDemoHostTests
                         RuntimeInstanceId.Parse("enemy_1"),
                         [AnalysisLayer.Affinities])
                 ]),
-            original.BattleActivations,
+            new RuntimeBattleActivationSnapshot(
+                passiveSkillStates:
+                [
+                    new RuntimePassiveSkillStateSnapshot(
+                        ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample"),
+                        IsEnabled: false)
+                ]),
             original.BaseResourceValues,
-            original.VitalResourceId);
+            original.VitalResourceId,
+            [ContentId.Parse("analyze"), ContentId.Parse("switch_form")]);
         RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(actors: [actor]);
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(CleanSaveJsonCodec.Serialize(snapshot));
@@ -95,6 +106,10 @@ public sealed class CleanSaveDemoHostTests
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
         Assert.True(restoredActor.BattleStatus.IsGuarding);
         Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);
+        Assert.Equal(
+            [ContentId.Parse("analyze"), ContentId.Parse("switch_form")],
+            restoredActor.CapabilityIds);
+        Assert.False(Assert.Single(restoredActor.BattleActivations.PassiveSkillStates).IsEnabled);
     }
 
     [Fact]
@@ -105,7 +120,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v3", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v4", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);

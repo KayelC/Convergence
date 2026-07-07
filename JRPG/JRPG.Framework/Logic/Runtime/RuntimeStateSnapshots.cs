@@ -409,14 +409,20 @@ public sealed record RuntimePassiveActivationSnapshot
     public int ActivationCount { get; }
 }
 
+public sealed record RuntimePassiveSkillStateSnapshot(ContentId SkillId, bool IsEnabled);
+
 public sealed record RuntimeBattleActivationSnapshot
 {
-    public RuntimeBattleActivationSnapshot(IEnumerable<RuntimePassiveActivationSnapshot>? passiveActivations = null)
+    public RuntimeBattleActivationSnapshot(
+        IEnumerable<RuntimePassiveActivationSnapshot>? passiveActivations = null,
+        IEnumerable<RuntimePassiveSkillStateSnapshot>? passiveSkillStates = null)
     {
         PassiveActivations = RuntimeSnapshotCollections.List(passiveActivations);
+        PassiveSkillStates = RuntimeSnapshotCollections.List(passiveSkillStates);
     }
 
     public IReadOnlyList<RuntimePassiveActivationSnapshot> PassiveActivations { get; }
+    public IReadOnlyList<RuntimePassiveSkillStateSnapshot> PassiveSkillStates { get; }
 }
 
 public sealed record RuntimeActorSnapshot
@@ -434,7 +440,8 @@ public sealed record RuntimeActorSnapshot
         RuntimeBattleStatusSnapshot battleStatus,
         RuntimeBattleActivationSnapshot battleActivations,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues,
-        ContentId vitalResourceId)
+        ContentId vitalResourceId,
+        IEnumerable<ContentId>? capabilityIds = null)
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         Ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
@@ -448,6 +455,7 @@ public sealed record RuntimeActorSnapshot
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         BattleStatus = battleStatus ?? throw new ArgumentNullException(nameof(battleStatus));
         BattleActivations = battleActivations ?? throw new ArgumentNullException(nameof(battleActivations));
+        CapabilityIds = RuntimeSnapshotCollections.List(capabilityIds);
         VitalResourceId = vitalResourceId;
         if (!Resources.Any(resource => resource.ResourceId == vitalResourceId))
         {
@@ -467,6 +475,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeBattleStatusSnapshot BattleStatus { get; }
     public RuntimeBattleActivationSnapshot BattleActivations { get; }
+    public IReadOnlyList<ContentId> CapabilityIds { get; }
     public ContentId VitalResourceId { get; }
 
     public RuntimeActorSnapshot WithResources(IEnumerable<RuntimeResourceSnapshot> resources) =>
@@ -483,7 +492,8 @@ public sealed record RuntimeActorSnapshot
             BattleStatus,
             BattleActivations,
             BaseResourceValues,
-            VitalResourceId);
+            VitalResourceId,
+            CapabilityIds);
 
     public RuntimeActorSnapshot WithProgression(
         RuntimeProgressionSnapshot progression,
@@ -503,7 +513,8 @@ public sealed record RuntimeActorSnapshot
             BattleStatus,
             BattleActivations,
             baseResourceValues ?? BaseResourceValues,
-            VitalResourceId);
+            VitalResourceId,
+            CapabilityIds);
 }
 
 public sealed record RuntimeMutationDiagnostic(

@@ -1954,7 +1954,24 @@ internal sealed class CleanTrainingAnnexPlayHost
                 mutation.After.BaseResourceValues,
                 mutation.After.Stats.EffectiveStats,
                 ResourceCurrentAdjustmentMode.PreserveCurrent));
-        RuntimeResourceSnapshot afterHp = recalculated.GetRequired(TrainingAnnexHostSupport.Hp);
+        RuntimeMutationResult recalculationMutation =
+            new RuntimeResourceTransactionService().ApplyRecalculation(
+                player.Actor.State,
+                recalculated);
+        if (!recalculationMutation.Applied)
+        {
+            foreach (RuntimeMutationDiagnostic diagnostic in recalculationMutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return false;
+        }
+
+        RuntimeResourceSnapshot afterHp = recalculationMutation.After.Resources.Single(resource =>
+            resource.ResourceId == TrainingAnnexHostSupport.Hp);
         await _eventSink.PublishAsync(
             $"Resource recalculation: {player.Actor.Entity.DisplayName} hp {beforeHp.Current}/{beforeHp.Maximum} -> {afterHp.Current}/{afterHp.Maximum}.",
             cancellationToken).ConfigureAwait(false);

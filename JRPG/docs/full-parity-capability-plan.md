@@ -942,8 +942,11 @@ The first post-Phase-3 stabilization pass establishes one clean actor state auth
 - `CatalogBattleActor` supplies immutable definition/loadout metadata around that state.
 - Growth, resources, field actions, battles, snapshots, and restore use the same object.
 - Runtime actor/target references use `RuntimeInstanceId`, while content references remain `ContentId`.
-- Save contract version `3` preserves the vital resource, exact duration modes, affinity overrides, analysis, and passive activations.
+- Save contract version `4` preserves the vital resource, exact duration modes, affinity overrides, analysis, capability IDs, passive enabled/disabled state, and passive activations.
 - Current-only copy loops and the duplicate `RuntimeActorStateSet`/`BattleActorState` types are removed.
+- Resource recalculation applies its policy result to that canonical actor before reporting success.
+
+**Readiness:** ready. Final closure verification passed 810 tests with no failures or skips; the framework build has 0 warnings. The next work is the already-reviewed dynamic command identity and typed event metadata correction, not another actor-state pass.
 
 This corrects architectural integrity; it does not by itself promote a protected legacy capability to `clean_parity` or authorize removal.
 

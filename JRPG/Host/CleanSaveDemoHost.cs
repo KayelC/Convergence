@@ -409,6 +409,7 @@ internal static class CleanSaveJsonCodec
             actor.Stats.EffectiveStats.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
             actor.Skills.LearnedSkillIds.Select(id => id.ToString()).ToArray(),
             actor.Skills.EquippedSkillIds.Select(id => id.ToString()).ToArray(),
+            actor.CapabilityIds.Select(id => id.ToString()).ToArray(),
             actor.Forms.ActiveForm is null ? null : ToDto(actor.Forms.ActiveForm),
             actor.Forms.PersonaStock.Select(ToDto).ToArray(),
             actor.Forms.DemonStock.Select(ToDto).ToArray(),
@@ -421,6 +422,9 @@ internal static class CleanSaveJsonCodec
             actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(affinity.Element.ToString(), affinity.Affinity.ToString(), ToDto(affinity.Duration)!)).ToArray(),
             actor.BattleStatus.IsGuarding,
             actor.BattleStatus.Analysis.Select(analysis => new HostAnalysisDto(analysis.TargetInstanceId.ToString(), analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
+            actor.BattleActivations.PassiveSkillStates.Select(passive => new HostPassiveSkillStateDto(
+                passive.SkillId.ToString(),
+                passive.IsEnabled)).ToArray(),
             actor.BattleActivations.PassiveActivations.Select(passive => new HostPassiveActivationDto(
                 passive.SkillId.ToString(),
                 passive.EventId.ToString(),
@@ -455,13 +459,18 @@ internal static class CleanSaveJsonCodec
                 dto.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
                     Instance(analysis.TargetInstanceId),
                     analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer))))),
-            new RuntimeBattleActivationSnapshot(dto.PassiveActivations.Select(passive => new RuntimePassiveActivationSnapshot(
-                Id(passive.SkillId),
-                Id(passive.EventId),
-                passive.TriggerIndex,
-                passive.ActivationCount))),
+            new RuntimeBattleActivationSnapshot(
+                (dto.PassiveActivations ?? []).Select(passive => new RuntimePassiveActivationSnapshot(
+                    Id(passive.SkillId),
+                    Id(passive.EventId),
+                    passive.TriggerIndex,
+                    passive.ActivationCount)),
+                (dto.PassiveSkillStates ?? []).Select(passive => new RuntimePassiveSkillStateSnapshot(
+                    Id(passive.SkillId),
+                    passive.IsEnabled))),
             ToDecimalDictionary(dto.BaseResourceValues),
-            Id(dto.VitalResourceId));
+            Id(dto.VitalResourceId),
+            (dto.CapabilityIds ?? []).Select(Id));
 
     private static HostReferenceDto ToDto(RuntimeActorReferenceSnapshot reference) =>
         new(reference.InstanceId.ToString(), reference.EntityDefinitionId.ToString(), reference.DisplayName);
@@ -689,6 +698,7 @@ internal static class CleanSaveJsonCodec
         Dictionary<string, decimal> EffectiveStats,
         string[] LearnedSkillIds,
         string[] EquippedSkillIds,
+        string[]? CapabilityIds,
         HostReferenceDto? ActiveForm,
         HostReferenceDto[] PersonaStock,
         HostReferenceDto[] DemonStock,
@@ -701,7 +711,8 @@ internal static class CleanSaveJsonCodec
         HostAffinityOverrideDto[] AffinityOverrides,
         bool IsGuarding,
         HostAnalysisDto[] Analysis,
-        HostPassiveActivationDto[] PassiveActivations);
+        HostPassiveSkillStateDto[]? PassiveSkillStates,
+        HostPassiveActivationDto[]? PassiveActivations);
 
     private sealed record HostResourceDto(string ResourceId, decimal Current, decimal Maximum);
     private sealed record HostReferenceDto(string InstanceId, string EntityDefinitionId, string DisplayName);
@@ -717,6 +728,7 @@ internal static class CleanSaveJsonCodec
         bool? SuspendWhileReserve = null,
         string? PhaseId = null);
     private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
+    private sealed record HostPassiveSkillStateDto(string SkillId, bool IsEnabled);
     private sealed record HostPassiveActivationDto(string SkillId, string EventId, int TriggerIndex, int ActivationCount);
     private sealed record HostPartyStockDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveForm, HostReferenceDto[] PersonaStock, HostReferenceDto[] DemonStock, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);

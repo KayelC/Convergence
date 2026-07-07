@@ -64,6 +64,11 @@ public sealed class BattlePassiveCollection
 
     public void ResetBattleActivations() => _activationCounts.Clear();
 
+    internal IReadOnlyList<RuntimePassiveSkillStateSnapshot> CaptureStates() =>
+        Array.AsReadOnly(_entries
+            .Select(entry => new RuntimePassiveSkillStateSnapshot(entry.Skill.Id, entry.IsEnabled))
+            .ToArray());
+
     internal IReadOnlyList<RuntimePassiveActivationSnapshot> CaptureActivations() =>
         Array.AsReadOnly(_activationCounts
             .OrderBy(pair => pair.Key.SkillId.ToString(), StringComparer.Ordinal)
@@ -75,6 +80,28 @@ public sealed class BattlePassiveCollection
                 pair.Key.TriggerIndex,
                 pair.Value))
             .ToArray());
+
+    internal void RestoreStates(IEnumerable<RuntimePassiveSkillStateSnapshot> states)
+    {
+        var restoredSkillIds = new HashSet<ContentId>();
+        foreach (RuntimePassiveSkillStateSnapshot state in
+                 states ?? throw new ArgumentNullException(nameof(states)))
+        {
+            if (!restoredSkillIds.Add(state.SkillId))
+            {
+                throw new ArgumentException(
+                    $"Passive state contains duplicate skill '{state.SkillId}'.",
+                    nameof(states));
+            }
+
+            if (!SetEnabled(state.SkillId, state.IsEnabled))
+            {
+                throw new ArgumentException(
+                    $"Passive state references unloaded skill '{state.SkillId}'.",
+                    nameof(states));
+            }
+        }
+    }
 
     internal void RestoreActivations(IEnumerable<RuntimePassiveActivationSnapshot> activations)
     {
