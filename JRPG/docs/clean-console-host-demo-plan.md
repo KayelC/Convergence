@@ -396,7 +396,7 @@ Let the player use clean items or field actions through the framework.
 
 ## Iteration 5: Manual Clean Battle Loop
 
-Status: Phase 2-13 implemented through the current manual battle boundary.
+Status: Phases 2-11 through 2-19 are implemented; CodeReview-1 and CodeReview-2 stabilization are complete. Phase 3 restore hardening is next.
 
 ### Goal
 
@@ -458,6 +458,14 @@ Replace the Training Annex automated battle with a player-driven clean battle lo
 - The clean console host prints current icons before player command selection and updated icons after committed turns. This is presentation only; framework `PressTurnEngine` and `BattleEncounterRunner` still own the rules.
 - No Training Annex JSON changed.
 - Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all exited successfully.
+
+### CodeReview-2 Stabilization Result
+
+- Battle target, skill, and item rows now carry typed selection identities instead of collapsing dynamic rows into fixed enum values.
+- The second enemy in a multi-member encounter can be selected correctly.
+- Skills and owned battle items are discovered from runtime/catalog state, so newly exposed valid content requires no host enum case.
+- Press Turn updates carry typed icon counts in `BattleEncounterEvent`; console wording is presentation only.
+- This stabilization changes no Training Annex JSON and adds no new gameplay rule.
 
 ### Phase 2-15 Implementation Note
 
@@ -805,18 +813,6 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-If this plan is approved, start with:
-
-```text
-Iteration 1: Clean Demo Entry And Session Shell
-```
-
-That pass should create the interactive entry point and session skeleton, but avoid implementing battle/shop/fusion/negotiation all at once.
-
-The point is to build the new clean demo like a spine:
-
-```text
-boot -> menu -> session -> field -> encounter -> battle -> rewards -> save
-```
+Iterations 1-7 and CodeReview-1/2 are implemented. The next approved stabilization work is Phase 3 restore hardening from `docs/phase-1-3-code-review.md`: validate actor identity mappings and saved contexts, define dungeon host-state validation and content provenance, and plan restore atomically before Phase 4 begins.
 
 Then attach one feature at a time.

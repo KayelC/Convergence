@@ -245,6 +245,8 @@ Field recovery skills and items in the clean field demo now use this action faca
 
 Track O6 connects framework battle encounter events to a console-host presentation adapter. The adapter consumes every event deterministically, suppresses generic structural narration that would change the visible console output, and routes migrated lifecycle-shell messages such as skip, flee, return-to-COMP, and demon defeat return through typed presentation results. Richer AI/tactics migration, production content reauthoring, and legacy skill/item execution replacement remain later tracks.
 
+CodeReview-2 hardens the original clean battle consumer. Dynamic target rows carry `RuntimeInstanceId`; skill and item rows carry `ContentId`; and the host resolves those typed identities rather than display labels, row position, or content-specific enum cases. Press Turn changes carry `PressTurnStateSnapshot`, leaving message wording free for localization or another presentation host.
+
 ## Clean Status Lifecycle Foundation
 
 Track I moves the approved status lifecycle rules into `BattleStatusLifecycleService`. The console `StatusRegistry` still exposes the same methods to battle and field callers, but ailment infliction, turn-start restrictions, turn-end effects, natural recovery, duration ticking, cleanup scopes, and stat-stage mutation now delegate through a console adapter where strict parity exists.

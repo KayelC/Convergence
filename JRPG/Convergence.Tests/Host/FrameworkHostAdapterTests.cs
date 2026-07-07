@@ -1,6 +1,7 @@
 using Convergence.Tests.TestSupport;
 using JRPGPrototype.Host;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Data.Definitions;
 using Xunit;
 
 namespace Convergence.Tests.Host;
@@ -81,7 +82,11 @@ public sealed class FrameworkHostAdapterTests
             "Choose",
             [
                 new HostCommandOption<string>("one", "First"),
-                new HostCommandOption<string>("two", "Second"),
+                new HostCommandOption<string>(
+                    "two",
+                    "Second",
+                    SelectionIdentity: HostCommandSelectionIdentity.ForContent(
+                        ContentId.Parse("selected_skill"))),
                 new HostCommandOption<string>("three", "Third", IsEnabled: false)
             ],
             initialIndex: 1);
@@ -90,6 +95,8 @@ public sealed class FrameworkHostAdapterTests
 
         Assert.True(result.IsSelected);
         Assert.Equal("two", result.Command);
+        Assert.Equal(ContentId.Parse("selected_skill"), result.SelectionIdentity?.ContentId);
+        Assert.Null(result.SelectionIdentity?.RuntimeInstanceId);
         GameIoMenuCall menu = Assert.Single(io.Menus);
         Assert.Equal("Choose", menu.Header);
         Assert.Equal(["First", "Second", "Third"], menu.Options);

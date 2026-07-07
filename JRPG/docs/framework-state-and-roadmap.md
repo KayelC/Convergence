@@ -413,16 +413,7 @@ This section is for ranking before implementation. Do not treat `TBD` items as a
 
 ## Immediate Next Recommendation
 
-The next implementation pass should not be another broad migration.
-
-Recommended next work:
-
-1. make the host-owned encounter-start proof more scene-like, with explicit host scene/trigger state instead of a scripted demo shortcut;
-2. prove shop/equipment/negotiation/fusion sample records through tiny clean host flows when each is ready;
-3. keep optional-mechanic cleanup, especially Moon Phase decoupling, in view before deepening sample rulesets;
-4. grow the interactive clean loop only after the encounter-start boundary is clear.
-
-That keeps momentum inside the new architecture while restoring ownership of the content and design.
+CodeReview-1 and CodeReview-2 are complete. The next implementation pass is the already-reviewed Phase 3 restore-hardening checkpoint: validate the expected actor/entity mapping and saved creation context, define host-owned dungeon-state validation, add content provenance, and prepare the full restore before mutating the live session. Phase 4 resumes only after that checkpoint is ready.
 
 ## Ground Rules For Future Work
 

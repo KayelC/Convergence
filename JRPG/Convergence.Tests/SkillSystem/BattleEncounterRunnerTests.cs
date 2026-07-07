@@ -42,18 +42,19 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Theory]
-    [InlineData(PressTurnOutcome.Normal, false, false, "Press Turn: 1 full, 0 blinking.")]
-    [InlineData(PressTurnOutcome.Weakness, false, false, "Press Turn: 1 full, 1 blinking.")]
-    [InlineData(PressTurnOutcome.Critical, true, false, "Press Turn: 1 full, 1 blinking.")]
-    [InlineData(PressTurnOutcome.Miss, false, false, "Press Turn: 0 full, 0 blinking.")]
-    [InlineData(PressTurnOutcome.Null, false, false, "Press Turn: 0 full, 0 blinking.")]
-    [InlineData(PressTurnOutcome.Repel, false, true, "Press Turn: 0 full, 0 blinking.")]
-    [InlineData(PressTurnOutcome.Absorb, false, true, "Press Turn: 0 full, 0 blinking.")]
+    [InlineData(PressTurnOutcome.Normal, false, false, 1, 0)]
+    [InlineData(PressTurnOutcome.Weakness, false, false, 1, 1)]
+    [InlineData(PressTurnOutcome.Critical, true, false, 1, 1)]
+    [InlineData(PressTurnOutcome.Miss, false, false, 0, 0)]
+    [InlineData(PressTurnOutcome.Null, false, false, 0, 0)]
+    [InlineData(PressTurnOutcome.Repel, false, true, 0, 0)]
+    [InlineData(PressTurnOutcome.Absorb, false, true, 0, 0)]
     public void Runner_AppliesEveryPressTurnOutcome(
         PressTurnOutcome outcome,
         bool critical,
         bool terminates,
-        string expected)
+        int expectedFullIcons,
+        int expectedBlinkingIcons)
     {
         BattleEncounterParticipant first = Participant("first", PlayerTeam);
         BattleEncounterParticipant second = Participant("second", PlayerTeam);
@@ -68,9 +69,11 @@ public sealed class BattleEncounterRunnerTests
             handler,
             new CompleteAfterTurnsPolicy(1));
 
-        Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged &&
-            battleEvent.Message == expected);
+        BattleEncounterEvent changed = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged);
+        Assert.NotNull(changed.PressTurnState);
+        Assert.Equal(expectedFullIcons, changed.PressTurnState!.FullIcons);
+        Assert.Equal(expectedBlinkingIcons, changed.PressTurnState.BlinkingIcons);
     }
 
     [Fact]

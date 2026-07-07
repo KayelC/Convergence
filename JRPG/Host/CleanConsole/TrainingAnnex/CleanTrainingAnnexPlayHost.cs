@@ -42,14 +42,12 @@ internal enum CleanTrainingAnnexPlayCommand
     BattleGuard,
     BattlePass,
     BattleAnalyze,
+    SelectBattleSkill,
+    SelectBattleItem,
+    SelectBattleTarget,
     UseAnnexTonic,
-    UseFrostTip,
-    UseEchoStrike,
     UseMend,
-    UseToxinTouch,
-    UseClearToxin,
     TargetPlayer,
-    TargetEnemy,
     Back,
     Exit
 }
@@ -129,6 +127,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
     private readonly IRandomSource _randomSource;
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
+    private readonly RuntimeInventorySnapshot? _initialInventory;
 
     public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
         : this(
@@ -144,13 +143,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         IHostEventSink<string> eventSink,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
         IRandomSource? randomSource = null,
-        TrainingAnnexSaveSlotStore? saveSlots = null)
+        TrainingAnnexSaveSlotStore? saveSlots = null,
+        RuntimeInventorySnapshot? initialInventory = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
         _randomSource = randomSource ?? new TrainingAnnexMinimumRandomSource();
         _saveSlots = saveSlots ?? new TrainingAnnexSaveSlotStore();
+        _initialInventory = initialInventory;
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -265,8 +266,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         var fieldActions = new TrainingAnnexFieldActionAdapter(
             executionServices);
         var economy = new EconomyTransactionService();
-        var inventory = new TrainingAnnexItemActionInventory(new RuntimeInventorySnapshot(
-            [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
+        var inventory = new TrainingAnnexItemActionInventory(
+            _initialInventory ?? new RuntimeInventorySnapshot(
+                [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
         var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
             manualAllowedContextIds:
             [

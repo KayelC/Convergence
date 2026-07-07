@@ -950,6 +950,15 @@ The first post-Phase-3 stabilization pass establishes one clean actor state auth
 
 This corrects architectural integrity; it does not by itself promote a protected legacy capability to `clean_parity` or authorize removal.
 
+### CodeReview-2: Dynamic Commands And Typed Press Turn Events (completed)
+
+- Host command options/results can carry a typed content ID or runtime-instance ID without changing existing coarse command enums.
+- Training Annex target selection returns the selected participant, including the second actor in a multi-enemy formation.
+- Battle skill menus are generated from executable actor definitions; battle item menus are generated from owned battle-usable catalog items.
+- `BattleEncounterEvent.PressTurnState` carries icon counts, so hosts never parse presentation text to recover rule state.
+
+**Readiness:** ready. Focused command/event coverage passed 67 tests and the full suite passed 814 tests with no failures or skips. This does not promote legacy battle consumers to `clean_parity`; it removes a correctness defect from the original clean consumer.
+
 Do not start with all 36.
 
 Start with:

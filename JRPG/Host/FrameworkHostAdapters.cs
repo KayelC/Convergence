@@ -89,7 +89,7 @@ internal sealed class ConsoleHostCommandSource<TCommand> : IHostCommandSource<TC
         int selection = _io.RenderMenu(request.Prompt, labels, request.InitialIndex, disabled);
         return ValueTask.FromResult(selection < 0
             ? HostCommandReadResult<TCommand>.Cancelled()
-            : HostCommandReadResult<TCommand>.Selected(request.Options[selection].Command));
+            : HostCommandReadResult<TCommand>.Selected(request.Options[selection]));
     }
 }
 

@@ -1,6 +1,6 @@
 # Phase 1-3 Code Review And Forward Direction
 
-> **Status: Active implementation audit; CodeReview-1 is complete and ready as of 2026-07-07.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. Separate target-selection, typed-event, and restore-hardening findings are still open. This document does not authorize legacy removal.
+> **Status: Active implementation audit; CodeReview-1 and CodeReview-2 are complete and ready as of 2026-07-07.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. Phase 3 restore hardening is the next unresolved stabilization item. This document does not authorize legacy removal.
 
 ## Executive Verdict
 
@@ -19,11 +19,11 @@ The framework boundary is the strongest part of the implementation:
 The clean path is nevertheless still a proof harness rather than a production runtime. The original review identified four high-priority issues before Phase 4:
 
 1. The clean host maintained two mutable actor-state representations and manually synchronized only parts of them. **Resolved by CodeReview-1.**
-2. The battle target menu cannot distinguish between multiple actors and always selects the first eligible target.
+2. The battle target menu could not distinguish between multiple actors and always selected the first eligible target. **Resolved by CodeReview-2.**
 3. Phase 3 restore matches actors by runtime ID without confirming that the saved entity is the actor being restored.
 4. The resource recalculation command calculated a result but did not apply that recalculated result to runtime state. **Resolved by the CodeReview-1 closure.**
 
-CodeReview-1 is now ready: one actor state is authoritative, its complete mutable state round-trips, and recalculation commits to that state. The correct next move remains the existing stabilization order: dynamic command identity and typed event metadata, then Phase 3 restore hardening, before Phase 4 deepens the clean consumer.
+CodeReview-1 and CodeReview-2 are now ready: one actor state is authoritative, recalculation commits to it, dynamic menu rows carry typed identities, and Press Turn presentation consumes typed event state. The correct next move is Phase 3 restore hardening before Phase 4 deepens the clean consumer.
 
 ## Audit Scope
 
@@ -262,7 +262,7 @@ This resolves the first stabilization item and its recalculation closure. It doe
 
 CodeReview-1 final verification: 810 tests passed with no failures or skips; focused closure coverage passed 64 tests; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v4, and Training Annex demos all exited successfully. The closure changes no content files.
 
-### High: the battle target menu always returns the first target
+### High (resolved by CodeReview-2): the battle target menu always returned the first target
 
 **Evidence**
 
@@ -276,6 +276,10 @@ The current one-enemy Ashling battle passes. A two-enemy encounter would display
 **Required correction**
 
 Use a target command payload that contains the selected `RuntimeInstanceId` or `ContentId`. Dynamic menu rows must not collapse to one enum value. Add a two-enemy integration test that selects the second target.
+
+**Resolution**
+
+`HostCommandOption<TCommand>` and `HostCommandReadResult<TCommand>` now carry an optional `HostCommandSelectionIdentity` containing exactly one typed `ContentId` or `RuntimeInstanceId`. Training Annex target rows carry the participant runtime ID, skill rows carry the authored skill ID, and item rows carry the owned catalog item ID. The two-enemy regression selects Bramble Runner in the second row and proves the resulting damage targets its runtime instance rather than the first Ashling.
 
 ### High: restore can combine one catalog actor with another actor's saved identity
 
@@ -311,7 +315,7 @@ Add a resource-recalculation transaction that replaces the resource snapshot aft
 
 `RecalculatePlayerResourcesAsync` now applies the returned `ResourceRecalculationResult` to the canonical actor through `RuntimeResourceTransactionService.ApplyRecalculation` and reports success only after that mutation succeeds. The regression test replaces HP and SP maxima with different values and asserts the live actor changed, removing the former false-positive condition.
 
-### Medium: Press Turn presentation parses framework message text
+### Medium (resolved by CodeReview-2): Press Turn presentation parsed framework message text
 
 **Evidence**
 
@@ -325,6 +329,10 @@ Presentation breaks if punctuation, wording, or localization changes. This contr
 **Required correction**
 
 Add the smallest serializer-neutral typed metadata to the event, such as a `PressTurnStateSnapshot`, and let the host format it.
+
+**Resolution**
+
+`BattleEncounterEvent` now carries an optional immutable `PressTurnStateSnapshot`. `BattleEncounterRunner` supplies it for every `PressTurnChanged` event, and the Training Annex event sink reads only that typed state. A regression supplies deliberately unparseable/localized message text and proves icon evidence and presentation still use the typed counts.
 
 ### Medium: load policy validates the current context but not the saved record context
 
@@ -368,7 +376,7 @@ If wallet application rejects after progression succeeds, EXP remains committed 
 
 Assess every mutation first, then commit one aggregate result, or preserve a rollback snapshot.
 
-### Medium: the clean host is content-driven in execution but hardcoded in selection
+### Medium (resolved by CodeReview-2 for the clean battle shell): the clean host was content-driven in execution but hardcoded in selection
 
 **Evidence**
 
@@ -383,6 +391,12 @@ Adding a valid skill or item to the pack does not automatically make it usable. 
 **Required correction**
 
 Keep Training Annex defaults, but use command payloads carrying catalog IDs. Generate menus from executable definitions and inventory rather than a closed enum per content record.
+
+**Resolution**
+
+The battle shell now generates skill rows from battle-available actor definitions and item rows from owned battle-usable catalog items. It resolves the selected typed content ID directly and no longer contains a skill-ID-to-enum switch or an Annex-Tonic-only item menu. Test-only content exposes Focus Call without an enum case, and test inventory exposes Focus Tea as a second item; both execute through the existing typed action pipeline.
+
+CodeReview-2 final verification: 814 tests passed with no failures or skips; focused command/event/parity coverage passed 67 tests; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v4, and Training Annex demos all exited successfully. Framework boundary and obsolete-parser searches were empty, and `Data/Jsons` was unchanged.
 
 ### Medium: host and test concentration is now impeding review
 
@@ -512,7 +526,7 @@ Do not create another roadmap or lettered track. Use the existing phase plan and
    - Remove current-only copy loops.
    - Prove growth, battle, field use, and restore share one state.
 
-2. **Fix dynamic command identity and typed event metadata.**
+2. **Fix dynamic command identity and typed event metadata. Completed and ready in CodeReview-2.**
    - Target, skill, and item selections carry IDs.
    - Press Turn events carry typed state.
 

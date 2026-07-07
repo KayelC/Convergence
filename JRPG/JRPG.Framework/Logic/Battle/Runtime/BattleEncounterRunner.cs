@@ -49,6 +49,20 @@ public enum BattleEncounterEventKind
     HostActionRequested
 }
 
+public sealed record PressTurnStateSnapshot
+{
+    public PressTurnStateSnapshot(int fullIcons, int blinkingIcons)
+    {
+        if (fullIcons < 0) throw new ArgumentOutOfRangeException(nameof(fullIcons));
+        if (blinkingIcons < 0) throw new ArgumentOutOfRangeException(nameof(blinkingIcons));
+        FullIcons = fullIcons;
+        BlinkingIcons = blinkingIcons;
+    }
+
+    public int FullIcons { get; }
+    public int BlinkingIcons { get; }
+}
+
 public sealed record BattleEncounterEvent(
     int Sequence,
     BattleEncounterEventKind Kind,
@@ -56,7 +70,8 @@ public sealed record BattleEncounterEvent(
     RuntimeInstanceId? ActorId = null,
     RuntimeInstanceId? TargetId = null,
     ContentId? SourceId = null,
-    decimal? Value = null);
+    decimal? Value = null,
+    PressTurnStateSnapshot? PressTurnState = null);
 
 public sealed record BattleEncounterParticipant
 {
@@ -387,6 +402,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await services.Events.PublishAsync(battleEvent, cancellationToken);
         }
 
+        async ValueTask AddPressTurnAsync(RuntimeInstanceId actor, PressTurnEngine pressTurn)
+        {
+            var battleEvent = new BattleEncounterEvent(
+                ++sequence,
+                BattleEncounterEventKind.PressTurnChanged,
+                $"Press Turn: {pressTurn.FullIcons} full, {pressTurn.BlinkingIcons} blinking.",
+                actor,
+                PressTurnState: new PressTurnStateSnapshot(
+                    pressTurn.FullIcons,
+                    pressTurn.BlinkingIcons));
+            events.Add(battleEvent);
+            await services.Events.PublishAsync(battleEvent, cancellationToken);
+        }
+
         async ValueTask AddRangeAsync(IEnumerable<BattleEncounterEvent> unsequenced)
         {
             foreach (BattleEncounterEvent battleEvent in unsequenced)
@@ -527,10 +556,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             cancellationToken));
                     }
 
-                    await AddAsync(
-                        BattleEncounterEventKind.PressTurnChanged,
-                        $"Press Turn: {pressTurn.FullIcons} full, {pressTurn.BlinkingIcons} blinking.",
-                        actor.InstanceId);
+                    await AddPressTurnAsync(actor.InstanceId, pressTurn);
 
                     services.Synchronizer.Synchronize(request.Participants);
                     await AnnounceNewDefeatsAsync(request.Participants, defeatedAnnouncements, AddAsync);

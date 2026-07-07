@@ -763,7 +763,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            SkillDefinition? skill = SkillForCommand(selection.Command, skills);
+            SkillDefinition? skill = selection.SelectionIdentity?.ContentId is ContentId skillId
+                ? skills.FirstOrDefault(candidate => candidate.Id == skillId)
+                : null;
             if (skill is null)
             {
                 return null;
@@ -784,9 +786,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
             CatalogBattleActor actor,
             CancellationToken cancellationToken)
         {
-            ItemDefinition tonic = _catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
+            IReadOnlyList<ItemDefinition> items = KnownBattleItems();
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
-                await _commands.ReadAsync(CreateBattleItemMenu(tonic), cancellationToken)
+                await _commands.ReadAsync(CreateBattleItemMenu(items), cancellationToken)
                     .ConfigureAwait(false);
             if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back)
             {
@@ -794,14 +796,22 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
+            ItemDefinition? item = selection.SelectionIdentity?.ContentId is ContentId itemId
+                ? items.FirstOrDefault(candidate => candidate.Id == itemId)
+                : null;
+            if (item is null)
+            {
+                return null;
+            }
+
             RuntimeInstanceId? target = await SelectTargetForTargetingAsync(
                 request,
                 actor.State,
-                tonic.Usage?.Targeting,
+                item.Usage?.Targeting,
                 cancellationToken).ConfigureAwait(false);
             return target is null
                 ? null
-                : new ItemBattleActionCommand(tonic, [target.Value]);
+                : new ItemBattleActionCommand(item, [target.Value]);
         }
 
         private async ValueTask<BattleActionCommand?> SelectAnalyzeAsync(
@@ -851,7 +861,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 actor,
                 relation);
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
-                await _commands.ReadAsync(CreateTargetMenu(prompt, eligible, relation), cancellationToken)
+                await _commands.ReadAsync(CreateTargetMenu(prompt, eligible), cancellationToken)
                     .ConfigureAwait(false);
             if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back)
             {
@@ -859,7 +869,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            return eligible.Count == 0 ? null : eligible[0].InstanceId;
+            return selection.SelectionIdentity?.RuntimeInstanceId;
         }
 
         private async ValueTask<BattleEncounterCommandResult> ExecuteCommandAsync(
@@ -965,23 +975,14 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private static bool IsBattleAvailable(SkillDefinition skill) =>
             skill.Availability?.ContextIds.Contains(TrainingAnnexHostSupport.Battle) == true;
 
-        private static SkillDefinition? SkillForCommand(
-            CleanTrainingAnnexPlayCommand command,
-            IReadOnlyList<SkillDefinition> skills) =>
-            command switch
-            {
-                CleanTrainingAnnexPlayCommand.UseFrostTip =>
-                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.FrostTip),
-                CleanTrainingAnnexPlayCommand.UseEchoStrike =>
-                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.EchoStrike),
-                CleanTrainingAnnexPlayCommand.UseMend =>
-                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.Mend),
-                CleanTrainingAnnexPlayCommand.UseToxinTouch =>
-                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.ToxinTouch),
-                CleanTrainingAnnexPlayCommand.UseClearToxin =>
-                    skills.FirstOrDefault(skill => skill.Id == TrainingAnnexHostSupport.ClearToxin),
-                _ => null
-            };
+        private IReadOnlyList<ItemDefinition> KnownBattleItems() =>
+            _inventory.Snapshot.ItemQuantities
+                .Where(pair => pair.Value > 0)
+                .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
+                .Select(pair => _catalog.TryGetItem(pair.Key, out ItemDefinition? item) ? item : null)
+                .Where(item => item?.Usage?.ContextIds.Contains(TrainingAnnexHostSupport.Battle) == true)
+                .Cast<ItemDefinition>()
+                .ToArray();
 
         private static RuntimeInstanceId? FirstEligibleTarget(
             RuntimeActorState actor,
@@ -1045,23 +1046,11 @@ internal sealed class TrainingAnnexBattleActionAdapter
             var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>();
             foreach (SkillDefinition skill in skills)
             {
-                CleanTrainingAnnexPlayCommand command =
-                    skill.Id == TrainingAnnexHostSupport.FrostTip
-                        ? CleanTrainingAnnexPlayCommand.UseFrostTip
-                        : skill.Id == TrainingAnnexHostSupport.EchoStrike
-                            ? CleanTrainingAnnexPlayCommand.UseEchoStrike
-                            : skill.Id == TrainingAnnexHostSupport.Mend
-                                ? CleanTrainingAnnexPlayCommand.UseMend
-                                : skill.Id == TrainingAnnexHostSupport.ToxinTouch
-                                    ? CleanTrainingAnnexPlayCommand.UseToxinTouch
-                                    : skill.Id == TrainingAnnexHostSupport.ClearToxin
-                                        ? CleanTrainingAnnexPlayCommand.UseClearToxin
-                                        : CleanTrainingAnnexPlayCommand.Back;
                 options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    command,
+                    CleanTrainingAnnexPlayCommand.SelectBattleSkill,
                     skill.DisplayName,
-                    command != CleanTrainingAnnexPlayCommand.Back,
-                    skill.Description));
+                    Description: skill.Description,
+                    SelectionIdentity: HostCommandSelectionIdentity.ForContent(skill.Id)));
             }
 
             options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
@@ -1070,31 +1059,31 @@ internal sealed class TrainingAnnexBattleActionAdapter
             return new HostCommandRequest<CleanTrainingAnnexPlayCommand>("Clean Battle Skills", options);
         }
 
-        private HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateBattleItemMenu(ItemDefinition tonic) =>
-            new(
-                "Clean Battle Items",
-                [
-                    new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                        CleanTrainingAnnexPlayCommand.UseAnnexTonic,
-                        $"{tonic.DisplayName} x{_inventory.Snapshot.GetQuantity(tonic.Id)}",
-                        _inventory.Snapshot.GetQuantity(tonic.Id) > 0,
-                        tonic.Description),
-                    new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                        CleanTrainingAnnexPlayCommand.Back,
-                        "Back")
-                ]);
+        private HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateBattleItemMenu(
+            IReadOnlyList<ItemDefinition> items)
+        {
+            var options = items.Select(item => new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.SelectBattleItem,
+                    $"{item.DisplayName} x{_inventory.Snapshot.GetQuantity(item.Id)}",
+                    Description: item.Description,
+                    SelectionIdentity: HostCommandSelectionIdentity.ForContent(item.Id)))
+                .ToList();
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.Back,
+                "Back"));
+            return new HostCommandRequest<CleanTrainingAnnexPlayCommand>("Clean Battle Items", options);
+        }
 
         private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateTargetMenu(
             string prompt,
-            IReadOnlyList<BattleEncounterParticipant> eligible,
-            TargetRelation relation)
+            IReadOnlyList<BattleEncounterParticipant> eligible)
         {
             var options = eligible
                 .Select(participant => new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    relation == TargetRelation.Enemy
-                        ? CleanTrainingAnnexPlayCommand.TargetEnemy
-                        : CleanTrainingAnnexPlayCommand.TargetPlayer,
-                    participant.DisplayName))
+                    CleanTrainingAnnexPlayCommand.SelectBattleTarget,
+                    participant.DisplayName,
+                    SelectionIdentity: HostCommandSelectionIdentity.ForRuntimeInstance(
+                        participant.InstanceId)))
                 .ToList();
             options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                 CleanTrainingAnnexPlayCommand.Back,
@@ -1586,11 +1575,14 @@ internal sealed class TrainingAnnexPressTurnEventSink(
         CancellationToken cancellationToken = default)
     {
         if (battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged &&
-            TryParsePressTurnCounts(battleEvent.Message, out int fullIcons, out int blinkingIcons))
+            battleEvent.PressTurnState is PressTurnStateSnapshot pressTurnState)
         {
-            tracker.TryRecordAfter(battleEvent.ActorId, fullIcons, blinkingIcons);
+            tracker.TryRecordAfter(
+                battleEvent.ActorId,
+                pressTurnState.FullIcons,
+                pressTurnState.BlinkingIcons);
             await events.PublishAsync(
-                $"Press Turn updated: {fullIcons} full, {blinkingIcons} blinking.",
+                $"Press Turn updated: {pressTurnState.FullIcons} full, {pressTurnState.BlinkingIcons} blinking.",
                 cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -1604,19 +1596,4 @@ internal sealed class TrainingAnnexPressTurnEventSink(
         }
     }
 
-    private static bool TryParsePressTurnCounts(string message, out int fullIcons, out int blinkingIcons)
-    {
-        fullIcons = 0;
-        blinkingIcons = 0;
-        const string prefix = "Press Turn: ";
-        if (!message.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        string[] parts = message[prefix.Length..].TrimEnd('.').Split(", ");
-        return parts.Length == 2 &&
-               int.TryParse(parts[0].Replace(" full", "", StringComparison.Ordinal), out fullIcons) &&
-               int.TryParse(parts[1].Replace(" blinking", "", StringComparison.Ordinal), out blinkingIcons);
-    }
 }

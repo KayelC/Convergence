@@ -488,6 +488,111 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_TargetMenuSelectsTheAuthoredSecondEnemy()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 1, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new MultiEnemyAshlingDrillContentSource(ContentRoot()));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == Qualified("practice_blade"));
+        Assert.Equal(RuntimeInstanceId.Parse("review_hall_trigger_bramble_runner_2"), attack.TargetId);
+        GameIoMenuCall targetMenu = Assert.Single(io.Menus, menu => menu.Header == "Select Battle Target");
+        Assert.Equal(["Ashling", "Bramble Runner", "Back"], targetMenu.Options);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleSkillMenuExecutesContentWithoutAnEnumCase()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 0, -1, 13);
+        using var output = new StringWriter();
+        var source = new TrainingAnnexLifecycleContentPackTextSource(
+            ContentRoot(),
+            playerBaseSkillIds: ["frost_tip", "echo_strike", "steady_breath", "focus_call"]);
+        var host = CreateHost(io, output, source);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(Qualified("focus_call"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("focus_call") &&
+            effect.EffectKind == "modify_stat_stage");
+        GameIoMenuCall skillMenu = Assert.Single(io.Menus, menu => menu.Header == "Clean Battle Skills");
+        Assert.Equal(["Frost Tip", "Echo Strike", "Focus Call", "Back"], skillMenu.Options);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleItemMenuExecutesSecondOwnedCatalogItem()
+    {
+        ContentId focusTea = Qualified("focus_tea");
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 0, 0,
+            2, 1, 0,
+            -1,
+            13);
+        using var output = new StringWriter();
+        var initialInventory = new RuntimeInventorySnapshot(
+        [
+            KeyValuePair.Create(Qualified("annex_tonic"), 1),
+            KeyValuePair.Create(focusTea, 1)
+        ]);
+        var host = CreateHost(io, output, initialInventory: initialInventory);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(focusTea, summary.ExecutedBattleActionIds);
+        Assert.Equal(0, summary.Inventory.GetQuantity(focusTea));
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsResourceEffect(effect, focusTea, "restore_resource", "sp"));
+        GameIoMenuCall itemMenu = Assert.Single(io.Menus, menu => menu.Header == "Clean Battle Items");
+        Assert.Equal(["Annex Tonic x1", "Focus Tea x1", "Back"], itemMenu.Options);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task PressTurnEventSink_UsesTypedStateAndIgnoresDisplayMessageWording()
+    {
+        using var output = new StringWriter();
+        var tracker = new TrainingAnnexPressTurnTracker();
+        RuntimeInstanceId actorId = RuntimeInstanceId.Parse("echo_adept");
+        tracker.RecordBefore(
+            actorId,
+            Qualified("frost_tip"),
+            1,
+            0,
+            ActionTurnConsumption.FromPressTurn(
+                new PressTurnResolution(PressTurnOutcome.Weakness, false, false)));
+        var sink = new TrainingAnnexPressTurnEventSink(new TextWriterEventSink(output), tracker);
+
+        await sink.PublishAsync(new BattleEncounterEvent(
+            1,
+            BattleEncounterEventKind.PressTurnChanged,
+            "Localized presentation text with no parseable icon counts.",
+            actorId,
+            PressTurnState: new PressTurnStateSnapshot(0, 1)));
+
+        TrainingAnnexPressTurnEvidence evidence = Assert.Single(tracker.Evidence);
+        Assert.Equal(0, evidence.AfterFullIcons);
+        Assert.Equal(1, evidence.AfterBlinkingIcons);
+        Assert.Contains("Press Turn updated: 0 full, 1 blinking.", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_FrameworkAiPreservesAuthoredSkillOrderForEqualScores()
     {
         var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
@@ -1748,13 +1853,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         StringWriter output,
         IContentPackTextSource? source = null,
         IRandomSource? randomSource = null,
-        TrainingAnnexSaveSlotStore? saveSlots = null) =>
+        TrainingAnnexSaveSlotStore? saveSlots = null,
+        RuntimeInventorySnapshot? initialInventory = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
             new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
             randomSource,
-            saveSlots);
+            saveSlots,
+            initialInventory);
 
     private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
 
@@ -1937,6 +2044,43 @@ public sealed class CleanTrainingAnnexPlayHostTests
                         throw new InvalidOperationException($"Training Annex entity '{entityId}' has no affinity map.");
                     affinities[elementId] = affinity;
                     text = rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                }
+
+                documents.Add(new ContentDocumentText(path, path, text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class MultiEnemyAshlingDrillContentSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                if (path.EndsWith(".encounters.json", StringComparison.Ordinal))
+                {
+                    JsonObject document = JsonNode.Parse(text)?.AsObject() ??
+                        throw new InvalidOperationException("Training Annex encounters JSON could not be parsed.");
+                    JsonObject encounter = document["encounters"]?.AsArray()
+                        .Select(node => node?.AsObject())
+                        .Single(node => node?["id"]?.GetValue<string>() == "ashling_drill") ??
+                        throw new InvalidOperationException("Ashling Drill was not found.");
+                    JsonArray members = encounter["formations"]?[0]?["members"]?.AsArray() ??
+                        throw new InvalidOperationException("Ashling Drill members were not found.");
+                    members.Add(new JsonObject
+                    {
+                        ["entityId"] = "bramble_runner",
+                        ["level"] = 3,
+                        ["count"] = 1
+                    });
+                    text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
                 }
 
                 documents.Add(new ContentDocumentText(path, path, text));
