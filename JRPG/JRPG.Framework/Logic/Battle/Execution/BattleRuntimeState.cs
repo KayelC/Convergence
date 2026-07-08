@@ -257,6 +257,11 @@ public sealed class RuntimeActorState
     public decimal SetResource(ContentId id, decimal value) => GetRequiredResource(id).Set(value);
     public decimal AddResource(ContentId id, decimal value) => GetRequiredResource(id).Add(value);
 
+    public void ReplaceEquipment(RuntimeEquipmentSnapshot equipment)
+    {
+        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+    }
+
     public void ApplyAilment(AilmentDefinition definition, DurationDefinition duration)
     {
         if (definition.ExclusivityGroupId is ContentId exclusivityGroup)

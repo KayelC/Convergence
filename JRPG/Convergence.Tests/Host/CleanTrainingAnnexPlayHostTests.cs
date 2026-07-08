@@ -122,6 +122,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.PreparedEncounterIds);
         Assert.Empty(summary.PreparedEncounterActorInstanceIds);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Contains(Qualified("practice_blade"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Weapon));
+        Assert.Contains(Qualified("focus_charm"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Accessory));
+        Assert.Equal(Qualified("practice_blade"), summary.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
+        Assert.Equal(Qualified("focus_charm"), summary.Equipment.EquippedItemIds[EquipmentSlot.Accessory]);
+        Assert.Equal(Qualified("practice_blade"), summary.EquipmentProfile.BasicAttack?.EquipmentId);
+        Assert.Equal(1, summary.EquipmentProfile.StatModifiers[ContentId.Parse("magic")]);
+        Assert.Empty(summary.EquipmentProfile.Diagnostics);
         Assert.Empty(summary.ExecutedFieldActionIds);
         Assert.Equal(0, summary.CancelledFieldTargetSelections);
         Assert.Equal(
@@ -483,6 +490,52 @@ public sealed class CleanTrainingAnnexPlayHostTests
             StringComparison.Ordinal);
         Assert.Contains(
             "Framework AI selected: Ashling -> Ash Spark.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_BasicAttackUsesEquippedWeaponProfile()
+    {
+        ContentId weightedClub = Qualified("weighted_club");
+        var inventory = new RuntimeInventorySnapshot(
+            itemQuantities:
+            [
+                new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)
+            ],
+            ownedEquipmentIds:
+            [
+                new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(EquipmentSlot.Weapon, [weightedClub])
+            ]);
+        var equipment = new RuntimeEquipmentSnapshot(
+            [new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, weightedClub)]);
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new EquipmentAddingContentPackTextSource(ContentRoot()),
+            initialInventory: inventory,
+            initialEquipment: equipment);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(weightedClub, summary.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
+        Assert.Equal(weightedClub, summary.EquipmentProfile.BasicAttack?.EquipmentId);
+        Assert.Contains(weightedClub, summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            IsDamage(effect, weightedClub, DamageElement.Physical));
+        TrainingAnnexCombatResolutionEvidence attack = Assert.Single(
+            summary.CombatResolutionEvidence,
+            evidence => evidence.SourceActionId == weightedClub);
+        Assert.Equal(4, attack.Power);
+        Assert.Equal(88, attack.Accuracy);
+        Assert.Contains(
+            "Battle action executed: Echo Adept used Weighted Club.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -2199,14 +2252,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
         IContentPackTextSource? source = null,
         IRandomSource? randomSource = null,
         TrainingAnnexSaveSlotStore? saveSlots = null,
-        RuntimeInventorySnapshot? initialInventory = null) =>
+        RuntimeInventorySnapshot? initialInventory = null,
+        RuntimeEquipmentSnapshot? initialEquipment = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
             new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
             randomSource,
             saveSlots,
-            initialInventory);
+            initialInventory,
+            initialEquipment);
 
     private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
 
@@ -2263,6 +2318,56 @@ public sealed class CleanTrainingAnnexPlayHostTests
             }
 
             return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class EquipmentAddingContentPackTextSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                documents.Add(new ContentDocumentText(
+                    path,
+                    path,
+                    path == "training_annex_slice.equipment.json"
+                        ? AddWeightedClub(text)
+                        : text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private static string AddWeightedClub(string json)
+        {
+            JsonNode node = JsonNode.Parse(json) ??
+                throw new InvalidOperationException("Training Annex equipment JSON could not be parsed.");
+            JsonArray equipment = node["equipment"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex equipment JSON must contain equipment.");
+            equipment.Add(new JsonObject
+            {
+                ["id"] = "weighted_club",
+                ["displayName"] = "Weighted Club",
+                ["description"] = "Test-only alternate weapon.",
+                ["slot"] = "weapon",
+                ["baseValue"] = 1,
+                ["weapon"] = new JsonObject
+                {
+                    ["basicAttack"] = new JsonObject
+                    {
+                        ["element"] = "physical",
+                        ["power"] = 4,
+                        ["accuracy"] = 88,
+                        ["isLongRange"] = false
+                    }
+                }
+            });
+            return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
     }
 

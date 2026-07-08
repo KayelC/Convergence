@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -92,11 +93,80 @@ public sealed class ResourceManagementServiceTests
             Id("longsword"),
             EquipmentSlot.Weapon,
             EquipmentSlot.Weapon);
+        EquipmentTransitionResult alreadyEquipped = service.Equip(
+            inventory,
+            equipped.After,
+            shortsword,
+            EquipmentSlot.Weapon,
+            EquipmentSlot.Weapon);
 
         Assert.True(equipped.Applied);
         Assert.Equal(shortsword, equipped.After.EquippedItemIds[EquipmentSlot.Weapon]);
         Assert.Equal(ResourceTransactionCode.EquipmentSlotMismatch, wrongSlot.Code);
         Assert.Equal(ResourceTransactionCode.EquipmentNotOwned, notOwned.Code);
+        Assert.Equal(ResourceTransactionCode.EquipmentAlreadyEquipped, alreadyEquipped.Code);
+        Assert.Equal(equipped.After, alreadyEquipped.After);
+    }
+
+    [Fact]
+    public void EquipmentProfileResolver_ResolvesBasicAttackAndAccessoryStatModifiers()
+    {
+        ContentId sword = Id("shortsword");
+        ContentId charm = Id("focus_charm");
+        ContentId magic = Id("magic");
+        var repository = new TestEquipmentRepository(
+            Weapon(sword, power: 12, accuracy: 95),
+            Accessory(
+                charm,
+                new StatModifierDefinition(magic, 1),
+                new StatModifierDefinition(magic, 2)));
+        var equipment = new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, sword),
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Accessory, charm)
+            ]);
+
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(equipment, repository);
+        var statPolicy = new StandardStatResolutionPolicy();
+        StatResolutionResult resolvedMagic = statPolicy.Resolve(new StatResolutionRequest(
+            StandardProgressionIds.Human,
+            magic,
+            [new KeyValuePair<ContentId, decimal>(magic, 4)],
+            equipmentStatModifiers: profile.StatModifiers));
+
+        Assert.Empty(profile.Diagnostics);
+        Assert.NotNull(profile.BasicAttack);
+        Assert.Equal(sword, profile.BasicAttack!.EquipmentId);
+        Assert.Equal(DamageElement.Physical, profile.BasicAttack.BasicAttack.Element);
+        Assert.Equal(12, profile.BasicAttack.BasicAttack.Power);
+        Assert.Equal(95, profile.BasicAttack.BasicAttack.Accuracy);
+        Assert.Equal(3, profile.StatModifiers[magic]);
+        Assert.Equal(7, resolvedMagic.FinalValue);
+    }
+
+    [Fact]
+    public void EquipmentProfileResolver_ReportsMissingAndSlotMismatchedDefinitions()
+    {
+        ContentId sword = Id("shortsword");
+        ContentId missing = Id("missing_blade");
+        var repository = new TestEquipmentRepository(Weapon(sword, power: 8, accuracy: 90));
+        var equipment = new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, missing),
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Accessory, sword)
+            ]);
+
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(equipment, repository);
+
+        Assert.Null(profile.BasicAttack);
+        Assert.Empty(profile.EquippedDefinitions);
+        Assert.Contains(profile.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition &&
+            diagnostic.EquipmentId == missing);
+        Assert.Contains(profile.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch &&
+            diagnostic.EquipmentId == sword &&
+            diagnostic.Slot == EquipmentSlot.Accessory);
     }
 
     [Fact]
@@ -199,4 +269,37 @@ public sealed class ResourceManagementServiceTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static EquipmentDefinition Weapon(ContentId id, int power, int accuracy) =>
+        new(
+            id,
+            id.ToString(),
+            "test weapon",
+            EquipmentSlot.Weapon,
+            baseValue: 10,
+            weapon: new EquipmentWeaponProfileDefinition(
+                new EquipmentBasicAttackDefinition(DamageElement.Physical, power, accuracy, IsLongRange: false)));
+
+    private static EquipmentDefinition Accessory(ContentId id, params StatModifierDefinition[] modifiers) =>
+        new(
+            id,
+            id.ToString(),
+            "test accessory",
+            EquipmentSlot.Accessory,
+            baseValue: 10,
+            accessory: new EquipmentAccessoryProfileDefinition(modifiers));
+
+    private sealed class TestEquipmentRepository(params EquipmentDefinition[] definitions) : IEquipmentDefinitionRepository
+    {
+        private readonly Dictionary<ContentId, EquipmentDefinition> _definitions =
+            definitions.ToDictionary(definition => definition.Id);
+
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment) =>
+            _definitions.TryGetValue(id, out equipment);
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
+            TryGetEquipment(id, out EquipmentDefinition? equipment)
+                ? equipment!
+                : throw new KeyNotFoundException(id.ToString());
+    }
 }

@@ -752,6 +752,16 @@ Clean console proof:
 
 - player buys or equips sample equipment and sees stat/action impact.
 
+Phase 4-22 result:
+
+- `JRPG.Framework` now has `RuntimeEquipmentProfileResolver`, which resolves equipped definitions from `RuntimeEquipmentSnapshot` plus catalog repositories into a gameplay-facing equipment profile: equipped definitions, accessory stat modifiers, weapon basic-attack profile, and typed diagnostics for missing or slot-mismatched equipment.
+- `EquipmentTransitionService.Equip(...)` now rejects re-equipping the same item into the same slot with `EquipmentAlreadyEquipped`, preserving the unchanged snapshot on rejection.
+- `RuntimeActorState` exposes `ReplaceEquipment(...)` so clean hosts and restore paths can commit equipment snapshots onto the same canonical actor state used by battle, field effects, growth, and save snapshots.
+- `--clean-training-annex-play` seeds original sample equipment through framework inventory/equipment transactions: `practice_blade` in the weapon slot and `focus_charm` in the accessory slot. The summary records both the raw equipment snapshot and the resolved profile.
+- Manual clean basic attack now uses the actor's equipped weapon profile rather than a hardcoded `practice_blade` lookup. A test-only alternate `weighted_club` content source proves the action ID, display label, power, and accuracy all change when the equipped weapon changes.
+- Framework tests prove accessory stat modifiers feed `StandardStatResolutionPolicy` for actor kinds that use equipment modifiers. Training Annex itself does not force visible stat changes here because Echo Adept is authored as `demon`, and `standard_stat` intentionally resolves demon stats from active-form stats rather than accessories.
+- This remains `parallel_partial`: clean ownership/equip state and basic-attack impact are now framework-owned and demonstrable, but there is still no clean interactive equip/shop UI, no production equipment reauthoring, and no legacy equipment removal authorization.
+
 ### 23. `economy`
 
 Current status: `parallel_partial`.
@@ -997,22 +1007,21 @@ Do not start with all 36.
 Resume with:
 
 ```text
-Phase 4-22: equipment_ownership
+Phase 4-23: economy
 ```
 
 Scope:
 
-- make clean equipment ownership and slot compatibility demonstrable in the Training Annex clean path;
-- keep ownership/equip mutation in framework resource-management transactions;
-- preserve host-owned presentation and item selection;
-- avoid legacy `InventoryManager` authority in the clean consumer;
-- do not start economy, shops, hospital, fusion, negotiation, or archive work in the same pass.
+- make clean wallet ownership, add/spend, and rollback behavior demonstrable in the Training Annex clean path;
+- keep Macca mutation in framework economy transactions;
+- preserve host-owned presentation and avoid legacy `EconomyManager` authority in the clean consumer;
+- do not start shops, hospital, fusion, negotiation, or archive work in the same pass.
 
 Why first:
 
 - Phase 4-21 established trustworthy clean item quantities and selected-item consumption;
-- equipment is the next narrow Phase 4 capability in the numbered sequence;
-- economy, shops, and hospital build naturally on trustworthy inventory and equipment ownership models.
+- Phase 4-22 established clean equipment ownership/equip state and equipped basic-attack impact;
+- shops and hospital build naturally on trustworthy inventory, equipment, and wallet transaction models.
 
 ## Update Rules
 

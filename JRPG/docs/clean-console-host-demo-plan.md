@@ -639,12 +639,20 @@ The framework already has snapshots and validation. This iteration decides when 
 
 Demonstrate clean shop/equipment services in the clean runtime.
 
+### Phase 4-22 Equipment Result
+
+- The clean Training Annex host now owns and equips sample equipment through framework inventory/equipment transactions at startup.
+- The host summary records the live `RuntimeEquipmentSnapshot` and resolved `RuntimeEquipmentProfile`.
+- Manual clean basic attack uses the actor's equipped weapon profile, so replacing `practice_blade` with a test-only `weighted_club` changes the action ID, label, power, and accuracy without editing production JSON.
+- Accessory stat modifiers are resolved by the framework profile resolver and tested against `StandardStatResolutionPolicy`; the Training Annex actor does not show visible accessory stat changes because it is authored as `demon`, and the standard policy intentionally ignores equipment modifiers for demons.
+- Shop/economy presentation is not part of this checkpoint.
+
 ### Work
 
 - Add a small shop interaction in Training Annex.
 - List clean item/equipment offers.
 - Buy one item.
-- Equip one piece of equipment.
+- Equip or replace one piece of equipment through player choice.
 - Show updated actor stats/basic attack profile if relevant.
 - Keep economy and inventory mutations framework-backed.
 

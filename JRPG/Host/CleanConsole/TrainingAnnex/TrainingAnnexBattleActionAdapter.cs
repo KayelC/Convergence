@@ -403,6 +403,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
     private readonly IBattleRewardService _rewardService;
     private readonly Func<PressTurnEngine> _pressTurnFactory;
     private readonly IBattleStatusLifecycleService _statusLifecycle;
+    private readonly IRuntimeEquipmentProfileResolver _equipmentProfileResolver;
 
     public TrainingAnnexBattleActionAdapter(
         GameDataCatalog catalog,
@@ -411,7 +412,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
         BattleExecutionServices services,
         IBattleRewardService rewardService,
         Func<PressTurnEngine> pressTurnFactory,
-        IBattleStatusLifecycleService statusLifecycle)
+        IBattleStatusLifecycleService statusLifecycle,
+        IRuntimeEquipmentProfileResolver? equipmentProfileResolver = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _events = events ?? throw new ArgumentNullException(nameof(events));
@@ -420,6 +422,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
         _pressTurnFactory = pressTurnFactory ?? throw new ArgumentNullException(nameof(pressTurnFactory));
         _statusLifecycle = statusLifecycle ?? throw new ArgumentNullException(nameof(statusLifecycle));
+        _equipmentProfileResolver = equipmentProfileResolver ?? new RuntimeEquipmentProfileResolver();
     }
 
     public async ValueTask<TrainingAnnexManualBattleSummary> RunAsync(
@@ -452,6 +455,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands,
             new BattleActionExecutor(skillExecutor, new ItemExecutor(_services), _services),
             enemySelector,
+            _equipmentProfileResolver,
             playerBattleKnowledge,
             encounterAiKnowledge,
             actors,
@@ -538,6 +542,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
         private readonly IBattleActionExecutor _actions;
         private readonly IBattleActionSelector _enemySelector;
+        private readonly IRuntimeEquipmentProfileResolver _equipmentProfileResolver;
         private readonly TrainingAnnexBattleKnowledgeState _playerBattleKnowledge;
         private readonly TrainingAnnexBattleKnowledgeState _encounterAiKnowledge;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
@@ -558,6 +563,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
             IBattleActionExecutor actions,
             IBattleActionSelector enemySelector,
+            IRuntimeEquipmentProfileResolver equipmentProfileResolver,
             TrainingAnnexBattleKnowledgeState playerBattleKnowledge,
             TrainingAnnexBattleKnowledgeState encounterAiKnowledge,
             IReadOnlyList<CatalogBattleActor> actors,
@@ -571,6 +577,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands = commands;
             _actions = actions;
             _enemySelector = enemySelector ?? throw new ArgumentNullException(nameof(enemySelector));
+            _equipmentProfileResolver = equipmentProfileResolver ?? throw new ArgumentNullException(nameof(equipmentProfileResolver));
             _playerBattleKnowledge = playerBattleKnowledge ?? throw new ArgumentNullException(nameof(playerBattleKnowledge));
             _encounterAiKnowledge = encounterAiKnowledge ?? throw new ArgumentNullException(nameof(encounterAiKnowledge));
             _actors = actors;
@@ -731,21 +738,26 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            EquipmentDefinition weapon = _catalog.GetRequiredEquipment(TrainingAnnexHostSupport.PracticeBlade);
-            if (weapon.Weapon is null)
+            RuntimeEquipmentProfile profile = _equipmentProfileResolver.Resolve(
+                actor.State.ToSnapshot().Equipment,
+                _catalog);
+            if (profile.BasicAttack is null)
             {
-                throw new InvalidOperationException("Practice Blade must define a weapon profile.");
+                await _events.PublishAsync(
+                    "Basic attack unavailable: no equipped weapon.",
+                    cancellationToken).ConfigureAwait(false);
+                return null;
             }
 
             return new BasicAttackBattleActionCommand(
-                weapon.Weapon.BasicAttack,
+                profile.BasicAttack.BasicAttack,
                 new TargetingDefinition(
                     TargetRelation.Enemy,
                     TargetSelection.Single,
                     TargetLifeState.Alive,
                     AllowSelf: false),
                 [target.Value],
-                weapon.Id);
+                profile.BasicAttack.EquipmentId);
         }
 
         private async ValueTask<BattleActionCommand?> SelectSkillAsync(
@@ -1228,10 +1240,13 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 _ => throw new InvalidOperationException($"Unsupported typed effect '{effect.GetType().Name}'.")
             };
 
-        private static string ActionLabel(BattleActionCommand command) =>
+        private string ActionLabel(BattleActionCommand command) =>
             command switch
             {
-                BasicAttackBattleActionCommand => "Practice Blade",
+                BasicAttackBattleActionCommand basic =>
+                    _catalog.TryGetEquipment(basic.ActionId, out EquipmentDefinition? equipment) && equipment is not null
+                        ? equipment.DisplayName
+                        : basic.ActionId.ToString(),
                 SkillBattleActionCommand skill => skill.Skill.DisplayName,
                 ItemBattleActionCommand item => item.Item.DisplayName,
                 GuardBattleActionCommand => "Guard",

@@ -110,6 +110,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int CancelledBattleCommandSelections,
     int PreparedBattleEventCount,
     RuntimeInventorySnapshot Inventory,
+    RuntimeEquipmentSnapshot Equipment,
+    RuntimeEquipmentProfile EquipmentProfile,
     IReadOnlyList<ContentId> ExecutedFieldActionIds,
     int CancelledFieldTargetSelections,
     IReadOnlyList<CleanTrainingAnnexPlayCommand> Commands);
@@ -124,6 +126,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly IRandomSource _randomSource;
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
     private readonly RuntimeInventorySnapshot? _initialInventory;
+    private readonly RuntimeEquipmentSnapshot? _initialEquipment;
 
     public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
         : this(
@@ -140,7 +143,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
         IRandomSource? randomSource = null,
         TrainingAnnexSaveSlotStore? saveSlots = null,
-        RuntimeInventorySnapshot? initialInventory = null)
+        RuntimeInventorySnapshot? initialInventory = null,
+        RuntimeEquipmentSnapshot? initialEquipment = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
@@ -148,6 +152,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         _randomSource = randomSource ?? new TrainingAnnexMinimumRandomSource();
         _saveSlots = saveSlots ?? new TrainingAnnexSaveSlotStore();
         _initialInventory = initialInventory;
+        _initialEquipment = initialEquipment;
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -264,9 +269,16 @@ internal sealed class CleanTrainingAnnexPlayHost
         var fieldPresenter = new TrainingAnnexFieldPresenter(_eventSink);
         var economy = new EconomyTransactionService();
         var rewardApplicator = new TrainingAnnexBattleRewardApplicator(_eventSink, _randomSource);
+        var inventoryTransitions = new InventoryTransitionService();
+        var equipmentTransitions = new EquipmentTransitionService();
+        var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
         var inventory = new TrainingAnnexItemActionInventory(
-            _initialInventory ?? new RuntimeInventorySnapshot(
-                [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
+            BuildInitialInventory(_initialInventory, inventoryTransitions));
+        roster.Player.Actor.State.ReplaceEquipment(BuildInitialEquipment(
+            catalog,
+            inventory.Snapshot,
+            _initialEquipment,
+            equipmentTransitions));
         var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
             manualAllowedContextIds:
             [
@@ -393,6 +405,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     cancelledBattleCommandSelections,
                     preparedBattleEventCount,
                     inventory.Snapshot,
+                    equipmentProfileResolver,
+                    catalog,
                     executedFieldActionIds,
                     cancelledFieldTargetSelections,
                     commands);
@@ -412,9 +426,13 @@ internal sealed class CleanTrainingAnnexPlayHost
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
+                    RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+                        roster.Player.Actor.State.ToSnapshot().Equipment,
+                        catalog);
                     statPreview = await ResolvePlayerStatsAsync(
                         roster.Player,
                         statPolicy,
+                        equipmentProfile,
                         cancellationToken).ConfigureAwait(false);
                     statResolutionPreviewed = true;
                     break;
@@ -505,6 +523,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             cancelledBattleCommandSelections,
                             preparedBattleEventCount,
                             inventory.Snapshot,
+                            equipmentProfileResolver,
+                            catalog,
                             executedFieldActionIds,
                             cancelledFieldTargetSelections,
                             commands);
@@ -642,7 +662,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             executionServices,
                             rewardService,
                             pressTurnFactory,
-                            new BattleStatusLifecycleService(_randomSource))
+                            new BattleStatusLifecycleService(_randomSource),
+                            equipmentProfileResolver)
                         .RunAsync(
                             roster.Player,
                             preparedEncounter,
@@ -1008,6 +1029,115 @@ internal sealed class CleanTrainingAnnexPlayHost
             options);
     }
 
+    private static RuntimeInventorySnapshot BuildInitialInventory(
+        RuntimeInventorySnapshot? supplied,
+        IInventoryTransitionService inventoryTransitions)
+    {
+        RuntimeInventorySnapshot inventory = supplied ?? new RuntimeInventorySnapshot(
+            [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]);
+
+        inventory = AddEquipmentIfMissing(
+            inventory,
+            inventoryTransitions,
+            TrainingAnnexHostSupport.PracticeBlade,
+            EquipmentSlot.Weapon);
+        inventory = AddEquipmentIfMissing(
+            inventory,
+            inventoryTransitions,
+            TrainingAnnexHostSupport.FocusCharm,
+            EquipmentSlot.Accessory);
+
+        return inventory;
+    }
+
+    private static RuntimeInventorySnapshot AddEquipmentIfMissing(
+        RuntimeInventorySnapshot inventory,
+        IInventoryTransitionService inventoryTransitions,
+        ContentId equipmentId,
+        EquipmentSlot slot)
+    {
+        if (inventory.OwnsEquipment(equipmentId, slot))
+        {
+            return inventory;
+        }
+
+        InventoryTransitionResult result = inventoryTransitions.AddEquipment(inventory, equipmentId, slot);
+        return result.Applied ? result.After : inventory;
+    }
+
+    private static RuntimeEquipmentSnapshot BuildInitialEquipment(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory,
+        RuntimeEquipmentSnapshot? supplied,
+        IEquipmentTransitionService equipmentTransitions)
+    {
+        if (supplied is not null)
+        {
+            return EquipRequestedEquipment(catalog, inventory, supplied, equipmentTransitions);
+        }
+
+        RuntimeEquipmentSnapshot equipment = new();
+        equipment = EquipIfOwned(
+            catalog,
+            inventory,
+            equipmentTransitions,
+            equipment,
+            TrainingAnnexHostSupport.PracticeBlade);
+        equipment = EquipIfOwned(
+            catalog,
+            inventory,
+            equipmentTransitions,
+            equipment,
+            TrainingAnnexHostSupport.FocusCharm);
+        return equipment;
+    }
+
+    private static RuntimeEquipmentSnapshot EquipRequestedEquipment(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory,
+        RuntimeEquipmentSnapshot requested,
+        IEquipmentTransitionService equipmentTransitions)
+    {
+        RuntimeEquipmentSnapshot equipment = new();
+        foreach ((EquipmentSlot slot, ContentId equipmentId) in requested.EquippedItemIds.OrderBy(pair => pair.Key))
+        {
+            if (!catalog.TryGetEquipment(equipmentId, out EquipmentDefinition? definition) || definition is null)
+            {
+                continue;
+            }
+
+            EquipmentTransitionResult result = equipmentTransitions.Equip(
+                inventory,
+                equipment,
+                equipmentId,
+                definition.Slot,
+                slot);
+            if (result.Applied)
+            {
+                equipment = result.After;
+            }
+        }
+
+        return equipment;
+    }
+
+    private static RuntimeEquipmentSnapshot EquipIfOwned(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory,
+        IEquipmentTransitionService equipmentTransitions,
+        RuntimeEquipmentSnapshot equipment,
+        ContentId equipmentId)
+    {
+        EquipmentDefinition definition = catalog.GetRequiredEquipment(equipmentId);
+        EquipmentTransitionResult result = equipmentTransitions.Equip(
+            inventory,
+            equipment,
+            equipmentId,
+            definition.Slot,
+            definition.Slot);
+        return result.Applied ? result.After : equipment;
+    }
+
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateSaveLoadMenu(
         TrainingAnnexSaveSlotStore saveSlots) =>
         new(
@@ -1296,12 +1426,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         int cancelledBattleCommandSelections,
         int preparedBattleEventCount,
         RuntimeInventorySnapshot inventory,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        IEquipmentDefinitionRepository equipmentRepository,
         IReadOnlyList<ContentId> executedFieldActionIds,
         int cancelledFieldTargetSelections,
         IReadOnlyList<CleanTrainingAnnexPlayCommand> commands)
     {
         CatalogBattleActor player = roster.Player.Actor;
         RuntimeActorSnapshot playerSnapshot = roster.Player.Actor.State.ToSnapshot();
+        RuntimeEquipmentSnapshot equipment = playerSnapshot.Equipment;
         return new(
             [request.ManifestPath],
             request.DocumentPaths,
@@ -1360,6 +1493,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancelledBattleCommandSelections,
             preparedBattleEventCount,
             inventory,
+            equipment,
+            equipmentProfileResolver.Resolve(equipment, equipmentRepository),
             executedFieldActionIds.ToArray(),
             cancelledFieldTargetSelections,
             commands.ToArray());
@@ -1381,6 +1516,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private async ValueTask<IReadOnlyList<StatResolutionResult>> ResolvePlayerStatsAsync(
         TrainingAnnexRuntimeActor player,
         IStatResolutionPolicy statPolicy,
+        RuntimeEquipmentProfile equipmentProfile,
         CancellationToken cancellationToken)
     {
         RuntimeActorSnapshot snapshot = player.Actor.State.ToSnapshot();
@@ -1398,12 +1534,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                 snapshot.Identity.ActorKindId,
                 statId,
                 snapshot.Stats.BaseStats,
-                activeFormStats));
+                activeFormStats,
+                equipmentStatModifiers: equipmentProfile.StatModifiers));
             StatResolutionResult boosted = statPolicy.Resolve(new StatResolutionRequest(
                 snapshot.Identity.ActorKindId,
                 statId,
                 snapshot.Stats.BaseStats,
                 activeFormStats,
+                equipmentStatModifiers: equipmentProfile.StatModifiers,
                 statStages: [attackStage]));
             results.Add(boosted);
             messages.Add($"{statId} {unmodified.FinalValue}->{boosted.FinalValue}");

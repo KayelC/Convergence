@@ -449,6 +449,11 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
         {
             return Rejected(equipment, ResourceTransactionCode.EquipmentNotOwned, $"Equipment '{equipmentId}' is not owned.", equipmentId, ownedSlot);
         }
+        if (equipment.EquippedItemIds.TryGetValue(targetSlot, out ContentId currentEquipmentId) &&
+            currentEquipmentId == equipmentId)
+        {
+            return Rejected(equipment, ResourceTransactionCode.EquipmentAlreadyEquipped, $"Equipment '{equipmentId}' is already equipped.", equipmentId, targetSlot);
+        }
 
         Dictionary<EquipmentSlot, ContentId> equipped = new(equipment.EquippedItemIds);
         equipped[targetSlot] = equipmentId;
