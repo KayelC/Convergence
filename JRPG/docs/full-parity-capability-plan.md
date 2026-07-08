@@ -959,6 +959,18 @@ This corrects architectural integrity; it does not by itself promote a protected
 
 **Readiness:** ready. Focused command/event coverage passed 67 tests and the full suite passed 814 tests with no failures or skips. This does not promote legacy battle consumers to `clean_parity`; it removes a correctness defect from the original clean consumer.
 
+### CodeReview-3: Restore Hardening And Save Provenance (implemented)
+
+- Save contract version `5` records exact content-pack IDs and versions through serializer-neutral `ContentPackIdentity` values.
+- `GameDataCatalog` exposes the loaded content-pack identities, and `RuntimeSaveValidator` rejects missing, duplicate, unknown, or version-mismatched save provenance.
+- `RuntimeSavePolicyService.AssessLoad` now validates both the current load context and the saved record's original creation context.
+- Training Annex restore validates the expected actor instance, entity definition, actor kind, and team before constructing the restored session.
+- Training Annex restore validates host-owned dungeon/navigation state against the locations, nodes, and checkpoints this clean host actually supports.
+- Restore remains planned before mutation: the live session is updated only after framework validation and host compatibility checks all pass.
+- Battle reward application now assesses wallet mutation before committing progression, so a failed currency transaction cannot leave EXP half-applied.
+
+**Readiness:** ready. Focused persistence/Training Annex restore coverage passed 62 tests; focused restore/parity coverage passed 106 tests; the full suite passed 819 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully. This hardens the clean save/load proof but still does not promote protected legacy save/load to `clean_parity` or authorize legacy removal.
+
 Do not start with all 36.
 
 Start with:

@@ -317,6 +317,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         RuntimeActorReferenceSnapshot echoReference = Reference(echoSnapshot);
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("0.1.0"),
+            [TrainingAnnexHostSupport.PackIdentity],
             [echoSnapshot, ashlingSnapshot],
             new RuntimePartyStockSnapshot(
                 echoReference,

@@ -457,10 +457,12 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         var dungeons = new List<KeyValuePair<ContentId, DungeonDefinition>>();
         var fusion = new List<KeyValuePair<ContentId, FusionRecipeDefinition>>();
         var rulesets = new List<KeyValuePair<ContentId, RulesetDefinition>>();
+        var contentPacks = new List<ContentPackIdentity>();
 
         foreach (LoadedPack pack in loadOrder.Where(pack => pack.Validated is not null))
         {
             string packId = pack.Manifest.Id;
+            contentPacks.Add(new ContentPackIdentity(packId, pack.Manifest.Version));
             AddQualified(pack, pack.Validated!.SkillDocuments, skills, definition => DefinitionQualifier.Skill(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.EntityDocuments, entities, definition => DefinitionQualifier.Entity(packId, definition), diagnostics);
             AddQualified(pack, pack.Validated.RaceDocuments, races, definition => DefinitionQualifier.Race(packId, definition), diagnostics);
@@ -476,6 +478,7 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         }
 
         return new GameDataCatalog(
+            contentPacks,
             skills,
             entities,
             races,

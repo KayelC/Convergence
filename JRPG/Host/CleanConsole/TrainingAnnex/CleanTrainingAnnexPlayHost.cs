@@ -1258,11 +1258,14 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexActorRoster currentRoster,
         ICatalogBattleActorFactory actorFactory)
     {
+        var diagnostics = new List<string>();
+        ValidateTrainingAnnexField(snapshot.Field, diagnostics);
+
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
         if (!TryRestoreActor(currentRoster.Player, actors, actorFactory, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
         {
-            return TrainingAnnexSessionRestoreResult.Failed(playerDiagnostic);
+            diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
         }
 
         var enemies = new List<TrainingAnnexRuntimeActor>();
@@ -1270,10 +1273,16 @@ internal sealed class CleanTrainingAnnexPlayHost
         {
             if (!TryRestoreActor(enemy, actors, actorFactory, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
             {
-                return TrainingAnnexSessionRestoreResult.Failed(enemyDiagnostic);
+                diagnostics.Add(enemyDiagnostic ?? $"Saved enemy actor '{enemy.Actor.State.InstanceId}' could not be restored.");
+                continue;
             }
 
             enemies.Add(restoredEnemy);
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return new TrainingAnnexSessionRestoreResult(null, diagnostics);
         }
 
         TrainingAnnexActorRoster roster = new(player, enemies);
@@ -1308,6 +1317,71 @@ internal sealed class CleanTrainingAnnexPlayHost
             []);
     }
 
+    private static void ValidateTrainingAnnexField(
+        RuntimeFieldSnapshot? field,
+        ICollection<string> diagnostics)
+    {
+        if (field is null)
+        {
+            return;
+        }
+
+        if (field.Navigation.CurrentLocationId != TrainingAnnexHostSupport.StagingArea &&
+            field.Navigation.CurrentLocationId != TrainingAnnexHostSupport.TrainingAnnexEntrance)
+        {
+            diagnostics.Add(
+                $"Saved location '{field.Navigation.CurrentLocationId}' is not a Training Annex play location.");
+        }
+
+        RuntimeDungeonTraversalSnapshot? dungeon = field.DungeonTraversal;
+        if (dungeon is null)
+        {
+            return;
+        }
+
+        if (dungeon.DungeonId != TrainingAnnexHostSupport.TrainingAnnexDungeon)
+        {
+            diagnostics.Add(
+                $"Saved dungeon '{dungeon.DungeonId}' is not the Training Annex dungeon.");
+        }
+
+        ContentId[] allowedNodes =
+        [
+            TrainingAnnexHostSupport.TrainingAnnexEntrance,
+            TrainingAnnexHostSupport.ReviewHall,
+            TrainingAnnexHostSupport.ReviewAlcove
+        ];
+        if (!allowedNodes.Contains(dungeon.CurrentNodeId))
+        {
+            diagnostics.Add(
+                $"Saved dungeon node '{dungeon.CurrentNodeId}' is not recognized by the Training Annex host.");
+        }
+
+        foreach (ContentId nodeId in dungeon.VisitedNodeIds)
+        {
+            if (!allowedNodes.Contains(nodeId))
+            {
+                diagnostics.Add(
+                    $"Saved visited dungeon node '{nodeId}' is not recognized by the Training Annex host.");
+            }
+        }
+
+        foreach (ContentId checkpointId in dungeon.UnlockedCheckpointIds)
+        {
+            if (checkpointId != TrainingAnnexHostSupport.ReviewCheckpoint)
+            {
+                diagnostics.Add(
+                    $"Saved checkpoint '{checkpointId}' is not recognized by the Training Annex host.");
+            }
+        }
+
+        foreach (ContentId bossId in dungeon.DefeatedBossIds)
+        {
+            diagnostics.Add(
+                $"Saved defeated boss '{bossId}' is not recognized by the Training Annex host.");
+        }
+    }
+
     private static bool TryRestoreActor(
         TrainingAnnexRuntimeActor current,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
@@ -1319,6 +1393,31 @@ internal sealed class CleanTrainingAnnexPlayHost
         {
             restored = current;
             diagnostic = $"Saved session has no actor '{current.Actor.State.InstanceId}'.";
+            return false;
+        }
+
+        RuntimeActorSnapshot expected = current.Actor.State.ToSnapshot();
+        if (snapshot.Identity.EntityDefinitionId != expected.Identity.EntityDefinitionId)
+        {
+            restored = current;
+            diagnostic =
+                $"Saved actor '{snapshot.Identity.InstanceId}' has entity '{snapshot.Identity.EntityDefinitionId}', expected '{expected.Identity.EntityDefinitionId}' for {current.Role}.";
+            return false;
+        }
+
+        if (snapshot.Identity.ActorKindId != expected.Identity.ActorKindId)
+        {
+            restored = current;
+            diagnostic =
+                $"Saved actor '{snapshot.Identity.InstanceId}' has kind '{snapshot.Identity.ActorKindId}', expected '{expected.Identity.ActorKindId}' for {current.Role}.";
+            return false;
+        }
+
+        if (snapshot.Ownership.TeamId != expected.Ownership.TeamId)
+        {
+            restored = current;
+            diagnostic =
+                $"Saved actor '{snapshot.Identity.InstanceId}' has team '{snapshot.Ownership.TeamId}', expected '{expected.Ownership.TeamId}' for {current.Role}.";
             return false;
         }
 
@@ -1867,6 +1966,32 @@ internal sealed class CleanTrainingAnnexPlayHost
             _randomSource,
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
+
+        WalletTransactionResult walletMutation;
+        try
+        {
+            walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
+        }
+        catch (OverflowException exception)
+        {
+            await _eventSink.PublishAsync(
+                $"[InvalidCurrencyAmount]: {exception.Message}",
+                cancellationToken).ConfigureAwait(false);
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+        }
+
+        if (!walletMutation.Applied)
+        {
+            foreach (ResourceTransactionDiagnostic diagnostic in walletMutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}]: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+        }
+
         RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
             player.Actor.State,
             growth);
@@ -1876,19 +2001,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             {
                 await _eventSink.PublishAsync(
                     $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
-        }
-
-        WalletTransactionResult walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
-        if (!walletMutation.Applied)
-        {
-            foreach (ResourceTransactionDiagnostic diagnostic in walletMutation.Diagnostics)
-            {
-                await _eventSink.PublishAsync(
-                    $"[{diagnostic.Code}]: {diagnostic.Message}",
                     cancellationToken).ConfigureAwait(false);
             }
 

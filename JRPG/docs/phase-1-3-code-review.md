@@ -1,6 +1,6 @@
 # Phase 1-3 Code Review And Forward Direction
 
-> **Status: Active implementation audit; CodeReview-1 and CodeReview-2 are complete and ready as of 2026-07-07.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. Phase 3 restore hardening is the next unresolved stabilization item. This document does not authorize legacy removal.
+> **Status: Active implementation audit; CodeReview-1, CodeReview-2, and CodeReview-3 are implemented and ready as of 2026-07-08.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. This document does not authorize legacy removal.
 
 ## Executive Verdict
 
@@ -20,10 +20,10 @@ The clean path is nevertheless still a proof harness rather than a production ru
 
 1. The clean host maintained two mutable actor-state representations and manually synchronized only parts of them. **Resolved by CodeReview-1.**
 2. The battle target menu could not distinguish between multiple actors and always selected the first eligible target. **Resolved by CodeReview-2.**
-3. Phase 3 restore matches actors by runtime ID without confirming that the saved entity is the actor being restored.
+3. Phase 3 restore matches actors by runtime ID without confirming that the saved entity is the actor being restored. **Resolved by CodeReview-3.**
 4. The resource recalculation command calculated a result but did not apply that recalculated result to runtime state. **Resolved by the CodeReview-1 closure.**
 
-CodeReview-1 and CodeReview-2 are now ready: one actor state is authoritative, recalculation commits to it, dynamic menu rows carry typed identities, and Press Turn presentation consumes typed event state. The correct next move is Phase 3 restore hardening before Phase 4 deepens the clean consumer.
+CodeReview-1 and CodeReview-2 are ready: one actor state is authoritative, recalculation commits to it, dynamic menu rows carry typed identities, and Press Turn presentation consumes typed event state. CodeReview-3 is also ready: saved actor/entity/team mappings, saved creation context, Training Annex host dungeon-state checks, content-pack provenance, and atomic restore planning are implemented and covered by the final gate.
 
 ## Audit Scope
 
@@ -348,7 +348,7 @@ A record marked as created during a pending action or in a disallowed context ca
 
 Validate both creation metadata and current load context, with separate diagnostics when useful.
 
-### Medium: dungeon save validation checks only the dungeon ID
+### Medium (resolved by CodeReview-3 host boundary): dungeon save validation checks only the dungeon ID
 
 **Evidence**
 
@@ -362,7 +362,7 @@ Unknown current nodes, visited nodes, checkpoint IDs, and boss IDs can pass vali
 
 Either validate against an explicit runtime dungeon graph supplied by the host, or clearly classify node/checkpoint/boss IDs as host-owned and require a host restore validator. The current mixed catalog/host boundary is incomplete.
 
-### Medium: reward application is not atomic
+### Medium (resolved by CodeReview-3): reward application is not atomic
 
 **Evidence**
 
@@ -419,7 +419,7 @@ Split by responsibility only after the state-authority correction so the refacto
 
 The ledger remains useful as protection evidence, but should not be used as an automatic completion score until these terms are defined once.
 
-### Low: save compatibility lacks explicit content provenance
+### Low (resolved by CodeReview-3): save compatibility lacks explicit content provenance
 
 `RuntimeSaveGameSnapshot` stores a framework version and contract version, but not the loaded pack IDs and exact versions that authored the referenced records. The Training Annex host currently writes a hardcoded framework version `0.1.0`.
 
@@ -530,10 +530,11 @@ Do not create another roadmap or lettered track. Use the existing phase plan and
    - Target, skill, and item selections carry IDs.
    - Press Turn events carry typed state.
 
-3. **Harden Phase 3 restore and commit it separately.**
+3. **Harden Phase 3 restore and commit it separately. Completed and ready in CodeReview-3.**
    - Validate actor identity mappings and saved contexts.
    - Define dungeon host validation and content provenance.
    - Add atomic restore planning.
+   - Final verification: focused restore/parity coverage passed 106 tests; the full suite passed 819 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully; `Data/Jsons` remained unchanged.
 
 4. **Split the clean host by responsibility.**
    - Session coordinator.

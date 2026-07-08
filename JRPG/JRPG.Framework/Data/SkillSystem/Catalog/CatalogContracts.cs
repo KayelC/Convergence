@@ -189,7 +189,39 @@ public sealed class GameDataCatalog :
         IEnumerable<KeyValuePair<ContentId, DungeonDefinition>>? dungeons = null,
         IEnumerable<KeyValuePair<ContentId, FusionRecipeDefinition>>? fusionRecipes = null,
         IEnumerable<KeyValuePair<ContentId, RulesetDefinition>>? rulesets = null)
+        : this(
+            [],
+            skills,
+            entities,
+            races,
+            ailments,
+            items,
+            equipment,
+            shops,
+            negotiations,
+            encounters,
+            dungeons,
+            fusionRecipes,
+            rulesets)
     {
+    }
+
+    internal GameDataCatalog(
+        IEnumerable<ContentPackIdentity> contentPacks,
+        IEnumerable<KeyValuePair<ContentId, SkillDefinition>> skills,
+        IEnumerable<KeyValuePair<ContentId, EntityDefinition>> entities,
+        IEnumerable<KeyValuePair<ContentId, RaceDefinition>> races,
+        IEnumerable<KeyValuePair<ContentId, AilmentDefinition>> ailments,
+        IEnumerable<KeyValuePair<ContentId, ItemDefinition>> items,
+        IEnumerable<KeyValuePair<ContentId, EquipmentDefinition>>? equipment = null,
+        IEnumerable<KeyValuePair<ContentId, ShopCatalogDefinition>>? shops = null,
+        IEnumerable<KeyValuePair<ContentId, NegotiationDefinition>>? negotiations = null,
+        IEnumerable<KeyValuePair<ContentId, EncounterDefinition>>? encounters = null,
+        IEnumerable<KeyValuePair<ContentId, DungeonDefinition>>? dungeons = null,
+        IEnumerable<KeyValuePair<ContentId, FusionRecipeDefinition>>? fusionRecipes = null,
+        IEnumerable<KeyValuePair<ContentId, RulesetDefinition>>? rulesets = null)
+    {
+        ContentPacks = Array.AsReadOnly((contentPacks ?? throw new ArgumentNullException(nameof(contentPacks))).ToArray());
         Skills = Snapshot(skills);
         Entities = Snapshot(entities);
         Races = Snapshot(races);
@@ -204,6 +236,7 @@ public sealed class GameDataCatalog :
         Rulesets = Snapshot(rulesets ?? []);
     }
 
+    public IReadOnlyList<ContentPackIdentity> ContentPacks { get; }
     public IReadOnlyDictionary<ContentId, SkillDefinition> Skills { get; }
     public IReadOnlyDictionary<ContentId, EntityDefinition> Entities { get; }
     public IReadOnlyDictionary<ContentId, RaceDefinition> Races { get; }

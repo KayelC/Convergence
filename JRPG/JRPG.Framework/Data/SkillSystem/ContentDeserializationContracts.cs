@@ -23,6 +23,8 @@ public sealed record ContentPackDocumentReference(string Type, string Path);
 
 public sealed record ContentPackDependency(string Id, SemanticVersion Version);
 
+public sealed record ContentPackIdentity(string Id, SemanticVersion Version);
+
 public sealed record ContentPackManifest
 {
     public ContentPackManifest(

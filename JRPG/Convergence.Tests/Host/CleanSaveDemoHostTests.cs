@@ -120,7 +120,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v4", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v5", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);
@@ -146,11 +146,13 @@ public sealed class CleanSaveDemoHostTests
         RuntimeSaveRecord restored = CleanSaveJsonCodec.DeserializeRecord(json);
 
         Assert.Contains("\"kind\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"contentPacks\"", json, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(RuntimeSaveKind.Suspend, restored.Kind);
         Assert.Equal(ContentId.Parse("dungeon_menu"), restored.Context.ContextId);
         Assert.False(restored.Context.HasPendingHostAction);
         Assert.Equal(42, restored.Sequence);
         Assert.Equal(record.Snapshot.ContractVersion, restored.Snapshot.ContractVersion);
+        Assert.Equal(record.Snapshot.ContentPacks, restored.Snapshot.ContentPacks);
         Assert.Equal(record.Snapshot.Wallet.Macca, restored.Snapshot.Wallet.Macca);
     }
 

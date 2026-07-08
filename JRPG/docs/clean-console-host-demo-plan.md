@@ -396,7 +396,7 @@ Let the player use clean items or field actions through the framework.
 
 ## Iteration 5: Manual Clean Battle Loop
 
-Status: Phases 2-11 through 2-19 are implemented; CodeReview-1 and CodeReview-2 stabilization are complete. Phase 3 restore hardening is next.
+Status: Phases 2-11 through 2-19 are implemented; CodeReview-1, CodeReview-2, and CodeReview-3 stabilization are complete and ready.
 
 ### Goal
 
@@ -813,6 +813,6 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-Iterations 1-7 and CodeReview-1/2 are implemented. The next approved stabilization work is Phase 3 restore hardening from `docs/phase-1-3-code-review.md`: validate actor identity mappings and saved contexts, define dungeon host-state validation and content provenance, and plan restore atomically before Phase 4 begins.
+Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. Phase 4 may resume after the next responsibility split/refactor checkpoint described in the code-review plan.
 
 Then attach one feature at a time.

@@ -10,6 +10,9 @@ namespace JRPGPrototype.Logic.Runtime;
 public enum RuntimeSaveValidationCode
 {
     ContractVersionUnsupported,
+    DuplicateContentPack,
+    MissingContentPack,
+    ContentPackVersionMismatch,
     DuplicateActorInstanceId,
     MissingActorReference,
     MissingActiveFormReference,
@@ -180,10 +183,11 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 4;
+    public const int CurrentContractVersion = 5;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
+        IEnumerable<ContentPackIdentity> contentPacks,
         IEnumerable<RuntimeActorSnapshot> actors,
         RuntimePartyStockSnapshot partyStock,
         RuntimeInventorySnapshot inventory,
@@ -204,6 +208,7 @@ public sealed record RuntimeSaveGameSnapshot
 
         ContractVersion = contractVersion;
         FrameworkVersion = frameworkVersion;
+        ContentPacks = RuntimePersistenceCollections.List(contentPacks);
         Actors = RuntimePersistenceCollections.List(actors);
         PartyStock = partyStock ?? throw new ArgumentNullException(nameof(partyStock));
         Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
@@ -219,6 +224,7 @@ public sealed record RuntimeSaveGameSnapshot
 
     public int ContractVersion { get; }
     public SemanticVersion FrameworkVersion { get; }
+    public IReadOnlyList<ContentPackIdentity> ContentPacks { get; }
     public IReadOnlyList<RuntimeActorSnapshot> Actors { get; }
     public RuntimePartyStockSnapshot PartyStock { get; }
     public RuntimeInventorySnapshot Inventory { get; }
@@ -247,6 +253,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 $"Runtime save contract version {snapshot.ContractVersion} is not supported.",
                 Path: "$.contractVersion"));
         }
+
+        ValidateContentPacks(snapshot.ContentPacks, catalog, diagnostics);
 
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = [];
         for (int index = 0; index < snapshot.Actors.Count; index++)
@@ -287,6 +295,59 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidateCheckpoints(snapshot.Checkpoints, actors, diagnostics);
 
         return new RuntimeSaveValidationResult(snapshot, diagnostics);
+    }
+
+    private static void ValidateContentPacks(
+        IReadOnlyList<ContentPackIdentity> contentPacks,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        var catalogPacks = catalog.ContentPacks.ToDictionary(pack => pack.Id, StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int index = 0; index < contentPacks.Count; index++)
+        {
+            ContentPackIdentity pack = contentPacks[index];
+            string path = $"$.contentPacks[{index}]";
+            if (!seen.Add(pack.Id))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DuplicateContentPack,
+                    $"Content pack '{pack.Id}' appears more than once.",
+                    Path: path + ".id"));
+                continue;
+            }
+
+            if (!catalogPacks.TryGetValue(pack.Id, out ContentPackIdentity? catalogPack))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.MissingContentPack,
+                    $"Content pack '{pack.Id}' is not loaded in the current catalog.",
+                    Path: path + ".id"));
+                continue;
+            }
+
+            if (catalogPack.Version != pack.Version)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ContentPackVersionMismatch,
+                    $"Content pack '{pack.Id}' was saved with version {pack.Version}, but the current catalog loaded version {catalogPack.Version}.",
+                    Path: path + ".version"));
+            }
+        }
+
+        for (int index = 0; index < catalog.ContentPacks.Count; index++)
+        {
+            ContentPackIdentity catalogPack = catalog.ContentPacks[index];
+            if (seen.Contains(catalogPack.Id))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.MissingContentPack,
+                $"Current catalog pack '{catalogPack.Id}' is not recorded by the save.",
+                Path: "$.contentPacks"));
+        }
     }
 
     private static void ValidateActorCatalogReferences(

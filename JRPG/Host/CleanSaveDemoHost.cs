@@ -163,6 +163,12 @@ internal sealed class CleanSaveDemoHost
 
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
+            [
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.1.0"))
+            ],
             [frost, ember],
             new RuntimePartyStockSnapshot(
                 frostRef,
@@ -357,6 +363,9 @@ internal static class CleanSaveJsonCodec
         new(
             snapshot.ContractVersion,
             snapshot.FrameworkVersion.ToString(),
+            snapshot.ContentPacks
+                .Select(pack => new HostContentPackDto(pack.Id, pack.Version.ToString()))
+                .ToArray(),
             snapshot.Actors.Select(ToDto).ToArray(),
             ToDto(snapshot.PartyStock),
             ToDto(snapshot.Inventory),
@@ -372,6 +381,8 @@ internal static class CleanSaveJsonCodec
     private static RuntimeSaveGameSnapshot FromDto(HostSaveGameDto dto) =>
         new(
             SemanticVersion.Parse(dto.FrameworkVersion),
+            (dto.ContentPacks ?? [])
+                .Select(pack => new ContentPackIdentity(pack.Id, SemanticVersion.Parse(pack.Version))),
             dto.Actors.Select(FromDto),
             FromDto(dto.PartyStock),
             FromDto(dto.Inventory),
@@ -663,6 +674,7 @@ internal static class CleanSaveJsonCodec
     private sealed record HostSaveGameDto(
         int ContractVersion,
         string FrameworkVersion,
+        HostContentPackDto[]? ContentPacks,
         HostActorDto[] Actors,
         HostPartyStockDto PartyStock,
         HostInventoryDto Inventory,
@@ -674,6 +686,8 @@ internal static class CleanSaveJsonCodec
         HostSessionDto Session,
         HostCheckpointDto[] Checkpoints,
         Dictionary<string, string> HostContext);
+
+    private sealed record HostContentPackDto(string Id, string Version);
 
     private sealed record HostActorDto(
         string InstanceId,

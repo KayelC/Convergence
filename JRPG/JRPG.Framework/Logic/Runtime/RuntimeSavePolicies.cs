@@ -19,7 +19,9 @@ public enum RuntimeSavePolicyDiagnosticCode
     MissingSaveRecord,
     SaveKindMismatch,
     ContextNotAllowed,
-    PendingHostAction
+    PendingHostAction,
+    SavedContextNotAllowed,
+    SavedContextPendingHostAction
 }
 
 public sealed record RuntimeSaveContextSnapshot
@@ -158,6 +160,10 @@ public sealed class RuntimeSavePolicyService : IRuntimeSavePolicyService
                 expectedKind,
                 context.ContextId));
         }
+        else
+        {
+            diagnostics.AddRange(ValidateSavedContext(expectedKind, record.Context));
+        }
 
         bool consume = diagnostics.Count == 0 &&
             expectedKind == RuntimeSaveKind.Suspend &&
@@ -184,6 +190,32 @@ public sealed class RuntimeSavePolicyService : IRuntimeSavePolicyService
             diagnostics.Add(new RuntimeSavePolicyDiagnostic(
                 RuntimeSavePolicyDiagnosticCode.ContextNotAllowed,
                 $"Save kind '{kind}' is not allowed in context '{context.ContextId}'.",
+                kind,
+                context.ContextId));
+        }
+
+        return diagnostics;
+    }
+
+    private List<RuntimeSavePolicyDiagnostic> ValidateSavedContext(
+        RuntimeSaveKind kind,
+        RuntimeSaveContextSnapshot context)
+    {
+        var diagnostics = new List<RuntimeSavePolicyDiagnostic>();
+        if (context.HasPendingHostAction)
+        {
+            diagnostics.Add(new RuntimeSavePolicyDiagnostic(
+                RuntimeSavePolicyDiagnosticCode.SavedContextPendingHostAction,
+                "Save records created while a host action was pending cannot be loaded.",
+                kind,
+                context.ContextId));
+        }
+
+        if (!_options.AllowedContexts(kind).Contains(context.ContextId))
+        {
+            diagnostics.Add(new RuntimeSavePolicyDiagnostic(
+                RuntimeSavePolicyDiagnosticCode.SavedContextNotAllowed,
+                $"Save record context '{context.ContextId}' is not allowed for kind '{kind}'.",
                 kind,
                 context.ContextId));
         }

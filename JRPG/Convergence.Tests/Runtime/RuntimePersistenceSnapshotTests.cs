@@ -128,6 +128,37 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsMissingDuplicateAndVersionMismatchedContentPacks()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            CreateSaveSnapshot(),
+            contentPacks:
+            [
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("9.9.9")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.1.0"))
+            ]);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ContentPackVersionMismatch &&
+            diagnostic.Path == "$.contentPacks[1].version");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicateContentPack &&
+            diagnostic.Path == "$.contentPacks[2].id");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.MissingContentPack &&
+            diagnostic.Path == "$.contentPacks[3].id");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.MissingContentPack &&
+            diagnostic.Path == "$.contentPacks");
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion()
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -203,6 +234,20 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeSavePolicyAssessment mismatch = service.AssessLoad(manual, RuntimeSaveKind.Suspend, context);
         RuntimeSavePolicyAssessment suspendLoad = service.AssessLoad(suspend, RuntimeSaveKind.Suspend, context);
         RuntimeSavePolicyAssessment manualLoad = service.AssessLoad(manual, RuntimeSaveKind.Manual, context);
+        RuntimeSavePolicyAssessment savedContextMismatch = service.AssessLoad(
+            new RuntimeSaveRecord(
+                RuntimeSaveKind.Manual,
+                CreateSaveSnapshot(),
+                new RuntimeSaveContextSnapshot(Id("battle"))),
+            RuntimeSaveKind.Manual,
+            context);
+        RuntimeSavePolicyAssessment savedPending = service.AssessLoad(
+            new RuntimeSaveRecord(
+                RuntimeSaveKind.Manual,
+                CreateSaveSnapshot(),
+                new RuntimeSaveContextSnapshot(Id("field_menu"), hasPendingHostAction: true)),
+            RuntimeSaveKind.Manual,
+            context);
 
         Assert.False(missing.IsAllowed);
         Assert.Contains(missing.Diagnostics, diagnostic =>
@@ -214,6 +259,13 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.True(suspendLoad.ConsumeAfterSuccessfulRestore);
         Assert.True(manualLoad.IsAllowed);
         Assert.False(manualLoad.ConsumeAfterSuccessfulRestore);
+        Assert.False(savedContextMismatch.IsAllowed);
+        Assert.Contains(savedContextMismatch.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.SavedContextNotAllowed &&
+            diagnostic.ContextId == Id("battle"));
+        Assert.False(savedPending.IsAllowed);
+        Assert.Contains(savedPending.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSavePolicyDiagnosticCode.SavedContextPendingHostAction);
     }
 
     [Fact]
@@ -318,6 +370,12 @@ public sealed class RuntimePersistenceSnapshotTests
 
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
+            [
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.1.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.1.0"))
+            ],
             actors ?? [frost, ember],
             partyStock ?? new RuntimePartyStockSnapshot(
                 frostRef,
@@ -396,6 +454,25 @@ public sealed class RuntimePersistenceSnapshotTests
             hostContext ?? [new KeyValuePair<ContentId, string>(Id("scene"), "clean_save_demo")],
             contractVersion);
     }
+
+    private static RuntimeSaveGameSnapshot Copy(
+        RuntimeSaveGameSnapshot snapshot,
+        IEnumerable<ContentPackIdentity>? contentPacks = null) =>
+        new(
+            snapshot.FrameworkVersion,
+            contentPacks ?? snapshot.ContentPacks,
+            snapshot.Actors,
+            snapshot.PartyStock,
+            snapshot.Inventory,
+            snapshot.Equipment,
+            snapshot.Wallet,
+            snapshot.Field,
+            snapshot.Compendium,
+            snapshot.Knowledge,
+            snapshot.Session,
+            snapshot.Checkpoints,
+            snapshot.HostContext,
+            snapshot.ContractVersion);
 
     internal static RuntimeActorSnapshot CreateActor(
         RuntimeInstanceId instanceId,

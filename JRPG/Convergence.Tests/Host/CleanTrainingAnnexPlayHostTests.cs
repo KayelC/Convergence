@@ -1,5 +1,6 @@
 using Convergence.Tests.TestSupport;
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Host;
 using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
@@ -1690,6 +1691,129 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsActorEntityMismatchBeforeMutation()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(
+                snapshot,
+                actors: snapshot.Actors.Select(actor =>
+                    actor.Identity.InstanceId == RuntimeInstanceId.Parse("echo_adept")
+                        ? CopyActor(actor, entityId: Qualified("ashling"))
+                        : actor)));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Equal(Qualified("echo_adept"), summary.PlayerEntityId);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Contains(
+            "Manual load rejected: Saved actor 'echo_adept' has entity 'convergence.training_annex_slice:ashling', expected 'convergence.training_annex_slice:echo_adept' for Player.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsSavedContextThatWasNotSaveEligible()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(
+            snapshot => snapshot,
+            new RuntimeSaveContextSnapshot(TrainingAnnexHostSupport.BattleSaveContext));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            "Manual load rejected [SavedContextNotAllowed]: Save record context 'battle' is not allowed for kind 'Manual'.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsInvalidTrainingAnnexDungeonStateBeforeMutation()
+    {
+        ContentId missingNode = Qualified("missing_node");
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(
+                snapshot,
+                field: new RuntimeFieldSnapshot(
+                    new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance),
+                    new RuntimeDungeonTraversalSnapshot(
+                        TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                        missingNode))));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.True(summary.SaveDiagnosticCount >= 1);
+        Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
+        Assert.Contains(
+            "Manual load rejected: Saved dungeon node 'convergence.training_annex_slice:missing_node' is not recognized by the Training Annex host.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsContentPackVersionMismatch()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(
+                snapshot,
+                contentPacks:
+                [
+                    new ContentPackIdentity(
+                        TrainingAnnexHostSupport.PackId,
+                        SemanticVersion.Parse("9.9.9"))
+                ]));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            "Manual load rejected [ContentPackVersionMismatch] $.contentPacks[0].version",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_PostVictoryRewardStateSurvivesManualSaveLoad()
     {
         var io = new ScriptedGameIO().QueueMenu(
@@ -1847,6 +1971,73 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new SkillSystemCatalogLoadRequest(TrainingAnnexHostSupport.BuildRegistrations(), [bundle]));
         return load.RequireCatalog();
     }
+
+    private static async Task<RuntimeSaveRecord> CreateTrainingAnnexSaveRecordAsync(
+        Func<RuntimeSaveGameSnapshot, RuntimeSaveGameSnapshot> mutate,
+        RuntimeSaveContextSnapshot? context = null)
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimeSaveGameSnapshot snapshot = TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
+            roster,
+            new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea)),
+            new RuntimeKnowledgeSnapshot(),
+            new RuntimeInventorySnapshot(
+                [new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
+            new RuntimeWalletSnapshot(0),
+            new RuntimeSessionProgressSnapshot());
+        return new RuntimeSaveRecord(
+            RuntimeSaveKind.Manual,
+            mutate(snapshot),
+            context ?? new RuntimeSaveContextSnapshot(TrainingAnnexHostSupport.FieldMenuSaveContext));
+    }
+
+    private static RuntimeSaveGameSnapshot CopySave(
+        RuntimeSaveGameSnapshot snapshot,
+        IEnumerable<RuntimeActorSnapshot>? actors = null,
+        RuntimeFieldSnapshot? field = null,
+        IEnumerable<ContentPackIdentity>? contentPacks = null) =>
+        new(
+            snapshot.FrameworkVersion,
+            contentPacks ?? snapshot.ContentPacks,
+            actors ?? snapshot.Actors,
+            snapshot.PartyStock,
+            snapshot.Inventory,
+            snapshot.Equipment,
+            snapshot.Wallet,
+            field ?? snapshot.Field,
+            snapshot.Compendium,
+            snapshot.Knowledge,
+            snapshot.Session,
+            snapshot.Checkpoints,
+            snapshot.HostContext,
+            snapshot.ContractVersion);
+
+    private static RuntimeActorSnapshot CopyActor(
+        RuntimeActorSnapshot actor,
+        ContentId? entityId = null,
+        ContentId? actorKindId = null,
+        RuntimeActorOwnershipSnapshot? ownership = null) =>
+        new(
+            new RuntimeActorIdentitySnapshot(
+                actor.Identity.InstanceId,
+                entityId ?? actor.Identity.EntityDefinitionId,
+                actorKindId ?? actor.Identity.ActorKindId,
+                actor.Identity.DisplayName,
+                actor.Identity.DisplaySubtitle),
+            ownership ?? actor.Ownership,
+            actor.Deployment,
+            actor.Progression,
+            actor.Resources,
+            actor.Stats,
+            actor.Skills,
+            actor.Forms,
+            actor.Equipment,
+            actor.BattleStatus,
+            actor.BattleActivations,
+            actor.BaseResourceValues,
+            actor.VitalResourceId,
+            actor.CapabilityIds);
 
     private static CleanTrainingAnnexPlayHost CreateHost(
         ScriptedGameIO io,

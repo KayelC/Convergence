@@ -54,6 +54,8 @@ internal sealed record TrainingAnnexActorRosterResult
 internal static class TrainingAnnexHostSupport
 {
     public const string PackId = "convergence.training_annex_slice";
+    public static readonly ContentPackIdentity PackIdentity =
+        new(PackId, SemanticVersion.Parse("0.1.0"));
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
     public static readonly ContentId FieldMenuSaveContext = ContentId.Parse("field_menu");
@@ -360,6 +362,7 @@ internal static class TrainingAnnexHostSupport
 
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("0.1.0"),
+            [PackIdentity],
             actors,
             new RuntimePartyStockSnapshot(
                 playerReference,
