@@ -255,19 +255,22 @@ The active documentation order is now:
 
 1. this document;
 2. the Full Parity Capability Plan when choosing implementation work;
-3. the Repository Architecture Proposal when changing physical file layout;
-4. the Clean Console Host Demo Plan when implementing proof-harness details for the framework-first console demo;
-5. the Skill System GDD for approved skill design;
-6. Architecture and Gameplay Systems for implementation reference;
-7. subsystem docs for local orientation;
-8. Project Vision for long-term direction;
-9. archived plans only as history.
+3. `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` when checking executable capability status, ownership, evidence, and the numbered `futurePhase` for each capability;
+4. the Repository Architecture Proposal when changing physical file layout;
+5. the Clean Console Host Demo Plan when implementing proof-harness details for the framework-first console demo;
+6. the Skill System GDD for approved skill design;
+7. Architecture and Gameplay Systems for implementation reference;
+8. subsystem docs for local orientation;
+9. Project Vision for long-term direction;
+10. archived plans only as history.
 
 ## Plan Moving Forward
 
 Future work should use numbered, named phases or explicitly approved plan files. Do not casually invent new lettered tracks.
 
 The active implementation spine is now [Full Parity Capability Plan](full-parity-capability-plan.md). The clean console host is the proof harness for that plan, not a separate competing roadmap.
+
+The parity ledger uses the same numbered pass IDs through `futurePhase`. Old lettered track labels are historical only and should not be used to choose new work.
 
 ### Phase 1: Rebuild Ownership
 
@@ -367,6 +370,7 @@ Goal: replace compatibility adapters with clean consumer authority only where pr
 Work:
 
 - follow the [Full Parity Capability Plan](full-parity-capability-plan.md);
+- confirm the capability's `futurePhase` in `recovery-baseline.json`;
 - choose one capability;
 - define the intended behavior in active docs;
 - add original clean content if needed;
@@ -413,7 +417,9 @@ This section is for ranking before implementation. Do not treat `TBD` items as a
 
 ## Immediate Next Recommendation
 
-CodeReview-1, CodeReview-2, CodeReview-3, and CodeReview-4 are complete and ready. CodeReview-3 implements the already-reviewed Phase 3 restore-hardening checkpoint: expected actor/entity mapping and saved creation context are validated, host-owned dungeon-state validation is explicit for Training Annex, content provenance is recorded, and restore planning completes before mutating the live session. CodeReview-4 splits the Training Annex host's persistence, field-presentation, and reward-application seams into dedicated collaborators. Phase 4 can resume on top of the hardened state/persistence boundary and the cleaner host structure.
+CodeReview-1, CodeReview-2, CodeReview-3, and CodeReview-4 are complete and ready. CodeReview-3 implements the already-reviewed Phase 3 restore-hardening checkpoint: expected actor/entity mapping and saved creation context are validated, host-owned dungeon-state validation is explicit for Training Annex, content provenance is recorded, and restore planning completes before mutating the live session. CodeReview-4 splits the Training Annex host's persistence, field-presentation, and reward-application seams into dedicated collaborators. Phase 4-21 is now implemented: Training Annex field inventory selection is driven by the clean inventory snapshot and selected catalog content IDs, and selected-item consumption commits through framework inventory reservations only after meaningful execution.
+
+The next numbered capability is Phase 4-22, `equipment_ownership`, unless the owner deliberately reprioritizes the plan.
 
 ## Ground Rules For Future Work
 

@@ -380,6 +380,13 @@ Let the player use clean items or field actions through the framework.
 - Full-HP tonic use is rejected without consumption, successful tonic use consumes one, and Mend commits its SP cost.
 - Runtime resource state is synchronized around execution so progression/save snapshots remain the persistent clean state.
 
+### Phase 4-21 Result
+
+- The clean field inventory is no longer Annex-Tonic-specific. It enumerates usable field items from the current `RuntimeInventorySnapshot`, filters out zero-quantity and non-usable key records, and attaches each row's catalog `ContentId` as the selection identity.
+- Selecting Focus Tea, Annex Tonic, or any future field-usable clean item now resolves the chosen `ItemDefinition` from the catalog and executes that item through the same shared field action path.
+- Successful meaningful item execution consumes only the selected item. No-effect use, rejected use, failed execution, and target cancellation leave the framework inventory snapshot unchanged.
+- Field skills still do not mutate inventory and no longer print a misleading hardcoded item quantity.
+
 ### Non-Goals
 
 - no shop yet;
@@ -813,6 +820,8 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4 may resume on top of those stabilized boundaries.
+Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path.
+
+The next numbered capability is Phase 4-22, `equipment_ownership`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

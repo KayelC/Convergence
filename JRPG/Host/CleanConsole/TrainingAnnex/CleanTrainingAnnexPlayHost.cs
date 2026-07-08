@@ -44,8 +44,8 @@ internal enum CleanTrainingAnnexPlayCommand
     BattleAnalyze,
     SelectBattleSkill,
     SelectBattleItem,
+    SelectFieldItem,
     SelectBattleTarget,
-    UseAnnexTonic,
     UseMend,
     TargetPlayer,
     Back,
@@ -116,6 +116,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
 
 internal sealed class CleanTrainingAnnexPlayHost
 {
+    private static readonly ContentId Field = ContentId.Parse("field");
+
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
@@ -702,6 +704,18 @@ internal sealed class CleanTrainingAnnexPlayHost
                     }
 
                     commands.Add(itemSelection.Command);
+                    ItemDefinition? item = itemSelection.SelectionIdentity?.ContentId is ContentId itemId
+                        ? GetKnownFieldItems(catalog, inventory.Snapshot)
+                            .FirstOrDefault(candidate => candidate.Id == itemId)
+                        : null;
+                    if (item is null)
+                    {
+                        await _eventSink.PublishAsync(
+                            "Field item selection rejected; inventory and actor state are unchanged.",
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+
                     HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
                         await _commandSource.ReadAsync(
                             CreateTargetMenu(roster.Player),
@@ -717,13 +731,17 @@ internal sealed class CleanTrainingAnnexPlayHost
                     }
 
                     commands.Add(targetSelection.Command);
-                    ItemDefinition item = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
                     TrainingAnnexFieldActionResult action = await fieldActions.UseItemAsync(
                         roster.Player,
                         item,
                         inventory,
                         cancellationToken).ConfigureAwait(false);
-                    await PresentFieldActionAsync(action, item.DisplayName, inventory.Snapshot, cancellationToken)
+                    await PresentFieldActionAsync(
+                            action,
+                            item.DisplayName,
+                            inventory.Snapshot,
+                            cancellationToken,
+                            item.Id)
                         .ConfigureAwait(false);
                     if (action.Applied)
                     {
@@ -1020,20 +1038,27 @@ internal sealed class CleanTrainingAnnexPlayHost
         GameDataCatalog catalog,
         RuntimeInventorySnapshot inventory)
     {
-        ItemDefinition tonic = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
-        int quantity = inventory.GetQuantity(tonic.Id);
+        List<HostCommandOption<CleanTrainingAnnexPlayCommand>> options = GetKnownFieldItems(catalog, inventory)
+            .Select(item => new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.SelectFieldItem,
+                $"{item.DisplayName} x{inventory.GetQuantity(item.Id)}",
+                Description: item.Description,
+                SelectionIdentity: HostCommandSelectionIdentity.ForContent(item.Id)))
+            .ToList();
+        if (options.Count == 0)
+        {
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.SelectFieldItem,
+                "No usable field items",
+                false));
+        }
+
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.Back,
+            "Back"));
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             "Clean Inventory",
-            [
-                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.UseAnnexTonic,
-                    $"{tonic.DisplayName} x{quantity}",
-                    quantity > 0,
-                    tonic.Description),
-                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.Back,
-                    "Back")
-            ]);
+            options);
     }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateFieldSkillMenu(
@@ -1077,9 +1102,27 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeInventorySnapshot inventory,
         CancellationToken cancellationToken)
     {
-        ItemDefinition tonic = catalog.GetRequiredItem(TrainingAnnexHostSupport.AnnexTonic);
+        string summary = string.Join(
+            ", ",
+            inventory.ItemQuantities
+                .Where(pair => pair.Value > 0)
+                .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
+                .Select(pair =>
+                {
+                    if (catalog.TryGetItem(pair.Key, out ItemDefinition? item) && item is not null)
+                    {
+                        return $"{item.DisplayName} x{pair.Value}";
+                    }
+
+                    return $"{pair.Key} x{pair.Value}";
+                }));
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            summary = "empty";
+        }
+
         return _eventSink.PublishAsync(
-            $"Inventory: {tonic.DisplayName} x{inventory.GetQuantity(tonic.Id)}.",
+            $"Inventory: {summary}.",
             cancellationToken);
     }
 
@@ -1087,7 +1130,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexFieldActionResult action,
         string displayName,
         RuntimeInventorySnapshot inventory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ContentId? inventoryItemId = null)
     {
         if (!action.Assessment.CanExecute)
         {
@@ -1111,10 +1155,29 @@ internal sealed class CleanTrainingAnnexPlayHost
             return;
         }
 
+        string inventorySummary = inventoryItemId is ContentId itemId
+            ? $"inventory {itemId} x{inventory.GetQuantity(itemId)}"
+            : "inventory unchanged";
         await _eventSink.PublishAsync(
-            $"Field action executed: {displayName}; HP {action.HpBefore.Current}->{action.HpAfter.Current}/{action.HpAfter.Maximum}; SP {action.SpBefore.Current}->{action.SpAfter.Current}/{action.SpAfter.Maximum}; inventory {TrainingAnnexHostSupport.AnnexTonic} x{inventory.GetQuantity(TrainingAnnexHostSupport.AnnexTonic)}.",
+            $"Field action executed: {displayName}; HP {action.HpBefore.Current}->{action.HpAfter.Current}/{action.HpAfter.Maximum}; SP {action.SpBefore.Current}->{action.SpAfter.Current}/{action.SpAfter.Maximum}; {inventorySummary}.",
             cancellationToken).ConfigureAwait(false);
     }
+
+    private static IReadOnlyList<ItemDefinition> GetKnownFieldItems(
+        GameDataCatalog catalog,
+        RuntimeInventorySnapshot inventory)
+    {
+        return inventory.ItemQuantities
+            .Where(pair => pair.Value > 0)
+            .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
+            .Select(pair => catalog.TryGetItem(pair.Key, out ItemDefinition? item) ? item : null)
+            .OfType<ItemDefinition>()
+            .Where(IsFieldUsableItem)
+            .ToArray();
+    }
+
+    private static bool IsFieldUsableItem(ItemDefinition item) =>
+        item.Usage?.ContextIds.Contains(Field) == true;
 
     private async ValueTask<bool> PresentEncounterPreparationAsync(
         EncounterPreparationResult preparation,

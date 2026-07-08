@@ -7,16 +7,17 @@ This directory contains the active documentation for the `track-12-recovery` bra
 Use active documents in this order:
 
 1. Current source code and automated tests define implemented behavior.
-2. [Phase 1-3 Code Review And Forward Direction](phase-1-3-code-review.md) is the current code-derived quality audit and immediate direction.
-3. [Framework State And Roadmap](framework-state-and-roadmap.md) is the current project map and forward plan.
-4. [Full Parity Capability Plan](full-parity-capability-plan.md) is the active capability-by-capability implementation spine.
-5. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
-6. [Repository Architecture Proposal](repository-architecture-proposal.md) maps the current file layout and proposed declutter architecture.
-7. [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) defines the proof-harness details for the new framework-first console demo.
-8. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
-9. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
-10. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
-11. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
+2. [Framework State And Roadmap](framework-state-and-roadmap.md) is the current project map and forward plan.
+3. [Full Parity Capability Plan](full-parity-capability-plan.md) is the active capability-by-capability implementation spine.
+4. `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` is the executable parity ledger for status, evidence, ownership, and numbered `futurePhase` routing.
+5. [Phase 1-3 Code Review And Forward Direction](phase-1-3-code-review.md) is the code-derived stabilization audit that closed CodeReview-1 through CodeReview-4.
+6. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
+7. [Repository Architecture Proposal](repository-architecture-proposal.md) maps the current file layout and proposed declutter architecture.
+8. [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) defines the proof-harness details for the new framework-first console demo.
+9. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+10. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+11. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
+12. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
 Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 

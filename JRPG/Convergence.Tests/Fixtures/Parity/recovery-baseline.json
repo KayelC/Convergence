@@ -42,7 +42,7 @@
       "cleanOwners": ["Host/InteractiveConsoleHostContext.cs", "Host/FrameworkHostAdapters.cs", "Host/CleanBattleDemoHost.cs", "Host/CleanFieldDemoHost.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": [],
       "tests": ["LegacyHostCharacterizationTests.OrdinaryStartup_LoadsDataReachesFieldAndExits", "InteractiveConsoleHostStartupTests.OrdinaryStartup_LoadsCleanCatalogSidecarSilently", "InteractiveConsoleHostStartupTests.OrdinaryStartup_WarnsAndContinuesWhenCleanCatalogSidecarFails", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_MissingContentReportsFailureWithoutReadingCommands"],
-      "futureTrack": "O",
+      "futurePhase": "1-01",
       "removalFiles": ["Program.cs", "Host/ConsoleGameHost.cs", "Host/ScenarioFactory.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -55,7 +55,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/EntityDefinition.cs", "JRPG.Framework/Logic/Battle/Runtime/CatalogBattleActorFactory.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["class_and_progression_profiles"],
       "tests": ["LegacyHostCharacterizationTests.ScenarioChoices_ConfigureCurrentActorModels", "CatalogBattleRuntimeTests.DemoPacks_LoadAndHydrateQualifiedOrderedActors", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits"],
-      "futureTrack": "E",
+      "futurePhase": "1-02",
       "removalFiles": ["Entities/Combatant.cs", "Entities/Persona.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -68,7 +68,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Entities/Components/LegacyProgressionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["ruleset_policy_content", "equipment_schema"],
       "tests": ["ProgressionPolicyTests", "ProgressionAdapterTests", "CombatMathTests", "LegacyWorkflowCharacterizationTests.EquipmentAndStatusMenus_PreserveCurrentSurfaces", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits"],
-      "futureTrack": "E",
+      "futurePhase": "1-04",
       "removalFiles": ["Entities/Components/StatProcessor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -81,7 +81,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Entities/Components/LegacyProgressionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["ruleset_policy_content"],
       "tests": ["ProgressionPolicyTests", "ProgressionAdapterTests", "LegacyHostCharacterizationTests.StandardPrototypeSetup_PreservesLevelResourcesAndStartingAssets", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "RuntimeStateSnapshotTests.RuntimeProgressionTransactions_ApplyGrowthResultToActorSnapshot", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits"],
-      "futureTrack": "E",
+      "futurePhase": "1-05",
       "removalFiles": ["Entities/Components/GrowthProcessor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -94,7 +94,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Runtime/CatalogBattleActorFactory.cs", "JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Entities/Components/LegacyProgressionAdapter.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["ruleset_policy_content"],
       "tests": ["ProgressionPolicyTests", "ProgressionAdapterTests", "LegacyHostCharacterizationTests.StandardPrototypeSetup_PreservesLevelResourcesAndStartingAssets", "CatalogBattleRuntimeTests.DemoPacks_LoadAndHydrateQualifiedOrderedActors", "RuntimeStateSnapshotTests.RuntimeResourceTransactions_ReturnBeforeAfterSnapshotsAndRejectInvalidMutation", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits"],
-      "futureTrack": "E",
+      "futurePhase": "1-03",
       "removalFiles": ["Entities/Components/GrowthProcessor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -107,7 +107,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/PartyStockTransitions.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Logic/Core/LegacyPartyStockAdapter.cs", "Logic/Core/LegacyRuntimeIdentityRegistry.cs"],
       "decisionDependencies": ["host_actor_persistence"],
       "tests": ["PartyStockTransitionTests", "PartyStockAdapterTests", "PartyManagerTests", "LegacyHostCharacterizationTests.UnifiedStockScenario_PreservesOwnedAndActiveOverlap", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
-      "futureTrack": "F",
+      "futurePhase": "5-26",
       "removalFiles": ["Logic/Core/PartyManager.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -120,7 +120,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/PartyStockTransitions.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "Logic/Core/LegacyPartyStockAdapter.cs", "Logic/Core/LegacyRuntimeIdentityRegistry.cs", "Logic/Field/PartyStockPresentationResults.cs"],
       "decisionDependencies": ["host_actor_persistence"],
       "tests": ["PartyStockTransitionTests", "PartyStockAdapterTests", "PartyStockPresentationTests", "PartyManagerTests", "LegacyHostCharacterizationTests.ScenarioChoices_ConfigureCurrentActorModels", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
-      "futureTrack": "F",
+      "futurePhase": "5-27",
       "removalFiles": ["Entities/Combatant.cs", "Logic/Core/PartyManager.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -133,7 +133,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/PartyStockTransitions.cs", "Logic/Core/LegacyPartyStockAdapter.cs", "Logic/Field/PartyStockPresentationResults.cs"],
       "decisionDependencies": ["host_actor_persistence"],
       "tests": ["PartyStockTransitionTests", "PartyStockAdapterTests", "PartyStockPresentationTests", "PartyManagerTests", "BattleBridgeResultTests"],
-      "futureTrack": "F",
+      "futurePhase": "5-28",
       "removalFiles": ["Logic/Core/PartyManager.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -146,7 +146,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs", "JRPG.Framework/Logic/Runtime/RuntimeSavePolicies.cs", "Host/CleanSaveDemoHost.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexPersistenceController.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexSaveSlotStore.cs"],
       "decisionDependencies": ["permanent_save_slots", "autosaves", "battle_save_policy", "save_version_migrations", "production_content_authority"],
       "tests": ["RuntimePersistenceSnapshotTests.RuntimeSavePolicy_AllowsManualAndSuspendOnlyInRegisteredStableContexts", "RuntimePersistenceSnapshotTests.RuntimeSavePolicy_AssessesLoadRecordsAndSuspendConsumption", "RuntimePersistenceSnapshotTests.RuntimeSaveValidator_RejectsMissingDuplicateAndVersionMismatchedContentPacks", "CleanSaveDemoHostTests.HostOwnedJsonRoundTrip_PreservesSaveRecordMetadata", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ManualSaveLoadRestoresProgressionInventoryWalletFieldAndKnowledge", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_SuspendLoadConsumesSlotOnlyAfterSuccessfulRestore", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_SaveWhilePreparedEncounterPendingIsRejectedWithoutSlotMutation", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_MalformedManualSaveJsonDoesNotMutateCurrentSession", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ManualLoadRejectsActorEntityMismatchBeforeMutation", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ManualLoadRejectsSavedContextThatWasNotSaveEligible", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ManualLoadRejectsInvalidTrainingAnnexDungeonStateBeforeMutation", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ManualLoadRejectsContentPackVersionMismatch", "CleanTrainingAnnexPlayHostTests.TrainingAnnexPersistenceController_BuildsSaveSnapshotWithHostProgressFlags", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_PostVictoryRewardStateSurvivesManualSaveLoad"],
-      "futureTrack": "R",
+      "futurePhase": "3-20",
       "removalFiles": ["Host/ConsoleGameHost.cs", "Entities/Combatant.cs", "Entities/Persona.cs", "Logic/Core/PartyManager.cs", "Logic/Fusion/CompendiumRegistry.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -159,7 +159,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/ProductionCombatRuleset.cs", "Logic/Battle/LegacyCombatPolicyAdapter.cs", "JRPG.Framework/Logic/Battle/Execution/ExecutionPolicies.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["complete_runtime_status_model"],
       "tests": ["ProductionCombatRulesetTests", "CombatMathTests", "BattleEffectTests", "CombatVocabularyTests", "ActiveSkillExecutionTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.TrainingAnnexExecutionServices_UseOneCatalogBoundProductionCombatRuleset", "CleanTrainingAnnexPlayHostTests.TrainingAnnexBoundRuleset_UsesStrengthForPhysicalAndMagicForMagicalDamage", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_AuthoredAccuracyCanMissThroughBoundCombatRuleset", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_CriticalPolicyUsesTypedDamageElement", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_InvalidCombatBindingFailsWithoutFallback"],
-      "futureTrack": "G",
+      "futurePhase": "2-13",
       "removalFiles": ["Logic/Battle/CombatMath.cs", "Entities/Components/DamageHandler.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -172,7 +172,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Engines/PressTurnEngine.cs", "JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs", "JRPG.Framework/Logic/Battle/Runtime/AutomatedBattleRunner.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Logic/Battle/Bridges/BattleEventPresentationResults.cs"],
       "decisionDependencies": [],
       "tests": ["PressTurnEngineTests", "CatalogBattleRuntimeTests.CleanPressTurnOverload_ConsumesEveryTypedOutcome", "BattleEncounterRunnerTests.Runner_AppliesEveryPressTurnOutcome", "BattleEventPresentationTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleGuardPassAndAnalyzeUseFrameworkCommands", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_DefensivePressTurnOutcomesTerminatePlayerPhase", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_InvalidPressTurnBindingFailsBeforeSession", "CleanTrainingAnnexPlayHostTests.PressTurnEventSink_UsesTypedStateAndIgnoresDisplayMessageWording", "LegacyWorkflowCharacterizationTests.BattleConductor_StartBattle_RoutesOrdinaryBattleThroughFrameworkEncounterRunner"],
-      "futureTrack": "J",
+      "futurePhase": "2-14",
       "removalFiles": ["Logic/Battle/BattleConductor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -185,7 +185,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs", "JRPG.Framework/Logic/Battle/Execution", "JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs", "JRPG.Framework/Logic/Battle/Runtime/AutomatedBattleRunner.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Logic/Battle/LegacyBattleActionAdapter.cs", "Logic/Battle/LegacyBattleCommandShellAdapter.cs", "Logic/Battle/Bridges/BattleBridgeResults.cs", "Logic/Battle/Bridges/BattleEventPresentationResults.cs", "Logic/Battle/Bridges/NegotiationRewardPresentationResults.cs"],
       "decisionDependencies": ["production_content_reauthoring", "ai_and_tactics_policy"],
       "tests": ["BattleActionExecutorTests", "ActionProcessorResultTests", "BattleBridgeResultTests", "BattleCommandShellTests", "BattleEventPresentationTests", "NegotiationRewardPresentationTests", "ActiveSkillExecutionTests", "BattleEncounterRunnerTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BasicAttackUsesPracticeBlade", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleItemCommitsOneReservedTonicAfterMeaningfulSuccess", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleGuardPassAndAnalyzeUseFrameworkCommands", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleBackSelectionDoesNotExecuteSkillOrConsumeItem", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_TargetMenuSelectsTheAuthoredSecondEnemy", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleSkillMenuExecutesContentWithoutAnEnumCase", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleItemMenuExecutesSecondOwnedCatalogItem", "LegacyWorkflowCharacterizationTests.BattleConductor_StartBattle_RoutesOrdinaryBattleThroughFrameworkEncounterRunner"],
-      "futureTrack": "H",
+      "futurePhase": "2-11",
       "removalFiles": ["Logic/Battle/ActionProcessor.cs", "Logic/Battle/BattleConductor.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -198,7 +198,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution", "JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs", "JRPG.Framework/Data/Definitions/Effects.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs"],
       "decisionDependencies": ["complete_production_effect_content"],
       "tests": ["BattleActionExecutorTests", "BattleEffectTests", "ActiveSkillExecutionTests", "SharedEffectsRuntimeTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BasicAttackUsesPracticeBlade", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleItemCommitsOneReservedTonicAfterMeaningfulSuccess", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleGuardPassAndAnalyzeUseFrameworkCommands", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleBackSelectionDoesNotExecuteSkillOrConsumeItem", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_DisplayTextChangesDoNotChangeTypedBattleBehavior", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ShellFacingContentUsesConcreteTypedEffects", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexShell_DoesNotReferenceLegacyEffectInputs"],
-      "futureTrack": "H",
+      "futurePhase": "2-12",
       "removalFiles": ["Logic/Battle/Effects", "Logic/Battle/ActionProcessor.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -211,7 +211,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/AilmentDefinition.cs", "JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs", "JRPG.Framework/Logic/Battle/Execution/BattleRuntimeState.cs", "Logic/Battle/Engines/LegacyStatusLifecycleAdapter.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Data/Jsons/status_lifecycle_demo.ailments.json", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
       "decisionDependencies": ["production_status_content_migration", "complete_battle_orchestration"],
       "tests": ["BattleStatusLifecycleTests", "StatusRegistryTests", "ActiveSkillExecutionTests.Execute_AilmentLifecycleUsesAilmentIdentityAndExclusivity", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_PoisonAppliesAndTicksThroughFrameworkLifecycle", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StunSkipsEnemyTurnAndExpiresThroughFrameworkLifecycle", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_ClearToxinRemovesPoisonBeforeTurnEndTick"],
-      "futureTrack": "I",
+      "futurePhase": "2-15",
       "removalFiles": ["Logic/Battle/Engines/StatusRegistry.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -224,7 +224,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/PassiveRuntime.cs", "JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Logic/Battle/Engines/LegacyStatusLifecycleAdapter.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs"],
       "decisionDependencies": ["complete_passive_content", "complete_battle_orchestration"],
       "tests": ["BattleStatusLifecycleTests", "StatusRegistryTests.ProcessInitialPassives_AppliesSingleTargetAutoKajaToActor", "PassiveSkillRuntimeTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleStartPassiveDispatchesOnceThroughFrameworkLifecycle", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_PassiveRuleModifierUsesTypedElementNotDisplayText", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BattleBackSelectionDoesNotExecuteSkillOrConsumeItem", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup"],
-      "futureTrack": "I",
+      "futurePhase": "2-16",
       "removalFiles": ["Logic/Battle/Engines/StatusRegistry.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -237,7 +237,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs", "JRPG.Framework/Logic/Battle/Runtime/AutomatedBattleRunner.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs", "Logic/Battle/BattleConductor.cs", "Logic/Battle/Engines/BehaviorEngine.cs", "Logic/Battle/LegacyBattleCommandShellAdapter.cs", "Logic/Battle/Bridges/BattleEventPresentationResults.cs"],
       "decisionDependencies": ["production_ai_policy"],
       "tests": ["BattleBridgeResultTests", "BattleCommandShellTests", "BattleEventPresentationTests", "CatalogBattleRuntimeTests.Selector_UsesSharedAssessmentKnowledgeAndAuthoredTieOrder", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_BasicAttackUsesPracticeBlade", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiPreservesAuthoredSkillOrderForEqualScores", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiSkipsUnaffordableSkillUsingSharedAssessment", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiPassesWhenNoAuthoredSkillIsExecutable", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiReusesDiscoveredElementalResistance", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StunSkipsEnemyTurnAndExpiresThroughFrameworkLifecycle", "BattleEncounterRunnerTests.Run_DispatchesTurnEndAfterSkipAndCommittedAction", "LegacyWorkflowCharacterizationTests.BattleConductor_StartBattle_RoutesOrdinaryBattleThroughFrameworkEncounterRunner"],
-      "futureTrack": "J",
+      "futurePhase": "2-17",
       "removalFiles": ["Logic/Battle/Engines/BehaviorEngine.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -250,7 +250,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Engines/CombatKnowledgeStores.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs"],
       "decisionDependencies": ["knowledge_persistence"],
       "tests": ["CombatVocabularyTests", "CatalogBattleRuntimeTests.Runner_ExecutesDeterministicKnowledgePassiveAndPressTurnLifecycle", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "RuntimePersistenceSnapshotTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_AnalyzeLearnsAllDefenseChannelsAndValidatesSaveKnowledge", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FrameworkAiReusesDiscoveredElementalResistance"],
-      "futureTrack": "J",
+      "futurePhase": "2-18",
       "removalFiles": ["Logic/Battle/Engines/BattleKnowledge.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -263,7 +263,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Runtime/BattleNegotiationAndRewards.cs", "Logic/Battle/Engines/NegotiationEngine.cs", "Logic/Battle/LegacyRecruitmentAdapter.cs", "Logic/Battle/Bridges/NegotiationRewardPresentationResults.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.negotiations.json"],
       "decisionDependencies": ["clean_negotiation_content_reauthoring", "recruitment_reward_policy_binding"],
       "tests": ["NegotiationRewardRuntimeTests", "NegotiationRewardPresentationTests", "LegacyWorkflowCharacterizationTests.Negotiation_PreservesBlockedFamiliarFailureAndRecruitmentOutcomes", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences"],
-      "futureTrack": "Q",
+      "futurePhase": "6-29",
       "removalFiles": ["Logic/Battle/Engines/NegotiationEngine.cs", "Data/NegotiationData.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -276,7 +276,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/ProductionCombatRuleset.cs", "JRPG.Framework/Logic/Battle/Runtime/BattleNegotiationAndRewards.cs", "Logic/Battle/LegacyBattleRewardAdapter.cs", "Logic/Battle/Bridges/NegotiationRewardPresentationResults.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleRewardApplicator.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.rulesets.json"],
       "decisionDependencies": ["catalog_ruleset_policy_binding"],
       "tests": ["NegotiationRewardRuntimeTests", "NegotiationRewardPresentationTests", "ProductionCombatRulesetTests", "CombatMathTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_StartPreparedBattle_UsesManualSkillActionsAndReachesVictory", "CleanTrainingAnnexPlayHostTests.TrainingAnnexBattleRewardApplicator_RejectedWalletDoesNotMutateProgression", "LegacyWorkflowCharacterizationTests.BattleConductor_StartBattle_RoutesOrdinaryBattleThroughFrameworkEncounterRunner", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences"],
-      "futureTrack": "Q",
+      "futurePhase": "2-19",
       "removalFiles": ["Logic/Battle/CombatMath.cs", "Logic/Battle/BattleConductor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -286,10 +286,10 @@
       "name": "Inventory quantities and consumption transactions",
       "status": "parallel_partial",
       "legacyOwners": ["Logic/Core/InventoryManager.cs"],
-      "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/ItemExecutor.cs", "JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs"],
+      "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/ItemExecutor.cs", "JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexFieldActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs"],
       "decisionDependencies": ["legacy_item_content_reauthoring"],
-      "tests": ["BattleActionExecutorTests", "ActionProcessorResultTests", "SharedEffectsRuntimeTests", "ResourceManagementServiceTests", "LegacyWorkflowCharacterizationTests.InventoryAndEconomyManagers_DelegateThroughFrameworkResourceServices", "LegacyWorkflowCharacterizationTests.FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions"],
-      "futureTrack": "L",
+      "tests": ["BattleActionExecutorTests", "ActionProcessorResultTests", "SharedEffectsRuntimeTests", "ResourceManagementServiceTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FieldItemUsesSharedExecutorAndCommitsOneReservedItem", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FieldInventoryExecutesSelectedCatalogItemFromSnapshot", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FieldInventoryOmitsNonUsableAndEmptyItems", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_NoEffectItemDoesNotConsumeInventory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_TargetCancellationDoesNotMutateOrReserveInventory", "LegacyWorkflowCharacterizationTests.InventoryAndEconomyManagers_DelegateThroughFrameworkResourceServices", "LegacyWorkflowCharacterizationTests.FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions"],
+      "futurePhase": "4-21",
       "removalFiles": ["Logic/Core/InventoryManager.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -302,7 +302,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs", "Logic/Field/ShopHospitalPresentationResults.cs", "Data/Jsons/catalog_surface_sample.equipment.json"],
       "decisionDependencies": ["legacy_equipment_content_reauthoring"],
       "tests": ["LegacyWorkflowCharacterizationTests.EquipmentAndStatusMenus_PreserveCurrentSurfaces", "LegacyWorkflowCharacterizationTests.ShopTransactions_RejectDuplicateAndEquippedEquipmentWithoutMutation", "LegacyWorkflowCharacterizationTests.FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions", "ShopHospitalPresentationTests", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "RuntimeStateSnapshotTests.RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup", "ResourceManagementServiceTests"],
-      "futureTrack": "L",
+      "futurePhase": "4-22",
       "removalFiles": ["Data/WeaponData.cs", "Data/ArmorData.cs", "Data/BootData.cs", "Data/AccessoryData.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -315,7 +315,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs", "Logic/Field/ShopHospitalPresentationResults.cs"],
       "decisionDependencies": ["ruleset_economy_policy_binding"],
       "tests": ["LegacyWorkflowCharacterizationTests.ShopTransactions_PreservePricingInventoryAndFailureBehavior", "LegacyWorkflowCharacterizationTests.InventoryAndEconomyManagers_DelegateThroughFrameworkResourceServices", "ShopHospitalPresentationTests", "ResourceManagementServiceTests"],
-      "futureTrack": "L",
+      "futurePhase": "4-23",
       "removalFiles": ["Logic/Core/EconomyManager.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -328,7 +328,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs", "Logic/Field/ShopHospitalPresentationResults.cs", "Logic/Field/Bridges/ShopUIBridge.cs", "Data/Jsons/catalog_surface_sample.shops.json"],
       "decisionDependencies": ["legacy_shop_content_reauthoring", "ruleset_economy_policy_binding"],
       "tests": ["LegacyWorkflowCharacterizationTests.ShopTransactions_PreservePricingInventoryAndFailureBehavior", "LegacyWorkflowCharacterizationTests.ShopTransactions_RejectDuplicateAndEquippedEquipmentWithoutMutation", "ShopHospitalPresentationTests", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "ResourceManagementServiceTests"],
-      "futureTrack": "L",
+      "futurePhase": "4-24",
       "removalFiles": ["Logic/Field/Engines/ShopEngine.cs", "Logic/Field/Bridges/ShopUIBridge.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -341,7 +341,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs", "Logic/Field/ShopHospitalPresentationResults.cs", "Logic/Field/Bridges/ServiceUIBridge.cs"],
       "decisionDependencies": ["field_state_machine"],
       "tests": ["LegacyWorkflowCharacterizationTests.FieldAndCityMenus_PreserveCurrentOptionOrdering", "LegacyWorkflowCharacterizationTests.FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions", "ShopHospitalPresentationTests", "ResourceManagementServiceTests"],
-      "futureTrack": "L",
+      "futurePhase": "4-25",
       "removalFiles": ["Logic/Field/Engines/FieldServiceEngine.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -354,7 +354,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs", "JRPG.Framework/Logic/Battle/Execution/ItemExecutor.cs", "JRPG.Framework/Logic/Battle/Execution/SkillExecutor.cs", "JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexFieldActionAdapter.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Logic/Core/LegacyInventoryResourceAdapter.cs", "Logic/Field/FieldActionResults.cs", "Host/CleanFieldDemoHost.cs"],
       "decisionDependencies": ["legacy_item_content_reauthoring", "field_state_machine"],
       "tests": ["BattleActionExecutorTests", "SharedEffectsRuntimeTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FieldItemUsesSharedExecutorAndCommitsOneReservedItem", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_NoEffectItemDoesNotConsumeInventory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_TargetCancellationDoesNotMutateOrReserveInventory", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_FieldSkillUsesTypedEffectsAndCommitsSkillCost", "FieldInventoryPresentationTests", "LegacyWorkflowCharacterizationTests.InventoryMenu_PreservesClassSpecificOptions", "LegacyWorkflowCharacterizationTests.FieldServiceEquipmentHospitalAndItems_UseFrameworkBackedTransactions"],
-      "futureTrack": "O",
+      "futurePhase": "1-10",
       "removalFiles": ["Logic/Field/Engines/FieldServiceEngine.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -367,7 +367,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Runtime/NavigationTransitions.cs", "JRPG.Framework/Logic/Runtime/FieldDungeonStateMachines.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexFieldPresenter.cs", "Logic/Field/Dungeon/DungeonManager.cs", "Logic/Field/DungeonTraversalPresentationResults.cs", "Logic/Field/Bridges/DungeonUIBridge.cs"],
       "decisionDependencies": ["legacy_field_menu_migration"],
       "tests": ["LegacyHostCharacterizationTests.OrdinaryStartup_LoadsDataReachesFieldAndExits", "LegacyWorkflowCharacterizationTests.FieldAndCityMenus_PreserveCurrentOptionOrdering", "LegacyWorkflowCharacterizationTests.FieldConductor_RoutesDungeonEntryTerminalWarpAndReturnThroughFrameworkState", "RuntimeNavigationTests.Navigation_UsesArbitraryLocationIdsAndRequiresAnExplicitReverseTransition", "RuntimeNavigationTests.Navigation_UsesInjectedPolicyAndPreservesStateWhenRejected", "RuntimePersistenceSnapshotTests.RuntimeSaveSnapshot_AllowsNavigationAndDungeonModulesToBeOmittedIndependently", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits", "CleanTrainingAnnexPlayHostTests.TrainingAnnexFieldPresenter_PreservesNavigationAndDungeonMessages", "DungeonTraversalPresentationTests"],
-      "futureTrack": "M",
+      "futurePhase": "1-07",
       "removalFiles": ["Logic/Field/FieldConductor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -380,7 +380,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "JRPG.Framework/Logic/Runtime/DungeonTraversal.cs", "JRPG.Framework/Logic/Runtime/FieldDungeonStateMachines.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Logic/Field/Dungeon/LegacyDungeonContentAdapter.cs", "Logic/Field/DungeonTraversalPresentationResults.cs", "Logic/Field/Bridges/DungeonUIBridge.cs", "Data/Jsons/catalog_surface_sample.dungeons.json"],
       "decisionDependencies": ["catalog_backed_dungeon_runtime_content"],
       "tests": ["LegacyWorkflowCharacterizationTests.DungeonNavigation_PreservesLobbyFixedFloorsTerminalsAndBossDefeat", "LegacyWorkflowCharacterizationTests.FieldConductor_RoutesDungeonEntryTerminalWarpAndReturnThroughFrameworkState", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "RuntimeDungeonTraversalTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_TraversesGenericDungeonNodesWithoutStartingEncounter", "FieldDungeonStateMachineTests", "DungeonTraversalPresentationTests"],
-      "futureTrack": "M",
+      "futurePhase": "1-08",
       "removalFiles": ["Logic/Field/Dungeon/DungeonManager.cs", "Logic/Field/Dungeon/DungeonState.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -393,7 +393,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "JRPG.Framework/Logic/Runtime/EncounterStartPlanner.cs", "JRPG.Framework/Logic/Runtime/EncounterPreparationService.cs", "JRPG.Framework/Logic/Runtime/FieldDungeonStateMachines.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Logic/Field/Dungeon/LegacyDungeonContentAdapter.cs", "Logic/Field/DungeonTraversalPresentationResults.cs", "Logic/Field/Engines/ExplorationProcessor.cs", "Data/Jsons/catalog_surface_sample.encounters.json"],
       "decisionDependencies": ["catalog_backed_encounter_runtime_content"],
       "tests": ["RecoveryDatasetBaselineTests.DatasetReferences_PreserveKnownIntegrityFindings", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "EncounterPreparationServiceTests", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_HostTriggerExplicitlyPreparesCatalogEncounterActors", "FieldDungeonStateMachineTests.RandomEncounters_UseDeterministicCountPoolSelectionAndEmptyFallback", "LegacyWorkflowCharacterizationTests.ExplorationProcessor_PrepareEncounterPreservesHydrationAndDuplicateSuffixes", "DungeonTraversalPresentationTests"],
-      "futureTrack": "M",
+      "futurePhase": "1-09",
       "removalFiles": ["Logic/Field/Engines/ExplorationProcessor.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -406,7 +406,7 @@
       "cleanOwners": ["JRPG.Framework/Data/Definitions/Conditions.cs", "JRPG.Framework/Logic/Battle/Runtime/AutomatedBattleRunner.cs", "JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs", "Host/CleanTrainingAnnexDemoHost.cs", "Data/Jsons/training_annex_slice.rulesets.json"],
       "decisionDependencies": ["session_clock_and_phase_ownership"],
       "tests": ["MoonPhaseSystemTests", "LegacyWorkflowCharacterizationTests.Negotiation_PreservesBlockedFamiliarFailureAndRecruitmentOutcomes", "CatalogBattleRuntimeTests.Runner_AllowsMissingMoonPhaseWhenContentDoesNotUseMoonConditions", "OriginalCleanContentSliceTests.TrainingAnnexSlice_LoadsAsSelfContainedOriginalCleanContent", "OriginalCleanContentSliceTests.TrainingAnnexSlice_RulesetsBindToStandardFrameworkServices", "CleanTrainingAnnexDemoHostTests.CleanTrainingAnnexDemo_RunsOriginalCleanRuntimeSliceEndToEnd", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits"],
-      "futureTrack": "M",
+      "futurePhase": "1-06",
       "removalFiles": ["Logic/Core/MoonPhaseSystem.cs"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -419,7 +419,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "Logic/Fusion/LegacyFusionContentAdapter.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.fusion.json"],
       "decisionDependencies": [],
       "tests": ["FusionCompendiumRuntimeTests.ResultResolver_PreservesSpecificRankAccidentAndMitamaRules", "FusionBugRegressionTests", "LegacyHostCharacterizationTests.MonteCarloScenario_IsDeterministicThroughInternalSeams", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences"],
-      "futureTrack": "N",
+      "futurePhase": "7-30",
       "removalFiles": ["Logic/Fusion/FusionCalculator.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -432,7 +432,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "Logic/Fusion/LegacyFusionContentAdapter.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.fusion.json"],
       "decisionDependencies": [],
       "tests": ["FusionCompendiumRuntimeTests.Planning_UsesTypedInheritanceAndPassiveFusionFodder", "FusionCompendiumRuntimeTests.MutationAndSlots_PreserveLegacyPolicies", "FusionBugRegressionTests", "FusionInheritanceTests", "LegacyHostCharacterizationTests.MonteCarloScenario_IsDeterministicThroughInternalSeams", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences"],
-      "futureTrack": "N",
+      "futurePhase": "7-31",
       "removalFiles": ["Logic/Fusion/FusionCalculator.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -445,7 +445,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs", "Logic/Fusion/Bridges/CathedralUIBridge.cs"],
       "decisionDependencies": ["catalog_fusion_result_construction"],
       "tests": ["FusionCompendiumRuntimeTests.Planning_UsesTypedInheritanceAndPassiveFusionFodder", "FusionBridgeResultTests", "FusionCompendiumPresentationTests", "FusionBugRegressionTests", "FusionInheritanceTests"],
-      "futureTrack": "N",
+      "futurePhase": "7-32",
       "removalFiles": ["Logic/Fusion/Planning", "Logic/Fusion/Preview"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -458,7 +458,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Runtime/PartyStockTransitions.cs", "Logic/Core/LegacyPartyStockAdapter.cs", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs"],
       "decisionDependencies": [],
       "tests": ["FusionCompendiumRuntimeTests.CompendiumService_RegistersOverwritesPricesAndRejectsRecallBeforeMutation", "FusionCompendiumPresentationTests", "FusionBugRegressionTests"],
-      "futureTrack": "N",
+      "futurePhase": "7-33",
       "removalFiles": ["Logic/Fusion/FusionMutator.cs", "Logic/Fusion/Transactions"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -471,7 +471,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.fusion.json"],
       "decisionDependencies": [],
       "tests": ["FusionCompendiumRuntimeTests.ResultResolver_PreservesSpecificRankAccidentAndMitamaRules", "FusionBugRegressionTests", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences"],
-      "futureTrack": "N",
+      "futurePhase": "7-34",
       "removalFiles": ["Logic/Fusion/Strategies"],
       "consumerMigrated": false,
       "removalAuthorized": false
@@ -484,7 +484,7 @@
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "Logic/Fusion/CompendiumRegistry.cs", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs"],
       "decisionDependencies": ["compendium_persistence"],
       "tests": ["FusionCompendiumRuntimeTests.CompendiumService_RegistersOverwritesPricesAndRejectsRecallBeforeMutation", "FusionCompendiumPresentationTests", "LegacyWorkflowCharacterizationTests.Compendium_PreservesRegistrationSnapshotReplacementAndRecall", "LegacyHostCharacterizationTests.CompendiumScenario_ReachesPostBattleRegistryEvaluation"],
-      "futureTrack": "N",
+      "futurePhase": "7-35",
       "removalFiles": ["Logic/Fusion/CompendiumRegistry.cs"],
       "consumerMigrated": true,
       "removalAuthorized": false
@@ -497,7 +497,7 @@
       "cleanOwners": ["JRPG.Framework/Hosting/HostContracts.cs", "Host/FrameworkHostAdapters.cs", "Logic/Battle/LegacyBattleCommandShellAdapter.cs", "Logic/Battle/Bridges/BattleBridgeResults.cs", "Logic/Battle/Bridges/BattleEventPresentationResults.cs", "Logic/Battle/Bridges/NegotiationRewardPresentationResults.cs", "Logic/Field/FieldActionResults.cs", "Logic/Field/PartyStockPresentationResults.cs", "Logic/Field/ShopHospitalPresentationResults.cs", "Logic/Field/DungeonTraversalPresentationResults.cs", "Logic/Field/Bridges/ServiceUIBridge.cs", "Logic/Field/Bridges/ShopUIBridge.cs", "Logic/Field/Bridges/InventoryUIBridge.cs", "Logic/Field/Bridges/StatusUIBridge.cs", "Logic/Field/Bridges/DungeonUIBridge.cs", "Logic/Field/Bridges/LegacyStatusPresentationProjection.cs", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs", "Logic/Fusion/Bridges/CathedralUIBridge.cs"],
       "decisionDependencies": ["host_command_and_event_flow"],
       "tests": ["BattleBridgeResultTests", "BattleCommandShellTests", "BattleEventPresentationTests", "NegotiationRewardPresentationTests", "FusionBridgeResultTests", "FusionCompendiumPresentationTests", "LegacyWorkflowCharacterizationTests.MenuSurfaces_PreserveOptionOrderingAndCancellation", "FrameworkHostAdapterTests.ConsoleCommandSource_PreservesOptionsAndReturnsSelection", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_TargetMenuSelectsTheAuthoredSecondEnemy", "CleanTrainingAnnexPlayHostTests.PressTurnEventSink_UsesTypedStateAndIgnoresDisplayMessageWording", "ConsolePlainMenuCommandTests", "StatusPresentationProjectionTests", "FieldInventoryPresentationTests", "PartyStockPresentationTests", "ShopHospitalPresentationTests", "DungeonTraversalPresentationTests"],
-      "futureTrack": "O",
+      "futurePhase": "8-36",
       "removalFiles": ["Services/ConsoleIO.cs", "Logic/Battle/Bridges", "Logic/Field/Bridges", "Logic/Fusion/Bridges"],
       "consumerMigrated": true,
       "removalAuthorized": false

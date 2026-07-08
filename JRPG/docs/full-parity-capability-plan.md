@@ -36,6 +36,8 @@ Godot remains a later interchangeable presentation over the same framework.
 Legacy removal only after parity is proven.
 ```
 
+The executable ledger now uses a `futurePhase` field rather than old lettered track labels. Those values point back to the numbered passes in this document, such as `4-21` for inventory quantities. If the ledger and this sequence disagree, stop and align them before implementation.
+
 ## Relationship To The Clean Console Host Demo Plan
 
 [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) is not a competing plan.
@@ -87,15 +89,16 @@ A capability reaches `clean_parity` only when all are true:
 Each capability pass should follow this checklist:
 
 1. Read the capability entry in `recovery-baseline.json`.
-2. Identify the legacy authority being replaced or bypassed.
-3. Decide whether the behavior should be preserved, changed, or dropped.
-4. Add or adjust original clean content only if needed.
-5. Implement the smallest framework change needed.
-6. Add the smallest clean console proof needed.
-7. Keep Godot compatibility by avoiding console/filesystem/serializer types in framework APIs.
-8. Add focused tests.
-9. Run the quality gate.
-10. Update this plan and the parity ledger only if the evidence justifies it.
+2. Confirm its `futurePhase` matches the numbered pass being worked.
+3. Identify the legacy authority being replaced or bypassed.
+4. Decide whether the behavior should be preserved, changed, or dropped.
+5. Add or adjust original clean content only if needed.
+6. Implement the smallest framework change needed.
+7. Add the smallest clean console proof needed.
+8. Keep Godot compatibility by avoiding console/filesystem/serializer types in framework APIs.
+9. Add focused tests.
+10. Run the quality gate.
+11. Update this plan and the parity ledger only if the evidence justifies it.
 
 ## Quality Gate For Every Capability Pass
 
@@ -728,6 +731,14 @@ Clean console proof:
 
 - clean item use consumes inventory only on meaningful success.
 
+Phase 4-21 result:
+
+- `--clean-training-annex-play` field inventory now lists usable clean items from the live `RuntimeInventorySnapshot` rather than a hardcoded item row.
+- Field item choices carry `HostCommandSelectionIdentity.ForContent(...)`, resolve back to catalog `ItemDefinition`s, and execute the selected item through the existing `BattleActionExecutor`/`ItemExecutor` field path.
+- `TrainingAnnexItemActionInventory` remains the mutation bridge: it reserves through `InventoryTransitionService.ReserveItem`, commits only after meaningful execution, and leaves the snapshot unchanged on rejection, failure, no-effect use, or target cancellation.
+- Focused tests prove Annex Tonic and Focus Tea are selected by content ID, non-usable key items and zero-quantity rows are not actionable, successful selected-item execution consumes only that item, and field skill execution no longer reports a fake item quantity.
+- This remains `parallel_partial`: the original clean consumer has authoritative framework inventory quantities, but broader equipment, economy, shop, hospital, legacy inventory UI, and production content conversion remain later Phase 4 work.
+
 ### 22. `equipment_ownership`
 
 Current status: `parallel_partial`.
@@ -932,7 +943,7 @@ Clean console proof:
 
 - every clean demo capability uses host presentation boundaries, not legacy rule logic.
 
-## First Recommended Implementation Pass
+## Completed Stabilization Checkpoints Before Phase 4
 
 ### CodeReview-1: Canonical Actor State (completed)
 
@@ -983,32 +994,32 @@ This corrects architectural integrity; it does not by itself promote a protected
 
 Do not start with all 36.
 
-Start with:
+Resume with:
 
 ```text
-Pass 01: interactive_boot
+Phase 4-22: equipment_ownership
 ```
 
 Scope:
 
-- add the clean interactive console entry;
-- load only original clean Training Annex content;
-- create a clean session shell;
-- add minimal inspect/enter/exit commands;
-- no battle/shop/fusion/negotiation yet.
+- make clean equipment ownership and slot compatibility demonstrable in the Training Annex clean path;
+- keep ownership/equip mutation in framework resource-management transactions;
+- preserve host-owned presentation and item selection;
+- avoid legacy `InventoryManager` authority in the clean consumer;
+- do not start economy, shops, hospital, fusion, negotiation, or archive work in the same pass.
 
 Why first:
 
-- every later capability needs a clean consumer to prove it;
-- without this shell, capabilities remain framework services without a player-facing proof;
-- this keeps us on one plan instead of jumping between "console demo" and "capability parity."
+- Phase 4-21 established trustworthy clean item quantities and selected-item consumption;
+- equipment is the next narrow Phase 4 capability in the numbered sequence;
+- economy, shops, and hospital build naturally on trustworthy inventory and equipment ownership models.
 
 ## Update Rules
 
 When a pass completes:
 
 1. update this document's capability section with actual evidence;
-2. update `recovery-baseline.json` only if the capability status truly changes;
+2. update `recovery-baseline.json` only if the capability status, evidence, ownership, or `futurePhase` truly changes;
 3. update [Framework State And Roadmap](framework-state-and-roadmap.md);
 4. update [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) only if the host iteration details change;
 5. do not change `removalAuthorized` unless a separate archive gate is approved.

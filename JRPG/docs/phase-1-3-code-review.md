@@ -413,14 +413,13 @@ The host is now more clearly a coordinator: persistence/restore planning lives i
 
 CodeReview-4 final verification is recorded in the completion section below.
 
-### Medium: completion metadata has drifted across plans and the parity ledger
+### Medium (partially resolved by documentation alignment): completion metadata can drift across plans and the parity ledger
 
-- The parity ledger still uses old future-track letters such as `E`, `H`, and `R` while the active plan uses numbered phases.
+- The parity ledger now uses numbered `futurePhase` values such as `2-11`, `3-20`, and `4-21`, matching `docs/full-parity-capability-plan.md`.
 - `consumerMigrated` is not consistently interpretable: some clean-host consumers mark it true while other equally real clean consumers mark it false.
-- Phase 3 documentation says implemented even though its code is still uncommitted.
-- Verification notes are duplicated across several active documents and can appear out of order.
+- Historical verification notes are still duplicated across several documents and can appear out of order.
 
-The ledger remains useful as protection evidence, but should not be used as an automatic completion score until these terms are defined once.
+The ledger remains useful as protection evidence and implementation routing. It should not be used as an automatic completion score until `consumerMigrated`, capability status, and removal authorization are interpreted through the active numbered plan.
 
 ### Low (resolved by CodeReview-3): save compatibility lacks explicit content provenance
 

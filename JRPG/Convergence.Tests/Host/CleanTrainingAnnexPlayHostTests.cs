@@ -1498,7 +1498,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [
                 CleanTrainingAnnexPlayCommand.RecalculateResources,
                 CleanTrainingAnnexPlayCommand.OpenInventory,
-                CleanTrainingAnnexPlayCommand.UseAnnexTonic,
+                CleanTrainingAnnexPlayCommand.SelectFieldItem,
                 CleanTrainingAnnexPlayCommand.TargetPlayer,
                 CleanTrainingAnnexPlayCommand.Exit
             ],
@@ -1507,6 +1507,66 @@ public sealed class CleanTrainingAnnexPlayHostTests
             "Field action executed: Annex Tonic; HP 70->80/80; SP 28->28/28; inventory convergence.training_annex_slice:annex_tonic x0.",
             output.ToString(),
             StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FieldInventoryExecutesSelectedCatalogItemFromSnapshot()
+    {
+        ContentId annexTonic = Qualified("annex_tonic");
+        ContentId focusTea = Qualified("focus_tea");
+        var io = new ScriptedGameIO().QueueMenu(4, 3, 8, 0, 0, 7, 1, 0, 9);
+        using var output = new StringWriter();
+        var initialInventory = new RuntimeInventorySnapshot(
+        [
+            KeyValuePair.Create(annexTonic, 1),
+            KeyValuePair.Create(focusTea, 1)
+        ]);
+        var host = CreateHost(io, output, initialInventory: initialInventory);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.Inventory.GetQuantity(annexTonic));
+        Assert.Equal(0, summary.Inventory.GetQuantity(focusTea));
+        Assert.Equal([Qualified("mend"), focusTea], summary.ExecutedFieldActionIds);
+        Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
+        Assert.Equal(28, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
+        GameIoMenuCall itemMenu = Assert.Single(io.Menus, menu => menu.Header == "Clean Inventory");
+        Assert.Equal(["Annex Tonic x1", "Focus Tea x1", "Back"], itemMenu.Options);
+        string text = output.ToString();
+        Assert.Contains("Inventory: Annex Tonic x1, Focus Tea x1.", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Field action executed: Focus Tea; HP 80->80/80; SP 26->28/28; inventory convergence.training_annex_slice:focus_tea x0.",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FieldInventoryOmitsNonUsableAndEmptyItems()
+    {
+        var io = new ScriptedGameIO().QueueMenu(7, 1, 9);
+        using var output = new StringWriter();
+        var initialInventory = new RuntimeInventorySnapshot(
+        [
+            KeyValuePair.Create(Qualified("annex_tonic"), 1),
+            KeyValuePair.Create(Qualified("focus_tea"), 0),
+            KeyValuePair.Create(Qualified("training_badge"), 1)
+        ]);
+        var host = CreateHost(io, output, initialInventory: initialInventory);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("training_badge")));
+        Assert.Empty(summary.ExecutedFieldActionIds);
+        GameIoMenuCall itemMenu = Assert.Single(io.Menus, menu => menu.Header == "Clean Inventory");
+        Assert.Equal(["Annex Tonic x1", "Back"], itemMenu.Options);
+        Assert.Contains("Inventory: Annex Tonic x1, Training Badge x1.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -1564,7 +1624,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
         Assert.Equal(26, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
         Assert.Contains(
-            "Field action executed: Mend; HP 70->80/80; SP 28->26/28; inventory convergence.training_annex_slice:annex_tonic x1.",
+            "Field action executed: Mend; HP 70->80/80; SP 28->26/28; inventory unchanged.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();

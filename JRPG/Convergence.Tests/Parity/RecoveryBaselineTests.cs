@@ -51,6 +51,46 @@ public sealed class RecoveryParityLedgerTests
         "typed_effects"
     ];
 
+    private static readonly Dictionary<string, string> ExpectedFuturePhases = new(StringComparer.Ordinal)
+    {
+        ["interactive_boot"] = "1-01",
+        ["actor_models"] = "1-02",
+        ["resource_recalculation"] = "1-03",
+        ["stat_composition"] = "1-04",
+        ["growth_and_levels"] = "1-05",
+        ["moon_phase"] = "1-06",
+        ["field_navigation"] = "1-07",
+        ["dungeon_traversal"] = "1-08",
+        ["encounters"] = "1-09",
+        ["field_items_and_skills"] = "1-10",
+        ["battle_actions"] = "2-11",
+        ["typed_effects"] = "2-12",
+        ["combat_math"] = "2-13",
+        ["press_turn"] = "2-14",
+        ["ailment_lifecycle"] = "2-15",
+        ["passive_lifecycle"] = "2-16",
+        ["enemy_ai_and_tactics"] = "2-17",
+        ["battle_knowledge"] = "2-18",
+        ["battle_rewards"] = "2-19",
+        ["persistence_snapshots"] = "3-20",
+        ["inventory_quantities"] = "4-21",
+        ["equipment_ownership"] = "4-22",
+        ["economy"] = "4-23",
+        ["shops"] = "4-24",
+        ["hospital"] = "4-25",
+        ["active_and_reserve_party"] = "5-26",
+        ["persona_and_demon_stock"] = "5-27",
+        ["party_operations"] = "5-28",
+        ["negotiation_and_recruitment"] = "6-29",
+        ["fusion_result_calculation"] = "7-30",
+        ["fusion_slots_mutation_accidents"] = "7-31",
+        ["fusion_preview_confirmation"] = "7-32",
+        ["fusion_transactions"] = "7-33",
+        ["fusion_strategies"] = "7-34",
+        ["compendium"] = "7-35",
+        ["console_presentation"] = "8-36"
+    };
+
     [Fact]
     public void RecoveryLedger_CoversEveryProtectedCapabilityWithValidEvidence()
     {
@@ -73,6 +113,7 @@ public sealed class RecoveryParityLedgerTests
 
         Assert.Equal(ExpectedCapabilityIds, actualIds);
         Assert.Equal(actualIds.Length, actualIds.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(ExpectedCapabilityIds, ExpectedFuturePhases.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray());
 
         HashSet<string> validStatuses =
         [
@@ -91,10 +132,10 @@ public sealed class RecoveryParityLedgerTests
             Assert.NotEmpty(RequiredStrings(capability, "tests"));
             Assert.NotEmpty(RequiredStrings(capability, "removalFiles"));
 
-            string futureTrack = RequiredString(capability, "futureTrack");
-            Assert.True(
-                futureTrack.Length == 1 && futureTrack[0] is >= 'B' and <= 'S',
-                $"Capability '{id}' has invalid future track '{futureTrack}'.");
+            Assert.False(capability.TryGetProperty("futureTrack", out _), $"Capability '{id}' still uses the obsolete futureTrack field.");
+            string futurePhase = RequiredString(capability, "futurePhase");
+            Assert.True(ExpectedFuturePhases.TryGetValue(id, out string? expectedFuturePhase), $"Capability '{id}' has no expected phase.");
+            Assert.Equal(expectedFuturePhase, futurePhase);
 
             bool consumerMigrated = capability.GetProperty("consumerMigrated").GetBoolean();
             bool removalAuthorized = capability.GetProperty("removalAuthorized").GetBoolean();
