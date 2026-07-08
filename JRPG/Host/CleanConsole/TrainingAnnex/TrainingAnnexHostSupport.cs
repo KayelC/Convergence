@@ -58,6 +58,7 @@ internal static class TrainingAnnexHostSupport
         new(PackId, SemanticVersion.Parse("0.1.0"));
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
+    public static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
     public static readonly ContentId FieldMenuSaveContext = ContentId.Parse("field_menu");
     public static readonly ContentId DungeonMenuSaveContext = ContentId.Parse("dungeon_menu");
     public static readonly ContentId BattleSaveContext = ContentId.Parse("battle");

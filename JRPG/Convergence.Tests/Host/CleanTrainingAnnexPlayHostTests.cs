@@ -1814,6 +1814,100 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task TrainingAnnexPersistenceController_BuildsSaveSnapshotWithHostProgressFlags()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimeSaveGameSnapshot snapshot = TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
+            roster,
+            new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance)),
+            new RuntimeKnowledgeSnapshot(),
+            new RuntimeInventorySnapshot([new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
+            new RuntimeWalletSnapshot(50),
+            new RuntimeSessionProgressSnapshot(),
+            encounterTriggerConsumed: true,
+            preparedBattleStarted: true,
+            preparedBattleOutcome: BattleEncounterOutcome.Victory,
+            preparedBattleWinningTeamId: TrainingAnnexHostSupport.PlayerTeam);
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(snapshot, catalog);
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(RuntimeSaveGameSnapshot.CurrentContractVersion, snapshot.ContractVersion);
+        Assert.Equal("True", snapshot.HostContext[ContentId.Parse("ashling_trigger_consumed")]);
+        Assert.Equal("True", snapshot.HostContext[ContentId.Parse("prepared_battle_started")]);
+        Assert.Equal("Victory", snapshot.HostContext[ContentId.Parse("prepared_battle_outcome")]);
+        Assert.Equal(
+            TrainingAnnexHostSupport.PlayerTeam.ToString(),
+            snapshot.HostContext[ContentId.Parse("prepared_battle_winning_team")]);
+    }
+
+    [Fact]
+    public async Task TrainingAnnexFieldPresenter_PreservesNavigationAndDungeonMessages()
+    {
+        using var output = new StringWriter();
+        var presenter = new TrainingAnnexFieldPresenter(new TextWriterEventSink(output));
+        var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
+        var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        RuntimeFieldSnapshot field = new(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
+
+        field = await presenter.ApplyNavigationAsync(
+            field,
+            navigation.Navigate(field.Navigation, TrainingAnnexHostSupport.EnterTrainingAnnexTransition),
+            "entered Training Annex",
+            CancellationToken.None);
+        field = new RuntimeFieldSnapshot(
+            field.Navigation,
+            new RuntimeDungeonTraversalSnapshot(
+                TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                TrainingAnnexHostSupport.TrainingAnnexEntrance));
+        field = await presenter.ApplyDungeonTraversalAsync(
+            field,
+            dungeonTraversal.Traverse(
+                TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                TrainingAnnexHostSupport.EnterReviewHallTransition),
+            CancellationToken.None);
+
+        Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, field.Navigation.CurrentLocationId);
+        Assert.Equal(TrainingAnnexHostSupport.ReviewHall, field.DungeonTraversal?.CurrentNodeId);
+        string text = output.ToString();
+        Assert.Contains(
+            $"Field navigation: entered Training Annex; location Training Annex Entrance ({TrainingAnnexHostSupport.TrainingAnnexEntrance}).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains("Dungeon traversal: Training Annex Entrance -> Review Hall.", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TrainingAnnexBattleRewardApplicator_RejectedWalletDoesNotMutateProgression()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver()
+            .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
+            .RequireService();
+        RuntimeActorSnapshot before = roster.Player.Actor.State.ToSnapshot();
+        var reward = new BattleRewardResult(100, 50);
+        using var output = new StringWriter();
+        var applicator = new TrainingAnnexBattleRewardApplicator(
+            new TextWriterEventSink(output),
+            new TrainingAnnexMinimumRandomSource());
+
+        TrainingAnnexBattleRewardApplication result = await applicator.ApplyAsync(
+            roster.Player,
+            reward,
+            growthServices,
+            new RejectingEconomyTransactionService(),
+            new RuntimeWalletSnapshot(0),
+            CancellationToken.None);
+
+        Assert.False(result.Applied);
+        Assert.Equal(before.Progression, roster.Player.Actor.State.ToSnapshot().Progression);
+        Assert.Equal(0, result.Wallet.Macca);
+        Assert.Contains("[InsufficientCurrency]: blocked for test", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_PostVictoryRewardStateSurvivesManualSaveLoad()
     {
         var io = new ScriptedGameIO().QueueMenu(
@@ -2065,6 +2159,23 @@ public sealed class CleanTrainingAnnexPlayHostTests
         }
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+    }
+
+    private sealed class RejectingEconomyTransactionService : IEconomyTransactionService
+    {
+        public WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount) =>
+            new(
+                ResourceTransactionCode.InsufficientCurrency,
+                snapshot,
+                snapshot,
+                [new ResourceTransactionDiagnostic(ResourceTransactionCode.InsufficientCurrency, "blocked for test")]);
+
+        public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount) =>
+            new(
+                ResourceTransactionCode.InsufficientCurrency,
+                snapshot,
+                snapshot,
+                [new ResourceTransactionDiagnostic(ResourceTransactionCode.InsufficientCurrency, "blocked for test")]);
     }
 
     private sealed class RecordingContentPackTextSource(string root) : IContentPackTextSource

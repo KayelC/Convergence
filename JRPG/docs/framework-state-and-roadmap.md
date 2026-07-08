@@ -413,7 +413,7 @@ This section is for ranking before implementation. Do not treat `TBD` items as a
 
 ## Immediate Next Recommendation
 
-CodeReview-1, CodeReview-2, and CodeReview-3 are complete and ready. CodeReview-3 implements the already-reviewed Phase 3 restore-hardening checkpoint: expected actor/entity mapping and saved creation context are validated, host-owned dungeon-state validation is explicit for Training Annex, content provenance is recorded, and restore planning completes before mutating the live session. The next recommended checkpoint is splitting the clean host by responsibility, then Phase 4 can resume on top of the hardened state/persistence boundary.
+CodeReview-1, CodeReview-2, CodeReview-3, and CodeReview-4 are complete and ready. CodeReview-3 implements the already-reviewed Phase 3 restore-hardening checkpoint: expected actor/entity mapping and saved creation context are validated, host-owned dungeon-state validation is explicit for Training Annex, content provenance is recorded, and restore planning completes before mutating the live session. CodeReview-4 splits the Training Annex host's persistence, field-presentation, and reward-application seams into dedicated collaborators. Phase 4 can resume on top of the hardened state/persistence boundary and the cleaner host structure.
 
 ## Ground Rules For Future Work
 

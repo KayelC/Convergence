@@ -971,6 +971,16 @@ This corrects architectural integrity; it does not by itself promote a protected
 
 **Readiness:** ready. Focused persistence/Training Annex restore coverage passed 62 tests; focused restore/parity coverage passed 106 tests; the full suite passed 819 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully. This hardens the clean save/load proof but still does not promote protected legacy save/load to `clean_parity` or authorize legacy removal.
 
+### CodeReview-4: Clean Host Responsibility Split (implemented)
+
+- `CleanTrainingAnnexPlayHost` remains the coordinator for boot, command flow, and session summary.
+- Save/load policy checks, snapshot construction, save-slot access, restore planning, actor identity checks, and Training Annex save compatibility checks moved to `TrainingAnnexPersistenceController`.
+- Navigation/dungeon transition presentation moved to `TrainingAnnexFieldPresenter`.
+- Post-battle reward application and reward progress flags moved to `TrainingAnnexBattleRewardApplicator`.
+- Focused seam tests prove persistence host-context flags, field/dungeon presentation messages, and reward wallet rejection without progression mutation.
+
+**Readiness:** ready. Focused CodeReview-4/parity coverage passed 99 tests; the full suite passed 822 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully. The split does not add gameplay behavior, does not promote legacy capabilities to `clean_parity`, and does not authorize legacy removal.
+
 Do not start with all 36.
 
 Start with:

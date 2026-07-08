@@ -1,6 +1,6 @@
 # Phase 1-3 Code Review And Forward Direction
 
-> **Status: Active implementation audit; CodeReview-1, CodeReview-2, and CodeReview-3 are implemented and ready as of 2026-07-08.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. This document does not authorize legacy removal.
+> **Status: Active implementation audit; CodeReview-1 through CodeReview-4 are implemented and ready as of 2026-07-08.** This report is derived from source, tests, builds, and executable demos. Resolved findings remain below as audit history. This document does not authorize legacy removal.
 
 ## Executive Verdict
 
@@ -398,17 +398,20 @@ The battle shell now generates skill rows from battle-available actor definition
 
 CodeReview-2 final verification: 814 tests passed with no failures or skips; focused command/event/parity coverage passed 67 tests; the framework nonincremental build produced 0 warnings; the solution nonincremental build retained 98 legacy console-host nullable warnings; clean battle, field, save-v4, and Training Annex demos all exited successfully. Framework boundary and obsolete-parser searches were empty, and `Data/Jsons` was unchanged.
 
-### Medium: host and test concentration is now impeding review
+### Medium (partially resolved by CodeReview-4): host and test concentration is now impeding review
 
-Current sizes:
+CodeReview-4 split the Training Annex host's persistence, field/navigation presentation, and battle-reward application seams into focused collaborators. Current sizes after the split:
 
-- `CleanTrainingAnnexPlayHost.cs`: 1,969 lines.
+- `CleanTrainingAnnexPlayHost.cs`: 1,460 lines.
+- `TrainingAnnexPersistenceController.cs`: 472 lines.
+- `TrainingAnnexFieldPresenter.cs`: 109 lines.
+- `TrainingAnnexBattleRewardApplicator.cs`: 114 lines.
 - `TrainingAnnexBattleActionAdapter.cs`: 1,650 lines.
-- `CleanTrainingAnnexPlayHostTests.cs`: 2,270 lines.
+- `CleanTrainingAnnexPlayHostTests.cs`: larger than before because CodeReview-4 adds focused seam tests.
 
-The files mix boot, menus, state ownership, presentation, save coordination, reward application, battle selection, telemetry, and restore logic. The code is still readable locally, but changes increasingly require editing broad constructor/summary argument lists and index-based scripted menus.
+The host is now more clearly a coordinator: persistence/restore planning lives in `TrainingAnnexPersistenceController`, field transition messages live in `TrainingAnnexFieldPresenter`, and reward application lives in `TrainingAnnexBattleRewardApplicator`. The remaining concentration is battle selection/telemetry and the large host test file. That cleanup can happen opportunistically, but it no longer blocks Phase 4.
 
-Split by responsibility only after the state-authority correction so the refactor follows the intended model rather than preserving duplication.
+CodeReview-4 final verification is recorded in the completion section below.
 
 ### Medium: completion metadata has drifted across plans and the parity ledger
 
@@ -536,13 +539,14 @@ Do not create another roadmap or lettered track. Use the existing phase plan and
    - Add atomic restore planning.
    - Final verification: focused restore/parity coverage passed 106 tests; the full suite passed 819 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully; `Data/Jsons` remained unchanged.
 
-4. **Split the clean host by responsibility.**
-   - Session coordinator.
-   - Field/navigation controller.
-   - Battle controller.
-   - Persistence controller.
-   - Presentation/menu adapters.
-   - Test builders and focused test files.
+4. **Split the clean host by responsibility. Completed and ready in CodeReview-4.**
+   - The host remains the session coordinator.
+   - Field/navigation presentation moved to `TrainingAnnexFieldPresenter`.
+   - Persistence/save/load/restore planning moved to `TrainingAnnexPersistenceController`.
+   - Battle reward application moved to `TrainingAnnexBattleRewardApplicator`.
+   - Focused tests now cover save host-context snapshot construction, field/dungeon presentation messages, and reward rejection without progression mutation.
+   - Remaining cleanup is optional: battle adapter/test-file concentration can be reduced later without blocking Phase 4.
+   - Final verification: focused CodeReview-4/parity coverage passed 99 tests; the full suite passed 822 tests with no failures or skips; `JRPG.Framework` built with 0 warnings; the solution build retained 98 existing legacy console-host warnings; clean battle, field, save-v5, and Training Annex demos exited successfully; `Data/Jsons` remained unchanged.
 
 5. **Resume the existing Phase 4 order.**
    - Inventory quantities.

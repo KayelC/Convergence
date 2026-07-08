@@ -116,12 +116,6 @@ internal sealed record CleanTrainingAnnexPlaySummary(
 
 internal sealed class CleanTrainingAnnexPlayHost
 {
-    private static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
-    private static readonly ContentId AshlingTriggerConsumedHostKey = ContentId.Parse("ashling_trigger_consumed");
-    private static readonly ContentId PreparedBattleStartedHostKey = ContentId.Parse("prepared_battle_started");
-    private static readonly ContentId PreparedBattleOutcomeHostKey = ContentId.Parse("prepared_battle_outcome");
-    private static readonly ContentId PreparedBattleWinningTeamHostKey = ContentId.Parse("prepared_battle_winning_team");
-
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
@@ -265,7 +259,9 @@ internal sealed class CleanTrainingAnnexPlayHost
             actorFactory);
         var fieldActions = new TrainingAnnexFieldActionAdapter(
             executionServices);
+        var fieldPresenter = new TrainingAnnexFieldPresenter(_eventSink);
         var economy = new EconomyTransactionService();
+        var rewardApplicator = new TrainingAnnexBattleRewardApplicator(_eventSink, _randomSource);
         var inventory = new TrainingAnnexItemActionInventory(
             _initialInventory ?? new RuntimeInventorySnapshot(
                 [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]));
@@ -280,6 +276,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 TrainingAnnexHostSupport.FieldMenuSaveContext,
                 TrainingAnnexHostSupport.DungeonMenuSaveContext
             ]));
+        var persistence = new TrainingAnnexPersistenceController(_saveSlots, _eventSink);
         RuntimeWalletSnapshot wallet = new(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
@@ -407,7 +404,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             switch (command)
             {
                 case CleanTrainingAnnexPlayCommand.InspectSession:
-                    await PrintSessionAsync(catalog, field, cancellationToken).ConfigureAwait(false);
+                    await fieldPresenter.PrintSessionAsync(catalog, field, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectActor:
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
@@ -435,13 +432,17 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-                        TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
+                        TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
                             wallet,
-                            sessionProgress),
+                            sessionProgress,
+                            encounterTriggerConsumed,
+                            preparedBattleStarted,
+                            preparedBattleOutcome,
+                            preparedBattleWinningTeamId),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -513,7 +514,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     RuntimeNavigationResult navigationResult = navigation.Navigate(
                         field.Navigation,
                         TrainingAnnexHostSupport.EnterTrainingAnnexTransition);
-                    field = await ApplyNavigationAsync(
+                    field = await fieldPresenter.ApplyNavigationAsync(
                         field,
                         navigationResult,
                         "entered Training Annex",
@@ -534,7 +535,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     RuntimeNavigationResult navigationResult = navigation.Navigate(
                         field.Navigation,
                         TrainingAnnexHostSupport.LeaveTrainingAnnexTransition);
-                    field = await ApplyNavigationAsync(
+                    field = await fieldPresenter.ApplyNavigationAsync(
                         field,
                         navigationResult,
                         "returned to Staging Area",
@@ -546,43 +547,43 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.EnterReviewHall:
-                    field = await ApplyDungeonTraversalAsync(
+                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
                         dungeonTraversal.Traverse(
-                            RequireDungeonTraversal(field),
-                            TrainingAnnexHostSupport.EnterReviewHallTransition),
+                                TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                                TrainingAnnexHostSupport.EnterReviewHallTransition),
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.EnterReviewAlcove:
-                    field = await ApplyDungeonTraversalAsync(
+                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
                         dungeonTraversal.Traverse(
-                            RequireDungeonTraversal(field),
-                            TrainingAnnexHostSupport.EnterReviewAlcoveTransition),
+                                TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                                TrainingAnnexHostSupport.EnterReviewAlcoveTransition),
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ReturnToReviewHall:
-                    field = await ApplyDungeonTraversalAsync(
+                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
                         dungeonTraversal.Traverse(
-                            RequireDungeonTraversal(field),
-                            TrainingAnnexHostSupport.ReturnToReviewHallTransition),
+                                TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                                TrainingAnnexHostSupport.ReturnToReviewHallTransition),
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ReturnToAnnexEntrance:
-                    field = await ApplyDungeonTraversalAsync(
+                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
                         dungeonTraversal.Traverse(
-                            RequireDungeonTraversal(field),
-                            TrainingAnnexHostSupport.ReturnToEntranceTransition),
+                                TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                                TrainingAnnexHostSupport.ReturnToEntranceTransition),
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectTrainingBarrier:
                 {
                     RuntimeDungeonTraversalResult traversal = dungeonTraversal.Traverse(
-                        RequireDungeonTraversal(field),
+                        TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
                         TrainingAnnexHostSupport.InspectBarrierTransition);
-                    field = await ApplyDungeonTraversalAsync(
+                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
                         traversal,
                         cancellationToken).ConfigureAwait(false);
@@ -590,10 +591,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.UnlockReviewCheckpoint:
-                    field = await ApplyDungeonStateChangeAsync(
+                    field = await fieldPresenter.ApplyDungeonStateChangeAsync(
                         field,
                         dungeonTraversal.UnlockCheckpoint(
-                            RequireDungeonTraversal(field),
+                            TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
                             TrainingAnnexHostSupport.ReviewCheckpoint),
                         cancellationToken).ConfigureAwait(false);
                     break;
@@ -663,7 +664,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     if (battle.RewardPreview is not null && appliedBattleReward is null)
                     {
                         TrainingAnnexBattleRewardApplication rewardApplication =
-                            await ApplyPreparedBattleRewardAsync(
+                            await rewardApplicator.ApplyAsync(
                                 roster.Player,
                                 battle.RewardPreview,
                                 growthServices,
@@ -677,7 +678,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
                             growthApplied = true;
                             levelUpCount += rewardApplication.Growth.LevelUps.Count;
-                            sessionProgress = RecordBattleRewardSessionProgress(
+                            sessionProgress = TrainingAnnexBattleRewardApplicator.RecordSessionProgress(
                                 sessionProgress,
                                 battle.RewardPreview);
                         }
@@ -790,11 +791,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                         RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualSave
                             ? RuntimeSaveKind.Manual
                             : RuntimeSaveKind.Suspend;
-                        TrainingAnnexSaveActionResult save = await SaveCurrentSessionAsync(
+                        TrainingAnnexSaveActionResult save = await persistence.SaveCurrentSessionAsync(
                             kind,
                             savePolicy,
                             catalog,
-                            actorFactory,
                             roster,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
@@ -828,7 +828,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualLoad
                             ? RuntimeSaveKind.Manual
                             : RuntimeSaveKind.Suspend;
-                        TrainingAnnexLoadActionResult loadResult = await LoadCurrentSessionAsync(
+                        TrainingAnnexLoadActionResult loadResult = await persistence.LoadCurrentSessionAsync(
                             kind,
                             savePolicy,
                             catalog,
@@ -983,8 +983,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             "Save / Load"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
-            ? FieldLabel(locationId)
-            : DungeonNodeLabel(field.DungeonTraversal?.CurrentNodeId);
+            ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
+            : TrainingAnnexFieldPresenter.DungeonNodeLabel(field.DungeonTraversal?.CurrentNodeId);
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             $"Training Annex Clean Session - {locationLabel}",
             options);
@@ -1072,417 +1072,6 @@ internal sealed class CleanTrainingAnnexPlayHost
                     "Back")
             ]);
 
-    private async ValueTask<TrainingAnnexSaveActionResult> SaveCurrentSessionAsync(
-        RuntimeSaveKind kind,
-        IRuntimeSavePolicyService savePolicy,
-        GameDataCatalog catalog,
-        ICatalogBattleActorFactory actorFactory,
-        TrainingAnnexActorRoster roster,
-        RuntimeFieldSnapshot field,
-        RuntimeKnowledgeSnapshot knowledge,
-        RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
-        RuntimeSessionProgressSnapshot session,
-        bool encounterTriggerConsumed,
-        bool preparedBattleStarted,
-        BattleEncounterOutcome? preparedBattleOutcome,
-        ContentId? preparedBattleWinningTeamId,
-        bool hasPendingHostAction,
-        long sequence,
-        CancellationToken cancellationToken)
-    {
-        RuntimeSaveContextSnapshot context = CurrentSaveContext(field, hasPendingHostAction);
-        RuntimeSavePolicyAssessment assessment = savePolicy.AssessSave(kind, context);
-        if (!assessment.IsAllowed)
-        {
-            await PublishSavePolicyDiagnosticsAsync($"{KindLabel(kind)} save", assessment, cancellationToken)
-                .ConfigureAwait(false);
-            return new TrainingAnnexSaveActionResult(false, assessment.Diagnostics.Count);
-        }
-
-        RuntimeSaveGameSnapshot snapshot = BuildCurrentSaveSnapshot(
-            roster,
-            field,
-            knowledge,
-            inventory,
-            wallet,
-            session,
-            encounterTriggerConsumed,
-            preparedBattleStarted,
-            preparedBattleOutcome,
-            preparedBattleWinningTeamId);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(snapshot, catalog);
-        if (!validation.IsValid)
-        {
-            await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} save", validation, cancellationToken)
-                .ConfigureAwait(false);
-            return new TrainingAnnexSaveActionResult(false, validation.Diagnostics.Count);
-        }
-
-        _saveSlots.Save(new RuntimeSaveRecord(kind, validation.RequireValidSnapshot(), context, sequence));
-        await _eventSink.PublishAsync(
-            $"{KindLabel(kind)} save created in {context.ContextId} (sequence {sequence}).",
-            cancellationToken).ConfigureAwait(false);
-        return new TrainingAnnexSaveActionResult(true, 0);
-    }
-
-    private async ValueTask<TrainingAnnexLoadActionResult> LoadCurrentSessionAsync(
-        RuntimeSaveKind kind,
-        IRuntimeSavePolicyService savePolicy,
-        GameDataCatalog catalog,
-        ICatalogBattleActorFactory actorFactory,
-        TrainingAnnexActorRoster roster,
-        RuntimeFieldSnapshot field,
-        bool hasPendingHostAction,
-        CancellationToken cancellationToken)
-    {
-        RuntimeSaveContextSnapshot context = CurrentSaveContext(field, hasPendingHostAction);
-        RuntimeSaveRecord? record = null;
-        string? json = _saveSlots.GetRaw(kind);
-        if (json is not null)
-        {
-            try
-            {
-                record = CleanSaveJsonCodec.DeserializeRecord(json);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                await _eventSink.PublishAsync(
-                    $"{KindLabel(kind)} load rejected: save JSON could not be read ({exception.Message}).",
-                    cancellationToken).ConfigureAwait(false);
-                return new TrainingAnnexLoadActionResult(null, 1, false);
-            }
-        }
-
-        RuntimeSavePolicyAssessment assessment = savePolicy.AssessLoad(record, kind, context);
-        if (!assessment.IsAllowed)
-        {
-            await PublishSavePolicyDiagnosticsAsync($"{KindLabel(kind)} load", assessment, cancellationToken)
-                .ConfigureAwait(false);
-            return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
-        }
-
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(record!.Snapshot, catalog);
-        if (!validation.IsValid)
-        {
-            await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} load", validation, cancellationToken)
-                .ConfigureAwait(false);
-            return new TrainingAnnexLoadActionResult(null, validation.Diagnostics.Count, false);
-        }
-
-        TrainingAnnexSessionRestoreResult restore =
-            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster, actorFactory);
-        if (restore.Restored is null)
-        {
-            foreach (string diagnostic in restore.Diagnostics)
-            {
-                await _eventSink.PublishAsync(
-                    $"{KindLabel(kind)} load rejected: {diagnostic}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return new TrainingAnnexLoadActionResult(null, restore.Diagnostics.Count, false);
-        }
-
-        bool consume = assessment.ConsumeAfterSuccessfulRestore;
-        if (consume)
-        {
-            _saveSlots.Consume(kind);
-        }
-
-        await _eventSink.PublishAsync(
-            $"{KindLabel(kind)} save restored from {record.Context.ContextId} (sequence {record.Sequence}).",
-            cancellationToken).ConfigureAwait(false);
-        if (consume)
-        {
-            await _eventSink.PublishAsync(
-                "Suspend save consumed after successful restore.",
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        return new TrainingAnnexLoadActionResult(restore.Restored, 0, consume);
-    }
-
-    private static RuntimeSaveContextSnapshot CurrentSaveContext(
-        RuntimeFieldSnapshot field,
-        bool hasPendingHostAction) =>
-        new(
-            field.DungeonTraversal is null
-                ? TrainingAnnexHostSupport.FieldMenuSaveContext
-                : TrainingAnnexHostSupport.DungeonMenuSaveContext,
-            hasPendingHostAction);
-
-    private static RuntimeSaveGameSnapshot BuildCurrentSaveSnapshot(
-        TrainingAnnexActorRoster roster,
-        RuntimeFieldSnapshot field,
-        RuntimeKnowledgeSnapshot knowledge,
-        RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
-        RuntimeSessionProgressSnapshot session,
-        bool encounterTriggerConsumed,
-        bool preparedBattleStarted,
-        BattleEncounterOutcome? preparedBattleOutcome,
-        ContentId? preparedBattleWinningTeamId)
-    {
-        var hostContext = new List<KeyValuePair<ContentId, string>>
-        {
-            new(AshlingTriggerConsumedHostKey, encounterTriggerConsumed.ToString()),
-            new(PreparedBattleStartedHostKey, preparedBattleStarted.ToString())
-        };
-        if (preparedBattleOutcome is BattleEncounterOutcome outcome)
-        {
-            hostContext.Add(new KeyValuePair<ContentId, string>(
-                PreparedBattleOutcomeHostKey,
-                outcome.ToString()));
-        }
-
-        if (preparedBattleWinningTeamId is ContentId winningTeam)
-        {
-            hostContext.Add(new KeyValuePair<ContentId, string>(
-                PreparedBattleWinningTeamHostKey,
-                winningTeam.ToString()));
-        }
-
-        return TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
-            roster,
-            field,
-            knowledge,
-            inventory,
-            wallet,
-            session,
-            hostContext);
-    }
-
-    private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
-        RuntimeSaveGameSnapshot snapshot,
-        TrainingAnnexActorRoster currentRoster,
-        ICatalogBattleActorFactory actorFactory)
-    {
-        var diagnostics = new List<string>();
-        ValidateTrainingAnnexField(snapshot.Field, diagnostics);
-
-        Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
-            .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
-        if (!TryRestoreActor(currentRoster.Player, actors, actorFactory, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
-        {
-            diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
-        }
-
-        var enemies = new List<TrainingAnnexRuntimeActor>();
-        foreach (TrainingAnnexRuntimeActor enemy in currentRoster.Enemies)
-        {
-            if (!TryRestoreActor(enemy, actors, actorFactory, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
-            {
-                diagnostics.Add(enemyDiagnostic ?? $"Saved enemy actor '{enemy.Actor.State.InstanceId}' could not be restored.");
-                continue;
-            }
-
-            enemies.Add(restoredEnemy);
-        }
-
-        if (diagnostics.Count > 0)
-        {
-            return new TrainingAnnexSessionRestoreResult(null, diagnostics);
-        }
-
-        TrainingAnnexActorRoster roster = new(player, enemies);
-
-        RuntimeFieldSnapshot field = snapshot.Field ??
-            new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
-        bool ashlingCleared = snapshot.Session.Flags.Contains(AshlingDrillClearedFlag);
-        bool triggerConsumed = HostFlag(snapshot, AshlingTriggerConsumedHostKey) || ashlingCleared;
-        bool battleStarted = HostFlag(snapshot, PreparedBattleStartedHostKey) || ashlingCleared;
-        BattleEncounterOutcome? outcome = HostEnum<BattleEncounterOutcome>(
-            snapshot,
-            PreparedBattleOutcomeHostKey) ?? (ashlingCleared ? BattleEncounterOutcome.Victory : null);
-        ContentId? winningTeam = HostContentId(snapshot, PreparedBattleWinningTeamHostKey) ??
-            (ashlingCleared ? TrainingAnnexHostSupport.PlayerTeam : null);
-        IReadOnlyList<ContentId> preparedEncounterIds = triggerConsumed
-            ? [TrainingAnnexHostSupport.ReviewHallAshlingTrigger.EncounterId]
-            : [];
-
-        return new TrainingAnnexSessionRestoreResult(
-            new TrainingAnnexRestoredSession(
-                roster,
-                field,
-                snapshot.Inventory,
-                snapshot.Wallet,
-                snapshot.Session,
-                TrainingAnnexBattleKnowledgeState.FromSnapshot(snapshot.Knowledge),
-                triggerConsumed,
-                battleStarted,
-                outcome,
-                winningTeam,
-                preparedEncounterIds),
-            []);
-    }
-
-    private static void ValidateTrainingAnnexField(
-        RuntimeFieldSnapshot? field,
-        ICollection<string> diagnostics)
-    {
-        if (field is null)
-        {
-            return;
-        }
-
-        if (field.Navigation.CurrentLocationId != TrainingAnnexHostSupport.StagingArea &&
-            field.Navigation.CurrentLocationId != TrainingAnnexHostSupport.TrainingAnnexEntrance)
-        {
-            diagnostics.Add(
-                $"Saved location '{field.Navigation.CurrentLocationId}' is not a Training Annex play location.");
-        }
-
-        RuntimeDungeonTraversalSnapshot? dungeon = field.DungeonTraversal;
-        if (dungeon is null)
-        {
-            return;
-        }
-
-        if (dungeon.DungeonId != TrainingAnnexHostSupport.TrainingAnnexDungeon)
-        {
-            diagnostics.Add(
-                $"Saved dungeon '{dungeon.DungeonId}' is not the Training Annex dungeon.");
-        }
-
-        ContentId[] allowedNodes =
-        [
-            TrainingAnnexHostSupport.TrainingAnnexEntrance,
-            TrainingAnnexHostSupport.ReviewHall,
-            TrainingAnnexHostSupport.ReviewAlcove
-        ];
-        if (!allowedNodes.Contains(dungeon.CurrentNodeId))
-        {
-            diagnostics.Add(
-                $"Saved dungeon node '{dungeon.CurrentNodeId}' is not recognized by the Training Annex host.");
-        }
-
-        foreach (ContentId nodeId in dungeon.VisitedNodeIds)
-        {
-            if (!allowedNodes.Contains(nodeId))
-            {
-                diagnostics.Add(
-                    $"Saved visited dungeon node '{nodeId}' is not recognized by the Training Annex host.");
-            }
-        }
-
-        foreach (ContentId checkpointId in dungeon.UnlockedCheckpointIds)
-        {
-            if (checkpointId != TrainingAnnexHostSupport.ReviewCheckpoint)
-            {
-                diagnostics.Add(
-                    $"Saved checkpoint '{checkpointId}' is not recognized by the Training Annex host.");
-            }
-        }
-
-        foreach (ContentId bossId in dungeon.DefeatedBossIds)
-        {
-            diagnostics.Add(
-                $"Saved defeated boss '{bossId}' is not recognized by the Training Annex host.");
-        }
-    }
-
-    private static bool TryRestoreActor(
-        TrainingAnnexRuntimeActor current,
-        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
-        ICatalogBattleActorFactory actorFactory,
-        out TrainingAnnexRuntimeActor restored,
-        out string? diagnostic)
-    {
-        if (!actors.TryGetValue(current.Actor.State.InstanceId, out RuntimeActorSnapshot? snapshot))
-        {
-            restored = current;
-            diagnostic = $"Saved session has no actor '{current.Actor.State.InstanceId}'.";
-            return false;
-        }
-
-        RuntimeActorSnapshot expected = current.Actor.State.ToSnapshot();
-        if (snapshot.Identity.EntityDefinitionId != expected.Identity.EntityDefinitionId)
-        {
-            restored = current;
-            diagnostic =
-                $"Saved actor '{snapshot.Identity.InstanceId}' has entity '{snapshot.Identity.EntityDefinitionId}', expected '{expected.Identity.EntityDefinitionId}' for {current.Role}.";
-            return false;
-        }
-
-        if (snapshot.Identity.ActorKindId != expected.Identity.ActorKindId)
-        {
-            restored = current;
-            diagnostic =
-                $"Saved actor '{snapshot.Identity.InstanceId}' has kind '{snapshot.Identity.ActorKindId}', expected '{expected.Identity.ActorKindId}' for {current.Role}.";
-            return false;
-        }
-
-        if (snapshot.Ownership.TeamId != expected.Ownership.TeamId)
-        {
-            restored = current;
-            diagnostic =
-                $"Saved actor '{snapshot.Identity.InstanceId}' has team '{snapshot.Ownership.TeamId}', expected '{expected.Ownership.TeamId}' for {current.Role}.";
-            return false;
-        }
-
-        CatalogBattleActorCreationResult result = actorFactory.Restore(snapshot);
-        if (!result.IsSuccess)
-        {
-            restored = current;
-            diagnostic = string.Join("; ", result.Diagnostics.Select(item => item.Message));
-            return false;
-        }
-
-        restored = new TrainingAnnexRuntimeActor(current.Role, result.RequireActor());
-        diagnostic = null;
-        return true;
-    }
-
-    private async ValueTask PublishSavePolicyDiagnosticsAsync(
-        string actionLabel,
-        RuntimeSavePolicyAssessment assessment,
-        CancellationToken cancellationToken)
-    {
-        foreach (RuntimeSavePolicyDiagnostic diagnostic in assessment.Diagnostics)
-        {
-            await _eventSink.PublishAsync(
-                $"{actionLabel} rejected [{diagnostic.Code}]: {diagnostic.Message}",
-                cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private async ValueTask PublishSaveValidationDiagnosticsAsync(
-        string actionLabel,
-        RuntimeSaveValidationResult validation,
-        CancellationToken cancellationToken)
-    {
-        foreach (RuntimeSaveValidationDiagnostic diagnostic in validation.Diagnostics)
-        {
-            await _eventSink.PublishAsync(
-                $"{actionLabel} rejected [{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
-                cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private static bool HostFlag(RuntimeSaveGameSnapshot snapshot, ContentId key) =>
-        snapshot.HostContext.TryGetValue(key, out string? value) &&
-        bool.TryParse(value, out bool result) &&
-        result;
-
-    private static TEnum? HostEnum<TEnum>(RuntimeSaveGameSnapshot snapshot, ContentId key)
-        where TEnum : struct
-    {
-        return snapshot.HostContext.TryGetValue(key, out string? value) &&
-            Enum.TryParse(value, out TEnum result)
-                ? result
-                : null;
-    }
-
-    private static ContentId? HostContentId(RuntimeSaveGameSnapshot snapshot, ContentId key) =>
-        snapshot.HostContext.TryGetValue(key, out string? value) &&
-        ContentId.TryParse(value, out ContentId contentId)
-            ? contentId
-            : null;
-
-    private static string KindLabel(RuntimeSaveKind kind) =>
-        kind == RuntimeSaveKind.Manual ? "Manual" : "Suspend";
-
     private ValueTask PrintInventoryAsync(
         GameDataCatalog catalog,
         RuntimeInventorySnapshot inventory,
@@ -1527,83 +1116,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancellationToken).ConfigureAwait(false);
     }
 
-    private ValueTask PrintSessionAsync(
-        GameDataCatalog catalog,
-        RuntimeFieldSnapshot field,
-        CancellationToken cancellationToken) =>
-        _eventSink.PublishAsync(
-            $"Session: {TrainingAnnexHostSupport.PackId}; {catalog.Entities.Count} entities, {catalog.Skills.Count} skills, {catalog.Items.Count} items, {catalog.Encounters.Count} encounters, {catalog.Dungeons.Count} dungeons. Location: {FieldLabel(field.Navigation.CurrentLocationId)} ({field.Navigation.CurrentLocationId}); dungeon state: {(field.DungeonTraversal is null ? "not active" : field.DungeonTraversal.CurrentNodeId.ToString())}.",
-            cancellationToken);
-
-    private async ValueTask<RuntimeFieldSnapshot> ApplyNavigationAsync(
-        RuntimeFieldSnapshot field,
-        RuntimeNavigationResult navigation,
-        string appliedDescription,
-        CancellationToken cancellationToken)
-    {
-        if (!navigation.Applied)
-        {
-            await _eventSink.PublishAsync(
-                $"Field navigation rejected: {navigation.Message}",
-                cancellationToken).ConfigureAwait(false);
-            return field;
-        }
-
-        await _eventSink.PublishAsync(
-            $"Field navigation: {appliedDescription}; location {FieldLabel(navigation.After.CurrentLocationId)} ({navigation.After.CurrentLocationId}).",
-            cancellationToken).ConfigureAwait(false);
-        return new RuntimeFieldSnapshot(navigation.After, field.DungeonTraversal);
-    }
-
-    private async ValueTask<RuntimeFieldSnapshot> ApplyDungeonTraversalAsync(
-        RuntimeFieldSnapshot field,
-        RuntimeDungeonTraversalResult traversal,
-        CancellationToken cancellationToken)
-    {
-        if (!traversal.Applied)
-        {
-            await _eventSink.PublishAsync(
-                $"Dungeon traversal rejected: {traversal.Message}",
-                cancellationToken).ConfigureAwait(false);
-            return field;
-        }
-
-        await _eventSink.PublishAsync(
-            $"Dungeon traversal: {DungeonNodeLabel(traversal.Before.CurrentNodeId)} -> {DungeonNodeLabel(traversal.After.CurrentNodeId)}.",
-            cancellationToken).ConfigureAwait(false);
-        return new RuntimeFieldSnapshot(field.Navigation, traversal.After);
-    }
-
-    private async ValueTask<RuntimeFieldSnapshot> ApplyDungeonStateChangeAsync(
-        RuntimeFieldSnapshot field,
-        RuntimeDungeonStateChangeResult change,
-        CancellationToken cancellationToken)
-    {
-        if (!change.Applied)
-        {
-            await _eventSink.PublishAsync(
-                "Dungeon state unchanged: checkpoint was already unlocked.",
-                cancellationToken).ConfigureAwait(false);
-            return field;
-        }
-
-        RuntimeDungeonTraversalEvent dungeonEvent = RequireSingleEvent(change.Events);
-        await _eventSink.PublishAsync(
-            $"Dungeon checkpoint unlocked: {dungeonEvent.ContentId}.",
-            cancellationToken).ConfigureAwait(false);
-        return new RuntimeFieldSnapshot(field.Navigation, change.After);
-    }
-
-    private static RuntimeDungeonTraversalSnapshot RequireDungeonTraversal(RuntimeFieldSnapshot field) =>
-        field.DungeonTraversal ?? throw new InvalidOperationException(
-            "The Training Annex dungeon traversal state is not active.");
-
-    private static RuntimeDungeonTraversalEvent RequireSingleEvent(
-        IReadOnlyList<RuntimeDungeonTraversalEvent> events) =>
-        events.Count == 1
-            ? events[0]
-            : throw new InvalidOperationException("Expected one dungeon state event.");
-
     private async ValueTask<bool> PresentEncounterPreparationAsync(
         EncounterPreparationResult preparation,
         CancellationToken cancellationToken)
@@ -1633,22 +1145,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancellationToken).ConfigureAwait(false);
         return true;
     }
-
-    private static string FieldLabel(ContentId locationId) =>
-        locationId == TrainingAnnexHostSupport.StagingArea
-            ? "Staging Area"
-            : locationId == TrainingAnnexHostSupport.TrainingAnnexEntrance
-                ? "Training Annex Entrance"
-                : locationId.ToString();
-
-    private static string DungeonNodeLabel(ContentId? nodeId) =>
-        nodeId == TrainingAnnexHostSupport.TrainingAnnexEntrance
-            ? "Training Annex Entrance"
-            : nodeId == TrainingAnnexHostSupport.ReviewHall
-                ? "Review Hall"
-                : nodeId == TrainingAnnexHostSupport.ReviewAlcove
-                    ? "Review Alcove"
-                    : nodeId?.ToString() ?? "Unknown Dungeon Node";
 
     private async ValueTask PrintActorsAsync(TrainingAnnexActorRoster roster, CancellationToken cancellationToken)
     {
@@ -1806,50 +1302,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             commands.ToArray());
     }
 
-    private sealed record TrainingAnnexBattleRewardApplication(
-        bool Applied,
-        LevelGrowthResult Growth,
-        RuntimeWalletSnapshot Wallet);
-
-    private sealed record TrainingAnnexSaveActionResult(
-        bool Applied,
-        int DiagnosticCount);
-
-    private sealed record TrainingAnnexLoadActionResult(
-        TrainingAnnexRestoredSession? Restored,
-        int DiagnosticCount,
-        bool ConsumedRecord);
-
-    private sealed record TrainingAnnexSessionRestoreResult
-    {
-        public TrainingAnnexSessionRestoreResult(
-            TrainingAnnexRestoredSession? restored,
-            IEnumerable<string>? diagnostics = null)
-        {
-            Restored = restored;
-            Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
-        }
-
-        public TrainingAnnexRestoredSession? Restored { get; }
-        public IReadOnlyList<string> Diagnostics { get; }
-
-        public static TrainingAnnexSessionRestoreResult Failed(string? diagnostic) =>
-            new(null, [diagnostic ?? "Saved session could not be restored."]);
-    }
-
-    private sealed record TrainingAnnexRestoredSession(
-        TrainingAnnexActorRoster Roster,
-        RuntimeFieldSnapshot Field,
-        RuntimeInventorySnapshot Inventory,
-        RuntimeWalletSnapshot Wallet,
-        RuntimeSessionProgressSnapshot SessionProgress,
-        TrainingAnnexBattleKnowledgeState PlayerBattleKnowledge,
-        bool EncounterTriggerConsumed,
-        bool PreparedBattleStarted,
-        BattleEncounterOutcome? PreparedBattleOutcome,
-        ContentId? PreparedBattleWinningTeamId,
-        IReadOnlyList<ContentId> PreparedEncounterIds);
-
     private async ValueTask PublishRulesetDiagnosticsAsync(
         string category,
         IEnumerable<RulesetBindingDiagnostic> diagnostics,
@@ -1947,95 +1399,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             cancellationToken).ConfigureAwait(false);
 
         return growth;
-    }
-
-    private async ValueTask<TrainingAnnexBattleRewardApplication> ApplyPreparedBattleRewardAsync(
-        TrainingAnnexRuntimeActor player,
-        BattleRewardResult reward,
-        GrowthRulesetServices growthServices,
-        IEconomyTransactionService economy,
-        RuntimeWalletSnapshot wallet,
-        CancellationToken cancellationToken)
-    {
-        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
-        LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
-            before.Progression,
-            before.Stats,
-            before.Identity.ActorKindId,
-            reward.TotalExperience,
-            _randomSource,
-            resources: before.Resources,
-            baseResourceValues: before.BaseResourceValues));
-
-        WalletTransactionResult walletMutation;
-        try
-        {
-            walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
-        }
-        catch (OverflowException exception)
-        {
-            await _eventSink.PublishAsync(
-                $"[InvalidCurrencyAmount]: {exception.Message}",
-                cancellationToken).ConfigureAwait(false);
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
-        }
-
-        if (!walletMutation.Applied)
-        {
-            foreach (ResourceTransactionDiagnostic diagnostic in walletMutation.Diagnostics)
-            {
-                await _eventSink.PublishAsync(
-                    $"[{diagnostic.Code}]: {diagnostic.Message}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
-        }
-
-        RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            player.Actor.State,
-            growth);
-        if (!progressionMutation.Applied)
-        {
-            foreach (RuntimeMutationDiagnostic diagnostic in progressionMutation.Diagnostics)
-            {
-                await _eventSink.PublishAsync(
-                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
-        }
-
-        RuntimeActorSnapshot after = progressionMutation.After;
-        await _eventSink.PublishAsync(
-            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalMacca} Macca.",
-            cancellationToken).ConfigureAwait(false);
-        await _eventSink.PublishAsync(
-            $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Macca}->{walletMutation.After.Macca}.",
-            cancellationToken).ConfigureAwait(false);
-
-        return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After);
-    }
-
-    private static RuntimeSessionProgressSnapshot RecordBattleRewardSessionProgress(
-        RuntimeSessionProgressSnapshot before,
-        BattleRewardResult reward)
-    {
-        var counters = before.Counters.ToDictionary(pair => pair.Key, pair => pair.Value);
-        AddCounter(counters, ContentId.Parse("training_annex_victories"), 1);
-        AddCounter(counters, ContentId.Parse("training_annex_exp"), reward.TotalExperience);
-        AddCounter(counters, ContentId.Parse("training_annex_macca"), reward.TotalMacca);
-        return new RuntimeSessionProgressSnapshot(
-            before.MoonPhaseId,
-            before.ElapsedTicks,
-            counters,
-            before.Flags.Append(AshlingDrillClearedFlag).Distinct());
-    }
-
-    private static void AddCounter(Dictionary<ContentId, long> counters, ContentId id, long value)
-    {
-        counters[id] = counters.GetValueOrDefault(id) + value;
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(
