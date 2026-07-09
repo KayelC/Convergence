@@ -42,6 +42,8 @@ internal enum CleanTrainingAnnexPlayCommand
     SelectShopOffer,
     SelectSellOffer,
     EquipPurchasedEquipment,
+    OpenRecoveryFacility,
+    RecoveryTreat,
     BattleAttack,
     OpenBattleSkills,
     OpenBattleItems,
@@ -106,6 +108,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     WalletTransactionResult? AppliedWalletTransaction,
     IReadOnlyList<TrainingAnnexShopTransactionEvidence> ShopTransactions,
     IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> ShopEquipmentChanges,
+    IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> HospitalRestorations,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
     int ManualSaveCount,
@@ -353,6 +356,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         WalletTransactionResult? appliedWalletTransaction = null;
         var shopTransactions = new List<TrainingAnnexShopTransactionEvidence>();
         var shopEquipmentChanges = new List<TrainingAnnexEquipmentChangeEvidence>();
+        var hospitalRestorations = new List<TrainingAnnexHospitalRestorationEvidence>();
         long saveSequence = 0;
         int manualSaveCount = 0;
         int manualLoadCount = 0;
@@ -423,6 +427,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     appliedWalletTransaction,
                     shopTransactions,
                     shopEquipmentChanges,
+                    hospitalRestorations,
                     wallet,
                     sessionProgress,
                     manualSaveCount,
@@ -544,6 +549,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             appliedWalletTransaction,
                             shopTransactions,
                             shopEquipmentChanges,
+                            hospitalRestorations,
                             wallet,
                             sessionProgress,
                             manualSaveCount,
@@ -969,6 +975,20 @@ internal sealed class CleanTrainingAnnexPlayHost
                     shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
+                {
+                    TrainingAnnexRecoveryFacilityResult recoveryResult =
+                        await new TrainingAnnexRecoveryFacilityController(_eventSink, _commandSource)
+                            .OpenAsync(
+                                resourceManagement.Hospital,
+                                roster.Player,
+                                wallet,
+                                commands,
+                                cancellationToken).ConfigureAwait(false);
+                    wallet = recoveryResult.Wallet;
+                    hospitalRestorations.AddRange(recoveryResult.Restorations);
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
@@ -1076,6 +1096,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenShop,
             "Training Supply"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenRecoveryFacility,
+            "Recovery Facility"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1472,6 +1495,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         WalletTransactionResult? appliedWalletTransaction,
         IReadOnlyList<TrainingAnnexShopTransactionEvidence> shopTransactions,
         IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> shopEquipmentChanges,
+        IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> hospitalRestorations,
         RuntimeWalletSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
         int manualSaveCount,
@@ -1542,6 +1566,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             appliedWalletTransaction,
             shopTransactions.ToArray(),
             shopEquipmentChanges.ToArray(),
+            hospitalRestorations.ToArray(),
             wallet,
             sessionProgress,
             manualSaveCount,

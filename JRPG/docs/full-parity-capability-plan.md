@@ -821,6 +821,15 @@ Clean console proof:
 
 - optional clean recovery facility demonstrates restoration if still desired.
 
+Phase 4-25 result:
+
+- `--clean-training-annex-play` now exposes a `Recovery Facility` clean option after `Training Supply`.
+- The facility creates a `RuntimeHospitalPatientSnapshot` from the live clean actor, assesses treatment through the bound `IHospitalRestorationService`, and uses that same service for execution. Menu availability therefore cannot disagree with mutation.
+- Successful treatment spends Macca through the bound `standard_economy` service, restores HP/SP, removes removable ailments, and clears encounter-persistent clean battle state through the framework lifecycle cleanup service.
+- Failed or unnecessary treatment remains non-mutating: insufficient funds and no-restoration-needed rows are disabled and recorded by tests.
+- This remains `parallel_partial`: the original clean host now proves recovery-facility behavior, but the protected legacy city hospital remains on its compatibility path and no legacy hospital files are removable.
+- Phase 4-25 verification passed `87/87` focused tests and `839/839` full-suite tests with no skips.
+
 ### 26. `active_and_reserve_party`
 
 Current status: `parallel_partial`.

@@ -102,6 +102,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Null(summary.AppliedWalletTransaction);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
+        Assert.Empty(summary.HospitalRestorations);
         Assert.Equal(0, summary.Wallet.Macca);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
@@ -167,7 +168,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Field Skills",
                 "Exit",
                 "Save / Load",
-                "Training Supply"
+                "Training Supply",
+                "Recovery Facility"
             ],
                 menu.Options);
         }
@@ -188,7 +190,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Field Skills",
                 "Exit",
                 "Save / Load",
-                "Training Supply"
+                "Training Supply",
+                "Recovery Facility"
             ],
                 menu.Options);
         }
@@ -1711,6 +1714,121 @@ public sealed class CleanTrainingAnnexPlayHostTests
             "Shop transaction: Sold Annex Tonic for 27 M; wallet 0->27; quantity 1->0.",
             output.ToString(),
             StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RecoveryFacilityRestoresResourcesAndSpendsWallet()
+    {
+        var io = new ScriptedGameIO().QueueMenu(3, 12, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(20));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexHospitalRestorationEvidence restoration = Assert.Single(summary.HospitalRestorations);
+        Assert.Equal(RuntimeInstanceId.Parse("echo_adept"), restoration.PatientId);
+        Assert.Equal(ResourceTransactionCode.Applied, restoration.Code);
+        Assert.Equal(10, restoration.Cost);
+        Assert.Equal(20, restoration.WalletBefore);
+        Assert.Equal(10, restoration.WalletAfter);
+        Assert.Equal(70, restoration.HpBefore);
+        Assert.Equal(80, restoration.HpAfter);
+        Assert.Equal(80, restoration.MaxHp);
+        Assert.Equal(28, restoration.SpBefore);
+        Assert.Equal(28, restoration.SpAfter);
+        Assert.Equal(28, restoration.MaxSp);
+        Assert.False(restoration.HadAilmentBefore);
+        Assert.False(restoration.HasAilmentAfter);
+        Assert.False(restoration.HadEncounterPersistenceBefore);
+        Assert.False(restoration.HasEncounterPersistenceAfter);
+        Assert.Equal(10, summary.Wallet.Macca);
+        Assert.Equal(80, Resource(summary, "hp").Current);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.RecalculateResources,
+                CleanTrainingAnnexPlayCommand.OpenRecoveryFacility,
+                CleanTrainingAnnexPlayCommand.RecoveryTreat,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
+        Assert.Equal(
+            [
+                "Treat Echo Adept - 10 M",
+                "Back"
+            ],
+            recoveryMenu.Options);
+        Assert.Equal([false, false], recoveryMenu.DisabledOptions);
+        Assert.Contains(
+            "Recovery complete: Echo Adept; HP 70->80/80; SP 28->28/28; wallet 20->10.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RecoveryFacilityInsufficientFundsAreDisabledWithoutMutation()
+    {
+        var io = new ScriptedGameIO().QueueMenu(3, 12, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Empty(summary.HospitalRestorations);
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(70, Resource(summary, "hp").Current);
+
+        GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
+        Assert.Equal(
+            [
+                "Treat Echo Adept - 10 M [Not enough Macca]",
+                "Back"
+            ],
+            recoveryMenu.Options);
+        Assert.Equal([true, false], recoveryMenu.DisabledOptions);
+        Assert.Contains(
+            "Recovery canceled; wallet and actor state are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RecoveryFacilityNoRestorationNeededIsDisabled()
+    {
+        var io = new ScriptedGameIO().QueueMenu(12, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(20));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Empty(summary.HospitalRestorations);
+        Assert.Equal(20, summary.Wallet.Macca);
+        Assert.Equal(80, Resource(summary, "hp").Current);
+
+        GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
+        Assert.Equal(
+            [
+                "Treat Echo Adept - 0 M [No restoration needed]",
+                "Back"
+            ],
+            recoveryMenu.Options);
+        Assert.Equal([true, false], recoveryMenu.DisabledOptions);
         io.AssertConsumed();
     }
 

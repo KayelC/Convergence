@@ -55,6 +55,8 @@ Track O8 keeps the same visible shop flow while adding typed console-host presen
 
 Phase 4-24 adds a separate clean Training Annex shop proof. `--clean-training-annex-play` does not read `Database.ShopInventory`; it reads the clean `training_supply` catalog record, resolves offers through `RuntimeShopOfferResolver`, uses the bound shop/economy service for menu availability and execution, and equips purchased equipment through the clean equipment transition service. This is a framework-first sample path, not a replacement for the protected legacy city shops yet.
 
+Phase 4-25 adds a separate clean Training Annex recovery proof. `Recovery Facility` captures the clean actor as a hospital patient snapshot, assesses treatment through the bound hospital service, spends through the bound economy service on success, and applies HP/SP restoration plus clean status cleanup only after the framework result is applied.
+
 - Buying checks Macca, applies Luck-based discounts, and adds item/equipment ownership.
 - Selling removes inventory/equipment and grants Luck-scaled Macca.
 - Duplicate equipment purchases, insufficient Macca, unavailable stock, and equipped-item sales are rejected before mutation.

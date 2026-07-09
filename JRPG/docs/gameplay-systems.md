@@ -108,6 +108,8 @@ Phase 4-23 makes the clean Training Annex economy policy explicit. Startup binds
 
 Phase 4-24 adds the first clean shop interaction for original content. Training Annex exposes `Training Supply`, lists authored item/equipment offers from the clean catalog, resolves fixed prices, stock gates, item stack limits, and equipment slots into runtime shop offers, and uses the same bound shop transaction service for row availability and execution. Successful purchases and sales mutate the clean inventory and wallet snapshots; purchased equipment can be equipped immediately through the clean equipment transition service. The default demo wallet remains empty, so funded purchase tests inject a starting wallet through the host boundary rather than hardcoding free money into the framework.
 
+Phase 4-25 adds the clean Training Annex recovery facility. Treatment cost and eligibility come from the framework hospital service, successful treatment spends Macca through the bound economy service, restores HP/SP, removes removable ailments, and clears encounter-persistent clean battle state. Insufficient funds and no-restoration-needed states are disabled and non-mutating.
+
 Track O8 keeps those rules unchanged and adds typed console-host presentation results for shop command selection, buy/sell offers, confirmation, transaction messages, hospital patient selection, and hospital treatment display. Shop and hospital menus still use legacy `Database` records, metadata repair, exact labels, and current HP/SP-based hospital eligibility behavior.
 
 Important rules:
