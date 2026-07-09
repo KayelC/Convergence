@@ -782,7 +782,7 @@ Phase 4-23 result:
 - The host owns one live `RuntimeWalletSnapshot`, accepts a host-selected starting balance, applies battle Macca through `IEconomyTransactionService`, records the actual immutable `WalletTransactionResult`, and carries the resulting wallet through save validation and restore.
 - `EconomyTransactionService.AddMacca(...)` now rejects integer overflow with `InvalidCurrencyAmount` and preserves the original wallet snapshot instead of throwing across the transaction boundary. Negative and insufficient-funds operations remain non-mutating typed rejections.
 - Focused tests prove reward income adds to an injected balance rather than resetting or assuming zero, invalid economy bindings fail before any command read, and rejected/overflowing operations preserve the exact before-state.
-- This remains `parallel_partial`: clean reward income is now policy-bound and authoritative, but Phase 4-24 is still responsible for proving real clean spending through catalog-backed shop transactions. No artificial spend command was added solely to satisfy this checkpoint.
+- This remains `parallel_partial`: clean reward income is now policy-bound and authoritative, and Phase 4-24 adds real clean spending through catalog-backed shop transactions. Broader production economy parity still waits on content/consumer migration and removal authorization. No artificial spend command was added solely to satisfy this checkpoint.
 - Phase 4-23 verification passed `73/73` focused tests and `830/830` full-suite tests with no skips. The framework build remained at `0` warnings, the solution remained at `98` pre-existing legacy-host warnings, all four noninteractive clean demos exited successfully, framework boundary searches were clean, and `Data/Jsons` was unchanged.
 
 ### 24. `shops`
@@ -797,6 +797,16 @@ Full parity target:
 Clean console proof:
 
 - Training Annex shop sells at least one clean item/equipment record.
+
+Phase 4-24 result:
+
+- `--clean-training-annex-play` now exposes a `Training Supply` clean shop option over the authored `convergence.training_annex_slice:training_supply` shop catalog.
+- The host resolves authored shop offers through `RuntimeShopOfferResolver`, which maps fixed prices, limited/unlimited stock gates, item stack limits, and equipment slots into runtime shop-offer snapshots without consulting legacy shop DTOs or display text.
+- Buy and sell menus are presentation only. Their enabled/disabled rows are produced from the same bound `IShopTransactionService` assessment used for execution, so insufficient funds, duplicate equipment, equipped-sale blocks, stack limits, and unavailable stock cannot disagree between display and mutation.
+- Successful purchases and sales mutate the clean host's live `RuntimeInventorySnapshot` and `RuntimeWalletSnapshot` through the bound `standard_economy` services. Equipment purchases can then be equipped through `IEquipmentTransitionService`, and the actor's clean `RuntimeEquipmentSnapshot` and resolved profile update immediately.
+- The default Training Annex wallet remains `0`; funded purchase/equip tests inject a starting wallet through the host boundary. This preserves the previous economy baseline while proving real clean spending without adding a fake money command.
+- This remains `parallel_partial`: clean original-content shop interactions now exist, but legacy shops still use their protected console path, clean stock-state persistence is minimal, hospital remains Phase 4-25, and no legacy shop files are removable.
+- Phase 4-24 verification passed `84/84` focused tests and `836/836` full-suite tests with no skips.
 
 ### 25. `hospital`
 

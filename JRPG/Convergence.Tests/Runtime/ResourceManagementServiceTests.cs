@@ -250,6 +250,139 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void ShopOfferResolver_MapsAuthoredItemAndEquipmentOffersIntoRuntimeOffers()
+    {
+        var resolver = new RuntimeShopOfferResolver();
+        ContentId medicine = Q("medicine");
+        ContentId blade = Q("blade");
+        var catalog = new GameDataCatalog(
+            skills: [],
+            entities: [],
+            races: [],
+            ailments: [],
+            items:
+            [
+                new KeyValuePair<ContentId, ItemDefinition>(
+                    medicine,
+                    new ItemDefinition(
+                        medicine,
+                        "Medicine",
+                        "Restores HP.",
+                        ItemKind.Consumable,
+                        stackLimit: 10,
+                        baseValue: 50))
+            ],
+            equipment:
+            [
+                new KeyValuePair<ContentId, EquipmentDefinition>(
+                    blade,
+                    new EquipmentDefinition(
+                        blade,
+                        "Blade",
+                        "A weapon.",
+                        EquipmentSlot.Weapon,
+                        baseValue: 100,
+                        weapon: new EquipmentWeaponProfileDefinition(
+                            new EquipmentBasicAttackDefinition(
+                                DamageElement.Physical,
+                                10,
+                                95,
+                                false))))
+            ]);
+        var itemOffer = new ShopOfferDefinition(
+            ShopContentKind.Item,
+            medicine,
+            new FixedShopPriceDefinition(25),
+            new LimitedShopStockDefinition(3));
+        var equipmentOffer = new ShopOfferDefinition(
+            ShopContentKind.Equipment,
+            blade,
+            new FixedShopPriceDefinition(100),
+            new UnlimitedShopStockDefinition());
+
+        RuntimeShopOfferResolutionResult item = resolver.Resolve(itemOffer, catalog, catalog);
+        RuntimeShopOfferResolutionResult equipment = resolver.Resolve(equipmentOffer, catalog, catalog);
+
+        RuntimeShopOfferSnapshot itemSnapshot = item.RequireOffer();
+        RuntimeShopOfferSnapshot equipmentSnapshot = equipment.RequireOffer();
+        Assert.Equal(ShopContentKind.Item, itemSnapshot.ContentKind);
+        Assert.Equal(medicine, itemSnapshot.ContentId);
+        Assert.Equal(25, itemSnapshot.BasePrice);
+        Assert.Equal(10, itemSnapshot.ItemStackLimit);
+        Assert.Equal(3, itemSnapshot.StockAvailable);
+        Assert.Null(itemSnapshot.EquipmentSlot);
+        Assert.Equal(ShopContentKind.Equipment, equipmentSnapshot.ContentKind);
+        Assert.Equal(blade, equipmentSnapshot.ContentId);
+        Assert.Equal(100, equipmentSnapshot.BasePrice);
+        Assert.Equal(EquipmentSlot.Weapon, equipmentSnapshot.EquipmentSlot);
+        Assert.Null(equipmentSnapshot.ItemStackLimit);
+        Assert.Null(equipmentSnapshot.StockAvailable);
+    }
+
+    [Fact]
+    public void ShopOfferResolver_RejectsUnsupportedOrMalformedOffersWithoutRuntimeFallbacks()
+    {
+        var resolver = new RuntimeShopOfferResolver();
+        ContentId medicine = Q("medicine");
+        ContentId missingBlade = Q("missing_blade");
+        var catalog = new GameDataCatalog(
+            skills: [],
+            entities: [],
+            races: [],
+            ailments: [],
+            items:
+            [
+                new KeyValuePair<ContentId, ItemDefinition>(
+                    medicine,
+                    new ItemDefinition(
+                        medicine,
+                        "Medicine",
+                        "Restores HP.",
+                        ItemKind.Consumable,
+                        stackLimit: 10,
+                        baseValue: 50))
+            ]);
+        var missing = new ShopOfferDefinition(
+            ShopContentKind.Equipment,
+            missingBlade,
+            new FixedShopPriceDefinition(100),
+            new UnlimitedShopStockDefinition());
+        var policyPrice = new ShopOfferDefinition(
+            ShopContentKind.Item,
+            medicine,
+            new PolicyShopPriceDefinition(Id("dynamic_price")),
+            new UnlimitedShopStockDefinition());
+        var fractionalPrice = new ShopOfferDefinition(
+            ShopContentKind.Item,
+            medicine,
+            new FixedShopPriceDefinition(12.5m),
+            new UnlimitedShopStockDefinition());
+        var policyStock = new ShopOfferDefinition(
+            ShopContentKind.Item,
+            medicine,
+            new FixedShopPriceDefinition(12),
+            new PolicyShopStockDefinition(Id("dynamic_stock")));
+
+        RuntimeShopOfferResolutionResult missingResult = resolver.Resolve(missing, catalog, catalog);
+        RuntimeShopOfferResolutionResult policyPriceResult = resolver.Resolve(policyPrice, catalog, catalog);
+        RuntimeShopOfferResolutionResult fractionalPriceResult = resolver.Resolve(fractionalPrice, catalog, catalog);
+        RuntimeShopOfferResolutionResult policyStockResult = resolver.Resolve(policyStock, catalog, catalog);
+
+        Assert.False(missingResult.IsSuccess);
+        Assert.Contains(missingResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.MissingEquipmentDefinition);
+        Assert.False(policyPriceResult.IsSuccess);
+        Assert.Contains(policyPriceResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.UnsupportedPricePolicy);
+        Assert.False(fractionalPriceResult.IsSuccess);
+        Assert.Contains(fractionalPriceResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.InvalidFixedPrice);
+        Assert.False(policyStockResult.IsSuccess);
+        Assert.Contains(policyStockResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.UnsupportedStockPolicy);
+    }
+
+    [Fact]
     public void HospitalService_RestoresResourcesAilmentsAndSpendsAtomically()
     {
         var service = new HospitalRestorationService();
@@ -280,6 +413,8 @@ public sealed class ResourceManagementServiceTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static ContentId Q(string localId) => ContentId.Parse($"test.pack:{localId}");
 
     private static EquipmentDefinition Weapon(ContentId id, int power, int accuracy) =>
         new(

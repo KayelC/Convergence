@@ -36,6 +36,12 @@ internal enum CleanTrainingAnnexPlayCommand
     ManualLoad,
     SuspendSave,
     SuspendLoad,
+    OpenShop,
+    ShopBuy,
+    ShopSell,
+    SelectShopOffer,
+    SelectSellOffer,
+    EquipPurchasedEquipment,
     BattleAttack,
     OpenBattleSkills,
     OpenBattleItems,
@@ -98,6 +104,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     BattleRewardResult? AppliedBattleReward,
     int AppliedBattleRewardLevelUpCount,
     WalletTransactionResult? AppliedWalletTransaction,
+    IReadOnlyList<TrainingAnnexShopTransactionEvidence> ShopTransactions,
+    IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> ShopEquipmentChanges,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
     int ManualSaveCount,
@@ -343,6 +351,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? appliedBattleReward = null;
         int appliedBattleRewardLevelUpCount = 0;
         WalletTransactionResult? appliedWalletTransaction = null;
+        var shopTransactions = new List<TrainingAnnexShopTransactionEvidence>();
+        var shopEquipmentChanges = new List<TrainingAnnexEquipmentChangeEvidence>();
         long saveSequence = 0;
         int manualSaveCount = 0;
         int manualLoadCount = 0;
@@ -411,6 +421,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     appliedBattleReward,
                     appliedBattleRewardLevelUpCount,
                     appliedWalletTransaction,
+                    shopTransactions,
+                    shopEquipmentChanges,
                     wallet,
                     sessionProgress,
                     manualSaveCount,
@@ -530,6 +542,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             appliedBattleReward,
                             appliedBattleRewardLevelUpCount,
                             appliedWalletTransaction,
+                            shopTransactions,
+                            shopEquipmentChanges,
                             wallet,
                             sessionProgress,
                             manualSaveCount,
@@ -902,7 +916,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         {
                             roster = restored.Roster;
                             field = restored.Field;
-                            inventory = new TrainingAnnexItemActionInventory(restored.Inventory);
+                            inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
                             wallet = restored.Wallet;
                             sessionProgress = restored.SessionProgress;
                             playerBattleKnowledge = restored.PlayerBattleKnowledge;
@@ -935,6 +949,24 @@ internal sealed class CleanTrainingAnnexPlayHost
                             suspendSaveConsumed |= loadResult.ConsumedRecord;
                         }
                     }
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.OpenShop:
+                {
+                    var shopResult = await new TrainingAnnexShopController(_eventSink, _commandSource)
+                        .OpenTrainingSupplyAsync(
+                        catalog,
+                        resourceManagement.Shop,
+                        equipmentTransitions,
+                        equipmentProfileResolver,
+                        roster.Player,
+                        inventory,
+                        wallet,
+                        commands,
+                        cancellationToken).ConfigureAwait(false);
+                    wallet = shopResult.Wallet;
+                    shopTransactions.AddRange(shopResult.Transactions);
+                    shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
                     break;
                 }
                 default:
@@ -1041,6 +1073,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenSaveLoad,
             "Save / Load"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenShop,
+            "Training Supply"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1435,6 +1470,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? appliedBattleReward,
         int appliedBattleRewardLevelUpCount,
         WalletTransactionResult? appliedWalletTransaction,
+        IReadOnlyList<TrainingAnnexShopTransactionEvidence> shopTransactions,
+        IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> shopEquipmentChanges,
         RuntimeWalletSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
         int manualSaveCount,
@@ -1503,6 +1540,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             appliedBattleReward,
             appliedBattleRewardLevelUpCount,
             appliedWalletTransaction,
+            shopTransactions.ToArray(),
+            shopEquipmentChanges.ToArray(),
             wallet,
             sessionProgress,
             manualSaveCount,

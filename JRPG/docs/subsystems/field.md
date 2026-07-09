@@ -53,6 +53,8 @@ During exploration:
 
 Track O8 keeps the same visible shop flow while adding typed console-host presentation results for shop command selection, buy/sell offers, confirmation, inspection, transaction success, and transaction failure. The UI still reads legacy `Database.ShopInventory` and equipment/item metadata, but mutation and failure decisions are presented from framework-backed transaction results.
 
+Phase 4-24 adds a separate clean Training Annex shop proof. `--clean-training-annex-play` does not read `Database.ShopInventory`; it reads the clean `training_supply` catalog record, resolves offers through `RuntimeShopOfferResolver`, uses the bound shop/economy service for menu availability and execution, and equips purchased equipment through the clean equipment transition service. This is a framework-first sample path, not a replacement for the protected legacy city shops yet.
+
 - Buying checks Macca, applies Luck-based discounts, and adds item/equipment ownership.
 - Selling removes inventory/equipment and grants Luck-scaled Macca.
 - Duplicate equipment purchases, insufficient Macca, unavailable stock, and equipped-item sales are rejected before mutation.

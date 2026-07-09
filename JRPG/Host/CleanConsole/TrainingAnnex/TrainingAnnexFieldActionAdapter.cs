@@ -109,6 +109,11 @@ internal sealed class TrainingAnnexItemActionInventory : IItemActionInventory
 
     public RuntimeInventorySnapshot Snapshot { get; private set; }
 
+    public void Replace(RuntimeInventorySnapshot snapshot)
+    {
+        Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+    }
+
     public bool HasAvailable(ContentId itemId, int quantity) =>
         quantity > 0 && Snapshot.GetQuantity(itemId) >= quantity;
 

@@ -656,6 +656,16 @@ Demonstrate clean shop/equipment services in the clean runtime.
 - Actual clean spending remains part of the shop interaction below; the console host does not add a fake economy-only command.
 - Verification passed `73/73` focused tests and `830/830` full-suite tests; framework warnings stayed at `0`, solution warnings stayed at the existing `98`, and all noninteractive clean demos passed.
 
+### Phase 4-24 Shop Result
+
+- Training Annex play now includes a `Training Supply` clean shop option.
+- Shop rows come from the `training_annex_slice.shops.json` catalog, then pass through the framework `RuntimeShopOfferResolver` before they can be displayed or executed.
+- Buy/sell row availability is assessed through the same bound `IShopTransactionService` used for execution, so disabled rows such as insufficient funds, duplicate equipment, and equipped-sale blocks are not guessed by the console host.
+- Buying mutates the clean runtime inventory and wallet through `standard_economy`; buying equipment can immediately route into `IEquipmentTransitionService` and update the actor's equipment profile.
+- Selling an authored shop item adds Macca through the same shop/economy service and blocks selling equipped gear.
+- The default demo wallet remains `0`; funded shop tests inject a starting wallet through the host boundary so the shop can prove real spending without adding fake currency.
+- Shop/economy verification passed `84/84` focused tests and `836/836` full-suite tests with no skips.
+
 ### Work
 
 - Add a small shop interaction in Training Annex.
@@ -837,8 +847,8 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback.
+Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions.
 
-The next numbered capability is Phase 4-24, `shops`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 4-25, `hospital`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

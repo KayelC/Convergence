@@ -100,6 +100,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Null(summary.PreparedBattleRewardPreview);
         Assert.Null(summary.AppliedBattleReward);
         Assert.Null(summary.AppliedWalletTransaction);
+        Assert.Empty(summary.ShopTransactions);
+        Assert.Empty(summary.ShopEquipmentChanges);
         Assert.Equal(0, summary.Wallet.Macca);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
@@ -164,7 +166,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Inventory",
                 "Field Skills",
                 "Exit",
-                "Save / Load"
+                "Save / Load",
+                "Training Supply"
             ],
                 menu.Options);
         }
@@ -184,7 +187,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Inventory",
                 "Field Skills",
                 "Exit",
-                "Save / Load"
+                "Save / Load",
+                "Training Supply"
             ],
                 menu.Options);
         }
@@ -1527,6 +1531,187 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Null(host.LastSummary);
         Assert.Empty(io.Menus);
         Assert.Contains($"[economy:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopBuysCatalogItemThroughBoundTransactions()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
+        Assert.True(transaction.IsPurchase);
+        Assert.Equal(Qualified("training_supply"), transaction.ShopId);
+        Assert.Equal(Qualified("annex_tonic"), transaction.OfferId);
+        Assert.Equal(ShopContentKind.Item, transaction.ContentKind);
+        Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
+        Assert.Equal(48, transaction.Price);
+        Assert.Equal(100, transaction.WalletBefore);
+        Assert.Equal(52, transaction.WalletAfter);
+        Assert.Equal(1, transaction.OwnedCountBefore);
+        Assert.Equal(2, transaction.OwnedCountAfter);
+        Assert.Empty(summary.ShopEquipmentChanges);
+        Assert.Equal(52, summary.Wallet.Macca);
+        Assert.Equal(2, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenShop,
+                CleanTrainingAnnexPlayCommand.ShopBuy,
+                CleanTrainingAnnexPlayCommand.SelectShopOffer,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+        Assert.Contains(
+            "Shop transaction: Bought Annex Tonic for 48 M; wallet 100->52; quantity 1->2.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopBuysAndEquipsCatalogEquipment()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 3, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
+        TrainingAnnexEquipmentChangeEvidence equipment = Assert.Single(summary.ShopEquipmentChanges);
+        Assert.Equal(Qualified("padded_jacket"), transaction.OfferId);
+        Assert.Equal(ShopContentKind.Equipment, transaction.ContentKind);
+        Assert.Equal(86, transaction.Price);
+        Assert.Equal(100, transaction.WalletBefore);
+        Assert.Equal(14, transaction.WalletAfter);
+        Assert.Equal(0, transaction.OwnedCountBefore);
+        Assert.Equal(1, transaction.OwnedCountAfter);
+        Assert.Equal(Qualified("padded_jacket"), equipment.EquipmentId);
+        Assert.Equal(EquipmentSlot.Armor, equipment.Slot);
+        Assert.True(equipment.Applied);
+        Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
+        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Contains(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
+        Assert.Equal(Qualified("padded_jacket"), summary.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
+        Assert.Contains(EquipmentSlot.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenShop,
+                CleanTrainingAnnexPlayCommand.ShopBuy,
+                CleanTrainingAnnexPlayCommand.SelectShopOffer,
+                CleanTrainingAnnexPlayCommand.EquipPurchasedEquipment,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
+        Assert.Equal(
+            [
+                "Annex Tonic - 48 M",
+                "Cleanse Drop - 38 M (stock 5)",
+                "Practice Blade - 115 M [Already owned]",
+                "Padded Jacket - 86 M",
+                "Back"
+            ],
+            buyMenu.Options);
+        Assert.Equal([false, false, true, false, false], buyMenu.DisabledOptions);
+        string text = output.ToString();
+        Assert.Contains(
+            "Shop transaction: Bought Padded Jacket for 86 M; wallet 100->14; owned 0->1.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Equipped Padded Jacket in Armor; equipment profile now",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopInsufficientFundsAreDisabledWithoutMutation()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 4, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Empty(summary.ShopTransactions);
+        Assert.Empty(summary.ShopEquipmentChanges);
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        Assert.DoesNotContain(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
+
+        GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
+        Assert.Equal(
+            [
+                "Annex Tonic - 48 M [Not enough Macca]",
+                "Cleanse Drop - 38 M (stock 5) [Not enough Macca]",
+                "Practice Blade - 115 M [Already owned]",
+                "Padded Jacket - 86 M [Not enough Macca]",
+                "Back"
+            ],
+            buyMenu.Options);
+        Assert.Equal([true, true, true, true, false], buyMenu.DisabledOptions);
+        Assert.Contains(
+            "Shop purchase canceled; wallet and inventory are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopSellsCatalogItemAndBlocksEquippedSale()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 1, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
+        Assert.False(transaction.IsPurchase);
+        Assert.Equal(Qualified("annex_tonic"), transaction.OfferId);
+        Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
+        Assert.Equal(27, transaction.Price);
+        Assert.Equal(0, transaction.WalletBefore);
+        Assert.Equal(27, transaction.WalletAfter);
+        Assert.Equal(1, transaction.OwnedCountBefore);
+        Assert.Equal(0, transaction.OwnedCountAfter);
+        Assert.Equal(27, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+
+        GameIoMenuCall sellMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Sell");
+        Assert.Equal(
+            [
+                "Annex Tonic - 27 M (owned 1)",
+                "Practice Blade - 64 M (owned) [Equipped]",
+                "Back"
+            ],
+            sellMenu.Options);
+        Assert.Equal([false, true, false], sellMenu.DisabledOptions);
+        Assert.Contains(
+            "Shop transaction: Sold Annex Tonic for 27 M; wallet 0->27; quantity 1->0.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
     }
 
     [Fact]

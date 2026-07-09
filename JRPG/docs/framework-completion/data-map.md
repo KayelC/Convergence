@@ -147,7 +147,9 @@ Next, use that sample data more deeply:
 1. route more sample skills through the clean runtime demo;
 2. exercise ailment application and curing;
 3. run the fixed `shell_check` encounter;
-4. prove shop/equipment records through a tiny host flow;
+4. keep expanding shop/equipment only when real gameplay needs more than the current Training Supply proof;
 5. prove the concept fusion recipes without deciding final fusion identity.
+
+Phase 4-24 now proves the first shop/equipment host flow: Training Supply offers are catalog-authored, resolved into runtime shop offers, bought/sold through bound economy services, and purchased equipment can be equipped immediately.
 
 Keep every addition small enough for the owner to review and understand.

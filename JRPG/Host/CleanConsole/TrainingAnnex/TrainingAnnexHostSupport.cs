@@ -74,6 +74,7 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId ReviewAlcove = Qualified("review_alcove");
     public static readonly ContentId SealedWing = Qualified("sealed_wing");
     public static readonly ContentId ReviewCheckpoint = Qualified("review_checkpoint");
+    public static readonly ContentId TrainingSupply = Qualified("training_supply");
     public static readonly ContentId AnnexTonic = Qualified("annex_tonic");
     public static readonly ContentId PracticeBlade = Qualified("practice_blade");
     public static readonly ContentId FocusCharm = Qualified("focus_charm");

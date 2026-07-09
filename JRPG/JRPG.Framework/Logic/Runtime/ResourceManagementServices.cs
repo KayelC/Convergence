@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Data.SkillSystem.Catalog;
 
 namespace JRPGPrototype.Logic.Runtime;
 
@@ -495,6 +496,164 @@ public sealed record RuntimeShopOfferSnapshot(
     EquipmentSlot? EquipmentSlot = null,
     int? ItemStackLimit = null,
     int? StockAvailable = null);
+
+public enum RuntimeShopOfferResolutionCode
+{
+    Applied,
+    MissingItemDefinition,
+    MissingEquipmentDefinition,
+    UnsupportedPricePolicy,
+    InvalidFixedPrice,
+    UnsupportedStockPolicy
+}
+
+public sealed record RuntimeShopOfferResolutionDiagnostic(
+    RuntimeShopOfferResolutionCode Code,
+    ContentId ContentId,
+    string Message);
+
+public sealed record RuntimeShopOfferResolutionResult
+{
+    public RuntimeShopOfferResolutionResult(
+        RuntimeShopOfferSnapshot? offer,
+        IEnumerable<RuntimeShopOfferResolutionDiagnostic>? diagnostics = null)
+    {
+        Offer = offer;
+        Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
+    }
+
+    public RuntimeShopOfferSnapshot? Offer { get; }
+    public IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> Diagnostics { get; }
+    public bool IsSuccess => Offer is not null && Diagnostics.Count == 0;
+
+    public RuntimeShopOfferSnapshot RequireOffer() =>
+        IsSuccess && Offer is not null
+            ? Offer
+            : throw new InvalidOperationException(
+                "Shop offer resolution failed: " +
+                string.Join("; ", Diagnostics.Select(diagnostic => diagnostic.Message)));
+}
+
+public interface IRuntimeShopOfferResolver
+{
+    RuntimeShopOfferResolutionResult Resolve(
+        ShopOfferDefinition offer,
+        IItemDefinitionRepository itemRepository,
+        IEquipmentDefinitionRepository equipmentRepository);
+}
+
+public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
+{
+    public RuntimeShopOfferResolutionResult Resolve(
+        ShopOfferDefinition offer,
+        IItemDefinitionRepository itemRepository,
+        IEquipmentDefinitionRepository equipmentRepository)
+    {
+        ArgumentNullException.ThrowIfNull(offer);
+        ArgumentNullException.ThrowIfNull(itemRepository);
+        ArgumentNullException.ThrowIfNull(equipmentRepository);
+
+        var diagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
+        int? basePrice = ResolvePrice(offer, diagnostics);
+        int? stock = ResolveStock(offer, diagnostics);
+        EquipmentSlot? equipmentSlot = null;
+        int? itemStackLimit = null;
+
+        if (offer.ContentKind == ShopContentKind.Item)
+        {
+            if (!itemRepository.TryGetItem(offer.ContentId, out ItemDefinition? item) || item is null)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    RuntimeShopOfferResolutionCode.MissingItemDefinition,
+                    offer.ContentId,
+                    $"Shop item offer '{offer.ContentId}' does not resolve to an item definition."));
+            }
+            else
+            {
+                itemStackLimit = item.StackLimit;
+            }
+        }
+        else if (offer.ContentKind == ShopContentKind.Equipment)
+        {
+            if (!equipmentRepository.TryGetEquipment(offer.ContentId, out EquipmentDefinition? equipment) ||
+                equipment is null)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    RuntimeShopOfferResolutionCode.MissingEquipmentDefinition,
+                    offer.ContentId,
+                    $"Shop equipment offer '{offer.ContentId}' does not resolve to an equipment definition."));
+            }
+            else
+            {
+                equipmentSlot = equipment.Slot;
+            }
+        }
+
+        if (diagnostics.Count > 0 || basePrice is null)
+        {
+            return new RuntimeShopOfferResolutionResult(null, diagnostics);
+        }
+
+        return new RuntimeShopOfferResolutionResult(
+            new RuntimeShopOfferSnapshot(
+                offer.ContentKind,
+                offer.ContentId,
+                basePrice.Value,
+                equipmentSlot,
+                itemStackLimit,
+                stock));
+    }
+
+    private static int? ResolvePrice(
+        ShopOfferDefinition offer,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        if (offer.Price is not FixedShopPriceDefinition fixedPrice)
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                RuntimeShopOfferResolutionCode.UnsupportedPricePolicy,
+                offer.ContentId,
+                $"Shop offer '{offer.ContentId}' uses pricing kind '{offer.Price.Kind}', which is not supported by the standard runtime shop resolver yet."));
+            return null;
+        }
+
+        if (fixedPrice.BasePrice < 0 ||
+            fixedPrice.BasePrice > int.MaxValue ||
+            decimal.Truncate(fixedPrice.BasePrice) != fixedPrice.BasePrice)
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                RuntimeShopOfferResolutionCode.InvalidFixedPrice,
+                offer.ContentId,
+                $"Shop offer '{offer.ContentId}' has fixed price '{fixedPrice.BasePrice}', which must be a nonnegative whole integer."));
+            return null;
+        }
+
+        return (int)fixedPrice.BasePrice;
+    }
+
+    private static int? ResolveStock(
+        ShopOfferDefinition offer,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        return offer.Stock switch
+        {
+            UnlimitedShopStockDefinition => null,
+            LimitedShopStockDefinition limited => limited.Quantity,
+            _ => AddUnsupportedStock(offer, diagnostics)
+        };
+    }
+
+    private static int? AddUnsupportedStock(
+        ShopOfferDefinition offer,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+            RuntimeShopOfferResolutionCode.UnsupportedStockPolicy,
+            offer.ContentId,
+            $"Shop offer '{offer.ContentId}' uses stock kind '{offer.Stock.Kind}', which is not supported by the standard runtime shop resolver yet."));
+        return null;
+    }
+}
 
 public sealed record ShopTransactionResult
 {
