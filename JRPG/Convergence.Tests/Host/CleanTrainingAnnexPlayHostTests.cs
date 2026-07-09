@@ -1817,6 +1817,59 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task TrainingAnnexRecoveryFacility_CleansLiveAilmentsAndEncounterPersistence()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        TrainingAnnexRuntimeActor player = TrainingAnnexHostSupport.CreateActorRoster(catalog)
+            .RequireRoster()
+            .Player;
+        RuntimeActorState state = player.Actor.State;
+        state.SetResource(StandardProgressionIds.Hp, 70);
+        state.ApplyAilment(catalog.GetRequiredAilment(Qualified("sample_poison")), Turns(3));
+        state.SetGuarding(true);
+        state.ChangeStatStage(ContentId.Parse("attack"), 1, Turns(1));
+        state.GrantCharge(ChargeKind.Physical, 2m, Turns(1));
+        state.GrantShield(ShieldKind.Physical, Turns(1));
+        state.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
+        state.AddOtherStatus(ContentId.Parse("training_annex_recovery_mark"), Turns(1));
+        var commands = new List<CleanTrainingAnnexPlayCommand>();
+        var io = new ScriptedGameIO().QueueMenu(0);
+        using var output = new StringWriter();
+        var controller = new TrainingAnnexRecoveryFacilityController(
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+
+        TrainingAnnexRecoveryFacilityResult result = await controller.OpenAsync(
+            new HospitalRestorationService(),
+            player,
+            new RuntimeWalletSnapshot(20),
+            commands,
+            CancellationToken.None);
+
+        TrainingAnnexHospitalRestorationEvidence restoration = Assert.Single(result.Restorations);
+        Assert.Equal(ResourceTransactionCode.Applied, restoration.Code);
+        Assert.True(restoration.HadAilmentBefore);
+        Assert.False(restoration.HasAilmentAfter);
+        Assert.True(restoration.HadEncounterPersistenceBefore);
+        Assert.False(restoration.HasEncounterPersistenceAfter);
+        Assert.Equal(10, result.Wallet.Macca);
+        Assert.Equal(80, state.GetRequiredResource(StandardProgressionIds.Hp).Current);
+        Assert.Empty(state.Ailments);
+        Assert.False(state.IsGuarding);
+        Assert.Empty(state.StatStages);
+        Assert.Empty(state.Charges);
+        Assert.Empty(state.Shields);
+        Assert.Empty(state.AffinityOverrides);
+        Assert.Empty(state.OtherStatuses);
+        Assert.Equal([CleanTrainingAnnexPlayCommand.RecoveryTreat], commands);
+        Assert.Contains(
+            "Recovery complete: Echo Adept; HP 70->80/80; SP 28->28/28; wallet 20->10.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_RecoveryFacilityInsufficientFundsAreDisabledWithoutMutation()
     {
         var io = new ScriptedGameIO().QueueMenu(3, 12, 1, 9);
@@ -2501,6 +2554,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static RuntimeResourceSnapshot Resource(CleanTrainingAnnexPlaySummary summary, string resourceId) =>
         Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse(resourceId));
+
+    private static TurnDurationDefinition Turns(int value) =>
+        new(value, ContentId.Parse("owner_turn_end"), false);
 
     private static ProductionCombatantProfile CombatProfile(EntityDefinition entity) =>
         new(

@@ -11,7 +11,7 @@ The clean host now proves inventory quantities, equipment ownership, wallet/econ
 No critical blocker was found. Phase 4 is suitable as a baseline for Phase 5, with two recommended quality follow-ups before the next major dependency is built on top of it:
 
 1. Surface shop-offer resolution diagnostics in the clean host instead of silently omitting invalid offers. **Resolved after this review by carrying `RuntimeShopOfferResolutionDiagnostic` values into the clean host summary and visible output.**
-2. Add a host-level recovery test proving live ailment and encounter-persistent status cleanup, not only HP/SP restoration and wallet spending.
+2. Add a host-level recovery test proving live ailment and encounter-persistent status cleanup, not only HP/SP restoration and wallet spending. **Resolved after this review; the test exposed that `OtherStatuses` were not cleared by field-transition cleanup, and the framework cleanup rule now clears them.**
 
 Those follow-ups are not evidence that Phase 4 failed. They are the sort of sharp edges that become expensive if left invisible.
 
@@ -229,7 +229,7 @@ Recommended resolution:
 
 Implemented immediately after this review. `ResolveShopOffers(...)` now returns both valid resolved offers and `RuntimeShopOfferResolutionDiagnostic` values. The clean host publishes each diagnostic as `Shop offer diagnostic: [...]`, carries the diagnostics into `CleanTrainingAnnexPlaySummary.ShopOfferDiagnostics`, and keeps valid offers available. A test-only policy-priced offer proves unsupported runtime offers are visible and do not create fallback transactions.
 
-### Medium: Recovery live cleanup needs one stronger host-level test
+### Resolved: Recovery live cleanup now has host-level and framework-level coverage
 
 `HospitalRestorationService` correctly returns `HasAilment = false` and `HasEncounterPersistence = false` on successful restoration. The Training Annex controller also removes ailments and calls cleanup on the live actor:
 
@@ -237,11 +237,13 @@ Implemented immediately after this review. `ResolveShopOffers(...)` now returns 
 - `Host/CleanConsole/TrainingAnnex/TrainingAnnexRecoveryFacilityController.cs:158`
 - `Host/CleanConsole/TrainingAnnex/TrainingAnnexRecoveryFacilityController.cs:159`
 
-The host tests added for Phase 4-25 focus on HP/SP, wallet, insufficient funds, and no-op treatment. They do not yet create a live ailment or encounter-persistent status and prove it is removed from the actor.
+The host tests added for Phase 4-25 focused on HP/SP, wallet, insufficient funds, and no-op treatment. They did not create a live ailment or encounter-persistent status and prove it was removed from the actor.
 
 Recommended resolution:
 
-Add a focused host/controller test that puts an ailment plus one encounter-persistent status on the Training Annex player, runs recovery, and asserts the live `RuntimeActorState` is clean afterward. This closes the gap between framework result coverage and host mutation coverage.
+Implemented immediately after this review. A focused controller test now puts an ailment, guard state, stat stage, charge, shield, affinity override, and other status on the real catalog-created Echo Adept, runs the Recovery Facility, and asserts the same live `RuntimeActorState` is clean afterward.
+
+The test exposed a real framework gap: `BattleStatusLifecycleService.Cleanup(FieldTransition)` called `ClearEncounterStatuses()`, but `ClearEncounterStatuses()` did not remove `OtherStatuses` even though the Recovery Facility classified them as encounter-persistent. `RuntimeActorState.ClearEncounterStatuses()` now clears other statuses, and `BattleStatusLifecycleTests.Cleanup_ClearsTransientAndEncounterStatusesWithoutRemovingAilments` covers the rule directly.
 
 ### Medium, deferred by design: Clean shop stock is not persistent
 
@@ -322,13 +324,4 @@ I would not call it full parity, because:
 - the Training Annex is a clean original-content proof, not a production replacement for the legacy console workflows;
 - limited shop stock and broader production shop semantics remain incomplete.
 
-I would proceed to Phase 5 after either:
-
-1. implementing the two recommended follow-ups, or
-2. explicitly accepting them as Phase 5-adjacent cleanup items.
-
-The first follow-up is now resolved. My remaining preference before Phase 5 is:
-
-1. Add the recovery live-status cleanup host test.
-
-After that, Phase 5 can build on a cleaner foundation instead of inheriting invisible edge cases.
+Both recommended follow-ups are now resolved. Phase 5 can build on a cleaner foundation instead of inheriting invisible edge cases.

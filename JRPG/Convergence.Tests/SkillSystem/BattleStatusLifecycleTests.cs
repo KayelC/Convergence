@@ -170,6 +170,7 @@ public sealed class BattleStatusLifecycleTests
         actor.GrantCharge(ChargeKind.Physical, 2, Turns(1));
         actor.ChangeStatStage(ContentId.Parse("attack"), 1, Turns(1));
         actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
+        actor.AddOtherStatus(ContentId.Parse("marked"), Turns(1));
         actor.ApplyAilment(PoisonAilment(), Turns(3));
 
         service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap));
@@ -179,12 +180,14 @@ public sealed class BattleStatusLifecycleTests
         Assert.Empty(actor.Charges);
         Assert.NotEmpty(actor.StatStages);
         Assert.NotEmpty(actor.AffinityOverrides);
+        Assert.NotEmpty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
 
         service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd));
 
         Assert.Empty(actor.StatStages);
         Assert.Empty(actor.AffinityOverrides);
+        Assert.Empty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
     }
 

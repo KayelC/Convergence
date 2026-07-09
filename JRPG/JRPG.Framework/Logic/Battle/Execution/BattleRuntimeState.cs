@@ -446,6 +446,7 @@ public sealed class RuntimeActorState
     {
         _statStages.Clear();
         _affinityOverrides.Clear();
+        _otherStatuses.Clear();
     }
 
     public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
