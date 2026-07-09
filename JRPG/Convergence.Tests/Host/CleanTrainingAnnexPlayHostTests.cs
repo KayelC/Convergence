@@ -99,6 +99,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
         Assert.Null(summary.PreparedBattleRewardPreview);
         Assert.Null(summary.AppliedBattleReward);
+        Assert.Null(summary.AppliedWalletTransaction);
         Assert.Equal(0, summary.Wallet.Macca);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
@@ -409,6 +410,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.AppliedBattleReward!.TotalExperience);
         Assert.Equal(14, summary.AppliedBattleReward.TotalMacca);
         Assert.Equal(0, summary.AppliedBattleRewardLevelUpCount);
+        WalletTransactionResult walletTransaction = Assert.IsType<WalletTransactionResult>(
+            summary.AppliedWalletTransaction);
+        Assert.True(walletTransaction.Applied);
+        Assert.Equal(0, walletTransaction.Before.Macca);
+        Assert.Equal(14, walletTransaction.After.Macca);
         Assert.True(summary.GrowthApplied);
         Assert.Equal(0, summary.LevelUpCount);
         Assert.Equal(1, summary.PlayerProgression.Experience);
@@ -449,6 +455,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.PreparedBattleStarted);
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
         Assert.Null(summary.AppliedBattleReward);
+        Assert.Null(summary.AppliedWalletTransaction);
         Assert.Equal(0, summary.Wallet.Macca);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
@@ -1500,6 +1507,28 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains($"[press_turn:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, RulesetBindingDiagnosticCode.MissingRuleset)]
+    [InlineData(false, RulesetBindingDiagnosticCode.CategoryMismatch)]
+    public async Task CleanTrainingAnnexPlay_InvalidEconomyBindingFailsBeforeSession(
+        bool removeRuleset,
+        RulesetBindingDiagnosticCode expectedCode)
+    {
+        var io = new ScriptedGameIO();
+        using var output = new StringWriter();
+        IContentPackTextSource source = removeRuleset
+            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_economy")
+            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_economy", "damage");
+        var host = CreateHost(io, output, source);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(4, exitCode);
+        Assert.Null(host.LastSummary);
+        Assert.Empty(io.Menus);
+        Assert.Contains($"[economy:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void CleanTrainingAnnexShell_DoesNotReferenceLegacyEffectInputs()
     {
@@ -2017,7 +2046,41 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(result.Applied);
         Assert.Equal(before.Progression, roster.Player.Actor.State.ToSnapshot().Progression);
         Assert.Equal(0, result.Wallet.Macca);
+        Assert.False(result.WalletTransaction.Applied);
+        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.WalletTransaction.Code);
+        Assert.Same(result.WalletTransaction.Before, result.WalletTransaction.After);
         Assert.Contains("[InsufficientCurrency]: blocked for test", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RewardAddsToInjectedWalletThroughBoundEconomy()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            1, 0, 0,
+            13);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        WalletTransactionResult transaction = Assert.IsType<WalletTransactionResult>(
+            summary.AppliedWalletTransaction);
+        Assert.True(transaction.Applied);
+        Assert.Equal(100, transaction.Before.Macca);
+        Assert.Equal(114, transaction.After.Macca);
+        Assert.Equal(114, summary.Wallet.Macca);
+        Assert.Contains("wallet 100->114", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
     }
 
     [Fact]
@@ -2253,7 +2316,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         IRandomSource? randomSource = null,
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
-        RuntimeEquipmentSnapshot? initialEquipment = null) =>
+        RuntimeEquipmentSnapshot? initialEquipment = null,
+        RuntimeWalletSnapshot? initialWallet = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
@@ -2261,7 +2325,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
             randomSource,
             saveSlots,
             initialInventory,
-            initialEquipment);
+            initialEquipment,
+            initialWallet);
 
     private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
 

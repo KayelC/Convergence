@@ -36,18 +36,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
 
-        WalletTransactionResult walletMutation;
-        try
-        {
-            walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
-        }
-        catch (OverflowException exception)
-        {
-            await _eventSink.PublishAsync(
-                $"[InvalidCurrencyAmount]: {exception.Message}",
-                cancellationToken).ConfigureAwait(false);
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
-        }
+        WalletTransactionResult walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
 
         if (!walletMutation.Applied)
         {
@@ -58,7 +47,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
         }
 
         RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
@@ -73,7 +62,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet);
+            return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
         }
 
         RuntimeActorSnapshot after = progressionMutation.After;
@@ -84,7 +73,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Macca}->{walletMutation.After.Macca}.",
             cancellationToken).ConfigureAwait(false);
 
-        return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After);
+        return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After, walletMutation);
     }
 
     public static RuntimeSessionProgressSnapshot RecordSessionProgress(
@@ -111,4 +100,5 @@ internal sealed class TrainingAnnexBattleRewardApplicator
 internal sealed record TrainingAnnexBattleRewardApplication(
     bool Applied,
     LevelGrowthResult Growth,
-    RuntimeWalletSnapshot Wallet);
+    RuntimeWalletSnapshot Wallet,
+    WalletTransactionResult WalletTransaction);

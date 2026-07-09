@@ -104,6 +104,8 @@ Track L moves the transaction rules behind those console facades into `JRPG.Fram
 
 Phase 4-22 adds a clean equipment profile layer for original content. `RuntimeEquipmentProfileResolver` reads the actor's `RuntimeEquipmentSnapshot`, resolves equipped catalog definitions, exposes weapon basic-attack data, sums accessory stat modifiers, and reports missing or slot-mismatched equipment diagnostics. `--clean-training-annex-play` seeds and equips `practice_blade` and `focus_charm` through framework transactions, and manual Attack uses the equipped weapon profile rather than a hardcoded sample weapon.
 
+Phase 4-23 makes the clean Training Annex economy policy explicit. Startup binds `standard_economy` and uses the returned resource-management service bundle for inventory, equipment, and wallet mutations; missing or invalid bindings stop startup instead of falling back. Battle rewards add Macca to the host-owned `RuntimeWalletSnapshot`, expose the typed before/after transaction, and persist the resulting balance through save/load. Wallet overflow, negative amounts, and insufficient funds are rejected without changing the original snapshot. Clean purchasing remains Phase 4-24.
+
 Track O8 keeps those rules unchanged and adds typed console-host presentation results for shop command selection, buy/sell offers, confirmation, transaction messages, hospital patient selection, and hospital treatment display. Shop and hospital menus still use legacy `Database` records, metadata repair, exact labels, and current HP/SP-based hospital eligibility behavior.
 
 Important rules:

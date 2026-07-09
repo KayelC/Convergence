@@ -97,6 +97,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     BattleRewardResult? PreparedBattleRewardPreview,
     BattleRewardResult? AppliedBattleReward,
     int AppliedBattleRewardLevelUpCount,
+    WalletTransactionResult? AppliedWalletTransaction,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
     int ManualSaveCount,
@@ -127,6 +128,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
     private readonly RuntimeInventorySnapshot? _initialInventory;
     private readonly RuntimeEquipmentSnapshot? _initialEquipment;
+    private readonly RuntimeWalletSnapshot? _initialWallet;
 
     public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
         : this(
@@ -144,7 +146,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         IRandomSource? randomSource = null,
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
-        RuntimeEquipmentSnapshot? initialEquipment = null)
+        RuntimeEquipmentSnapshot? initialEquipment = null,
+        RuntimeWalletSnapshot? initialWallet = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
@@ -153,6 +156,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         _saveSlots = saveSlots ?? new TrainingAnnexSaveSlotStore();
         _initialInventory = initialInventory;
         _initialEquipment = initialEquipment;
+        _initialWallet = initialWallet;
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -234,6 +238,18 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         Func<PressTurnEngine> pressTurnFactory = pressTurnBinding.RequireService();
+        RulesetBindingResult<ResourceManagementRulesetServices> resourceManagementBinding =
+            rulesetResolver.BindResourceManagementServices(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_economy"));
+        if (!resourceManagementBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("economy", resourceManagementBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        ResourceManagementRulesetServices resourceManagement = resourceManagementBinding.RequireService();
         BattleExecutionServices executionServices =
             TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
@@ -267,13 +283,14 @@ internal sealed class CleanTrainingAnnexPlayHost
         var fieldActions = new TrainingAnnexFieldActionAdapter(
             executionServices);
         var fieldPresenter = new TrainingAnnexFieldPresenter(_eventSink);
-        var economy = new EconomyTransactionService();
         var rewardApplicator = new TrainingAnnexBattleRewardApplicator(_eventSink, _randomSource);
-        var inventoryTransitions = new InventoryTransitionService();
-        var equipmentTransitions = new EquipmentTransitionService();
+        IInventoryTransitionService inventoryTransitions = resourceManagement.Inventory;
+        IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
+        IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
         var inventory = new TrainingAnnexItemActionInventory(
-            BuildInitialInventory(_initialInventory, inventoryTransitions));
+            BuildInitialInventory(_initialInventory, inventoryTransitions),
+            inventoryTransitions);
         roster.Player.Actor.State.ReplaceEquipment(BuildInitialEquipment(
             catalog,
             inventory.Snapshot,
@@ -291,7 +308,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 TrainingAnnexHostSupport.DungeonMenuSaveContext
             ]));
         var persistence = new TrainingAnnexPersistenceController(_saveSlots, _eventSink);
-        RuntimeWalletSnapshot wallet = new(0);
+        RuntimeWalletSnapshot wallet = _initialWallet ?? new RuntimeWalletSnapshot(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -325,6 +342,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? preparedBattleRewardPreview = null;
         BattleRewardResult? appliedBattleReward = null;
         int appliedBattleRewardLevelUpCount = 0;
+        WalletTransactionResult? appliedWalletTransaction = null;
         long saveSequence = 0;
         int manualSaveCount = 0;
         int manualLoadCount = 0;
@@ -392,6 +410,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleRewardPreview,
                     appliedBattleReward,
                     appliedBattleRewardLevelUpCount,
+                    appliedWalletTransaction,
                     wallet,
                     sessionProgress,
                     manualSaveCount,
@@ -510,6 +529,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             preparedBattleRewardPreview,
                             appliedBattleReward,
                             appliedBattleRewardLevelUpCount,
+                            appliedWalletTransaction,
                             wallet,
                             sessionProgress,
                             manualSaveCount,
@@ -697,6 +717,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         if (rewardApplication.Applied)
                         {
                             wallet = rewardApplication.Wallet;
+                            appliedWalletTransaction = rewardApplication.WalletTransaction;
                             appliedBattleReward = battle.RewardPreview;
                             appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
                             growthApplied = true;
@@ -1413,6 +1434,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? preparedBattleRewardPreview,
         BattleRewardResult? appliedBattleReward,
         int appliedBattleRewardLevelUpCount,
+        WalletTransactionResult? appliedWalletTransaction,
         RuntimeWalletSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
         int manualSaveCount,
@@ -1480,6 +1502,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             preparedBattleRewardPreview,
             appliedBattleReward,
             appliedBattleRewardLevelUpCount,
+            appliedWalletTransaction,
             wallet,
             sessionProgress,
             manualSaveCount,

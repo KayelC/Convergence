@@ -775,6 +775,16 @@ Clean console proof:
 
 - clean shop or reward loop changes wallet state.
 
+Phase 4-23 result:
+
+- `--clean-training-annex-play` now binds `convergence.training_annex_slice:standard_economy` before the session starts and exits with typed `economy` diagnostics when the ruleset is missing, miscategorized, or unsupported. There is no direct-service fallback.
+- The bound `ResourceManagementRulesetServices` instance supplies the clean host's inventory, equipment, and economy transaction services, keeping the Phase 4 resource systems under one authored policy boundary.
+- The host owns one live `RuntimeWalletSnapshot`, accepts a host-selected starting balance, applies battle Macca through `IEconomyTransactionService`, records the actual immutable `WalletTransactionResult`, and carries the resulting wallet through save validation and restore.
+- `EconomyTransactionService.AddMacca(...)` now rejects integer overflow with `InvalidCurrencyAmount` and preserves the original wallet snapshot instead of throwing across the transaction boundary. Negative and insufficient-funds operations remain non-mutating typed rejections.
+- Focused tests prove reward income adds to an injected balance rather than resetting or assuming zero, invalid economy bindings fail before any command read, and rejected/overflowing operations preserve the exact before-state.
+- This remains `parallel_partial`: clean reward income is now policy-bound and authoritative, but Phase 4-24 is still responsible for proving real clean spending through catalog-backed shop transactions. No artificial spend command was added solely to satisfy this checkpoint.
+- Phase 4-23 verification passed `73/73` focused tests and `830/830` full-suite tests with no skips. The framework build remained at `0` warnings, the solution remained at `98` pre-existing legacy-host warnings, all four noninteractive clean demos exited successfully, framework boundary searches were clean, and `Data/Jsons` was unchanged.
+
 ### 24. `shops`
 
 Current status: `parallel_partial`.

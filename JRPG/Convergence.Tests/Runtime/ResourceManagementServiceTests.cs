@@ -179,12 +179,23 @@ public sealed class ResourceManagementServiceTests
         WalletTransactionResult spent = service.SpendMacca(added.After, 40);
         WalletTransactionResult insufficient = service.SpendMacca(spent.After, 100);
         WalletTransactionResult negative = service.AddMacca(spent.After, -1);
+        var maximum = new RuntimeWalletSnapshot(int.MaxValue);
+        WalletTransactionResult overflow = service.AddMacca(maximum, 1);
 
         Assert.Equal(100, added.After.Macca);
         Assert.Equal(60, spent.After.Macca);
         Assert.False(insufficient.Applied);
+        Assert.Same(spent.After, insufficient.Before);
+        Assert.Same(insufficient.Before, insufficient.After);
         Assert.Equal(60, insufficient.After.Macca);
         Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, negative.Code);
+        Assert.Same(spent.After, negative.After);
+        Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, overflow.Code);
+        Assert.Same(maximum, overflow.Before);
+        Assert.Same(maximum, overflow.After);
+        Assert.Contains(overflow.Diagnostics, diagnostic =>
+            diagnostic.Code == ResourceTransactionCode.InvalidCurrencyAmount &&
+            diagnostic.Message.Contains("integer range", StringComparison.Ordinal));
     }
 
     [Fact]

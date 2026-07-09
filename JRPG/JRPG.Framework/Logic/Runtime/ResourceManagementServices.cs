@@ -366,10 +366,15 @@ public sealed class EconomyTransactionService : IEconomyTransactionService
             return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Macca amount cannot be negative.");
         }
 
+        if (amount > int.MaxValue - snapshot.Macca)
+        {
+            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Macca balance cannot exceed the supported integer range.");
+        }
+
         return new WalletTransactionResult(
             ResourceTransactionCode.Applied,
             snapshot,
-            new RuntimeWalletSnapshot(checked(snapshot.Macca + amount)));
+            new RuntimeWalletSnapshot(snapshot.Macca + amount));
     }
 
     public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount)
