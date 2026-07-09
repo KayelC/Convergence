@@ -1679,6 +1679,49 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopReportsUnsupportedRuntimeOfferDiagnostics()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 4, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new RuntimeUnsupportedShopOfferContentPackTextSource(ContentRoot()),
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(summary.ShopOfferDiagnostics);
+        Assert.Equal(RuntimeShopOfferResolutionCode.UnsupportedPricePolicy, diagnostic.Code);
+        Assert.Equal(Qualified("annex_tonic"), diagnostic.ContentId);
+        Assert.Empty(summary.ShopTransactions);
+        Assert.Empty(summary.ShopEquipmentChanges);
+        Assert.Equal(100, summary.Wallet.Macca);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+
+        GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
+        Assert.Equal(
+            [
+                "Annex Tonic - 48 M",
+                "Cleanse Drop - 38 M (stock 5)",
+                "Practice Blade - 115 M [Already owned]",
+                "Padded Jacket - 86 M",
+                "Back"
+            ],
+            buyMenu.Options);
+        string text = output.ToString();
+        Assert.Contains("Shop offer diagnostic: [UnsupportedPricePolicy]", text, StringComparison.Ordinal);
+        Assert.Contains("annex_tonic", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Shop purchase canceled; wallet and inventory are unchanged.",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_ShopSellsCatalogItemAndBlocksEquippedSale()
     {
         var io = new ScriptedGameIO().QueueMenu(11, 1, 0, 9);
@@ -2733,6 +2776,52 @@ public sealed class CleanTrainingAnnexPlayHostTests
                         ["accuracy"] = 88,
                         ["isLongRange"] = false
                     }
+                }
+            });
+            return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    private sealed class RuntimeUnsupportedShopOfferContentPackTextSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                documents.Add(new ContentDocumentText(
+                    path,
+                    path,
+                    path == "training_annex_slice.shops.json"
+                        ? AddUnsupportedRuntimeOffer(text)
+                        : text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private static string AddUnsupportedRuntimeOffer(string json)
+        {
+            JsonObject node = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex shops JSON could not be parsed.");
+            JsonArray offers = node["shops"]?[0]?["offers"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex shop offers were not found.");
+            offers.Add(new JsonObject
+            {
+                ["contentKind"] = "item",
+                ["contentId"] = "annex_tonic",
+                ["price"] = new JsonObject
+                {
+                    ["kind"] = "policy",
+                    ["pricingPolicyId"] = "standard_economy"
+                },
+                ["stock"] = new JsonObject
+                {
+                    ["kind"] = "unlimited"
                 }
             });
             return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });

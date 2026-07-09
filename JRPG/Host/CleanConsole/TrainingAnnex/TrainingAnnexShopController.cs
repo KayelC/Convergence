@@ -28,13 +28,18 @@ internal sealed record TrainingAnnexEquipmentChangeEvidence(
 internal sealed record TrainingAnnexShopInteractionResult(
     RuntimeWalletSnapshot Wallet,
     IReadOnlyList<TrainingAnnexShopTransactionEvidence> Transactions,
-    IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> EquipmentChanges);
+    IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> EquipmentChanges,
+    IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> OfferDiagnostics);
 
 internal sealed record TrainingAnnexResolvedShopOffer(
     ShopOfferDefinition Definition,
     RuntimeShopOfferSnapshot Runtime,
     string DisplayName,
     string Description);
+
+internal sealed record TrainingAnnexShopOfferResolutionResult(
+    IReadOnlyList<TrainingAnnexResolvedShopOffer> Offers,
+    IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> Diagnostics);
 
 internal sealed class TrainingAnnexShopController
 {
@@ -63,13 +68,22 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop = catalog.GetRequiredShop(TrainingAnnexHostSupport.TrainingSupply);
         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
         int luck = StatAsInt(playerSnapshot, StandardProgressionIds.Luck);
-        IReadOnlyList<TrainingAnnexResolvedShopOffer> offers = ResolveShopOffers(catalog, shop);
+        TrainingAnnexShopOfferResolutionResult offerResolution = ResolveShopOffers(catalog, shop);
+        IReadOnlyList<TrainingAnnexResolvedShopOffer> offers = offerResolution.Offers;
+        IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics = offerResolution.Diagnostics;
         var transactionEvidence = new List<TrainingAnnexShopTransactionEvidence>();
         var equipmentEvidence = new List<TrainingAnnexEquipmentChangeEvidence>();
 
         await _eventSink.PublishAsync(
             $"Shop opened: {shop.DisplayName}; wallet {wallet.Macca} M.",
             cancellationToken).ConfigureAwait(false);
+        foreach (RuntimeShopOfferResolutionDiagnostic diagnostic in offerDiagnostics)
+        {
+            await _eventSink.PublishAsync(
+                $"Shop offer diagnostic: [{diagnostic.Code}] {diagnostic.Message}",
+                cancellationToken).ConfigureAwait(false);
+        }
+
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> shopCommand =
             await _commandSource.ReadAsync(
                 CreateShopSessionMenu(shop, wallet),
@@ -79,7 +93,11 @@ internal sealed class TrainingAnnexShopController
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
             await _eventSink.PublishAsync("Shop closed without transaction.", cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         commands.Add(shopCommand.Command);
@@ -99,6 +117,7 @@ internal sealed class TrainingAnnexShopController
                 commands,
                 transactionEvidence,
                 equipmentEvidence,
+                offerDiagnostics,
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -115,10 +134,11 @@ internal sealed class TrainingAnnexShopController
                 commands,
                 transactionEvidence,
                 equipmentEvidence,
+                offerDiagnostics,
                 cancellationToken).ConfigureAwait(false);
         }
 
-        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence, offerDiagnostics);
     }
 
     private async ValueTask<TrainingAnnexShopInteractionResult> BuyAsync(
@@ -135,6 +155,7 @@ internal sealed class TrainingAnnexShopController
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexShopTransactionEvidence> transactionEvidence,
         List<TrainingAnnexEquipmentChangeEvidence> equipmentEvidence,
+        IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics,
         CancellationToken cancellationToken)
     {
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> offerSelection =
@@ -146,7 +167,11 @@ internal sealed class TrainingAnnexShopController
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
             await _eventSink.PublishAsync("Shop purchase canceled; wallet and inventory are unchanged.", cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         commands.Add(offerSelection.Command);
@@ -155,7 +180,11 @@ internal sealed class TrainingAnnexShopController
         {
             await _eventSink.PublishAsync("Shop purchase rejected; selected offer was not available.", cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         ShopTransactionResult purchase = shopTransactions.Buy(
@@ -168,7 +197,11 @@ internal sealed class TrainingAnnexShopController
         {
             await PublishShopTransactionFailureAsync("purchase", offer, purchase, cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         inventory.Replace(purchase.AfterInventory);
@@ -192,7 +225,7 @@ internal sealed class TrainingAnnexShopController
                 cancellationToken).ConfigureAwait(false);
         }
 
-        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence, offerDiagnostics);
     }
 
     private async ValueTask<TrainingAnnexShopInteractionResult> SellAsync(
@@ -206,6 +239,7 @@ internal sealed class TrainingAnnexShopController
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexShopTransactionEvidence> transactionEvidence,
         List<TrainingAnnexEquipmentChangeEvidence> equipmentEvidence,
+        IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics,
         CancellationToken cancellationToken)
     {
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> offerSelection =
@@ -224,7 +258,11 @@ internal sealed class TrainingAnnexShopController
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
             await _eventSink.PublishAsync("Shop sale canceled; wallet and inventory are unchanged.", cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         commands.Add(offerSelection.Command);
@@ -233,7 +271,11 @@ internal sealed class TrainingAnnexShopController
         {
             await _eventSink.PublishAsync("Shop sale rejected; selected offer was not available.", cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         ShopTransactionResult sale = shopTransactions.Sell(
@@ -247,7 +289,11 @@ internal sealed class TrainingAnnexShopController
         {
             await PublishShopTransactionFailureAsync("sale", offer, sale, cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+            return new TrainingAnnexShopInteractionResult(
+                wallet,
+                transactionEvidence,
+                equipmentEvidence,
+                offerDiagnostics);
         }
 
         inventory.Replace(sale.AfterInventory);
@@ -255,7 +301,7 @@ internal sealed class TrainingAnnexShopController
         await PublishShopTransactionSuccessAsync("Sold", offer, sale, inventory.Snapshot, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence);
+        return new TrainingAnnexShopInteractionResult(wallet, transactionEvidence, equipmentEvidence, offerDiagnostics);
     }
 
     private async ValueTask PromptEquipPurchasedEquipmentAsync(
@@ -328,29 +374,31 @@ internal sealed class TrainingAnnexShopController
         return (int)Math.Floor(value);
     }
 
-    private static IReadOnlyList<TrainingAnnexResolvedShopOffer> ResolveShopOffers(
+    private static TrainingAnnexShopOfferResolutionResult ResolveShopOffers(
         GameDataCatalog catalog,
         ShopCatalogDefinition shop)
     {
         var resolver = new RuntimeShopOfferResolver();
-        return shop.Offers
-            .Select(offer =>
+        var offers = new List<TrainingAnnexResolvedShopOffer>();
+        var diagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
+        foreach (ShopOfferDefinition offer in shop.Offers)
+        {
+            RuntimeShopOfferResolutionResult resolved = resolver.Resolve(offer, catalog, catalog);
+            if (!resolved.IsSuccess || resolved.Offer is null)
             {
-                RuntimeShopOfferResolutionResult resolved = resolver.Resolve(offer, catalog, catalog);
-                if (!resolved.IsSuccess || resolved.Offer is null)
-                {
-                    return null;
-                }
+                diagnostics.AddRange(resolved.Diagnostics);
+                continue;
+            }
 
-                (string displayName, string description) = ResolveShopOfferText(catalog, offer);
-                return new TrainingAnnexResolvedShopOffer(
-                    offer,
-                    resolved.Offer,
-                    displayName,
-                    description);
-            })
-            .OfType<TrainingAnnexResolvedShopOffer>()
-            .ToArray();
+            (string displayName, string description) = ResolveShopOfferText(catalog, offer);
+            offers.Add(new TrainingAnnexResolvedShopOffer(
+                offer,
+                resolved.Offer,
+                displayName,
+                description));
+        }
+
+        return new TrainingAnnexShopOfferResolutionResult(offers, diagnostics);
     }
 
     private static (string DisplayName, string Description) ResolveShopOfferText(

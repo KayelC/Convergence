@@ -108,6 +108,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     WalletTransactionResult? AppliedWalletTransaction,
     IReadOnlyList<TrainingAnnexShopTransactionEvidence> ShopTransactions,
     IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> ShopEquipmentChanges,
+    IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> ShopOfferDiagnostics,
     IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> HospitalRestorations,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
@@ -356,6 +357,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         WalletTransactionResult? appliedWalletTransaction = null;
         var shopTransactions = new List<TrainingAnnexShopTransactionEvidence>();
         var shopEquipmentChanges = new List<TrainingAnnexEquipmentChangeEvidence>();
+        var shopOfferDiagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
         var hospitalRestorations = new List<TrainingAnnexHospitalRestorationEvidence>();
         long saveSequence = 0;
         int manualSaveCount = 0;
@@ -427,6 +429,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     appliedWalletTransaction,
                     shopTransactions,
                     shopEquipmentChanges,
+                    shopOfferDiagnostics,
                     hospitalRestorations,
                     wallet,
                     sessionProgress,
@@ -549,6 +552,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             appliedWalletTransaction,
                             shopTransactions,
                             shopEquipmentChanges,
+                            shopOfferDiagnostics,
                             hospitalRestorations,
                             wallet,
                             sessionProgress,
@@ -973,6 +977,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     wallet = shopResult.Wallet;
                     shopTransactions.AddRange(shopResult.Transactions);
                     shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
+                    shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
@@ -1495,6 +1500,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         WalletTransactionResult? appliedWalletTransaction,
         IReadOnlyList<TrainingAnnexShopTransactionEvidence> shopTransactions,
         IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> shopEquipmentChanges,
+        IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> shopOfferDiagnostics,
         IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> hospitalRestorations,
         RuntimeWalletSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
@@ -1566,6 +1572,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             appliedWalletTransaction,
             shopTransactions.ToArray(),
             shopEquipmentChanges.ToArray(),
+            shopOfferDiagnostics.ToArray(),
             hospitalRestorations.ToArray(),
             wallet,
             sessionProgress,

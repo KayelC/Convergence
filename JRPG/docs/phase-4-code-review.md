@@ -10,7 +10,7 @@ The clean host now proves inventory quantities, equipment ownership, wallet/econ
 
 No critical blocker was found. Phase 4 is suitable as a baseline for Phase 5, with two recommended quality follow-ups before the next major dependency is built on top of it:
 
-1. Surface shop-offer resolution diagnostics in the clean host instead of silently omitting invalid offers.
+1. Surface shop-offer resolution diagnostics in the clean host instead of silently omitting invalid offers. **Resolved after this review by carrying `RuntimeShopOfferResolutionDiagnostic` values into the clean host summary and visible output.**
 2. Add a host-level recovery test proving live ailment and encounter-persistent status cleanup, not only HP/SP restoration and wallet spending.
 
 Those follow-ups are not evidence that Phase 4 failed. They are the sort of sharp edges that become expensive if left invisible.
@@ -210,7 +210,7 @@ Host-level tests currently prove HP/SP restoration, wallet spending, insufficien
 
 ## Findings
 
-### Medium: Invalid shop offers are silently omitted from the clean host
+### Resolved: Invalid shop offers are no longer silently omitted from the clean host
 
 `TrainingAnnexShopController.ResolveShopOffers(...)` resolves each authored offer, but failed resolutions return `null` and are removed by `.OfType<TrainingAnnexResolvedShopOffer>()`.
 
@@ -227,7 +227,7 @@ The framework resolver has useful diagnostics for missing equipment definitions,
 
 Recommended resolution:
 
-Before or during early Phase 5, return a detailed shop resolution result from `ResolveShopOffers(...)`. Either fail opening the shop with diagnostics or publish those diagnostics clearly before suppressing invalid rows. Add a test-only malformed shop offer to prove diagnostics are visible and no fallback transaction happens.
+Implemented immediately after this review. `ResolveShopOffers(...)` now returns both valid resolved offers and `RuntimeShopOfferResolutionDiagnostic` values. The clean host publishes each diagnostic as `Shop offer diagnostic: [...]`, carries the diagnostics into `CleanTrainingAnnexPlaySummary.ShopOfferDiagnostics`, and keeps valid offers available. A test-only policy-priced offer proves unsupported runtime offers are visible and do not create fallback transactions.
 
 ### Medium: Recovery live cleanup needs one stronger host-level test
 
@@ -327,9 +327,8 @@ I would proceed to Phase 5 after either:
 1. implementing the two recommended follow-ups, or
 2. explicitly accepting them as Phase 5-adjacent cleanup items.
 
-My preference is to fix them now because they are small, contained, and strengthen trust in the next phase:
+The first follow-up is now resolved. My remaining preference before Phase 5 is:
 
-1. Make invalid shop-offer diagnostics visible.
-2. Add the recovery live-status cleanup host test.
+1. Add the recovery live-status cleanup host test.
 
 After that, Phase 5 can build on a cleaner foundation instead of inheriting invisible edge cases.
