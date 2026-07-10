@@ -263,12 +263,56 @@ internal sealed class TrainingAnnexPersistenceController
             enemies.Add(restoredEnemy);
         }
 
+        var dynamicMembers = new List<TrainingAnnexRuntimeActor>();
+        var knownActorIds = currentRoster.AllActors
+            .Select(actor => actor.Actor.State.InstanceId)
+            .ToHashSet();
+        foreach (TrainingAnnexRuntimeActor dynamic in currentRoster.DynamicMembers)
+        {
+            if (!actors.ContainsKey(dynamic.Actor.State.InstanceId))
+            {
+                continue;
+            }
+
+            if (!TryRestoreActor(dynamic, actors, actorFactory, out TrainingAnnexRuntimeActor restoredDynamic, out string? dynamicDiagnostic))
+            {
+                diagnostics.Add(dynamicDiagnostic ?? $"Saved dynamic actor '{dynamic.Actor.State.InstanceId}' could not be restored.");
+                continue;
+            }
+
+            dynamicMembers.Add(restoredDynamic);
+        }
+
+        foreach (RuntimeActorSnapshot savedActor in actors.Values.OrderBy(actor => actor.Identity.InstanceId.ToString(), StringComparer.Ordinal))
+        {
+            if (knownActorIds.Contains(savedActor.Identity.InstanceId))
+            {
+                continue;
+            }
+
+            if (!savedActor.Identity.InstanceId.ToString().StartsWith("fusion_", StringComparison.Ordinal))
+            {
+                diagnostics.Add($"Saved session contains unexpected actor '{savedActor.Identity.InstanceId}'.");
+                continue;
+            }
+
+            CatalogBattleActorCreationResult restored = actorFactory.Restore(savedActor);
+            if (!restored.IsSuccess)
+            {
+                string restoreDiagnostics = string.Join("; ", restored.Diagnostics.Select(item => item.Message));
+                diagnostics.Add($"Saved fusion actor '{savedActor.Identity.InstanceId}' could not be restored: {restoreDiagnostics}");
+                continue;
+            }
+
+            dynamicMembers.Add(new TrainingAnnexRuntimeActor("Fused Result", restored.RequireActor()));
+        }
+
         if (diagnostics.Count > 0)
         {
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
         }
 
-        TrainingAnnexActorRoster roster = new(player, supportMembers, stockMembers, enemies);
+        TrainingAnnexActorRoster roster = new(player, supportMembers, stockMembers, enemies, dynamicMembers);
 
         RuntimeFieldSnapshot field = snapshot.Field ??
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));

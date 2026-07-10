@@ -981,7 +981,15 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion design approval.
+- Phase 7-33 result:
+  - `--clean-training-annex-play` now has a `Commit Fusion Transaction` proof command.
+  - The command uses the direct clean catalog recipe `ashling + bramble_runner -> ward_shell`, validates inherited-skill selection with the same planner/selection validator used by preview, and assesses commit legality through `FusionTransactionService`.
+  - The default Training Annex state already owns Ward Shell, so the transaction is rejected with a typed `DuplicateResult` diagnostic and no runtime state mutation. This is intentional coverage for pre-mutation rejection.
+  - If the host first replaces owned Ward Shell with the prepared Bramble Runner candidate, the same command can commit atomically: Ashling and Bramble Runner are consumed through `PartyStockTransitionService`, a new `fusion_ward_shell_1` actor is hydrated through `CatalogBattleActorFactory`, and the resulting Demon stock contains that new Ward Shell reference.
+  - The committed result uses the preview's natural and inherited skill IDs as a typed runtime skill snapshot; the actor is restored through the catalog actor factory so skill references are validated rather than copied as loose strings.
+  - Training Annex save validation now includes dynamic fused actors in the roster, so the fused result does not become a dangling stock reference.
+  - This remains `parallel_partial`: clean Training Annex proves transaction ownership and rollback, but Compendium registration/recall integration and full fusion strategy approval remain Phase 7-34/7-35 work.
+  - Verification: focused 7-33 and guard tests passed `14/14`, focused transaction tests passed `3/3`, and the full suite passed `867/867` with no skips. Framework build remained `0` warnings, solution build remained at `98` pre-existing legacy-host warnings, clean battle/field/save/Training Annex demos passed, `git diff --check` reported only line-ending normalization warnings, framework forbidden-reference search returned no matches, and protected `Data/Jsons` content stayed unchanged.
 
 ### 34. `fusion_strategies`
 

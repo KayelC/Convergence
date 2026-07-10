@@ -24,7 +24,8 @@ internal sealed record TrainingAnnexActorRoster
         TrainingAnnexRuntimeActor player,
         IEnumerable<TrainingAnnexRuntimeActor> supportMembers,
         IEnumerable<TrainingAnnexRuntimeActor> stockMembers,
-        IEnumerable<TrainingAnnexRuntimeActor> enemies)
+        IEnumerable<TrainingAnnexRuntimeActor> enemies,
+        IEnumerable<TrainingAnnexRuntimeActor>? dynamicMembers = null)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         SupportMembers = Array.AsReadOnly(
@@ -32,14 +33,24 @@ internal sealed record TrainingAnnexActorRoster
         StockMembers = Array.AsReadOnly(
             (stockMembers ?? throw new ArgumentNullException(nameof(stockMembers))).ToArray());
         Enemies = Array.AsReadOnly((enemies ?? throw new ArgumentNullException(nameof(enemies))).ToArray());
-        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. StockMembers, .. Enemies]);
+        DynamicMembers = Array.AsReadOnly((dynamicMembers ?? []).ToArray());
+        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. StockMembers, .. DynamicMembers, .. Enemies]);
     }
 
     public TrainingAnnexRuntimeActor Player { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> SupportMembers { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> StockMembers { get; }
+    public IReadOnlyList<TrainingAnnexRuntimeActor> DynamicMembers { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> Enemies { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> AllActors { get; }
+
+    public TrainingAnnexActorRoster WithDynamicMember(TrainingAnnexRuntimeActor dynamicMember) =>
+        new(
+            Player,
+            SupportMembers,
+            StockMembers,
+            Enemies,
+            [.. DynamicMembers, dynamicMember ?? throw new ArgumentNullException(nameof(dynamicMember))]);
 }
 
 internal sealed record TrainingAnnexActorRosterResult

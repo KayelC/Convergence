@@ -75,6 +75,8 @@ internal enum CleanTrainingAnnexPlayCommand
     SelectFusionInheritedSkill,
     BuildFusionPreview,
     ConfirmFusionPreview,
+    CommitFusionTransaction,
+    ConfirmFusionTransaction,
     Back,
     Exit
 }
@@ -94,6 +96,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexFusionResultEvidence> FusionResults,
     IReadOnlyList<TrainingAnnexFusionPlanningEvidence> FusionPlanning,
     IReadOnlyList<TrainingAnnexFusionPreviewEvidence> FusionPreviews,
+    IReadOnlyList<TrainingAnnexFusionTransactionEvidence> FusionTransactions,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -333,6 +336,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var fusionResults = new List<TrainingAnnexFusionResultEvidence>();
         var fusionPlanning = new List<TrainingAnnexFusionPlanningEvidence>();
         var fusionPreviews = new List<TrainingAnnexFusionPreviewEvidence>();
+        var fusionTransactions = new List<TrainingAnnexFusionTransactionEvidence>();
         var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
@@ -443,6 +447,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     fusionResults,
                     fusionPlanning,
                     fusionPreviews,
+                    fusionTransactions,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -602,6 +607,27 @@ internal sealed class CleanTrainingAnnexPlayHost
 
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.CommitFusionTransaction:
+                {
+                    TrainingAnnexFusionTransactionResult transaction =
+                        await new TrainingAnnexFusionController(_eventSink)
+                            .CommitAsync(
+                                catalog,
+                                roster,
+                                partyStock,
+                                actorFactory,
+                                _commandSource,
+                                commands,
+                                cancellationToken).ConfigureAwait(false);
+                    partyStock = transaction.PartyStock;
+                    fusionTransactions.Add(transaction.Evidence);
+                    if (transaction.ResultActor is not null)
+                    {
+                        roster = roster.WithDynamicMember(transaction.ResultActor);
+                    }
+
+                    break;
+                }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
                         roster.Player.Actor.State.ToSnapshot().Equipment,
@@ -665,6 +691,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             fusionResults,
                             fusionPlanning,
                             fusionPreviews,
+                            fusionTransactions,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -1270,6 +1297,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.PreviewFusionResult,
             "Preview Fusion Result"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.CommitFusionTransaction,
+            "Commit Fusion Transaction"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1728,6 +1758,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexFusionResultEvidence> fusionResults,
         IReadOnlyList<TrainingAnnexFusionPlanningEvidence> fusionPlanning,
         IReadOnlyList<TrainingAnnexFusionPreviewEvidence> fusionPreviews,
+        IReadOnlyList<TrainingAnnexFusionTransactionEvidence> fusionTransactions,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1799,6 +1830,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             fusionResults.ToArray(),
             fusionPlanning.ToArray(),
             fusionPreviews.ToArray(),
+            fusionTransactions.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),

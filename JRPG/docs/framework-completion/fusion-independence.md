@@ -10,6 +10,8 @@ The framework has fusion services for:
 - accidents and mutation hooks;
 - Compendium snapshots and recall checks.
 
+The Training Annex clean host currently proves a tiny original-content fusion path: clean result calculation, inheritance planning, non-mutating preview confirmation, duplicate-result rejection, and one atomic parent-consume/result-add transaction. This is still a sample proof, not a final game fusion design.
+
 The console Cathedral still uses legacy datasets, live `Combatant` / `Persona` objects, legacy fusion adapters, and existing presentation flows.
 
 ## Problem

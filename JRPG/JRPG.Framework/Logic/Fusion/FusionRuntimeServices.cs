@@ -444,6 +444,9 @@ public sealed record FusionPlanningResult
         FusionResolvedResult result,
         FusionEntitySnapshot? resultEntity,
         FusionParticipantSnapshot? previewBaseline,
+        FusionParticipantSnapshot? firstParent,
+        FusionParticipantSnapshot? secondParent,
+        FusionParticipantSnapshot? sacrifice,
         IReadOnlyList<ContentId> naturalSkillIds,
         IReadOnlyList<ContentId> pickableSkillIds,
         IReadOnlyList<ContentId> exclusiveSkillIds,
@@ -453,6 +456,9 @@ public sealed record FusionPlanningResult
         Result = result;
         ResultEntity = resultEntity;
         PreviewBaseline = previewBaseline;
+        FirstParent = firstParent;
+        SecondParent = secondParent;
+        Sacrifice = sacrifice;
         NaturalSkillIds = naturalSkillIds;
         PickableSkillIds = pickableSkillIds;
         ExclusiveSkillIds = exclusiveSkillIds;
@@ -464,6 +470,9 @@ public sealed record FusionPlanningResult
     public bool IsSuccessful => Result.IsSuccessful && ResultEntity is not null;
     public FusionEntitySnapshot? ResultEntity { get; }
     public FusionParticipantSnapshot? PreviewBaseline { get; }
+    public FusionParticipantSnapshot? FirstParent { get; }
+    public FusionParticipantSnapshot? SecondParent { get; }
+    public FusionParticipantSnapshot? Sacrifice { get; }
     public IReadOnlyList<ContentId> NaturalSkillIds { get; }
     public IReadOnlyList<ContentId> PickableSkillIds { get; }
     public IReadOnlyList<ContentId> ExclusiveSkillIds { get; }
@@ -576,6 +585,9 @@ public sealed class FusionPlanningService : IFusionPlanningService
             result,
             resultEntity,
             previewBaseline,
+            request.FirstParent,
+            request.SecondParent,
+            request.Sacrifice,
             naturalSkills,
             Snapshot(pickable),
             Snapshot(exclusive),
@@ -668,6 +680,9 @@ public sealed class FusionPlanningService : IFusionPlanningService
     private static FusionPlanningResult Empty(FusionResolvedResult result) =>
         new(
             result,
+            null,
+            null,
+            null,
             null,
             null,
             Array.AsReadOnly(Array.Empty<ContentId>()),
@@ -856,6 +871,27 @@ public sealed class FusionTransactionService : IFusionTransactionService
         {
             return Rejected(FusionRuntimeDiagnosticCode.NoFusionPossible, "The fusion plan has no result.");
         }
+
+        ArgumentNullException.ThrowIfNull(request.SelectedSkillIds);
+        ContentId[] authoredSelection = request.SelectedSkillIds.ToArray();
+        ContentId[] selectedSkillIds = authoredSelection
+            .Distinct()
+            .ToArray();
+        if (selectedSkillIds.Length != authoredSelection.Length)
+        {
+            return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, "The inherited skill selection contains duplicates.");
+        }
+        if (selectedSkillIds.Length > request.Plan.MaximumInheritanceSlots)
+        {
+            return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, "The inherited skill selection exceeds the available fusion slots.");
+        }
+        foreach (ContentId skillId in selectedSkillIds)
+        {
+            if (!request.Plan.PickableSkillIds.Contains(skillId))
+            {
+                return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, $"Skill '{skillId}' cannot be inherited by this fusion result.", skillId);
+            }
+        }
         if (request.ResultAlreadyOwned && request.Plan.Result.Operation == FusionRuntimeOperation.CreateNewEntity)
         {
             return Rejected(FusionRuntimeDiagnosticCode.DuplicateResult, "The fusion result is already owned.", request.Plan.Result.ResultEntityId);
@@ -868,8 +904,20 @@ public sealed class FusionTransactionService : IFusionTransactionService
         return new FusionTransactionAssessment(
             true,
             Array.AsReadOnly(Array.Empty<FusionRuntimeDiagnostic>()),
-            Array.AsReadOnly(Array.Empty<RuntimeInstanceId>()),
+            ConsumedParticipantIds(request.Plan),
             request.Plan.Result.ResultEntityId);
+    }
+
+    private static IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds(FusionPlanningResult plan)
+    {
+        IEnumerable<FusionParticipantSnapshot?> consumed = plan.Result.Operation == FusionRuntimeOperation.StatBoost
+            ? [plan.Result.CatalystParent]
+            : [plan.FirstParent, plan.SecondParent, plan.Sacrifice];
+        return Array.AsReadOnly(consumed
+            .OfType<FusionParticipantSnapshot>()
+            .Select(parent => parent.InstanceId)
+            .Distinct()
+            .ToArray());
     }
 
     private static FusionTransactionAssessment Rejected(FusionRuntimeDiagnosticCode code, string message, ContentId? contentId = null) =>

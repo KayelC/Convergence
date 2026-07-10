@@ -104,6 +104,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.FusionResults);
         Assert.Empty(summary.FusionPlanning);
         Assert.Empty(summary.FusionPreviews);
+        Assert.Empty(summary.FusionTransactions);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
@@ -207,7 +208,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Party / Stock Operations",
                 "Negotiate / Recruit",
                 "Calculate Fusion Results",
-                "Preview Fusion Result"
+                "Preview Fusion Result",
+                "Commit Fusion Transaction"
             ],
                 menu.Options);
         }
@@ -235,7 +237,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Party / Stock Operations",
                 "Negotiate / Recruit",
                 "Calculate Fusion Results",
-                "Preview Fusion Result"
+                "Preview Fusion Result",
+                "Commit Fusion Transaction"
             ],
                 menu.Options);
         }
@@ -629,6 +632,133 @@ public sealed class CleanTrainingAnnexPlayHostTests
             StringComparison.Ordinal);
         Assert.Contains(
             "Fusion preview confirmed: Ward Shell with inherited Frost Tip, Echo Strike, Steady Breath. No runtime state was mutated.",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RejectsFusionTransactionWhenResultIsAlreadyOwned()
+    {
+        var io = new ScriptedGameIO().QueueMenu(19, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [CleanTrainingAnnexPlayCommand.CommitFusionTransaction, CleanTrainingAnnexPlayCommand.Exit],
+            summary.Commands);
+        TrainingAnnexFusionTransactionEvidence transaction = Assert.Single(summary.FusionTransactions);
+        Assert.Equal("direct_transaction_commit", transaction.ScenarioId);
+        Assert.Equal(Qualified("ward_shell"), transaction.ResultEntityId);
+        Assert.Null(transaction.ResultInstanceId);
+        Assert.Empty(transaction.SelectedSkillIds);
+        Assert.Empty(transaction.ResultSkillIds);
+        Assert.NotNull(transaction.Assessment);
+        Assert.False(transaction.Assessment!.CanCommit);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.DuplicateResult,
+            Assert.Single(transaction.Assessment.Diagnostics).Code);
+        Assert.False(transaction.Confirmed);
+        Assert.False(transaction.Committed);
+        Assert.False(transaction.MutatedRuntimeState);
+        Assert.Equal(2, transaction.DemonStockCountBefore);
+        Assert.Equal(2, transaction.DemonStockCountAfter);
+        Assert.Empty(transaction.StockTransitions);
+        Assert.Equal(10, summary.ActorCount);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
+            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Fusion transaction rejected [DuplicateResult]: The fusion result is already owned.",
+            text,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Fusion transaction committed:", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_CommitsFusionTransactionAtomicallyAfterResultSlotIsFreed()
+    {
+        var io = new ScriptedGameIO().QueueMenu(15, 4, 19, 3, 0, 5, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenPartyStockOperations,
+                CleanTrainingAnnexPlayCommand.PartyReplaceWardShell,
+                CleanTrainingAnnexPlayCommand.CommitFusionTransaction,
+                CleanTrainingAnnexPlayCommand.BuildFusionPreview,
+                CleanTrainingAnnexPlayCommand.ConfirmFusionTransaction,
+                CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+
+        TrainingAnnexPartyTransitionEvidence replacement = Assert.Single(summary.PartyTransitions);
+        Assert.Equal("replace_demon", replacement.Operation);
+        Assert.Equal(PartyStockTransitionCode.Applied, replacement.Code);
+        Assert.Equal(2, replacement.DemonStockCountBefore);
+        Assert.Equal(2, replacement.DemonStockCountAfter);
+        Assert.Equal(
+            [TrainingAnnexHostSupport.DemonWardShellInstance, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance],
+            replacement.AffectedInstanceIds);
+
+        TrainingAnnexFusionTransactionEvidence transaction = Assert.Single(summary.FusionTransactions);
+        Assert.Equal("direct_transaction_commit", transaction.ScenarioId);
+        Assert.Equal(Qualified("ward_shell"), transaction.ResultEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("fusion_ward_shell_1"), transaction.ResultInstanceId);
+        Assert.Empty(transaction.SelectedSkillIds);
+        Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], transaction.ResultSkillIds);
+        Assert.NotNull(transaction.Assessment);
+        Assert.True(transaction.Assessment!.CanCommit);
+        Assert.Empty(transaction.Assessment.Diagnostics);
+        Assert.Equal(
+            [TrainingAnnexHostSupport.DemonAshlingInstance, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance],
+            transaction.Assessment.ConsumedParticipantIds);
+        Assert.True(transaction.Confirmed);
+        Assert.True(transaction.Committed);
+        Assert.True(transaction.MutatedRuntimeState);
+        Assert.Equal(2, transaction.DemonStockCountBefore);
+        Assert.Equal(1, transaction.DemonStockCountAfter);
+        Assert.Equal(3, transaction.StockTransitions.Count);
+        Assert.All(transaction.StockTransitions, transition => Assert.Equal(PartyStockTransitionCode.Applied, transition.Code));
+
+        RuntimeActorReferenceSnapshot fusedDemon = Assert.Single(summary.PartyStock.DemonStock);
+        Assert.Equal(RuntimeInstanceId.Parse("fusion_ward_shell_1"), fusedDemon.InstanceId);
+        Assert.Equal(Qualified("ward_shell"), fusedDemon.EntityDefinitionId);
+        Assert.Equal(11, summary.ActorCount);
+        Assert.Contains(RuntimeInstanceId.Parse("fusion_ward_shell_1"), summary.ActorInstanceIds);
+        Assert.True(summary.StartupSnapshotValidated);
+        Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
+
+        Assert.Contains(io.Menus, menu =>
+            menu.Header == "Select Inherited Skills" &&
+            menu.Options.SequenceEqual([
+                "Ash Spark [group_not_allowed]",
+                "Shell Bash [already_known]",
+                "Toxin Touch [group_not_allowed]",
+                "Build Preview (0/1)",
+                "Back"
+            ]));
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Fusion transaction committed: Ashling (demon_ashling) + Bramble Runner (replacement_bramble_runner) -> Ward Shell; consumed demon_ashling, replacement_bramble_runner; added fusion_ward_shell_1; Demon stock 2->1.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Startup snapshot validation: 0 diagnostic(s).",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();

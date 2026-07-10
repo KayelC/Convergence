@@ -512,7 +512,7 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50));
+        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50));
         var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
 
         FusionParticipantSnapshot echo = Participant(
@@ -556,6 +556,65 @@ public sealed class OriginalCleanContentSliceTests
         FusionInheritanceSelectionDiagnostic diagnostic = Assert.Single(invalidSelection.Diagnostics);
         Assert.Equal(FusionInheritanceSelectionDiagnosticCode.SkillIneligible, diagnostic.Code);
         Assert.Equal(FusionInheritanceDecisionCode.GroupNotAllowed, diagnostic.InheritanceDecisionCode);
+    }
+
+    [Fact]
+    public void TrainingAnnexSlice_AssessesFusionTransactionFromValidatedPlan()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var repository = new CatalogFusionContentRepository(catalog);
+        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50));
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+
+        FusionParticipantSnapshot bramble = Participant(
+            catalog.GetRequiredEntity(Qualified("bramble_runner")),
+            "bramble_parent");
+        FusionParticipantSnapshot ashling = Participant(
+            catalog.GetRequiredEntity(Qualified("ashling")),
+            "ashling_parent");
+
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            ashling,
+            bramble,
+            Sacrifice: null,
+            IsSacrificial: false,
+            MoonPhase: 0));
+
+        var service = new FusionTransactionService();
+        FusionTransactionAssessment valid = service.Assess(new FusionTransactionRequest(
+            FusionParticipantStockKind.Demon,
+            plan,
+            [],
+            ResultAlreadyOwned: false,
+            HasOpenStockSlot: true));
+
+        Assert.True(valid.CanCommit);
+        Assert.Empty(valid.Diagnostics);
+        Assert.Equal(Qualified("ward_shell"), valid.ResultEntityId);
+        Assert.Equal(
+            [
+                RuntimeInstanceId.Parse("ashling_parent"),
+                RuntimeInstanceId.Parse("bramble_parent")
+            ],
+            valid.ConsumedParticipantIds);
+
+        FusionTransactionAssessment ineligible = service.Assess(new FusionTransactionRequest(
+            FusionParticipantStockKind.Demon,
+            plan,
+            [Qualified("mend")],
+            ResultAlreadyOwned: false,
+            HasOpenStockSlot: true));
+        Assert.False(ineligible.CanCommit);
+        Assert.Equal(FusionRuntimeDiagnosticCode.InvalidSelection, Assert.Single(ineligible.Diagnostics).Code);
+
+        FusionTransactionAssessment duplicateOwned = service.Assess(new FusionTransactionRequest(
+            FusionParticipantStockKind.Demon,
+            plan,
+            [],
+            ResultAlreadyOwned: true,
+            HasOpenStockSlot: true));
+        Assert.False(duplicateOwned.CanCommit);
+        Assert.Equal(FusionRuntimeDiagnosticCode.DuplicateResult, Assert.Single(duplicateOwned.Diagnostics).Code);
     }
 
     [Fact]
@@ -772,6 +831,25 @@ public sealed class OriginalCleanContentSliceTests
         }
 
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class NoAccidentRandomSource(params int[] values) : IRandomSource
+    {
+        private readonly Queue<int> _values = new(values);
+
+        public int NextInt32(int minimumInclusive, int maximumExclusive)
+        {
+            if (_values.Count == 0)
+            {
+                return minimumInclusive;
+            }
+
+            int value = _values.Dequeue();
+            Assert.InRange(value, minimumInclusive, maximumExclusive - 1);
+            return value;
+        }
+
+        public decimal NextUnitDecimal() => 0.99m;
     }
 
     private sealed class TestDamagePolicy : IDamageExecutionPolicy

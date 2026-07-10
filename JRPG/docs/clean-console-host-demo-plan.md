@@ -779,9 +779,18 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - This is still non-mutating. Phase 7-33 owns committed clean fusion transactions and rollback behavior.
 - Verification: focused 7-32 tests passed `3/3`; parity/roadmap guard tests passed within the `13/13` focused guard run; full suite passed `864/864` with no skips. Framework build stayed at `0` warnings, solution build stayed at `98` legacy warnings, clean battle/field/save/Training Annex demos passed, and protected legacy JSON remained unchanged. Direct redirected CLI smoke for `--clean-training-annex-play` still hits the known `ConsoleIO` cursor-handle limitation; scripted interactive coverage remains test-owned through `ScriptedGameIO`.
 
+### Phase 7-33 Result
+
+- `--clean-training-annex-play` now has a `Commit Fusion Transaction` proof command.
+- The proof uses the direct clean catalog recipe `Ashling + Bramble Runner -> Ward Shell`.
+- If Ward Shell is already owned, framework transaction assessment rejects the commit with `DuplicateResult` before any stock, actor, wallet, inventory, or Compendium state mutates.
+- If the host frees the Ward Shell slot first, the transaction consumes Ashling and the prepared Bramble Runner through framework party/stock transitions, hydrates a new `fusion_ward_shell_1` runtime actor from the catalog, applies the preview skill snapshot, adds the fused result to Demon stock, and validates the resulting save snapshot.
+- This remains `parallel_partial`. The clean host now proves atomic transaction mutation and rollback, but Compendium integration and broader strategy approval are still later Phase 7 work.
+- Verification: focused 7-33 and guard tests passed `14/14`, focused transaction tests passed `3/3`, and the full suite passed `867/867` with no skips. Framework build stayed at `0` warnings, solution build stayed at `98` pre-existing legacy-host warnings, clean battle/field/save/Training Annex demos passed, `git diff --check` reported only line-ending normalization warnings, framework forbidden-reference search returned no matches, and protected `Data/Jsons` content stayed unchanged.
+
 ### Possible Work After Approval
 
-- Commit transaction.
+- Approve and harden the remaining fusion strategies.
 - Register/recall a simple Compendium entry if approved.
 - Demonstrate optional player-knowledge import from a registered/owned familiar entity, so later target selection can show known weakness/resistance hints without a fresh Analyze action.
 
@@ -892,8 +901,8 @@ Phase 6-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` u
 
 Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
 
-Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof.
+Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof. Phase 7-33 adds `Commit Fusion Transaction`, a duplicate-result rejection and atomic parent-consume/result-add proof.
 
-The next numbered capability is Phase 7-33, `fusion_transactions`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 7-34, `fusion_strategies`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.
