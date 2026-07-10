@@ -25,6 +25,10 @@ internal enum CleanTrainingAnnexPlayCommand
     PartyReplaceWardShell,
     PartyDismissAshling,
     PartyConsumeBrambleRunner,
+    OpenNegotiation,
+    SelectNegotiationTarget,
+    SelectNegotiationAnswer,
+    SelectNegotiationDemand,
     ResolveStats,
     RecalculateResources,
     ApplyVictoryExperience,
@@ -81,6 +85,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<RuntimeInstanceId> ActorInstanceIds,
     RuntimePartyStockSnapshot PartyStock,
     IReadOnlyList<TrainingAnnexPartyTransitionEvidence> PartyTransitions,
+    IReadOnlyList<TrainingAnnexNegotiationEvidence> Negotiations,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -316,6 +321,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexPartySetupResult partySetup = partyController.CreateInitialParty(roster);
         RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
+        var negotiations = new List<TrainingAnnexNegotiationEvidence>();
+        var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
             inventoryTransitions);
@@ -421,6 +428,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     roster,
                     partyStock,
                     partyTransitions,
+                    negotiations,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -533,6 +541,27 @@ internal sealed class CleanTrainingAnnexPlayHost
 
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.OpenNegotiation:
+                {
+                    TrainingAnnexNegotiationInteractionResult negotiation =
+                        await new TrainingAnnexNegotiationController(
+                                _eventSink,
+                                _commandSource,
+                                _randomSource)
+                            .OpenAsync(
+                                catalog,
+                                roster,
+                                partyStock,
+                                wallet,
+                                economy,
+                                recruitedThisSession,
+                                commands,
+                                cancellationToken).ConfigureAwait(false);
+                    partyStock = negotiation.PartyStock;
+                    wallet = negotiation.Wallet;
+                    negotiations.AddRange(negotiation.Evidence);
+                    break;
+                }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
                         roster.Player.Actor.State.ToSnapshot().Equipment,
@@ -592,6 +621,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             roster,
                             partyStock,
                             partyTransitions,
+                            negotiations,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -1188,6 +1218,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenPartyStockOperations,
             "Party / Stock Operations"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenNegotiation,
+            "Negotiate / Recruit"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1642,6 +1675,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexActorRoster roster,
         RuntimePartyStockSnapshot partyStock,
         IReadOnlyList<TrainingAnnexPartyTransitionEvidence> partyTransitions,
+        IReadOnlyList<TrainingAnnexNegotiationEvidence> negotiations,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1709,6 +1743,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
             partyStock,
             partyTransitions.ToArray(),
+            negotiations.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),

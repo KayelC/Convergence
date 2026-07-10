@@ -32,7 +32,7 @@ The project needs neutral, open-source-safe example content that exercises frame
 
 The Training Annex sample is the first answer to that problem. It is deliberately plain and concept-driven; it should remain easy to inspect and safe to replace.
 
-This problem is no longer blocked on creating a generic reference pack. The remaining issue is coverage: not every sample record is exercised by a clean runtime/demo path yet. Phase 4-24 exercises the sample shop and equipment purchase path through `--clean-training-annex-play`, and Phase 4-25 exercises framework hospital restoration through the clean Recovery Facility.
+This problem is no longer blocked on creating a generic reference pack. The remaining issue is coverage: not every sample record is exercised by a clean runtime/demo path yet. Phase 4-24 exercises the sample shop and equipment purchase path through `--clean-training-annex-play`, Phase 4-25 exercises framework hospital restoration through the clean Recovery Facility, and Phase 5-29 exercises the `steady_sample` negotiation/recruitment path through clean framework services.
 
 ## Current Sample Data
 
@@ -70,4 +70,4 @@ The next implementation step should be a clean, non-legacy consumer pass that us
 
 1. keep exercising `mixed_drill`, `shell_check`, `cleanse_drop`, `revival_pin`, `focus_tea`, `focus_call`, `soften_guard`, and `toxin_touch` through clean tests and demos;
 2. grow the host-owned encounter-start proof toward a small interactive scene/trigger loop;
-3. prove negotiation/fusion sample records through small host flows when those presentation paths are ready.
+3. prove fusion sample records through a small host flow when that design is ready.

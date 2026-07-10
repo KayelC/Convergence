@@ -21,7 +21,7 @@ Use generic placeholder content for tests and demos. Downstream games should rep
 | Items | Consumables, key items, materials, valuables | HP, SP, cure, revive, and key-item examples | tonic, antidote, revival item, escape item, key token |
 | Equipment | Weapons, armor, boots, accessories, stat modifiers, basic attacks | `practice_blade`, `padded_jacket`, `light_steps`, `focus_charm` | training blade, padded vest, light boots, focus charm |
 | Shops | Offers, prices, stock policies, availability | `training_supply` | supply kiosk selling tonic and training blade |
-| Negotiation | Question sets, answers, demands, familiar dialogue | `steady_sample` | calm personality with one greeting and one demand |
+| Negotiation | Question sets, answers, demands, familiar dialogue | `steady_sample` | calm personality with two prompts, one demand outcome, and familiar dialogue |
 | Encounters | Formations, enemy levels, reward policy hooks | `ashling_drill`, `mixed_drill`, `shell_check` | single enemy, two-enemy group, boss formation |
 | Dungeons / fields | Blocks, floors, fixed floors, encounter pools, terminals, barriers | `training_annex` with random, safe, fixed battle, and barrier floors | three-floor training area with safe room and boss gate |
 | Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Two concept-level Training Annex recipes | concept recipes using generic entities only |

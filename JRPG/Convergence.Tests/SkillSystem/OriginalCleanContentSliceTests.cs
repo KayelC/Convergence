@@ -382,8 +382,9 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Contains(accessory.Accessory!.StatModifiers, modifier => modifier.StatId == Id("magic") && modifier.Value == 1);
 
         Assert.Equal(Id("sample_macca"), Assert.Single(negotiation.Demands).DemandId);
-        NegotiationQuestionDefinition question = Assert.Single(negotiation.Questions);
-        Assert.Equal(3, question.Answers.Count);
+        Assert.Equal(2, negotiation.Questions.Count);
+        Assert.All(negotiation.Questions, question => Assert.Equal(3, question.Answers.Count));
+        Assert.All(negotiation.Questions, question => Assert.Contains(question.Answers, answer => answer.Score > 0));
 
         EncounterFormationDefinition mixedFormation = Assert.Single(mixed.Formations);
         Assert.False(mixedFormation.IsBoss);

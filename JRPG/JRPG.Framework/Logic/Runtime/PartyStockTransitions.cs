@@ -130,6 +130,7 @@ public sealed class LegacyStockCapacityPolicy : IStockCapacityPolicy
 
 public sealed record AddPartyMemberRequest(RuntimePartyStockSnapshot Snapshot, RuntimeActorReferenceSnapshot Member);
 public sealed record SwapPartyMemberRequest(RuntimePartyStockSnapshot Snapshot, int ActiveIndex, int ReserveIndex);
+public sealed record AddDemonToStockRequest(RuntimePartyStockSnapshot Snapshot, RuntimeActorReferenceSnapshot Demon);
 public sealed record SummonDemonRequest(RuntimePartyStockSnapshot Snapshot, RuntimeInstanceId DemonInstanceId);
 public sealed record SwapActiveDemonRequest(RuntimePartyStockSnapshot Snapshot, RuntimeInstanceId ActiveDemonInstanceId, RuntimeInstanceId StandbyDemonInstanceId);
 public sealed record ReturnDemonRequest(RuntimePartyStockSnapshot Snapshot, RuntimeInstanceId DemonInstanceId);
@@ -144,6 +145,7 @@ public interface IPartyStockTransitionService
 {
     PartyStockTransitionResult AddPartyMember(AddPartyMemberRequest request);
     PartyStockTransitionResult SwapPartyMember(SwapPartyMemberRequest request);
+    PartyStockTransitionResult AddDemonToStock(AddDemonToStockRequest request);
     PartyStockTransitionResult SummonDemon(SummonDemonRequest request);
     PartyStockTransitionResult SwapActiveDemon(SwapActiveDemonRequest request);
     PartyStockTransitionResult ReturnDemon(ReturnDemonRequest request);
@@ -207,6 +209,24 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
         active[request.ActiveIndex] = oldReserve;
         reserve[request.ReserveIndex] = oldActive;
         return Applied(before, before.With(activeParty: active, reserveMembers: reserve), oldActive.InstanceId, oldReserve.InstanceId);
+    }
+
+    public PartyStockTransitionResult AddDemonToStock(AddDemonToStockRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        RuntimePartyStockSnapshot before = request.Snapshot;
+        if (Contains(before.ActiveParty, request.Demon.InstanceId) || Contains(before.DemonStock, request.Demon.InstanceId))
+        {
+            return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Demon is already present.", request.Demon.InstanceId);
+        }
+
+        RuntimeActorReferenceSnapshot[] demonStock = before.DemonStock.Append(request.Demon).ToArray();
+        if (demonStock.Length > _stockCapacityPolicy.GetCapacity(before.OwnerLevel))
+        {
+            return Rejected(before, PartyStockTransitionCode.StockFull, "Demon stock is full.", request.Demon.InstanceId);
+        }
+
+        return Applied(before, before.With(demonStock: demonStock), request.Demon.InstanceId);
     }
 
     public PartyStockTransitionResult SummonDemon(SummonDemonRequest request)

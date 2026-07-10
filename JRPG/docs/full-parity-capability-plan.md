@@ -208,13 +208,13 @@ Goal: add conversation/recruitment only if it remains part of the desired framew
 
 | Pass | Capability | Current Status | Goal |
 | ---: | --- | --- | --- |
-| 29 | `negotiation_and_recruitment` | `parallel_partial` | Demonstrate clean negotiation/recruitment over original content. |
+| 29 | `negotiation_and_recruitment` | `parallel_partial` | Implemented Training Annex clean negotiation/recruitment over framework services. |
 
-Before implementation, decide:
+Owner decision recorded before implementation:
 
-- whether negotiation is core or optional;
-- whether recruitment adds stock members;
-- whether failure/trick/flee outcomes remain part of the clean design.
+- negotiation remains an optional framework capability that a host/game may choose to use;
+- this clean proof uses recruitment into Demon stock;
+- refusal and familiar/duplicate paths remain supported because they are useful framework outcomes, not console-only quirks.
 
 ### Phase 7: Fusion And Compendium
 
@@ -902,7 +902,13 @@ Full parity target:
 
 Clean console proof:
 
-- only after owner confirms negotiation is part of the clean framework sample.
+- Phase 5-29 result:
+  - `--clean-training-annex-play` now exposes `Negotiate / Recruit` as a host-owned menu over the clean Training Annex party/stock, wallet, and roster state.
+  - `TrainingAnnexNegotiationController` drives the flow through `NegotiationSessionService`, `RecruitmentTransactionService`, `PartyStockTransitionService.AddDemonToStock`, and the bound economy service. The host owns prompts and presentation; framework services own session outcome, recruitment validation, stock mutation rules, and Macca spending.
+  - The clean Training Annex negotiation content now has enough authored prompt material for a real success path. The success path recruits `bramble_runner` into Demon stock, spends Macca through the economy service, and records typed evidence for outcome, reason, mood score, wallet before/after, stock before/after, and transition codes.
+  - Refusal preserves wallet and stock, and a repeated familiar encounter follows the familiar path without duplicate recruitment.
+  - This remains `parallel_partial`: authored demand records exist in content, but the current `NegotiationSessionService` still calculates the Macca demand internally. Binding demand amount/type selection directly to authored clean content remains future framework work.
+  - Phase 5-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests, plus `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. The only `Data/Jsons` change is the clean Training Annex negotiation sample; protected legacy/prototype data remains untouched.
 
 ### 30. `fusion_result_calculation`
 

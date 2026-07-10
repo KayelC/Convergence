@@ -23,6 +23,23 @@
               "score": -1
             }
           ]
+        },
+        {
+          "text": "The sample studies your rhythm. How do you answer?",
+          "answers": [
+            {
+              "text": "Match its breathing.",
+              "score": 2
+            },
+            {
+              "text": "Wait without moving.",
+              "score": 1
+            },
+            {
+              "text": "Break the silence.",
+              "score": -1
+            }
+          ]
         }
       ],
       "familiarDialogueLines": [

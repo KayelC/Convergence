@@ -732,6 +732,14 @@ Demonstrate clean negotiation/recruitment if the owner still wants this mechanic
 - recruitment success/failure mutates or preserves state correctly;
 - cancellation does not consume unintended resources.
 
+### Phase 5-29 Result
+
+- `--clean-training-annex-play` now exposes `Negotiate / Recruit`.
+- The host presents prompts and records command choices, but the outcome comes from framework negotiation and recruitment services.
+- Successful negotiation recruits the Training Annex `bramble_runner` into Demon stock through `PartyStockTransitionService.AddDemonToStock` and spends Macca through the bound economy service.
+- Refusal and repeated familiar encounters preserve wallet/stock state and are covered by focused tests.
+- Authored demand records are not yet the source of the Macca demand amount. The framework service still uses its existing formula, so content-bound demand policy remains a future refinement.
+
 ## Iteration 10: Fusion And Compendium Demo Flow
 
 ### Goal
@@ -845,7 +853,7 @@ This board should be updated before each implementation prompt.
 | Rewards/progression | `P1` | Needed to complete the loop. |
 | Save policy and suspend saves | `P1/P2` | Important once the loop has state worth saving. |
 | Shop/equipment | `P2` | Add after the base loop. |
-| Negotiation/recruitment | `P2` | Requires owner confirmation. |
+| Negotiation/recruitment | `P2` | Training Annex proof implemented; demand-policy binding remains future work. |
 | Fusion/Compendium | `Blocked/P2` | Requires owner design decision. |
 | Content authoring tooling | `P2` | Useful after content shape stabilizes. |
 | Godot adapter/project | `P3` | Later, after console proves the clean loop. |
@@ -855,6 +863,10 @@ This board should be updated before each implementation prompt.
 
 Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions. Phase 4-25 adds a clean Recovery Facility proof over the framework hospital service. Phase 5-26 adds clean active/reserve party ownership: Annex Mentor is hydrated as a reserve support actor, the session creates a `RuntimePartyStockSnapshot` through `PartyStockTransitionService`, `Inspect Party` presents that snapshot, and saves restore the live party state. Phase 5-27 adds inspectable clean active-form, Persona-stock, and Demon-stock ownership to that same snapshot, with save/restore validation for same-team stock references. Phase 5-28 adds manual clean party/stock operations over framework transitions: active-form swap, Demon-stock summon, active demon swap, return, replace, dismiss, and consume.
 
-The next numbered capability is Phase 5-29, `negotiation_and_recruitment`, unless the owner deliberately reprioritizes the plan.
+Phase 5-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` uses framework negotiation, recruitment, party-stock, and economy services to recruit Bramble Runner into Demon stock, while refusal and familiar repeat paths remain non-mutating.
+
+Phase 5-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
+
+The next numbered capability is Phase 6-30, `fusion_result_calculation`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

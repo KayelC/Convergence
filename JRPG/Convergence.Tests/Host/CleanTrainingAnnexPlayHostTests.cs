@@ -200,7 +200,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     "Recovery Facility",
                     "Inspect Party",
                     "Inspect Stock",
-                    "Party / Stock Operations"
+                    "Party / Stock Operations",
+                    "Negotiate / Recruit"
             ],
                 menu.Options);
         }
@@ -225,7 +226,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Recovery Facility",
                 "Inspect Party",
                 "Inspect Stock",
-                "Party / Stock Operations"
+                "Party / Stock Operations",
+                "Negotiate / Recruit"
             ],
                 menu.Options);
         }
@@ -425,6 +427,123 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(duplicate.Applied);
         Assert.Equal(PartyStockTransitionCode.AlreadyActive, duplicate.Code);
         Assert.Same(summoned.After, duplicate.After);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationRecruitmentAddsDemonThroughFrameworkTransitions()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(Qualified("bramble_runner"), negotiation.TargetEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("replacement_bramble_runner"), negotiation.TargetInstanceId);
+        Assert.Equal(NegotiationOutcomeKind.Success, negotiation.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.None, negotiation.Reason);
+        Assert.Equal(4, negotiation.MoodScore);
+        Assert.Equal(86, negotiation.MaccaSpent);
+        Assert.Equal(RecruitmentTransactionStatus.Applied, negotiation.RecruitmentStatus);
+        Assert.Equal(RecruitmentTransactionErrorCode.None, negotiation.RecruitmentErrorCode);
+        Assert.Equal(PartyStockTransitionCode.Applied, negotiation.StockTransitionCode);
+        Assert.True(negotiation.Recruited);
+        Assert.Equal(100, negotiation.WalletBefore);
+        Assert.Equal(14, negotiation.WalletAfter);
+        Assert.Equal(2, negotiation.DemonStockCountBefore);
+        Assert.Equal(3, negotiation.DemonStockCountAfter);
+        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Contains(
+            summary.PartyStock.DemonStock,
+            actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
+
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenNegotiation,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationTarget,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationAnswer,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationAnswer,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationDemand,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+        string text = output.ToString();
+        Assert.Contains("Negotiation opened: Steady Sample; target Bramble Runner; wallet 100 M.", text, StringComparison.Ordinal);
+        Assert.Contains("Negotiation event: MoodPositive; Bramble Runner seems pleased with your answers.", text, StringComparison.Ordinal);
+        Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->14 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationRefusalDoesNotSpendOrMutateStock()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(NegotiationOutcomeKind.Failure, negotiation.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.MaccaRefused, negotiation.Reason);
+        Assert.False(negotiation.Recruited);
+        Assert.Null(negotiation.RecruitmentStatus);
+        Assert.Null(negotiation.StockTransitionCode);
+        Assert.Equal(100, negotiation.WalletBefore);
+        Assert.Equal(100, negotiation.WalletAfter);
+        Assert.Equal(2, negotiation.DemonStockCountBefore);
+        Assert.Equal(2, negotiation.DemonStockCountAfter);
+        Assert.Equal(100, summary.Wallet.Macca);
+        Assert.DoesNotContain(
+            summary.PartyStock.DemonStock,
+            actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
+        Assert.Contains("Negotiation ended: Failure (MaccaRefused); wallet and Demon stock are unchanged.", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RepeatedNegotiationUsesFamiliarPathWithoutDuplicateRecruitment()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 0, 16, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(2, summary.Negotiations.Count);
+        TrainingAnnexNegotiationEvidence first = summary.Negotiations[0];
+        TrainingAnnexNegotiationEvidence second = summary.Negotiations[1];
+        Assert.True(first.Recruited);
+        Assert.Equal(NegotiationOutcomeKind.FamiliarFlee, second.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.FamiliarDemon, second.Reason);
+        Assert.False(second.Recruited);
+        Assert.Equal(3, second.DemonStockCountBefore);
+        Assert.Equal(3, second.DemonStockCountAfter);
+        Assert.Equal(14, second.WalletBefore);
+        Assert.Equal(14, second.WalletAfter);
+        Assert.Single(
+            summary.PartyStock.DemonStock,
+            actor => actor.EntityDefinitionId == Qualified("bramble_runner"));
+        Assert.Contains(
+            io.Menus.SelectMany(menu => menu.Options),
+            option => option.Contains("[Familiar]", StringComparison.Ordinal));
+        io.AssertConsumed();
     }
 
     [Fact]

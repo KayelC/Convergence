@@ -77,6 +77,40 @@ public sealed class PartyStockTransitionTests
     }
 
     [Fact]
+    public void AddDemonToStock_AppendsOwnedDemonAndRejectsDuplicateOrFullStock()
+    {
+        RuntimeActorReferenceSnapshot pixie = Actor("pixie");
+        RuntimePartyStockSnapshot snapshot = Snapshot(
+            activeParty: [Actor("hero")],
+            demonStock: [Actor("jack"), Actor("angel")]);
+
+        PartyStockTransitionResult added = _service.AddDemonToStock(new AddDemonToStockRequest(snapshot, pixie));
+
+        Assert.True(added.Applied);
+        Assert.Equal(["jack", "angel", "pixie"], added.After.DemonStock.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["pixie"], added.AffectedInstanceIds.Select(id => id.ToString()));
+
+        PartyStockTransitionResult duplicate = _service.AddDemonToStock(new AddDemonToStockRequest(added.After, pixie));
+
+        Assert.False(duplicate.Applied);
+        Assert.Equal(PartyStockTransitionCode.DuplicateOwned, duplicate.Code);
+        Assert.Same(added.After, duplicate.After);
+
+        RuntimePartyStockSnapshot fullSnapshot = Snapshot(
+            ownerLevel: 1,
+            activeParty: [Actor("hero")],
+            demonStock: [Actor("a"), Actor("b"), Actor("c")]);
+
+        PartyStockTransitionResult full = _service.AddDemonToStock(new AddDemonToStockRequest(
+            fullSnapshot,
+            Actor("full_candidate")));
+
+        Assert.False(full.Applied);
+        Assert.Equal(PartyStockTransitionCode.StockFull, full.Code);
+        Assert.Same(fullSnapshot, full.After);
+    }
+
+    [Fact]
     public void DemonReplacementAndConsumption_UpdateActiveAndStockReferencesAtomically()
     {
         RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");

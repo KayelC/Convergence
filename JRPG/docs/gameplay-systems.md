@@ -79,6 +79,8 @@ Player-facing behavior:
 - Familiar demons can use alternate dialogue paths.
 - Successful recruitment can feed compendium registration after battle.
 
+The original clean Training Annex path now has a separate framework-first proof. `--clean-training-annex-play` exposes `Negotiate / Recruit`, presents clean prompt choices through the host, and resolves success/refusal/familiar outcomes through framework negotiation and recruitment services. A successful clean negotiation spends Macca through the bound economy service and adds Bramble Runner to Demon stock through `PartyStockTransitionService.AddDemonToStock`. This does not depend on legacy `questions.json` or `NegotiationEngine`, and it does not make authored demand records authoritative yet; demand-policy binding remains future work.
+
 ## Field, City, And Dungeon
 
 `FieldConductor` owns non-combat navigation. It coordinates city services, inventory, status, party organization, dungeon entry, and fusion access.
