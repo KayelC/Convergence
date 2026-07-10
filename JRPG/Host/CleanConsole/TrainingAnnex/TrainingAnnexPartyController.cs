@@ -114,8 +114,7 @@ internal sealed class TrainingAnnexPartyController
                     party,
                     TrainingAnnexHostSupport.DemonAshlingInstance,
                     TrainingAnnexHostSupport.DemonWardShellInstance)),
-            TrainingAnnexPartyOperation.ReturnActiveDemon => _transitions.ReturnDemon(
-                new ReturnDemonRequest(party, RequireActiveDemon(party))),
+            TrainingAnnexPartyOperation.ReturnActiveDemon => ReturnActiveDemon(party),
             TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => _transitions.ReplaceDemon(
                 new ReplaceDemonRequest(
                     party,
@@ -181,12 +180,25 @@ internal sealed class TrainingAnnexPartyController
             cancellationToken).ConfigureAwait(false);
     }
 
-    private static RuntimeInstanceId RequireActiveDemon(RuntimePartyStockSnapshot party)
+    private PartyStockTransitionResult ReturnActiveDemon(RuntimePartyStockSnapshot party)
     {
         RuntimeActorReferenceSnapshot? activeDemon = party.ActiveParty.FirstOrDefault(actor =>
             party.DemonStock.Any(demon => demon.InstanceId == actor.InstanceId));
-        return activeDemon?.InstanceId ??
-            RuntimeInstanceId.Parse("missing_active_demon");
+        if (activeDemon is null)
+        {
+            return new PartyStockTransitionResult(
+                PartyStockTransitionCode.NotActive,
+                party,
+                party,
+                diagnostics:
+                [
+                    new PartyStockTransitionDiagnostic(
+                        PartyStockTransitionCode.NotActive,
+                        "No active demon is in the party.")
+                ]);
+        }
+
+        return _transitions.ReturnDemon(new ReturnDemonRequest(party, activeDemon.InstanceId));
     }
 
     private static RuntimeActorReferenceSnapshot FindRosterReference(

@@ -412,6 +412,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(returned.Applied);
         Assert.Equal(PartyStockTransitionCode.NotActive, returned.Code);
         Assert.Same(initial, returned.After);
+        Assert.Empty(returned.AffectedInstanceIds);
+        PartyStockTransitionDiagnostic diagnostic = Assert.Single(returned.Diagnostics);
+        Assert.Equal(PartyStockTransitionCode.NotActive, diagnostic.Code);
+        Assert.Equal("No active demon is in the party.", diagnostic.Message);
+        Assert.Null(diagnostic.SubjectInstanceId);
 
         PartyStockTransitionResult summoned = controller.ExecuteOperation(
             TrainingAnnexPartyOperation.SummonAshling,

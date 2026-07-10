@@ -138,9 +138,9 @@ The strongest part of this pass is that failed operations are not silent and do 
 
 The Training Annex host applies `result.After` only when the result is successful. Tests cover the happy path and rejection path, including duplicate active summon rejection and return-without-active-demon rejection.
 
-There is one small host-code smell: `TrainingAnnexPartyController.RequireActiveDemon` creates a sentinel runtime ID named `missing_active_demon` when no active demon exists, then relies on the framework service to reject it as `NotActive`. This does not break behavior, but a typed host precheck would be clearer and easier to audit.
+CodeReview-5-6-3 removed the small host-code smell around returning an active demon when no demon is deployed. The host now returns an explicit rejected `PartyStockTransitionResult` instead of inventing a fake runtime ID.
 
-**Review conclusion:** implemented correctly, with a low-priority cleanup opportunity.
+**Review conclusion:** implemented correctly. The earlier low-priority sentinel cleanup is now resolved by CodeReview-5-6-3.
 
 ## Phase 6-29 Review: Negotiation And Recruitment
 
@@ -231,13 +231,15 @@ The clean host now spends the authored `50` Macca, not the old internally calcul
 
 CodeReview-5-6-2 verification added focused runtime and host tests for authored amount selection, unaffordable authored demands, and Training Annex content parameter mapping. The focused negotiation/content gate passed `94/94`, the full suite passed `858/858`, the framework build reported `0` warnings, the solution build retained the existing `98` console-host warnings, `git diff --check` passed, the refined framework forbidden-reference search returned no matches, and `Data/Jsons` remained unchanged.
 
-### Low: `missing_active_demon` sentinel should become an explicit host result
+### Low (resolved by CodeReview-5-6-3): `missing_active_demon` sentinel should become an explicit host result
 
-`TrainingAnnexPartyController.RequireActiveDemon` returns `RuntimeInstanceId.Parse("missing_active_demon")` when there is no active demon. The service then rejects the operation as `NotActive`.
+`TrainingAnnexPartyController.RequireActiveDemon` previously returned `RuntimeInstanceId.Parse("missing_active_demon")` when there was no active demon. The service then rejected the operation as `NotActive`.
 
-This keeps behavior safe, but it mixes a host presentation condition with a fake runtime identity. A direct host-side rejection result would be easier to read and impossible to confuse with a real actor ID.
+That kept behavior safe, but mixed a host presentation condition with a fake runtime identity.
 
-**Recommended follow-up:** replace the sentinel with a typed host precheck or a helper that returns a rejected `PartyStockTransitionResult` without inventing an ID.
+**Resolution:** CodeReview-5-6-3 replaces the sentinel with a typed host-side rejection result. `ReturnActiveDemon` now emits `PartyStockTransitionCode.NotActive`, preserves the original snapshot, reports no affected runtime IDs, and carries a clear diagnostic with no fake subject ID.
+
+CodeReview-5-6-3 verification: focused Training Annex host tests passed `81/81`, the full suite passed `858/858`, the standalone framework build reported `0` warnings, the solution build retained the existing `98` console-host warnings, `git diff --check` passed, the refined framework forbidden-reference search returned no matches, clean battle/field/save demos passed, and `Data/Jsons` remained unchanged.
 
 ### Low: Training Annex negotiation target is fixed to Bramble Runner
 
@@ -288,6 +290,6 @@ No capability should be promoted to `clean_parity` yet. Full parity still requir
    Completed. `NegotiationDefinition.Demands` now flow into typed runtime demands for the clean Training Annex path, and the framework uses authored demand weights and operands when supplied.
 
 3. **CodeReview-5-6-3: Clean up Training Annex host seams.**
-   Replace the `missing_active_demon` sentinel. The insufficient-Macca clean-host regression was completed as part of CodeReview-5-6-2 because it directly proves authored-demand transaction safety.
+   Completed. `ReturnActiveDemon` now returns a typed rejected result when no active demon exists, rather than inventing a fake runtime ID. The insufficient-Macca clean-host regression was completed as part of CodeReview-5-6-2 because it directly proves authored-demand transaction safety.
 
 These follow-ups are quality improvements, not emergency blockers.
