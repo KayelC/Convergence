@@ -449,16 +449,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(NegotiationOutcomeKind.Success, negotiation.Outcome);
         Assert.Equal(NegotiationOutcomeReason.None, negotiation.Reason);
         Assert.Equal(4, negotiation.MoodScore);
-        Assert.Equal(86, negotiation.MaccaSpent);
+        Assert.Equal(50, negotiation.MaccaSpent);
         Assert.Equal(RecruitmentTransactionStatus.Applied, negotiation.RecruitmentStatus);
         Assert.Equal(RecruitmentTransactionErrorCode.None, negotiation.RecruitmentErrorCode);
         Assert.Equal(PartyStockTransitionCode.Applied, negotiation.StockTransitionCode);
         Assert.True(negotiation.Recruited);
         Assert.Equal(100, negotiation.WalletBefore);
-        Assert.Equal(14, negotiation.WalletAfter);
+        Assert.Equal(50, negotiation.WalletAfter);
         Assert.Equal(2, negotiation.DemonStockCountBefore);
         Assert.Equal(3, negotiation.DemonStockCountAfter);
-        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(50, summary.Wallet.Macca);
         Assert.Contains(
             summary.PartyStock.DemonStock,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
@@ -476,7 +476,35 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string text = output.ToString();
         Assert.Contains("Negotiation opened: Steady Sample; target Bramble Runner; wallet 100 M.", text, StringComparison.Ordinal);
         Assert.Contains("Negotiation event: MoodPositive; Bramble Runner seems pleased with your answers.", text, StringComparison.Ordinal);
-        Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->14 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->50 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationUsesAuthoredDemandAmountFromContent()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new NegotiationDemandAmountContentPackTextSource(ContentRoot(), 30),
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(NegotiationOutcomeKind.Success, negotiation.Outcome);
+        Assert.Equal(30, negotiation.MaccaSpent);
+        Assert.Equal(100, negotiation.WalletBefore);
+        Assert.Equal(70, negotiation.WalletAfter);
+        Assert.Equal(70, summary.Wallet.Macca);
+        Assert.Contains(
+            "Recruitment applied: Bramble Runner joined Demon stock; wallet 100->70 M; Demon stock 2->3.",
+            output.ToString(),
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -513,6 +541,45 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationInsufficientAuthoredDemandDoesNotSpendOrMutateStock()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(40));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(NegotiationOutcomeKind.Failure, negotiation.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.InsufficientMacca, negotiation.Reason);
+        Assert.Equal(0, negotiation.MaccaSpent);
+        Assert.False(negotiation.Recruited);
+        Assert.Null(negotiation.RecruitmentStatus);
+        Assert.Null(negotiation.StockTransitionCode);
+        Assert.Equal(40, negotiation.WalletBefore);
+        Assert.Equal(40, negotiation.WalletAfter);
+        Assert.Equal(2, negotiation.DemonStockCountBefore);
+        Assert.Equal(2, negotiation.DemonStockCountAfter);
+        Assert.Equal(40, summary.Wallet.Macca);
+        Assert.DoesNotContain(
+            summary.Commands,
+            command => command == CleanTrainingAnnexPlayCommand.SelectNegotiationDemand);
+        Assert.DoesNotContain(
+            summary.PartyStock.DemonStock,
+            actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
+        Assert.Contains(
+            "Negotiation ended: Failure (InsufficientMacca); wallet and Demon stock are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_RepeatedNegotiationUsesFamiliarPathWithoutDuplicateRecruitment()
     {
         var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 0, 16, 0, 9);
@@ -535,8 +602,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(second.Recruited);
         Assert.Equal(3, second.DemonStockCountBefore);
         Assert.Equal(3, second.DemonStockCountAfter);
-        Assert.Equal(14, second.WalletBefore);
-        Assert.Equal(14, second.WalletAfter);
+        Assert.Equal(50, second.WalletBefore);
+        Assert.Equal(50, second.WalletAfter);
         Assert.Single(
             summary.PartyStock.DemonStock,
             actor => actor.EntityDefinitionId == Qualified("bramble_runner"));
@@ -3302,6 +3369,47 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     ["kind"] = "unlimited"
                 }
             });
+            return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    private sealed class NegotiationDemandAmountContentPackTextSource(string root, int amount) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                documents.Add(new ContentDocumentText(
+                    path,
+                    path,
+                    path == "training_annex_slice.negotiations.json"
+                        ? ReplaceDemandAmount(text)
+                        : text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private string ReplaceDemandAmount(string json)
+        {
+            JsonObject node = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex negotiation JSON could not be parsed.");
+            JsonArray negotiations = node["negotiations"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex negotiations document has no negotiations array.");
+            JsonObject negotiation = negotiations
+                .Select(child => child?.AsObject())
+                .Single(child => child?["id"]?.GetValue<string>() == "steady_sample") ??
+                throw new InvalidOperationException("Training Annex steady_sample negotiation was not found.");
+            JsonObject demand = negotiation["demands"]?.AsArray()[0]?.AsObject() ??
+                throw new InvalidOperationException("Training Annex steady_sample negotiation has no demand.");
+            JsonObject parameters = demand["parameters"]?.AsObject() ??
+                throw new InvalidOperationException("Training Annex steady_sample demand has no parameters.");
+            parameters["amount"] = amount;
             return node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
     }

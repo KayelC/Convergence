@@ -89,6 +89,7 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId PracticeBlade = Qualified("practice_blade");
     public static readonly ContentId FocusCharm = Qualified("focus_charm");
     public static readonly ContentId SteadySampleNegotiation = Qualified("steady_sample");
+    public static readonly ContentId SampleMaccaDemand = ContentId.Parse("sample_macca");
     public static readonly ContentId FrostTip = Qualified("frost_tip");
     public static readonly ContentId EchoStrike = Qualified("echo_strike");
     public static readonly ContentId Mend = Qualified("mend");

@@ -201,7 +201,8 @@ internal sealed class TrainingAnnexNegotiationController
             questions: negotiation.Questions.Select(question => new NegotiationQuestionPrompt(
                 question.Text,
                 question.Answers.Select(answer => new NegotiationAnswerOption(answer.Text, answer.Score)))),
-            familiarDialogueLines: negotiation.FamiliarDialogueLines);
+            familiarDialogueLines: negotiation.FamiliarDialogueLines,
+            demands: negotiation.Demands.Select(MapDemand));
     }
 
     private bool HasOpenDemonStockSlot(RuntimePartyStockSnapshot party) =>
@@ -214,6 +215,48 @@ internal sealed class TrainingAnnexNegotiationController
         roster.StockMembers.FirstOrDefault(actor =>
             actor.Actor.State.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance) ??
         throw new InvalidOperationException("Training Annex recruitment candidate was not hydrated.");
+
+    private static NegotiationRuntimeDemand MapDemand(NegotiationDemandDefinition demand)
+    {
+        if (demand.DemandId == TrainingAnnexHostSupport.SampleMaccaDemand)
+        {
+            return new NegotiationRuntimeDemand(
+                demand.DemandId,
+                NegotiationDemandKind.Macca,
+                demand.Weight,
+                maccaAmount: RequiredPositiveIntParameter(demand, "amount"));
+        }
+
+        throw new InvalidOperationException(
+            $"Training Annex negotiation demand '{demand.DemandId}' has no host mapping.");
+    }
+
+    private static int RequiredPositiveIntParameter(NegotiationDemandDefinition demand, string key)
+    {
+        if (!demand.Parameters.TryGetValue(key, out object? value))
+        {
+            throw new InvalidOperationException(
+                $"Training Annex negotiation demand '{demand.DemandId}' is missing '{key}'.");
+        }
+
+        int amount = value switch
+        {
+            int integer => integer,
+            long integer when integer >= int.MinValue && integer <= int.MaxValue => (int)integer,
+            decimal number when decimal.Truncate(number) == number &&
+                number >= int.MinValue &&
+                number <= int.MaxValue => (int)number,
+            _ => throw new InvalidOperationException(
+                $"Training Annex negotiation demand '{demand.DemandId}' parameter '{key}' must be a whole number.")
+        };
+        if (amount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Training Annex negotiation demand '{demand.DemandId}' parameter '{key}' must be positive.");
+        }
+
+        return amount;
+    }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateTargetMenu(
         TrainingAnnexRuntimeActor target,

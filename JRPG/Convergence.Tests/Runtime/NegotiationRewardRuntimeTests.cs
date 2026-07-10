@@ -49,6 +49,93 @@ public sealed class NegotiationRewardRuntimeTests
     }
 
     [Fact]
+    public async Task NegotiationSession_UsesAuthoredDemandInsteadOfCalculatedMaccaFormula()
+    {
+        var random = new SequenceRandomSource(ints: [0, 0, 0]);
+        var service = new NegotiationSessionService(random);
+        var commands = new QueueNegotiationCommands(
+            answers: [0, 0],
+            demands: [NegotiationDemandDecision.Accept]);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            new NegotiationSessionRequest(
+                "Pixie",
+                actorLevel: 50,
+                targetLevel: 9,
+                actorLuck: 0,
+                livingEnemyCount: 1,
+                isMoonBlocked: false,
+                isTargetAlreadyOwned: false,
+                hasOpenDemonStockSlot: true,
+                currentMacca: 100,
+                questions:
+                [
+                    Question("Do you like me?", 2),
+                    Question("Do you trust me?", 2)
+                ],
+                demands:
+                [
+                    new NegotiationRuntimeDemand(
+                        ContentId.Parse("sample_macca"),
+                        NegotiationDemandKind.Macca,
+                        weight: 1,
+                        maccaAmount: 25)
+                ]),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Success, result.Outcome);
+        Assert.Equal(25, result.MaccaSpent);
+        NegotiationDemandPrompt prompt = Assert.Single(commands.DemandPrompts);
+        Assert.Equal(NegotiationDemandKind.Macca, prompt.Kind);
+        Assert.Equal("Pixie: \"A gift of 25 Macca should suffice.\"", prompt.Prompt);
+        Assert.Equal(["Give 25 Macca", "Refuse"], prompt.Options.Select(option => option.Label));
+    }
+
+    [Fact]
+    public async Task NegotiationSession_RejectsUnaffordableAuthoredDemandBeforePrompting()
+    {
+        var service = new NegotiationSessionService(new SequenceRandomSource(ints: [0, 0, 0]));
+        var commands = new QueueNegotiationCommands(
+            answers: [0, 0],
+            demands: [NegotiationDemandDecision.Accept]);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            new NegotiationSessionRequest(
+                "Pixie",
+                actorLevel: 50,
+                targetLevel: 9,
+                actorLuck: 0,
+                livingEnemyCount: 1,
+                isMoonBlocked: false,
+                isTargetAlreadyOwned: false,
+                hasOpenDemonStockSlot: true,
+                currentMacca: 24,
+                questions:
+                [
+                    Question("Do you like me?", 2),
+                    Question("Do you trust me?", 2)
+                ],
+                demands:
+                [
+                    new NegotiationRuntimeDemand(
+                        ContentId.Parse("sample_macca"),
+                        NegotiationDemandKind.Macca,
+                        weight: 1,
+                        maccaAmount: 25)
+                ]),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Failure, result.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.InsufficientMacca, result.Reason);
+        Assert.Equal(0, result.MaccaSpent);
+        Assert.Empty(commands.DemandPrompts);
+        Assert.Contains(
+            result.Events,
+            negotiationEvent => negotiationEvent.Kind == NegotiationEventKind.Failure &&
+                negotiationEvent.Message == "The required donation of 25 Macca is missing.");
+    }
+
+    [Fact]
     public async Task NegotiationSession_FamiliarRewardsAreReturnedWithoutHostMutation()
     {
         var service = new NegotiationSessionService(new SequenceRandomSource(ints: [0, 75]));
@@ -138,6 +225,7 @@ public sealed class NegotiationRewardRuntimeTests
     {
         private readonly Queue<int> _answers;
         private readonly Queue<NegotiationDemandDecision> _demands;
+        private readonly List<NegotiationDemandPrompt> _demandPrompts = [];
 
         public QueueNegotiationCommands(
             IEnumerable<int> answers,
@@ -146,6 +234,8 @@ public sealed class NegotiationRewardRuntimeTests
             _answers = new Queue<int>(answers);
             _demands = new Queue<NegotiationDemandDecision>(demands);
         }
+
+        public IReadOnlyList<NegotiationDemandPrompt> DemandPrompts => _demandPrompts;
 
         public ValueTask<NegotiationAnswerSelection> ReadAnswerAsync(
             NegotiationQuestionPrompt prompt,
@@ -160,6 +250,7 @@ public sealed class NegotiationRewardRuntimeTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            _demandPrompts.Add(prompt);
             return ValueTask.FromResult(NegotiationDemandSelection.Selected(_demands.Dequeue()));
         }
     }

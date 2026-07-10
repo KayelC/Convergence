@@ -381,7 +381,10 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(EquipmentSlot.Accessory, accessory.Slot);
         Assert.Contains(accessory.Accessory!.StatModifiers, modifier => modifier.StatId == Id("magic") && modifier.Value == 1);
 
-        Assert.Equal(Id("sample_macca"), Assert.Single(negotiation.Demands).DemandId);
+        NegotiationDemandDefinition demand = Assert.Single(negotiation.Demands);
+        Assert.Equal(Id("sample_macca"), demand.DemandId);
+        Assert.Equal(1, demand.Weight);
+        Assert.Equal(50L, demand.Parameters["amount"]);
         Assert.Equal(2, negotiation.Questions.Count);
         Assert.All(negotiation.Questions, question => Assert.Equal(3, question.Answers.Count));
         Assert.All(negotiation.Questions, question => Assert.Contains(question.Answers, answer => answer.Score > 0));

@@ -8,7 +8,7 @@ Phase 5 and Phase 6 are implemented correctly for their approved scope: they pro
 
 The implementation is intentionally still `parallel_partial`. It is usable evidence for the new framework path, but it is not full parity with every protected legacy consumer. The old console prototype remains active compatibility code, and removal remains unauthorized.
 
-No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. The main remaining follow-up is making authored negotiation demand records truly authoritative instead of leaving demand math inside the current negotiation service.
+No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. CodeReview-5-6-2 resolved the authored negotiation demand gap by making content-supplied demands authoritative in the runtime flow.
 
 ## Audit Scope
 
@@ -47,6 +47,7 @@ The active roadmap records the following completed gates:
 | Phase 5-27 | `74/74` | `845/845` | `0` warnings | `98` existing warnings | Clean demos passed |
 | Phase 5-28 | `76/76` | `847/847` | `0` warnings | `98` existing warnings | Clean demos passed |
 | Phase 6-29 | `104/104` | `851/851` | `0` warnings | `98` existing warnings | Clean battle, field, save, and Training Annex demos passed |
+| CodeReview-5-6 follow-ups | `94/94` | `858/858` | `0` warnings | `98` existing warnings | Clean battle, field, and save demos passed |
 
 The Phase 6-29 gate also records:
 
@@ -168,7 +169,7 @@ The implementation also handles non-mutating outcomes:
 
 The content record has two authored questions, answer scores, familiar dialogue, and one `sample_macca` demand record. Tests verify the negotiation record exists, has the expected shape, and participates in the clean host proof.
 
-**Review conclusion:** implemented correctly for a first clean negotiation slice. The largest remaining design gap is that authored demand records are not yet authoritative in runtime behavior.
+**Review conclusion:** implemented correctly for a first clean negotiation slice. After CodeReview-5-6-2, authored demand records are now authoritative when the host supplies them to the framework runtime request.
 
 ## Findings
 
@@ -198,7 +199,7 @@ Training Annex adds host restore checks for some role mistakes, such as enemy ac
 
 CodeReview-5-6-1 verification: focused persistence and party-stock coverage passed `30/30` tests with no failures or skips.
 
-### Medium: Authored negotiation demands are present in content but not yet rule-authoritative
+### Medium (resolved by CodeReview-5-6-2): Authored negotiation demands were present in content but not rule-authoritative
 
 `training_annex_slice.negotiations.json` includes:
 
@@ -214,11 +215,21 @@ CodeReview-5-6-1 verification: focused persistence and party-stock coverage pass
 ]
 ```
 
-However, `TrainingAnnexNegotiationController.BuildRequest` maps questions and familiar dialogue into `NegotiationSessionRequest`, while `NegotiationSessionService.ResolveDemandsAsync` calculates its own Macca demand from target level and actor luck.
+Earlier, `TrainingAnnexNegotiationController.BuildRequest` mapped questions and familiar dialogue into `NegotiationSessionRequest`, while `NegotiationSessionService.ResolveDemandsAsync` calculated its own Macca demand from target level and actor luck.
 
-That means the content proves the schema surface exists, but the runtime does not yet use the authored demand amount or weight. This is acceptable for Phase 6-29 only because the roadmap explicitly says authored demand-policy binding remains future work.
+That meant the content proved the schema surface existed, but the runtime did not use the authored demand amount or weight.
 
-**Recommended follow-up:** introduce a framework demand-policy binding or extend the negotiation request so authored demands become the source of runtime demand selection.
+**Resolution:** CodeReview-5-6-2 adds `NegotiationRuntimeDemand` and extends `NegotiationSessionRequest` with an immutable demand list. When demands are supplied, `NegotiationSessionService` selects them by authored weight and executes the typed demand instead of calculating level/luck Macca internally. The older calculated path remains only as fallback compatibility for callers that do not supply authored demands.
+
+Training Annex now maps `steady_sample.demands[0]` through a host-owned demand vocabulary mapping:
+
+- `demandId: sample_macca`
+- `parameters.amount: 50`
+- runtime kind: `Macca`
+
+The clean host now spends the authored `50` Macca, not the old internally calculated `86`. A test-only content source changes the amount to `30` and proves the runtime result follows the authored parameter. The unaffordable authored-demand path now fails before the demand prompt and before wallet or Demon-stock mutation.
+
+CodeReview-5-6-2 verification added focused runtime and host tests for authored amount selection, unaffordable authored demands, and Training Annex content parameter mapping. The focused negotiation/content gate passed `94/94`, the full suite passed `858/858`, the framework build reported `0` warnings, the solution build retained the existing `98` console-host warnings, `git diff --check` passed, the refined framework forbidden-reference search returned no matches, and `Data/Jsons` remained unchanged.
 
 ### Low: `missing_active_demon` sentinel should become an explicit host result
 
@@ -234,11 +245,9 @@ This keeps behavior safe, but it mixes a host presentation condition with a fake
 
 **Recommended follow-up:** when Phase 6 is expanded, select from a list of recruitable encounter participants instead of a fixed sample instance.
 
-### Low: Add one clean-host insufficient-Macca regression
+### Low (resolved by CodeReview-5-6-2): Add one clean-host insufficient-Macca regression
 
-The framework negotiation service supports `InsufficientMacca`, and the Training Annex controller handles wallet spend rejection. The current host tests already cover success, refusal, and familiar repeat behavior. A targeted host test for the insufficient-Macca path would close a useful gap: successful mood plus impossible donation should not mutate Demon stock or wallet.
-
-**Recommended follow-up:** add a `CleanTrainingAnnexPlay_NegotiationInsufficientMaccaDoesNotMutateStockOrWallet` style test when demand binding is revisited.
+CodeReview-5-6-2 adds the clean-host insufficient-Macca regression alongside authored demand binding. The test proves a successful mood with an unaffordable authored demand does not prompt for demand selection, spend Macca, recruit the target, or mutate Demon stock.
 
 ## Hardcoding Review
 
@@ -253,7 +262,7 @@ The following should not graduate into framework-level assumptions:
 - fixed negotiation target selection;
 - fixed sample party operation menu;
 - sentinel runtime IDs for missing actors;
-- internally calculated negotiation demands when content authored a demand record.
+- internally calculated negotiation demands when a caller supplies authored demand records.
 
 The framework itself remains clean of console, filesystem, Godot, Newtonsoft, `Database`, `Combatant`, `Persona`, and legacy DTO dependencies in this area.
 
@@ -268,7 +277,7 @@ The next phase may proceed, provided we keep the current status honest:
 - `party_operations`: `parallel_partial`
 - `negotiation_and_recruitment`: `parallel_partial`
 
-No capability should be promoted to `clean_parity` yet. Full parity still requires real consumer migration outside the Training Annex proof, stronger save-invariant validation, authored negotiation demand binding, and broader gameplay integration.
+No capability should be promoted to `clean_parity` yet. Full parity still requires real consumer migration outside the Training Annex proof and broader gameplay integration.
 
 ## Recommended Follow-Up Queue
 
@@ -276,9 +285,9 @@ No capability should be promoted to `clean_parity` yet. Full parity still requir
    Framework validation now rejects duplicate party/stock references, active party overflow, Demon stock overflow, active/reserve overlap, and illegal active-form duplication while preserving the intentional active+owned Demon stock overlap.
 
 2. **CodeReview-5-6-2: Make authored negotiation demands authoritative.**
-   Bind `NegotiationDefinition.Demands` into the runtime demand flow instead of relying on service-owned Macca math.
+   Completed. `NegotiationDefinition.Demands` now flow into typed runtime demands for the clean Training Annex path, and the framework uses authored demand weights and operands when supplied.
 
 3. **CodeReview-5-6-3: Clean up Training Annex host seams.**
-   Replace the `missing_active_demon` sentinel and add the insufficient-Macca clean-host regression.
+   Replace the `missing_active_demon` sentinel. The insufficient-Macca clean-host regression was completed as part of CodeReview-5-6-2 because it directly proves authored-demand transaction safety.
 
 These follow-ups are quality improvements, not emergency blockers.
