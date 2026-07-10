@@ -674,6 +674,15 @@ Demonstrate clean shop/equipment services in the clean runtime.
 - Insufficient funds and no-restoration-needed states are disabled without mutating wallet or actor state.
 - Recovery/shop/economy verification passed `87/87` focused tests and `839/839` full-suite tests with no skips.
 
+### Phase 5-26 Active/Reserve Party Result
+
+- Training Annex play now hydrates Annex Mentor as a reserve support actor beside Echo Adept.
+- The live party is created through `RuntimePartyStockSnapshot` and `PartyStockTransitionService.AddPartyMember`, not through host-only list mutation.
+- The `Inspect Party` command presents the framework-owned active/reserve snapshot while keeping host presentation separate.
+- Manual and suspend save snapshots include the live active/reserve party state and restore it with the clean actor roster.
+- This remains `parallel_partial`: Persona stock, Demon stock, summon/return/dismiss, and broader party operations remain later capability work.
+- Phase 5-26 verification passed `88/88` focused tests and `843/843` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
+
 ### Work
 
 - Add a small shop interaction in Training Annex.
@@ -855,8 +864,8 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions. Phase 4-25 adds a clean Recovery Facility proof over the framework hospital service.
+Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions. Phase 4-25 adds a clean Recovery Facility proof over the framework hospital service. Phase 5-26 adds clean active/reserve party ownership: Annex Mentor is hydrated as a reserve support actor, the session creates a `RuntimePartyStockSnapshot` through `PartyStockTransitionService`, `Inspect Party` presents that snapshot, and saves restore the live party state.
 
-The next numbered capability is Phase 5-26, `active_and_reserve_party`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 5-27, `persona_and_demon_stock`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

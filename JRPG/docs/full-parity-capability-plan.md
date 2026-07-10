@@ -842,7 +842,13 @@ Full parity target:
 
 Clean console proof:
 
-- only needed once the clean demo has more than one party actor.
+- Phase 5-26 result:
+  - `--clean-training-annex-play` now hydrates Echo Adept as the active player actor and Annex Mentor as a reserve support actor from the original clean catalog.
+  - The session builds a `RuntimePartyStockSnapshot` through `PartyStockTransitionService.AddPartyMember` instead of hand-mutating host lists.
+  - The clean summary records the live party snapshot and transition evidence; the host can inspect party state through `Inspect Party`.
+  - Manual/suspend save snapshots include the live party stock and restore it with the actor roster.
+  - This remains `parallel_partial`: the original clean host proves active/reserve party ownership, but Persona/Demon stock and broader party operations remain later phases.
+  - Phase 5-26 verification passed `88/88` focused tests and `843/843` full-suite tests with no skips.
 
 ### 27. `persona_and_demon_stock`
 

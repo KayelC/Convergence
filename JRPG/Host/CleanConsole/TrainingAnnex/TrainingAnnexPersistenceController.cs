@@ -29,6 +29,7 @@ internal sealed class TrainingAnnexPersistenceController
         IRuntimeSavePolicyService savePolicy,
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
+        RuntimePartyStockSnapshot partyStock,
         RuntimeFieldSnapshot field,
         RuntimeKnowledgeSnapshot knowledge,
         RuntimeInventorySnapshot inventory,
@@ -53,6 +54,7 @@ internal sealed class TrainingAnnexPersistenceController
 
         RuntimeSaveGameSnapshot snapshot = BuildCurrentSaveSnapshot(
             roster,
+            partyStock,
             field,
             knowledge,
             inventory,
@@ -83,6 +85,7 @@ internal sealed class TrainingAnnexPersistenceController
         GameDataCatalog catalog,
         ICatalogBattleActorFactory actorFactory,
         TrainingAnnexActorRoster roster,
+        RuntimePartyStockSnapshot partyStock,
         RuntimeFieldSnapshot field,
         bool hasPendingHostAction,
         CancellationToken cancellationToken)
@@ -122,7 +125,7 @@ internal sealed class TrainingAnnexPersistenceController
         }
 
         TrainingAnnexSessionRestoreResult restore =
-            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster, actorFactory);
+            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster, partyStock, actorFactory);
         if (restore.Restored is null)
         {
             foreach (string diagnostic in restore.Diagnostics)
@@ -165,6 +168,7 @@ internal sealed class TrainingAnnexPersistenceController
 
     public static RuntimeSaveGameSnapshot BuildCurrentSaveSnapshot(
         TrainingAnnexActorRoster roster,
+        RuntimePartyStockSnapshot partyStock,
         RuntimeFieldSnapshot field,
         RuntimeKnowledgeSnapshot knowledge,
         RuntimeInventorySnapshot inventory,
@@ -196,6 +200,7 @@ internal sealed class TrainingAnnexPersistenceController
 
         return TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
             roster,
+            partyStock,
             field,
             knowledge,
             inventory,
@@ -207,6 +212,7 @@ internal sealed class TrainingAnnexPersistenceController
     private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
         RuntimeSaveGameSnapshot snapshot,
         TrainingAnnexActorRoster currentRoster,
+        RuntimePartyStockSnapshot currentPartyStock,
         ICatalogBattleActorFactory actorFactory)
     {
         var diagnostics = new List<string>();
@@ -214,9 +220,23 @@ internal sealed class TrainingAnnexPersistenceController
 
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
+        ValidateTrainingAnnexParty(snapshot.PartyStock, currentPartyStock, actors, diagnostics);
+
         if (!TryRestoreActor(currentRoster.Player, actors, actorFactory, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
         {
             diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
+        }
+
+        var supportMembers = new List<TrainingAnnexRuntimeActor>();
+        foreach (TrainingAnnexRuntimeActor support in currentRoster.SupportMembers)
+        {
+            if (!TryRestoreActor(support, actors, actorFactory, out TrainingAnnexRuntimeActor restoredSupport, out string? supportDiagnostic))
+            {
+                diagnostics.Add(supportDiagnostic ?? $"Saved support actor '{support.Actor.State.InstanceId}' could not be restored.");
+                continue;
+            }
+
+            supportMembers.Add(restoredSupport);
         }
 
         var enemies = new List<TrainingAnnexRuntimeActor>();
@@ -236,7 +256,7 @@ internal sealed class TrainingAnnexPersistenceController
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
         }
 
-        TrainingAnnexActorRoster roster = new(player, enemies);
+        TrainingAnnexActorRoster roster = new(player, supportMembers, enemies);
 
         RuntimeFieldSnapshot field = snapshot.Field ??
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -255,6 +275,7 @@ internal sealed class TrainingAnnexPersistenceController
         return new TrainingAnnexSessionRestoreResult(
             new TrainingAnnexRestoredSession(
                 roster,
+                snapshot.PartyStock,
                 field,
                 snapshot.Inventory,
                 snapshot.Wallet,
@@ -266,6 +287,71 @@ internal sealed class TrainingAnnexPersistenceController
                 winningTeam,
                 preparedEncounterIds),
             []);
+    }
+
+    private static void ValidateTrainingAnnexParty(
+        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyStockSnapshot currentPartyStock,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<string> diagnostics)
+    {
+        if (partyStock.Owner.InstanceId != currentPartyStock.Owner.InstanceId)
+        {
+            diagnostics.Add(
+                $"Saved party owner '{partyStock.Owner.InstanceId}' does not match expected owner '{currentPartyStock.Owner.InstanceId}'.");
+        }
+
+        if (partyStock.MaxActivePartySize != currentPartyStock.MaxActivePartySize)
+        {
+            diagnostics.Add(
+                $"Saved active party limit '{partyStock.MaxActivePartySize}' does not match expected limit '{currentPartyStock.MaxActivePartySize}'.");
+        }
+
+        if (!actors.TryGetValue(partyStock.Owner.InstanceId, out RuntimeActorSnapshot? owner))
+        {
+            return;
+        }
+
+        ValidateTrainingAnnexPartyTeam("active party", partyStock.ActiveParty, owner.Ownership.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("reserve party", partyStock.ReserveMembers, owner.Ownership.TeamId, actors, diagnostics);
+
+        if (partyStock.ActiveForm is not null)
+        {
+            diagnostics.Add(
+                $"Saved active form '{partyStock.ActiveForm.InstanceId}' is not supported by the Training Annex host.");
+        }
+
+        if (partyStock.PersonaStock.Count > 0)
+        {
+            diagnostics.Add("Saved Persona stock is not supported by the Training Annex host.");
+        }
+
+        if (partyStock.DemonStock.Count > 0)
+        {
+            diagnostics.Add("Saved Demon stock is not supported by the Training Annex host.");
+        }
+    }
+
+    private static void ValidateTrainingAnnexPartyTeam(
+        string listName,
+        IEnumerable<RuntimeActorReferenceSnapshot> references,
+        ContentId expectedTeamId,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<string> diagnostics)
+    {
+        foreach (RuntimeActorReferenceSnapshot reference in references)
+        {
+            if (!actors.TryGetValue(reference.InstanceId, out RuntimeActorSnapshot? actor))
+            {
+                continue;
+            }
+
+            if (actor.Ownership.TeamId != expectedTeamId)
+            {
+                diagnostics.Add(
+                    $"Saved {listName} actor '{reference.InstanceId}' belongs to team '{actor.Ownership.TeamId}', expected '{expectedTeamId}'.");
+            }
+        }
     }
 
     private static void ValidateTrainingAnnexField(
@@ -460,6 +546,7 @@ internal sealed record TrainingAnnexSessionRestoreResult
 
 internal sealed record TrainingAnnexRestoredSession(
     TrainingAnnexActorRoster Roster,
+    RuntimePartyStockSnapshot PartyStock,
     RuntimeFieldSnapshot Field,
     RuntimeInventorySnapshot Inventory,
     RuntimeWalletSnapshot Wallet,

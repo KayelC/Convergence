@@ -54,11 +54,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(source.DocumentRequests, summary.RequestedDocumentPaths);
         Assert.Equal(Qualified("echo_adept"), summary.PlayerEntityId);
         Assert.Equal(4, summary.PlayerLevel);
-        Assert.Equal(4, summary.ActorCount);
+        Assert.Equal(5, summary.ActorCount);
         Assert.Equal(3, summary.EnemyActorCount);
         Assert.Equal(
             [
                 Qualified("echo_adept"),
+                Qualified("annex_mentor"),
                 Qualified("ashling"),
                 Qualified("bramble_runner"),
                 Qualified("ward_shell")
@@ -67,11 +68,25 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(
             [
                 RuntimeInstanceId.Parse("echo_adept"),
+                RuntimeInstanceId.Parse("support_annex_mentor"),
                 RuntimeInstanceId.Parse("enemy_ashling"),
                 RuntimeInstanceId.Parse("enemy_bramble_runner"),
                 RuntimeInstanceId.Parse("enemy_ward_shell")
             ],
             summary.ActorInstanceIds);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("echo_adept")],
+            summary.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("support_annex_mentor")],
+            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
+        TrainingAnnexPartyTransitionEvidence partyTransition = Assert.Single(summary.PartyTransitions);
+        Assert.Equal("add_party_member", partyTransition.Operation);
+        Assert.Equal(PartyStockTransitionCode.Applied, partyTransition.Code);
+        Assert.Equal(1, partyTransition.ActiveCountBefore);
+        Assert.Equal(0, partyTransition.ReserveCountBefore);
+        Assert.Equal(1, partyTransition.ActiveCountAfter);
+        Assert.Equal(1, partyTransition.ReserveCountAfter);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
@@ -169,7 +184,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Exit",
                 "Save / Load",
                 "Training Supply",
-                "Recovery Facility"
+                "Recovery Facility",
+                "Inspect Party"
             ],
                 menu.Options);
         }
@@ -191,7 +207,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Exit",
                 "Save / Load",
                 "Training Supply",
-                "Recovery Facility"
+                "Recovery Facility",
+                "Inspect Party"
             ],
                 menu.Options);
         }
@@ -201,14 +218,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Clean Training Annex session booted.", text, StringComparison.Ordinal);
         Assert.Contains("without legacy Database startup", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
-        Assert.Contains("Hydrated clean actor roster with 4 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
+        Assert.Contains("Hydrated clean actor roster with 5 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
+        Assert.Contains("Party setup: 1 active, 1 reserve.", text, StringComparison.Ordinal);
         Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: convergence.training_annex_slice:training_annex_entrance.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: returned to Staging Area; location Staging Area (convergence.training_annex_slice:staging_area).", text, StringComparison.Ordinal);
-        Assert.Contains("Actor roster: 4 actor(s).", text, StringComparison.Ordinal);
+        Assert.Contains("Actor roster: 5 actor(s).", text, StringComparison.Ordinal);
         Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 28/28.", text, StringComparison.Ordinal);
+        Assert.Contains("Reserve: Annex Mentor; instance support_annex_mentor; level 5;", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources: hp 65/65, sp 29/29.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources: hp 75/75, sp 22/22.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources: hp 100/100, sp 27/27.", text, StringComparison.Ordinal);
@@ -225,6 +244,38 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Level-up events: 4.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("Clean Training Annex session exited.", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_InspectPartyUsesFrameworkPartySnapshot()
+    {
+        var io = new ScriptedGameIO().QueueMenu(13, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("echo_adept")],
+            summary.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("support_annex_mentor")],
+            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
+        TrainingAnnexPartyTransitionEvidence transition = Assert.Single(summary.PartyTransitions);
+        Assert.Equal("add_party_member", transition.Operation);
+        Assert.Equal(PartyStockTransitionCode.Applied, transition.Code);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("support_annex_mentor")],
+            transition.AffectedInstanceIds);
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Party: active [Echo Adept (echo_adept)]; reserve [Annex Mentor (support_annex_mentor)].",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
     }
 
     [Fact]
@@ -2264,6 +2315,46 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsEnemyInSavedPartyStockBeforeMutation()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+        {
+            RuntimeActorReferenceSnapshot enemyReference = Reference(
+                Assert.Single(snapshot.Actors, actor =>
+                    actor.Identity.InstanceId == RuntimeInstanceId.Parse("enemy_ashling")));
+            RuntimePartyStockSnapshot corruptedParty = new(
+                snapshot.PartyStock.Owner,
+                snapshot.PartyStock.OwnerLevel,
+                activeParty: snapshot.PartyStock.ActiveParty,
+                reserveMembers: [enemyReference],
+                maxActivePartySize: snapshot.PartyStock.MaxActivePartySize);
+
+            return CopySave(snapshot, partyStock: corruptedParty);
+        });
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("support_annex_mentor")],
+            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
+        Assert.Contains(
+            "Manual load rejected: Saved reserve party actor 'enemy_ashling' belongs to team 'enemy_team', expected 'player_team'.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_ManualLoadRejectsSavedContextThatWasNotSaveEligible()
     {
         RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(
@@ -2359,8 +2450,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimePartyStockSnapshot partyStock = new TrainingAnnexPartyController()
+            .CreateInitialParty(roster)
+            .Snapshot;
         RuntimeSaveGameSnapshot snapshot = TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
             roster,
+            partyStock,
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance)),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot([new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
@@ -2375,6 +2470,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         Assert.True(validation.IsValid);
         Assert.Equal(RuntimeSaveGameSnapshot.CurrentContractVersion, snapshot.ContractVersion);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("echo_adept")],
+            snapshot.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("support_annex_mentor")],
+            snapshot.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
         Assert.Equal("True", snapshot.HostContext[ContentId.Parse("ashling_trigger_consumed")]);
         Assert.Equal("True", snapshot.HostContext[ContentId.Parse("prepared_battle_started")]);
         Assert.Equal("Victory", snapshot.HostContext[ContentId.Parse("prepared_battle_outcome")]);
@@ -2650,8 +2751,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimePartyStockSnapshot partyStock = new TrainingAnnexPartyController()
+            .CreateInitialParty(roster)
+            .Snapshot;
         RuntimeSaveGameSnapshot snapshot = TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
             roster,
+            partyStock,
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea)),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot(
@@ -2668,12 +2773,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeSaveGameSnapshot snapshot,
         IEnumerable<RuntimeActorSnapshot>? actors = null,
         RuntimeFieldSnapshot? field = null,
-        IEnumerable<ContentPackIdentity>? contentPacks = null) =>
+        IEnumerable<ContentPackIdentity>? contentPacks = null,
+        RuntimePartyStockSnapshot? partyStock = null) =>
         new(
             snapshot.FrameworkVersion,
             contentPacks ?? snapshot.ContentPacks,
             actors ?? snapshot.Actors,
-            snapshot.PartyStock,
+            partyStock ?? snapshot.PartyStock,
             snapshot.Inventory,
             snapshot.Equipment,
             snapshot.Wallet,
@@ -2710,6 +2816,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
             actor.BaseResourceValues,
             actor.VitalResourceId,
             actor.CapabilityIds);
+
+    private static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
+        new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);
 
     private static CleanTrainingAnnexPlayHost CreateHost(
         ScriptedGameIO io,

@@ -1,6 +1,6 @@
 # Phase 4 Code Review And Readiness
 
-> **Status: Active implementation audit; Phase 4-21 through Phase 4-25 are committed on `track-12-recovery` at `928288c` (`4-25`).** This report is derived from source, tests, builds, and executable demos. It does not authorize legacy removal and does not promote any protected capability to `clean_parity`.
+> **Status: Post-follow-up implementation audit; Phase 4-21 through Phase 4-25 and their two review follow-ups are present on `track-12-recovery` at `74db5f4`.** This report is derived from source, tests, builds, and executable demos. It does not authorize legacy removal and does not promote any protected capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -8,12 +8,12 @@ Phase 4 was implemented successfully as a framework-first resource-management sl
 
 The clean host now proves inventory quantities, equipment ownership, wallet/economy mutation, catalog-backed shop transactions, and hospital-style recovery through framework-owned services. The implementation is not just console text: the real state changes flow through typed framework snapshots and services such as `RuntimeInventorySnapshot`, `RuntimeEquipmentSnapshot`, `RuntimeWalletSnapshot`, `IShopTransactionService`, `IHospitalRestorationService`, and ruleset-bound `ResourceManagementRulesetServices`.
 
-No critical blocker was found. Phase 4 is suitable as a baseline for Phase 5, with two recommended quality follow-ups before the next major dependency is built on top of it:
+No critical or high-severity blocker remains. The two quality follow-ups identified by the first Phase 4 review are now resolved:
 
-1. Surface shop-offer resolution diagnostics in the clean host instead of silently omitting invalid offers. **Resolved after this review by carrying `RuntimeShopOfferResolutionDiagnostic` values into the clean host summary and visible output.**
-2. Add a host-level recovery test proving live ailment and encounter-persistent status cleanup, not only HP/SP restoration and wallet spending. **Resolved after this review; the test exposed that `OtherStatuses` were not cleared by field-transition cleanup, and the framework cleanup rule now clears them.**
+1. Shop-offer resolution diagnostics are surfaced in the clean host instead of silently omitting invalid offers.
+2. Recovery Facility live cleanup is covered at host level, and the test exposed and fixed a real framework cleanup gap for `OtherStatuses`.
 
-Those follow-ups are not evidence that Phase 4 failed. They are the sort of sharp edges that become expensive if left invisible.
+Phase 4 is suitable as the current clean-resource baseline for Phase 5. The remaining notes are mostly future production-completeness items, not correctness blockers for the current framework slice.
 
 ## Audit Scope
 
@@ -24,6 +24,8 @@ Those follow-ups are not evidence that Phase 4 failed. They are the sort of shar
 - Phase 4-23: economy and wallet authority.
 - Phase 4-24: Training Supply shop.
 - Phase 4-25: Recovery Facility.
+- Post-review follow-up: shop-offer diagnostics.
+- Post-review follow-up: Recovery Facility live cleanup and framework encounter-status cleanup.
 - Training Annex clean host code that consumes those systems.
 - Framework resource-management and equipment-profile services.
 - Focused framework and host tests supporting the Phase 4 slice.
@@ -31,24 +33,24 @@ Those follow-ups are not evidence that Phase 4 failed. They are the sort of shar
 ### Repository state reviewed
 
 - Branch: `track-12-recovery`.
-- Current HEAD: `928288c` (`4-25`).
-- Worktree: clean before this review document was added.
+- Current HEAD reviewed: `74db5f4`.
+- Worktree: clean before this document refresh.
 - `Data/Jsons`: unchanged.
 
 ## Verification Evidence
 
-The Phase 4-25 gate recorded the following checks:
+The latest post-follow-up gate recorded the following checks:
 
 | Check | Result |
 | --- | --- |
-| Focused Phase 4 tests | 87 passed, 0 failed, 0 skipped |
-| Full solution tests | 839 passed, 0 failed, 0 skipped |
+| Focused recovery/lifecycle follow-up tests | 6 passed, 0 failed, 0 skipped |
+| Full solution tests | 841 passed, 0 failed, 0 skipped |
 | Framework nonincremental build | succeeded, 0 warnings |
 | Full solution nonincremental build | succeeded, 98 existing legacy-host warnings |
 | Clean battle demo | passed |
 | Clean field demo | passed |
 | Clean save demo | passed |
-| Training Annex runtime/play coverage | passed |
+| Clean Training Annex runtime demo | passed |
 | `git diff --check` | passed; only Git line-ending notices were present |
 | Framework forbidden-reference search | no framework leaks of console, Godot, filesystem, Newtonsoft, `Database`, `SkillData`, `ItemData`, or legacy host types |
 | `Data/Jsons` worktree check | clean |
@@ -185,6 +187,8 @@ The menu and the mutation path are aligned. Disabled rows are based on framework
 
 Clean shop stock is not persistent yet. `RuntimeShopOfferSnapshot.StockAvailable` is checked during a buy, but there is no `RuntimeShopStateSnapshot` that decrements and persists limited stock across visits. That is acceptable for the current Training Annex proof, but it should be designed before production shops rely on limited stock.
 
+The earlier diagnostic blind spot is resolved. Invalid or unsupported authored offers now produce `RuntimeShopOfferResolutionDiagnostic` values, visible host output, and summary evidence instead of disappearing from the buy list without explanation.
+
 ## Phase 4-25 Review: Hospital
 
 ### What was built
@@ -206,28 +210,30 @@ The important bit is that assessment and execution are the same framework operat
 
 ### Remaining limitation
 
-Host-level tests currently prove HP/SP restoration, wallet spending, insufficient-funds behavior, and no-restoration behavior. Framework tests prove ailment and encounter-persistence cleanup in the service result. The live Training Annex host should still get one focused test proving ailments/statuses are actually removed from the actor object after treatment.
+Recovery is still a single-actor Training Annex proof, not a complete hospital UI or multi-patient production system. However, the important authority question is now covered: treatment mutates the same live `RuntimeActorState` used by battle, field actions, summaries, and save validation. The host-level follow-up test proves ailments, guard, stat stages, charges, shields, affinity overrides, and other statuses are removed from the actor after successful treatment.
 
 ## Findings
 
 ### Resolved: Invalid shop offers are no longer silently omitted from the clean host
 
-`TrainingAnnexShopController.ResolveShopOffers(...)` resolves each authored offer, but failed resolutions return `null` and are removed by `.OfType<TrainingAnnexResolvedShopOffer>()`.
+The first review found that `TrainingAnnexShopController.ResolveShopOffers(...)` resolved each authored offer but effectively hid failures by omitting bad offers from the result set.
 
-Code evidence:
+Current code evidence:
 
-- `Host/CleanConsole/TrainingAnnex/TrainingAnnexShopController.cs:339`
-- `Host/CleanConsole/TrainingAnnex/TrainingAnnexShopController.cs:340`
-- `Host/CleanConsole/TrainingAnnex/TrainingAnnexShopController.cs:342`
-- `Host/CleanConsole/TrainingAnnex/TrainingAnnexShopController.cs:352`
+- `Host/CleanConsole/TrainingAnnex/TrainingAnnexShopController.cs`
+  - `TrainingAnnexShopOfferResolutionResult` carries both resolved offers and diagnostics.
+  - `OpenAsync(...)` publishes each `RuntimeShopOfferResolutionDiagnostic` as visible host output.
+  - transaction results carry the same diagnostics into `CleanTrainingAnnexPlaySummary.ShopOfferDiagnostics`.
+- `Convergence.Tests/Host/CleanTrainingAnnexPlayHostTests.cs`
+  - `CleanTrainingAnnexPlay_ShopReportsUnsupportedRuntimeOfferDiagnostics` proves an unsupported price policy is visible, does not create a fallback transaction, and does not mutate wallet or inventory.
 
 Why this matters:
 
-The framework resolver has useful diagnostics for missing equipment definitions, unsupported price policies, invalid fixed prices, and unsupported stock policies. The Training Annex host currently hides those diagnostics by dropping the bad offer. With the present valid sample content this does not break behavior, but it could make future content errors look like a mysteriously empty shop row.
+The framework resolver has useful diagnostics for missing equipment definitions, unsupported price policies, invalid fixed prices, and unsupported stock policies. The original host behavior hid those diagnostics by dropping the bad offer. With valid sample content this did not break behavior, but future content errors could have looked like mysteriously missing shop rows.
 
-Recommended resolution:
+Resolution:
 
-Implemented immediately after this review. `ResolveShopOffers(...)` now returns both valid resolved offers and `RuntimeShopOfferResolutionDiagnostic` values. The clean host publishes each diagnostic as `Shop offer diagnostic: [...]`, carries the diagnostics into `CleanTrainingAnnexPlaySummary.ShopOfferDiagnostics`, and keeps valid offers available. A test-only policy-priced offer proves unsupported runtime offers are visible and do not create fallback transactions.
+Implemented. `ResolveShopOffers(...)` now returns both valid resolved offers and `RuntimeShopOfferResolutionDiagnostic` values. The clean host publishes each diagnostic as `Shop offer diagnostic: [...]`, carries the diagnostics into `CleanTrainingAnnexPlaySummary.ShopOfferDiagnostics`, and keeps valid offers available.
 
 ### Resolved: Recovery live cleanup now has host-level and framework-level coverage
 
@@ -237,11 +243,11 @@ Implemented immediately after this review. `ResolveShopOffers(...)` now returns 
 - `Host/CleanConsole/TrainingAnnex/TrainingAnnexRecoveryFacilityController.cs:158`
 - `Host/CleanConsole/TrainingAnnex/TrainingAnnexRecoveryFacilityController.cs:159`
 
-The host tests added for Phase 4-25 focused on HP/SP, wallet, insufficient funds, and no-op treatment. They did not create a live ailment or encounter-persistent status and prove it was removed from the actor.
+The first review noted that the host tests added for Phase 4-25 focused on HP/SP, wallet, insufficient funds, and no-op treatment. They did not yet create a live ailment or encounter-persistent status and prove it was removed from the actor.
 
-Recommended resolution:
+Resolution:
 
-Implemented immediately after this review. A focused controller test now puts an ailment, guard state, stat stage, charge, shield, affinity override, and other status on the real catalog-created Echo Adept, runs the Recovery Facility, and asserts the same live `RuntimeActorState` is clean afterward.
+Implemented. A focused controller test now puts an ailment, guard state, stat stage, charge, shield, affinity override, and other status on the real catalog-created Echo Adept, runs the Recovery Facility, and asserts the same live `RuntimeActorState` is clean afterward.
 
 The test exposed a real framework gap: `BattleStatusLifecycleService.Cleanup(FieldTransition)` called `ClearEncounterStatuses()`, but `ClearEncounterStatuses()` did not remove `OtherStatuses` even though the Recovery Facility classified them as encounter-persistent. `RuntimeActorState.ClearEncounterStatuses()` now clears other statuses, and `BattleStatusLifecycleTests.Cleanup_ClearsTransientAndEncounterStatusesWithoutRemovingAilments` covers the rule directly.
 
@@ -311,7 +317,7 @@ There are host/content-specific defaults in the Training Annex host:
 
 Those are acceptable because Training Annex is an original sample host. They do not leak into `JRPG.Framework`, and they do not determine framework rules. The rules still come from catalog definitions, ruleset binding, and framework services.
 
-The one place that needs attention is not hardcoding but diagnostic loss: invalid shop offers are currently hidden from the host by omission.
+The earlier diagnostic-loss issue is resolved. Invalid shop offers are now visible as diagnostics rather than being hidden by omission.
 
 ## Readiness For Phase 5
 

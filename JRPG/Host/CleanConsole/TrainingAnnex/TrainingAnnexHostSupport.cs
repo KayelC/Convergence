@@ -20,14 +20,20 @@ internal sealed record TrainingAnnexRuntimeActor(
 
 internal sealed record TrainingAnnexActorRoster
 {
-    public TrainingAnnexActorRoster(TrainingAnnexRuntimeActor player, IEnumerable<TrainingAnnexRuntimeActor> enemies)
+    public TrainingAnnexActorRoster(
+        TrainingAnnexRuntimeActor player,
+        IEnumerable<TrainingAnnexRuntimeActor> supportMembers,
+        IEnumerable<TrainingAnnexRuntimeActor> enemies)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
+        SupportMembers = Array.AsReadOnly(
+            (supportMembers ?? throw new ArgumentNullException(nameof(supportMembers))).ToArray());
         Enemies = Array.AsReadOnly((enemies ?? throw new ArgumentNullException(nameof(enemies))).ToArray());
-        AllActors = Array.AsReadOnly([Player, .. Enemies]);
+        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. Enemies]);
     }
 
     public TrainingAnnexRuntimeActor Player { get; }
+    public IReadOnlyList<TrainingAnnexRuntimeActor> SupportMembers { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> Enemies { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> AllActors { get; }
 }
@@ -221,6 +227,20 @@ internal static class TrainingAnnexHostSupport
             AddActorDiagnostics("player", playerResult.Diagnostics, diagnostics);
         }
 
+        CatalogBattleActorCreationResult mentorResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("annex_mentor"),
+            RuntimeInstanceId.Parse("support_annex_mentor"),
+            PlayerTeam,
+            5,
+            new RuntimeProgressionSnapshot(5, 0, 0, 4),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!mentorResult.IsSuccess)
+        {
+            AddActorDiagnostics("support", mentorResult.Diagnostics, diagnostics);
+        }
+
         IReadOnlyList<CatalogBattleActorCreationRequest> enemyRequests = CreateEnemyActorRequests(catalog, diagnostics);
         var enemies = new List<TrainingAnnexRuntimeActor>();
         foreach (CatalogBattleActorCreationRequest request in enemyRequests)
@@ -235,7 +255,7 @@ internal static class TrainingAnnexHostSupport
             enemies.Add(new TrainingAnnexRuntimeActor("Enemy", enemyResult.RequireActor()));
         }
 
-        if (diagnostics.Count > 0 || playerResult.Actor is null)
+        if (diagnostics.Count > 0 || playerResult.Actor is null || mentorResult.Actor is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
@@ -243,6 +263,7 @@ internal static class TrainingAnnexHostSupport
         return new TrainingAnnexActorRosterResult(
             new TrainingAnnexActorRoster(
                 new TrainingAnnexRuntimeActor("Player", playerResult.RequireActor()),
+                [new TrainingAnnexRuntimeActor("Reserve", mentorResult.RequireActor())],
                 enemies));
     }
 
@@ -297,18 +318,38 @@ internal static class TrainingAnnexHostSupport
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
         RuntimeSessionProgressSnapshot? session = null,
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null) =>
+        BuildStartupSaveSnapshot(
+            roster,
+            null,
+            field,
+            knowledge,
+            inventory,
+            wallet,
+            session,
+            hostContext);
+
+    public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyStockSnapshot? partyStock,
+        RuntimeFieldSnapshot? field = null,
+        RuntimeKnowledgeSnapshot? knowledge = null,
+        RuntimeInventorySnapshot? inventory = null,
+        RuntimeWalletSnapshot? wallet = null,
+        RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
         RuntimeActorSnapshot playerSnapshot = roster.Player.Actor.State.ToSnapshot();
-        IReadOnlyList<RuntimeActorSnapshot> enemySnapshots = roster.Enemies
-            .Select(enemy => enemy.Actor.State.ToSnapshot())
+        IReadOnlyList<RuntimeActorSnapshot> actorSnapshots = roster.AllActors
+            .Select(actor => actor.Actor.State.ToSnapshot())
             .ToArray();
         RuntimeActorReferenceSnapshot playerReference = Reference(playerSnapshot);
         return BuildStartupSaveSnapshot(
-            [playerSnapshot, .. enemySnapshots],
+            actorSnapshots,
             playerReference,
+            partyStock,
             field,
             knowledge,
             inventory,
@@ -334,6 +375,7 @@ internal static class TrainingAnnexHostSupport
         return BuildStartupSaveSnapshot(
             [actorSnapshot],
             actorReference,
+            null,
             field,
             knowledge,
             inventory,
@@ -345,6 +387,7 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         IReadOnlyList<RuntimeActorSnapshot> actors,
         RuntimeActorReferenceSnapshot playerReference,
+        RuntimePartyStockSnapshot? partyStock = null,
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
@@ -367,7 +410,7 @@ internal static class TrainingAnnexHostSupport
             SemanticVersion.Parse("0.1.0"),
             [PackIdentity],
             actors,
-            new RuntimePartyStockSnapshot(
+            partyStock ?? new RuntimePartyStockSnapshot(
                 playerReference,
                 playerSnapshot.Progression.Level,
                 activeParty: [playerReference]),
@@ -410,6 +453,9 @@ internal static class TrainingAnnexHostSupport
 
     public static RuntimeActorReferenceSnapshot Reference(RuntimeActorSnapshot actor) =>
         new(actor.Identity.InstanceId, actor.Identity.EntityDefinitionId, actor.Identity.DisplayName);
+
+    public static RuntimeActorReferenceSnapshot Reference(TrainingAnnexRuntimeActor actor) =>
+        Reference(actor.Actor.State.ToSnapshot());
 
     public static IReadOnlyDictionary<ContentId, decimal> InitialBaseResourceValues(int level) =>
         new Dictionary<ContentId, decimal>

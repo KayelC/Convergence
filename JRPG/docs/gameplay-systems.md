@@ -110,6 +110,8 @@ Phase 4-24 adds the first clean shop interaction for original content. Training 
 
 Phase 4-25 adds the clean Training Annex recovery facility. Treatment cost and eligibility come from the framework hospital service, successful treatment spends Macca through the bound economy service, restores HP/SP, removes removable ailments, and clears encounter-persistent clean battle state. Insufficient funds and no-restoration-needed states are disabled and non-mutating.
 
+Phase 5-26 adds the first clean active/reserve party proof for original content. `--clean-training-annex-play` hydrates Annex Mentor as a reserve support actor, creates a `RuntimePartyStockSnapshot` with Echo Adept active and Mentor reserve through `PartyStockTransitionService`, exposes `Inspect Party`, and includes that party stock in save/load validation. This is not Persona/Demon stock and does not add summon/return/dismiss operations.
+
 Track O8 keeps those rules unchanged and adds typed console-host presentation results for shop command selection, buy/sell offers, confirmation, transaction messages, hospital patient selection, and hospital treatment display. Shop and hospital menus still use legacy `Database` records, metadata repair, exact labels, and current HP/SP-based hospital eligibility behavior.
 
 Important rules:

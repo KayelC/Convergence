@@ -15,6 +15,7 @@ internal enum CleanTrainingAnnexPlayCommand
 {
     InspectSession,
     InspectActor,
+    InspectParty,
     ResolveStats,
     RecalculateResources,
     ApplyVictoryExperience,
@@ -69,6 +70,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int EnemyActorCount,
     IReadOnlyList<ContentId> ActorEntityIds,
     IReadOnlyList<RuntimeInstanceId> ActorInstanceIds,
+    RuntimePartyStockSnapshot PartyStock,
+    IReadOnlyList<TrainingAnnexPartyTransitionEvidence> PartyTransitions,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -300,6 +303,10 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
+        var partyController = new TrainingAnnexPartyController();
+        TrainingAnnexPartySetupResult partySetup = partyController.CreateInitialParty(roster);
+        RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
+        var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
             inventoryTransitions);
@@ -382,6 +389,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"Hydrated clean actor roster with {roster.AllActors.Count} actor(s): {roster.Enemies.Count} enemy model(s).",
             cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Party setup: {partyStock.ActiveParty.Count} active, {partyStock.ReserveMembers.Count} reserve.",
+            cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync("Field location: Staging Area.", cancellationToken)
             .ConfigureAwait(false);
 
@@ -397,6 +407,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                 LastSummary = CreateSummary(
                     request,
                     roster,
+                    partyStock,
+                    partyTransitions,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -464,6 +476,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                 case CleanTrainingAnnexPlayCommand.InspectActor:
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
                     break;
+                case CleanTrainingAnnexPlayCommand.InspectParty:
+                    await partyController.PrintPartyAsync(partyStock, _eventSink, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
                         roster.Player.Actor.State.ToSnapshot().Equipment,
@@ -493,6 +509,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
                         TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
+                            partyStock,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
@@ -520,6 +537,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                         LastSummary = CreateSummary(
                             request,
                             roster,
+                            partyStock,
+                            partyTransitions,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -880,6 +899,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             savePolicy,
                             catalog,
                             roster,
+                            partyStock,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
@@ -918,6 +938,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             catalog,
                             actorFactory,
                             roster,
+                            partyStock,
                             field,
                             preparedEncounter is not null && !preparedBattleStarted,
                             cancellationToken).ConfigureAwait(false);
@@ -925,6 +946,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         if (loadResult.Restored is TrainingAnnexRestoredSession restored)
                         {
                             roster = restored.Roster;
+                            partyStock = restored.PartyStock;
                             field = restored.Field;
                             inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
                             wallet = restored.Wallet;
@@ -1104,6 +1126,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenRecoveryFacility,
             "Recovery Facility"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.InspectParty,
+            "Inspect Party"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1468,6 +1493,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static CleanTrainingAnnexPlaySummary CreateSummary(
         ContentPackTextRequest request,
         TrainingAnnexActorRoster roster,
+        RuntimePartyStockSnapshot partyStock,
+        IReadOnlyList<TrainingAnnexPartyTransitionEvidence> partyTransitions,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1533,6 +1560,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.Enemies.Count,
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
             roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
+            partyStock,
+            partyTransitions.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),
