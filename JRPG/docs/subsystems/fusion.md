@@ -1,6 +1,6 @@
 # Fusion Subsystem
 
-> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets.
+> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets. Phase 7-30 adds clean catalog-backed result calculation for original content, without replacing the Cathedral transaction flow.
 
 ## Purpose
 
@@ -10,6 +10,7 @@
 
 - `FusionConductor`: root Cathedral workflow and menu loop.
 - `JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs`: framework contracts and services for result resolution, planning, slot calculation, mutation, accident inheritance, preview snapshots, transaction assessment, and Compendium state.
+- `JRPG.Framework/Logic/Fusion/CatalogFusionContentRepository.cs`: framework adapter that feeds qualified `GameDataCatalog` fusion recipes, entities, and skills into `IFusionContentRepository` for clean original content.
 - `LegacyFusionContentAdapter`: console adapter that maps `Database.FusionRecipes`, `PersonaData`, `SkillData`, and live participants into framework snapshots.
 - `FusionCalculator`: compatibility facade over the framework result resolver and planning helpers.
 - `FusionMutator`: dispatches committed transactions and handles compendium recall.
@@ -59,6 +60,8 @@ The conductor creates transient `Combatant` wrappers for persona participants so
 
 Recipe lookup is parent-order neutral. Specific ID pairs are checked before race pairs.
 
+For clean original content, `CatalogFusionContentRepository` adapts catalog-authored recipes into the same resolver contract. Structured recipe results preserve operations such as `create_entity` and `rank_offset` instead of relying on legacy string tokens. The Training Annex host currently exposes this only as a non-mutating `Calculate Fusion Results` proof command.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.
@@ -94,7 +97,8 @@ Future knowledge integration: once clean battle UI and clean Compendium ownershi
 
 ## Important State And Invariants
 
-- Interactive fusion still requires `Database.FusionRecipes` and `Database.Personas`; the legacy content adapter is the only layer that reads them for framework fusion services.
+- Interactive Cathedral fusion still requires `Database.FusionRecipes` and `Database.Personas`; the legacy content adapter is the only layer that reads them for framework fusion services.
+- Clean original-content fusion result calculation can use catalog fusion recipes directly through `CatalogFusionContentRepository`.
 - Operators use `DemonStock`; Wild Cards use `ActivePersona` and `PersonaStock`.
 - Active demons are still owned through unified `DemonStock`.
 - Mitama plus Mitama is unsupported.
@@ -105,14 +109,16 @@ Future knowledge integration: once clean battle UI and clean Compendium ownershi
 
 ## Data Dependencies
 
-- `fusion_table.json` drives specific ID, race, and rank operation mapping.
+- `fusion_table.json` drives the protected legacy Cathedral specific ID, race, and rank operation mapping.
+- Clean catalog packs may provide fusion recipe documents for framework-owned original content result calculation.
 - `entity_database.json` drives race, rank, level, base skills, learned skills, and stat/affinity data.
 - `skills_database.json` drives exclusive checks, family/rank mutation, and inheritance pool legality.
 - Shop inventory may influence compendium recall costs.
 
 ## Extension Points
 
-- Add new fusion recipes in `fusion_table.json`.
+- Add legacy Cathedral recipes in `fusion_table.json`.
+- Add clean original-content recipes through catalog fusion documents.
 - Add a new fusion operation by extending `FusionOperationType`, writing an `IFusionStrategy`, and registering it.
 - Add new framework-supported result behavior in `FusionRuntimeServices` and adapt console presentation only after the rule exists.
 - Add new inheritance restrictions through typed skill/entity definitions and `FusionInheritanceEvaluator`.

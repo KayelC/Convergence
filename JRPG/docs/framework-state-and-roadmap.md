@@ -408,7 +408,7 @@ This section is for ranking before implementation. Do not treat `TBD` items as a
 | Interactive clean runtime loop | Noninteractive demos exist; no player-driven clean loop yet | TBD |
 | Shop/equipment clean host flow | Content and framework services exist; sample records are not yet demonstrated in a clean host flow | TBD |
 | Negotiation clean host flow | Training Annex proof exists for prompt outcome, recruitment validation, Macca spend, and Demon-stock addition; authored demand policy binding remains unfinished | TBD |
-| Fusion clean host flow | Concept recipes and services exist; sample flow is not yet demonstrated independently of legacy Cathedral presentation | TBD |
+| Fusion clean host flow | Phase 7-30 proves non-mutating clean catalog result calculation in Training Annex; slots, mutation/accidents, transactions, and Compendium remain pending | TBD |
 | Optional mechanic decoupling, especially Moon Phase | Training Annex no longer requires fake moon metadata; broader optional-mechanic policy remains unfinished | TBD |
 | Save policy and suspend saves | Snapshot/validation contracts exist; save kind, suspend rules, and consume-after-load policy are not implemented | TBD |
 | Content authoring tooling/templates | Validation exists; authoring remains raw JSON | TBD |
@@ -421,7 +421,7 @@ CodeReview-1, CodeReview-2, CodeReview-3, and CodeReview-4 are complete and read
 
 Phase 5-28 verification passed `76/76` focused Training Annex host tests and `847/847` full-suite tests with no skips. Phase 6-29 is implemented: the Training Annex clean host now demonstrates negotiation/recruitment through framework session, recruitment, party-stock, and economy services, including success, refusal, and repeated familiar paths. Authored demand-policy binding remains future work. Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for the clean Training Annex negotiation sample.
 
-The next numbered capability is Phase 7-30, `fusion_result_calculation`, unless the owner deliberately reprioritizes the plan.
+Phase 7-30 is implemented: clean fusion result calculation now uses `CatalogFusionContentRepository` over the original Training Annex pack and records non-mutating result evidence in `--clean-training-annex-play`. The next numbered capability is Phase 7-31, `fusion_slots_mutation_accidents`, unless the owner deliberately reprioritizes the plan.
 
 ## Ground Rules For Future Work
 

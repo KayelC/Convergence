@@ -7,6 +7,7 @@ using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -409,6 +410,39 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexSlice_ResolvesFusionResultsThroughCatalogRepository()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var repository = new CatalogFusionContentRepository(catalog);
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50));
+
+        FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
+            Participant(catalog.GetRequiredEntity(Qualified("ashling")), "ashling_parent"),
+            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent"),
+            MoonPhase: 0));
+
+        Assert.True(direct.IsSuccessful);
+        Assert.False(direct.IsAccident);
+        Assert.Empty(direct.Diagnostics);
+        Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
+        Assert.Equal(Qualified("ward_shell"), direct.ResultEntityId);
+
+        FusionResolvedResult rankOffset = resolver.Resolve(new FusionResultRequest(
+            Participant(catalog.GetRequiredEntity(Qualified("echo_adept")), "echo_parent"),
+            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent"),
+            MoonPhase: 0));
+
+        Assert.True(rankOffset.IsSuccessful);
+        Assert.False(rankOffset.IsAccident);
+        Assert.Empty(rankOffset.Diagnostics);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, rankOffset.Operation);
+        Assert.Equal(Qualified("ward_shell"), rankOffset.ResultEntityId);
+        Assert.Contains(repository.GetRecipes(), recipe =>
+            recipe.Result is { Operation: FusionResultOperationKind.RankOffset, ResultRaceId: ContentId raceId } &&
+            raceId == Qualified("annex_construct"));
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_ManifestUsesOnlyTheOriginalSliceDocuments()
     {
         string root = FindJsonRoot();
@@ -566,6 +600,17 @@ public sealed class OriginalCleanContentSliceTests
             Id("hp"),
             new CombatDefenseProfile(),
             [new BattleResourceState(Id("hp"), hp, maxHp), new BattleResourceState(Id("sp"), sp, maxSp)]);
+
+    private static FusionParticipantSnapshot Participant(EntityDefinition entity, string instanceId) =>
+        new(
+            RuntimeInstanceId.Parse(instanceId),
+            entity.Id,
+            entity.DisplayName,
+            entity.RaceId,
+            entity.Rank,
+            entity.BaseLevel,
+            entity.BaseSkillIds,
+            entity.Stats);
 
     private sealed class SequenceRandomSource(params int[] values) : IRandomSource
     {

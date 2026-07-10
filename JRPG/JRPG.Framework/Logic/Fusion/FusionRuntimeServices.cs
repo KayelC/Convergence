@@ -44,7 +44,18 @@ public sealed record FusionRuntimeDiagnostic(
     ContentId? ContentId = null,
     RuntimeInstanceId? InstanceId = null);
 
-public sealed record FusionRecipeSnapshot(ContentId ParentAId, ContentId ParentBId, string ResultToken);
+public sealed record FusionRecipeResultSnapshot(
+    FusionResultOperationKind Operation,
+    ContentId? ResultEntityId = null,
+    ContentId? ResultRaceId = null,
+    int? RankOffset = null,
+    ContentId? PolicyId = null);
+
+public sealed record FusionRecipeSnapshot(
+    ContentId ParentAId,
+    ContentId ParentBId,
+    string ResultToken,
+    FusionRecipeResultSnapshot? Result = null);
 
 public sealed record FusionEntitySnapshot
 {
@@ -203,6 +214,11 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return Failed(FusionRuntimeDiagnosticCode.NoRecipe, "No fusion recipe matched the selected parents.");
         }
 
+        if (recipe.Result is not null)
+        {
+            return ResolveAuthoredResult(recipe.Result, a, b, isAccident);
+        }
+
         string token = recipe.ResultToken;
         if (TryToken(token, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _))
         {
@@ -288,10 +304,88 @@ public sealed class FusionResultResolver : IFusionResultResolver
 
         if (recipe is null || !TryToken(recipe.ResultToken, out ContentId resultId))
         {
+            if (recipe?.Result is { Operation: FusionResultOperationKind.CreateEntity, ResultEntityId: ContentId authoredResultId } &&
+                _content.TryGetEntity(authoredResultId, out _))
+            {
+                return authoredResultId;
+            }
+
             return null;
         }
 
         return _content.TryGetEntity(resultId, out _) ? resultId : null;
+    }
+
+    private FusionResolvedResult ResolveAuthoredResult(
+        FusionRecipeResultSnapshot result,
+        FusionParticipantSnapshot a,
+        FusionParticipantSnapshot b,
+        bool isAccident)
+    {
+        return result.Operation switch
+        {
+            FusionResultOperationKind.CreateEntity => ResolveAuthoredCreateEntity(result, isAccident),
+            FusionResultOperationKind.RankOffset => ResolveAuthoredRankOffset(result, a, b, isAccident),
+            _ => Failed(
+                FusionRuntimeDiagnosticCode.NoFusionPossible,
+                $"Fusion result operation '{result.Operation}' is not supported by the runtime resolver.")
+        };
+    }
+
+    private FusionResolvedResult ResolveAuthoredCreateEntity(
+        FusionRecipeResultSnapshot result,
+        bool isAccident)
+    {
+        if (result.ResultEntityId is not ContentId entityId)
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.NoFusionPossible,
+                "Create-entity fusion result is missing a result entity ID.");
+        }
+
+        return _content.TryGetEntity(entityId, out _)
+            ? Successful(FusionRuntimeOperation.CreateNewEntity, entityId, isAccident)
+            : Failed(FusionRuntimeDiagnosticCode.MissingEntity, $"Fusion result entity '{entityId}' was not found.");
+    }
+
+    private FusionResolvedResult ResolveAuthoredRankOffset(
+        FusionRecipeResultSnapshot result,
+        FusionParticipantSnapshot a,
+        FusionParticipantSnapshot b,
+        bool isAccident)
+    {
+        if (result.RankOffset is not int rankOffset || rankOffset == 0)
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.NoFusionPossible,
+                "Rank-offset fusion result must specify a nonzero rank offset.");
+        }
+
+        FusionParticipantSnapshot? rankedParent = result.ResultRaceId is null
+            ? SelectNonElementParent(a, b)
+            : null;
+        ContentId raceId = result.ResultRaceId ?? rankedParent?.RaceId ?? a.RaceId;
+        int baseRank = rankedParent?.Rank ?? (a.Rank + b.Rank) / 2;
+        int targetRank = baseRank + rankOffset;
+
+        FusionEntitySnapshot[] racePool = _content.GetEntitiesByRace(raceId)
+            .OrderBy(entity => entity.Rank)
+            .ThenBy(entity => entity.BaseLevel)
+            .ThenBy(entity => entity.Id.ToString(), StringComparer.Ordinal)
+            .ToArray();
+        if (racePool.Length == 0)
+        {
+            return Failed(FusionRuntimeDiagnosticCode.MissingRaceMembers, $"Race '{raceId}' has no fusion results.");
+        }
+
+        FusionEntitySnapshot ranked = rankOffset > 0
+            ? racePool.FirstOrDefault(entity => entity.Rank >= targetRank) ?? racePool[^1]
+            : racePool.LastOrDefault(entity => entity.Rank <= targetRank) ?? racePool[0];
+        return Successful(
+            rankOffset > 0 ? FusionRuntimeOperation.RankUpParent : FusionRuntimeOperation.RankDownParent,
+            ranked.Id,
+            isAccident,
+            rankedParent);
     }
 
     private bool RollAccident(int moonPhase)
@@ -304,6 +398,11 @@ public sealed class FusionResultResolver : IFusionResultResolver
         _content.GetRecipes().FirstOrDefault(recipe =>
             recipe.ParentAId == a && recipe.ParentBId == b ||
             recipe.ParentAId == b && recipe.ParentBId == a);
+
+    private static FusionParticipantSnapshot? SelectNonElementParent(
+        FusionParticipantSnapshot a,
+        FusionParticipantSnapshot b) =>
+        a.RaceId != ElementRaceId ? a : b.RaceId != ElementRaceId ? b : null;
 
     private static bool TryToken(string token, out ContentId id) =>
         ContentId.TryParse(token, out id);

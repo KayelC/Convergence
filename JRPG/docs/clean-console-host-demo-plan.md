@@ -744,11 +744,21 @@ Demonstrate clean negotiation/recruitment if the owner still wants this mechanic
 
 ### Goal
 
-Demonstrate clean fusion only after the game's fusion direction is approved.
+Demonstrate clean fusion only after the game's fusion direction is approved. The first safe slice, Phase 7-30, is limited to non-mutating result calculation over original clean content.
 
 ### Why Blocked
 
-Fusion is not just a technical feature. It defines the identity of the game loop. The current framework has fusion concepts, but the owner has not settled what fusion should mean for the final game.
+Fusion is not just a technical feature. It defines the identity of the game loop. The current framework has fusion concepts, but the owner has not settled what the full fusion loop should mean for the final game. Phase 7-30 therefore avoids rituals, inheritance selection, transactions, accidents, and Compendium state.
+
+### Phase 7-30 Result
+
+- `--clean-training-annex-play` now has a `Calculate Fusion Results` proof command.
+- The command uses `CatalogFusionContentRepository` and `FusionResultResolver` against the original `convergence.training_annex_slice` pack.
+- It proves two catalog-authored results without mutating runtime state:
+  - `Ashling + Bramble Runner -> Ward Shell` through an explicit `create_entity` recipe.
+  - `Echo Adept + Bramble Runner -> Ward Shell` through a race/rank-offset recipe.
+- The host records typed evidence for parent instance IDs, parent entity IDs, operation, result entity ID, accident flag, and diagnostics.
+- This is not yet a fusion menu. It is a framework authority proof that removes legacy fusion-table dependency from result calculation.
 
 ### Possible Work After Approval
 
@@ -867,6 +877,6 @@ Phase 6-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` u
 
 Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
 
-The next numbered capability is Phase 7-30, `fusion_result_calculation`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 7-31, `fusion_slots_mutation_accidents`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

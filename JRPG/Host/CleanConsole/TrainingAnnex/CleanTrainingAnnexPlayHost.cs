@@ -70,6 +70,7 @@ internal enum CleanTrainingAnnexPlayCommand
     SelectBattleTarget,
     UseMend,
     TargetPlayer,
+    CalculateFusionResults,
     Back,
     Exit
 }
@@ -86,6 +87,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     RuntimePartyStockSnapshot PartyStock,
     IReadOnlyList<TrainingAnnexPartyTransitionEvidence> PartyTransitions,
     IReadOnlyList<TrainingAnnexNegotiationEvidence> Negotiations,
+    IReadOnlyList<TrainingAnnexFusionResultEvidence> FusionResults,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -322,6 +324,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
         var negotiations = new List<TrainingAnnexNegotiationEvidence>();
+        var fusionResults = new List<TrainingAnnexFusionResultEvidence>();
         var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
@@ -429,6 +432,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     partyStock,
                     partyTransitions,
                     negotiations,
+                    fusionResults,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -562,6 +566,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                     negotiations.AddRange(negotiation.Evidence);
                     break;
                 }
+                case CleanTrainingAnnexPlayCommand.CalculateFusionResults:
+                {
+                    IReadOnlyList<TrainingAnnexFusionResultEvidence> calculated =
+                        await new TrainingAnnexFusionController(_eventSink)
+                            .CalculateAsync(catalog, roster, cancellationToken).ConfigureAwait(false);
+                    fusionResults.AddRange(calculated);
+                    break;
+                }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
                         roster.Player.Actor.State.ToSnapshot().Equipment,
@@ -622,6 +634,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             partyStock,
                             partyTransitions,
                             negotiations,
+                            fusionResults,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -1221,6 +1234,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenNegotiation,
             "Negotiate / Recruit"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.CalculateFusionResults,
+            "Calculate Fusion Results"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1676,6 +1692,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimePartyStockSnapshot partyStock,
         IReadOnlyList<TrainingAnnexPartyTransitionEvidence> partyTransitions,
         IReadOnlyList<TrainingAnnexNegotiationEvidence> negotiations,
+        IReadOnlyList<TrainingAnnexFusionResultEvidence> fusionResults,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1744,6 +1761,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             partyStock,
             partyTransitions.ToArray(),
             negotiations.ToArray(),
+            fusionResults.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),

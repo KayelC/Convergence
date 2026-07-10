@@ -138,6 +138,8 @@ Important rules:
 
 `FusionConductor` runs the Cathedral workflow. Track N keeps the same Cathedral menus and live `Combatant`/`Persona` participants, but `FusionCalculator` now adapts those participants into framework fusion services for result resolution, slot calculation, skill mutation, and duplicate-result checks. Track O10 routes Cathedral menus, participant selection, inheritance selection, ritual confirmation, transaction feedback, and Compendium recall/register presentation through typed console-host results. `FusionMutator` and the existing strategies still apply confirmed transactions to the legacy stock models.
 
+Phase 7-30 adds the first original clean fusion result proof. `CatalogFusionContentRepository` adapts `GameDataCatalog` fusion/entity/skill definitions directly into the framework fusion runtime, and the Training Annex host can calculate non-mutating results from clean catalog recipes. This proves result authority can come from original framework content rather than the legacy `fusion_table.json`; inheritance slots, accidents/mutations, transactions, and Compendium flow remain later Phase 7 work.
+
 Supported fusion concepts:
 
 - Binary fusion.

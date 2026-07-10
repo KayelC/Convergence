@@ -24,7 +24,7 @@ Use generic placeholder content for tests and demos. Downstream games should rep
 | Negotiation | Question sets, answers, demands, familiar dialogue | `steady_sample` | calm personality with two prompts, one demand outcome, and familiar dialogue |
 | Encounters | Formations, enemy levels, reward policy hooks | `ashling_drill`, `mixed_drill`, `shell_check` | single enemy, two-enemy group, boss formation |
 | Dungeons / fields | Blocks, floors, fixed floors, encounter pools, terminals, barriers | `training_annex` with random, safe, fixed battle, and barrier floors | three-floor training area with safe room and boss gate |
-| Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Two concept-level Training Annex recipes | concept recipes using generic entities only |
+| Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Two Training Annex recipes now execute for result calculation | concept recipes using generic entities only |
 | Compendium state | Runtime snapshots and recall rules | Framework services exist, content is thin | use generic species IDs and placeholder recall pricing |
 | Rewards | EXP/Macca-like reward policies and parameters | Bound standard reward service | generic experience and currency values |
 | Host registrations | Contexts, resources, stats, events, handlers, policies | Tests register explicit values | documented registration sets per demo |
@@ -124,9 +124,11 @@ Fusion should remain generic until the project owner decides the game's fusion i
 
 Safe placeholder examples:
 
-- `sample_wisp` + `sample_brute` -> `sample_shell`;
-- `sample_spirit` + `sample_beast` -> rank-offset result in `sample_construct`;
+- `ashling` + `bramble_runner` -> `ward_shell` through an explicit `create_entity` recipe;
+- `annex_spirit` + `annex_beast` -> rank-offset result in `annex_construct`;
 - a recipe that proves passive inheritance remains separate from elemental active-skill inheritance.
+
+Phase 7-30 proves the first two examples execute through `CatalogFusionContentRepository` and `FusionResultResolver` without legacy `fusion_table.json` authority. Passive inheritance and transaction flow remain later fusion passes.
 
 Do not imitate ATLUS race charts, names, demons, inheritance labels, or fusion tables.
 

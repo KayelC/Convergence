@@ -1,6 +1,6 @@
 # Phase 5-6 Code Review And Readiness
 
-> **Status: Active implementation audit for Phase 5 Party And Stock and Phase 6 Negotiation And Recruitment.** This report is derived from source code, tests, and the current active roadmap documents. It does not authorize legacy removal and does not mark any capability as `clean_parity`.
+> **Status: Concluded implementation audit for Phase 5 Party And Stock and Phase 6 Negotiation And Recruitment.** This report is derived from source code, tests, and the current active roadmap documents. It does not authorize legacy removal and does not mark any capability as `clean_parity`.
 
 ## Executive Verdict
 
@@ -9,6 +9,36 @@ Phase 5 and Phase 6 are implemented correctly for their approved scope: they pro
 The implementation is intentionally still `parallel_partial`. It is usable evidence for the new framework path, but it is not full parity with every protected legacy consumer. The old console prototype remains active compatibility code, and removal remains unauthorized.
 
 No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. CodeReview-5-6-2 resolved the authored negotiation demand gap by making content-supplied demands authoritative in the runtime flow. CodeReview-5-6-3 removed the fake active-demon sentinel. CodeReview-5-6-4 removed the fixed Bramble Runner negotiation target from the clean Training Annex negotiation controller.
+
+## Final Closure
+
+The Phase 5-6 review is closed with all identified follow-ups addressed.
+
+The final state is deliberately conservative:
+
+- framework party/stock transitions own the clean rules for active party, reserve party, active form, Persona stock, Demon stock, and immutable before/after results;
+- framework save validation now rejects illegal party/stock structures that could not be produced by legal transition commands;
+- framework negotiation runtime can consume authored demand records supplied by the host instead of silently calculating every Macca demand internally;
+- the Training Annex clean host no longer uses a fake active-demon runtime ID for host-side rejection;
+- the Training Annex clean host no longer hardcodes the negotiation target to `ReplacementBrambleRunnerInstance`;
+- the insufficient-Macca clean-host regression is present and proves no wallet, stock, recruitment, or demand-prompt mutation happens when an authored demand is unaffordable.
+
+These outcomes improve correctness and reduce host-specific shortcuts, but they do not make the protected legacy console consumers obsolete. The affected capabilities remain `parallel_partial` until real consumers outside the Training Annex proof are migrated and verified.
+
+## Source Re-Inspection Notes
+
+After the closure pass, the review was rechecked against the actual code rather than only against the written summary.
+
+The re-inspection confirmed:
+
+- `PartyStockTransitionService` owns the clean transition rules for active/reserve party, active-form exchange, Persona stock, Demon stock, summon, return, swap, dismiss, replace, and consume operations. Rejections return unchanged snapshots and stable diagnostics.
+- `RuntimeSaveValidator` now validates the structural party/stock invariants identified by the review: duplicate list entries, active party overflow, Demon stock overflow using an injected stock-capacity policy, active/reserve overlap, and active-form duplication in Persona stock. It intentionally still allows active-party plus Demon-stock overlap for summoned owned demons.
+- `NegotiationSessionService` now accepts typed `NegotiationRuntimeDemand` records. When demands are supplied, authored demand weight and operands drive the runtime demand path. The older calculated Macca formula remains a compatibility fallback only when no authored demands are supplied.
+- `TrainingAnnexPartyController.ReturnActiveDemon` now returns a typed `NotActive` rejection when no active demon exists, without inventing a fake runtime ID.
+- `TrainingAnnexNegotiationController` now builds target candidates from host-prepared recruitable actors that match the authored negotiation default entity/race IDs, then resolves the selected target through `HostCommandSelectionIdentity.RuntimeInstanceId`.
+- `CleanTrainingAnnexPlayHostTests` includes focused regressions for selected negotiation target identity, authored demand amount, insufficient authored Macca, refusal without mutation, repeated familiar negotiation, party-stock rejection immutability, and framework save validation.
+
+No source-level contradiction was found between the implementation and the final review verdict. The remaining limitations are scope limitations, not discovered defects: Training Annex remains a proof host, its party operation menu is still sample-specific, and broader consumer migration is still required before any capability can be called `clean_parity`.
 
 ## Audit Scope
 

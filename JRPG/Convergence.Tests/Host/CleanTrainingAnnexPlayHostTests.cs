@@ -8,6 +8,7 @@ using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -100,6 +101,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
             summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
         Assert.Empty(summary.PartyTransitions);
+        Assert.Empty(summary.FusionResults);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
@@ -201,7 +203,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     "Inspect Party",
                     "Inspect Stock",
                     "Party / Stock Operations",
-                    "Negotiate / Recruit"
+                    "Negotiate / Recruit",
+                    "Calculate Fusion Results"
             ],
                 menu.Options);
         }
@@ -227,7 +230,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Inspect Party",
                 "Inspect Stock",
                 "Party / Stock Operations",
-                "Negotiate / Recruit"
+                "Negotiate / Recruit",
+                "Calculate Fusion Results"
             ],
                 menu.Options);
         }
@@ -482,6 +486,56 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Negotiation opened: Steady Sample; target Bramble Runner; wallet 100 M.", text, StringComparison.Ordinal);
         Assert.Contains("Negotiation event: MoodPositive; Bramble Runner seems pleased with your answers.", text, StringComparison.Ordinal);
         Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->50 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_CalculatesFusionResultsThroughCleanCatalogRepository()
+    {
+        var io = new ScriptedGameIO().QueueMenu(17, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [CleanTrainingAnnexPlayCommand.CalculateFusionResults, CleanTrainingAnnexPlayCommand.Exit],
+            summary.Commands);
+        Assert.Equal(2, summary.FusionResults.Count);
+
+        TrainingAnnexFusionResultEvidence direct = summary.FusionResults[0];
+        Assert.Equal("direct_entity_result", direct.ScenarioId);
+        Assert.Equal(RuntimeInstanceId.Parse("demon_ashling"), direct.FirstParentInstanceId);
+        Assert.Equal(Qualified("ashling"), direct.FirstParentEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("replacement_bramble_runner"), direct.SecondParentInstanceId);
+        Assert.Equal(Qualified("bramble_runner"), direct.SecondParentEntityId);
+        Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
+        Assert.Equal(Qualified("ward_shell"), direct.ResultEntityId);
+        Assert.False(direct.IsAccident);
+        Assert.Empty(direct.Diagnostics);
+
+        TrainingAnnexFusionResultEvidence rank = summary.FusionResults[1];
+        Assert.Equal("race_rank_offset_result", rank.ScenarioId);
+        Assert.Equal(RuntimeInstanceId.Parse("echo_adept"), rank.FirstParentInstanceId);
+        Assert.Equal(Qualified("echo_adept"), rank.FirstParentEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("replacement_bramble_runner"), rank.SecondParentInstanceId);
+        Assert.Equal(Qualified("bramble_runner"), rank.SecondParentEntityId);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
+        Assert.Equal(Qualified("ward_shell"), rank.ResultEntityId);
+        Assert.False(rank.IsAccident);
+        Assert.Empty(rank.Diagnostics);
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Fusion result: Ashling + Bramble Runner -> Ward Shell (create_entity; direct_entity_result).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Fusion result: Echo Adept + Bramble Runner -> Ward Shell (rank_up; race_rank_offset_result).",
+            text,
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 

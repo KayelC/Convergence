@@ -222,7 +222,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 | Pass | Capability | Current Status | Goal |
 | ---: | --- | --- | --- |
-| 30 | `fusion_result_calculation` | `parallel_partial` | Prove clean fusion result calculation over original content. |
+| 30 | `fusion_result_calculation` | `parallel_partial` | Implemented clean fusion result calculation over original content. |
 | 31 | `fusion_slots_mutation_accidents` | `parallel_partial` | Add inheritance slots/mutation/accidents only if approved. |
 | 32 | `fusion_preview_confirmation` | `parallel_partial` | Add clean preview and confirmation flow. |
 | 33 | `fusion_transactions` | `parallel_partial` | Make clean fusion transactions atomic in runtime state. |
@@ -921,7 +921,12 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion design approval.
+- Phase 7-30 result:
+  - `CatalogFusionContentRepository` now adapts qualified `GameDataCatalog` definitions into the framework `IFusionContentRepository` contract. The clean resolver can consume original catalog recipes directly instead of relying on `fusion_table.json` or the legacy `LegacyFusionContentAdapter`.
+  - `FusionRecipeSnapshot` can carry a structured `FusionRecipeResultSnapshot`, so catalog-authored operations such as `create_entity` and `rank_offset` reach `FusionResultResolver` without being flattened into legacy string tokens.
+  - `FusionResultResolver` still supports the legacy token path for compatibility, but structured catalog results now resolve explicit entity results and race/rank-offset results. The Training Annex sample proves `ashling + bramble_runner -> ward_shell` and `echo_adept + bramble_runner -> ward_shell` through the original clean pack.
+  - `--clean-training-annex-play` exposes `Calculate Fusion Results`, a non-mutating proof command that records typed result evidence and prints the resolved result. It does not select inherited skills, mutate stock, spend resources, confirm rituals, apply accidents, or touch Compendium state.
+  - This remains `parallel_partial`: the protected legacy Cathedral flow is still active, and Phase 7-31 through Phase 7-35 still own slots, mutation/accidents, preview/confirmation, transactions, fusion strategies, and Compendium parity.
 
 ### 31. `fusion_slots_mutation_accidents`
 
