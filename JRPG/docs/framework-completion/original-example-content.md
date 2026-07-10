@@ -32,7 +32,7 @@ The project needs neutral, open-source-safe example content that exercises frame
 
 The Training Annex sample is the first answer to that problem. It is deliberately plain and concept-driven; it should remain easy to inspect and safe to replace.
 
-This problem is no longer blocked on creating a generic reference pack. The remaining issue is coverage: not every sample record is exercised by a clean runtime/demo path yet. Phase 4-24 exercises the sample shop and equipment purchase path through `--clean-training-annex-play`, Phase 4-25 exercises framework hospital restoration through the clean Recovery Facility, and Phase 5-29 exercises the `steady_sample` negotiation/recruitment path through clean framework services.
+This problem is no longer blocked on creating a generic reference pack. The remaining issue is coverage: not every sample record is exercised by a clean runtime/demo path yet. Phase 4-24 exercises the sample shop and equipment purchase path through `--clean-training-annex-play`, Phase 4-25 exercises framework hospital restoration through the clean Recovery Facility, and Phase 6-29 exercises the `steady_sample` negotiation/recruitment path through clean framework services.
 
 ## Current Sample Data
 

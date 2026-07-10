@@ -111,5 +111,5 @@ Each phase:
 - Track K adds framework negotiation/recruitment/reward tests plus console characterization for recruitment and victory reward application. Exhaustive live console battle traversal remains manual and later-track work.
 - Track O6 adds event-presentation tests for deterministic event mapping and visible-output preservation. It does not migrate legacy skill/item execution, AI policy, negotiation, rewards, or production battle content.
 - Track O7 adds negotiation/reward presentation tests for prompt mapping, event color/delay mapping, recruitment outcome display, and victory reward display. It does not migrate authored negotiation content or Cathedral compendium presentation.
-- Phase 5-29 adds authored Training Annex negotiation/recruitment coverage for the clean path, but demand amount/type binding is still not driven by authored demand records.
+- Phase 6-29 adds authored Training Annex negotiation/recruitment coverage for the clean path, but demand amount/type binding is still not driven by authored demand records.
 - Phase 2-19 adds Training Annex clean reward application tests. This proves the original clean loop can award EXP/Macca, but it does not remove the legacy reward adapter or switch prototype content to clean catalog authority.
