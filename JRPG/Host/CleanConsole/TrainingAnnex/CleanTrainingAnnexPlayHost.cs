@@ -16,6 +16,7 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectSession,
     InspectActor,
     InspectParty,
+    InspectStock,
     ResolveStats,
     RecalculateResources,
     ApplyVictoryExperience,
@@ -392,6 +393,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync(
             $"Party setup: {partyStock.ActiveParty.Count} active, {partyStock.ReserveMembers.Count} reserve.",
             cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Stock setup: active form {(partyStock.ActiveForm is null ? 0 : 1)}, Persona stock {partyStock.PersonaStock.Count}, Demon stock {partyStock.DemonStock.Count}.",
+            cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync("Field location: Staging Area.", cancellationToken)
             .ConfigureAwait(false);
 
@@ -478,6 +482,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectParty:
                     await partyController.PrintPartyAsync(partyStock, _eventSink, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+                case CleanTrainingAnnexPlayCommand.InspectStock:
+                    await partyController.PrintStockAsync(partyStock, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
@@ -1129,6 +1137,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.InspectParty,
             "Inspect Party"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.InspectStock,
+            "Inspect Stock"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)

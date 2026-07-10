@@ -683,6 +683,15 @@ Demonstrate clean shop/equipment services in the clean runtime.
 - This remains `parallel_partial`: Persona stock, Demon stock, summon/return/dismiss, and broader party operations remain later capability work.
 - Phase 5-26 verification passed `88/88` focused tests and `843/843` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
 
+### Phase 5-27 Persona/Demon Stock Result
+
+- Training Annex play now hydrates framework-owned stock actors without changing clean content files: an active-form Annex Mentor, a Persona-stock Bramble Runner, and Demon-stock Ashling/Ward Shell entries.
+- The live `RuntimePartyStockSnapshot` carries `ActiveForm`, `PersonaStock`, and `DemonStock` references in addition to active/reserve party members.
+- The `Inspect Stock` command presents those stock references from the framework snapshot while the console host remains presentation-only.
+- Manual and suspend save snapshots persist and restore the active form and stock references. Host restore validation now accepts valid same-team stock and rejects corrupted party/stock references that point at enemy-team actors before live state changes.
+- This remains `parallel_partial`: clean owned stock exists, but summon, return, swap, dismiss, replace, consume, recruitment, and fusion-driven stock mutation remain later work.
+- Phase 5-27 verification passed `74/74` focused Training Annex host tests and `845/845` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
+
 ### Work
 
 - Add a small shop interaction in Training Annex.
@@ -864,8 +873,8 @@ This board should be updated before each implementation prompt.
 
 ## Recommended Immediate Next Iteration
 
-Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions. Phase 4-25 adds a clean Recovery Facility proof over the framework hospital service. Phase 5-26 adds clean active/reserve party ownership: Annex Mentor is hydrated as a reserve support actor, the session creates a `RuntimePartyStockSnapshot` through `PartyStockTransitionService`, `Inspect Party` presents that snapshot, and saves restore the live party state.
+Iterations 1-7 and CodeReview-1/2 are implemented. CodeReview-3 completes the Phase 3 restore-hardening checkpoint from `docs/phase-1-3-code-review.md`: saved actor identity mappings and saved contexts are validated, Training Annex dungeon host-state validation is explicit, content-pack provenance is stored in save contract v5, and restore is planned before the live session is replaced. CodeReview-4 splits the Training Annex host seams for persistence, field presentation, and reward application while preserving behavior. Phase 4-21 completes the clean field-inventory quantity proof by using selected catalog item IDs and framework inventory reservations instead of a hardcoded item path. Phase 4-22 makes clean equipment ownership and basic attacks equipment-driven. Phase 4-23 binds the live Training Annex wallet and all resource transactions to authored `standard_economy`, with typed transaction evidence and no fallback. Phase 4-24 adds the clean Training Supply shop proof over original catalog offers, bound shop/economy transactions, and immediate equipment transitions. Phase 4-25 adds a clean Recovery Facility proof over the framework hospital service. Phase 5-26 adds clean active/reserve party ownership: Annex Mentor is hydrated as a reserve support actor, the session creates a `RuntimePartyStockSnapshot` through `PartyStockTransitionService`, `Inspect Party` presents that snapshot, and saves restore the live party state. Phase 5-27 adds inspectable clean active-form, Persona-stock, and Demon-stock ownership to that same snapshot, with save/restore validation for same-team stock references.
 
-The next numbered capability is Phase 5-27, `persona_and_demon_stock`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 5-28, `party_operations`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

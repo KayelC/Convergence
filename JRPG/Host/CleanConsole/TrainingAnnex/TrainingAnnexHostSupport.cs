@@ -23,17 +23,21 @@ internal sealed record TrainingAnnexActorRoster
     public TrainingAnnexActorRoster(
         TrainingAnnexRuntimeActor player,
         IEnumerable<TrainingAnnexRuntimeActor> supportMembers,
+        IEnumerable<TrainingAnnexRuntimeActor> stockMembers,
         IEnumerable<TrainingAnnexRuntimeActor> enemies)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         SupportMembers = Array.AsReadOnly(
             (supportMembers ?? throw new ArgumentNullException(nameof(supportMembers))).ToArray());
+        StockMembers = Array.AsReadOnly(
+            (stockMembers ?? throw new ArgumentNullException(nameof(stockMembers))).ToArray());
         Enemies = Array.AsReadOnly((enemies ?? throw new ArgumentNullException(nameof(enemies))).ToArray());
-        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. Enemies]);
+        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. StockMembers, .. Enemies]);
     }
 
     public TrainingAnnexRuntimeActor Player { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> SupportMembers { get; }
+    public IReadOnlyList<TrainingAnnexRuntimeActor> StockMembers { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> Enemies { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> AllActors { get; }
 }
@@ -241,6 +245,62 @@ internal static class TrainingAnnexHostSupport
             AddActorDiagnostics("support", mentorResult.Diagnostics, diagnostics);
         }
 
+        CatalogBattleActorCreationResult activeFormResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("annex_mentor"),
+            RuntimeInstanceId.Parse("form_annex_mentor"),
+            PlayerTeam,
+            5,
+            new RuntimeProgressionSnapshot(5, 0, 0, 4),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!activeFormResult.IsSuccess)
+        {
+            AddActorDiagnostics("active_form", activeFormResult.Diagnostics, diagnostics);
+        }
+
+        CatalogBattleActorCreationResult personaStockResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("bramble_runner"),
+            RuntimeInstanceId.Parse("persona_bramble_runner"),
+            PlayerTeam,
+            3,
+            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!personaStockResult.IsSuccess)
+        {
+            AddActorDiagnostics("persona_stock", personaStockResult.Diagnostics, diagnostics);
+        }
+
+        CatalogBattleActorCreationResult demonAshlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("ashling"),
+            RuntimeInstanceId.Parse("demon_ashling"),
+            PlayerTeam,
+            2,
+            new RuntimeProgressionSnapshot(2, 0, 0, 1),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!demonAshlingResult.IsSuccess)
+        {
+            AddActorDiagnostics("demon_stock", demonAshlingResult.Diagnostics, diagnostics);
+        }
+
+        CatalogBattleActorCreationResult demonWardShellResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("ward_shell"),
+            RuntimeInstanceId.Parse("demon_ward_shell"),
+            PlayerTeam,
+            4,
+            new RuntimeProgressionSnapshot(4, 0, 0, 3),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!demonWardShellResult.IsSuccess)
+        {
+            AddActorDiagnostics("demon_stock", demonWardShellResult.Diagnostics, diagnostics);
+        }
+
         IReadOnlyList<CatalogBattleActorCreationRequest> enemyRequests = CreateEnemyActorRequests(catalog, diagnostics);
         var enemies = new List<TrainingAnnexRuntimeActor>();
         foreach (CatalogBattleActorCreationRequest request in enemyRequests)
@@ -255,7 +315,13 @@ internal static class TrainingAnnexHostSupport
             enemies.Add(new TrainingAnnexRuntimeActor("Enemy", enemyResult.RequireActor()));
         }
 
-        if (diagnostics.Count > 0 || playerResult.Actor is null || mentorResult.Actor is null)
+        if (diagnostics.Count > 0 ||
+            playerResult.Actor is null ||
+            mentorResult.Actor is null ||
+            activeFormResult.Actor is null ||
+            personaStockResult.Actor is null ||
+            demonAshlingResult.Actor is null ||
+            demonWardShellResult.Actor is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
@@ -264,6 +330,12 @@ internal static class TrainingAnnexHostSupport
             new TrainingAnnexActorRoster(
                 new TrainingAnnexRuntimeActor("Player", playerResult.RequireActor()),
                 [new TrainingAnnexRuntimeActor("Reserve", mentorResult.RequireActor())],
+                [
+                    new TrainingAnnexRuntimeActor("Active Form", activeFormResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Persona Stock", personaStockResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Demon Stock", demonAshlingResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Demon Stock", demonWardShellResult.RequireActor())
+                ],
                 enemies));
     }
 

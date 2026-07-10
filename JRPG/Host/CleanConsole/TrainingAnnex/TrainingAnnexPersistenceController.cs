@@ -239,6 +239,18 @@ internal sealed class TrainingAnnexPersistenceController
             supportMembers.Add(restoredSupport);
         }
 
+        var stockMembers = new List<TrainingAnnexRuntimeActor>();
+        foreach (TrainingAnnexRuntimeActor stock in currentRoster.StockMembers)
+        {
+            if (!TryRestoreActor(stock, actors, actorFactory, out TrainingAnnexRuntimeActor restoredStock, out string? stockDiagnostic))
+            {
+                diagnostics.Add(stockDiagnostic ?? $"Saved stock actor '{stock.Actor.State.InstanceId}' could not be restored.");
+                continue;
+            }
+
+            stockMembers.Add(restoredStock);
+        }
+
         var enemies = new List<TrainingAnnexRuntimeActor>();
         foreach (TrainingAnnexRuntimeActor enemy in currentRoster.Enemies)
         {
@@ -256,7 +268,7 @@ internal sealed class TrainingAnnexPersistenceController
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
         }
 
-        TrainingAnnexActorRoster roster = new(player, supportMembers, enemies);
+        TrainingAnnexActorRoster roster = new(player, supportMembers, stockMembers, enemies);
 
         RuntimeFieldSnapshot field = snapshot.Field ??
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -314,22 +326,18 @@ internal sealed class TrainingAnnexPersistenceController
 
         ValidateTrainingAnnexPartyTeam("active party", partyStock.ActiveParty, owner.Ownership.TeamId, actors, diagnostics);
         ValidateTrainingAnnexPartyTeam("reserve party", partyStock.ReserveMembers, owner.Ownership.TeamId, actors, diagnostics);
-
-        if (partyStock.ActiveForm is not null)
+        if (partyStock.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
         {
-            diagnostics.Add(
-                $"Saved active form '{partyStock.ActiveForm.InstanceId}' is not supported by the Training Annex host.");
+            ValidateTrainingAnnexPartyTeam(
+                "active form",
+                [activeForm],
+                owner.Ownership.TeamId,
+                actors,
+                diagnostics);
         }
 
-        if (partyStock.PersonaStock.Count > 0)
-        {
-            diagnostics.Add("Saved Persona stock is not supported by the Training Annex host.");
-        }
-
-        if (partyStock.DemonStock.Count > 0)
-        {
-            diagnostics.Add("Saved Demon stock is not supported by the Training Annex host.");
-        }
+        ValidateTrainingAnnexPartyTeam("Persona stock", partyStock.PersonaStock, owner.Ownership.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("Demon stock", partyStock.DemonStock, owner.Ownership.TeamId, actors, diagnostics);
     }
 
     private static void ValidateTrainingAnnexPartyTeam(

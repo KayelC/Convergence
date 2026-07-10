@@ -45,10 +45,25 @@ internal sealed class TrainingAnnexPartyController
         ArgumentNullException.ThrowIfNull(roster);
 
         RuntimeActorReferenceSnapshot player = TrainingAnnexHostSupport.Reference(roster.Player);
+        RuntimeActorReferenceSnapshot? activeForm = roster.StockMembers
+            .Where(member => member.Role == "Active Form")
+            .Select(TrainingAnnexHostSupport.Reference)
+            .FirstOrDefault();
+        RuntimeActorReferenceSnapshot[] personaStock = roster.StockMembers
+            .Where(member => member.Role == "Persona Stock")
+            .Select(TrainingAnnexHostSupport.Reference)
+            .ToArray();
+        RuntimeActorReferenceSnapshot[] demonStock = roster.StockMembers
+            .Where(member => member.Role == "Demon Stock")
+            .Select(TrainingAnnexHostSupport.Reference)
+            .ToArray();
         var snapshot = new RuntimePartyStockSnapshot(
             player,
             roster.Player.Level,
             activeParty: [player],
+            activeForm: activeForm,
+            personaStock: personaStock,
+            demonStock: demonStock,
             maxActivePartySize: TrainingAnnexActivePartyLimit);
         var evidence = new List<TrainingAnnexPartyTransitionEvidence>();
 
@@ -75,6 +90,22 @@ internal sealed class TrainingAnnexPartyController
             $"Party: active [{FormatActors(party.ActiveParty)}]; reserve [{FormatActors(party.ReserveMembers)}].",
             cancellationToken).ConfigureAwait(false);
     }
+
+    public async ValueTask PrintStockAsync(
+        RuntimePartyStockSnapshot party,
+        IHostEventSink<string> eventSink,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(party);
+        ArgumentNullException.ThrowIfNull(eventSink);
+
+        await eventSink.PublishAsync(
+            $"Stock: active form [{FormatActor(party.ActiveForm)}]; Persona stock [{FormatActors(party.PersonaStock)}]; Demon stock [{FormatActors(party.DemonStock)}].",
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string FormatActor(RuntimeActorReferenceSnapshot? actor) =>
+        actor is null ? "none" : $"{actor.DisplayName} ({actor.InstanceId})";
 
     private static string FormatActors(IReadOnlyList<RuntimeActorReferenceSnapshot> actors) =>
         actors.Count == 0
