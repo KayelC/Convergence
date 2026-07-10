@@ -6,8 +6,8 @@
   "decision": "no_archive_candidates",
   "reviewedCapabilityCount": 36,
   "statusSummary": {
-    "clean_foundation": 2,
-    "parallel_partial": 33,
+    "clean_foundation": 1,
+    "parallel_partial": 34,
     "legacy_only": 1,
     "clean_parity": 0
   },

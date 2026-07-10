@@ -415,23 +415,24 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50));
+        FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50), policies);
 
         FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
             Participant(catalog.GetRequiredEntity(Qualified("ashling")), "ashling_parent"),
-            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent"),
-            MoonPhase: 0));
+            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent")));
 
         Assert.True(direct.IsSuccessful);
         Assert.False(direct.IsAccident);
         Assert.Empty(direct.Diagnostics);
         Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
         Assert.Equal(Qualified("ward_shell"), direct.ResultEntityId);
+        Assert.Equal(Id("standard_accident"), direct.MatchedRecipe?.AccidentPolicyId);
+        Assert.Equal(Id("standard_mutation"), direct.MatchedRecipe?.MutationPolicyId);
 
         FusionResolvedResult rankOffset = resolver.Resolve(new FusionResultRequest(
             Participant(catalog.GetRequiredEntity(Qualified("echo_adept")), "echo_parent"),
-            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent"),
-            MoonPhase: 0));
+            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent")));
 
         Assert.True(rankOffset.IsSuccessful);
         Assert.False(rankOffset.IsAccident);
@@ -448,8 +449,9 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50));
-        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+        FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50), policies);
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0), policies);
 
         SkillDefinition echoStrike = catalog.GetRequiredSkill(Qualified("echo_strike"));
         SkillDefinition shellBash = catalog.GetRequiredSkill(Qualified("shell_bash"));
@@ -474,8 +476,7 @@ public sealed class OriginalCleanContentSliceTests
             echo,
             bramble,
             Sacrifice: null,
-            IsSacrificial: false,
-            MoonPhase: 0));
+            IsSacrificial: false));
 
         Assert.True(plan.IsSuccessful);
         Assert.Equal(Qualified("ward_shell"), plan.ResultEntity!.Id);
@@ -497,13 +498,16 @@ public sealed class OriginalCleanContentSliceTests
             echo,
             bramble,
             ashling,
-            IsSacrificial: true,
-            MoonPhase: 0));
+            IsSacrificial: true));
         Assert.True(sacrificialPlan.IsSuccessful);
         Assert.Equal(3, sacrificialPlan.MaximumInheritanceSlots);
+        Assert.Equal(2, sacrificialPlan.SacrificeDecision?.AdditionalInheritanceSlots);
 
         IReadOnlyList<ContentId> accidentInheritance =
-            planner.CreateAccidentInheritance([Qualified("echo_strike")], maximumSlots: 1);
+            planner.CreateAccidentInheritance(
+                plan,
+                [Qualified("echo_strike")],
+                maximumSlots: 1);
         Assert.Equal([Qualified("shell_bash")], accidentInheritance);
     }
 
@@ -512,8 +516,9 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50));
-        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+        FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
+        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50), policies);
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0), policies);
 
         FusionParticipantSnapshot echo = Participant(
             catalog.GetRequiredEntity(Qualified("echo_adept")),
@@ -529,8 +534,7 @@ public sealed class OriginalCleanContentSliceTests
             echo,
             bramble,
             ashling,
-            IsSacrificial: true,
-            MoonPhase: 0));
+            IsSacrificial: true));
         Assert.True(plan.IsSuccessful);
         Assert.Equal(3, plan.MaximumInheritanceSlots);
 
@@ -563,8 +567,9 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50));
-        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+        FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
+        var resolver = new FusionResultResolver(repository, new NoAccidentRandomSource(50), policies);
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0), policies);
 
         FusionParticipantSnapshot bramble = Participant(
             catalog.GetRequiredEntity(Qualified("bramble_runner")),
@@ -577,8 +582,7 @@ public sealed class OriginalCleanContentSliceTests
             ashling,
             bramble,
             Sacrifice: null,
-            IsSacrificial: false,
-            MoonPhase: 0));
+            IsSacrificial: false));
 
         var service = new FusionTransactionService();
         FusionTransactionAssessment valid = service.Assess(new FusionTransactionRequest(
@@ -786,6 +790,29 @@ public sealed class OriginalCleanContentSliceTests
             entity.BaseLevel,
             entity.BaseSkillIds,
             entity.Stats);
+
+    private static FusionPolicyRegistry TrainingAnnexFusionPolicies(
+        IFusionSacrificePolicy? sacrificePolicy = null) =>
+        new(
+            new TieredFusionInheritanceSlotPolicy(
+                [
+                    new FusionInheritanceSlotTier(0, 1),
+                    new FusionInheritanceSlotTier(7, 2),
+                    new FusionInheritanceSlotTier(10, 3),
+                    new FusionInheritanceSlotTier(14, 4),
+                    new FusionInheritanceSlotTier(19, 5),
+                    new FusionInheritanceSlotTier(24, 6)
+                ],
+                maximumSlots: 8),
+            sacrificePolicy ?? new FixedFusionSacrificePolicy(true, 2),
+            accidentPolicies:
+            [
+                new PercentageFusionAccidentPolicy(Id("standard_accident"), chancePercent: 1)
+            ],
+            mutationPolicies:
+            [
+                new AdjacentTierFusionMutationPolicy(Id("standard_mutation"), chancePercent: 20)
+            ]);
 
     private static FusionInheritancePlan SelectionPlan(
         IFusionContentRepository repository,

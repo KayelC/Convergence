@@ -24,7 +24,9 @@ namespace JRPGPrototype.Logic.Fusion
             Database.FusionRecipes.Select(recipe => new FusionRecipeSnapshot(
                 ToContentId(recipe.ParentA),
                 ToContentId(recipe.ParentB),
-                ToResultToken(recipe.Result)));
+                ToResultToken(recipe.Result),
+                AccidentPolicyId: LegacyFusionStrategyPolicies.AccidentPolicyId,
+                MutationPolicyId: LegacyFusionStrategyPolicies.MutationPolicyId));
 
         public bool TryGetEntity(ContentId entityId, out FusionEntitySnapshot? entity)
         {

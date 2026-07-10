@@ -90,6 +90,31 @@ public sealed class FrameworkBoundaryTests
         }
     }
 
+    [Fact]
+    public void FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies()
+    {
+        string fusionRoot = RepositoryPath("JRPG.Framework", "Logic", "Fusion");
+        string[] legacyStrategyTokens =
+        [
+            "mitama",
+            "ara_mitama",
+            "nigi_mitama",
+            "kusi_mitama",
+            "saki_mitama",
+            "MoonPhase",
+            "Full Moon"
+        ];
+
+        foreach (string file in Directory.EnumerateFiles(fusionRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            string source = File.ReadAllText(file);
+            foreach (string token in legacyStrategyTokens)
+            {
+                Assert.DoesNotContain(token, source, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+    }
+
     private static void AssertAllowed(Type type)
     {
         foreach (Type candidate in Expand(type))

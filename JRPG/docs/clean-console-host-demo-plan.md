@@ -746,9 +746,9 @@ Demonstrate clean negotiation/recruitment if the owner still wants this mechanic
 
 Demonstrate clean fusion only after the game's fusion direction is approved. The first safe slice, Phase 7-30, is limited to non-mutating result calculation over original clean content.
 
-### Why Blocked
+### Design Boundary
 
-Fusion is not just a technical feature. It defines the identity of the game loop. The current framework has fusion concepts, but the owner has not settled what the full fusion loop should mean for the final game. Phase 7-30 therefore avoids rituals, inheritance selection, transactions, accidents, and Compendium state.
+Fusion is not just a technical feature. It defines the identity of the game loop. Phases 7-30 through 7-34 therefore establish generic operations and opt-in policies without treating any legacy-inspired mechanic as mandatory. Compendium remains the next separately reviewed capability.
 
 ### Phase 7-30 Result
 
@@ -788,9 +788,19 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - This remains `parallel_partial`. The clean host now proves atomic transaction mutation and rollback, but Compendium integration and broader strategy approval are still later Phase 7 work.
 - Verification: focused 7-33 and guard tests passed `14/14`, focused transaction tests passed `3/3`, and the full suite passed `867/867` with no skips. Framework build stayed at `0` warnings, solution build stayed at `98` pre-existing legacy-host warnings, clean battle/field/save/Training Annex demos passed, `git diff --check` reported only line-ending normalization warnings, framework forbidden-reference search returned no matches, and protected `Data/Jsons` content stayed unchanged.
 
-### Possible Work After Approval
+### Phase 7-34 Result
 
-- Approve and harden the remaining fusion strategies.
+- Fusion resolution and planning now require an explicit `FusionPolicyRegistry`; there is no framework-owned default policy set.
+- The policy boundary covers inheritance slot calculation, sacrificial availability/bonus, accidents, mutation, typed result handlers, optional combination handlers, and the unstructured-token compatibility hook.
+- Fusion requests carry optional `FusionPolicyContext` facts instead of a required Moon Phase number. A game may use progression, difficulty, a custom cycle, or no contextual mechanic.
+- Training Annex explicitly opts into its sample values and reports the accident/mutation policy IDs plus sacrifice bonus in its summary. Display names do not determine behavior.
+- Legacy Moon Phase, result-token, Element, and Mitama-style behavior is configured in `LegacyFusionStrategyPolicies` under the console host. The framework contains no knowledge of those names or conditions.
+- Missing authored policy registrations reject with typed diagnostics. No silent fallback selects legacy or sample behavior.
+- This remains `parallel_partial`: the clean path is strategy-policy driven, but protected Cathedral transaction strategies remain active and Compendium remains 7-35.
+- Verification passed `9/9` focused strategy-policy tests, `63/63` protected fusion compatibility tests, `86/86` Training Annex host tests, and `877/877` full-suite tests with no skips. Framework build warnings remained `0`; solution warnings remained the existing `98`. All four clean demos and boundary/content-preservation gates passed.
+
+### Remaining Work
+
 - Register/recall a simple Compendium entry if approved.
 - Demonstrate optional player-knowledge import from a registered/owned familiar entity, so later target selection can show known weakness/resistance hints without a fresh Analyze action.
 
@@ -901,8 +911,8 @@ Phase 6-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` u
 
 Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
 
-Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof. Phase 7-33 adds `Commit Fusion Transaction`, a duplicate-result rejection and atomic parent-consume/result-add proof.
+Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof. Phase 7-33 adds `Commit Fusion Transaction`, a duplicate-result rejection and atomic parent-consume/result-add proof. Phase 7-34 replaces embedded strategy assumptions with required host-selected fusion policies and isolates legacy-inspired rules in the console compatibility layer.
 
-The next numbered capability is Phase 7-34, `fusion_strategies`, unless the owner deliberately reprioritizes the plan.
+The next numbered capability is Phase 7-35, `compendium`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

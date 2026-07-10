@@ -91,7 +91,10 @@ namespace JRPGPrototype.Logic.Fusion
             }
 
             LegacyFusionContentAdapter adapter = LegacyFusionContentAdapter.Shared;
-            var resolver = new FusionResultResolver(adapter, new LegacyFusionRandomSource(new Random(0)));
+            var resolver = new FusionResultResolver(
+                adapter,
+                new LegacyFusionRandomSource(new Random(0)),
+                LegacyFusionStrategyPolicies.CreateRegistry());
             FusionParticipantSnapshot first = adapter.ToParticipant(parentA);
             FusionParticipantSnapshot second = adapter.ToParticipant(parentB);
             ContentId? directResult = resolver.TryResolveDirectCreateResult(

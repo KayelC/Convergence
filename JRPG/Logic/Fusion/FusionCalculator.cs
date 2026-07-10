@@ -43,11 +43,13 @@ namespace JRPGPrototype.Logic.Fusion
             _rnd = random ?? throw new ArgumentNullException(nameof(random));
             _adapter = LegacyFusionContentAdapter.Shared;
             var randomSource = new LegacyFusionRandomSource(_rnd);
-            _resultResolver = new FusionResultResolver(_adapter, randomSource);
+            FusionPolicyRegistry policies = LegacyFusionStrategyPolicies.CreateRegistry();
+            _resultResolver = new FusionResultResolver(_adapter, randomSource, policies);
             _planningService = new FusionPlanningService(
                 _adapter,
                 _resultResolver,
                 randomSource,
+                policies,
                 new FusionInheritancePlanner());
             _raceTable = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             LoadFusionTable();
@@ -107,7 +109,7 @@ namespace JRPGPrototype.Logic.Fusion
             FusionResolvedResult result = _resultResolver.Resolve(new FusionResultRequest(
                 _adapter.ToParticipant(a),
                 _adapter.ToParticipant(b),
-                moonPhase));
+                LegacyFusionStrategyPolicies.CreateContext(moonPhase)));
 
             if (!result.IsSuccessful || result.ResultEntityId is null)
             {
@@ -233,7 +235,9 @@ namespace JRPGPrototype.Logic.Fusion
         /// </summary>
         public string GetMutatedSkill(string originalSkillName)
         {
-            return _adapter.SkillName(_planningService.MutateSkill(_adapter.ContentIdForSkill(originalSkillName)));
+            return _adapter.SkillName(_planningService.MutateSkill(
+                _adapter.ContentIdForSkill(originalSkillName),
+                LegacyFusionStrategyPolicies.MutationPolicyId));
         }
 
         // Calculates the number of skill slots available for inheritance based on total unique parent skills.

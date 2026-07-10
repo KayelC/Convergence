@@ -523,6 +523,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
         Assert.Equal(Qualified("ward_shell"), direct.ResultEntityId);
         Assert.False(direct.IsAccident);
+        Assert.Equal(Id("standard_accident"), direct.AccidentPolicyId);
+        Assert.Null(direct.ResultPolicyId);
         Assert.Empty(direct.Diagnostics);
 
         TrainingAnnexFusionResultEvidence rank = summary.FusionResults[1];
@@ -534,6 +536,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
         Assert.Equal(Qualified("ward_shell"), rank.ResultEntityId);
         Assert.False(rank.IsAccident);
+        Assert.Equal(Id("standard_accident"), rank.AccidentPolicyId);
+        Assert.Null(rank.ResultPolicyId);
         Assert.Empty(rank.Diagnostics);
 
         Assert.Equal("inheritance_slots_mutation_accident", planning.ScenarioId);
@@ -555,6 +559,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal([Qualified("shell_bash")], planning.AccidentInheritedSkillIds);
         Assert.Equal(Qualified("echo_strike"), planning.MutationSourceSkillId);
         Assert.Equal(Qualified("shell_bash"), planning.MutationResultSkillId);
+        Assert.Equal(Id("standard_accident"), planning.AccidentPolicyId);
+        Assert.Equal(Id("standard_mutation"), planning.MutationPolicyId);
+        Assert.Equal(2, planning.SacrificeAdditionalSlots);
 
         string text = output.ToString();
         Assert.Contains(
@@ -570,7 +577,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            "accident sample Echo Strike -> Shell Bash.",
+            "accident policy standard_accident; mutation policy standard_mutation; sacrifice bonus 2; accident sample Echo Strike -> Shell Bash.",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -3373,6 +3380,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static ContentId Qualified(string localId) =>
         ContentId.Parse($"convergence.training_annex_slice:{localId}");
+
+    private static ContentId Id(string value) => ContentId.Parse(value);
 
     private static StatResolutionResult Resolved(CleanTrainingAnnexPlaySummary summary, string statId) =>
         Assert.Single(summary.PlayerResolvedStats, result => result.StatId == ContentId.Parse(statId));

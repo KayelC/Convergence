@@ -47,8 +47,8 @@ public sealed class ArchiveCandidateReviewTests
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         JsonElement summary = review.RootElement.GetProperty("statusSummary");
 
-        Assert.Equal(2, summary.GetProperty("clean_foundation").GetInt32());
-        Assert.Equal(33, summary.GetProperty("parallel_partial").GetInt32());
+        Assert.Equal(1, summary.GetProperty("clean_foundation").GetInt32());
+        Assert.Equal(34, summary.GetProperty("parallel_partial").GetInt32());
         Assert.Equal(1, summary.GetProperty("legacy_only").GetInt32());
         Assert.Equal(0, summary.GetProperty("clean_parity").GetInt32());
         foreach (JsonProperty property in summary.EnumerateObject())

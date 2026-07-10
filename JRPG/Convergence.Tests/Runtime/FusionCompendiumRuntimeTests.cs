@@ -10,8 +10,15 @@ namespace Convergence.Tests.Runtime;
 public sealed class FusionCompendiumRuntimeTests
 {
     [Fact]
-    public void ResultResolver_PreservesSpecificRankAccidentAndMitamaRules()
+    public void ResultResolver_UsesExplicitCreateRankAccidentAndCatalystPolicies()
     {
+        var catalystPolicy = new CatalystStatBoostFusionPolicy(
+            Id("stat_boost"),
+            [
+                new FusionCatalystStatBoostRule(
+                    Id("catalyst"),
+                    [new KeyValuePair<ContentId, int>(Id("strength"), 2)])
+            ]);
         var repository = new TestFusionRepository(
             entities:
             [
@@ -19,44 +26,76 @@ public sealed class FusionCompendiumRuntimeTests
                 Entity("high_pixie", "fairy", rank: 2, level: 10),
                 Entity("slime", "foul", rank: 1, level: 4),
                 Entity("aeros", "element", rank: 1, level: 8),
-                Entity("ara_mitama", "mitama", rank: 1, level: 12),
+                Entity("catalyst", "material", rank: 1, level: 12),
                 Entity("direct_child", "beast", rank: 1, level: 6)
             ],
             recipes:
             [
-                new FusionRecipeSnapshot(Id("pixie"), Id("slime"), "direct_child"),
-                new FusionRecipeSnapshot(Id("fairy"), Id("foul"), "fairy"),
-                new FusionRecipeSnapshot(Id("fairy"), Id("element"), "1")
+                new FusionRecipeSnapshot(
+                    Id("pixie"),
+                    Id("slime"),
+                    "direct_child",
+                    new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("direct_child")),
+                    AccidentPolicyId: Id("accident")),
+                new FusionRecipeSnapshot(
+                    Id("fairy"),
+                    Id("element"),
+                    "rank_offset",
+                    new FusionRecipeResultSnapshot(
+                        FusionResultOperationKind.RankOffset,
+                        ResultRaceId: Id("fairy"),
+                        RankOffset: 1)),
+                new FusionRecipeSnapshot(
+                    Id("catalyst"),
+                    Id("pixie"),
+                    "stat_boost",
+                    new FusionRecipeResultSnapshot(
+                        FusionResultOperationKind.StatBoost,
+                        PolicyId: Id("stat_boost")))
             ],
             skills: []);
-        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(ints: [50, 3, 0]));
+        FusionPolicyRegistry policies = Policies(
+            accidentPolicies:
+            [
+                new ContextualPercentageFusionAccidentPolicy(
+                    Id("accident"),
+                    defaultChancePercent: 0,
+                    Id("danger_level"),
+                    matchingValue: 1,
+                    matchingChancePercent: 100)
+            ],
+            resultPolicies: [catalystPolicy]);
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(), policies);
 
         FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
             Participant("pixie", "fairy", rank: 1, level: 2),
-            Participant("slime", "foul", rank: 1, level: 4),
-            MoonPhase: 0));
+            Participant("slime", "foul", rank: 1, level: 4)));
         Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
         Assert.Equal(Id("direct_child"), direct.ResultEntityId);
+        Assert.False(direct.IsAccident);
 
         FusionResolvedResult rank = resolver.Resolve(new FusionResultRequest(
             Participant("pixie", "fairy", rank: 1, level: 2),
-            Participant("aeros", "element", rank: 1, level: 8),
-            MoonPhase: 0));
+            Participant("aeros", "element", rank: 1, level: 8)));
         Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
         Assert.Equal(Id("high_pixie"), rank.ResultEntityId);
 
         FusionResolvedResult accident = resolver.Resolve(new FusionResultRequest(
             Participant("pixie", "fairy", rank: 1, level: 2),
             Participant("slime", "foul", rank: 1, level: 4),
-            MoonPhase: 8));
+            new FusionPolicyContext(numericValues:
+            [
+                new KeyValuePair<ContentId, decimal>(Id("danger_level"), 1)
+            ])));
         Assert.True(accident.IsAccident);
 
-        FusionResolvedResult mitama = resolver.Resolve(new FusionResultRequest(
-            Participant("ara_mitama", "mitama", rank: 1, level: 12),
-            Participant("pixie", "fairy", rank: 1, level: 2),
-            MoonPhase: 0));
-        Assert.Equal(FusionRuntimeOperation.StatBoost, mitama.Operation);
-        Assert.Equal(Id("pixie"), mitama.ResultEntityId);
+        FusionResolvedResult statBoost = resolver.Resolve(new FusionResultRequest(
+            Participant("catalyst", "material", rank: 1, level: 12),
+            Participant("pixie", "fairy", rank: 1, level: 2)));
+        Assert.Equal(FusionRuntimeOperation.StatBoost, statBoost.Operation);
+        Assert.Equal(Id("pixie"), statBoost.ResultEntityId);
+        Assert.Equal(Id("stat_boost"), statBoost.ResultPolicyId);
+        Assert.Equal(2, statBoost.ResultStats[Id("strength")]);
     }
 
     [Fact]
@@ -73,18 +112,25 @@ public sealed class FusionCompendiumRuntimeTests
                 new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList, [InheritanceGroup.Ice])));
         var repository = new TestFusionRepository(
             entities: [Entity("pixie", "fairy", 1, 2), Entity("slime", "foul", 1, 4), child],
-            recipes: [new FusionRecipeSnapshot(Id("pixie"), Id("slime"), "child")],
+            recipes:
+            [
+                new FusionRecipeSnapshot(
+                    Id("pixie"),
+                    Id("slime"),
+                    "child",
+                    new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("child")))
+            ],
             skills: [frostLance, iceBoost]);
         var random = new SequenceRandomSource(ints: [50]);
-        var resolver = new FusionResultResolver(repository, random);
-        var planner = new FusionPlanningService(repository, resolver, random, new FusionInheritancePlanner());
+        FusionPolicyRegistry policies = Policies();
+        var resolver = new FusionResultResolver(repository, random, policies);
+        var planner = new FusionPlanningService(repository, resolver, random, policies, new FusionInheritancePlanner());
 
         FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
             Participant("pixie", "fairy", 1, 2, ["frost_lance", "ice_boost"]),
             Participant("slime", "foul", 1, 4),
             Sacrifice: null,
-            IsSacrificial: false,
-            MoonPhase: 0));
+            IsSacrificial: false));
 
         Assert.True(plan.IsSuccessful);
         Assert.Contains(Id("ice_boost"), plan.PickableSkillIds);
@@ -112,13 +158,16 @@ public sealed class FusionCompendiumRuntimeTests
                 Skill("s6", InheritanceGroup.Physical),
                 Skill("s7", InheritanceGroup.Physical)
             ]);
+        FusionPolicyRegistry policies = Policies(
+            mutationPolicies: [new AdjacentTierFusionMutationPolicy(Id("mutation"), chancePercent: 100)]);
         var planner = new FusionPlanningService(
             repository,
-            new FusionResultResolver(repository, new SequenceRandomSource()),
-            new SequenceRandomSource(ints: [1, 0]));
+            new FusionResultResolver(repository, new SequenceRandomSource(), policies),
+            new SequenceRandomSource(ints: [0]),
+            policies);
 
         Assert.Equal(2, planner.GetInheritanceSlotCount(repository.GetSkills().Take(7)));
-        Assert.Equal(Id("maragi"), planner.MutateSkill(Id("agi")));
+        Assert.Equal(Id("maragi"), planner.MutateSkill(Id("agi"), Id("mutation")));
     }
 
     [Fact]
@@ -209,6 +258,27 @@ public sealed class FusionCompendiumRuntimeTests
             mutationFamily is null || mutationTier is null
                 ? null
                 : new SkillMutationDefinition(Id(mutationFamily), mutationTier.Value));
+
+    private static FusionPolicyRegistry Policies(
+        IEnumerable<IFusionAccidentPolicy>? accidentPolicies = null,
+        IEnumerable<IFusionMutationPolicy>? mutationPolicies = null,
+        IEnumerable<IFusionResultPolicy>? resultPolicies = null,
+        IFusionSacrificePolicy? sacrificePolicy = null) =>
+        new(
+            new TieredFusionInheritanceSlotPolicy(
+                [
+                    new FusionInheritanceSlotTier(0, 1),
+                    new FusionInheritanceSlotTier(7, 2),
+                    new FusionInheritanceSlotTier(10, 3),
+                    new FusionInheritanceSlotTier(14, 4),
+                    new FusionInheritanceSlotTier(19, 5),
+                    new FusionInheritanceSlotTier(24, 6)
+                ],
+                maximumSlots: 8),
+            sacrificePolicy ?? new FixedFusionSacrificePolicy(true, 2),
+            accidentPolicies,
+            mutationPolicies,
+            resultPolicies);
 
     private sealed class TestFusionRepository : IFusionContentRepository
     {

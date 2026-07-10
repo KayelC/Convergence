@@ -30,8 +30,13 @@ public enum FusionRuntimeDiagnosticCode
     NoFusionPossible,
     MissingEntity,
     MissingRaceMembers,
-    MitamaPairUnsupported,
-    ElementCannotReceiveStatBoost,
+    CatalystPairUnsupported,
+    TargetNotEligible,
+    PolicyNotRegistered,
+    InvalidPolicyResult,
+    SacrificeNotAllowed,
+    InvalidSacrifice,
+    UnsupportedRecipeFormat,
     DuplicateResult,
     StockFull,
     InsufficientCurrency,
@@ -44,18 +49,40 @@ public sealed record FusionRuntimeDiagnostic(
     ContentId? ContentId = null,
     RuntimeInstanceId? InstanceId = null);
 
-public sealed record FusionRecipeResultSnapshot(
-    FusionResultOperationKind Operation,
-    ContentId? ResultEntityId = null,
-    ContentId? ResultRaceId = null,
-    int? RankOffset = null,
-    ContentId? PolicyId = null);
+public sealed record FusionRecipeResultSnapshot
+{
+    public FusionRecipeResultSnapshot(
+        FusionResultOperationKind Operation,
+        ContentId? ResultEntityId = null,
+        ContentId? ResultRaceId = null,
+        int? RankOffset = null,
+        ContentId? PolicyId = null,
+        IEnumerable<KeyValuePair<string, object?>>? Parameters = null)
+    {
+        this.Operation = Operation;
+        this.ResultEntityId = ResultEntityId;
+        this.ResultRaceId = ResultRaceId;
+        this.RankOffset = RankOffset;
+        this.PolicyId = PolicyId;
+        this.Parameters = new ReadOnlyDictionary<string, object?>(
+            (Parameters ?? []).ToDictionary(pair => pair.Key, pair => pair.Value));
+    }
+
+    public FusionResultOperationKind Operation { get; }
+    public ContentId? ResultEntityId { get; }
+    public ContentId? ResultRaceId { get; }
+    public int? RankOffset { get; }
+    public ContentId? PolicyId { get; }
+    public IReadOnlyDictionary<string, object?> Parameters { get; }
+}
 
 public sealed record FusionRecipeSnapshot(
     ContentId ParentAId,
     ContentId ParentBId,
     string ResultToken,
-    FusionRecipeResultSnapshot? Result = null);
+    FusionRecipeResultSnapshot? Result = null,
+    ContentId? AccidentPolicyId = null,
+    ContentId? MutationPolicyId = null);
 
 public sealed record FusionEntitySnapshot
 {
@@ -129,7 +156,7 @@ public interface IFusionContentRepository
 public sealed record FusionResultRequest(
     FusionParticipantSnapshot FirstParent,
     FusionParticipantSnapshot SecondParent,
-    int MoonPhase);
+    FusionPolicyContext? PolicyContext = null);
 
 public sealed record FusionResolvedResult
 {
@@ -139,6 +166,9 @@ public sealed record FusionResolvedResult
         bool isAccident,
         FusionParticipantSnapshot? transformedParent,
         FusionParticipantSnapshot? catalystParent,
+        FusionRecipeSnapshot? matchedRecipe,
+        ContentId? resultPolicyId,
+        IReadOnlyDictionary<ContentId, int> resultStats,
         IReadOnlyList<FusionRuntimeDiagnostic> diagnostics)
     {
         Operation = operation;
@@ -146,6 +176,9 @@ public sealed record FusionResolvedResult
         IsAccident = isAccident;
         TransformedParent = transformedParent;
         CatalystParent = catalystParent;
+        MatchedRecipe = matchedRecipe;
+        ResultPolicyId = resultPolicyId;
+        ResultStats = resultStats;
         Diagnostics = diagnostics;
     }
 
@@ -154,6 +187,9 @@ public sealed record FusionResolvedResult
     public bool IsAccident { get; }
     public FusionParticipantSnapshot? TransformedParent { get; }
     public FusionParticipantSnapshot? CatalystParent { get; }
+    public FusionRecipeSnapshot? MatchedRecipe { get; }
+    public ContentId? ResultPolicyId { get; }
+    public IReadOnlyDictionary<ContentId, int> ResultStats { get; }
     public IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics { get; }
     public bool IsSuccessful => Operation != FusionRuntimeOperation.NoFusionPossible && ResultEntityId is not null;
 }
@@ -166,43 +202,59 @@ public interface IFusionResultResolver
 
 public sealed class FusionResultResolver : IFusionResultResolver
 {
-    private static readonly ContentId MitamaRaceId = ContentId.Parse("mitama");
-    private static readonly ContentId ElementRaceId = ContentId.Parse("element");
-
     private readonly IFusionContentRepository _content;
     private readonly IRandomSource _random;
+    private readonly FusionPolicyRegistry _policies;
 
-    public FusionResultResolver(IFusionContentRepository content, IRandomSource random)
+    public FusionResultResolver(
+        IFusionContentRepository content,
+        IRandomSource random,
+        FusionPolicyRegistry policies)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        _policies = policies ?? throw new ArgumentNullException(nameof(policies));
     }
 
     public FusionResolvedResult Resolve(FusionResultRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        bool isAccident = RollAccident(request.MoonPhase);
         FusionParticipantSnapshot a = request.FirstParent;
         FusionParticipantSnapshot b = request.SecondParent;
+        FusionPolicyContext context = request.PolicyContext ?? FusionPolicyContext.Empty;
 
-        bool aIsMitama = a.RaceId == MitamaRaceId;
-        bool bIsMitama = b.RaceId == MitamaRaceId;
-        if (aIsMitama || bIsMitama)
+        foreach (IFusionCombinationPolicy policy in _policies.CombinationPolicies)
         {
-            if (aIsMitama && bIsMitama)
+            FusionPolicyResolution? policyResolution = policy.TryResolve(new FusionCombinationPolicyRequest(
+                a,
+                b,
+                _content,
+                context,
+                _random));
+            if (policyResolution is null)
             {
-                return Failed(FusionRuntimeDiagnosticCode.MitamaPairUnsupported, "Mitama + Mitama fusion is not supported.");
+                continue;
             }
 
-            FusionParticipantSnapshot target = aIsMitama ? b : a;
-            FusionParticipantSnapshot catalyst = aIsMitama ? a : b;
-            if (target.RaceId == ElementRaceId)
+            if (!policyResolution.IsSuccessful)
             {
-                return Failed(FusionRuntimeDiagnosticCode.ElementCannotReceiveStatBoost, "Elements cannot receive Mitama stat boosts.");
+                return Failed(policyResolution.Diagnostics);
             }
 
-            return Successful(FusionRuntimeOperation.StatBoost, target.EntityId, isAccident, target, catalyst);
+            if (!TryRollAccident(
+                    _policies.DefaultAccidentPolicyId,
+                    null,
+                    a,
+                    b,
+                    context,
+                    out bool isAccident,
+                    out FusionResolvedResult? accidentFailure))
+            {
+                return accidentFailure!;
+            }
+
+            return FromPolicy(policyResolution, isAccident, null, policy.Id);
         }
 
         FusionRecipeSnapshot? recipe =
@@ -214,82 +266,95 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return Failed(FusionRuntimeDiagnosticCode.NoRecipe, "No fusion recipe matched the selected parents.");
         }
 
+        FusionResolvedResult? policyFailure = ValidateRecipePoliciesBeforeRandomness(recipe);
+        if (policyFailure is not null)
+        {
+            return policyFailure;
+        }
+
+        ContentId? accidentPolicyId = recipe.AccidentPolicyId ?? _policies.DefaultAccidentPolicyId;
+        if (!TryRollAccident(
+                accidentPolicyId,
+                recipe,
+                a,
+                b,
+                context,
+                out bool isRecipeAccident,
+                out FusionResolvedResult? recipeAccidentFailure))
+        {
+            return recipeAccidentFailure!;
+        }
+
         if (recipe.Result is not null)
         {
-            return ResolveAuthoredResult(recipe.Result, a, b, isAccident);
+            return ResolveAuthoredResult(recipe, a, b, isRecipeAccident, context);
         }
 
         string token = recipe.ResultToken;
         if (TryToken(token, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _))
         {
-            return Successful(FusionRuntimeOperation.CreateNewEntity, tokenId, isAccident);
+            return Successful(
+                FusionRuntimeOperation.CreateNewEntity,
+                tokenId,
+                isRecipeAccident,
+                matchedRecipe: recipe);
         }
 
-        if (token == "1" || token == "-1")
+        if (_policies.UnstructuredRecipePolicy is null)
         {
-            FusionParticipantSnapshot? parentToRank = a.RaceId != ElementRaceId ? a : b.RaceId != ElementRaceId ? b : null;
-            if (parentToRank is null)
+            return Failed(
+                FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
+                $"Fusion recipe result token '{token}' requires an explicitly registered compatibility policy.");
+        }
+
+        FusionPolicyResolution unstructured = _policies.UnstructuredRecipePolicy.Resolve(
+            new FusionUnstructuredRecipePolicyRequest(
+                recipe,
+                a,
+                b,
+                isRecipeAccident,
+                _content,
+                context),
+            _random);
+        return unstructured.IsSuccessful
+            ? FromPolicy(unstructured, isRecipeAccident, recipe, null)
+            : Failed(unstructured.Diagnostics);
+    }
+
+    private FusionResolvedResult? ValidateRecipePoliciesBeforeRandomness(FusionRecipeSnapshot recipe)
+    {
+        ContentId? accidentPolicyId = recipe.AccidentPolicyId ?? _policies.DefaultAccidentPolicyId;
+        if (accidentPolicyId is ContentId accidentId &&
+            !_policies.TryGetAccidentPolicy(accidentId, out _))
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.PolicyNotRegistered,
+                $"Fusion accident policy '{accidentId}' is not registered.");
+        }
+
+        if (recipe.Result is { Operation: FusionResultOperationKind.StatBoost or FusionResultOperationKind.Special } result)
+        {
+            if (result.PolicyId is not ContentId resultPolicyId ||
+                !_policies.TryGetResultPolicy(resultPolicyId, out _))
             {
-                return Failed(FusionRuntimeDiagnosticCode.NoFusionPossible, "No non-Element parent can receive the rank operation.");
-            }
-
-            int rankDirection = token == "1" ? 1 : -1;
-            int targetRank = parentToRank.Rank + rankDirection;
-            FusionEntitySnapshot? ranked = _content.GetEntitiesByRace(parentToRank.RaceId)
-                .FirstOrDefault(entity => entity.Rank == targetRank);
-            return ranked is null
-                ? Failed(FusionRuntimeDiagnosticCode.NoFusionPossible, "No entity exists at the target rank.")
-                : Successful(
-                    rankDirection > 0 ? FusionRuntimeOperation.RankUpParent : FusionRuntimeOperation.RankDownParent,
-                    ranked.Id,
-                    isAccident,
-                    parentToRank);
-        }
-
-        if (!TryToken(token, out ContentId raceId))
-        {
-            return Failed(FusionRuntimeDiagnosticCode.NoFusionPossible, $"Fusion result token '{token}' is not a valid entity or race ID.");
-        }
-
-        if (!_content.TryGetEntity(a.EntityId, out FusionEntitySnapshot? templateA) ||
-            !_content.TryGetEntity(b.EntityId, out FusionEntitySnapshot? templateB))
-        {
-            return Failed(FusionRuntimeDiagnosticCode.MissingEntity, "A selected parent has no entity template.");
-        }
-
-        FusionEntitySnapshot[] racePool = _content.GetEntitiesByRace(raceId)
-            .OrderBy(entity => entity.BaseLevel)
-            .ThenBy(entity => entity.Id.ToString(), StringComparer.Ordinal)
-            .ToArray();
-        if (racePool.Length == 0)
-        {
-            return Failed(FusionRuntimeDiagnosticCode.MissingRaceMembers, $"Race '{raceId}' has no fusion results.");
-        }
-
-        FusionEntitySnapshot result;
-        if (isAccident)
-        {
-            result = racePool[0];
-        }
-        else
-        {
-            FusionEntitySnapshot parentTemplateA = templateA ?? throw new InvalidOperationException("Parent A template disappeared during fusion resolution.");
-            FusionEntitySnapshot parentTemplateB = templateB ?? throw new InvalidOperationException("Parent B template disappeared during fusion resolution.");
-            int averageBaseLevel = (parentTemplateA.BaseLevel + parentTemplateB.BaseLevel) / 2;
-            int targetLevel = averageBaseLevel + _random.NextInt32(1, 6);
-            result = racePool.FirstOrDefault(entity => entity.BaseLevel >= targetLevel) ?? racePool[^1];
-
-            if (result.Id == parentTemplateA.Id || result.Id == parentTemplateB.Id)
-            {
-                int index = Array.IndexOf(racePool, result);
-                if (index + 1 < racePool.Length)
-                {
-                    result = racePool[index + 1];
-                }
+                return Failed(
+                    FusionRuntimeDiagnosticCode.PolicyNotRegistered,
+                    result.PolicyId is ContentId missingId
+                        ? $"Fusion result policy '{missingId}' is not registered."
+                        : $"Fusion result operation '{result.Operation}' requires a policy ID.");
             }
         }
 
-        return Successful(FusionRuntimeOperation.CreateNewEntity, result.Id, isAccident);
+        if (recipe.Result is null &&
+            !(TryToken(recipe.ResultToken, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _)) &&
+            _policies.UnstructuredRecipePolicy is null)
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
+                $"Fusion recipe result token '{recipe.ResultToken}' requires an explicitly registered compatibility policy.");
+        }
+
+        return null;
     }
 
     public ContentId? TryResolveDirectCreateResult(
@@ -317,22 +382,26 @@ public sealed class FusionResultResolver : IFusionResultResolver
     }
 
     private FusionResolvedResult ResolveAuthoredResult(
-        FusionRecipeResultSnapshot result,
+        FusionRecipeSnapshot recipe,
         FusionParticipantSnapshot a,
         FusionParticipantSnapshot b,
-        bool isAccident)
+        bool isAccident,
+        FusionPolicyContext context)
     {
+        FusionRecipeResultSnapshot result = recipe.Result!;
         return result.Operation switch
         {
-            FusionResultOperationKind.CreateEntity => ResolveAuthoredCreateEntity(result, isAccident),
-            FusionResultOperationKind.RankOffset => ResolveAuthoredRankOffset(result, a, b, isAccident),
-            _ => Failed(
-                FusionRuntimeDiagnosticCode.NoFusionPossible,
-                $"Fusion result operation '{result.Operation}' is not supported by the runtime resolver.")
+            FusionResultOperationKind.CreateEntity => ResolveAuthoredCreateEntity(recipe, result, isAccident),
+            FusionResultOperationKind.RankOffset => ResolveAuthoredRankOffset(recipe, result, a, b, isAccident),
+            FusionResultOperationKind.StatBoost or FusionResultOperationKind.Special =>
+                ResolvePolicyResult(recipe, result, a, b, isAccident, context),
+            _ => Failed(FusionRuntimeDiagnosticCode.NoFusionPossible,
+                $"Fusion result operation '{result.Operation}' is not supported.")
         };
     }
 
     private FusionResolvedResult ResolveAuthoredCreateEntity(
+        FusionRecipeSnapshot recipe,
         FusionRecipeResultSnapshot result,
         bool isAccident)
     {
@@ -344,11 +413,12 @@ public sealed class FusionResultResolver : IFusionResultResolver
         }
 
         return _content.TryGetEntity(entityId, out _)
-            ? Successful(FusionRuntimeOperation.CreateNewEntity, entityId, isAccident)
+            ? Successful(FusionRuntimeOperation.CreateNewEntity, entityId, isAccident, matchedRecipe: recipe)
             : Failed(FusionRuntimeDiagnosticCode.MissingEntity, $"Fusion result entity '{entityId}' was not found.");
     }
 
     private FusionResolvedResult ResolveAuthoredRankOffset(
+        FusionRecipeSnapshot recipe,
         FusionRecipeResultSnapshot result,
         FusionParticipantSnapshot a,
         FusionParticipantSnapshot b,
@@ -361,11 +431,8 @@ public sealed class FusionResultResolver : IFusionResultResolver
                 "Rank-offset fusion result must specify a nonzero rank offset.");
         }
 
-        FusionParticipantSnapshot? rankedParent = result.ResultRaceId is null
-            ? SelectNonElementParent(a, b)
-            : null;
-        ContentId raceId = result.ResultRaceId ?? rankedParent?.RaceId ?? a.RaceId;
-        int baseRank = rankedParent?.Rank ?? (a.Rank + b.Rank) / 2;
+        ContentId raceId = result.ResultRaceId ?? a.RaceId;
+        int baseRank = (a.Rank + b.Rank) / 2;
         int targetRank = baseRank + rankOffset;
 
         FusionEntitySnapshot[] racePool = _content.GetEntitiesByRace(raceId)
@@ -385,13 +452,41 @@ public sealed class FusionResultResolver : IFusionResultResolver
             rankOffset > 0 ? FusionRuntimeOperation.RankUpParent : FusionRuntimeOperation.RankDownParent,
             ranked.Id,
             isAccident,
-            rankedParent);
+            matchedRecipe: recipe);
     }
 
-    private bool RollAccident(int moonPhase)
+    private FusionResolvedResult ResolvePolicyResult(
+        FusionRecipeSnapshot recipe,
+        FusionRecipeResultSnapshot result,
+        FusionParticipantSnapshot a,
+        FusionParticipantSnapshot b,
+        bool isAccident,
+        FusionPolicyContext context)
     {
-        int accidentThreshold = moonPhase == 8 ? 12 : 1;
-        return _random.NextInt32(0, 100) < accidentThreshold;
+        if (result.PolicyId is not ContentId policyId ||
+            !_policies.TryGetResultPolicy(policyId, out IFusionResultPolicy? policy) ||
+            policy is null)
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.PolicyNotRegistered,
+                result.PolicyId is ContentId missingId
+                    ? $"Fusion result policy '{missingId}' is not registered."
+                    : $"Fusion result operation '{result.Operation}' requires a policy ID.");
+        }
+
+        FusionPolicyResolution resolution = policy.Resolve(new FusionResultPolicyRequest(
+            result,
+            a,
+            b,
+            _content,
+            context,
+            _random));
+        if (!resolution.IsSuccessful)
+        {
+            return Failed(resolution.Diagnostics);
+        }
+
+        return FromPolicy(resolution, isAccident, recipe, policyId);
     }
 
     private FusionRecipeSnapshot? FindRecipe(ContentId a, ContentId b) =>
@@ -399,30 +494,104 @@ public sealed class FusionResultResolver : IFusionResultResolver
             recipe.ParentAId == a && recipe.ParentBId == b ||
             recipe.ParentAId == b && recipe.ParentBId == a);
 
-    private static FusionParticipantSnapshot? SelectNonElementParent(
-        FusionParticipantSnapshot a,
-        FusionParticipantSnapshot b) =>
-        a.RaceId != ElementRaceId ? a : b.RaceId != ElementRaceId ? b : null;
-
     private static bool TryToken(string token, out ContentId id) =>
         ContentId.TryParse(token, out id);
+
+    private bool TryRollAccident(
+        ContentId? policyId,
+        FusionRecipeSnapshot? recipe,
+        FusionParticipantSnapshot a,
+        FusionParticipantSnapshot b,
+        FusionPolicyContext context,
+        out bool isAccident,
+        out FusionResolvedResult? failure)
+    {
+        isAccident = false;
+        failure = null;
+        if (policyId is null)
+        {
+            return true;
+        }
+
+        if (!_policies.TryGetAccidentPolicy(policyId.Value, out IFusionAccidentPolicy? policy) || policy is null)
+        {
+            failure = Failed(
+                FusionRuntimeDiagnosticCode.PolicyNotRegistered,
+                $"Fusion accident policy '{policyId}' is not registered.");
+            return false;
+        }
+
+        isAccident = policy.IsAccident(new FusionAccidentPolicyRequest(recipe, a, b, context), _random);
+        return true;
+    }
+
+    private FusionResolvedResult FromPolicy(
+        FusionPolicyResolution resolution,
+        bool isAccident,
+        FusionRecipeSnapshot? matchedRecipe,
+        ContentId? resultPolicyId)
+    {
+        ContentId resultEntityId = resolution.ResultEntityId!.Value;
+        if (!_content.TryGetEntity(resultEntityId, out _))
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.MissingEntity,
+                $"Fusion policy '{resultPolicyId?.ToString() ?? "unidentified"}' returned unknown entity '{resultEntityId}'.");
+        }
+
+        if (resolution.Operation == FusionRuntimeOperation.StatBoost &&
+            (resolution.TransformedParent is null || resolution.CatalystParent is null))
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.InvalidPolicyResult,
+                $"Fusion policy '{resultPolicyId?.ToString() ?? "unidentified"}' returned an incomplete stat-boost result.");
+        }
+
+        return Successful(
+            resolution.Operation,
+            resultEntityId,
+            isAccident,
+            resolution.TransformedParent,
+            resolution.CatalystParent,
+            matchedRecipe,
+            resultPolicyId,
+            resolution.ResultStats);
+    }
 
     private static FusionResolvedResult Successful(
         FusionRuntimeOperation operation,
         ContentId resultEntityId,
         bool isAccident,
         FusionParticipantSnapshot? transformedParent = null,
-        FusionParticipantSnapshot? catalystParent = null) =>
-        new(operation, resultEntityId, isAccident, transformedParent, catalystParent, Array.AsReadOnly(Array.Empty<FusionRuntimeDiagnostic>()));
+        FusionParticipantSnapshot? catalystParent = null,
+        FusionRecipeSnapshot? matchedRecipe = null,
+        ContentId? resultPolicyId = null,
+        IReadOnlyDictionary<ContentId, int>? resultStats = null) =>
+        new(
+            operation,
+            resultEntityId,
+            isAccident,
+            transformedParent,
+            catalystParent,
+            matchedRecipe,
+            resultPolicyId,
+            resultStats ?? new ReadOnlyDictionary<ContentId, int>(new Dictionary<ContentId, int>()),
+            Array.AsReadOnly(Array.Empty<FusionRuntimeDiagnostic>()));
 
     private static FusionResolvedResult Failed(FusionRuntimeDiagnosticCode code, string message) =>
+        Failed([new FusionRuntimeDiagnostic(code, message)]);
+
+    private static FusionResolvedResult Failed(IEnumerable<FusionRuntimeDiagnostic> diagnostics) =>
         new(
             FusionRuntimeOperation.NoFusionPossible,
             null,
             false,
             null,
             null,
-            Array.AsReadOnly(new[] { new FusionRuntimeDiagnostic(code, message) }));
+            null,
+            null,
+            new ReadOnlyDictionary<ContentId, int>(new Dictionary<ContentId, int>()),
+            Array.AsReadOnly(diagnostics.ToArray()));
 }
 
 public sealed record FusionInheritanceEntry(
@@ -436,7 +605,7 @@ public sealed record FusionPlanningRequest(
     FusionParticipantSnapshot SecondParent,
     FusionParticipantSnapshot? Sacrifice,
     bool IsSacrificial,
-    int MoonPhase);
+    FusionPolicyContext? PolicyContext = null);
 
 public sealed record FusionPlanningResult
 {
@@ -451,7 +620,8 @@ public sealed record FusionPlanningResult
         IReadOnlyList<ContentId> pickableSkillIds,
         IReadOnlyList<ContentId> exclusiveSkillIds,
         IReadOnlyList<FusionInheritanceEntry> displaySkills,
-        int maximumInheritanceSlots)
+        int maximumInheritanceSlots,
+        FusionSacrificePolicyDecision? sacrificeDecision)
     {
         Result = result;
         ResultEntity = resultEntity;
@@ -464,6 +634,7 @@ public sealed record FusionPlanningResult
         ExclusiveSkillIds = exclusiveSkillIds;
         DisplaySkills = displaySkills;
         MaximumInheritanceSlots = maximumInheritanceSlots;
+        SacrificeDecision = sacrificeDecision;
     }
 
     public FusionResolvedResult Result { get; }
@@ -478,14 +649,18 @@ public sealed record FusionPlanningResult
     public IReadOnlyList<ContentId> ExclusiveSkillIds { get; }
     public IReadOnlyList<FusionInheritanceEntry> DisplaySkills { get; }
     public int MaximumInheritanceSlots { get; }
+    public FusionSacrificePolicyDecision? SacrificeDecision { get; }
 }
 
 public interface IFusionPlanningService
 {
     FusionPlanningResult CreatePlan(FusionPlanningRequest request);
     int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills);
-    ContentId MutateSkill(ContentId skillId);
-    IReadOnlyList<ContentId> CreateAccidentInheritance(IReadOnlyList<ContentId> legalSkillIds, int maximumSlots);
+    ContentId MutateSkill(ContentId skillId, ContentId policyId, FusionPolicyContext? context = null);
+    IReadOnlyList<ContentId> CreateAccidentInheritance(
+        FusionPlanningResult plan,
+        IReadOnlyList<ContentId> legalSkillIds,
+        int maximumSlots);
 }
 
 public sealed class FusionPlanningService : IFusionPlanningService
@@ -494,16 +669,19 @@ public sealed class FusionPlanningService : IFusionPlanningService
     private readonly IFusionResultResolver _resolver;
     private readonly IFusionInheritancePlanner _inheritancePlanner;
     private readonly IRandomSource _random;
+    private readonly FusionPolicyRegistry _policies;
 
     public FusionPlanningService(
         IFusionContentRepository content,
         IFusionResultResolver resolver,
         IRandomSource random,
+        FusionPolicyRegistry policies,
         IFusionInheritancePlanner? inheritancePlanner = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        _policies = policies ?? throw new ArgumentNullException(nameof(policies));
         _inheritancePlanner = inheritancePlanner ?? new FusionInheritancePlanner();
     }
 
@@ -511,10 +689,40 @@ public sealed class FusionPlanningService : IFusionPlanningService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        FusionPolicyContext context = request.PolicyContext ?? FusionPolicyContext.Empty;
+        FusionSacrificePolicyDecision? sacrificeDecision = null;
+        if (request.IsSacrificial)
+        {
+            if (request.Sacrifice is null)
+            {
+                return Empty(FailedPlanningResult(
+                    FusionRuntimeDiagnosticCode.InvalidSacrifice,
+                    "Sacrificial fusion requires a sacrifice participant."));
+            }
+
+            sacrificeDecision = _policies.SacrificePolicy.Assess(new FusionSacrificePolicyRequest(
+                request.FirstParent,
+                request.SecondParent,
+                request.Sacrifice,
+                context));
+            if (!sacrificeDecision.IsAllowed)
+            {
+                return Empty(FailedPlanningResult(
+                    FusionRuntimeDiagnosticCode.SacrificeNotAllowed,
+                    sacrificeDecision.RejectionMessage ?? "Sacrificial fusion is not enabled."));
+            }
+        }
+        else if (request.Sacrifice is not null)
+        {
+            return Empty(FailedPlanningResult(
+                FusionRuntimeDiagnosticCode.InvalidSacrifice,
+                "A sacrifice participant was supplied for a non-sacrificial fusion request."));
+        }
+
         FusionResolvedResult result = _resolver.Resolve(new FusionResultRequest(
             request.FirstParent,
             request.SecondParent,
-            request.MoonPhase));
+            context));
         if (!result.IsSuccessful ||
             result.ResultEntityId is not ContentId resultEntityId ||
             !_content.TryGetEntity(resultEntityId, out FusionEntitySnapshot? resultEntity))
@@ -522,11 +730,17 @@ public sealed class FusionPlanningService : IFusionPlanningService
             return Empty(result);
         }
 
+        if (result.MatchedRecipe?.MutationPolicyId is ContentId mutationPolicyId &&
+            !_policies.TryGetMutationPolicy(mutationPolicyId, out _))
+        {
+            return Empty(FailedPlanningResult(
+                FusionRuntimeDiagnosticCode.PolicyNotRegistered,
+                $"Fusion mutation policy '{mutationPolicyId}' is not registered."));
+        }
+
         FusionParticipantSnapshot? previewBaseline = result.Operation == FusionRuntimeOperation.StatBoost
             ? result.TransformedParent
-            : request.FirstParent.RaceId != ContentId.Parse("element")
-                ? request.FirstParent
-                : request.SecondParent;
+            : result.TransformedParent ?? request.FirstParent;
 
         IReadOnlyList<ContentId> naturalSkills = result.Operation == FusionRuntimeOperation.StatBoost
             ? Snapshot(previewBaseline?.SkillIds)
@@ -546,14 +760,8 @@ public sealed class FusionPlanningService : IFusionPlanningService
         var display = new List<FusionInheritanceEntry>();
         var pickable = new List<ContentId>();
         var exclusive = new List<ContentId>();
-        int legalCount = 0;
         foreach (FusionInheritanceCandidate candidate in inheritancePlan.Candidates)
         {
-            if (candidate.PolicyDecision.IsAllowed)
-            {
-                legalCount++;
-            }
-
             if (candidate.IsSelectable)
             {
                 pickable.Add(candidate.Skill.Id);
@@ -570,16 +778,15 @@ public sealed class FusionPlanningService : IFusionPlanningService
                 candidate.AvailabilityReasonCode));
         }
 
-        int maxSlots = GetInheritanceSlotCount(
-            inheritancePlan.Candidates
-                .Where(candidate => candidate.PolicyDecision.IsAllowed)
-                .Select(candidate => candidate.Skill));
-        if (request.IsSacrificial)
-        {
-            maxSlots += 2;
-        }
-
-        maxSlots = Math.Min(8, maxSlots);
+        SkillDefinition[] legalSkills = inheritancePlan.Candidates
+            .Where(candidate => candidate.PolicyDecision.IsAllowed)
+            .Select(candidate => candidate.Skill)
+            .ToArray();
+        int maxSlots = _policies.InheritanceSlotPolicy.GetMaximumSlots(
+            new FusionInheritanceSlotPolicyRequest(
+                Array.AsReadOnly(legalSkills),
+                sacrificeDecision?.AdditionalInheritanceSlots ?? 0,
+                context));
 
         return new FusionPlanningResult(
             result,
@@ -592,46 +799,41 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Snapshot(pickable),
             Snapshot(exclusive),
             Snapshot(display),
-            maxSlots);
+            maxSlots,
+            sacrificeDecision);
     }
 
     public int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills)
     {
         ArgumentNullException.ThrowIfNull(legalSkills);
-        int uniqueSkillCount = legalSkills.Select(skill => skill.Id).Distinct().Count();
-        if (uniqueSkillCount >= 24) return 6;
-        if (uniqueSkillCount >= 19) return 5;
-        if (uniqueSkillCount >= 14) return 4;
-        if (uniqueSkillCount >= 10) return 3;
-        if (uniqueSkillCount >= 7) return 2;
-        return 1;
+        return _policies.InheritanceSlotPolicy.GetMaximumSlots(
+            new FusionInheritanceSlotPolicyRequest(
+                Array.AsReadOnly(legalSkills.ToArray()),
+                0,
+                FusionPolicyContext.Empty));
     }
 
-    public ContentId MutateSkill(ContentId skillId)
+    public ContentId MutateSkill(
+        ContentId skillId,
+        ContentId policyId,
+        FusionPolicyContext? context = null)
     {
-        if (!_content.TryGetSkill(skillId, out SkillDefinition? current) ||
-            current is null ||
-            current.Mutation is null)
+        if (!_policies.TryGetMutationPolicy(policyId, out IFusionMutationPolicy? policy) || policy is null)
         {
-            return skillId;
+            throw new InvalidOperationException($"Fusion mutation policy '{policyId}' is not registered.");
         }
 
-        int direction = _random.NextInt32(0, 2) == 0 ? 1 : -1;
-        if (current.Mutation.Tier == 1 && direction == -1)
-        {
-            direction = 1;
-        }
-
-        int targetTier = current.Mutation.Tier + direction;
-        SkillDefinition? mutation = _content.GetSkills().FirstOrDefault(skill =>
-            skill.Mutation is not null &&
-            skill.Mutation.FamilyId == current.Mutation.FamilyId &&
-            skill.Mutation.Tier == targetTier);
-        return mutation?.Id ?? skillId;
+        return policy.Mutate(
+            new FusionMutationPolicyRequest(skillId, _content, context ?? FusionPolicyContext.Empty),
+            _random);
     }
 
-    public IReadOnlyList<ContentId> CreateAccidentInheritance(IReadOnlyList<ContentId> legalSkillIds, int maximumSlots)
+    public IReadOnlyList<ContentId> CreateAccidentInheritance(
+        FusionPlanningResult plan,
+        IReadOnlyList<ContentId> legalSkillIds,
+        int maximumSlots)
     {
+        ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(legalSkillIds);
         if (maximumSlots < 0) throw new ArgumentOutOfRangeException(nameof(maximumSlots));
 
@@ -643,11 +845,13 @@ public sealed class FusionPlanningService : IFusionPlanningService
             .Take(maximumSlots)
             .ToList();
 
-        for (int i = 0; i < shuffled.Count; i++)
+        ContentId? mutationPolicyId = plan.Result.MatchedRecipe?.MutationPolicyId ??
+            _policies.DefaultMutationPolicyId;
+        if (mutationPolicyId is ContentId policyId)
         {
-            if (_random.NextInt32(0, 100) < 20)
+            for (int i = 0; i < shuffled.Count; i++)
             {
-                shuffled[i] = MutateSkill(shuffled[i]);
+                shuffled[i] = MutateSkill(shuffled[i], policyId, FusionPolicyContext.Empty);
             }
         }
 
@@ -689,7 +893,22 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Array.AsReadOnly(Array.Empty<ContentId>()),
             Array.AsReadOnly(Array.Empty<ContentId>()),
             Array.AsReadOnly(Array.Empty<FusionInheritanceEntry>()),
-            0);
+            0,
+            null);
+
+    private static FusionResolvedResult FailedPlanningResult(
+        FusionRuntimeDiagnosticCode code,
+        string message) =>
+        new(
+            FusionRuntimeOperation.NoFusionPossible,
+            null,
+            false,
+            null,
+            null,
+            null,
+            null,
+            new ReadOnlyDictionary<ContentId, int>(new Dictionary<ContentId, int>()),
+            Array.AsReadOnly([new FusionRuntimeDiagnostic(code, message)]));
 }
 
 public sealed record FusionPreviewRequest(
@@ -743,12 +962,6 @@ public interface IFusionPreviewService
 
 public sealed class FusionPreviewService : IFusionPreviewService
 {
-    private static readonly ContentId Strength = ContentId.Parse("strength");
-    private static readonly ContentId Magic = ContentId.Parse("magic");
-    private static readonly ContentId Vitality = ContentId.Parse("vitality");
-    private static readonly ContentId Agility = ContentId.Parse("agility");
-    private static readonly ContentId Luck = ContentId.Parse("luck");
-
     public FusionPreviewSnapshot? CreatePreview(FusionPreviewRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -770,10 +983,10 @@ public sealed class FusionPreviewService : IFusionPreviewService
             level = plan.PreviewBaseline.Level;
             experience = plan.PreviewBaseline.Experience;
             lifetimeExperience = plan.PreviewBaseline.LifetimeExperience;
-            stats = new Dictionary<ContentId, int>(plan.PreviewBaseline.Stats);
+            stats = plan.Result.ResultStats.Count > 0
+                ? new Dictionary<ContentId, int>(plan.Result.ResultStats)
+                : new Dictionary<ContentId, int>(plan.PreviewBaseline.Stats);
             naturalSkills = plan.PreviewBaseline.SkillIds;
-            string catalystKey = $"{plan.Result.CatalystParent?.EntityId} {plan.Result.CatalystParent?.DisplayName}";
-            ApplyMitamaBoost(stats, catalystKey);
         }
         else if (plan.Result.Operation is FusionRuntimeOperation.RankUpParent or FusionRuntimeOperation.RankDownParent &&
                  plan.PreviewBaseline is not null)
@@ -795,38 +1008,6 @@ public sealed class FusionPreviewService : IFusionPreviewService
             stats,
             experience,
             lifetimeExperience);
-    }
-
-    private static void ApplyMitamaBoost(Dictionary<ContentId, int> stats, string resultEntityId)
-    {
-        // The legacy adapter stores Mitama boosts through the result entity identity.
-        // Names are host-owned, so the framework recognizes only the stable normalized IDs.
-        if (resultEntityId.Contains("ara", StringComparison.Ordinal))
-        {
-            Add(stats, Strength, 2);
-            Add(stats, Agility, 1);
-        }
-        else if (resultEntityId.Contains("nigi", StringComparison.Ordinal))
-        {
-            Add(stats, Magic, 2);
-            Add(stats, Luck, 1);
-        }
-        else if (resultEntityId.Contains("kusi", StringComparison.Ordinal))
-        {
-            Add(stats, Vitality, 2);
-            Add(stats, Agility, 1);
-        }
-        else if (resultEntityId.Contains("saki", StringComparison.Ordinal))
-        {
-            Add(stats, Vitality, 2);
-            Add(stats, Luck, 1);
-        }
-    }
-
-    private static void Add(Dictionary<ContentId, int> stats, ContentId id, int value)
-    {
-        stats.TryGetValue(id, out int current);
-        stats[id] = Math.Min(40, current + value);
     }
 }
 

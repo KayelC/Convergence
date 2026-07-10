@@ -226,7 +226,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 | 31 | `fusion_slots_mutation_accidents` | `parallel_partial` | Prove clean slots, typed inheritance display, and mutation/accident evidence. |
 | 32 | `fusion_preview_confirmation` | `parallel_partial` | Add clean preview and confirmation flow. |
 | 33 | `fusion_transactions` | `parallel_partial` | Make clean fusion transactions atomic in runtime state. |
-| 34 | `fusion_strategies` | `clean_foundation` | Replace strategy assumptions with approved framework policies. |
+| 34 | `fusion_strategies` | `parallel_partial` | Implemented explicit framework policies for fusion strategy decisions. |
 | 35 | `compendium` | `parallel_partial` | Add clean registration/recall/persistence if the design needs it. |
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
@@ -993,7 +993,7 @@ Clean console proof:
 
 ### 34. `fusion_strategies`
 
-Current status: `clean_foundation`.
+Current status: `parallel_partial`.
 
 Full parity target:
 
@@ -1002,7 +1002,20 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion design approval.
+- Training Annex result calculation, inheritance planning, preview, and transaction paths explicitly register their accident, mutation, inheritance-slot, and sacrifice policies.
+
+Phase 7-34 result:
+
+- `FusionPolicyRegistry` is now a required dependency of clean fusion resolution and planning. It owns explicit accident, mutation, result-operation, combination, inheritance-slot, sacrifice, and legacy-token compatibility policies; the framework provides no hidden default registry.
+- `FusionPolicyContext` carries optional host/session flags and numeric facts. A policy may use story progress, difficulty, a custom cycle, or another host fact without the framework knowing what that fact means. Fusion requests no longer require a Moon Phase integer.
+- `FusionResultResolver` implements the neutral authored operations `create_entity` and `rank_offset`. Authored `stat_boost` and `special` operations require a registered result policy. Unstructured legacy result tokens require an explicitly supplied compatibility policy.
+- `TieredFusionInheritanceSlotPolicy`, `FixedFusionSacrificePolicy`, percentage/contextual accident policies, adjacent-tier mutation, and typed catalyst stat boosts are reusable opt-in implementations. Hosts may replace or omit them.
+- The framework no longer contains `mitama`, `element`-catalyst, Full Moon, catalyst-name, fixed `+2` sacrifice, fixed slot-table, or fixed 20% mutation assumptions. `FusionPreviewService` consumes typed policy-produced stat results instead of inspecting IDs or display names.
+- `CatalogFusionContentRepository` preserves authored accident IDs, mutation IDs, result-policy IDs, and result parameters in runtime recipe snapshots. Missing policy registrations fail with typed diagnostics before gameplay falls back or mutates state.
+- `--clean-training-annex-play` explicitly selects a neutral sample policy set: 1% accident chance, 20% adjacent-tier mutation, the reviewed slot tiers, and an enabled two-slot sacrifice bonus. Its fusion evidence records the policy IDs and bonus used.
+- The old Cathedral behavior remains available only through `LegacyFusionStrategyPolicies` in the console host. That adapter preserves the existing Moon Phase accident odds, legacy result tokens, catalyst stat boosts, rank handling, and external 20% mutation roll without teaching those concepts to `JRPG.Framework`.
+- This remains `parallel_partial`: the clean original-content consumer is policy-driven and legacy calculations delegate through a compatibility policy, but the Cathedral's live transaction strategy classes remain active and Compendium work remains Phase 7-35. No removal is authorized.
+- Verification: focused strategy-policy tests passed `9/9`, protected fusion compatibility tests passed `63/63`, all Training Annex host tests passed `86/86`, and the full suite passed `877/877` with no skips. The framework build remained at `0` warnings; the solution retained `98` pre-existing legacy-host warnings. Clean battle, field, save, and Training Annex demos passed. `git diff --check` passed with line-ending normalization notices only, framework forbidden-reference and legacy-fusion-token searches returned no matches, and `Data/Jsons` remained unchanged.
 
 ### 35. `compendium`
 

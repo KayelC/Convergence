@@ -62,7 +62,9 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
             first.Id,
             second.Id,
             ToLegacyResultToken(recipe.Result),
-            result);
+            result,
+            recipe.AccidentPolicyId,
+            recipe.MutationPolicyId);
     }
 
     private static FusionRecipeResultSnapshot ToResultSnapshot(FusionResultDefinition result) =>
@@ -71,7 +73,8 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
             result.ResultEntityId,
             result.ResultRaceId,
             result.RankOffset,
-            result.PolicyId);
+            result.PolicyId,
+            result.Parameters);
 
     private static string ToLegacyResultToken(FusionResultDefinition result) =>
         result.Operation switch

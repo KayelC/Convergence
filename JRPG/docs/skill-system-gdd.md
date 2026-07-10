@@ -285,6 +285,10 @@ Inheritance planning preserves the authored candidate order and keeps the first 
 
 The maximum number of inherited skills is supplied by the caller. Track 10 does not define a slot formula or fusion tuning schema; a future fusion profile or host rule may calculate that value before planning. Zero slots and deliberately selecting no skills are both valid.
 
+The runtime fusion pipeline requires an explicit policy registry. The framework does not choose an inheritance-slot table, sacrifice availability or bonus, accident chance, mutation chance, catalyst identity, Moon Phase rule, or special result behavior for the host. Authored accident, mutation, and result-policy IDs must resolve to host-registered policies; missing registrations reject with typed diagnostics rather than selecting a fallback. Optional host/session facts are supplied through a generic policy context, so story progress, difficulty, items, custom cycles, or no contextual mechanic can govern availability without becoming universal schema requirements.
+
+Neutral `create_entity` and `rank_offset` recipe results have framework implementations. `stat_boost` and `special` results require registered typed handlers. A catalyst handler operates on content IDs and typed stat results, never display names or descriptions. Legacy unstructured result tokens are supported only through an explicit host compatibility policy.
+
 This clean framework path is additive. The legacy Cathedral planner, preview, transaction, datasets, and console UI remain unchanged until runtime consumer migration. They must not be treated as the normative implementation of these typed rules.
 
 | Skill | Activation | Menu group | Inheritance group |

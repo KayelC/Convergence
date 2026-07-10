@@ -1,6 +1,6 @@
 # Fusion Subsystem
 
-> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets. Phase 7-30 adds clean catalog-backed result calculation for original content, Phase 7-31 adds clean inheritance/mutation planning evidence, Phase 7-32 adds non-mutating clean preview confirmation, and Phase 7-33 adds a committed clean transaction proof without replacing the Cathedral flow.
+> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets. Phases 7-30 through 7-33 add clean result, planning, preview, and transaction proofs. Phase 7-34 removes embedded strategy assumptions from the framework and requires explicit host-selected policies without replacing the Cathedral flow.
 
 ## Purpose
 
@@ -60,6 +60,8 @@ The conductor creates transient `Combatant` wrappers for persona participants so
 
 Recipe lookup is parent-order neutral. Specific ID pairs are checked before race pairs.
 
+Those listed odds and legacy race operations are now console compatibility configuration, not framework defaults. `LegacyFusionStrategyPolicies` registers the old Moon Phase accident policy, catalyst combinations, unstructured result-token interpretation, slot table, sacrifice bonus, and mutation behavior for the Cathedral. Clean hosts construct their own `FusionPolicyRegistry` and may omit or replace any optional mechanic.
+
 For clean original content, `CatalogFusionContentRepository` adapts catalog-authored recipes into the same resolver contract. Structured recipe results preserve operations such as `create_entity` and `rank_offset` instead of relying on legacy string tokens. The Training Annex host currently exposes this only as a non-mutating `Calculate Fusion Results` proof command.
 
 Phase 7-31 extends that proof through `FusionPlanningService`: Training Annex records ordinary and sacrificial slot counts, selectable inherited skills, blocked or already-known display reason codes, and a deterministic accident inheritance sample. The sample uses generic mutation metadata (`echo_strike` tier 1 and `shell_bash` tier 2 in `training_physical`) so mutation is authored data, not a display-name rule.
@@ -67,6 +69,8 @@ Phase 7-31 extends that proof through `FusionPlanningService`: Training Annex re
 Phase 7-32 adds `Preview Fusion Result` to the clean Training Annex host. The host presents inherited-skill choices for a sacrificial Echo Adept + Bramble Runner + Ashling sample, then validates the selected skills with `FusionInheritanceSelectionValidator` before creating a `FusionPreviewSnapshot`. Confirmation records the accepted preview but intentionally does not mutate party/stock, parent actors, inventory, wallet, or Compendium state.
 
 Phase 7-33 adds `Commit Fusion Transaction` to the clean Training Annex host. The host uses the direct Ashling + Bramble Runner recipe, rejects a duplicate Ward Shell result before mutation when Ward Shell is already owned, and can commit after the host frees that slot. A successful commit consumes the two parent demons through `PartyStockTransitionService`, hydrates a new `fusion_ward_shell_1` actor through `CatalogBattleActorFactory`, applies the preview skill snapshot, adds the result to Demon stock, and validates the save snapshot with the dynamic fused actor included.
+
+Phase 7-34 requires explicit strategy policies. Neutral `create_entity` and `rank_offset` results are authored operations. `stat_boost` and `special` results require registered policy handlers. Recipe accident and mutation IDs survive catalog mapping and missing runtime registrations reject with typed diagnostics. Sacrifice availability and bonus slots are decided by `IFusionSacrificePolicy`; slot scaling is decided by `IFusionInheritanceSlotPolicy`; optional host/session facts travel through `FusionPolicyContext`. The framework contains no Moon Phase, Mitama, Element-catalyst, catalyst-name, or fixed probability assumptions.
 
 ### Skill Inheritance
 
@@ -132,6 +136,6 @@ Future knowledge integration: once clean battle UI and clean Compendium ownershi
 
 ## Caveats
 
-- Full strategy removal is not authorized yet; old strategy classes remain the console transaction adapters.
+- Strategy policy extraction is complete for framework resolution/planning, but old Cathedral transaction strategy classes remain active console adapters and are not authorized for removal.
 - Some strategy paths assume non-null active personas and matching database records.
 - Accidents are revealed after confirmation, so previewed choices can be discarded by design.

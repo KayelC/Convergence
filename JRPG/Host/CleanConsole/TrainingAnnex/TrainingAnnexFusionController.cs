@@ -17,6 +17,8 @@ internal sealed record TrainingAnnexFusionResultEvidence(
     FusionRuntimeOperation Operation,
     ContentId? ResultEntityId,
     bool IsAccident,
+    ContentId? AccidentPolicyId,
+    ContentId? ResultPolicyId,
     IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics);
 
 internal sealed record TrainingAnnexFusionPlanningEvidence(
@@ -29,7 +31,10 @@ internal sealed record TrainingAnnexFusionPlanningEvidence(
     IReadOnlyList<FusionInheritanceEntry> DisplaySkills,
     IReadOnlyList<ContentId> AccidentInheritedSkillIds,
     ContentId MutationSourceSkillId,
-    ContentId MutationResultSkillId);
+    ContentId MutationResultSkillId,
+    ContentId? AccidentPolicyId,
+    ContentId? MutationPolicyId,
+    int SacrificeAdditionalSlots);
 
 internal sealed record TrainingAnnexFusionCalculationResult(
     IReadOnlyList<TrainingAnnexFusionResultEvidence> Results,
@@ -81,7 +86,8 @@ internal sealed class TrainingAnnexFusionController
         ArgumentNullException.ThrowIfNull(roster);
 
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        FusionPolicyRegistry policies = CreatePolicyRegistry();
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource(), policies);
         TrainingAnnexRuntimeActor ashling = FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance);
         TrainingAnnexRuntimeActor bramble = FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
 
@@ -126,11 +132,13 @@ internal sealed class TrainingAnnexFusionController
         ArgumentNullException.ThrowIfNull(commands);
 
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        FusionPolicyRegistry policies = CreatePolicyRegistry();
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource(), policies);
         var planner = new FusionPlanningService(
             repository,
             resolver,
-            new TrainingAnnexFusionAccidentRandomSource());
+            new TrainingAnnexFusionAccidentRandomSource(),
+            policies);
 
         TrainingAnnexRuntimeActor first = roster.Player;
         TrainingAnnexRuntimeActor second = FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
@@ -143,8 +151,7 @@ internal sealed class TrainingAnnexFusionController
             firstParent,
             secondParent,
             sacrificeParent,
-            IsSacrificial: true,
-            MoonPhase: 0));
+            IsSacrificial: true));
         if (!plan.IsSuccessful || plan.ResultEntity is null)
         {
             await _eventSink.PublishAsync(
@@ -276,11 +283,13 @@ internal sealed class TrainingAnnexFusionController
 
         const string scenarioId = "direct_transaction_commit";
         var repository = new CatalogFusionContentRepository(catalog);
-        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        FusionPolicyRegistry policies = CreatePolicyRegistry();
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource(), policies);
         var planner = new FusionPlanningService(
             repository,
             resolver,
-            new TrainingAnnexFusionNoAccidentRandomSource());
+            new TrainingAnnexFusionNoAccidentRandomSource(),
+            policies);
         FusionParticipantSnapshot firstParent = ToFusionParticipant(
             FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance));
         FusionParticipantSnapshot secondParent = ToFusionParticipant(
@@ -289,8 +298,7 @@ internal sealed class TrainingAnnexFusionController
             firstParent,
             secondParent,
             Sacrifice: null,
-            IsSacrificial: false,
-            MoonPhase: 0));
+            IsSacrificial: false));
 
         if (!plan.IsSuccessful || plan.ResultEntity is null)
         {
@@ -564,8 +572,7 @@ internal sealed class TrainingAnnexFusionController
     {
         FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
             ToFusionParticipant(first),
-            ToFusionParticipant(second),
-            MoonPhase: 0));
+            ToFusionParticipant(second)));
         var evidence = new TrainingAnnexFusionResultEvidence(
             scenarioId,
             first.Actor.State.InstanceId,
@@ -575,6 +582,8 @@ internal sealed class TrainingAnnexFusionController
             result.Operation,
             result.ResultEntityId,
             result.IsAccident,
+            result.MatchedRecipe?.AccidentPolicyId,
+            result.ResultPolicyId,
             result.Diagnostics);
 
         await _eventSink.PublishAsync(
@@ -591,11 +600,13 @@ internal sealed class TrainingAnnexFusionController
         TrainingAnnexRuntimeActor sacrifice,
         CancellationToken cancellationToken)
     {
-        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        FusionPolicyRegistry policies = CreatePolicyRegistry();
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource(), policies);
         var planner = new FusionPlanningService(
             repository,
             resolver,
-            new TrainingAnnexFusionAccidentRandomSource());
+            new TrainingAnnexFusionAccidentRandomSource(),
+            policies);
         FusionParticipantSnapshot firstParent = ToFusionParticipant(first);
         FusionParticipantSnapshot secondParent = ToFusionParticipant(second);
         FusionParticipantSnapshot sacrificeParent = ToFusionParticipant(sacrifice);
@@ -604,17 +615,18 @@ internal sealed class TrainingAnnexFusionController
             firstParent,
             secondParent,
             Sacrifice: null,
-            IsSacrificial: false,
-            MoonPhase: 0));
+            IsSacrificial: false));
         FusionPlanningResult sacrificialPlan = planner.CreatePlan(new FusionPlanningRequest(
             firstParent,
             secondParent,
             sacrificeParent,
-            IsSacrificial: true,
-            MoonPhase: 0));
+            IsSacrificial: true));
 
         IReadOnlyList<ContentId> accidentInheritedSkillIds =
-            planner.CreateAccidentInheritance([TrainingAnnexHostSupport.EchoStrike], maximumSlots: 1);
+            planner.CreateAccidentInheritance(
+                basePlan,
+                [TrainingAnnexHostSupport.EchoStrike],
+                maximumSlots: 1);
         ContentId mutationResult = accidentInheritedSkillIds.Count == 0
             ? TrainingAnnexHostSupport.EchoStrike
             : accidentInheritedSkillIds[0];
@@ -628,7 +640,10 @@ internal sealed class TrainingAnnexFusionController
             basePlan.DisplaySkills,
             accidentInheritedSkillIds,
             TrainingAnnexHostSupport.EchoStrike,
-            mutationResult);
+            mutationResult,
+            basePlan.Result.MatchedRecipe?.AccidentPolicyId,
+            basePlan.Result.MatchedRecipe?.MutationPolicyId,
+            sacrificialPlan.SacrificeDecision?.AdditionalInheritanceSlots ?? 0);
 
         await _eventSink.PublishAsync(
             FormatPlanning(catalog, evidence),
@@ -761,6 +776,9 @@ internal sealed class TrainingAnnexFusionController
             + $"{resultName}; slots {evidence.MaximumInheritanceSlots}, "
             + $"sacrificial slots {evidence.SacrificialMaximumInheritanceSlots}; "
             + $"pickable {pickable}; blocked {blocked}; "
+            + $"accident policy {evidence.AccidentPolicyId?.ToString() ?? "none"}; "
+            + $"mutation policy {evidence.MutationPolicyId?.ToString() ?? "none"}; "
+            + $"sacrifice bonus {evidence.SacrificeAdditionalSlots}; "
             + $"accident sample {mutationSource} -> {mutationResult}.";
     }
 
@@ -1067,6 +1085,32 @@ internal sealed class TrainingAnnexFusionController
         RuntimeInstanceId instanceId) =>
         roster.AllActors.First(actor => actor.Actor.State.InstanceId == instanceId);
 
+    private static FusionPolicyRegistry CreatePolicyRegistry() =>
+        new(
+            new TieredFusionInheritanceSlotPolicy(
+                [
+                    new FusionInheritanceSlotTier(0, 1),
+                    new FusionInheritanceSlotTier(7, 2),
+                    new FusionInheritanceSlotTier(10, 3),
+                    new FusionInheritanceSlotTier(14, 4),
+                    new FusionInheritanceSlotTier(19, 5),
+                    new FusionInheritanceSlotTier(24, 6)
+                ],
+                maximumSlots: 8),
+            new FixedFusionSacrificePolicy(isAllowed: true, additionalInheritanceSlots: 2),
+            accidentPolicies:
+            [
+                new PercentageFusionAccidentPolicy(
+                    ContentId.Parse("standard_accident"),
+                    chancePercent: 1)
+            ],
+            mutationPolicies:
+            [
+                new AdjacentTierFusionMutationPolicy(
+                    ContentId.Parse("standard_mutation"),
+                    chancePercent: 20)
+            ]);
+
     private sealed class TrainingAnnexFusionRandomSource : IRandomSource
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
@@ -1088,7 +1132,7 @@ internal sealed class TrainingAnnexFusionController
 
     private sealed class TrainingAnnexFusionNoAccidentRandomSource : IRandomSource
     {
-        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
         public decimal NextUnitDecimal() => 0.99m;
     }
 }
