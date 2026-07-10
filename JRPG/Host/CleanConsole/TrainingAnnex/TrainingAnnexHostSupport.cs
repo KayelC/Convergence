@@ -93,6 +93,13 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId Mend = Qualified("mend");
     public static readonly ContentId ToxinTouch = Qualified("toxin_touch");
     public static readonly ContentId ClearToxin = Qualified("clear_toxin");
+    public static readonly RuntimeInstanceId EchoAdeptInstance = RuntimeInstanceId.Parse("echo_adept");
+    public static readonly RuntimeInstanceId SupportAnnexMentorInstance = RuntimeInstanceId.Parse("support_annex_mentor");
+    public static readonly RuntimeInstanceId FormAnnexMentorInstance = RuntimeInstanceId.Parse("form_annex_mentor");
+    public static readonly RuntimeInstanceId PersonaBrambleRunnerInstance = RuntimeInstanceId.Parse("persona_bramble_runner");
+    public static readonly RuntimeInstanceId DemonAshlingInstance = RuntimeInstanceId.Parse("demon_ashling");
+    public static readonly RuntimeInstanceId DemonWardShellInstance = RuntimeInstanceId.Parse("demon_ward_shell");
+    public static readonly RuntimeInstanceId ReplacementBrambleRunnerInstance = RuntimeInstanceId.Parse("replacement_bramble_runner");
     public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
         ContentId.Parse("enter_training_annex"),
         StagingArea,
@@ -220,7 +227,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult playerResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("echo_adept"),
-            RuntimeInstanceId.Parse("echo_adept"),
+            EchoAdeptInstance,
             PlayerTeam,
             3,
             new RuntimeProgressionSnapshot(3, 0, 0, 2),
@@ -233,7 +240,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult mentorResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("annex_mentor"),
-            RuntimeInstanceId.Parse("support_annex_mentor"),
+            SupportAnnexMentorInstance,
             PlayerTeam,
             5,
             new RuntimeProgressionSnapshot(5, 0, 0, 4),
@@ -247,7 +254,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult activeFormResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("annex_mentor"),
-            RuntimeInstanceId.Parse("form_annex_mentor"),
+            FormAnnexMentorInstance,
             PlayerTeam,
             5,
             new RuntimeProgressionSnapshot(5, 0, 0, 4),
@@ -261,7 +268,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult personaStockResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("bramble_runner"),
-            RuntimeInstanceId.Parse("persona_bramble_runner"),
+            PersonaBrambleRunnerInstance,
             PlayerTeam,
             3,
             new RuntimeProgressionSnapshot(3, 0, 0, 2),
@@ -275,7 +282,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult demonAshlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("ashling"),
-            RuntimeInstanceId.Parse("demon_ashling"),
+            DemonAshlingInstance,
             PlayerTeam,
             2,
             new RuntimeProgressionSnapshot(2, 0, 0, 1),
@@ -289,7 +296,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult demonWardShellResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("ward_shell"),
-            RuntimeInstanceId.Parse("demon_ward_shell"),
+            DemonWardShellInstance,
             PlayerTeam,
             4,
             new RuntimeProgressionSnapshot(4, 0, 0, 3),
@@ -299,6 +306,20 @@ internal static class TrainingAnnexHostSupport
         if (!demonWardShellResult.IsSuccess)
         {
             AddActorDiagnostics("demon_stock", demonWardShellResult.Diagnostics, diagnostics);
+        }
+
+        CatalogBattleActorCreationResult replacementBrambleResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("bramble_runner"),
+            ReplacementBrambleRunnerInstance,
+            PlayerTeam,
+            3,
+            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            ContentId.Parse("clean_training_annex"),
+            RuntimeActorDeployment.Reserve,
+            IsActive: false));
+        if (!replacementBrambleResult.IsSuccess)
+        {
+            AddActorDiagnostics("demon_replacement_candidate", replacementBrambleResult.Diagnostics, diagnostics);
         }
 
         IReadOnlyList<CatalogBattleActorCreationRequest> enemyRequests = CreateEnemyActorRequests(catalog, diagnostics);
@@ -321,7 +342,8 @@ internal static class TrainingAnnexHostSupport
             activeFormResult.Actor is null ||
             personaStockResult.Actor is null ||
             demonAshlingResult.Actor is null ||
-            demonWardShellResult.Actor is null)
+            demonWardShellResult.Actor is null ||
+            replacementBrambleResult.Actor is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
@@ -334,7 +356,8 @@ internal static class TrainingAnnexHostSupport
                     new TrainingAnnexRuntimeActor("Active Form", activeFormResult.RequireActor()),
                     new TrainingAnnexRuntimeActor("Persona Stock", personaStockResult.RequireActor()),
                     new TrainingAnnexRuntimeActor("Demon Stock", demonAshlingResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Demon Stock", demonWardShellResult.RequireActor())
+                    new TrainingAnnexRuntimeActor("Demon Stock", demonWardShellResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Demon Replacement Candidate", replacementBrambleResult.RequireActor())
                 ],
                 enemies));
     }

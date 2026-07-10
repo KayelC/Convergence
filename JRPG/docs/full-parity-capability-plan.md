@@ -198,7 +198,7 @@ Goal: support multi-actor ownership only when the demo needs it.
 | ---: | --- | --- | --- |
 | 26 | `active_and_reserve_party` | `parallel_partial` | Move clean demo party state through framework party snapshots/transitions. |
 | 27 | `persona_and_demon_stock` | `parallel_partial` | Implemented inspectable clean active-form, Persona-stock, and Demon-stock ownership in Training Annex. |
-| 28 | `party_operations` | `parallel_partial` | Add summon/return/swap/dismiss commands only after clean stock exists. |
+| 28 | `party_operations` | `parallel_partial` | Implemented Training Annex clean stock operations over framework transitions. |
 
 These are not required for the first single-actor clean loop.
 
@@ -867,7 +867,7 @@ Clean console proof:
   - The session stores those references in `RuntimePartyStockSnapshot.ActiveForm`, `PersonaStock`, and `DemonStock`.
   - The `Inspect Stock` command presents that framework-owned snapshot without adding stock mutation commands.
   - Manual/suspend saves include and restore the active form and stock lists; corrupted saves that place enemy-team actors into party/stock lists are rejected before mutation.
-  - This remains `parallel_partial`: clean owned stock now exists in the original clean host, but summon/return/swap/dismiss/replace operations remain Phase 5-28.
+  - This checkpoint remained `parallel_partial`: clean owned stock existed in the original clean host, but mutation operations were not part of Phase 5-27.
   - Phase 5-27 verification passed `74/74` focused Training Annex host tests and `845/845` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
 
 ### 28. `party_operations`
@@ -882,7 +882,13 @@ Full parity target:
 
 Clean console proof:
 
-- only needed after clean stock exists.
+- Phase 5-28 result:
+  - `--clean-training-annex-play` now exposes `Party / Stock Operations` as a host-owned menu over the existing clean `RuntimePartyStockSnapshot`.
+  - Operations execute through `PartyStockTransitionService` via `TrainingAnnexPartyController`: swap active form, summon Ashling, swap active demon to Ward Shell, return active demon, replace Ward Shell with Bramble Runner, dismiss Ashling, and consume Bramble Runner.
+  - The host records before/after transition evidence for active party count, reserve count, active form, Persona stock count, Demon stock count, stable transition code, and affected runtime IDs.
+  - Rejected operations return framework diagnostics and preserve the original snapshot; tests prove invalid return and duplicate summon do not mutate state.
+  - This remains `parallel_partial`: original clean content can mutate party/stock state manually, but recruitment, fusion, battle COMP usage, and Godot presentation are still separate capability work.
+  - Phase 5-28 verification passed `76/76` focused Training Annex host tests and `847/847` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
 
 ### 29. `negotiation_and_recruitment`
 

@@ -17,6 +17,14 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectActor,
     InspectParty,
     InspectStock,
+    OpenPartyStockOperations,
+    PartySwapActiveForm,
+    PartySummonAshling,
+    PartySwapActiveDemon,
+    PartyReturnActiveDemon,
+    PartyReplaceWardShell,
+    PartyDismissAshling,
+    PartyConsumeBrambleRunner,
     ResolveStats,
     RecalculateResources,
     ApplyVictoryExperience,
@@ -488,6 +496,43 @@ internal sealed class CleanTrainingAnnexPlayHost
                     await partyController.PrintStockAsync(partyStock, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
+                case CleanTrainingAnnexPlayCommand.OpenPartyStockOperations:
+                {
+                    await partyController.PrintPartyAsync(partyStock, _eventSink, cancellationToken)
+                        .ConfigureAwait(false);
+                    await partyController.PrintStockAsync(partyStock, _eventSink, cancellationToken)
+                        .ConfigureAwait(false);
+                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> operationSelection =
+                        await _commandSource.ReadAsync(
+                            CreatePartyStockOperationMenu(partyStock),
+                            cancellationToken).ConfigureAwait(false);
+                    if (!operationSelection.IsSelected ||
+                        operationSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                    {
+                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                        break;
+                    }
+
+                    commands.Add(operationSelection.Command);
+                    TrainingAnnexPartyOperation operation = ToPartyOperation(operationSelection.Command);
+                    string operationName = PartyOperationName(operation);
+                    PartyStockTransitionResult operationResult = partyController.ExecuteOperation(
+                        operation,
+                        partyStock,
+                        roster);
+                    partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(operationName, operationResult));
+                    await partyController.PrintOperationAsync(
+                        operationName,
+                        operationResult,
+                        _eventSink,
+                        cancellationToken).ConfigureAwait(false);
+                    if (operationResult.Applied)
+                    {
+                        partyStock = operationResult.After;
+                    }
+
+                    break;
+                }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
                         roster.Player.Actor.State.ToSnapshot().Equipment,
@@ -1140,6 +1185,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.InspectStock,
             "Inspect Stock"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenPartyStockOperations,
+            "Party / Stock Operations"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1148,6 +1196,94 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Training Annex Clean Session - {locationLabel}",
             options);
     }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreatePartyStockOperationMenu(
+        RuntimePartyStockSnapshot party)
+    {
+        bool hasPersonaStock = party.PersonaStock.Any(persona =>
+            persona.InstanceId == TrainingAnnexHostSupport.PersonaBrambleRunnerInstance);
+        bool ashlingOwned = party.DemonStock.Any(demon =>
+            demon.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
+        bool ashlingActive = party.ActiveParty.Any(actor =>
+            actor.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
+        bool wardOwned = party.DemonStock.Any(demon =>
+            demon.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
+        bool wardActive = party.ActiveParty.Any(actor =>
+            actor.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
+        bool brambleOwned = party.DemonStock.Any(demon =>
+            demon.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
+        bool activeDemon = party.ActiveParty.Any(actor =>
+            party.DemonStock.Any(demon => demon.InstanceId == actor.InstanceId));
+
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            "Clean Party / Stock Operations",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartySwapActiveForm,
+                    "Swap Active Form",
+                    hasPersonaStock,
+                    "Exchanges the active form with the Persona stock entry."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartySummonAshling,
+                    "Summon Ashling",
+                    ashlingOwned && !ashlingActive && party.ActiveParty.Count < party.MaxActivePartySize,
+                    "Adds the owned Ashling to the active party while keeping it in Demon stock."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartySwapActiveDemon,
+                    "Swap Active Demon to Ward Shell",
+                    ashlingActive && wardOwned && !wardActive,
+                    "Replaces the active Ashling with owned Ward Shell."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon,
+                    "Return Active Demon",
+                    activeDemon,
+                    "Removes the active demon from the party while keeping it owned."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartyReplaceWardShell,
+                    "Replace Ward Shell with Bramble Runner",
+                    wardOwned && !brambleOwned,
+                    "Replaces an owned Ward Shell with a prepared Bramble Runner candidate."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartyDismissAshling,
+                    "Dismiss Ashling",
+                    ashlingOwned,
+                    "Removes Ashling from the active party and Demon stock."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.PartyConsumeBrambleRunner,
+                    "Consume Bramble Runner",
+                    brambleOwned,
+                    "Consumes Bramble Runner from active party and Demon stock."),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
+    }
+
+    private static TrainingAnnexPartyOperation ToPartyOperation(CleanTrainingAnnexPlayCommand command) =>
+        command switch
+        {
+            CleanTrainingAnnexPlayCommand.PartySwapActiveForm => TrainingAnnexPartyOperation.SwapActiveForm,
+            CleanTrainingAnnexPlayCommand.PartySummonAshling => TrainingAnnexPartyOperation.SummonAshling,
+            CleanTrainingAnnexPlayCommand.PartySwapActiveDemon => TrainingAnnexPartyOperation.SwapActiveDemonToWardShell,
+            CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon => TrainingAnnexPartyOperation.ReturnActiveDemon,
+            CleanTrainingAnnexPlayCommand.PartyReplaceWardShell => TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner,
+            CleanTrainingAnnexPlayCommand.PartyDismissAshling => TrainingAnnexPartyOperation.DismissAshling,
+            CleanTrainingAnnexPlayCommand.PartyConsumeBrambleRunner => TrainingAnnexPartyOperation.ConsumeBrambleRunner,
+            _ => throw new InvalidOperationException($"'{command}' is not a Training Annex party operation.")
+        };
+
+    private static string PartyOperationName(TrainingAnnexPartyOperation operation) =>
+        operation switch
+        {
+            TrainingAnnexPartyOperation.SwapActiveForm => "swap_active_form",
+            TrainingAnnexPartyOperation.SummonAshling => "summon_demon",
+            TrainingAnnexPartyOperation.SwapActiveDemonToWardShell => "swap_active_demon",
+            TrainingAnnexPartyOperation.ReturnActiveDemon => "return_active_demon",
+            TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => "replace_demon",
+            TrainingAnnexPartyOperation.DismissAshling => "dismiss_demon",
+            TrainingAnnexPartyOperation.ConsumeBrambleRunner => "consume_demon",
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unsupported party operation.")
+        };
 
     private static RuntimeInventorySnapshot BuildInitialInventory(
         RuntimeInventorySnapshot? supplied,
