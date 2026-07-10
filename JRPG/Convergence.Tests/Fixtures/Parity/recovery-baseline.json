@@ -442,12 +442,12 @@
       "name": "Fusion planning, preview, inheritance selection, and confirmation",
       "status": "parallel_partial",
       "legacyOwners": ["Logic/Fusion/Planning", "Logic/Fusion/Preview", "Logic/Fusion/Bridges/CathedralUIBridge.cs"],
-      "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs", "Logic/Fusion/Bridges/CathedralUIBridge.cs"],
+      "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "JRPG.Framework/Logic/Fusion/CatalogFusionContentRepository.cs", "Logic/Fusion/Bridges/FusionCompendiumPresentationResults.cs", "Logic/Fusion/Bridges/CathedralUIBridge.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexFusionController.cs", "Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs", "Data/Jsons/training_annex_slice.fusion.json", "Data/Jsons/training_annex_slice.skills.json"],
       "decisionDependencies": ["catalog_fusion_result_construction"],
-      "tests": ["FusionCompendiumRuntimeTests.Planning_UsesTypedInheritanceAndPassiveFusionFodder", "FusionBridgeResultTests", "FusionCompendiumPresentationTests", "FusionBugRegressionTests", "FusionInheritanceTests"],
+      "tests": ["FusionCompendiumRuntimeTests.Planning_UsesTypedInheritanceAndPassiveFusionFodder", "FusionBridgeResultTests", "FusionCompendiumPresentationTests", "FusionBugRegressionTests", "FusionInheritanceTests", "OriginalCleanContentSliceTests.TrainingAnnexSlice_CreatesFusionPreviewFromValidatedSelection", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_PreviewsFusionThroughValidatedSelectionWithoutMutation"],
       "futurePhase": "7-32",
       "removalFiles": ["Logic/Fusion/Planning", "Logic/Fusion/Preview"],
-      "consumerMigrated": false,
+      "consumerMigrated": true,
       "removalAuthorized": false
     },
     {

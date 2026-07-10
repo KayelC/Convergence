@@ -103,6 +103,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.PartyTransitions);
         Assert.Empty(summary.FusionResults);
         Assert.Empty(summary.FusionPlanning);
+        Assert.Empty(summary.FusionPreviews);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
@@ -188,9 +189,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
             Assert.Equal("Training Annex Clean Session - Staging Area", menu.Header);
             Assert.Equal(
             [
-                    "Inspect Session",
-                    "Inspect Actors",
-                    "Resolve Stats",
+                "Inspect Session",
+                "Inspect Actors",
+                "Resolve Stats",
                 "Recalculate Resources",
                 "Apply Victory EXP",
                 "Validate Startup Snapshot",
@@ -199,13 +200,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Field Skills",
                 "Exit",
                 "Save / Load",
-                    "Training Supply",
-                    "Recovery Facility",
-                    "Inspect Party",
-                    "Inspect Stock",
-                    "Party / Stock Operations",
-                    "Negotiate / Recruit",
-                    "Calculate Fusion Results"
+                "Training Supply",
+                "Recovery Facility",
+                "Inspect Party",
+                "Inspect Stock",
+                "Party / Stock Operations",
+                "Negotiate / Recruit",
+                "Calculate Fusion Results",
+                "Preview Fusion Result"
             ],
                 menu.Options);
         }
@@ -232,7 +234,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Inspect Stock",
                 "Party / Stock Operations",
                 "Negotiate / Recruit",
-                "Calculate Fusion Results"
+                "Calculate Fusion Results",
+                "Preview Fusion Result"
             ],
                 menu.Options);
         }
@@ -506,6 +509,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.Commands);
         Assert.Equal(2, summary.FusionResults.Count);
         TrainingAnnexFusionPlanningEvidence planning = Assert.Single(summary.FusionPlanning);
+        Assert.Empty(summary.FusionPreviews);
 
         TrainingAnnexFusionResultEvidence direct = summary.FusionResults[0];
         Assert.Equal("direct_entity_result", direct.ScenarioId);
@@ -564,6 +568,67 @@ public sealed class CleanTrainingAnnexPlayHostTests
             StringComparison.Ordinal);
         Assert.Contains(
             "accident sample Echo Strike -> Shell Bash.",
+            text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_PreviewsFusionThroughValidatedSelectionWithoutMutation()
+    {
+        var io = new ScriptedGameIO().QueueMenu(18, 0, 1, 2, 6, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.PreviewFusionResult,
+                CleanTrainingAnnexPlayCommand.SelectFusionInheritedSkill,
+                CleanTrainingAnnexPlayCommand.SelectFusionInheritedSkill,
+                CleanTrainingAnnexPlayCommand.SelectFusionInheritedSkill,
+                CleanTrainingAnnexPlayCommand.BuildFusionPreview,
+                CleanTrainingAnnexPlayCommand.ConfirmFusionPreview,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+        TrainingAnnexFusionPreviewEvidence previewEvidence = Assert.Single(summary.FusionPreviews);
+        Assert.Equal("sacrificial_preview_confirmation", previewEvidence.ScenarioId);
+        Assert.Equal(Qualified("ward_shell"), previewEvidence.ResultEntityId);
+        Assert.Equal(
+            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")],
+            previewEvidence.SelectedSkillIds);
+        Assert.Empty(previewEvidence.SelectionDiagnostics);
+        Assert.True(previewEvidence.Confirmed);
+        Assert.False(previewEvidence.MutatedRuntimeState);
+
+        Assert.NotNull(previewEvidence.Preview);
+        FusionPreviewSnapshot preview = previewEvidence.Preview!;
+        Assert.Equal(Qualified("ward_shell"), preview.EntityId);
+        Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], preview.NaturalSkillIds);
+        Assert.Equal(previewEvidence.SelectedSkillIds, preview.InheritedSkillIds);
+
+        Assert.Contains(io.Menus, menu =>
+            menu.Header == "Select Inherited Skills" &&
+            menu.Options.Contains("Toxin Touch [group_not_allowed]"));
+        GameIoMenuCall inheritanceMenu = io.Menus.First(menu =>
+            menu.Header == "Select Inherited Skills" &&
+            menu.Options.Contains("Toxin Touch [group_not_allowed]"));
+        Assert.Equal("Frost Tip", inheritanceMenu.Options[0]);
+        Assert.Equal("Echo Strike", inheritanceMenu.Options[1]);
+        Assert.Equal("Steady Breath", inheritanceMenu.Options[2]);
+        Assert.Equal("Shell Bash [already_known]", inheritanceMenu.Options[3]);
+
+        string text = output.ToString();
+        Assert.Contains(
+            "Fusion preview: Ward Shell; level 4; natural Shell Bash, Soften Guard; inherited Frost Tip, Echo Strike, Steady Breath;",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Fusion preview confirmed: Ward Shell with inherited Frost Tip, Echo Strike, Steady Breath. No runtime state was mutated.",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();

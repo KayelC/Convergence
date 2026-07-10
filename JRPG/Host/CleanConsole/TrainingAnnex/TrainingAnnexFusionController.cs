@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Fusion.Inheritance;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
@@ -32,6 +33,15 @@ internal sealed record TrainingAnnexFusionPlanningEvidence(
 internal sealed record TrainingAnnexFusionCalculationResult(
     IReadOnlyList<TrainingAnnexFusionResultEvidence> Results,
     IReadOnlyList<TrainingAnnexFusionPlanningEvidence> Planning);
+
+internal sealed record TrainingAnnexFusionPreviewEvidence(
+    string ScenarioId,
+    ContentId? ResultEntityId,
+    IReadOnlyList<ContentId> SelectedSkillIds,
+    IReadOnlyList<FusionInheritanceSelectionDiagnostic> SelectionDiagnostics,
+    FusionPreviewSnapshot? Preview,
+    bool Confirmed,
+    bool MutatedRuntimeState);
 
 internal sealed class TrainingAnnexFusionController
 {
@@ -81,6 +91,151 @@ internal sealed class TrainingAnnexFusionController
         return new TrainingAnnexFusionCalculationResult(
             Array.AsReadOnly([direct, rank]),
             Array.AsReadOnly([planning]));
+    }
+
+    public async ValueTask<TrainingAnnexFusionPreviewEvidence?> PreviewAsync(
+        GameDataCatalog catalog,
+        TrainingAnnexActorRoster roster,
+        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
+        ICollection<CleanTrainingAnnexPlayCommand> commands,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(commandSource);
+        ArgumentNullException.ThrowIfNull(commands);
+
+        var repository = new CatalogFusionContentRepository(catalog);
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        var planner = new FusionPlanningService(
+            repository,
+            resolver,
+            new TrainingAnnexFusionAccidentRandomSource());
+
+        TrainingAnnexRuntimeActor first = roster.Player;
+        TrainingAnnexRuntimeActor second = FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
+        TrainingAnnexRuntimeActor sacrifice = FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance);
+        FusionParticipantSnapshot firstParent = ToFusionParticipant(first);
+        FusionParticipantSnapshot secondParent = ToFusionParticipant(second);
+        FusionParticipantSnapshot sacrificeParent = ToFusionParticipant(sacrifice);
+
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            firstParent,
+            secondParent,
+            sacrificeParent,
+            IsSacrificial: true,
+            MoonPhase: 0));
+        if (!plan.IsSuccessful || plan.ResultEntity is null)
+        {
+            await _eventSink.PublishAsync(
+                "Fusion preview rejected: no successful plan was available.",
+                cancellationToken).ConfigureAwait(false);
+            return new TrainingAnnexFusionPreviewEvidence(
+                "sacrificial_preview_confirmation",
+                null,
+                [],
+                [],
+                null,
+                Confirmed: false,
+                MutatedRuntimeState: false);
+        }
+
+        IReadOnlyList<ContentId>? selectedSkillIds = await SelectInheritedSkillsAsync(
+            catalog,
+            commandSource,
+            commands,
+            plan,
+            cancellationToken).ConfigureAwait(false);
+        if (selectedSkillIds is null)
+        {
+            await _eventSink.PublishAsync(
+                "Fusion preview canceled before validation.",
+                cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+
+        FusionInheritancePlan selectionPlan = CreateSelectionPlan(
+            repository,
+            plan,
+            firstParent,
+            secondParent,
+            sacrificeParent);
+        FusionInheritanceSelectionResult selection =
+            new FusionInheritanceSelectionValidator().Validate(selectionPlan, selectedSkillIds);
+        if (!selection.IsValid)
+        {
+            foreach (FusionInheritanceSelectionDiagnostic diagnostic in selection.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"Fusion preview selection rejected [{diagnostic.Code}]: {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return new TrainingAnnexFusionPreviewEvidence(
+                "sacrificial_preview_confirmation",
+                plan.ResultEntity.Id,
+                selectedSkillIds,
+                selection.Diagnostics,
+                null,
+                Confirmed: false,
+                MutatedRuntimeState: false);
+        }
+
+        ValidatedFusionInheritanceSelection validSelection = selection.RequireValidSelection();
+        FusionPreviewSnapshot? preview = new FusionPreviewService().CreatePreview(new FusionPreviewRequest(
+            plan,
+            validSelection.SelectedSkillIds));
+        if (preview is null)
+        {
+            await _eventSink.PublishAsync(
+                "Fusion preview rejected: preview service produced no result.",
+                cancellationToken).ConfigureAwait(false);
+            return new TrainingAnnexFusionPreviewEvidence(
+                "sacrificial_preview_confirmation",
+                plan.ResultEntity.Id,
+                validSelection.SelectedSkillIds,
+                selection.Diagnostics,
+                null,
+                Confirmed: false,
+                MutatedRuntimeState: false);
+        }
+
+        await _eventSink.PublishAsync(
+            FormatPreview(catalog, preview),
+            cancellationToken).ConfigureAwait(false);
+
+        HostCommandReadResult<CleanTrainingAnnexPlayCommand> confirmation =
+            await commandSource.ReadAsync(
+                CreateFusionPreviewConfirmationMenu(preview),
+                cancellationToken).ConfigureAwait(false);
+        if (!confirmation.IsSelected || confirmation.Command == CleanTrainingAnnexPlayCommand.Back)
+        {
+            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+            await _eventSink.PublishAsync(
+                "Fusion preview canceled at confirmation. No runtime state was mutated.",
+                cancellationToken).ConfigureAwait(false);
+            return new TrainingAnnexFusionPreviewEvidence(
+                "sacrificial_preview_confirmation",
+                plan.ResultEntity.Id,
+                validSelection.SelectedSkillIds,
+                selection.Diagnostics,
+                preview,
+                Confirmed: false,
+                MutatedRuntimeState: false);
+        }
+
+        commands.Add(confirmation.Command);
+        await _eventSink.PublishAsync(
+            $"Fusion preview confirmed: {preview.DisplayName} with inherited {FormatSkillNames(catalog, preview.InheritedSkillIds)}. No runtime state was mutated.",
+            cancellationToken).ConfigureAwait(false);
+        return new TrainingAnnexFusionPreviewEvidence(
+            "sacrificial_preview_confirmation",
+            plan.ResultEntity.Id,
+            validSelection.SelectedSkillIds,
+            selection.Diagnostics,
+            preview,
+            Confirmed: true,
+            MutatedRuntimeState: false);
     }
 
     private async ValueTask<TrainingAnnexFusionResultEvidence> ResolveAsync(
@@ -165,6 +320,80 @@ internal sealed class TrainingAnnexFusionController
         return evidence;
     }
 
+    private async ValueTask<IReadOnlyList<ContentId>?> SelectInheritedSkillsAsync(
+        GameDataCatalog catalog,
+        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
+        ICollection<CleanTrainingAnnexPlayCommand> commands,
+        FusionPlanningResult plan,
+        CancellationToken cancellationToken)
+    {
+        var selected = new List<ContentId>();
+        while (true)
+        {
+            HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
+                await commandSource.ReadAsync(
+                    CreateFusionInheritanceMenu(catalog, plan, selected),
+                    cancellationToken).ConfigureAwait(false);
+            if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back)
+            {
+                commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                return null;
+            }
+
+            commands.Add(selection.Command);
+            if (selection.Command == CleanTrainingAnnexPlayCommand.BuildFusionPreview)
+            {
+                return selected.ToArray();
+            }
+
+            if (selection.Command != CleanTrainingAnnexPlayCommand.SelectFusionInheritedSkill ||
+                selection.SelectionIdentity?.ContentId is not ContentId skillId)
+            {
+                continue;
+            }
+
+            if (!selected.Contains(skillId))
+            {
+                selected.Add(skillId);
+                await _eventSink.PublishAsync(
+                    $"Fusion inheritance selected: {SkillName(catalog, skillId)}.",
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static FusionInheritancePlan CreateSelectionPlan(
+        IFusionContentRepository repository,
+        FusionPlanningResult plan,
+        params FusionParticipantSnapshot?[] participants)
+    {
+        var candidates = new List<SkillDefinition>();
+        var seen = new HashSet<ContentId>();
+        foreach (FusionParticipantSnapshot? participant in participants)
+        {
+            if (participant is null)
+            {
+                continue;
+            }
+
+            foreach (ContentId skillId in participant.SkillIds)
+            {
+                if (seen.Add(skillId) &&
+                    repository.TryGetSkill(skillId, out SkillDefinition? skill) &&
+                    skill is not null)
+                {
+                    candidates.Add(skill);
+                }
+            }
+        }
+
+        return new FusionInheritancePlanner().CreatePlan(new FusionInheritancePlanRequest(
+            plan.ResultEntity!.Definition,
+            candidates,
+            plan.NaturalSkillIds,
+            plan.MaximumInheritanceSlots));
+    }
+
     private static FusionParticipantSnapshot ToFusionParticipant(TrainingAnnexRuntimeActor actor) =>
         new(
             actor.Actor.State.InstanceId,
@@ -218,6 +447,67 @@ internal sealed class TrainingAnnexFusionController
             + $"pickable {pickable}; blocked {blocked}; "
             + $"accident sample {mutationSource} -> {mutationResult}.";
     }
+
+    private static string FormatPreview(GameDataCatalog catalog, FusionPreviewSnapshot preview)
+    {
+        string natural = FormatSkillNames(catalog, preview.NaturalSkillIds);
+        string inherited = FormatSkillNames(catalog, preview.InheritedSkillIds);
+        string stats = string.Join(
+            ", ",
+            preview.Stats
+                .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
+                .Select(pair => $"{pair.Key} {pair.Value}"));
+        return "Fusion preview: "
+            + $"{preview.DisplayName}; level {preview.Level}; "
+            + $"natural {natural}; inherited {inherited}; stats {stats}.";
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateFusionInheritanceMenu(
+        GameDataCatalog catalog,
+        FusionPlanningResult plan,
+        IReadOnlyList<ContentId> selectedSkillIds)
+    {
+        var options = new List<HostCommandOption<CleanTrainingAnnexPlayCommand>>();
+        foreach (FusionInheritanceEntry entry in plan.DisplaySkills)
+        {
+            bool alreadySelected = selectedSkillIds.Contains(entry.SkillId);
+            bool enabled = entry.IsSelectable && !alreadySelected;
+            string suffix = alreadySelected
+                ? " [Selected]"
+                : entry.IsSelectable
+                    ? string.Empty
+                    : $" [{entry.ReasonCode}]";
+            options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                CleanTrainingAnnexPlayCommand.SelectFusionInheritedSkill,
+                SkillName(catalog, entry.SkillId) + suffix,
+                enabled,
+                entry.ReasonCode,
+                HostCommandSelectionIdentity.ForContent(entry.SkillId)));
+        }
+
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.BuildFusionPreview,
+            $"Build Preview ({selectedSkillIds.Count}/{plan.MaximumInheritanceSlots})"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.Back,
+            "Back"));
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            "Select Inherited Skills",
+            options);
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateFusionPreviewConfirmationMenu(
+        FusionPreviewSnapshot preview) =>
+        new(
+            $"Confirm preview for {preview.DisplayName}?",
+            [
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.ConfirmFusionPreview,
+                    "Confirm Preview"),
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.Back,
+                    "Back")
+            ]);
 
     private static string FormatSkillNames(GameDataCatalog catalog, IReadOnlyList<ContentId> skillIds) =>
         skillIds.Count == 0

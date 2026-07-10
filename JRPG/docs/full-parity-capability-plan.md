@@ -926,7 +926,7 @@ Clean console proof:
   - `FusionRecipeSnapshot` can carry a structured `FusionRecipeResultSnapshot`, so catalog-authored operations such as `create_entity` and `rank_offset` reach `FusionResultResolver` without being flattened into legacy string tokens.
   - `FusionResultResolver` still supports the legacy token path for compatibility, but structured catalog results now resolve explicit entity results and race/rank-offset results. The Training Annex sample proves `ashling + bramble_runner -> ward_shell` and `echo_adept + bramble_runner -> ward_shell` through the original clean pack.
   - `--clean-training-annex-play` exposes `Calculate Fusion Results`, a non-mutating proof command that records typed result evidence and prints the resolved result. It does not select inherited skills, mutate stock, spend resources, confirm rituals, or touch Compendium state.
-  - This remains `parallel_partial`: the protected legacy Cathedral flow is still active, and Phase 7-31 through Phase 7-35 still own slot presentation, mutation/accident evidence, preview/confirmation, transactions, fusion strategies, and Compendium parity.
+  - This remains `parallel_partial`: the protected legacy Cathedral flow is still active, and later Phase 7 work still owns committed transactions, fusion strategy approval, and Compendium parity.
 
 ### 31. `fusion_slots_mutation_accidents`
 
@@ -960,7 +960,15 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion design approval.
+- Phase 7-32 result:
+  - `--clean-training-annex-play` now has a `Preview Fusion Result` proof command.
+  - The command builds a sacrificial clean catalog plan from Echo Adept, Bramble Runner, and Ashling through `CatalogFusionContentRepository`, `FusionResultResolver`, and `FusionPlanningService`.
+  - The console host presents inherited-skill choices, but the framework remains the rule authority: selection is rechecked through `FusionInheritanceSelectionValidator` before any preview is built.
+  - The current sample selects `Frost Tip`, `Echo Strike`, and passive `Steady Breath`; shows `Shell Bash` as `already_known`; and shows `Toxin Touch` plus `Ash Spark` as `group_not_allowed`.
+  - `FusionPreviewService` creates the preview snapshot for Ward Shell with natural skills `Shell Bash` and `Soften Guard`, then the host asks for confirmation.
+  - Confirmation is intentionally non-mutating. Runtime party/stock state, inventory, wallet, Compendium, and parent actors are not changed in this phase.
+  - This remains `parallel_partial`: Phase 7-33 still owns atomic clean fusion transactions, parent consumption, result ownership, rollback, and any Compendium updates.
+  - Verification: focused 7-32 tests passed `3/3`; parity/roadmap guard tests passed as part of the `13/13` focused guard run; full suite passed `864/864` with no skips; framework build remained `0` warnings; solution build remained at `98` legacy warnings; clean battle, field, save, and Training Annex demos passed; framework forbidden-reference search returned no matches; protected legacy JSON stayed unchanged. Direct redirected CLI smoke for `--clean-training-annex-play` still hits the known `ConsoleIO` cursor-handle limitation, so scripted interactive coverage remains test-owned through `ScriptedGameIO`.
 
 ### 33. `fusion_transactions`
 

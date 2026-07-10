@@ -1,6 +1,6 @@
 # Fusion Subsystem
 
-> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets. Phase 7-30 adds clean catalog-backed result calculation for original content, without replacing the Cathedral transaction flow.
+> **Status: Current implementation reference.** Track N moves fusion rule decisions and Compendium state checks into framework services. Track O10 routes Cathedral presentation through typed console-host results while preserving the interactive workflow and legacy datasets. Phase 7-30 adds clean catalog-backed result calculation for original content, Phase 7-31 adds clean inheritance/mutation planning evidence, and Phase 7-32 adds non-mutating clean preview confirmation without replacing the Cathedral transaction flow.
 
 ## Purpose
 
@@ -64,6 +64,8 @@ For clean original content, `CatalogFusionContentRepository` adapts catalog-auth
 
 Phase 7-31 extends that proof through `FusionPlanningService`: Training Annex records ordinary and sacrificial slot counts, selectable inherited skills, blocked or already-known display reason codes, and a deterministic accident inheritance sample. The sample uses generic mutation metadata (`echo_strike` tier 1 and `shell_bash` tier 2 in `training_physical`) so mutation is authored data, not a display-name rule.
 
+Phase 7-32 adds `Preview Fusion Result` to the clean Training Annex host. The host presents inherited-skill choices for a sacrificial Echo Adept + Bramble Runner + Ashling sample, then validates the selected skills with `FusionInheritanceSelectionValidator` before creating a `FusionPreviewSnapshot`. Confirmation records the accepted preview but intentionally does not mutate party/stock, parent actors, inventory, wallet, or Compendium state.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.
@@ -100,7 +102,7 @@ Future knowledge integration: once clean battle UI and clean Compendium ownershi
 ## Important State And Invariants
 
 - Interactive Cathedral fusion still requires `Database.FusionRecipes` and `Database.Personas`; the legacy content adapter is the only layer that reads them for framework fusion services.
-- Clean original-content fusion result calculation can use catalog fusion recipes directly through `CatalogFusionContentRepository`.
+- Clean original-content fusion result calculation and preview confirmation can use catalog fusion recipes directly through `CatalogFusionContentRepository`.
 - Operators use `DemonStock`; Wild Cards use `ActivePersona` and `PersonaStock`.
 - Active demons are still owned through unified `DemonStock`.
 - Mitama plus Mitama is unsupported.

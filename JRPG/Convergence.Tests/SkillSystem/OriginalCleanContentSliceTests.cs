@@ -8,6 +8,7 @@ using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Fusion.Inheritance;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -507,6 +508,57 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexSlice_CreatesFusionPreviewFromValidatedSelection()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var repository = new CatalogFusionContentRepository(catalog);
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50));
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+
+        FusionParticipantSnapshot echo = Participant(
+            catalog.GetRequiredEntity(Qualified("echo_adept")),
+            "echo_parent");
+        FusionParticipantSnapshot bramble = Participant(
+            catalog.GetRequiredEntity(Qualified("bramble_runner")),
+            "bramble_parent");
+        FusionParticipantSnapshot ashling = Participant(
+            catalog.GetRequiredEntity(Qualified("ashling")),
+            "ashling_sacrifice");
+
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            echo,
+            bramble,
+            ashling,
+            IsSacrificial: true,
+            MoonPhase: 0));
+        Assert.True(plan.IsSuccessful);
+        Assert.Equal(3, plan.MaximumInheritanceSlots);
+
+        FusionInheritancePlan selectionPlan = SelectionPlan(repository, plan, echo, bramble, ashling);
+        FusionInheritanceSelectionResult selection = new FusionInheritanceSelectionValidator().Validate(
+            selectionPlan,
+            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")]);
+        Assert.True(selection.IsValid);
+
+        FusionPreviewSnapshot preview = Assert.IsType<FusionPreviewSnapshot>(
+            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(
+                plan,
+                selection.RequireValidSelection().SelectedSkillIds)));
+        Assert.Equal(Qualified("ward_shell"), preview.EntityId);
+        Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], preview.NaturalSkillIds);
+        Assert.Equal(
+            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")],
+            preview.InheritedSkillIds);
+
+        FusionInheritanceSelectionResult invalidSelection =
+            new FusionInheritanceSelectionValidator().Validate(selectionPlan, [Qualified("toxin_touch")]);
+        Assert.False(invalidSelection.IsValid);
+        FusionInheritanceSelectionDiagnostic diagnostic = Assert.Single(invalidSelection.Diagnostics);
+        Assert.Equal(FusionInheritanceSelectionDiagnosticCode.SkillIneligible, diagnostic.Code);
+        Assert.Equal(FusionInheritanceDecisionCode.GroupNotAllowed, diagnostic.InheritanceDecisionCode);
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_ManifestUsesOnlyTheOriginalSliceDocuments()
     {
         string root = FindJsonRoot();
@@ -675,6 +727,33 @@ public sealed class OriginalCleanContentSliceTests
             entity.BaseLevel,
             entity.BaseSkillIds,
             entity.Stats);
+
+    private static FusionInheritancePlan SelectionPlan(
+        IFusionContentRepository repository,
+        FusionPlanningResult plan,
+        params FusionParticipantSnapshot[] participants)
+    {
+        var skills = new List<SkillDefinition>();
+        var seen = new HashSet<ContentId>();
+        foreach (FusionParticipantSnapshot participant in participants)
+        {
+            foreach (ContentId skillId in participant.SkillIds)
+            {
+                if (seen.Add(skillId) &&
+                    repository.TryGetSkill(skillId, out SkillDefinition? skill) &&
+                    skill is not null)
+                {
+                    skills.Add(skill);
+                }
+            }
+        }
+
+        return new FusionInheritancePlanner().CreatePlan(new FusionInheritancePlanRequest(
+            plan.ResultEntity!.Definition,
+            skills,
+            plan.NaturalSkillIds,
+            plan.MaximumInheritanceSlots));
+    }
 
     private sealed class SequenceRandomSource(params int[] values) : IRandomSource
     {
