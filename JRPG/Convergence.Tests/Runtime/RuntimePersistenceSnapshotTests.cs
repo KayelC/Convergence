@@ -128,6 +128,120 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsPartyStockStructuralInvariantViolations()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeActorSnapshot frost = CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot ember = CreateActor(
+            RuntimeInstanceId.Parse("ember"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimeActorSnapshot ward = CreateActor(
+            RuntimeInstanceId.Parse("ward"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorReferenceSnapshot frostRef = Reference(frost);
+        RuntimeActorReferenceSnapshot emberRef = Reference(ember);
+        RuntimeActorReferenceSnapshot wardRef = Reference(ward);
+        RuntimePartyStockSnapshot invalidParty = new(
+            frostRef,
+            ownerLevel: 1,
+            activeParty: [frostRef, emberRef, frostRef],
+            reserveMembers: [emberRef],
+            activeForm: frostRef,
+            personaStock: [frostRef, emberRef, emberRef],
+            demonStock: [frostRef, emberRef, wardRef, wardRef],
+            maxActivePartySize: 2);
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            actors: [frost, ember, ward],
+            partyStock: invalidParty);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActivePartyCapacityExceeded &&
+            diagnostic.Path == "$.partyStock.activeParty");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DemonStockCapacityExceeded &&
+            diagnostic.Path == "$.partyStock.demonStock");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicatePartyStockReference &&
+            diagnostic.Path == "$.partyStock.activeParty[2]" &&
+            diagnostic.InstanceId == frostRef.InstanceId);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicatePartyStockReference &&
+            diagnostic.Path == "$.partyStock.reserveMembers[0]" &&
+            diagnostic.InstanceId == emberRef.InstanceId);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActiveFormDuplicatedInPersonaStock &&
+            diagnostic.Path == "$.partyStock.personaStock[0]" &&
+            diagnostic.InstanceId == frostRef.InstanceId);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicatePartyStockReference &&
+            diagnostic.Path == "$.partyStock.personaStock[2]" &&
+            diagnostic.InstanceId == emberRef.InstanceId);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicatePartyStockReference &&
+            diagnostic.Path == "$.partyStock.demonStock[3]" &&
+            diagnostic.InstanceId == wardRef.InstanceId);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_AllowsIntentionalActiveDemonOwnedStockOverlap()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        Assert.Contains(
+            snapshot.PartyStock.DemonStock,
+            actor => actor.InstanceId == snapshot.PartyStock.ActiveParty[0].InstanceId);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_UsesInjectedStockCapacityPolicy()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeActorSnapshot frost = CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot ember = CreateActor(
+            RuntimeInstanceId.Parse("ember"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimeActorSnapshot ward = CreateActor(
+            RuntimeInstanceId.Parse("ward"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot veil = CreateActor(
+            RuntimeInstanceId.Parse("veil"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimeActorReferenceSnapshot frostRef = Reference(frost);
+        RuntimeActorReferenceSnapshot emberRef = Reference(ember);
+        RuntimeActorReferenceSnapshot wardRef = Reference(ward);
+        RuntimeActorReferenceSnapshot veilRef = Reference(veil);
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            actors: [frost, ember, ward, veil],
+            partyStock: new RuntimePartyStockSnapshot(
+                frostRef,
+                ownerLevel: 1,
+                activeParty: [frostRef],
+                demonStock: [frostRef, emberRef, wardRef, veilRef]));
+
+        RuntimeSaveValidationResult defaultResult = new RuntimeSaveValidator().Validate(snapshot, catalog);
+        RuntimeSaveValidationResult customResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(4))
+            .Validate(snapshot, catalog);
+
+        Assert.Contains(defaultResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DemonStockCapacityExceeded);
+        Assert.True(customResult.IsValid, string.Join(Environment.NewLine, customResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsMissingDuplicateAndVersionMismatchedContentPacks()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -631,5 +745,10 @@ public sealed class RuntimePersistenceSnapshotTests
         public static EmptyParameterValidator Instance { get; } = new();
 
         public IReadOnlyList<ContentParameterValidationIssue> Validate(IReadOnlyDictionary<string, object?> parameters) => [];
+    }
+
+    private sealed class FixedStockCapacityPolicy(int capacity) : IStockCapacityPolicy
+    {
+        public int GetCapacity(int ownerLevel) => capacity;
     }
 }

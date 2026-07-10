@@ -8,7 +8,7 @@ Phase 5 and Phase 6 are implemented correctly for their approved scope: they pro
 
 The implementation is intentionally still `parallel_partial`. It is usable evidence for the new framework path, but it is not full parity with every protected legacy consumer. The old console prototype remains active compatibility code, and removal remains unauthorized.
 
-No critical blocker was found. The main follow-ups are hardening save validation for party/stock invariants and making authored negotiation demand records truly authoritative instead of leaving demand math inside the current negotiation service.
+No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. The main remaining follow-up is making authored negotiation demand records truly authoritative instead of leaving demand math inside the current negotiation service.
 
 ## Audit Scope
 
@@ -180,7 +180,7 @@ None.
 
 None.
 
-### Medium: Save validation checks party-stock references but not full party-stock invariants
+### Medium (resolved by CodeReview-5-6-1): Save validation checked party-stock references but not full party-stock invariants
 
 `RuntimeSaveValidator.ValidatePartyReferences` currently checks whether party-stock references point to actors in the save. That is necessary, but not sufficient for production save safety.
 
@@ -194,7 +194,9 @@ It does not yet validate all structural invariants that `PartyStockTransitionSer
 
 Training Annex adds host restore checks for some role mistakes, such as enemy actors in party or Demon stock, but the framework save validator should eventually own the general invariants. Otherwise a malformed host save can bypass transition rules and restore a state no legal command could have produced.
 
-**Recommended follow-up:** add a save-invariant validation pass for `RuntimePartyStockSnapshot` and focused tests. This can be a small CodeReview follow-up before the save contract is treated as production-facing.
+**Resolution:** CodeReview-5-6-1 adds framework-level validation for duplicate party/stock references, active party capacity, Demon stock capacity, active/reserve overlap, and active-form duplication in Persona stock. The validator accepts an injected `IStockCapacityPolicy`, so the capacity rule is not hardwired to one future host model. Regression tests also preserve the intentional active+owned Demon stock overlap.
+
+CodeReview-5-6-1 verification: focused persistence and party-stock coverage passed `30/30` tests with no failures or skips.
 
 ### Medium: Authored negotiation demands are present in content but not yet rule-authoritative
 
@@ -270,8 +272,8 @@ No capability should be promoted to `clean_parity` yet. Full parity still requir
 
 ## Recommended Follow-Up Queue
 
-1. **CodeReview-5-6-1: Harden party-stock save invariants.**
-   Add framework validation for duplicate party/stock references, active party max, stock capacity, and illegal active-form duplication.
+1. **CodeReview-5-6-1: Harden party-stock save invariants. Completed.**
+   Framework validation now rejects duplicate party/stock references, active party overflow, Demon stock overflow, active/reserve overlap, and illegal active-form duplication while preserving the intentional active+owned Demon stock overlap.
 
 2. **CodeReview-5-6-2: Make authored negotiation demands authoritative.**
    Bind `NegotiationDefinition.Demands` into the runtime demand flow instead of relying on service-owned Macca math.

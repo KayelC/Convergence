@@ -24,7 +24,11 @@ public enum RuntimeSaveValidationCode
     MissingCatalogAilment,
     MissingCompendiumEntity,
     KnowledgeTargetMissing,
-    InvalidCheckpoint
+    InvalidCheckpoint,
+    DuplicatePartyStockReference,
+    ActivePartyCapacityExceeded,
+    DemonStockCapacityExceeded,
+    ActiveFormDuplicatedInPersonaStock
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -240,6 +244,13 @@ public sealed record RuntimeSaveGameSnapshot
 
 public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 {
+    private readonly IStockCapacityPolicy _stockCapacityPolicy;
+
+    public RuntimeSaveValidator(IStockCapacityPolicy? stockCapacityPolicy = null)
+    {
+        _stockCapacityPolicy = stockCapacityPolicy ?? new LegacyStockCapacityPolicy();
+    }
+
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -283,7 +294,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             ValidateActorCatalogReferences(actor, catalog, diagnostics, index);
         }
 
-        ValidatePartyReferences(snapshot.PartyStock, actors, diagnostics);
+        ValidatePartyReferences(snapshot.PartyStock, actors, _stockCapacityPolicy, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
         ValidateEquipment(snapshot.Equipment, catalog, diagnostics);
         if (snapshot.Field is not null)
@@ -386,6 +397,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private static void ValidatePartyReferences(
         RuntimePartyStockSnapshot partyStock,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        IStockCapacityPolicy stockCapacityPolicy,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
         if (!actors.ContainsKey(partyStock.Owner.InstanceId))
@@ -397,10 +409,33 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 Path: "$.partyStock.owner"));
         }
 
+        if (partyStock.ActiveParty.Count > partyStock.MaxActivePartySize)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActivePartyCapacityExceeded,
+                $"Active party has {partyStock.ActiveParty.Count} members, exceeding the maximum of {partyStock.MaxActivePartySize}.",
+                Path: "$.partyStock.activeParty"));
+        }
+
+        int demonStockCapacity = stockCapacityPolicy.GetCapacity(partyStock.OwnerLevel);
+        if (partyStock.DemonStock.Count > demonStockCapacity)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.DemonStockCapacityExceeded,
+                $"Demon stock has {partyStock.DemonStock.Count} entries, exceeding the capacity of {demonStockCapacity}.",
+                Path: "$.partyStock.demonStock"));
+        }
+
         ValidateActorReferenceList(partyStock.ActiveParty, actors, diagnostics, "$.partyStock.activeParty");
         ValidateActorReferenceList(partyStock.ReserveMembers, actors, diagnostics, "$.partyStock.reserveMembers");
         ValidateActorReferenceList(partyStock.PersonaStock, actors, diagnostics, "$.partyStock.personaStock");
         ValidateActorReferenceList(partyStock.DemonStock, actors, diagnostics, "$.partyStock.demonStock");
+        ValidateNoOverlap(
+            partyStock.ActiveParty,
+            partyStock.ReserveMembers,
+            diagnostics,
+            "$.partyStock.reserveMembers",
+            "Active party and reserve party cannot contain the same actor.");
 
         if (partyStock.ActiveForm is not null && !actors.ContainsKey(partyStock.ActiveForm.InstanceId))
         {
@@ -410,17 +445,36 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 partyStock.ActiveForm.InstanceId,
                 Path: "$.partyStock.activeForm"));
         }
+
+        if (partyStock.ActiveForm is not null)
+        {
+            for (int index = 0; index < partyStock.PersonaStock.Count; index++)
+            {
+                RuntimeActorReferenceSnapshot persona = partyStock.PersonaStock[index];
+                if (persona.InstanceId != partyStock.ActiveForm.InstanceId)
+                {
+                    continue;
+                }
+
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActiveFormDuplicatedInPersonaStock,
+                    $"Active form '{persona.InstanceId}' also appears in Persona stock.",
+                    persona.InstanceId,
+                    Path: $"$.partyStock.personaStock[{index}]"));
+            }
+        }
     }
 
     private static void ValidateActorReferenceList(
-        IEnumerable<RuntimeActorReferenceSnapshot> references,
+        IReadOnlyList<RuntimeActorReferenceSnapshot> references,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         string path)
     {
-        int index = 0;
-        foreach (RuntimeActorReferenceSnapshot reference in references)
+        var seen = new HashSet<RuntimeInstanceId>();
+        for (int index = 0; index < references.Count; index++)
         {
+            RuntimeActorReferenceSnapshot reference = references[index];
             if (!actors.ContainsKey(reference.InstanceId))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -429,7 +483,41 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     reference.InstanceId,
                     Path: $"{path}[{index}]"));
             }
-            index++;
+
+            if (!seen.Add(reference.InstanceId))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DuplicatePartyStockReference,
+                    $"Actor reference '{reference.InstanceId}' appears more than once in '{path}'.",
+                    reference.InstanceId,
+                    Path: $"{path}[{index}]"));
+            }
+        }
+    }
+
+    private static void ValidateNoOverlap(
+        IReadOnlyList<RuntimeActorReferenceSnapshot> first,
+        IReadOnlyList<RuntimeActorReferenceSnapshot> second,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        string secondPath,
+        string message)
+    {
+        HashSet<RuntimeInstanceId> firstIds = first
+            .Select(reference => reference.InstanceId)
+            .ToHashSet();
+        for (int index = 0; index < second.Count; index++)
+        {
+            RuntimeActorReferenceSnapshot reference = second[index];
+            if (!firstIds.Contains(reference.InstanceId))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.DuplicatePartyStockReference,
+                message,
+                reference.InstanceId,
+                Path: $"{secondPath}[{index}]"));
         }
     }
 
