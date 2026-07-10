@@ -75,18 +75,28 @@ internal sealed class TrainingAnnexNegotiationController
         ArgumentNullException.ThrowIfNull(recruitedThisSession);
         ArgumentNullException.ThrowIfNull(commands);
 
-        TrainingAnnexRuntimeActor target = FindRecruitmentCandidate(roster);
         NegotiationDefinition negotiation = catalog.GetRequiredNegotiation(TrainingAnnexHostSupport.SteadySampleNegotiation);
+        IReadOnlyList<TrainingAnnexRuntimeActor> candidates = FindRecruitmentCandidates(negotiation, roster);
+        if (candidates.Count == 0)
+        {
+            await _eventSink.PublishAsync(
+                $"Negotiation unavailable: {negotiation.DisplayName} has no prepared recruitable targets.",
+                cancellationToken).ConfigureAwait(false);
+            return new TrainingAnnexNegotiationInteractionResult(party, wallet, []);
+        }
 
         await _eventSink.PublishAsync(
-            $"Negotiation opened: {negotiation.DisplayName}; target {target.Actor.Entity.DisplayName}; wallet {wallet.Macca} M.",
+            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Macca} M.",
             cancellationToken).ConfigureAwait(false);
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
             await _commandSource.ReadAsync(
-                CreateTargetMenu(target, party),
+                CreateTargetMenu(candidates, party),
                 cancellationToken).ConfigureAwait(false);
-        if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+        TrainingAnnexRuntimeActor? target = ResolveSelectedTarget(candidates, targetSelection);
+        if (!targetSelection.IsSelected ||
+            targetSelection.Command == CleanTrainingAnnexPlayCommand.Back ||
+            target is null)
         {
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
             await _eventSink.PublishAsync(
@@ -211,10 +221,48 @@ internal sealed class TrainingAnnexNegotiationController
     private static bool AlreadyOwnedByEntity(RuntimePartyStockSnapshot party, ContentId entityId) =>
         party.DemonStock.Any(demon => demon.EntityDefinitionId == entityId);
 
-    private static TrainingAnnexRuntimeActor FindRecruitmentCandidate(TrainingAnnexActorRoster roster) =>
-        roster.StockMembers.FirstOrDefault(actor =>
-            actor.Actor.State.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance) ??
-        throw new InvalidOperationException("Training Annex recruitment candidate was not hydrated.");
+    private static IReadOnlyList<TrainingAnnexRuntimeActor> FindRecruitmentCandidates(
+        NegotiationDefinition negotiation,
+        TrainingAnnexActorRoster roster) =>
+        roster.StockMembers
+            .Where(IsHostRecruitmentCandidate)
+            .Where(actor => actor.Actor.Entity.Capabilities.Recruitable)
+            .Where(actor => MatchesNegotiationDefaults(negotiation, actor))
+            .ToArray();
+
+    private static bool IsHostRecruitmentCandidate(TrainingAnnexRuntimeActor actor) =>
+        actor.Role.Contains("candidate", StringComparison.OrdinalIgnoreCase);
+
+    private static bool MatchesNegotiationDefaults(
+        NegotiationDefinition negotiation,
+        TrainingAnnexRuntimeActor actor)
+    {
+        bool hasDefaultEntities = negotiation.DefaultEntityIds.Count > 0;
+        bool hasDefaultRaces = negotiation.DefaultRaceIds.Count > 0;
+        if (!hasDefaultEntities && !hasDefaultRaces)
+        {
+            return true;
+        }
+
+        EntityDefinition entity = actor.Actor.Entity;
+        return negotiation.DefaultEntityIds.Contains(entity.Id) ||
+            negotiation.DefaultRaceIds.Contains(entity.RaceId);
+    }
+
+    private static TrainingAnnexRuntimeActor? ResolveSelectedTarget(
+        IReadOnlyList<TrainingAnnexRuntimeActor> candidates,
+        HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection)
+    {
+        RuntimeInstanceId? selectedId = selection.SelectionIdentity?.RuntimeInstanceId;
+        return selectedId is null
+            ? null
+            : candidates.FirstOrDefault(candidate => candidate.Actor.State.InstanceId == selectedId);
+    }
+
+    private static string TargetSummary(IReadOnlyList<TrainingAnnexRuntimeActor> candidates) =>
+        candidates.Count == 1
+            ? $"target {candidates[0].Actor.Entity.DisplayName}"
+            : $"{candidates.Count} targets";
 
     private static NegotiationRuntimeDemand MapDemand(NegotiationDemandDefinition demand)
     {
@@ -259,27 +307,29 @@ internal sealed class TrainingAnnexNegotiationController
     }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateTargetMenu(
-        TrainingAnnexRuntimeActor target,
+        IReadOnlyList<TrainingAnnexRuntimeActor> targets,
         RuntimePartyStockSnapshot party)
     {
-        bool alreadyOwned = AlreadyOwnedByEntity(party, target.Actor.Entity.Id);
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             "Clean Negotiation",
-            [
-                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.SelectNegotiationTarget,
-                    alreadyOwned
-                        ? $"{target.Actor.Entity.DisplayName} [Familiar]"
-                        : target.Actor.Entity.DisplayName,
-                    Description: alreadyOwned
-                        ? "Runs the familiar-demon negotiation path without adding stock."
-                        : "Starts a clean negotiation session for this recruitable sample.",
-                    SelectionIdentity: HostCommandSelectionIdentity.ForRuntimeInstance(
-                        target.Actor.State.InstanceId)),
-                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            targets.Select(target =>
+                {
+                    bool alreadyOwned = AlreadyOwnedByEntity(party, target.Actor.Entity.Id);
+                    return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                        CleanTrainingAnnexPlayCommand.SelectNegotiationTarget,
+                        alreadyOwned
+                            ? $"{target.Actor.Entity.DisplayName} [Familiar]"
+                            : target.Actor.Entity.DisplayName,
+                        Description: alreadyOwned
+                            ? "Runs the familiar-demon negotiation path without adding stock."
+                            : "Starts a clean negotiation session for this recruitable sample.",
+                        SelectionIdentity: HostCommandSelectionIdentity.ForRuntimeInstance(
+                            target.Actor.State.InstanceId));
+                })
+                .Append(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.Back,
-                    "Back")
-            ]);
+                    "Back"))
+                .ToArray());
     }
 
     private static TrainingAnnexNegotiationEvidence Evidence(

@@ -8,7 +8,7 @@ Phase 5 and Phase 6 are implemented correctly for their approved scope: they pro
 
 The implementation is intentionally still `parallel_partial`. It is usable evidence for the new framework path, but it is not full parity with every protected legacy consumer. The old console prototype remains active compatibility code, and removal remains unauthorized.
 
-No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. CodeReview-5-6-2 resolved the authored negotiation demand gap by making content-supplied demands authoritative in the runtime flow.
+No critical blocker was found. CodeReview-5-6-1 resolved the save-validation invariant gap. CodeReview-5-6-2 resolved the authored negotiation demand gap by making content-supplied demands authoritative in the runtime flow. CodeReview-5-6-3 removed the fake active-demon sentinel. CodeReview-5-6-4 removed the fixed Bramble Runner negotiation target from the clean Training Annex negotiation controller.
 
 ## Audit Scope
 
@@ -47,7 +47,7 @@ The active roadmap records the following completed gates:
 | Phase 5-27 | `74/74` | `845/845` | `0` warnings | `98` existing warnings | Clean demos passed |
 | Phase 5-28 | `76/76` | `847/847` | `0` warnings | `98` existing warnings | Clean demos passed |
 | Phase 6-29 | `104/104` | `851/851` | `0` warnings | `98` existing warnings | Clean battle, field, save, and Training Annex demos passed |
-| CodeReview-5-6 follow-ups | `94/94` | `858/858` | `0` warnings | `98` existing warnings | Clean battle, field, and save demos passed |
+| CodeReview-5-6 follow-ups | Latest focused gate `82/82` | `859/859` | `0` warnings | `98` existing warnings | Clean battle, field, and save demos passed |
 
 The Phase 6-29 gate also records:
 
@@ -241,11 +241,15 @@ That kept behavior safe, but mixed a host presentation condition with a fake run
 
 CodeReview-5-6-3 verification: focused Training Annex host tests passed `81/81`, the full suite passed `858/858`, the standalone framework build reported `0` warnings, the solution build retained the existing `98` console-host warnings, `git diff --check` passed, the refined framework forbidden-reference search returned no matches, clean battle/field/save demos passed, and `Data/Jsons` remained unchanged.
 
-### Low: Training Annex negotiation target is fixed to Bramble Runner
+### Low (resolved by CodeReview-5-6-4): Training Annex negotiation target was fixed to Bramble Runner
 
-`TrainingAnnexNegotiationController.FindRecruitmentCandidate` selects `ReplacementBrambleRunnerInstance` directly. That is fine for a single-slice proof, but it is not a general clean negotiation target-selection system.
+`TrainingAnnexNegotiationController.FindRecruitmentCandidate` previously selected `ReplacementBrambleRunnerInstance` directly. That was fine for a single-slice proof, but it was not a general clean negotiation target-selection system.
 
-**Recommended follow-up:** when Phase 6 is expanded, select from a list of recruitable encounter participants instead of a fixed sample instance.
+**Resolution:** CodeReview-5-6-4 replaces the fixed instance lookup with a host-owned candidate list. The controller now finds prepared recruitment candidates by host role, recruitable entity capability, and the authored negotiation defaults for allowed entity/race IDs. The target menu carries runtime-instance selection identities, and the selected identity determines which actor enters the negotiation and recruitment transaction.
+
+The default Training Annex flow still has one prepared candidate, so visible behavior remains the same. A regression test adds a second prepared Bramble Runner candidate and proves the controller recruits the selected runtime instance instead of `ReplacementBrambleRunnerInstance`.
+
+CodeReview-5-6-4 verification: `CleanTrainingAnnexPlayHostTests` passed `82/82`, the full suite passed `859/859`, the standalone framework build reported `0` warnings, the solution build retained the existing `98` console-host warnings, `git diff --check` passed, the refined framework forbidden-reference search returned no matches, clean battle/field/save demos passed, and `Data/Jsons` remained unchanged.
 
 ### Low (resolved by CodeReview-5-6-2): Add one clean-host insufficient-Macca regression
 
@@ -261,9 +265,8 @@ The Training Annex host still contains sample-specific IDs such as `DemonAshling
 
 The following should not graduate into framework-level assumptions:
 
-- fixed negotiation target selection;
 - fixed sample party operation menu;
-- sentinel runtime IDs for missing actors;
+- host-specific negotiation candidate roles as a framework rule;
 - internally calculated negotiation demands when a caller supplies authored demand records.
 
 The framework itself remains clean of console, filesystem, Godot, Newtonsoft, `Database`, `Combatant`, `Persona`, and legacy DTO dependencies in this area.
@@ -291,5 +294,8 @@ No capability should be promoted to `clean_parity` yet. Full parity still requir
 
 3. **CodeReview-5-6-3: Clean up Training Annex host seams.**
    Completed. `ReturnActiveDemon` now returns a typed rejected result when no active demon exists, rather than inventing a fake runtime ID. The insufficient-Macca clean-host regression was completed as part of CodeReview-5-6-2 because it directly proves authored-demand transaction safety.
+
+4. **CodeReview-5-6-4: Remove fixed Training Annex negotiation target.**
+   Completed. Clean Training Annex negotiation now builds a candidate list from host-prepared recruitable actors plus authored negotiation defaults, then uses the selected runtime-instance identity for the session and recruitment transaction.
 
 These follow-ups are quality improvements, not emergency blockers.

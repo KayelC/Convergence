@@ -486,6 +486,66 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task TrainingAnnexNegotiationController_UsesSelectedRuntimeTargetRatherThanFixedSample()
+    {
+        GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        TrainingAnnexActorRoster originalRoster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimePartyStockSnapshot party = new TrainingAnnexPartyController()
+            .CreateInitialParty(originalRoster)
+            .Snapshot;
+        TrainingAnnexRuntimeActor selectedCandidate = originalRoster.Enemies
+            .Single(actor => actor.Actor.State.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"))
+            with
+            {
+                Role = "Demon Replacement Candidate"
+            };
+        var roster = new TrainingAnnexActorRoster(
+            originalRoster.Player,
+            originalRoster.SupportMembers,
+            [.. originalRoster.StockMembers, selectedCandidate],
+            originalRoster.Enemies);
+        var io = new ScriptedGameIO().QueueMenu(1, 0, 0, 0);
+        using var output = new StringWriter();
+        var commands = new List<CleanTrainingAnnexPlayCommand>();
+        var controller = new TrainingAnnexNegotiationController(
+            new TextWriterEventSink(output),
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
+            new TrainingAnnexMinimumRandomSource());
+
+        TrainingAnnexNegotiationInteractionResult result = await controller.OpenAsync(
+            catalog,
+            roster,
+            party,
+            new RuntimeWalletSnapshot(100),
+            new EconomyTransactionService(),
+            new HashSet<ContentId>(),
+            commands,
+            CancellationToken.None);
+
+        TrainingAnnexNegotiationEvidence evidence = Assert.Single(result.Evidence);
+        Assert.Equal(Qualified("bramble_runner"), evidence.TargetEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("enemy_bramble_runner"), evidence.TargetInstanceId);
+        Assert.True(evidence.Recruited);
+        Assert.Equal(50, evidence.WalletAfter);
+        Assert.Contains(
+            result.PartyStock.DemonStock,
+            actor => actor.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"));
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.SelectNegotiationTarget,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationAnswer,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationAnswer,
+                CleanTrainingAnnexPlayCommand.SelectNegotiationDemand
+            ],
+            commands);
+        Assert.Contains(
+            "Negotiation opened: Steady Sample; 2 targets; wallet 100 M.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_NegotiationUsesAuthoredDemandAmountFromContent()
     {
         var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 0, 9);
