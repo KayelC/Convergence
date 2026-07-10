@@ -760,6 +760,15 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - The host records typed evidence for parent instance IDs, parent entity IDs, operation, result entity ID, accident flag, and diagnostics.
 - This is not yet a fusion menu. It is a framework authority proof that removes legacy fusion-table dependency from result calculation.
 
+### Phase 7-31 Result
+
+- `Calculate Fusion Results` now also publishes fusion planning evidence from the clean catalog path.
+- The Training Annex content includes generic mutation metadata for `echo_strike` tier 1 and `shell_bash` tier 2 in the `training_physical` family.
+- The proof records ordinary and sacrificial inheritance slot counts, natural skills, selectable inherited skills, blocked/known display reason codes, and a deterministic accident sample.
+- The current sample proves `Frost Tip` is selectable through explicit allowance, `Steady Breath` remains selectable as passive fusion fodder, `Shell Bash` is shown as already known, `Toxin Touch` is rejected by typed group policy, and accident inheritance can mutate `Echo Strike -> Shell Bash`.
+- This is still non-mutating. It does not yet select inherited skills, commit a fusion transaction, modify party/stock state, or touch Compendium state.
+- Verification: focused fusion tests passed `3/3`, parity/roadmap guard tests passed `6/6`, and the full suite passed `862/862` with no skips. Framework build stayed at `0` warnings, solution build stayed at `98` legacy warnings, clean battle/field/save/Training Annex demos passed, and protected legacy JSON remained unchanged.
+
 ### Possible Work After Approval
 
 - Add a tiny fusion menu.
@@ -877,6 +886,8 @@ Phase 6-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` u
 
 Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
 
-The next numbered capability is Phase 7-31, `fusion_slots_mutation_accidents`, unless the owner deliberately reprioritizes the plan.
+Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence.
+
+The next numbered capability is Phase 7-32, `fusion_preview_confirmation`, unless the owner deliberately reprioritizes the plan.
 
 Then attach one feature at a time.

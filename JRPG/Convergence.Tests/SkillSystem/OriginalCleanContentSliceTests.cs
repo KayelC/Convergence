@@ -443,6 +443,70 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexSlice_PlansFusionSlotsMutationAndAccidentsThroughCatalogRepository()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var repository = new CatalogFusionContentRepository(catalog);
+        var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50));
+        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0));
+
+        SkillDefinition echoStrike = catalog.GetRequiredSkill(Qualified("echo_strike"));
+        SkillDefinition shellBash = catalog.GetRequiredSkill(Qualified("shell_bash"));
+        Assert.NotNull(echoStrike.Mutation);
+        Assert.NotNull(shellBash.Mutation);
+        Assert.Equal(Qualified("training_physical"), echoStrike.Mutation!.FamilyId);
+        Assert.Equal(1, echoStrike.Mutation.Tier);
+        Assert.Equal(Qualified("training_physical"), shellBash.Mutation!.FamilyId);
+        Assert.Equal(2, shellBash.Mutation.Tier);
+
+        FusionParticipantSnapshot echo = Participant(
+            catalog.GetRequiredEntity(Qualified("echo_adept")),
+            "echo_parent");
+        FusionParticipantSnapshot bramble = Participant(
+            catalog.GetRequiredEntity(Qualified("bramble_runner")),
+            "bramble_parent");
+        FusionParticipantSnapshot ashling = Participant(
+            catalog.GetRequiredEntity(Qualified("ashling")),
+            "ashling_sacrifice");
+
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            echo,
+            bramble,
+            Sacrifice: null,
+            IsSacrificial: false,
+            MoonPhase: 0));
+
+        Assert.True(plan.IsSuccessful);
+        Assert.Equal(Qualified("ward_shell"), plan.ResultEntity!.Id);
+        Assert.Equal(1, plan.MaximumInheritanceSlots);
+        Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], plan.NaturalSkillIds);
+        Assert.Equal(
+            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")],
+            plan.PickableSkillIds);
+        Assert.Contains(plan.DisplaySkills, entry =>
+            entry.SkillId == Qualified("shell_bash") &&
+            !entry.IsSelectable &&
+            entry.ReasonCode == "already_known");
+        Assert.Contains(plan.DisplaySkills, entry =>
+            entry.SkillId == Qualified("toxin_touch") &&
+            !entry.IsSelectable &&
+            entry.ReasonCode == "group_not_allowed");
+
+        FusionPlanningResult sacrificialPlan = planner.CreatePlan(new FusionPlanningRequest(
+            echo,
+            bramble,
+            ashling,
+            IsSacrificial: true,
+            MoonPhase: 0));
+        Assert.True(sacrificialPlan.IsSuccessful);
+        Assert.Equal(3, sacrificialPlan.MaximumInheritanceSlots);
+
+        IReadOnlyList<ContentId> accidentInheritance =
+            planner.CreateAccidentInheritance([Qualified("echo_strike")], maximumSlots: 1);
+        Assert.Equal([Qualified("shell_bash")], accidentInheritance);
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_ManifestUsesOnlyTheOriginalSliceDocuments()
     {
         string root = FindJsonRoot();

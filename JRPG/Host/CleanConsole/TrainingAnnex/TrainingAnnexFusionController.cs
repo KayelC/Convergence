@@ -17,6 +17,22 @@ internal sealed record TrainingAnnexFusionResultEvidence(
     bool IsAccident,
     IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics);
 
+internal sealed record TrainingAnnexFusionPlanningEvidence(
+    string ScenarioId,
+    ContentId? ResultEntityId,
+    int MaximumInheritanceSlots,
+    int SacrificialMaximumInheritanceSlots,
+    IReadOnlyList<ContentId> NaturalSkillIds,
+    IReadOnlyList<ContentId> PickableSkillIds,
+    IReadOnlyList<FusionInheritanceEntry> DisplaySkills,
+    IReadOnlyList<ContentId> AccidentInheritedSkillIds,
+    ContentId MutationSourceSkillId,
+    ContentId MutationResultSkillId);
+
+internal sealed record TrainingAnnexFusionCalculationResult(
+    IReadOnlyList<TrainingAnnexFusionResultEvidence> Results,
+    IReadOnlyList<TrainingAnnexFusionPlanningEvidence> Planning);
+
 internal sealed class TrainingAnnexFusionController
 {
     private readonly IHostEventSink<string> _eventSink;
@@ -26,7 +42,7 @@ internal sealed class TrainingAnnexFusionController
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
     }
 
-    public async ValueTask<IReadOnlyList<TrainingAnnexFusionResultEvidence>> CalculateAsync(
+    public async ValueTask<TrainingAnnexFusionCalculationResult> CalculateAsync(
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
         CancellationToken cancellationToken)
@@ -54,7 +70,17 @@ internal sealed class TrainingAnnexFusionController
             bramble,
             cancellationToken).ConfigureAwait(false);
 
-        return Array.AsReadOnly([direct, rank]);
+        TrainingAnnexFusionPlanningEvidence planning = await PlanAsync(
+            catalog,
+            repository,
+            roster.Player,
+            bramble,
+            ashling,
+            cancellationToken).ConfigureAwait(false);
+
+        return new TrainingAnnexFusionCalculationResult(
+            Array.AsReadOnly([direct, rank]),
+            Array.AsReadOnly([planning]));
     }
 
     private async ValueTask<TrainingAnnexFusionResultEvidence> ResolveAsync(
@@ -82,6 +108,59 @@ internal sealed class TrainingAnnexFusionController
 
         await _eventSink.PublishAsync(
             FormatResult(catalog, first, second, evidence),
+            cancellationToken).ConfigureAwait(false);
+        return evidence;
+    }
+
+    private async ValueTask<TrainingAnnexFusionPlanningEvidence> PlanAsync(
+        GameDataCatalog catalog,
+        IFusionContentRepository repository,
+        TrainingAnnexRuntimeActor first,
+        TrainingAnnexRuntimeActor second,
+        TrainingAnnexRuntimeActor sacrifice,
+        CancellationToken cancellationToken)
+    {
+        var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource());
+        var planner = new FusionPlanningService(
+            repository,
+            resolver,
+            new TrainingAnnexFusionAccidentRandomSource());
+        FusionParticipantSnapshot firstParent = ToFusionParticipant(first);
+        FusionParticipantSnapshot secondParent = ToFusionParticipant(second);
+        FusionParticipantSnapshot sacrificeParent = ToFusionParticipant(sacrifice);
+
+        FusionPlanningResult basePlan = planner.CreatePlan(new FusionPlanningRequest(
+            firstParent,
+            secondParent,
+            Sacrifice: null,
+            IsSacrificial: false,
+            MoonPhase: 0));
+        FusionPlanningResult sacrificialPlan = planner.CreatePlan(new FusionPlanningRequest(
+            firstParent,
+            secondParent,
+            sacrificeParent,
+            IsSacrificial: true,
+            MoonPhase: 0));
+
+        IReadOnlyList<ContentId> accidentInheritedSkillIds =
+            planner.CreateAccidentInheritance([TrainingAnnexHostSupport.EchoStrike], maximumSlots: 1);
+        ContentId mutationResult = accidentInheritedSkillIds.Count == 0
+            ? TrainingAnnexHostSupport.EchoStrike
+            : accidentInheritedSkillIds[0];
+        var evidence = new TrainingAnnexFusionPlanningEvidence(
+            "inheritance_slots_mutation_accident",
+            basePlan.ResultEntity?.Id,
+            basePlan.MaximumInheritanceSlots,
+            sacrificialPlan.MaximumInheritanceSlots,
+            basePlan.NaturalSkillIds,
+            basePlan.PickableSkillIds,
+            basePlan.DisplaySkills,
+            accidentInheritedSkillIds,
+            TrainingAnnexHostSupport.EchoStrike,
+            mutationResult);
+
+        await _eventSink.PublishAsync(
+            FormatPlanning(catalog, evidence),
             cancellationToken).ConfigureAwait(false);
         return evidence;
     }
@@ -120,6 +199,47 @@ internal sealed class TrainingAnnexFusionController
             + $"({evidence.ScenarioId}; {diagnostics}).";
     }
 
+    private static string FormatPlanning(
+        GameDataCatalog catalog,
+        TrainingAnnexFusionPlanningEvidence evidence)
+    {
+        string resultName = evidence.ResultEntityId is ContentId resultId &&
+            catalog.TryGetEntity(resultId, out EntityDefinition? resultEntity) &&
+            resultEntity is not null
+                ? resultEntity.DisplayName
+                : "no result";
+        string pickable = FormatSkillNames(catalog, evidence.PickableSkillIds);
+        string blocked = FormatBlockedSkills(catalog, evidence.DisplaySkills);
+        string mutationSource = SkillName(catalog, evidence.MutationSourceSkillId);
+        string mutationResult = SkillName(catalog, evidence.MutationResultSkillId);
+        return "Fusion planning: "
+            + $"{resultName}; slots {evidence.MaximumInheritanceSlots}, "
+            + $"sacrificial slots {evidence.SacrificialMaximumInheritanceSlots}; "
+            + $"pickable {pickable}; blocked {blocked}; "
+            + $"accident sample {mutationSource} -> {mutationResult}.";
+    }
+
+    private static string FormatSkillNames(GameDataCatalog catalog, IReadOnlyList<ContentId> skillIds) =>
+        skillIds.Count == 0
+            ? "none"
+            : string.Join(", ", skillIds.Select(id => SkillName(catalog, id)));
+
+    private static string FormatBlockedSkills(
+        GameDataCatalog catalog,
+        IReadOnlyList<FusionInheritanceEntry> displaySkills)
+    {
+        string[] blocked = displaySkills
+            .Where(entry => !entry.IsSelectable)
+            .Select(entry => $"{SkillName(catalog, entry.SkillId)}:{entry.ReasonCode}")
+            .ToArray();
+        return blocked.Length == 0 ? "none" : string.Join(", ", blocked);
+    }
+
+    private static string SkillName(GameDataCatalog catalog, ContentId skillId) =>
+        catalog.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null
+            ? skill.DisplayName
+            : skillId.ToString();
+
     private static string FormatOperation(FusionRuntimeOperation operation) =>
         operation switch
         {
@@ -139,5 +259,18 @@ internal sealed class TrainingAnnexFusionController
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
         public decimal NextUnitDecimal() => 0.99m;
+    }
+
+    private sealed class TrainingAnnexFusionAccidentRandomSource : IRandomSource
+    {
+        private readonly Queue<int> _values = new([0, 0, 0]);
+
+        public int NextInt32(int minimumInclusive, int maximumExclusive)
+        {
+            int value = _values.Count == 0 ? minimumInclusive : _values.Dequeue();
+            return Math.Clamp(value, minimumInclusive, maximumExclusive - 1);
+        }
+
+        public decimal NextUnitDecimal() => 0m;
     }
 }

@@ -102,6 +102,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
         Assert.Empty(summary.PartyTransitions);
         Assert.Empty(summary.FusionResults);
+        Assert.Empty(summary.FusionPlanning);
         Assert.Equal(2, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
@@ -504,6 +505,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [CleanTrainingAnnexPlayCommand.CalculateFusionResults, CleanTrainingAnnexPlayCommand.Exit],
             summary.Commands);
         Assert.Equal(2, summary.FusionResults.Count);
+        TrainingAnnexFusionPlanningEvidence planning = Assert.Single(summary.FusionPlanning);
 
         TrainingAnnexFusionResultEvidence direct = summary.FusionResults[0];
         Assert.Equal("direct_entity_result", direct.ScenarioId);
@@ -527,6 +529,26 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(rank.IsAccident);
         Assert.Empty(rank.Diagnostics);
 
+        Assert.Equal("inheritance_slots_mutation_accident", planning.ScenarioId);
+        Assert.Equal(Qualified("ward_shell"), planning.ResultEntityId);
+        Assert.Equal(1, planning.MaximumInheritanceSlots);
+        Assert.Equal(3, planning.SacrificialMaximumInheritanceSlots);
+        Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], planning.NaturalSkillIds);
+        Assert.Equal(
+            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")],
+            planning.PickableSkillIds);
+        Assert.Contains(planning.DisplaySkills, entry =>
+            entry.SkillId == Qualified("shell_bash") &&
+            !entry.IsSelectable &&
+            entry.ReasonCode == "already_known");
+        Assert.Contains(planning.DisplaySkills, entry =>
+            entry.SkillId == Qualified("toxin_touch") &&
+            !entry.IsSelectable &&
+            entry.ReasonCode == "group_not_allowed");
+        Assert.Equal([Qualified("shell_bash")], planning.AccidentInheritedSkillIds);
+        Assert.Equal(Qualified("echo_strike"), planning.MutationSourceSkillId);
+        Assert.Equal(Qualified("shell_bash"), planning.MutationResultSkillId);
+
         string text = output.ToString();
         Assert.Contains(
             "Fusion result: Ashling + Bramble Runner -> Ward Shell (create_entity; direct_entity_result).",
@@ -534,6 +556,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
             StringComparison.Ordinal);
         Assert.Contains(
             "Fusion result: Echo Adept + Bramble Runner -> Ward Shell (rank_up; race_rank_offset_result).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Fusion planning: Ward Shell; slots 1, sacrificial slots 3;",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "accident sample Echo Strike -> Shell Bash.",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();

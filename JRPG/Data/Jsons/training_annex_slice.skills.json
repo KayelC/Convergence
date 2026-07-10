@@ -11,6 +11,10 @@
       "inheritance": {
         "isInheritable": true
       },
+      "mutation": {
+        "familyId": "training_physical",
+        "tier": 1
+      },
       "costs": [],
       "targeting": {
         "relation": "enemy",
@@ -338,6 +342,10 @@
       "inheritanceGroupId": "physical",
       "inheritance": {
         "isInheritable": true
+      },
+      "mutation": {
+        "familyId": "training_physical",
+        "tier": 2
       },
       "costs": [],
       "targeting": {

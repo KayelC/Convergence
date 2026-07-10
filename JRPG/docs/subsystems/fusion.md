@@ -62,6 +62,8 @@ Recipe lookup is parent-order neutral. Specific ID pairs are checked before race
 
 For clean original content, `CatalogFusionContentRepository` adapts catalog-authored recipes into the same resolver contract. Structured recipe results preserve operations such as `create_entity` and `rank_offset` instead of relying on legacy string tokens. The Training Annex host currently exposes this only as a non-mutating `Calculate Fusion Results` proof command.
 
+Phase 7-31 extends that proof through `FusionPlanningService`: Training Annex records ordinary and sacrificial slot counts, selectable inherited skills, blocked or already-known display reason codes, and a deterministic accident inheritance sample. The sample uses generic mutation metadata (`echo_strike` tier 1 and `shell_bash` tier 2 in `training_physical`) so mutation is authored data, not a display-name rule.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.

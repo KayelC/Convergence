@@ -88,6 +88,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexPartyTransitionEvidence> PartyTransitions,
     IReadOnlyList<TrainingAnnexNegotiationEvidence> Negotiations,
     IReadOnlyList<TrainingAnnexFusionResultEvidence> FusionResults,
+    IReadOnlyList<TrainingAnnexFusionPlanningEvidence> FusionPlanning,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -325,6 +326,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
         var negotiations = new List<TrainingAnnexNegotiationEvidence>();
         var fusionResults = new List<TrainingAnnexFusionResultEvidence>();
+        var fusionPlanning = new List<TrainingAnnexFusionPlanningEvidence>();
         var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
@@ -433,6 +435,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     partyTransitions,
                     negotiations,
                     fusionResults,
+                    fusionPlanning,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -568,10 +571,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                 }
                 case CleanTrainingAnnexPlayCommand.CalculateFusionResults:
                 {
-                    IReadOnlyList<TrainingAnnexFusionResultEvidence> calculated =
+                    TrainingAnnexFusionCalculationResult calculated =
                         await new TrainingAnnexFusionController(_eventSink)
                             .CalculateAsync(catalog, roster, cancellationToken).ConfigureAwait(false);
-                    fusionResults.AddRange(calculated);
+                    fusionResults.AddRange(calculated.Results);
+                    fusionPlanning.AddRange(calculated.Planning);
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
@@ -635,6 +639,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             partyTransitions,
                             negotiations,
                             fusionResults,
+                            fusionPlanning,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -1693,6 +1698,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexPartyTransitionEvidence> partyTransitions,
         IReadOnlyList<TrainingAnnexNegotiationEvidence> negotiations,
         IReadOnlyList<TrainingAnnexFusionResultEvidence> fusionResults,
+        IReadOnlyList<TrainingAnnexFusionPlanningEvidence> fusionPlanning,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1762,6 +1768,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             partyTransitions.ToArray(),
             negotiations.ToArray(),
             fusionResults.ToArray(),
+            fusionPlanning.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),

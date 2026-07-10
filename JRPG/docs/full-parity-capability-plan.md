@@ -223,7 +223,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 | Pass | Capability | Current Status | Goal |
 | ---: | --- | --- | --- |
 | 30 | `fusion_result_calculation` | `parallel_partial` | Implemented clean fusion result calculation over original content. |
-| 31 | `fusion_slots_mutation_accidents` | `parallel_partial` | Add inheritance slots/mutation/accidents only if approved. |
+| 31 | `fusion_slots_mutation_accidents` | `parallel_partial` | Prove clean slots, typed inheritance display, and mutation/accident evidence. |
 | 32 | `fusion_preview_confirmation` | `parallel_partial` | Add clean preview and confirmation flow. |
 | 33 | `fusion_transactions` | `parallel_partial` | Make clean fusion transactions atomic in runtime state. |
 | 34 | `fusion_strategies` | `clean_foundation` | Replace strategy assumptions with approved framework policies. |
@@ -925,8 +925,8 @@ Clean console proof:
   - `CatalogFusionContentRepository` now adapts qualified `GameDataCatalog` definitions into the framework `IFusionContentRepository` contract. The clean resolver can consume original catalog recipes directly instead of relying on `fusion_table.json` or the legacy `LegacyFusionContentAdapter`.
   - `FusionRecipeSnapshot` can carry a structured `FusionRecipeResultSnapshot`, so catalog-authored operations such as `create_entity` and `rank_offset` reach `FusionResultResolver` without being flattened into legacy string tokens.
   - `FusionResultResolver` still supports the legacy token path for compatibility, but structured catalog results now resolve explicit entity results and race/rank-offset results. The Training Annex sample proves `ashling + bramble_runner -> ward_shell` and `echo_adept + bramble_runner -> ward_shell` through the original clean pack.
-  - `--clean-training-annex-play` exposes `Calculate Fusion Results`, a non-mutating proof command that records typed result evidence and prints the resolved result. It does not select inherited skills, mutate stock, spend resources, confirm rituals, apply accidents, or touch Compendium state.
-  - This remains `parallel_partial`: the protected legacy Cathedral flow is still active, and Phase 7-31 through Phase 7-35 still own slots, mutation/accidents, preview/confirmation, transactions, fusion strategies, and Compendium parity.
+  - `--clean-training-annex-play` exposes `Calculate Fusion Results`, a non-mutating proof command that records typed result evidence and prints the resolved result. It does not select inherited skills, mutate stock, spend resources, confirm rituals, or touch Compendium state.
+  - This remains `parallel_partial`: the protected legacy Cathedral flow is still active, and Phase 7-31 through Phase 7-35 still own slot presentation, mutation/accident evidence, preview/confirmation, transactions, fusion strategies, and Compendium parity.
 
 ### 31. `fusion_slots_mutation_accidents`
 
@@ -940,7 +940,13 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion design approval.
+- Phase 7-31 result:
+  - Training Annex skills now include generic mutation metadata for the `training_physical` family: `echo_strike` is tier 1 and `shell_bash` is tier 2. This is original example content, not legacy or private-IP data.
+  - `Calculate Fusion Results` now also records `TrainingAnnexFusionPlanningEvidence`: result entity, natural skills, pickable inherited skills, display reason codes, ordinary slot count, sacrificial slot count, accident inherited skills, and mutation source/result IDs.
+  - The proof uses `FusionPlanningService` over `CatalogFusionContentRepository`. It shows Ward Shell's base skills are already known, Frost Tip can pass through explicit allowance even though Ward Shell does not generally allow Ice, passive `Steady Breath` remains selectable, and ailment `Toxin Touch` is rejected by typed group policy.
+  - A deterministic accident sample mutates `Echo Strike -> Shell Bash` through authored mutation tiers. No display name, description, legacy fusion table, or legacy Cathedral class determines that behavior.
+  - This remains `parallel_partial`: no inherited-skill selection menu, stock mutation, ritual confirmation, accident application to a committed result, or Compendium update exists in the clean Training Annex path yet.
+  - Verification: focused fusion tests passed `3/3`; parity/roadmap guard tests passed `6/6`; full suite passed `862/862` with no skips; framework build remained `0` warnings; solution build remained at `98` legacy warnings; clean battle, field, save, and Training Annex demos passed; framework forbidden-reference search returned no matches; protected legacy JSON stayed unchanged. The only `Data/Jsons` change is `training_annex_slice.skills.json`, adding original clean mutation metadata.
 
 ### 32. `fusion_preview_confirmation`
 
