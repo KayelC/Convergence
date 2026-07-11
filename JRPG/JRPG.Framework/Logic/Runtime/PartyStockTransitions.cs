@@ -14,6 +14,7 @@ public enum PartyStockTransitionCode
     ReserveNotFound,
     StockEntryNotFound,
     DuplicateOwned,
+    RuntimeInstanceIdInUse,
     ActiveFormMissing,
     InvalidSlot,
     CapacityExceeded
@@ -221,6 +222,14 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
         {
             return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Demon is already present.", request.Demon.InstanceId);
         }
+        if (RuntimePartyStockIdentityRules.ContainsInstanceId(before, request.Demon.InstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.RuntimeInstanceIdInUse,
+                "Demon runtime instance ID is already used by another party or stock reference.",
+                request.Demon.InstanceId);
+        }
 
         RuntimeActorReferenceSnapshot[] demonStock = before.DemonStock.Append(request.Demon).ToArray();
         if (demonStock.Length > _stockCapacityPolicy.GetCapacity(before.OwnerLevel))
@@ -242,6 +251,14 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
                 before,
                 PartyStockTransitionCode.DuplicateOwned,
                 "Persona is already present.",
+                request.Persona.InstanceId);
+        }
+        if (RuntimePartyStockIdentityRules.ContainsInstanceId(before, request.Persona.InstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.RuntimeInstanceIdInUse,
+                "Persona runtime instance ID is already used by another party or stock reference.",
                 request.Persona.InstanceId);
         }
 
@@ -348,6 +365,14 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
         {
             return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Replacement demon is already present.", request.NewDemon.InstanceId);
         }
+        if (RuntimePartyStockIdentityRules.ContainsInstanceId(before, request.NewDemon.InstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.RuntimeInstanceIdInUse,
+                "Replacement demon runtime instance ID is already used by another party or stock reference.",
+                request.NewDemon.InstanceId);
+        }
 
         RuntimeActorReferenceSnapshot[] active = before.ActiveParty
             .Select(actor => actor.InstanceId == request.OldDemonInstanceId ? request.NewDemon : actor)
@@ -432,6 +457,14 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
         if (before.ActiveForm?.InstanceId == request.NewPersona.InstanceId || Contains(before.PersonaStock, request.NewPersona.InstanceId))
         {
             return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Replacement Persona is already present.", request.NewPersona.InstanceId);
+        }
+        if (RuntimePartyStockIdentityRules.ContainsInstanceId(before, request.NewPersona.InstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.RuntimeInstanceIdInUse,
+                "Replacement Persona runtime instance ID is already used by another party or stock reference.",
+                request.NewPersona.InstanceId);
         }
 
         RuntimeActorReferenceSnapshot[] personaStock = before.PersonaStock.ToArray();

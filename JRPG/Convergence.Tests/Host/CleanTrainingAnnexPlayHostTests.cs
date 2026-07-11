@@ -3135,12 +3135,27 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task CleanTrainingAnnexPlay_ManualLoadRejectsActorEntityMismatchBeforeMutation()
     {
         RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
-            CopySave(
-                snapshot,
-                actors: snapshot.Actors.Select(actor =>
-                    actor.Identity.InstanceId == RuntimeInstanceId.Parse("echo_adept")
-                        ? CopyActor(actor, entityId: Qualified("ashling"))
-                        : actor)));
+        {
+            RuntimeInstanceId playerId = RuntimeInstanceId.Parse("echo_adept");
+            RuntimeActorSnapshot[] actors = snapshot.Actors
+                .Select(actor => actor.Identity.InstanceId == playerId
+                    ? CopyActor(actor, entityId: Qualified("ashling"))
+                    : actor)
+                .ToArray();
+            RuntimeActorReferenceSnapshot playerReference = Reference(
+                Assert.Single(actors, actor => actor.Identity.InstanceId == playerId));
+            RuntimePartyStockSnapshot party = new(
+                playerReference,
+                snapshot.PartyStock.OwnerLevel,
+                activeParty: snapshot.PartyStock.ActiveParty.Select(reference =>
+                    reference.InstanceId == playerId ? playerReference : reference),
+                reserveMembers: snapshot.PartyStock.ReserveMembers,
+                activeForm: snapshot.PartyStock.ActiveForm,
+                personaStock: snapshot.PartyStock.PersonaStock,
+                demonStock: snapshot.PartyStock.DemonStock,
+                maxActivePartySize: snapshot.PartyStock.MaxActivePartySize);
+            return CopySave(snapshot, actors: actors, partyStock: party);
+        });
         var slots = new TrainingAnnexSaveSlotStore();
         slots.Save(record);
         var io = new ScriptedGameIO().QueueMenu(10, 1, 9);

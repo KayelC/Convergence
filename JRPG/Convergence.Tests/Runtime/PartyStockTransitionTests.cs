@@ -193,6 +193,68 @@ public sealed class PartyStockTransitionTests
     }
 
     [Fact]
+    public void StockAdditions_RejectRuntimeIdsUsedByAnyOtherOwnershipRole()
+    {
+        RuntimeActorReferenceSnapshot collision = Actor("collision");
+        RuntimePartyStockSnapshot[] demonCollisions =
+        [
+            new RuntimePartyStockSnapshot(collision, 40),
+            Snapshot(reserveMembers: [collision]),
+            Snapshot(activeForm: collision),
+            Snapshot(personaStock: [collision])
+        ];
+        RuntimePartyStockSnapshot[] personaCollisions =
+        [
+            new RuntimePartyStockSnapshot(collision, 40),
+            Snapshot(activeParty: [Actor("hero"), collision]),
+            Snapshot(reserveMembers: [collision]),
+            Snapshot(demonStock: [collision])
+        ];
+
+        foreach (RuntimePartyStockSnapshot snapshot in demonCollisions)
+        {
+            AssertIdentityCollision(
+                snapshot,
+                _service.AddDemonToStock(new AddDemonToStockRequest(snapshot, collision)),
+                collision.InstanceId);
+        }
+
+        foreach (RuntimePartyStockSnapshot snapshot in personaCollisions)
+        {
+            AssertIdentityCollision(
+                snapshot,
+                _service.AddPersonaToStock(new AddPersonaToStockRequest(snapshot, collision)),
+                collision.InstanceId);
+        }
+    }
+
+    [Fact]
+    public void StockReplacements_RejectRuntimeIdsUsedByTheOppositeStockFamily()
+    {
+        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
+        RuntimeActorReferenceSnapshot oldPersona = Actor("old_persona");
+        RuntimeActorReferenceSnapshot collision = Actor("collision");
+        RuntimePartyStockSnapshot demonSnapshot = Snapshot(
+            personaStock: [collision],
+            demonStock: [oldDemon]);
+        RuntimePartyStockSnapshot personaSnapshot = Snapshot(
+            personaStock: [oldPersona],
+            demonStock: [collision]);
+
+        PartyStockTransitionResult demon = _service.ReplaceDemon(new ReplaceDemonRequest(
+            demonSnapshot,
+            oldDemon.InstanceId,
+            collision));
+        PartyStockTransitionResult persona = _service.ReplacePersona(new ReplacePersonaRequest(
+            personaSnapshot,
+            oldPersona.InstanceId,
+            collision));
+
+        AssertIdentityCollision(demonSnapshot, demon, collision.InstanceId);
+        AssertIdentityCollision(personaSnapshot, persona, collision.InstanceId);
+    }
+
+    [Fact]
     public void RejectedCommands_ReturnStableCodesAndUnchangedSnapshots()
     {
         RuntimePartyStockSnapshot snapshot = Snapshot(activeParty: [Actor("hero")]);
@@ -266,4 +328,18 @@ public sealed class PartyStockTransitionTests
 
     private static RuntimeActorReferenceSnapshot Actor(string id) =>
         new(RuntimeInstanceId.Parse(id), ContentId.Parse(id), id);
+
+    private static void AssertIdentityCollision(
+        RuntimePartyStockSnapshot expectedSnapshot,
+        PartyStockTransitionResult result,
+        RuntimeInstanceId instanceId)
+    {
+        Assert.False(result.Applied);
+        Assert.Equal(PartyStockTransitionCode.RuntimeInstanceIdInUse, result.Code);
+        Assert.Same(expectedSnapshot, result.Before);
+        Assert.Same(expectedSnapshot, result.After);
+        PartyStockTransitionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(PartyStockTransitionCode.RuntimeInstanceIdInUse, diagnostic.Code);
+        Assert.Equal(instanceId, diagnostic.SubjectInstanceId);
+    }
 }

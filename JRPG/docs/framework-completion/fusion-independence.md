@@ -16,6 +16,8 @@ The Training Annex clean host currently proves a tiny original-content fusion pa
 
 CodeReview-7-1 establishes the clean recipe boundary: schema v1 is explicitly binary, parent selectors retain entity/race kind through runtime resolution, mixed selector recipes are legal, and structured operations are authoritative. The legacy result token is now optional compatibility data and clean catalog recipes do not generate one.
 
+CodeReview-7-2 establishes the clean recall identity boundary. Recall and stock transitions consult one complete party/stock ownership graph, reject cross-role runtime-ID reuse before mutation, and validate persisted reference/entity consistency. The deliberate active-party plus Demon-stock overlap remains explicit and tested.
+
 The console Cathedral still uses legacy datasets, live `Combatant` / `Persona` objects, legacy fusion adapters, and existing presentation flows.
 
 ## Problem
@@ -56,4 +58,4 @@ sample_spirit + sample_beast -> sample_construct rank operation
 
 Do not build a full fusion chart yet.
 
-Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 has preserved typed recipe selector/cardinality data. Before presentation work continues, resolve CodeReview-7-2 through CodeReview-7-5 in `docs/phase-7-code-review.md`: enforce recall identity, centralize commit coordination, retain strategy context, and harden Compendium save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
+Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 preserves typed recipe selector/cardinality data, and CodeReview-7-2 enforces recall identity. Before Phase 8 begins, resolve CodeReview-7-3 through CodeReview-7-5 in `docs/phase-7-code-review.md`: centralize commit coordination, retain strategy context, and harden Compendium entry/save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.

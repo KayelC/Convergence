@@ -1,6 +1,6 @@
 # Phase 7 Code Review And Readiness
 
-> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 is complete; CodeReview-7-2 through CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
+> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 and CodeReview-7-2. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 and CodeReview-7-2 are complete; CodeReview-7-3 through CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -16,7 +16,7 @@ Phase 7 achieved meaningful framework-first progress:
 
 The current sample paths are green and are not false demonstrations. They execute real framework services and mutate real clean runtime snapshots.
 
-The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 now resolves the first: runtime recipes preserve authored selector kinds, schema v1 explicitly rejects non-binary recipe cardinality, and clean structured results no longer require fabricated legacy tokens. The remaining high-severity issue is that Compendium recall can accept a runtime instance ID already used in another party/stock collection.
+The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding by enforcing one party/stock identity graph during recall, stock mutation, and save validation. The remaining required findings concern fusion commit ownership, accident-strategy context, and Compendium entry validation.
 
 **Verdict:** do not begin Phase 8-36 as though Phase 7 were closed. Resolve the Phase 7 review queue first, then rerun this audit. The current code remains suitable as the existing clean demonstration baseline while those corrections are made.
 
@@ -117,9 +117,9 @@ At the initial review point, tests covered one entity/entity recipe and one race
 - The legacy dataset audit found 460 recipes using 30 unique race selector tokens and 4 unique entity selector tokens, with no unknown or ambiguous parent tokens.
 - Regression coverage now proves entity/entity and race/race catalog mapping, mixed selectors, reversed order, selector-ID collision handling, selector specificity, structured-result precedence, one/three-parent rejection, and fail-fast adapter behavior.
 
-This finding is closed. It does not close Phase 7 because CodeReview-7-2 through CodeReview-7-5 remain.
+This finding is closed. It does not close Phase 7 because CodeReview-7-3 through CodeReview-7-5 remain after the separate CodeReview-7-2 identity correction.
 
-### High: Compendium recall can return a party snapshot with a duplicate runtime instance ID
+### High, resolved by CodeReview-7-2: Compendium recall can return a party snapshot with a duplicate runtime instance ID
 
 `CompendiumRecallTransactionRequest` lets the host supply the recalled actor's `RuntimeInstanceId`. The service checks whether the entity is already owned, but it does not separately check whether that runtime ID is already used by another actor.
 
@@ -141,6 +141,17 @@ The Training Annex host avoids this through its own `NextRecallInstanceId(...)` 
 - Harden `AddDemonToStock(...)` and `AddPersonaToStock(...)` around the same global identity invariant, or centralize the invariant in one reusable validator.
 - Extend save validation to detect illegal cross-list identity reuse and reference/entity mismatches while preserving the intentional active-party plus Demon-stock overlap for the same actor.
 - Test both Demon and Persona recall destinations with collisions in every relevant collection.
+
+**CodeReview-7-2 resolution, 2026-07-11:**
+
+- `RuntimePartyStockIdentityRules` now enumerates owner, active party, reserve party, active form, Persona stock, and Demon stock from one deterministic source.
+- `CompendiumRuntimeService.Recall(...)` rejects a proposed recall ID used anywhere in that graph before actor construction, stock placement, recall-cost assessment, or wallet mutation. It returns the typed `DuplicateRuntimeInstanceId` transaction and diagnostic codes.
+- `PartyStockTransitionService` rejects cross-role ID reuse through `RuntimeInstanceIdInUse` for Demon/Persona additions and replacements. Existing destination duplicates retain `DuplicateOwned`, preserving the prior public distinction.
+- `RuntimeSaveValidator` now verifies every party/stock reference against its actor snapshot's entity ID and rejects illegal cross-role reuse through `ActorReferenceEntityMismatch` and `PartyStockIdentityCollision` diagnostics with authored save paths.
+- The deliberate unified-stock model remains legal: an active demon may also appear in Demon stock, and the owner may be both the active party member and owned active demon. Active-form/Persona-stock duplication and active/reserve duplication remain invalid through their existing dedicated diagnostics.
+- Demon and Persona recall tests cover collisions in all six ownership locations and assert that party, wallet, and actor output remain unchanged. Save tests cover every reference role, legal overlap, illegal overlap, and mismatched entity references.
+
+This finding is closed. The framework no longer depends on a host-generated ID convention to protect recall integrity.
 
 ### Medium: Fusion commit orchestration remains host-owned
 
@@ -381,7 +392,6 @@ The existing tests are valuable, but their green result should be read as proof 
 
 ### Still requiring correction
 
-- Compendium recall does not yet enforce runtime-instance uniqueness across the whole party/stock graph;
 - the Training Annex fusion commit directly creates `LegacyStockCapacityPolicy` and Demon transitions;
 - mutation context is replaced with an empty context during accident inheritance;
 - Compendium save validation does not yet reject every invalid stored stat or duplicate skill shape;
@@ -420,9 +430,22 @@ CodeReview-7-1 follow-up verification on 2026-07-11 produced:
 | `git diff --check` | passed |
 | Production/prototype `Data/Jsons` | unchanged |
 
+CodeReview-7-2 follow-up verification on 2026-07-11 produced:
+
+| Check | Result |
+| --- | --- |
+| Focused identity, recall, stock, save, host, and ledger gate | `166/166` passed, `0` failed, `0` skipped |
+| Full solution tests | `915/915` passed, `0` failed, `0` skipped |
+| Framework nonincremental build | succeeded, `0` warnings, `0` errors |
+| Full solution nonincremental build | succeeded, `98` protected legacy-host warnings, `0` errors |
+| Clean battle, field, save, and Training Annex demos | all passed; save snapshots validated with `0` diagnostics |
+| Framework forbidden-reference scan | no forbidden production references |
+| `git diff --check` | passed |
+| Production/prototype `Data/Jsons` | unchanged |
+
 ## Readiness Decision
 
-Phase 7 is **implemented but not closed**. CodeReview-7-1 is complete; four required review corrections remain.
+Phase 7 is **implemented but not closed**. CodeReview-7-1 and CodeReview-7-2 are complete; three required review corrections remain.
 
 It is safe to retain as the current clean demonstration baseline. It is not yet appropriate to move to Phase 8 under the assumption that fusion and Compendium contracts are finished.
 
@@ -432,8 +455,8 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
 
 1. **CodeReview-7-1: Preserve the authored fusion recipe contract. Completed 2026-07-11.**
    Runtime selector kinds are preserved, schema v1 is explicitly binary, malformed cardinality is rejected rather than omitted, and legacy result tokens are optional compatibility data.
-2. **CodeReview-7-2: Enforce global runtime identity during recall and stock changes.**
-   Reject cross-collection runtime-ID collisions and strengthen save-reference validation.
+2. **CodeReview-7-2: Enforce global runtime identity during recall and stock changes. Completed 2026-07-11.**
+   Recall and stock transitions reject cross-collection runtime-ID collisions before mutation, while save validation enforces legal overlap and actor/entity reference consistency.
 3. **CodeReview-7-3: Move clean fusion commit coordination into the framework.**
    Honor owner kind and injected stock policy in one immutable transaction result.
 4. **CodeReview-7-4: Preserve strategy context through accident inheritance.**
@@ -442,4 +465,4 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
    Reject duplicate skills and invalid stats before recall or currency mutation.
 6. **Optional design hardening:** extract a narrow Compendium recall-pricing policy before production economy depends on the current sample formula.
 
-After follow-ups 2-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.
+After follow-ups 3-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.

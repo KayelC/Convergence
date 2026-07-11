@@ -144,6 +144,54 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Null(result.Actor);
     }
 
+    [Theory]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.Owner)]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ActiveParty)]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ReserveParty)]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ActiveForm)]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.PersonaStock)]
+    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.DemonStock)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.Owner)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ActiveParty)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ReserveParty)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ActiveForm)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.PersonaStock)]
+    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.DemonStock)]
+    public void Recall_RejectsRuntimeIdsUsedAnywhereInPartyStockBeforeMutation(
+        CompendiumRecallStockKind destination,
+        PartyReferenceLocation collisionLocation)
+    {
+        TestContext context = CreateContext();
+        CompendiumRuntimeService service = context.CreateService();
+        CompendiumStateSnapshot compendium = service.RegisterActor(
+            new CompendiumStateSnapshot(),
+            context.CreateActor("registered_ashling").State.ToSnapshot()).After;
+        RuntimeInstanceId recalledId = RuntimeInstanceId.Parse("recalled_collision");
+        RuntimePartyStockSnapshot party = PartyWithCollision(collisionLocation, recalledId);
+        RuntimeWalletSnapshot wallet = new(10_000);
+
+        CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
+            compendium,
+            party,
+            wallet,
+            context.Entity.Id,
+            recalledId,
+            Id("player_controller"),
+            Id("player_team"),
+            destination));
+
+        Assert.False(result.Applied);
+        Assert.Equal(CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId, result.Code);
+        Assert.Same(party, result.BeforePartyStock);
+        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(wallet, result.BeforeWallet);
+        Assert.Same(wallet, result.AfterWallet);
+        Assert.Null(result.Actor);
+        CompendiumRuntimeDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CompendiumRuntimeDiagnosticCode.DuplicateRuntimeInstanceId, diagnostic.Code);
+        Assert.Equal(recalledId, diagnostic.InstanceId);
+    }
+
     [Fact]
     public void Recall_UsesTheSelectedStockPolicyAndReportsCapacityBeforeMutation()
     {
@@ -342,6 +390,32 @@ public sealed class CompendiumRuntimeServiceTests
     private static RuntimeActorReferenceSnapshot Reference(CatalogBattleActor actor) =>
         new(actor.State.InstanceId, actor.Entity.Id, actor.Entity.DisplayName);
 
+    private static RuntimePartyStockSnapshot PartyWithCollision(
+        PartyReferenceLocation location,
+        RuntimeInstanceId collisionId)
+    {
+        RuntimeActorReferenceSnapshot owner = new(
+            RuntimeInstanceId.Parse("owner"),
+            Id("test.pack:owner"),
+            "Owner");
+        RuntimeActorReferenceSnapshot collision = new(
+            collisionId,
+            Id("test.pack:other_entity"),
+            "Other Actor");
+        return new RuntimePartyStockSnapshot(
+            location == PartyReferenceLocation.Owner ? collision : owner,
+            ownerLevel: 10,
+            activeParty: location == PartyReferenceLocation.ActiveParty
+                ? [owner, collision]
+                : location == PartyReferenceLocation.Owner
+                    ? []
+                    : [owner],
+            reserveMembers: location == PartyReferenceLocation.ReserveParty ? [collision] : [],
+            activeForm: location == PartyReferenceLocation.ActiveForm ? collision : null,
+            personaStock: location == PartyReferenceLocation.PersonaStock ? [collision] : [],
+            demonStock: location == PartyReferenceLocation.DemonStock ? [collision] : []);
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
 
     private sealed record TestContext(
@@ -367,6 +441,16 @@ public sealed class CompendiumRuntimeServiceTests
                 ActorFactory,
                 new StandardResourceGrowthPolicy(),
                 partyStock: partyStock);
+    }
+
+    public enum PartyReferenceLocation
+    {
+        Owner,
+        ActiveParty,
+        ReserveParty,
+        ActiveForm,
+        PersonaStock,
+        DemonStock
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy

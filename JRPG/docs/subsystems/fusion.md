@@ -107,6 +107,8 @@ Track N intentionally fixes the previous shallow-copy behavior: registered entri
 
 Phase 7-35 implements the clean Compendium runtime separately from the protected registry. `CompendiumRuntimeService` registers catalog-identified actor progression/stat/skill snapshots and recalls them through catalog actor reconstruction, caller-selected Demon or Persona stock placement, and wallet spending as one immutable transaction result. Training Annex uses typed selection IDs and persists both entries and recalled dynamic actors.
 
+CodeReview-7-2 closes the recall identity hole. A caller-supplied recall instance ID is checked against the complete party/stock graph before reconstruction, placement, cost assessment, or wallet spending. The recall result exposes `DuplicateRuntimeInstanceId`; stock transitions expose `RuntimeInstanceIdInUse` for cross-role collisions. Save validation rejects illegal cross-role reuse and entity/reference disagreement while deliberately allowing an active owned demon to appear in both active party and Demon stock.
+
 `FamiliarEntityKnowledgeService` is an opt-in companion service. A host supplies the entity IDs considered familiar through recruitment, fusion, recall, registration, or another approved ownership rule. The service imports typed defenses into persistent player knowledge only; it has no reference to or side effect on encounter-local enemy AI knowledge.
 
 ## Important State And Invariants

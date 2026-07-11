@@ -174,9 +174,8 @@ internal sealed class CleanSaveDemoHost
                 frostRef,
                 5,
                 activeParty: [frostRef],
-                reserveMembers: [emberRef],
-                activeForm: frostRef,
-                demonStock: [frostRef, emberRef]),
+                activeForm: emberRef,
+                demonStock: [frostRef]),
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(ContentId.Parse("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [

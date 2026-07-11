@@ -50,7 +50,7 @@ public sealed class RuntimePersistenceSnapshotTests
             actors,
             hostContext,
             checkpoints,
-            new RuntimePartyStockSnapshot(frostRef, 5, activeParty: [frostRef], activeForm: frostRef));
+            new RuntimePartyStockSnapshot(frostRef, 5, activeParty: [frostRef]));
         actors.Add(CreateActor(RuntimeInstanceId.Parse("ember"), Id("convergence.clean_battle_demo:ember_duelist_demo")));
         hostContext.Add(new KeyValuePair<ContentId, string>(Id("late"), "mutation"));
         checkpoints.Add(new RuntimeCheckpointEntrySnapshot(1, RuntimeCheckpointKind.HostAction, "Late mutation."));
@@ -234,6 +234,130 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Contains(
             snapshot.PartyStock.DemonStock,
             actor => actor.InstanceId == snapshot.PartyStock.ActiveParty[0].InstanceId);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsIllegalCrossRoleReuseButAllowsOwnerAndActiveDemonOverlap()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeActorSnapshot owner = CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot activeDemon = CreateActor(
+            RuntimeInstanceId.Parse("active_demon"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"));
+        RuntimeActorSnapshot reserve = CreateActor(
+            RuntimeInstanceId.Parse("reserve"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot form = CreateActor(
+            RuntimeInstanceId.Parse("form"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"));
+        RuntimeActorSnapshot persona = CreateActor(
+            RuntimeInstanceId.Parse("persona"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorReferenceSnapshot ownerRef = Reference(owner);
+        RuntimeActorReferenceSnapshot activeDemonRef = Reference(activeDemon);
+        RuntimeActorReferenceSnapshot reserveRef = Reference(reserve);
+        RuntimeActorReferenceSnapshot formRef = Reference(form);
+        RuntimeActorReferenceSnapshot personaRef = Reference(persona);
+        RuntimeActorSnapshot[] actors = [owner, activeDemon, reserve, form, persona];
+        RuntimePartyStockSnapshot validParty = new(
+            ownerRef,
+            ownerLevel: 40,
+            activeParty: [ownerRef, activeDemonRef],
+            reserveMembers: [reserveRef],
+            activeForm: formRef,
+            personaStock: [personaRef],
+            demonStock: [activeDemonRef]);
+
+        RuntimeSaveValidationResult valid = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(actors: actors, partyStock: validParty),
+            catalog);
+
+        Assert.True(valid.IsValid, string.Join(Environment.NewLine, valid.Diagnostics.Select(diagnostic => diagnostic.Message)));
+
+        RuntimePartyStockSnapshot invalidParty = new(
+            ownerRef,
+            ownerLevel: 40,
+            activeParty: [ownerRef, activeDemonRef],
+            reserveMembers: [reserveRef],
+            activeForm: ownerRef,
+            personaStock: [activeDemonRef, reserveRef],
+            demonStock: [activeDemonRef, reserveRef]);
+        RuntimeSaveValidationResult invalid = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(actors: actors, partyStock: invalidParty),
+            catalog);
+
+        Assert.False(invalid.IsValid);
+        Assert.Contains(invalid.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.PartyStockIdentityCollision &&
+            diagnostic.Path == "$.partyStock.activeForm" &&
+            diagnostic.InstanceId == ownerRef.InstanceId);
+        Assert.Contains(invalid.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.PartyStockIdentityCollision &&
+            diagnostic.Path == "$.partyStock.personaStock[0]" &&
+            diagnostic.InstanceId == activeDemonRef.InstanceId);
+        Assert.Contains(invalid.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.PartyStockIdentityCollision &&
+            diagnostic.Path == "$.partyStock.personaStock[1]" &&
+            diagnostic.InstanceId == reserveRef.InstanceId);
+        Assert.Contains(invalid.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.PartyStockIdentityCollision &&
+            diagnostic.Path == "$.partyStock.demonStock[1]" &&
+            diagnostic.InstanceId == reserveRef.InstanceId);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsEntityMismatchForEveryPartyStockReferenceRole()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        ContentId actualEntityId = Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId claimedEntityId = Id("convergence.clean_battle_demo:ember_duelist_demo");
+        RuntimeActorSnapshot[] actors =
+        [
+            CreateActor(RuntimeInstanceId.Parse("frost"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("active"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("reserve"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("form"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("persona"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("demon"), actualEntityId)
+        ];
+        RuntimeActorReferenceSnapshot[] mismatches = actors
+            .Select(actor => new RuntimeActorReferenceSnapshot(
+                actor.Identity.InstanceId,
+                claimedEntityId,
+                actor.Identity.DisplayName))
+            .ToArray();
+        RuntimePartyStockSnapshot party = new(
+            mismatches[0],
+            ownerLevel: 40,
+            activeParty: [mismatches[1]],
+            reserveMembers: [mismatches[2]],
+            activeForm: mismatches[3],
+            personaStock: [mismatches[4]],
+            demonStock: [mismatches[5]]);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(actors: actors, partyStock: party),
+            catalog);
+
+        RuntimeSaveValidationDiagnostic[] mismatchedReferences = result.Diagnostics
+            .Where(diagnostic => diagnostic.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch)
+            .ToArray();
+        Assert.Equal(6, mismatchedReferences.Length);
+        string[] expectedPaths =
+        [
+            "$.partyStock.owner.entityDefinitionId",
+            "$.partyStock.activeParty[0].entityDefinitionId",
+            "$.partyStock.reserveMembers[0].entityDefinitionId",
+            "$.partyStock.activeForm.entityDefinitionId",
+            "$.partyStock.personaStock[0].entityDefinitionId",
+            "$.partyStock.demonStock[0].entityDefinitionId"
+        ];
+        Assert.Equal(
+            expectedPaths.Order(),
+            mismatchedReferences.Select(diagnostic => diagnostic.Path).Order().ToArray());
+        Assert.All(mismatchedReferences, diagnostic => Assert.Equal(claimedEntityId, diagnostic.ContentId));
     }
 
     [Fact]
@@ -529,10 +653,9 @@ public sealed class RuntimePersistenceSnapshotTests
                 frostRef,
                 5,
                 activeParty: [frostRef],
-                reserveMembers: [emberRef],
-                activeForm: frostRef,
+                activeForm: emberRef,
                 personaStock: [],
-                demonStock: [frostRef, emberRef]),
+                demonStock: [frostRef]),
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [

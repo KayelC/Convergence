@@ -14,6 +14,7 @@ public enum CompendiumRuntimeDiagnosticCode
     InvalidStatValue,
     MissingEntry,
     DuplicateOwned,
+    DuplicateRuntimeInstanceId,
     StockFull,
     InsufficientCurrency,
     ActorCreationFailed,
@@ -64,6 +65,7 @@ public enum CompendiumRecallTransactionCode
     MissingEntry,
     EntityNotEligible,
     DuplicateOwned,
+    DuplicateRuntimeInstanceId,
     StockFull,
     InsufficientCurrency,
     ActorCreationFailed,
@@ -289,6 +291,18 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 entry);
         }
 
+        if (RuntimePartyStockIdentityRules.ContainsInstanceId(
+                request.PartyStock,
+                request.RecalledInstanceId))
+        {
+            return RecallRejected(
+                request,
+                CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId,
+                CompendiumRuntimeDiagnosticCode.DuplicateRuntimeInstanceId,
+                $"Runtime instance ID '{request.RecalledInstanceId}' is already used by the party or stock graph.",
+                entry);
+        }
+
         bool alreadyOwned = OwnedActorReferences(request.PartyStock)
             .Any(reference => reference.EntityDefinitionId == entry.EntityId);
         var recalledReference = new RuntimeActorReferenceSnapshot(
@@ -475,15 +489,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     }
 
     private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedActorReferences(
-        RuntimePartyStockSnapshot partyStock)
-    {
-        yield return partyStock.Owner;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.ActiveParty) yield return actor;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.ReserveMembers) yield return actor;
-        if (partyStock.ActiveForm is not null) yield return partyStock.ActiveForm;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.PersonaStock) yield return actor;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.DemonStock) yield return actor;
-    }
+        RuntimePartyStockSnapshot partyStock) =>
+        RuntimePartyStockIdentityRules.Enumerate(partyStock)
+            .Select(occurrence => occurrence.Reference);
 
     private static bool TrySnapshotStats(
         IEnumerable<KeyValuePair<ContentId, decimal>> values,

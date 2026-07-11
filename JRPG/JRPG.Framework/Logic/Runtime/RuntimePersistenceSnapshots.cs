@@ -31,7 +31,9 @@ public enum RuntimeSaveValidationCode
     DuplicatePartyStockReference,
     ActivePartyCapacityExceeded,
     DemonStockCapacityExceeded,
-    ActiveFormDuplicatedInPersonaStock
+    ActiveFormDuplicatedInPersonaStock,
+    PartyStockIdentityCollision,
+    ActorReferenceEntityMismatch
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -403,14 +405,13 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         IStockCapacityPolicy stockCapacityPolicy,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        if (!actors.ContainsKey(partyStock.Owner.InstanceId))
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.MissingActorReference,
-                $"Party-stock owner '{partyStock.Owner.InstanceId}' is not present in actors.",
-                partyStock.Owner.InstanceId,
-                Path: "$.partyStock.owner"));
-        }
+        ValidateActorReference(
+            partyStock.Owner,
+            actors,
+            diagnostics,
+            "$.partyStock.owner",
+            RuntimeSaveValidationCode.MissingActorReference,
+            "Party-stock owner");
 
         if (partyStock.ActiveParty.Count > partyStock.MaxActivePartySize)
         {
@@ -440,17 +441,16 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             "$.partyStock.reserveMembers",
             "Active party and reserve party cannot contain the same actor.");
 
-        if (partyStock.ActiveForm is not null && !actors.ContainsKey(partyStock.ActiveForm.InstanceId))
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.MissingActiveFormReference,
-                $"Active form '{partyStock.ActiveForm.InstanceId}' is not present in actors.",
-                partyStock.ActiveForm.InstanceId,
-                Path: "$.partyStock.activeForm"));
-        }
-
         if (partyStock.ActiveForm is not null)
         {
+            ValidateActorReference(
+                partyStock.ActiveForm,
+                actors,
+                diagnostics,
+                "$.partyStock.activeForm",
+                RuntimeSaveValidationCode.MissingActiveFormReference,
+                "Active form");
+
             for (int index = 0; index < partyStock.PersonaStock.Count; index++)
             {
                 RuntimeActorReferenceSnapshot persona = partyStock.PersonaStock[index];
@@ -466,6 +466,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     Path: $"$.partyStock.personaStock[{index}]"));
             }
         }
+
+        ValidatePartyStockIdentityOverlaps(partyStock, diagnostics);
     }
 
     private static void ValidateActorReferenceList(
@@ -478,14 +480,13 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         for (int index = 0; index < references.Count; index++)
         {
             RuntimeActorReferenceSnapshot reference = references[index];
-            if (!actors.ContainsKey(reference.InstanceId))
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.MissingActorReference,
-                    $"Actor reference '{reference.InstanceId}' is not present in actors.",
-                    reference.InstanceId,
-                    Path: $"{path}[{index}]"));
-            }
+            ValidateActorReference(
+                reference,
+                actors,
+                diagnostics,
+                $"{path}[{index}]",
+                RuntimeSaveValidationCode.MissingActorReference,
+                "Actor reference");
 
             if (!seen.Add(reference.InstanceId))
             {
@@ -496,6 +497,38 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     Path: $"{path}[{index}]"));
             }
         }
+    }
+
+    private static void ValidateActorReference(
+        RuntimeActorReferenceSnapshot reference,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        string path,
+        RuntimeSaveValidationCode missingCode,
+        string referenceLabel)
+    {
+        if (!actors.TryGetValue(reference.InstanceId, out RuntimeActorSnapshot? actor))
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                missingCode,
+                $"{referenceLabel} '{reference.InstanceId}' is not present in actors.",
+                reference.InstanceId,
+                Path: path));
+            return;
+        }
+
+        if (actor.Identity.EntityDefinitionId == reference.EntityDefinitionId)
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+            RuntimeSaveValidationCode.ActorReferenceEntityMismatch,
+            $"{referenceLabel} '{reference.InstanceId}' identifies entity '{reference.EntityDefinitionId}', " +
+            $"but its actor snapshot identifies '{actor.Identity.EntityDefinitionId}'.",
+            reference.InstanceId,
+            reference.EntityDefinitionId,
+            path + ".entityDefinitionId"));
     }
 
     private static void ValidateNoOverlap(
@@ -523,6 +556,70 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 Path: $"{secondPath}[{index}]"));
         }
     }
+
+    private static void ValidatePartyStockIdentityOverlaps(
+        RuntimePartyStockSnapshot partyStock,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        foreach (IGrouping<RuntimeInstanceId, RuntimePartyStockReferenceOccurrence> group in
+                 RuntimePartyStockIdentityRules.Enumerate(partyStock)
+                     .GroupBy(occurrence => occurrence.Reference.InstanceId))
+        {
+            RuntimePartyStockReferenceOccurrence[] occurrences = group.ToArray();
+            if (occurrences.Length < 2)
+            {
+                continue;
+            }
+
+            HashSet<RuntimePartyStockReferenceRole> roles = occurrences
+                .Select(occurrence => occurrence.Role)
+                .ToHashSet();
+            for (int currentIndex = 1; currentIndex < occurrences.Length; currentIndex++)
+            {
+                RuntimePartyStockReferenceOccurrence current = occurrences[currentIndex];
+                RuntimePartyStockReferenceOccurrence? conflict = null;
+                for (int previousIndex = 0; previousIndex < currentIndex; previousIndex++)
+                {
+                    RuntimePartyStockReferenceOccurrence previous = occurrences[previousIndex];
+                    if (HasDedicatedOverlapDiagnostic(previous.Role, current.Role) ||
+                        RuntimePartyStockIdentityRules.IsIntentionalOverlap(previous.Role, current.Role, roles))
+                    {
+                        continue;
+                    }
+
+                    conflict = previous;
+                    break;
+                }
+
+                if (conflict is not RuntimePartyStockReferenceOccurrence conflicting)
+                {
+                    continue;
+                }
+
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.PartyStockIdentityCollision,
+                    $"Runtime instance '{group.Key}' is referenced as both '{conflicting.Role}' and " +
+                    $"'{current.Role}', which is not an allowed party/stock overlap.",
+                    group.Key,
+                    Path: current.Path));
+            }
+        }
+    }
+
+    private static bool HasDedicatedOverlapDiagnostic(
+        RuntimePartyStockReferenceRole first,
+        RuntimePartyStockReferenceRole second) =>
+        first == second ||
+        IsRolePair(first, second, RuntimePartyStockReferenceRole.ActiveParty, RuntimePartyStockReferenceRole.ReserveMember) ||
+        IsRolePair(first, second, RuntimePartyStockReferenceRole.ActiveForm, RuntimePartyStockReferenceRole.PersonaStock);
+
+    private static bool IsRolePair(
+        RuntimePartyStockReferenceRole first,
+        RuntimePartyStockReferenceRole second,
+        RuntimePartyStockReferenceRole expectedFirst,
+        RuntimePartyStockReferenceRole expectedSecond) =>
+        (first == expectedFirst && second == expectedSecond) ||
+        (first == expectedSecond && second == expectedFirst);
 
     private static void ValidateInventory(
         RuntimeInventorySnapshot inventory,

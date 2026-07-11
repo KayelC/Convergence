@@ -236,6 +236,8 @@ The field subsystem then creates the party manager, dungeon manager, bridges, se
 
 Phase 7-35 completes the original-content Compendium runtime proof without coupling it to the Cathedral. `CompendiumRuntimeService` registers durable clean actor data by qualified catalog entity ID, reconstructs recalled actors through `CatalogBattleActorFactory`, and returns atomic stock/wallet snapshots. `FamiliarEntityKnowledgeService` is a separate opt-in boundary: a host chooses which registered or owned entity IDs seed persistent player knowledge. It never writes to encounter-local enemy AI knowledge. Training Annex presentation and host-generated recall instance IDs remain outside the framework.
 
+CodeReview-7-2 makes runtime identity a framework invariant rather than a host naming convention. `RuntimePartyStockIdentityRules` is the shared internal ownership graph used by party/stock transitions, Compendium recall, and save validation. A runtime ID may identify only one actor. The graph explicitly permits the same owned demon to appear in active party and Demon stock, plus the owner/active overlap used by the current unified-stock model; all other cross-role reuse is rejected. Every persisted party/stock reference must also identify the same catalog entity as its actor snapshot.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.

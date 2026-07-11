@@ -158,6 +158,8 @@ The Compendium now uses framework state/recall contracts for registration, overw
 
 Phase 7-35 adds the clean runtime counterpart. `CompendiumRuntimeService` snapshots a clean actor's qualified entity ID, progression, integral base stats, learned skills, and equipped skills; catalog reconstruction restores those durable values while clearing transient battle/equipment state and refilling recalculated resources. Recall checks duplicate entity ownership, selected Demon/Persona stock capacity, and Macca before returning any changed snapshot. Host code applies the returned party/wallet state only when the result is `Applied`.
 
+CodeReview-7-2 adds a separate runtime-identity guard before recall can create an actor or charge the wallet. The proposed recalled ID must be absent from owner, active party, reserve party, active form, Persona stock, and Demon stock. Stock addition/replacement commands enforce the same rule. Existing duplicates in the destination still report `DuplicateOwned`; cross-role reuse reports the distinct typed identity-collision code. Save validation applies the same ownership model and checks that each reference's entity ID matches its actor snapshot. The intended active-party plus Demon-stock representation remains valid.
+
 ## Clean Catalog Surface
 
 Track C adds framework definitions, strict deserialization, validation, catalog qualification, repositories, and one small fixture pack for the content families that were still legacy-only: equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets.

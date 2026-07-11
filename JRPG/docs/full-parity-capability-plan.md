@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 is complete: schema v1 fusion recipes are explicitly binary, runtime selectors preserve entity/race kind, structured results are authoritative, and malformed cardinality can no longer disappear silently. CodeReview-7-2 through CodeReview-7-5 must be completed before Phase 8 begins.
+Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant across Compendium recall, party/stock changes, and save validation while preserving deliberate active-demon ownership overlap. CodeReview-7-3 through CodeReview-7-5 must be completed before Phase 8 begins.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -1046,6 +1046,16 @@ Phase 7-35 result:
 - Compendium state, learned/equipped skill distinctions, unspent stat points, wallet/stock changes, and recalled catalog actors survive manual/suspend save round trips. Save validation rejects duplicate Compendium entity records, ineligible/missing entities, missing skills, and equipped skills that were not learned.
 - This remains `parallel_partial`: the clean original-content path owns the complete Compendium transaction proof, but `CompendiumRegistry`, the Cathedral presentation, and legacy production consumers remain active and are not authorized for removal.
 - Verification: the focused Phase 7-35, boundary, and protected-legacy gate passed `148/148`; the full suite passed `893/893` with no failures or skips. The framework build remained at `0` warnings, while the full solution retained `98` pre-existing legacy-host warnings. Clean battle, field, save, and Training Annex demos completed successfully; `git diff --check` passed with line-ending notices only; the framework forbidden-reference search returned no matches; and `Data/Jsons` remained unchanged.
+
+CodeReview-7-2 integrity amendment:
+
+- one centralized identity rule enumerates owner, active party, reserve party, active form, Persona stock, and Demon stock;
+- Compendium recall rejects a proposed runtime ID already used in any of those locations before actor creation, stock placement, cost assessment, or wallet mutation;
+- Demon/Persona stock additions and replacements reject cross-role runtime-ID reuse with a typed transition code;
+- save validation rejects illegal cross-list identity reuse and party/stock references whose entity ID disagrees with the referenced actor snapshot;
+- active party plus Demon-stock overlap for the same owned demon remains legal by explicit rule rather than by omission;
+- the capability remains `parallel_partial`, and CodeReview-7-3 through CodeReview-7-5 still gate Phase 8.
+- Verification: the focused identity, recall, stock, persistence, host, and ledger gate passed `166/166`; the full suite passed `915/915` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 36. `console_presentation`
 
