@@ -582,7 +582,7 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
-    public void TrainingAnnexSlice_AssessesFusionTransactionFromValidatedPlan()
+    public void TrainingAnnexSlice_PreparesAndCommitsFusionTransactionFromValidatedSelection()
     {
         GameDataCatalog catalog = LoadCatalog();
         var repository = new CatalogFusionContentRepository(catalog);
@@ -602,14 +602,35 @@ public sealed class OriginalCleanContentSliceTests
             bramble,
             Sacrifice: null,
             IsSacrificial: false));
-
-        var service = new FusionTransactionService();
-        FusionTransactionAssessment valid = service.Assess(new FusionTransactionRequest(
+        FusionInheritancePlan selectionPlan = SelectionPlan(repository, plan, ashling, bramble);
+        ValidatedFusionInheritanceSelection selection = new FusionInheritanceSelectionValidator()
+            .Validate(selectionPlan, [])
+            .RequireValidSelection();
+        RuntimeActorReferenceSnapshot owner = new(
+            RuntimeInstanceId.Parse("owner"),
+            Qualified("echo_adept"),
+            "Owner");
+        RuntimePartyStockSnapshot party = new(
+            owner,
+            ownerLevel: 10,
+            demonStock:
+            [
+                new RuntimeActorReferenceSnapshot(ashling.InstanceId, ashling.EntityId, ashling.DisplayName),
+                new RuntimeActorReferenceSnapshot(bramble.InstanceId, bramble.EntityId, bramble.DisplayName)
+            ]);
+        var actorFactory = new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy());
+        var service = new FusionTransactionService(
+            actorFactory,
+            new PartyStockTransitionService(new TestStockCapacityPolicy()));
+        var request = new FusionTransactionPreparationRequest(
             FusionParticipantStockKind.Demon,
             plan,
-            [],
-            ResultAlreadyOwned: false,
-            HasOpenStockSlot: true));
+            selection,
+            party,
+            RuntimeInstanceId.Parse("fused_ward_shell"),
+            Id("player_team"),
+            Id("test_controller"));
+        FusionTransactionAssessment valid = service.Prepare(request);
 
         Assert.True(valid.CanCommit);
         Assert.Empty(valid.Diagnostics);
@@ -620,22 +641,35 @@ public sealed class OriginalCleanContentSliceTests
                 RuntimeInstanceId.Parse("bramble_parent")
             ],
             valid.ConsumedParticipantIds);
+        PreparedFusionTransaction prepared = valid.RequirePreparedTransaction();
+        Assert.Same(party, prepared.BeforePartyStock);
+        Assert.Equal(
+            [RuntimeInstanceId.Parse("fused_ward_shell")],
+            prepared.AfterPartyStock.DemonStock.Select(actor => actor.InstanceId));
 
-        FusionTransactionAssessment ineligible = service.Assess(new FusionTransactionRequest(
+        FusionTransactionCommitResult committed = service.Commit(new FusionTransactionCommitRequest(
+            prepared,
+            party));
+        Assert.True(committed.Applied);
+        Assert.Equal(FusionTransactionCommitCode.Applied, committed.Code);
+        Assert.Equal(Qualified("ward_shell"), committed.ResultActor?.Entity.Id);
+        Assert.Equal(
+            [Qualified("shell_bash"), Qualified("soften_guard")],
+            committed.ResultActorSnapshot?.Skills.LearnedSkillIds);
+
+        RuntimePartyStockSnapshot duplicateParty = party.With(demonStock: party.DemonStock.Append(
+            new RuntimeActorReferenceSnapshot(
+                RuntimeInstanceId.Parse("owned_ward_shell"),
+                Qualified("ward_shell"),
+                "Ward Shell")));
+        FusionTransactionAssessment duplicateOwned = service.Prepare(new FusionTransactionPreparationRequest(
             FusionParticipantStockKind.Demon,
             plan,
-            [Qualified("mend")],
-            ResultAlreadyOwned: false,
-            HasOpenStockSlot: true));
-        Assert.False(ineligible.CanCommit);
-        Assert.Equal(FusionRuntimeDiagnosticCode.InvalidSelection, Assert.Single(ineligible.Diagnostics).Code);
-
-        FusionTransactionAssessment duplicateOwned = service.Assess(new FusionTransactionRequest(
-            FusionParticipantStockKind.Demon,
-            plan,
-            [],
-            ResultAlreadyOwned: true,
-            HasOpenStockSlot: true));
+            selection,
+            duplicateParty,
+            RuntimeInstanceId.Parse("second_ward_shell"),
+            Id("player_team"),
+            Id("test_controller")));
         Assert.False(duplicateOwned.CanCommit);
         Assert.Equal(FusionRuntimeDiagnosticCode.DuplicateResult, Assert.Single(duplicateOwned.Diagnostics).Code);
     }
@@ -946,5 +980,10 @@ public sealed class OriginalCleanContentSliceTests
                 new BattleResourceState(Id("sp"), sp, sp)
             ]);
         }
+    }
+
+    private sealed class TestStockCapacityPolicy : IStockCapacityPolicy
+    {
+        public int GetCapacity(int ownerLevel) => 12;
     }
 }

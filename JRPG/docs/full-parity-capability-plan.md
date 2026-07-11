@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant across Compendium recall, party/stock changes, and save validation while preserving deliberate active-demon ownership overlap. CodeReview-7-3 through CodeReview-7-5 must be completed before Phase 8 begins.
+Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 and CodeReview-7-5 must be completed before Phase 8 begins.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -990,8 +990,22 @@ Clean console proof:
   - If the host first replaces owned Ward Shell with the prepared Bramble Runner candidate, the same command can commit atomically: Ashling and Bramble Runner are consumed through `PartyStockTransitionService`, a new `fusion_ward_shell_1` actor is hydrated through `CatalogBattleActorFactory`, and the resulting Demon stock contains that new Ward Shell reference.
   - The committed result uses the preview's natural and inherited skill IDs as a typed runtime skill snapshot; the actor is restored through the catalog actor factory so skill references are validated rather than copied as loose strings.
   - Training Annex save validation now includes dynamic fused actors in the roster, so the fused result does not become a dangling stock reference.
-  - This remains `parallel_partial`: clean Training Annex proves transaction ownership and rollback, but Compendium registration/recall integration and full fusion strategy approval remain Phase 7-34/7-35 work.
-  - Verification: focused 7-33 and guard tests passed `14/14`, focused transaction tests passed `3/3`, and the full suite passed `867/867` with no skips. Framework build remained `0` warnings, solution build remained at `98` pre-existing legacy-host warnings, clean battle/field/save/Training Annex demos passed, `git diff --check` reported only line-ending normalization warnings, framework forbidden-reference search returned no matches, and protected `Data/Jsons` content stayed unchanged.
+- This remains `parallel_partial`: clean Training Annex proves transaction ownership and rollback, but Compendium registration/recall integration and full fusion strategy approval remain Phase 7-34/7-35 work.
+- Verification: focused 7-33 and guard tests passed `14/14`, focused transaction tests passed `3/3`, and the full suite passed `867/867` with no skips. Framework build remained `0` warnings, solution build remained at `98` pre-existing legacy-host warnings, clean battle/field/save/Training Annex demos passed, `git diff --check` reported only line-ending normalization warnings, framework forbidden-reference search returned no matches, and protected `Data/Jsons` content stayed unchanged.
+
+CodeReview-7-3 transaction amendment:
+
+- `FusionTransactionService.Prepare(...)` now consumes a validated inheritance token and the real party/stock snapshot; loose selected IDs and caller-authored ownership/capacity booleans are no longer accepted;
+- preparation derives duplicate-result, identity, participant/entity, capacity, consumption, and placement decisions through an injected `IPartyStockTransitionService` and returns an immutable prepared token without constructing an actor;
+- typed owner kind selects Demon or Persona consumption and placement;
+- `Commit(...)` rejects stale party snapshots, constructs/restores the catalog result actor, and returns one typed result containing before/after state, actor/snapshot, consumed IDs, transition evidence, and diagnostics;
+- actor-creation failure and transition rejection preserve the original authoritative party state;
+- the verified preparation token also fixes result team/controller ownership and retained stat-boost state before confirmation, rejects duplicate participant identities and conflicting owned references, and preserves separate learned/equipped skills;
+- rejected commits report no applied consumption or transitions; planned evidence remains explicitly available from the prepared token;
+- Training Annex obtains `standard_stock_capacity` from the catalog ruleset binding and no longer creates a legacy capacity policy or executes stock transitions inside its fusion controller;
+- the host remains responsible only for proposed identity, presentation, confirmation, and applying an `Applied` result;
+- the capability remains `parallel_partial`; CodeReview-7-4 and CodeReview-7-5 still gate Phase 8.
+- Verification after the post-interruption source audit: the broad fusion, stock, persistence, host, boundary, and roadmap gate passed `198/198`; the full suite passed `930/930` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 34. `fusion_strategies`
 
@@ -1054,7 +1068,7 @@ CodeReview-7-2 integrity amendment:
 - Demon/Persona stock additions and replacements reject cross-role runtime-ID reuse with a typed transition code;
 - save validation rejects illegal cross-list identity reuse and party/stock references whose entity ID disagrees with the referenced actor snapshot;
 - active party plus Demon-stock overlap for the same owned demon remains legal by explicit rule rather than by omission;
-- the capability remains `parallel_partial`, and CodeReview-7-3 through CodeReview-7-5 still gate Phase 8.
+- the capability remains `parallel_partial`, and CodeReview-7-4 plus CodeReview-7-5 still gate Phase 8.
 - Verification: the focused identity, recall, stock, persistence, host, and ledger gate passed `166/166`; the full suite passed `915/915` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 36. `console_presentation`

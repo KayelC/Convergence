@@ -286,6 +286,17 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         Func<PressTurnEngine> pressTurnFactory = pressTurnBinding.RequireService();
+        RulesetBindingResult<IStockCapacityPolicy> stockCapacityBinding =
+            rulesetResolver.BindStockCapacityPolicy(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_stock_capacity"));
+        if (!stockCapacityBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("stock_capacity", stockCapacityBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
         RulesetBindingResult<ResourceManagementRulesetServices> resourceManagementBinding =
             rulesetResolver.BindResourceManagementServices(
                 catalog,
@@ -336,7 +347,11 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
-        IPartyStockTransitionService partyStockTransitions = new PartyStockTransitionService();
+        IPartyStockTransitionService partyStockTransitions = new PartyStockTransitionService(
+            stockCapacityBinding.RequireService());
+        IFusionTransactionService fusionTransactionService = new FusionTransactionService(
+            actorFactory,
+            partyStockTransitions);
         var partyController = new TrainingAnnexPartyController(partyStockTransitions);
         var compendiumRuntime = new CompendiumRuntimeService(
             catalog,
@@ -644,11 +659,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                     TrainingAnnexFusionTransactionResult transaction =
                         await new TrainingAnnexFusionController(_eventSink)
                             .CommitAsync(
-                                catalog,
-                                roster,
-                                partyStock,
-                                actorFactory,
-                                _commandSource,
+                                 catalog,
+                                 roster,
+                                 partyStock,
+                                 fusionTransactionService,
+                                 _commandSource,
                                 commands,
                                 cancellationToken).ConfigureAwait(false);
                     partyStock = transaction.PartyStock;

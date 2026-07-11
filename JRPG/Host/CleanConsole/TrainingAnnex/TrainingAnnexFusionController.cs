@@ -61,7 +61,8 @@ internal sealed record TrainingAnnexFusionTransactionEvidence(
     bool Committed,
     bool MutatedRuntimeState,
     int DemonStockCountBefore,
-    int DemonStockCountAfter);
+    int DemonStockCountAfter,
+    FusionTransactionCommitResult? CommitResult);
 
 internal sealed record TrainingAnnexFusionTransactionResult(
     RuntimePartyStockSnapshot PartyStock,
@@ -269,7 +270,7 @@ internal sealed class TrainingAnnexFusionController
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
         RuntimePartyStockSnapshot partyStock,
-        ICatalogBattleActorFactory actorFactory,
+        IFusionTransactionService transactionService,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
@@ -277,7 +278,7 @@ internal sealed class TrainingAnnexFusionController
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(roster);
         ArgumentNullException.ThrowIfNull(partyStock);
-        ArgumentNullException.ThrowIfNull(actorFactory);
+        ArgumentNullException.ThrowIfNull(transactionService);
         ArgumentNullException.ThrowIfNull(commandSource);
         ArgumentNullException.ThrowIfNull(commands);
 
@@ -321,10 +322,28 @@ internal sealed class TrainingAnnexFusionController
                 partyStock.DemonStock.Count);
         }
 
-        FusionTransactionAssessment availabilityAssessment = AssessTransaction(
-            partyStock,
+        FusionInheritancePlan selectionPlan = CreateSelectionPlan(
+            repository,
             plan,
-            []);
+            firstParent,
+            secondParent);
+        var selectionValidator = new FusionInheritanceSelectionValidator();
+        ValidatedFusionInheritanceSelection emptySelection = selectionValidator
+            .Validate(selectionPlan, [])
+            .RequireValidSelection();
+        RuntimeInstanceId proposedResultInstanceId = GenerateFusionInstanceId(
+            roster,
+            partyStock,
+            plan.ResultEntity.Id);
+        FusionTransactionAssessment availabilityAssessment = transactionService.Prepare(
+            new FusionTransactionPreparationRequest(
+                FusionParticipantStockKind.Demon,
+                plan,
+                emptySelection,
+                partyStock,
+                proposedResultInstanceId,
+                TrainingAnnexHostSupport.PlayerTeam,
+                ContentId.Parse("clean_training_annex")));
         if (!availabilityAssessment.CanCommit)
         {
             await PublishTransactionDiagnosticsAsync(availabilityAssessment, cancellationToken)
@@ -372,13 +391,8 @@ internal sealed class TrainingAnnexFusionController
                 partyStock.DemonStock.Count);
         }
 
-        FusionInheritancePlan selectionPlan = CreateSelectionPlan(
-            repository,
-            plan,
-            firstParent,
-            secondParent);
         FusionInheritanceSelectionResult selection =
-            new FusionInheritanceSelectionValidator().Validate(selectionPlan, selectedSkillIds);
+            selectionValidator.Validate(selectionPlan, selectedSkillIds);
         if (!selection.IsValid)
         {
             foreach (FusionInheritanceSelectionDiagnostic diagnostic in selection.Diagnostics)
@@ -405,10 +419,15 @@ internal sealed class TrainingAnnexFusionController
         }
 
         ValidatedFusionInheritanceSelection validSelection = selection.RequireValidSelection();
-        FusionTransactionAssessment finalAssessment = AssessTransaction(
-            partyStock,
-            plan,
-            validSelection.SelectedSkillIds);
+        FusionTransactionAssessment finalAssessment = transactionService.Prepare(
+            new FusionTransactionPreparationRequest(
+                FusionParticipantStockKind.Demon,
+                plan,
+                validSelection,
+                partyStock,
+                proposedResultInstanceId,
+                TrainingAnnexHostSupport.PlayerTeam,
+                ContentId.Parse("clean_training_annex")));
         if (!finalAssessment.CanCommit)
         {
             await PublishTransactionDiagnosticsAsync(finalAssessment, cancellationToken)
@@ -429,29 +448,8 @@ internal sealed class TrainingAnnexFusionController
                 partyStock.DemonStock.Count);
         }
 
-        FusionPreviewSnapshot? preview = new FusionPreviewService().CreatePreview(new FusionPreviewRequest(
-            plan,
-            validSelection.SelectedSkillIds));
-        if (preview is null)
-        {
-            await _eventSink.PublishAsync(
-                "Fusion transaction rejected: preview service produced no result.",
-                cancellationToken).ConfigureAwait(false);
-            return TransactionResult(
-                partyStock,
-                null,
-                scenarioId,
-                plan.ResultEntity.Id,
-                null,
-                validSelection.SelectedSkillIds,
-                [],
-                finalAssessment,
-                [],
-                confirmed: false,
-                committed: false,
-                mutated: false,
-                partyStock.DemonStock.Count);
-        }
+        PreparedFusionTransaction prepared = finalAssessment.RequirePreparedTransaction();
+        FusionPreviewSnapshot preview = prepared.Preview;
 
         await _eventSink.PublishAsync(
             FormatPreview(catalog, preview),
@@ -474,7 +472,7 @@ internal sealed class TrainingAnnexFusionController
                 plan.ResultEntity.Id,
                 null,
                 validSelection.SelectedSkillIds,
-                ResultSkillIds(preview),
+                prepared.ResultLearnedSkillIds,
                 finalAssessment,
                 [],
                 confirmed: false,
@@ -484,82 +482,52 @@ internal sealed class TrainingAnnexFusionController
         }
 
         commands.Add(confirmation.Command);
-        TrainingAnnexRuntimeActor resultActor = CreateResultActor(
-            roster,
-            partyStock,
-            actorFactory,
-            preview);
-        RuntimeActorReferenceSnapshot resultReference = TrainingAnnexHostSupport.Reference(resultActor);
-        var transitions = new List<PartyStockTransitionResult>();
-        RuntimePartyStockSnapshot current = partyStock;
-        var partyTransitions = new PartyStockTransitionService();
-        foreach (RuntimeInstanceId participantId in finalAssessment.ConsumedParticipantIds)
+        FusionTransactionCommitResult committed = transactionService.Commit(
+            new FusionTransactionCommitRequest(
+                prepared,
+                partyStock));
+        if (!committed.Applied)
         {
-            PartyStockTransitionResult consumed = partyTransitions.ConsumeDemon(
-                new ConsumeDemonRequest(current, participantId));
-            transitions.Add(consumed);
-            if (!consumed.Applied)
-            {
-                await PublishStockDiagnosticsAsync(consumed, cancellationToken).ConfigureAwait(false);
-                return TransactionResult(
-                    partyStock,
-                    null,
-                    scenarioId,
-                    plan.ResultEntity.Id,
-                    resultActor.Actor.State.InstanceId,
-                    validSelection.SelectedSkillIds,
-                    ResultSkillIds(preview),
-                    finalAssessment,
-                    transitions,
-                    confirmed: true,
-                    committed: false,
-                    mutated: false,
-                    partyStock.DemonStock.Count);
-            }
-
-            current = consumed.After;
-        }
-
-        PartyStockTransitionResult added = partyTransitions.AddDemonToStock(
-            new AddDemonToStockRequest(current, resultReference));
-        transitions.Add(added);
-        if (!added.Applied)
-        {
-            await PublishStockDiagnosticsAsync(added, cancellationToken).ConfigureAwait(false);
+            await PublishTransactionDiagnosticsAsync(committed.Diagnostics, cancellationToken).ConfigureAwait(false);
             return TransactionResult(
                 partyStock,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
-                resultActor.Actor.State.InstanceId,
+                proposedResultInstanceId,
                 validSelection.SelectedSkillIds,
-                ResultSkillIds(preview),
+                prepared.ResultLearnedSkillIds,
                 finalAssessment,
-                transitions,
+                committed.StockTransitions,
                 confirmed: true,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyStock.DemonStock.Count,
+                committed);
         }
 
-        current = added.After;
+        CatalogBattleActor catalogActor = committed.ResultActor
+            ?? throw new InvalidOperationException("Applied fusion transaction did not return a result actor.");
+        var resultActor = new TrainingAnnexRuntimeActor("Fused Result", catalogActor);
+        RuntimePartyStockSnapshot current = committed.AfterPartyStock;
         await _eventSink.PublishAsync(
-            $"Fusion transaction committed: {FormatParent(firstParent)} + {FormatParent(secondParent)} -> {preview.DisplayName}; consumed {FormatInstances(finalAssessment.ConsumedParticipantIds)}; added {resultActor.Actor.State.InstanceId}; Demon stock {partyStock.DemonStock.Count}->{current.DemonStock.Count}.",
+            $"Fusion transaction committed: {FormatParent(firstParent)} + {FormatParent(secondParent)} -> {preview.DisplayName}; consumed {FormatInstances(committed.ConsumedParticipantIds)}; added {catalogActor.State.InstanceId}; Demon stock {partyStock.DemonStock.Count}->{current.DemonStock.Count}.",
             cancellationToken).ConfigureAwait(false);
         return TransactionResult(
             current,
             resultActor,
             scenarioId,
             plan.ResultEntity.Id,
-            resultActor.Actor.State.InstanceId,
+            catalogActor.State.InstanceId,
             validSelection.SelectedSkillIds,
-            ResultSkillIds(preview),
+            prepared.ResultLearnedSkillIds,
             finalAssessment,
-            transitions,
+            committed.StockTransitions,
             confirmed: true,
             committed: true,
             mutated: true,
-            partyStock.DemonStock.Count);
+            partyStock.DemonStock.Count,
+            committed);
     }
 
     private async ValueTask<TrainingAnnexFusionResultEvidence> ResolveAsync(
@@ -856,99 +824,6 @@ internal sealed class TrainingAnnexFusionController
                     "Back")
             ]);
 
-    private FusionTransactionAssessment AssessTransaction(
-        RuntimePartyStockSnapshot partyStock,
-        FusionPlanningResult plan,
-        IReadOnlyList<ContentId> selectedSkillIds) =>
-        new FusionTransactionService().Assess(new FusionTransactionRequest(
-            FusionParticipantStockKind.Demon,
-            plan,
-            selectedSkillIds,
-            ResultAlreadyOwned: plan.ResultEntity is not null &&
-                OwnsEntity(partyStock, plan.ResultEntity.Id),
-            HasOpenStockSlot: HasOpenStockSlot(partyStock, plan)));
-
-    private static bool OwnsEntity(RuntimePartyStockSnapshot partyStock, ContentId entityId) =>
-        partyStock.DemonStock
-            .Concat(partyStock.ActiveParty)
-            .Any(actor => actor.EntityDefinitionId == entityId);
-
-    private static bool HasOpenStockSlot(RuntimePartyStockSnapshot partyStock, FusionPlanningResult plan)
-    {
-        if (plan.Result.Operation != FusionRuntimeOperation.CreateNewEntity)
-        {
-            return true;
-        }
-
-        RuntimeInstanceId[] consumedIds = new[]
-        {
-            plan.FirstParent,
-            plan.SecondParent,
-            plan.Sacrifice
-        }
-            .OfType<FusionParticipantSnapshot>()
-            .Select(parent => parent.InstanceId)
-            .Distinct()
-            .ToArray();
-        int consumedStockEntries = consumedIds
-            .Count(id => partyStock.DemonStock.Any(demon => demon.InstanceId == id));
-        int projected = partyStock.DemonStock.Count - consumedStockEntries + 1;
-        return projected <= new LegacyStockCapacityPolicy().GetCapacity(partyStock.OwnerLevel);
-    }
-
-    private TrainingAnnexRuntimeActor CreateResultActor(
-        TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot partyStock,
-        ICatalogBattleActorFactory actorFactory,
-        FusionPreviewSnapshot preview)
-    {
-        RuntimeInstanceId instanceId = GenerateFusionInstanceId(roster, partyStock, preview.EntityId);
-        CatalogBattleActorCreationResult created = actorFactory.Create(new CatalogBattleActorCreationRequest(
-            preview.EntityId,
-            instanceId,
-            TrainingAnnexHostSupport.PlayerTeam,
-            preview.Level,
-            new RuntimeProgressionSnapshot(
-                preview.Level,
-                preview.Experience,
-                preview.LifetimeExperience,
-                0),
-            ControllerId: ContentId.Parse("clean_training_annex"),
-            Deployment: RuntimeActorDeployment.Reserve,
-            IsActive: false));
-        if (!created.IsSuccess)
-        {
-            string diagnostics = string.Join("; ", created.Diagnostics.Select(diagnostic => diagnostic.Message));
-            throw new InvalidOperationException($"Fusion result actor creation failed: {diagnostics}");
-        }
-
-        CatalogBattleActor actor = created.RequireActor();
-        RuntimeActorSnapshot snapshot = actor.State.ToSnapshot();
-        RuntimeActorSnapshot withPreviewSkills = new(
-            snapshot.Identity,
-            snapshot.Ownership,
-            snapshot.Deployment,
-            snapshot.Progression,
-            snapshot.Resources,
-            snapshot.Stats,
-            new RuntimeSkillStateSnapshot(ResultSkillIds(preview), ResultSkillIds(preview)),
-            snapshot.Forms,
-            snapshot.Equipment,
-            snapshot.BattleStatus,
-            snapshot.BattleActivations,
-            snapshot.BaseResourceValues,
-            snapshot.VitalResourceId,
-            snapshot.CapabilityIds);
-        CatalogBattleActorCreationResult restored = actorFactory.Restore(withPreviewSkills);
-        if (!restored.IsSuccess)
-        {
-            string diagnostics = string.Join("; ", restored.Diagnostics.Select(diagnostic => diagnostic.Message));
-            throw new InvalidOperationException($"Fusion result actor restore failed: {diagnostics}");
-        }
-
-        return new TrainingAnnexRuntimeActor("Fused Result", restored.RequireActor());
-    }
-
     private static RuntimeInstanceId GenerateFusionInstanceId(
         TrainingAnnexActorRoster roster,
         RuntimePartyStockSnapshot partyStock,
@@ -980,32 +855,19 @@ internal sealed class TrainingAnnexFusionController
         }
     }
 
-    private static IReadOnlyList<ContentId> ResultSkillIds(FusionPreviewSnapshot preview) =>
-        preview.NaturalSkillIds
-            .Concat(preview.InheritedSkillIds)
-            .Distinct()
-            .ToArray();
-
     private async ValueTask PublishTransactionDiagnosticsAsync(
         FusionTransactionAssessment assessment,
+        CancellationToken cancellationToken) =>
+        await PublishTransactionDiagnosticsAsync(assessment.Diagnostics, cancellationToken).ConfigureAwait(false);
+
+    private async ValueTask PublishTransactionDiagnosticsAsync(
+        IEnumerable<FusionRuntimeDiagnostic> diagnostics,
         CancellationToken cancellationToken)
     {
-        foreach (FusionRuntimeDiagnostic diagnostic in assessment.Diagnostics)
+        foreach (FusionRuntimeDiagnostic diagnostic in diagnostics)
         {
             await _eventSink.PublishAsync(
                 $"Fusion transaction rejected [{diagnostic.Code}]: {diagnostic.Message}",
-                cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private async ValueTask PublishStockDiagnosticsAsync(
-        PartyStockTransitionResult result,
-        CancellationToken cancellationToken)
-    {
-        foreach (PartyStockTransitionDiagnostic diagnostic in result.Diagnostics)
-        {
-            await _eventSink.PublishAsync(
-                $"Fusion stock transition rejected [{diagnostic.Code}]: {diagnostic.Message}",
                 cancellationToken).ConfigureAwait(false);
         }
     }
@@ -1023,7 +885,8 @@ internal sealed class TrainingAnnexFusionController
         bool confirmed,
         bool committed,
         bool mutated,
-        int demonStockCountBefore) =>
+        int demonStockCountBefore,
+        FusionTransactionCommitResult? commitResult = null) =>
         new(
             partyStock,
             resultActor,
@@ -1039,7 +902,8 @@ internal sealed class TrainingAnnexFusionController
                 committed,
                 mutated,
                 demonStockCountBefore,
-                partyStock.DemonStock.Count));
+                partyStock.DemonStock.Count,
+                commitResult));
 
     private static string FormatSkillNames(GameDataCatalog catalog, IReadOnlyList<ContentId> skillIds) =>
         skillIds.Count == 0

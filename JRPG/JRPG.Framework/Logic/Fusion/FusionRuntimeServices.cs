@@ -40,7 +40,15 @@ public enum FusionRuntimeDiagnosticCode
     DuplicateResult,
     StockFull,
     InsufficientCurrency,
-    InvalidSelection
+    InvalidSelection,
+    InvalidParticipant,
+    DuplicateParticipant,
+    InvalidPreview,
+    ResultIdentityInUse,
+    ResultActorSnapshotInvalid,
+    StockTransitionRejected,
+    ActorCreationFailed,
+    TransactionStateChanged
 }
 
 public sealed record FusionRuntimeDiagnostic(
@@ -1078,104 +1086,6 @@ public sealed class FusionPreviewService : IFusionPreviewService
             experience,
             lifetimeExperience);
     }
-}
-
-public sealed record FusionTransactionRequest(
-    FusionParticipantStockKind OwnerKind,
-    FusionPlanningResult Plan,
-    IEnumerable<ContentId> SelectedSkillIds,
-    bool ResultAlreadyOwned,
-    bool HasOpenStockSlot);
-
-public sealed record FusionTransactionAssessment
-{
-    internal FusionTransactionAssessment(
-        bool canCommit,
-        IReadOnlyList<FusionRuntimeDiagnostic> diagnostics,
-        IReadOnlyList<RuntimeInstanceId> consumedParticipantIds,
-        ContentId? resultEntityId)
-    {
-        CanCommit = canCommit;
-        Diagnostics = diagnostics;
-        ConsumedParticipantIds = consumedParticipantIds;
-        ResultEntityId = resultEntityId;
-    }
-
-    public bool CanCommit { get; }
-    public IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics { get; }
-    public IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds { get; }
-    public ContentId? ResultEntityId { get; }
-}
-
-public interface IFusionTransactionService
-{
-    FusionTransactionAssessment Assess(FusionTransactionRequest request);
-}
-
-public sealed class FusionTransactionService : IFusionTransactionService
-{
-    public FusionTransactionAssessment Assess(FusionTransactionRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        if (!request.Plan.IsSuccessful)
-        {
-            return Rejected(FusionRuntimeDiagnosticCode.NoFusionPossible, "The fusion plan has no result.");
-        }
-
-        ArgumentNullException.ThrowIfNull(request.SelectedSkillIds);
-        ContentId[] authoredSelection = request.SelectedSkillIds.ToArray();
-        ContentId[] selectedSkillIds = authoredSelection
-            .Distinct()
-            .ToArray();
-        if (selectedSkillIds.Length != authoredSelection.Length)
-        {
-            return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, "The inherited skill selection contains duplicates.");
-        }
-        if (selectedSkillIds.Length > request.Plan.MaximumInheritanceSlots)
-        {
-            return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, "The inherited skill selection exceeds the available fusion slots.");
-        }
-        foreach (ContentId skillId in selectedSkillIds)
-        {
-            if (!request.Plan.PickableSkillIds.Contains(skillId))
-            {
-                return Rejected(FusionRuntimeDiagnosticCode.InvalidSelection, $"Skill '{skillId}' cannot be inherited by this fusion result.", skillId);
-            }
-        }
-        if (request.ResultAlreadyOwned && request.Plan.Result.Operation == FusionRuntimeOperation.CreateNewEntity)
-        {
-            return Rejected(FusionRuntimeDiagnosticCode.DuplicateResult, "The fusion result is already owned.", request.Plan.Result.ResultEntityId);
-        }
-        if (!request.HasOpenStockSlot && request.Plan.Result.Operation == FusionRuntimeOperation.CreateNewEntity)
-        {
-            return Rejected(FusionRuntimeDiagnosticCode.StockFull, "There is no open stock slot for the fusion result.", request.Plan.Result.ResultEntityId);
-        }
-
-        return new FusionTransactionAssessment(
-            true,
-            Array.AsReadOnly(Array.Empty<FusionRuntimeDiagnostic>()),
-            ConsumedParticipantIds(request.Plan),
-            request.Plan.Result.ResultEntityId);
-    }
-
-    private static IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds(FusionPlanningResult plan)
-    {
-        IEnumerable<FusionParticipantSnapshot?> consumed = plan.Result.Operation == FusionRuntimeOperation.StatBoost
-            ? [plan.Result.CatalystParent]
-            : [plan.FirstParent, plan.SecondParent, plan.Sacrifice];
-        return Array.AsReadOnly(consumed
-            .OfType<FusionParticipantSnapshot>()
-            .Select(parent => parent.InstanceId)
-            .Distinct()
-            .ToArray());
-    }
-
-    private static FusionTransactionAssessment Rejected(FusionRuntimeDiagnosticCode code, string message, ContentId? contentId = null) =>
-        new(
-            false,
-            Array.AsReadOnly(new[] { new FusionRuntimeDiagnostic(code, message, contentId) }),
-            Array.AsReadOnly(Array.Empty<RuntimeInstanceId>()),
-            null);
 }
 
 public enum CompendiumRegistrationCode

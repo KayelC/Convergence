@@ -830,6 +830,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(transaction.Confirmed);
         Assert.False(transaction.Committed);
         Assert.False(transaction.MutatedRuntimeState);
+        Assert.Null(transaction.CommitResult);
         Assert.Equal(2, transaction.DemonStockCountBefore);
         Assert.Equal(2, transaction.DemonStockCountAfter);
         Assert.Empty(transaction.StockTransitions);
@@ -894,6 +895,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(transaction.Confirmed);
         Assert.True(transaction.Committed);
         Assert.True(transaction.MutatedRuntimeState);
+        FusionTransactionCommitResult commit = Assert.IsType<FusionTransactionCommitResult>(transaction.CommitResult);
+        Assert.True(commit.Applied);
+        Assert.Equal(FusionTransactionCommitCode.Applied, commit.Code);
+        Assert.Same(commit.PreparedTransaction.AfterPartyStock, commit.AfterPartyStock);
+        Assert.Equal(RuntimeInstanceId.Parse("fusion_ward_shell_1"), commit.ResultActorSnapshot?.Identity.InstanceId);
         Assert.Equal(2, transaction.DemonStockCountBefore);
         Assert.Equal(1, transaction.DemonStockCountAfter);
         Assert.Equal(3, transaction.StockTransitions.Count);
@@ -930,6 +936,36 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(
             "Startup snapshot validation: 0 diagnostic(s).",
             text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FusionConfirmationBackDoesNotCommitPreparedTransaction()
+    {
+        var io = new ScriptedGameIO().QueueMenu(15, 4, 19, 3, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexFusionTransactionEvidence transaction = Assert.Single(summary.FusionTransactions);
+        Assert.NotNull(transaction.Assessment);
+        Assert.True(transaction.Assessment!.CanCommit);
+        Assert.False(transaction.Confirmed);
+        Assert.False(transaction.Committed);
+        Assert.False(transaction.MutatedRuntimeState);
+        Assert.Null(transaction.CommitResult);
+        Assert.Empty(transaction.StockTransitions);
+        Assert.Equal(
+            [TrainingAnnexHostSupport.DemonAshlingInstance, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance],
+            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+        Assert.DoesNotContain(RuntimeInstanceId.Parse("fusion_ward_shell_1"), summary.ActorInstanceIds);
+        Assert.Contains(
+            "Fusion transaction canceled at confirmation. No runtime state was mutated.",
+            output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -2434,6 +2470,28 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Null(host.LastSummary);
         Assert.Empty(io.Menus);
         Assert.Contains($"[economy:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, RulesetBindingDiagnosticCode.MissingRuleset)]
+    [InlineData(false, RulesetBindingDiagnosticCode.CategoryMismatch)]
+    public async Task CleanTrainingAnnexPlay_InvalidStockCapacityBindingFailsBeforeSession(
+        bool removeRuleset,
+        RulesetBindingDiagnosticCode expectedCode)
+    {
+        var io = new ScriptedGameIO();
+        using var output = new StringWriter();
+        IContentPackTextSource source = removeRuleset
+            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_stock_capacity")
+            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_stock_capacity", "damage");
+        var host = CreateHost(io, output, source);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(4, exitCode);
+        Assert.Null(host.LastSummary);
+        Assert.Empty(io.Menus);
+        Assert.Contains($"[stock_capacity:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

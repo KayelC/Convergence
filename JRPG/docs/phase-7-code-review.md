@@ -1,6 +1,6 @@
 # Phase 7 Code Review And Readiness
 
-> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 and CodeReview-7-2. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 and CodeReview-7-2 are complete; CodeReview-7-3 through CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
+> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 through CodeReview-7-3. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1, CodeReview-7-2, and CodeReview-7-3 are complete; CodeReview-7-4 and CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -16,7 +16,7 @@ Phase 7 achieved meaningful framework-first progress:
 
 The current sample paths are green and are not false demonstrations. They execute real framework services and mutate real clean runtime snapshots.
 
-The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding by enforcing one party/stock identity graph during recall, stock mutation, and save validation. The remaining required findings concern fusion commit ownership, accident-strategy context, and Compendium entry validation.
+The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding. CodeReview-7-3 resolves fusion commit ownership by moving preparation, actor construction, parent consumption, typed result placement, and rollback decisions into one injected framework service. The remaining required findings concern accident-strategy context and Compendium entry validation.
 
 **Verdict:** do not begin Phase 8-36 as though Phase 7 were closed. Resolve the Phase 7 review queue first, then rerun this audit. The current code remains suitable as the existing clean demonstration baseline while those corrections are made.
 
@@ -117,7 +117,7 @@ At the initial review point, tests covered one entity/entity recipe and one race
 - The legacy dataset audit found 460 recipes using 30 unique race selector tokens and 4 unique entity selector tokens, with no unknown or ambiguous parent tokens.
 - Regression coverage now proves entity/entity and race/race catalog mapping, mixed selectors, reversed order, selector-ID collision handling, selector specificity, structured-result precedence, one/three-parent rejection, and fail-fast adapter behavior.
 
-This finding is closed. It does not close Phase 7 because CodeReview-7-3 through CodeReview-7-5 remain after the separate CodeReview-7-2 identity correction.
+This finding is closed. It does not close Phase 7 because CodeReview-7-4 and CodeReview-7-5 remain after the separate identity and transaction corrections.
 
 ### High, resolved by CodeReview-7-2: Compendium recall can return a party snapshot with a duplicate runtime instance ID
 
@@ -153,7 +153,7 @@ The Training Annex host avoids this through its own `NextRecallInstanceId(...)` 
 
 This finding is closed. The framework no longer depends on a host-generated ID convention to protect recall integrity.
 
-### Medium: Fusion commit orchestration remains host-owned
+### Medium, resolved by CodeReview-7-3: Fusion commit orchestration remains host-owned
 
 The full-parity target says parent consumption, result ownership, stock updates, and rollback should be framework transaction decisions.
 
@@ -182,6 +182,29 @@ The controller does this safely for its sample because all intermediate snapshot
 - Let the host supply identity generation or a proposed result identity without owning the transaction algorithm.
 - Return one typed applied/rejected result containing before/after party state, result actor/snapshot, consumed IDs, and diagnostics.
 - Keep presentation and final acceptance host-owned.
+
+**CodeReview-7-3 resolution, 2026-07-11:**
+
+- The old `FusionTransactionRequest` boolean contract and `Assess(...)` method are removed. Callers can no longer claim that a result is not owned or that a slot is available.
+- `FusionTransactionService.Prepare(...)` accepts a `ValidatedFusionInheritanceSelection`, the actual immutable party/stock snapshot, typed Demon/Persona owner kind, and a host-proposed result identity.
+- Preparation derives duplicate ownership, identity availability, participant/entity consistency, stock capacity, parent consumption, and result placement through the injected `IPartyStockTransitionService`. It returns an immutable `PreparedFusionTransaction`; it does not construct an actor or mutate host state.
+- Demon ownership uses Demon consume/add transitions. Persona ownership uses Persona consume/add transitions. No Demon-specific branch remains in the Training Annex controller.
+- `Commit(...)` is allowed only against the exact snapshot used during preparation. A stale confirmation returns `PreparationStale` and preserves the newer state.
+- Actor creation and preview skill/stat restoration run through the injected `ICatalogBattleActorFactory`. Actor failure returns the original snapshot and typed diagnostics rather than throwing after host mutation.
+- The applied/rejected contracts carry before/after party state, consumed participant IDs, attempted stock transitions, result actor and immutable snapshot, and diagnostics. Stat-boost transactions retain the transformed actor identity and consume only the catalyst.
+- Training Annex now binds `standard_stock_capacity` through `RuntimeRulesetBindingResolver`, injects that policy into the shared party/stock transition service, and injects the same service into fusion and Compendium paths.
+- The host still chooses the proposed runtime ID, presents the preview and confirmation, and decides whether to call `Commit(...)`. Cancellation after preparation creates no actor and applies no prepared state.
+
+**Post-interruption audit hardening, 2026-07-11:**
+
+- repeated runtime IDs across parent or sacrifice slots are rejected as `DuplicateParticipant` instead of being silently collapsed into one consumed actor;
+- every intentional active-party plus Demon-stock occurrence is checked against the participant entity, so a correct first reference cannot hide a conflicting owned reference;
+- result team/controller ownership and the optional retained stat-boost actor snapshot are bound during preparation. Commit cannot change actor-construction inputs after confirmation, and it rejects a different retained snapshot as stale;
+- stat boosts require their retained actor snapshot before stock simulation and preserve separate learned/equipped skill state instead of equipping every learned skill;
+- injected preview and actor-factory results are checked against the prepared entity, selection, ownership, progression, stats, and skills;
+- rejected commits expose no applied consumed IDs or stock transitions. Their planned evidence remains available explicitly through `PlannedConsumedParticipantIds`, `PlannedStockTransitions`, and the prepared token.
+
+This finding is closed after the follow-up audit. A Godot host can use the same prepare/confirm/commit boundary without reproducing stock math or rollback ordering or supplying mutable result-construction choices after confirmation.
 
 ### Medium: Accident inheritance drops the plan's policy context
 
@@ -292,9 +315,7 @@ No independent defect was found in `FusionPreviewService` for the demonstrated c
 
 ### 7-33: Fusion transactions
 
-The Training Annex sample is externally atomic. Failed parent consumption or result insertion returns the original party snapshot, and the live host applies only the successful final result.
-
-The unresolved issue is that this atomic algorithm is in the host rather than one framework commit service. CodeReview-7-3 should move reusable coordination without moving menus or presentation into the framework.
+The Training Annex sample is now framework-atomic. `FusionTransactionService.Prepare(...)` calculates the complete immutable stock decision through injected transitions, and `Commit(...)` constructs the result actor only after host confirmation. Failed capacity, identity, participant, transition, stale-state, or actor-construction checks return an unchanged authoritative snapshot. The host applies only an `Applied` result.
 
 ### 7-34: Strategy policies
 
@@ -392,7 +413,6 @@ The existing tests are valuable, but their green result should be read as proof 
 
 ### Still requiring correction
 
-- the Training Annex fusion commit directly creates `LegacyStockCapacityPolicy` and Demon transitions;
 - mutation context is replaced with an empty context during accident inheritance;
 - Compendium save validation does not yet reject every invalid stored stat or duplicate skill shape;
 - Compendium default pricing is fixed unless the whole service is replaced.
@@ -443,9 +463,22 @@ CodeReview-7-2 follow-up verification on 2026-07-11 produced:
 | `git diff --check` | passed |
 | Production/prototype `Data/Jsons` | unchanged |
 
+CodeReview-7-3 follow-up verification on 2026-07-11 produced:
+
+| Check | Result |
+| --- | --- |
+| Broad fusion, stock, persistence, host, boundary, and roadmap gate | `198/198` passed, `0` failed, `0` skipped |
+| Full solution tests | `930/930` passed, `0` failed, `0` skipped |
+| Framework nonincremental build | succeeded, `0` warnings, `0` errors |
+| Full solution nonincremental build | succeeded, `98` protected legacy-host warnings, `0` errors |
+| Clean battle, field, save, and Training Annex demos | all passed; save snapshots validated with `0` diagnostics |
+| Framework forbidden-reference scan | no forbidden production references |
+| `git diff --check` | passed |
+| Production/prototype `Data/Jsons` | unchanged |
+
 ## Readiness Decision
 
-Phase 7 is **implemented but not closed**. CodeReview-7-1 and CodeReview-7-2 are complete; three required review corrections remain.
+Phase 7 is **implemented but not closed**. CodeReview-7-1 through CodeReview-7-3 are complete; two required review corrections remain.
 
 It is safe to retain as the current clean demonstration baseline. It is not yet appropriate to move to Phase 8 under the assumption that fusion and Compendium contracts are finished.
 
@@ -457,12 +490,12 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
    Runtime selector kinds are preserved, schema v1 is explicitly binary, malformed cardinality is rejected rather than omitted, and legacy result tokens are optional compatibility data.
 2. **CodeReview-7-2: Enforce global runtime identity during recall and stock changes. Completed 2026-07-11.**
    Recall and stock transitions reject cross-collection runtime-ID collisions before mutation, while save validation enforces legal overlap and actor/entity reference consistency.
-3. **CodeReview-7-3: Move clean fusion commit coordination into the framework.**
-   Honor owner kind and injected stock policy in one immutable transaction result.
+3. **CodeReview-7-3: Move clean fusion commit coordination into the framework. Completed 2026-07-11.**
+   Validated preparation and stale-safe commit now honor owner kind and injected stock/actor policies in typed immutable results.
 4. **CodeReview-7-4: Preserve strategy context through accident inheritance.**
    Add a recording contextual mutation-policy regression.
 5. **CodeReview-7-5: Harden Compendium entry/save validation.**
    Reject duplicate skills and invalid stats before recall or currency mutation.
 6. **Optional design hardening:** extract a narrow Compendium recall-pricing policy before production economy depends on the current sample formula.
 
-After follow-ups 3-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.
+After follow-ups 4-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.

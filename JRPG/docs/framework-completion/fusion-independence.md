@@ -18,6 +18,8 @@ CodeReview-7-1 establishes the clean recipe boundary: schema v1 is explicitly bi
 
 CodeReview-7-2 establishes the clean recall identity boundary. Recall and stock transitions consult one complete party/stock ownership graph, reject cross-role runtime-ID reuse before mutation, and validate persisted reference/entity consistency. The deliberate active-party plus Demon-stock overlap remains explicit and tested.
 
+CodeReview-7-3 establishes the clean fusion transaction boundary. The framework prepares consumption, placement, result ownership, and optional retained stat-boost state from a validated inheritance token and injected stock policy, then constructs the catalog result actor only after host confirmation. Typed Demon/Persona ownership, duplicate-participant rejection, learned/equipped skill preservation, stale-state rejection, actor failure, and rollback are framework outcomes; menus and identity generation remain host concerns.
+
 The console Cathedral still uses legacy datasets, live `Combatant` / `Persona` objects, legacy fusion adapters, and existing presentation flows.
 
 ## Problem
@@ -58,4 +60,4 @@ sample_spirit + sample_beast -> sample_construct rank operation
 
 Do not build a full fusion chart yet.
 
-Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 preserves typed recipe selector/cardinality data, and CodeReview-7-2 enforces recall identity. Before Phase 8 begins, resolve CodeReview-7-3 through CodeReview-7-5 in `docs/phase-7-code-review.md`: centralize commit coordination, retain strategy context, and harden Compendium entry/save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
+Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 preserves typed recipes, CodeReview-7-2 enforces recall identity, and CodeReview-7-3 centralizes commit coordination. Before Phase 8 begins, resolve CodeReview-7-4 and CodeReview-7-5 in `docs/phase-7-code-review.md`: retain strategy context and harden Compendium entry/save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
