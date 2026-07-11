@@ -13,13 +13,14 @@ Use active documents in this order:
 5. [Phase 1-3 Code Review And Forward Direction](phase-1-3-code-review.md) is the code-derived stabilization audit that closed CodeReview-1 through CodeReview-4.
 6. [Phase 4 Code Review And Readiness](phase-4-code-review.md) is the code-derived audit for inventory, equipment, economy, shops, and hospital before Phase 5.
 7. [Phase 5-6 Code Review And Readiness](phase-5-6-code-review.md) is the code-derived audit for party, stock, negotiation, and recruitment before the next phase.
-8. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
-9. [Repository Architecture Proposal](repository-architecture-proposal.md) maps the current file layout and proposed declutter architecture.
-10. [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) defines the proof-harness details for the new framework-first console demo.
-11. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
-12. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
-13. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
-14. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
+8. [Phase 7 Code Review And Readiness](phase-7-code-review.md) is the code-derived fusion and Compendium audit and owns the CodeReview-7 follow-up queue.
+9. [Framework Completion Problems](framework-completion/README.md) breaks the remaining work into owner-reviewable problem areas.
+10. [Repository Architecture Proposal](repository-architecture-proposal.md) maps the current file layout and proposed declutter architecture.
+11. [Clean Console Host Demo Plan](clean-console-host-demo-plan.md) defines the proof-harness details for the new framework-first console demo.
+12. [Skill System GDD](skill-system-gdd.md) is normative for approved skill behavior, vocabulary, resistance channels, passives, and inheritance.
+13. [Architecture](architecture.md), [Gameplay Systems](gameplay-systems.md), and subsystem chapters explain the present console prototype and additive clean framework path.
+14. [Godot Integration Contract](godot-integration-contract.md) defines the host boundary for Godot-style adapters.
+15. [Project Vision](project-vision.md) provides long-term direction, not an implementation contract.
 
 Archived documents are evidence and historical context only. They must not be used to approve implementation work without bringing the relevant decision back into active documentation.
 
@@ -28,6 +29,7 @@ Archived documents are evidence and historical context only. They must not be us
 - [Phase 1-3 Code Review And Forward Direction](phase-1-3-code-review.md)
 - [Phase 4 Code Review And Readiness](phase-4-code-review.md)
 - [Phase 5-6 Code Review And Readiness](phase-5-6-code-review.md)
+- [Phase 7 Code Review And Readiness](phase-7-code-review.md)
 - [Framework State And Roadmap](framework-state-and-roadmap.md)
 - [Full Parity Capability Plan](full-parity-capability-plan.md)
 - [Framework Completion Problems](framework-completion/README.md)

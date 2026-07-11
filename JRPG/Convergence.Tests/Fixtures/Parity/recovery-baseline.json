@@ -418,7 +418,7 @@
       "legacyOwners": ["Logic/Fusion/FusionCalculator.cs"],
       "cleanOwners": ["JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs", "JRPG.Framework/Logic/Fusion/CatalogFusionContentRepository.cs", "JRPG.Framework/Logic/Fusion/Inheritance", "Logic/Fusion/LegacyFusionContentAdapter.cs", "Host/CleanConsole/TrainingAnnex/TrainingAnnexFusionController.cs", "JRPG.Framework/Data/Definitions/ContentSurfaceDefinitions.cs", "Data/Jsons/catalog_surface_sample.fusion.json", "Data/Jsons/training_annex_slice.fusion.json"],
       "decisionDependencies": [],
-      "tests": ["FusionCompendiumRuntimeTests.ResultResolver_PreservesSpecificRankAccidentAndMitamaRules", "FusionBugRegressionTests", "LegacyHostCharacterizationTests.MonteCarloScenario_IsDeterministicThroughInternalSeams", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "OriginalCleanContentSliceTests.TrainingAnnexSlice_ResolvesFusionResultsThroughCatalogRepository", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_CalculatesFusionResultsThroughCleanCatalogRepository"],
+      "tests": ["FusionCompendiumRuntimeTests.ResultResolver_UsesExplicitCreateRankAccidentAndCatalystPolicies", "FusionBugRegressionTests", "LegacyHostCharacterizationTests.MonteCarloScenario_IsDeterministicThroughInternalSeams", "CatalogSurfaceTests.CatalogSurfaceSample_LoadsAllNewFamiliesWithQualifiedReferences", "OriginalCleanContentSliceTests.TrainingAnnexSlice_ResolvesFusionResultsThroughCatalogRepository", "CleanTrainingAnnexPlayHostTests.CleanTrainingAnnexPlay_CalculatesFusionResultsThroughCleanCatalogRepository"],
       "futurePhase": "7-30",
       "removalFiles": ["Logic/Fusion/FusionCalculator.cs"],
       "consumerMigrated": true,

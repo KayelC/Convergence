@@ -54,4 +54,4 @@ sample_spirit + sample_beast -> sample_construct rank operation
 
 Do not build a full fusion chart yet.
 
-Complete the separate Compendium proof in Phase 7-35 without expanding the recipe chart. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
+Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. Before presentation work continues, resolve the source-derived follow-ups in `docs/phase-7-code-review.md`: preserve typed recipe selector/cardinality data, centralize commit coordination, enforce recall identity, retain strategy context, and harden Compendium save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.

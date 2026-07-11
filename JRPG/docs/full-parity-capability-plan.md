@@ -231,6 +231,8 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
+Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. Those corrections must be completed before Phase 8 begins.
+
 ### Phase 8: Presentation And Archive Gate
 
 Goal: verify host interchangeability and only then review archive eligibility.
