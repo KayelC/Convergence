@@ -748,7 +748,7 @@ Demonstrate clean fusion only after the game's fusion direction is approved. The
 
 ### Design Boundary
 
-Fusion is not just a technical feature. It defines the identity of the game loop. Phases 7-30 through 7-34 therefore establish generic operations and opt-in policies without treating any legacy-inspired mechanic as mandatory. Compendium remains the next separately reviewed capability.
+Fusion is not just a technical feature. It defines the identity of the game loop. Phases 7-30 through 7-34 therefore establish generic operations and opt-in policies without treating any legacy-inspired mechanic as mandatory. Phase 7-35 adds the separately reviewed Compendium transaction and familiar-knowledge boundary.
 
 ### Phase 7-30 Result
 
@@ -799,10 +799,18 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - This remains `parallel_partial`: the clean path is strategy-policy driven, but protected Cathedral transaction strategies remain active and Compendium remains 7-35.
 - Verification passed `9/9` focused strategy-policy tests, `63/63` protected fusion compatibility tests, `86/86` Training Annex host tests, and `877/877` full-suite tests with no skips. Framework build warnings remained `0`; solution warnings remained the existing `98`. All four clean demos and boundary/content-preservation gates passed.
 
+### Phase 7-35 Result
+
+- `CompendiumRuntimeService` registers clean actor state by qualified catalog entity ID and recalls it through catalog reconstruction, caller-selected Demon/Persona stock placement, and an atomic wallet result.
+- The clean entry preserves level, EXP, lifetime EXP, unspent stat points, integral base stats, learned skills, and equipped skills. Recall restores those durable values, refills recalculated resources, and omits transient status, activation, forms, and equipment.
+- `FamiliarEntityKnowledgeService` is an opt-in framework service. Training Annex invokes it after recruitment, committed fusion, Compendium registration, and recall; it updates persistent player knowledge only. Ordinary enemy AI still starts every encounter with a fresh knowledge store.
+- The `Compendium` menu discovers eligible owned actors from typed party/stock references and uses typed runtime/content selection identities. It does not infer behavior from row text or fixed entity names.
+- Manual and suspend saves now carry clean Compendium state and can restore dynamically recalled actors. Invalid duplicate/ineligible entries and malformed learned/equipped skill relationships are rejected before restore.
+- This remains `parallel_partial` because the protected Cathedral/legacy Compendium path is still active. No removal is authorized.
+
 ### Remaining Work
 
-- Register/recall a simple Compendium entry if approved.
-- Demonstrate optional player-knowledge import from a registered/owned familiar entity, so later target selection can show known weakness/resistance hints without a fresh Analyze action.
+- Replace protected Cathedral/legacy Compendium consumers only after a separate consumer-switch review proves they are unreachable.
 
 ### Framework Use
 
@@ -898,7 +906,7 @@ This board should be updated before each implementation prompt.
 | Save policy and suspend saves | `P1/P2` | Important once the loop has state worth saving. |
 | Shop/equipment | `P2` | Add after the base loop. |
 | Negotiation/recruitment | `P2` | Training Annex proof implemented; demand-policy binding remains future work. |
-| Fusion/Compendium | `Blocked/P2` | Requires owner design decision. |
+| Fusion/Compendium | `P2` | Original clean result/planning/transaction/Compendium proof implemented; protected Cathedral consumers remain active. |
 | Content authoring tooling | `P2` | Useful after content shape stabilizes. |
 | Godot adapter/project | `P3` | Later, after console proves the clean loop. |
 | Legacy archive review | `P3` | Only after clean parity evidence. |
@@ -911,8 +919,10 @@ Phase 6-29 adds the clean negotiation/recruitment proof: `Negotiate / Recruit` u
 
 Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests and `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, the clean battle/field/save/Training Annex demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. `Data/Jsons` changed only for `training_annex_slice.negotiations.json`, the clean Training Annex sample content.
 
-Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof. Phase 7-33 adds `Commit Fusion Transaction`, a duplicate-result rejection and atomic parent-consume/result-add proof. Phase 7-34 replaces embedded strategy assumptions with required host-selected fusion policies and isolates legacy-inspired rules in the console compatibility layer.
+Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Results`. Phase 7-31 extends that same command with non-mutating planning evidence for inheritance slots, passive/explicit-allowance filtering, already-known and blocked reason codes, and deterministic mutation/accident evidence. Phase 7-32 adds `Preview Fusion Result`, a non-mutating inherited-skill selection and preview-confirmation proof. Phase 7-33 adds `Commit Fusion Transaction`, a duplicate-result rejection and atomic parent-consume/result-add proof. Phase 7-34 replaces embedded strategy assumptions with required host-selected fusion policies and isolates legacy-inspired rules in the console compatibility layer. Phase 7-35 adds framework-owned clean Compendium registration/recall, persistence, and opt-in familiar-knowledge import.
 
-The next numbered capability is Phase 7-35, `compendium`, unless the owner deliberately reprioritizes the plan.
+Phase 7-35 verification passed `148/148` focused capability, boundary, and protected-legacy tests and `893/893` full-suite tests with no failures or skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all clean demos pass, the framework boundary search returns no matches, and `Data/Jsons` is unchanged.
+
+The next numbered capability is Phase 8-36, `console_presentation`, unless the owner deliberately reprioritizes the plan. Framework rule completion remains the priority; no additional console presentation work should be invented outside the approved capability.
 
 Then attach one feature at a time.

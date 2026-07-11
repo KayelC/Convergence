@@ -34,6 +34,12 @@ public sealed class CleanSaveDemoHostTests
             snapshot.Field!.DungeonTraversal!.CurrentNodeId,
             restored.Field!.DungeonTraversal!.CurrentNodeId);
         Assert.Equal(snapshot.Compendium.Entries.Select(entry => entry.SpeciesId), restored.Compendium.Entries.Select(entry => entry.SpeciesId));
+        Assert.Equal(
+            snapshot.Compendium.Entries.Select(entry => entry.UnspentStatPoints),
+            restored.Compendium.Entries.Select(entry => entry.UnspentStatPoints));
+        Assert.Equal(
+            snapshot.Compendium.Entries.SelectMany(entry => entry.EquippedSkillIds),
+            restored.Compendium.Entries.SelectMany(entry => entry.EquippedSkillIds));
         Assert.Equal(snapshot.Knowledge.ElementalAffinities.Select(entry => entry.EntityId), restored.Knowledge.ElementalAffinities.Select(entry => entry.EntityId));
         Assert.Equal(
             snapshot.Session.Counters.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),

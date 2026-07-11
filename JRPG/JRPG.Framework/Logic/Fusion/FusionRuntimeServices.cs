@@ -1134,28 +1134,36 @@ public sealed record CompendiumEntrySnapshot
         IEnumerable<KeyValuePair<ContentId, int>>? stats = null,
         IEnumerable<ContentId>? skillIds = null,
         long experience = 0,
-        long lifetimeExperience = 0)
+        long lifetimeExperience = 0,
+        int unspentStatPoints = 0,
+        IEnumerable<ContentId>? equippedSkillIds = null)
     {
         if (level <= 0) throw new ArgumentOutOfRangeException(nameof(level));
         if (experience < 0) throw new ArgumentOutOfRangeException(nameof(experience));
         if (lifetimeExperience < 0) throw new ArgumentOutOfRangeException(nameof(lifetimeExperience));
+        if (unspentStatPoints < 0) throw new ArgumentOutOfRangeException(nameof(unspentStatPoints));
 
         SpeciesId = speciesId;
         DisplayName = string.IsNullOrWhiteSpace(displayName) ? speciesId.ToString() : displayName;
         Level = level;
         Stats = SnapshotDictionary(stats);
         SkillIds = Snapshot(skillIds);
+        EquippedSkillIds = Snapshot(equippedSkillIds ?? SkillIds);
         Experience = experience;
         LifetimeExperience = lifetimeExperience;
+        UnspentStatPoints = unspentStatPoints;
     }
 
+    public ContentId EntityId => SpeciesId;
     public ContentId SpeciesId { get; }
     public string DisplayName { get; }
     public int Level { get; }
     public IReadOnlyDictionary<ContentId, int> Stats { get; }
     public IReadOnlyList<ContentId> SkillIds { get; }
+    public IReadOnlyList<ContentId> EquippedSkillIds { get; }
     public long Experience { get; }
     public long LifetimeExperience { get; }
+    public int UnspentStatPoints { get; }
 }
 
 public sealed record CompendiumStateSnapshot
@@ -1226,8 +1234,22 @@ public sealed class CompendiumService : ICompendiumService
     public int CalculateRecallCost(CompendiumEntrySnapshot entry, int? basePrice = null)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        if (basePrice < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(basePrice), "Recall base price cannot be negative.");
+        }
+
         int price = basePrice ?? 2000;
-        return price + entry.Level * 100 + entry.Stats.Values.Sum() * 50 + entry.SkillIds.Count * 200;
+        long total = price
+            + ((long)entry.Level * 100)
+            + (entry.Stats.Values.Sum(value => (long)value) * 50)
+            + ((long)entry.SkillIds.Count * 200);
+        if (total is < 0 or > int.MaxValue)
+        {
+            throw new OverflowException("Compendium recall cost exceeds the supported currency range.");
+        }
+
+        return (int)total;
     }
 
     public CompendiumRecallAssessment AssessRecall(

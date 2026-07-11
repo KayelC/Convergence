@@ -426,7 +426,8 @@ internal static class TrainingAnnexHostSupport
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
         RuntimeSessionProgressSnapshot? session = null,
-        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null) =>
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
+        CompendiumStateSnapshot? compendium = null) =>
         BuildStartupSaveSnapshot(
             roster,
             null,
@@ -435,7 +436,8 @@ internal static class TrainingAnnexHostSupport
             inventory,
             wallet,
             session,
-            hostContext);
+            hostContext,
+            compendium);
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         TrainingAnnexActorRoster roster,
@@ -445,7 +447,8 @@ internal static class TrainingAnnexHostSupport
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
         RuntimeSessionProgressSnapshot? session = null,
-        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
+        CompendiumStateSnapshot? compendium = null)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
@@ -463,7 +466,8 @@ internal static class TrainingAnnexHostSupport
             inventory,
             wallet,
             session,
-            hostContext);
+            hostContext,
+            compendium);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -473,7 +477,8 @@ internal static class TrainingAnnexHostSupport
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
         RuntimeSessionProgressSnapshot? session = null,
-        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
+        CompendiumStateSnapshot? compendium = null)
     {
         RuntimeActorSnapshot actorSnapshot = CreateActorSnapshot(
             actor,
@@ -489,7 +494,8 @@ internal static class TrainingAnnexHostSupport
             inventory,
             wallet,
             session,
-            hostContext);
+            hostContext,
+            compendium);
     }
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
@@ -501,7 +507,8 @@ internal static class TrainingAnnexHostSupport
         RuntimeInventorySnapshot? inventory = null,
         RuntimeWalletSnapshot? wallet = null,
         RuntimeSessionProgressSnapshot? session = null,
-        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null)
+        IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
+        CompendiumStateSnapshot? compendium = null)
     {
         RuntimeActorSnapshot playerSnapshot = actors.First(actor =>
             actor.Identity.InstanceId == playerReference.InstanceId);
@@ -526,7 +533,7 @@ internal static class TrainingAnnexHostSupport
             new RuntimeEquipmentSnapshot(),
             wallet ?? new RuntimeWalletSnapshot(0),
             field,
-            new CompendiumStateSnapshot(),
+            compendium ?? new CompendiumStateSnapshot(),
             knowledge ?? new RuntimeKnowledgeSnapshot(),
             session ?? new RuntimeSessionProgressSnapshot(),
             new RuntimeCheckpointLogSnapshot(

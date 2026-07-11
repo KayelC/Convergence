@@ -608,7 +608,9 @@ internal static class CleanSaveJsonCodec
             entry.Stats.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
             entry.SkillIds.Select(id => id.ToString()).ToArray(),
             entry.Experience,
-            entry.LifetimeExperience)).ToArray());
+            entry.LifetimeExperience,
+            entry.UnspentStatPoints,
+            entry.EquippedSkillIds.Select(id => id.ToString()).ToArray())).ToArray());
 
     private static CompendiumStateSnapshot FromDto(HostCompendiumDto dto) =>
         new(dto.Entries.Select(entry => new CompendiumEntrySnapshot(
@@ -618,7 +620,9 @@ internal static class CleanSaveJsonCodec
             entry.Stats.Select(pair => new KeyValuePair<ContentId, int>(Id(pair.Key), pair.Value)),
             entry.SkillIds.Select(Id),
             entry.Experience,
-            entry.LifetimeExperience)));
+            entry.LifetimeExperience,
+            entry.UnspentStatPoints,
+            (entry.EquippedSkillIds ?? entry.SkillIds).Select(Id))));
 
     private static HostKnowledgeDto ToDto(RuntimeKnowledgeSnapshot snapshot) =>
         new(
@@ -750,7 +754,16 @@ internal static class CleanSaveJsonCodec
     private sealed record HostFieldDto(string LocationId, HostDungeonTraversalDto? DungeonTraversal);
     private sealed record HostDungeonTraversalDto(string DungeonId, string CurrentNodeId, string[] VisitedNodeIds, string[] UnlockedCheckpointIds, string[] DefeatedBossIds);
     private sealed record HostCompendiumDto(HostCompendiumEntryDto[] Entries);
-    private sealed record HostCompendiumEntryDto(string SpeciesId, string DisplayName, int Level, Dictionary<string, int> Stats, string[] SkillIds, long Experience, long LifetimeExperience);
+    private sealed record HostCompendiumEntryDto(
+        string SpeciesId,
+        string DisplayName,
+        int Level,
+        Dictionary<string, int> Stats,
+        string[] SkillIds,
+        long Experience,
+        long LifetimeExperience,
+        int UnspentStatPoints,
+        string[]? EquippedSkillIds);
     private sealed record HostKnowledgeDto(HostElementalKnowledgeDto[] ElementalAffinities, HostAilmentKnowledgeDto[] AilmentResistances, HostInstantDeathKnowledgeDto[] InstantDeathResistances);
     private sealed record HostElementalKnowledgeDto(string EntityId, string Element, string Affinity);
     private sealed record HostAilmentKnowledgeDto(string EntityId, string AilmentId, string Resistance);

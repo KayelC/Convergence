@@ -165,6 +165,34 @@ public sealed class PartyStockTransitionTests
     }
 
     [Fact]
+    public void AddPersonaToStock_AppendsAndRejectsDuplicateOrFullStockWithoutMutation()
+    {
+        RuntimePartyStockSnapshot snapshot = Snapshot(
+            ownerLevel: 1,
+            activeForm: Actor("orpheus"),
+            personaStock: [Actor("pixie"), Actor("angel")]);
+        RuntimeActorReferenceSnapshot candidate = Actor("jack_frost");
+
+        PartyStockTransitionResult added = _service.AddPersonaToStock(
+            new AddPersonaToStockRequest(snapshot, candidate));
+
+        Assert.True(added.Applied);
+        Assert.Equal(
+            ["pixie", "angel", "jack_frost"],
+            added.After.PersonaStock.Select(persona => persona.InstanceId.ToString()));
+
+        PartyStockTransitionResult duplicate = _service.AddPersonaToStock(
+            new AddPersonaToStockRequest(added.After, candidate));
+        Assert.Equal(PartyStockTransitionCode.DuplicateOwned, duplicate.Code);
+        Assert.Same(added.After, duplicate.After);
+
+        PartyStockTransitionResult full = _service.AddPersonaToStock(
+            new AddPersonaToStockRequest(added.After, Actor("overflow")));
+        Assert.Equal(PartyStockTransitionCode.StockFull, full.Code);
+        Assert.Same(added.After, full.After);
+    }
+
+    [Fact]
     public void RejectedCommands_ReturnStableCodesAndUnchangedSnapshots()
     {
         RuntimePartyStockSnapshot snapshot = Snapshot(activeParty: [Actor("hero")]);

@@ -189,6 +189,40 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsDuplicateCompendiumEntitiesAndUnlearnedEquippedSkills()
+    {
+        ContentId entityId = Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId learnedSkillId = Id("convergence.clean_battle_demo:frost_lance_demo");
+        ContentId unlearnedSkillId = Id("convergence.clean_battle_demo:ember_bolt_demo");
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            compendium: new CompendiumStateSnapshot(
+            [
+                new CompendiumEntrySnapshot(
+                    entityId,
+                    "Frost Duelist",
+                    5,
+                    skillIds: [learnedSkillId],
+                    equippedSkillIds: [learnedSkillId]),
+                new CompendiumEntrySnapshot(
+                    entityId,
+                    "Frost Duelist Duplicate",
+                    5,
+                    skillIds: [learnedSkillId],
+                    equippedSkillIds: [unlearnedSkillId])
+            ]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, LoadCatalog());
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicateCompendiumEntity &&
+            diagnostic.Path == "$.compendium.entries[1].entityId");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned &&
+            diagnostic.ContentId == unlearnedSkillId);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_AllowsIntentionalActiveDemonOwnedStockOverlap()
     {
         GameDataCatalog catalog = LoadCatalog();

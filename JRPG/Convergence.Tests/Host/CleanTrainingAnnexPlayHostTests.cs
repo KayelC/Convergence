@@ -209,7 +209,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Negotiate / Recruit",
                 "Calculate Fusion Results",
                 "Preview Fusion Result",
-                "Commit Fusion Transaction"
+                "Commit Fusion Transaction",
+                "Compendium"
             ],
                 menu.Options);
         }
@@ -238,7 +239,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 "Negotiate / Recruit",
                 "Calculate Fusion Results",
                 "Preview Fusion Result",
-                "Commit Fusion Transaction"
+                "Commit Fusion Transaction",
+                "Compendium"
             ],
                 menu.Options);
         }
@@ -478,6 +480,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(
             summary.PartyStock.DemonStock,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("bramble_runner") &&
+            knowledge.Element == DamageElement.Fire &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
 
         Assert.Equal(
             [
@@ -580,6 +587,157 @@ public sealed class CleanTrainingAnnexPlayHostTests
             "accident policy standard_accident; mutation policy standard_mutation; sacrifice bonus 2; accident sample Echo Strike -> Shell Bash.",
             text,
             StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RegistersOwnedActorAndImportsOnlyPlayerFamiliarKnowledge()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("ashling"), entry.EntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("demon_ashling"), summary.PartyStock.DemonStock[0].InstanceId);
+
+        TrainingAnnexCompendiumEvidence evidence = Assert.Single(summary.CompendiumEvidence);
+        Assert.Equal(TrainingAnnexCompendiumAction.Register, evidence.Action);
+        Assert.True(evidence.Applied);
+        Assert.Equal(CompendiumRegistrationCode.Added, evidence.RegistrationCode);
+        Assert.Equal(7, evidence.ImportedElementalAffinities);
+        Assert.True(evidence.ImportedAilmentResistances > 0);
+        Assert.Equal(2, evidence.ImportedInstantDeathResistances);
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Element == DamageElement.Ice &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
+        Assert.Empty(summary.EncounterAiKnowledge.AilmentResistances);
+        Assert.Empty(summary.EncounterAiKnowledge.InstantDeathResistances);
+        Assert.Equal(
+            [
+                CleanTrainingAnnexPlayCommand.OpenCompendium,
+                CleanTrainingAnnexPlayCommand.CompendiumRegister,
+                CleanTrainingAnnexPlayCommand.SelectCompendiumActor,
+                CleanTrainingAnnexPlayCommand.Exit
+            ],
+            summary.Commands);
+        Assert.Contains(
+            "Compendium added: Ashling; familiar defense knowledge imported for the player only.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RecallsRegisteredActorAtomicallyThroughStockAndWallet()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(5_000));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(summary.Compendium.Entries).EntityId);
+        Assert.Equal(2, summary.CompendiumEvidence.Count);
+        TrainingAnnexCompendiumEvidence recall = summary.CompendiumEvidence[1];
+        Assert.Equal(TrainingAnnexCompendiumAction.Recall, recall.Action);
+        Assert.True(recall.Applied);
+        Assert.Equal(CompendiumRecallTransactionCode.Applied, recall.RecallCode);
+        Assert.Equal(3_850, recall.Cost);
+        Assert.Equal(5_000, recall.WalletBefore);
+        Assert.Equal(1_150, recall.WalletAfter);
+        Assert.Equal(2, recall.DemonStockBefore);
+        Assert.Equal(3, recall.DemonStockAfter);
+        Assert.Equal(1_150, summary.Wallet.Macca);
+        Assert.Contains(summary.PartyStock.DemonStock, actor =>
+            actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
+            actor.EntityDefinitionId == Qualified("ward_shell"));
+        Assert.Contains(summary.ActorInstanceIds, id => id == RuntimeInstanceId.Parse("recall_ward_shell_1"));
+        Assert.Contains(
+            "Compendium recall applied: Ward Shell; wallet 5000->1150 M; Demon stock 2->3.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RecallRejectionDoesNotAddStockOrSpendWallet()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(0));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexCompendiumEvidence recall = summary.CompendiumEvidence[1];
+        Assert.False(recall.Applied);
+        Assert.Equal(CompendiumRecallTransactionCode.InsufficientCurrency, recall.RecallCode);
+        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(2, summary.PartyStock.DemonStock.Count);
+        Assert.DoesNotContain(summary.PartyStock.DemonStock, actor =>
+            actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1"));
+        Assert.Contains(
+            "Compendium rejected [InsufficientCurrency]",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_SaveLoadRestoresCompendiumAndImportedPlayerKnowledge()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 0, 10, 0, 20, 0, 3, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("ashling"), entry.EntityId);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ashling") &&
+            knowledge.Element == DamageElement.Ice &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.DoesNotContain(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ward_shell"));
+        Assert.Contains("Manual save restored", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_SaveLoadRestoresRecalledCatalogActor()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 10, 0, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(5_000));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(1_150, summary.Wallet.Macca);
+        Assert.Contains(summary.PartyStock.DemonStock, actor =>
+            actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
+            actor.EntityDefinitionId == Qualified("ward_shell"));
+        Assert.Contains(summary.ActorInstanceIds, id => id == RuntimeInstanceId.Parse("recall_ward_shell_1"));
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(summary.Compendium.Entries).EntityId);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
         io.AssertConsumed();
     }
 
@@ -746,6 +904,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("ward_shell"), fusedDemon.EntityDefinitionId);
         Assert.Equal(11, summary.ActorCount);
         Assert.Contains(RuntimeInstanceId.Parse("fusion_ward_shell_1"), summary.ActorInstanceIds);
+        Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
+            knowledge.EntityId == Qualified("ward_shell") &&
+            knowledge.Element == DamageElement.Electric &&
+            knowledge.Affinity == ElementalAffinity.Weak);
+        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
 

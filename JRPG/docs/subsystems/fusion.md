@@ -103,7 +103,9 @@ After confirmation, `FusionMutator.ExecuteFusionTransaction` dispatches to a str
 
 Track N intentionally fixes the previous shallow-copy behavior: registered entries deep-clone active Persona skill lists, stat modifiers, learn tables, affinities, and growth fields. Recalled clones can be modified without mutating the stored Compendium entry.
 
-Future knowledge integration: once clean battle UI and clean Compendium ownership are connected, registered or owned familiar entities may seed the player's battle knowledge snapshot. A demon recruited, fused, recalled, or registered in the Compendium can therefore reveal its known affinities/resistances immediately when encountered later, without granting that memory to ordinary enemy AI.
+Phase 7-35 implements the clean Compendium runtime separately from the protected registry. `CompendiumRuntimeService` registers catalog-identified actor progression/stat/skill snapshots and recalls them through catalog actor reconstruction, caller-selected Demon or Persona stock placement, and wallet spending as one immutable transaction result. Training Annex uses typed selection IDs and persists both entries and recalled dynamic actors.
+
+`FamiliarEntityKnowledgeService` is an opt-in companion service. A host supplies the entity IDs considered familiar through recruitment, fusion, recall, registration, or another approved ownership rule. The service imports typed defenses into persistent player knowledge only; it has no reference to or side effect on encounter-local enemy AI knowledge.
 
 ## Important State And Invariants
 
@@ -132,7 +134,7 @@ Future knowledge integration: once clean battle UI and clean Compendium ownershi
 - Add a new fusion operation by extending `FusionOperationType`, writing an `IFusionStrategy`, and registering it.
 - Add new framework-supported result behavior in `FusionRuntimeServices` and adapt console presentation only after the rule exists.
 - Add new inheritance restrictions through typed skill/entity definitions and `FusionInheritanceEvaluator`.
-- Add new compendium persistence by replacing or extending `CompendiumRegistry`.
+- Add host-specific Compendium presentation or persistence by consuming `CompendiumRuntimeService` and serializer-neutral snapshots; do not place host storage or UI in the framework.
 
 ## Caveats
 

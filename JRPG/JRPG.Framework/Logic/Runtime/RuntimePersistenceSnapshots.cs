@@ -23,6 +23,9 @@ public enum RuntimeSaveValidationCode
     MissingCatalogDungeon,
     MissingCatalogAilment,
     MissingCompendiumEntity,
+    DuplicateCompendiumEntity,
+    CompendiumEntityNotEligible,
+    CompendiumEquippedSkillNotLearned,
     KnowledgeTargetMissing,
     InvalidCheckpoint,
     DuplicatePartyStockReference,
@@ -590,16 +593,35 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
+        var seenEntityIds = new HashSet<ContentId>();
         for (int index = 0; index < compendium.Entries.Count; index++)
         {
             CompendiumEntrySnapshot entry = compendium.Entries[index];
-            if (!catalog.Entities.ContainsKey(entry.SpeciesId))
+            string entryPath = $"$.compendium.entries[{index}]";
+            if (!seenEntityIds.Add(entry.EntityId))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DuplicateCompendiumEntity,
+                    $"Compendium entity '{entry.EntityId}' appears more than once.",
+                    ContentId: entry.EntityId,
+                    Path: entryPath + ".entityId"));
+            }
+
+            if (!catalog.Entities.TryGetValue(entry.EntityId, out EntityDefinition? entity))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.MissingCompendiumEntity,
-                    $"Compendium species '{entry.SpeciesId}' is not present in the catalog.",
-                    ContentId: entry.SpeciesId,
-                    Path: $"$.compendium.entries[{index}].speciesId"));
+                    $"Compendium entity '{entry.EntityId}' is not present in the catalog.",
+                    ContentId: entry.EntityId,
+                    Path: entryPath + ".entityId"));
+            }
+            else if (!entity.Capabilities.CompendiumEligible)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.CompendiumEntityNotEligible,
+                    $"Entity '{entry.EntityId}' is not eligible for Compendium storage.",
+                    ContentId: entry.EntityId,
+                    Path: entryPath + ".entityId"));
             }
 
             foreach (ContentId skillId in entry.SkillIds)
@@ -610,7 +632,28 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                         RuntimeSaveValidationCode.MissingCatalogSkill,
                         $"Compendium skill '{skillId}' is not present in the catalog.",
                         ContentId: skillId,
-                        Path: $"$.compendium.entries[{index}].skillIds"));
+                        Path: entryPath + ".skillIds"));
+                }
+            }
+
+            foreach (ContentId skillId in entry.EquippedSkillIds)
+            {
+                if (!entry.SkillIds.Contains(skillId))
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned,
+                        $"Compendium equipped skill '{skillId}' is not present in learned skills.",
+                        ContentId: skillId,
+                        Path: entryPath + ".equippedSkillIds"));
+                }
+
+                if (!entry.SkillIds.Contains(skillId) && !catalog.Skills.ContainsKey(skillId))
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.MissingCatalogSkill,
+                        $"Compendium equipped skill '{skillId}' is not present in the catalog.",
+                        ContentId: skillId,
+                        Path: entryPath + ".equippedSkillIds"));
                 }
             }
         }

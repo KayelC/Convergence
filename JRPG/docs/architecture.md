@@ -227,12 +227,14 @@ The field subsystem then creates the party manager, dungeon manager, bridges, se
 - `Combatant` is intentionally broad because it represents humans, operators, demons, enemies, and party members.
 - Demons use `ActivePersona` as their stat and affinity source; their own character stats are reset to zero by the factory.
 - Operators use demon stock and active party references; Wild Cards use active persona plus persona stock.
-- The project currently has no persistence layer beyond in-memory managers and runtime JSON loading.
+- The protected legacy console path has no production save-file system. The framework has versioned serializer-neutral save snapshots and validation, while each host owns its save-file format and storage.
 - The console UI is abstracted, but the current interactive workflow remains menu-driven and synchronous.
 - Filesystem, console, delays, and legacy Newtonsoft loading are host-only concerns.
 - Framework public APIs expose no console, filesystem, serializer, Godot, or legacy runtime types.
 - Host cancellation is distinct from an ordinary menu cancellation in the async command contract.
 - Runtime snapshots are serializer-neutral contracts. A host may persist them, but the framework does not prescribe a save file format in Track D.
+
+Phase 7-35 completes the original-content Compendium runtime proof without coupling it to the Cathedral. `CompendiumRuntimeService` registers durable clean actor data by qualified catalog entity ID, reconstructs recalled actors through `CatalogBattleActorFactory`, and returns atomic stock/wallet snapshots. `FamiliarEntityKnowledgeService` is a separate opt-in boundary: a host chooses which registered or owned entity IDs seed persistent player knowledge. It never writes to encounter-local enemy AI knowledge. Training Annex presentation and host-generated recall instance IDs remain outside the framework.
 
 ## Caveats
 

@@ -6,6 +6,7 @@ using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Services;
 
@@ -77,6 +78,11 @@ internal enum CleanTrainingAnnexPlayCommand
     ConfirmFusionPreview,
     CommitFusionTransaction,
     ConfirmFusionTransaction,
+    OpenCompendium,
+    CompendiumRegister,
+    CompendiumRecall,
+    SelectCompendiumActor,
+    SelectCompendiumEntry,
     Back,
     Exit
 }
@@ -97,6 +103,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexFusionPlanningEvidence> FusionPlanning,
     IReadOnlyList<TrainingAnnexFusionPreviewEvidence> FusionPreviews,
     IReadOnlyList<TrainingAnnexFusionTransactionEvidence> FusionTransactions,
+    CompendiumStateSnapshot Compendium,
+    IReadOnlyList<TrainingAnnexCompendiumEvidence> CompendiumEvidence,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
@@ -328,7 +336,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
-        var partyController = new TrainingAnnexPartyController();
+        IPartyStockTransitionService partyStockTransitions = new PartyStockTransitionService();
+        var partyController = new TrainingAnnexPartyController(partyStockTransitions);
+        var compendiumRuntime = new CompendiumRuntimeService(
+            catalog,
+            actorFactory,
+            growthServices.ResourceGrowthPolicy,
+            partyStock: partyStockTransitions,
+            economy: economy);
+        var familiarKnowledge = new FamiliarEntityKnowledgeService(catalog);
         TrainingAnnexPartySetupResult partySetup = partyController.CreateInitialParty(roster);
         RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
@@ -337,6 +353,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         var fusionPlanning = new List<TrainingAnnexFusionPlanningEvidence>();
         var fusionPreviews = new List<TrainingAnnexFusionPreviewEvidence>();
         var fusionTransactions = new List<TrainingAnnexFusionTransactionEvidence>();
+        CompendiumStateSnapshot compendium = new();
+        var compendiumEvidence = new List<TrainingAnnexCompendiumEvidence>();
         var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
@@ -448,6 +466,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     fusionPlanning,
                     fusionPreviews,
                     fusionTransactions,
+                    compendium,
+                    compendiumEvidence,
                     statPreview,
                     statResolutionPreviewed,
                     resourceRecalculationApplied,
@@ -579,6 +599,18 @@ internal sealed class CleanTrainingAnnexPlayHost
                     partyStock = negotiation.PartyStock;
                     wallet = negotiation.Wallet;
                     negotiations.AddRange(negotiation.Evidence);
+                    ContentId[] recruitedEntityIds = negotiation.Evidence
+                        .Where(evidence => evidence.Recruited)
+                        .Select(evidence => evidence.TargetEntityId)
+                        .Distinct()
+                        .ToArray();
+                    if (recruitedEntityIds.Length > 0)
+                    {
+                        FamiliarKnowledgeImportResult imported = familiarKnowledge.Import(
+                            playerBattleKnowledge.ToSnapshot(),
+                            recruitedEntityIds);
+                        playerBattleKnowledge = TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
+                    }
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.CalculateFusionResults:
@@ -624,8 +656,36 @@ internal sealed class CleanTrainingAnnexPlayHost
                     if (transaction.ResultActor is not null)
                     {
                         roster = roster.WithDynamicMember(transaction.ResultActor);
+                        FamiliarKnowledgeImportResult imported = familiarKnowledge.Import(
+                            playerBattleKnowledge.ToSnapshot(),
+                            [transaction.ResultActor.Actor.Entity.Id]);
+                        playerBattleKnowledge = TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
                     }
 
+                    break;
+                }
+                case CleanTrainingAnnexPlayCommand.OpenCompendium:
+                {
+                    TrainingAnnexCompendiumInteractionResult interaction =
+                        await new TrainingAnnexCompendiumController(
+                                _eventSink,
+                                _commandSource,
+                                compendiumRuntime,
+                                familiarKnowledge)
+                            .OpenAsync(
+                                compendium,
+                                partyStock,
+                                wallet,
+                                roster,
+                                playerBattleKnowledge,
+                                commands,
+                                cancellationToken).ConfigureAwait(false);
+                    compendium = interaction.Compendium;
+                    partyStock = interaction.PartyStock;
+                    wallet = interaction.Wallet;
+                    roster = interaction.Roster;
+                    playerBattleKnowledge = interaction.PlayerKnowledge;
+                    compendiumEvidence.AddRange(interaction.Evidence);
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
@@ -666,7 +726,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             encounterTriggerConsumed,
                             preparedBattleStarted,
                             preparedBattleOutcome,
-                            preparedBattleWinningTeamId),
+                            preparedBattleWinningTeamId,
+                            compendium),
                         catalog);
                     snapshotValidated = validation.IsValid;
                     snapshotDiagnosticCount = validation.Diagnostics.Count;
@@ -692,6 +753,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             fusionPlanning,
                             fusionPreviews,
                             fusionTransactions,
+                            compendium,
+                            compendiumEvidence,
                             statPreview,
                             statResolutionPreviewed,
                             resourceRecalculationApplied,
@@ -1064,7 +1127,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             preparedBattleWinningTeamId,
                             preparedEncounter is not null && !preparedBattleStarted,
                             saveSequence,
-                            cancellationToken).ConfigureAwait(false);
+                            cancellationToken,
+                            compendium).ConfigureAwait(false);
                         saveDiagnosticCount += save.DiagnosticCount;
                         if (save.Applied)
                         {
@@ -1104,6 +1168,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
                             wallet = restored.Wallet;
                             sessionProgress = restored.SessionProgress;
+                            compendium = restored.Compendium;
                             playerBattleKnowledge = restored.PlayerBattleKnowledge;
                             locationHistory.Clear();
                             locationHistory.Add(field.Navigation.CurrentLocationId);
@@ -1300,6 +1365,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.CommitFusionTransaction,
             "Commit Fusion Transaction"));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.OpenCompendium,
+            "Compendium"));
 
         string locationLabel = locationId == TrainingAnnexHostSupport.StagingArea
             ? TrainingAnnexFieldPresenter.FieldLabel(locationId)
@@ -1759,6 +1827,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexFusionPlanningEvidence> fusionPlanning,
         IReadOnlyList<TrainingAnnexFusionPreviewEvidence> fusionPreviews,
         IReadOnlyList<TrainingAnnexFusionTransactionEvidence> fusionTransactions,
+        CompendiumStateSnapshot compendium,
+        IReadOnlyList<TrainingAnnexCompendiumEvidence> compendiumEvidence,
         IReadOnlyList<StatResolutionResult> statPreview,
         bool statResolutionPreviewed,
         bool resourceRecalculationApplied,
@@ -1831,6 +1901,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             fusionPlanning.ToArray(),
             fusionPreviews.ToArray(),
             fusionTransactions.ToArray(),
+            compendium,
+            compendiumEvidence.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Progression,
             statPreview.ToArray(),

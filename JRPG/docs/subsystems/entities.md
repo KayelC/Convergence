@@ -78,5 +78,5 @@ Battle effects calculate raw damage first, then `DamageHandler.ApplyDamage` appl
 ## Caveats
 
 - `Combatant` is intentionally broad, so unrelated systems can appear adjacent in the same class.
-- `CompendiumRegistry.CloneCombatant` currently copies `ActivePersona` by reference, not as a deep persona clone.
+- The protected `CompendiumRegistry` deep-clones legacy `ActivePersona` state. The clean Phase 7-35 path stores immutable catalog-identified progression/stat/skill data and reconstructs a fresh runtime actor on recall; neither path retains a live actor reference inside its Compendium entry.
 - Some ownership and identity checks compare names or source IDs; use canonical lowercase IDs where possible.

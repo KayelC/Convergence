@@ -1029,8 +1029,21 @@ Full parity target:
 
 Clean console proof:
 
-- optional after fusion/recruitment design approval.
-- future proof after battle-knowledge UI exists: register or own a sample entity, encounter that entity later, and show known weakness/resistance hints without requiring Analyze or a fresh attack in that battle.
+- select any owned Compendium-eligible Training Annex actor through a typed runtime identity, then add or update its immutable entry;
+- recall a selected registered entity through catalog actor hydration, the selected Demon/Persona stock policy, and an atomic wallet transaction;
+- persist and restore registered entries and dynamically recalled actors through the clean save path;
+- import typed familiar-entity defenses into persistent player knowledge after clean recruitment, fusion, registration, or recall without importing them into encounter-local enemy AI knowledge.
+
+Phase 7-35 result:
+
+- `CompendiumRuntimeService` now owns clean actor registration and recall orchestration. Registration resolves the actor's qualified catalog entity, enforces `compendiumEligible`, and snapshots level, EXP, lifetime EXP, unspent stat points, integral base stats, learned skills, and equipped skills into immutable `CompendiumEntrySnapshot` data.
+- Recall is one immutable transaction result. It checks entry existence, catalog eligibility, duplicate ownership by entity ID, destination stock capacity, and currency before returning changed party/wallet snapshots. Actor reconstruction uses `CatalogBattleActorFactory`, restores registered progression/stats/skills, resets transient battle/equipment state, and restores resources at their recalculated maxima.
+- Recall placement is caller-selected through `CompendiumRecallStockKind`; the framework supports both Demon and Persona stock. `PartyStockTransitionService.AddPersonaToStock` closes the previous missing stock primitive.
+- `FamiliarEntityKnowledgeService` is explicitly invoked rather than hidden. It imports all non-Almighty elemental affinities, catalog ailment resistances, and Light/Dark instant-death resistances from typed entity definitions. Missing defense entries resolve to the framework's typed Normal value. The caller chooses which familiar entity IDs count, so games may use Compendium registration, current ownership, or another approved policy.
+- The Training Annex `Compendium` menu uses typed runtime/content selection IDs. Registering Ashling proves player knowledge can know its Ice weakness before a fresh attack; recruitment and committed fusion also import the newly owned entity, and recall reuses the same boundary. Encounter AI receives none of this persistent import.
+- Compendium state, learned/equipped skill distinctions, unspent stat points, wallet/stock changes, and recalled catalog actors survive manual/suspend save round trips. Save validation rejects duplicate Compendium entity records, ineligible/missing entities, missing skills, and equipped skills that were not learned.
+- This remains `parallel_partial`: the clean original-content path owns the complete Compendium transaction proof, but `CompendiumRegistry`, the Cathedral presentation, and legacy production consumers remain active and are not authorized for removal.
+- Verification: the focused Phase 7-35, boundary, and protected-legacy gate passed `148/148`; the full suite passed `893/893` with no failures or skips. The framework build remained at `0` warnings, while the full solution retained `98` pre-existing legacy-host warnings. Clean battle, field, save, and Training Annex demos completed successfully; `git diff --check` passed with line-ending notices only; the framework forbidden-reference search returned no matches; and `Data/Jsons` remained unchanged.
 
 ### 36. `console_presentation`
 

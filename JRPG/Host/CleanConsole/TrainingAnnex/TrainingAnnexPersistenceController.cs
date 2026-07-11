@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Runtime;
+using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
@@ -41,7 +42,8 @@ internal sealed class TrainingAnnexPersistenceController
         ContentId? preparedBattleWinningTeamId,
         bool hasPendingHostAction,
         long sequence,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CompendiumStateSnapshot? compendium = null)
     {
         RuntimeSaveContextSnapshot context = CurrentSaveContext(field, hasPendingHostAction);
         RuntimeSavePolicyAssessment assessment = savePolicy.AssessSave(kind, context);
@@ -63,7 +65,8 @@ internal sealed class TrainingAnnexPersistenceController
             encounterTriggerConsumed,
             preparedBattleStarted,
             preparedBattleOutcome,
-            preparedBattleWinningTeamId);
+            preparedBattleWinningTeamId,
+            compendium);
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(snapshot, catalog);
         if (!validation.IsValid)
         {
@@ -177,7 +180,8 @@ internal sealed class TrainingAnnexPersistenceController
         bool encounterTriggerConsumed,
         bool preparedBattleStarted,
         BattleEncounterOutcome? preparedBattleOutcome,
-        ContentId? preparedBattleWinningTeamId)
+        ContentId? preparedBattleWinningTeamId,
+        CompendiumStateSnapshot? compendium = null)
     {
         var hostContext = new List<KeyValuePair<ContentId, string>>
         {
@@ -206,7 +210,8 @@ internal sealed class TrainingAnnexPersistenceController
             inventory,
             wallet,
             session,
-            hostContext);
+            hostContext,
+            compendium);
     }
 
     private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
@@ -290,7 +295,11 @@ internal sealed class TrainingAnnexPersistenceController
                 continue;
             }
 
-            if (!savedActor.Identity.InstanceId.ToString().StartsWith("fusion_", StringComparison.Ordinal))
+            bool fusionActor = savedActor.Identity.InstanceId.ToString()
+                .StartsWith("fusion_", StringComparison.Ordinal);
+            bool recalledActor = savedActor.Identity.InstanceId.ToString()
+                .StartsWith("recall_", StringComparison.Ordinal);
+            if (!fusionActor && !recalledActor)
             {
                 diagnostics.Add($"Saved session contains unexpected actor '{savedActor.Identity.InstanceId}'.");
                 continue;
@@ -300,11 +309,13 @@ internal sealed class TrainingAnnexPersistenceController
             if (!restored.IsSuccess)
             {
                 string restoreDiagnostics = string.Join("; ", restored.Diagnostics.Select(item => item.Message));
-                diagnostics.Add($"Saved fusion actor '{savedActor.Identity.InstanceId}' could not be restored: {restoreDiagnostics}");
+                diagnostics.Add($"Saved dynamic actor '{savedActor.Identity.InstanceId}' could not be restored: {restoreDiagnostics}");
                 continue;
             }
 
-            dynamicMembers.Add(new TrainingAnnexRuntimeActor("Fused Result", restored.RequireActor()));
+            dynamicMembers.Add(new TrainingAnnexRuntimeActor(
+                fusionActor ? "Fused Result" : "Compendium Recall",
+                restored.RequireActor()));
         }
 
         if (diagnostics.Count > 0)
@@ -336,6 +347,7 @@ internal sealed class TrainingAnnexPersistenceController
                 snapshot.Inventory,
                 snapshot.Wallet,
                 snapshot.Session,
+                snapshot.Compendium,
                 TrainingAnnexBattleKnowledgeState.FromSnapshot(snapshot.Knowledge),
                 triggerConsumed,
                 battleStarted,
@@ -603,6 +615,7 @@ internal sealed record TrainingAnnexRestoredSession(
     RuntimeInventorySnapshot Inventory,
     RuntimeWalletSnapshot Wallet,
     RuntimeSessionProgressSnapshot SessionProgress,
+    CompendiumStateSnapshot Compendium,
     TrainingAnnexBattleKnowledgeState PlayerBattleKnowledge,
     bool EncounterTriggerConsumed,
     bool PreparedBattleStarted,
