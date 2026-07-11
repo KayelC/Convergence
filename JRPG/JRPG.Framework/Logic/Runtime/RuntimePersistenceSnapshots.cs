@@ -25,6 +25,11 @@ public enum RuntimeSaveValidationCode
     MissingCompendiumEntity,
     DuplicateCompendiumEntity,
     CompendiumEntityNotEligible,
+    DuplicateCompendiumLearnedSkill,
+    DuplicateCompendiumEquippedSkill,
+    InvalidCompendiumStatValue,
+    MissingCompendiumStat,
+    UnknownCompendiumStat,
     CompendiumEquippedSkillNotLearned,
     KnowledgeTargetMissing,
     InvalidCheckpoint,
@@ -721,40 +726,54 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     Path: entryPath + ".entityId"));
             }
 
-            foreach (ContentId skillId in entry.SkillIds)
+            IReadOnlyList<CompendiumEntryIntegrityDiagnostic> entryDiagnostics =
+                CompendiumEntryIntegrity.Validate(entry, entity, catalog);
+            foreach (CompendiumEntryIntegrityDiagnostic issue in entryDiagnostics)
             {
-                if (!catalog.Skills.ContainsKey(skillId))
-                {
-                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                        RuntimeSaveValidationCode.MissingCatalogSkill,
-                        $"Compendium skill '{skillId}' is not present in the catalog.",
-                        ContentId: skillId,
-                        Path: entryPath + ".skillIds"));
-                }
-            }
-
-            foreach (ContentId skillId in entry.EquippedSkillIds)
-            {
-                if (!entry.SkillIds.Contains(skillId))
-                {
-                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                        RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned,
-                        $"Compendium equipped skill '{skillId}' is not present in learned skills.",
-                        ContentId: skillId,
-                        Path: entryPath + ".equippedSkillIds"));
-                }
-
-                if (!entry.SkillIds.Contains(skillId) && !catalog.Skills.ContainsKey(skillId))
-                {
-                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                        RuntimeSaveValidationCode.MissingCatalogSkill,
-                        $"Compendium equipped skill '{skillId}' is not present in the catalog.",
-                        ContentId: skillId,
-                        Path: entryPath + ".equippedSkillIds"));
-                }
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    SaveCode(issue.Code),
+                    issue.Message,
+                    ContentId: issue.ContentId,
+                    Path: CompendiumPath(entryPath, issue)));
             }
         }
     }
+
+    private static RuntimeSaveValidationCode SaveCode(CompendiumEntryIntegrityCode code) =>
+        code switch
+        {
+            CompendiumEntryIntegrityCode.DuplicateLearnedSkill =>
+                RuntimeSaveValidationCode.DuplicateCompendiumLearnedSkill,
+            CompendiumEntryIntegrityCode.DuplicateEquippedSkill =>
+                RuntimeSaveValidationCode.DuplicateCompendiumEquippedSkill,
+            CompendiumEntryIntegrityCode.InvalidStatValue =>
+                RuntimeSaveValidationCode.InvalidCompendiumStatValue,
+            CompendiumEntryIntegrityCode.MissingStat =>
+                RuntimeSaveValidationCode.MissingCompendiumStat,
+            CompendiumEntryIntegrityCode.UnknownStat =>
+                RuntimeSaveValidationCode.UnknownCompendiumStat,
+            CompendiumEntryIntegrityCode.MissingSkill =>
+                RuntimeSaveValidationCode.MissingCatalogSkill,
+            CompendiumEntryIntegrityCode.EquippedSkillNotLearned =>
+                RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown Compendium integrity code.")
+        };
+
+    private static string CompendiumPath(
+        string entryPath,
+        CompendiumEntryIntegrityDiagnostic diagnostic) =>
+        diagnostic.Field switch
+        {
+            CompendiumEntryIntegrityField.Stats when
+                diagnostic.Code == CompendiumEntryIntegrityCode.MissingStat => entryPath + ".stats",
+            CompendiumEntryIntegrityField.Stats =>
+                $"{entryPath}.stats['{diagnostic.ContentId}']",
+            CompendiumEntryIntegrityField.LearnedSkills =>
+                $"{entryPath}.skillIds[{diagnostic.Index}]",
+            CompendiumEntryIntegrityField.EquippedSkills =>
+                $"{entryPath}.equippedSkillIds[{diagnostic.Index}]",
+            _ => entryPath
+        };
 
     private static void ValidateKnowledge(
         RuntimeKnowledgeSnapshot knowledge,

@@ -355,6 +355,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var partyController = new TrainingAnnexPartyController(partyStockTransitions);
         var compendiumRuntime = new CompendiumRuntimeService(
             catalog,
+            catalog,
             actorFactory,
             growthServices.ResourceGrowthPolicy,
             partyStock: partyStockTransitions,

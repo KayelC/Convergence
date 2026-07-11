@@ -22,6 +22,8 @@ CodeReview-7-3 establishes the clean fusion transaction boundary. The framework 
 
 CodeReview-7-4 establishes the strategy-context lifecycle. A planning result retains its immutable host/session context, accident mutation reuses that same context for every selected skill, and standalone slot calculation offers separate contextual and deliberately context-free entry points.
 
+CodeReview-7-5 establishes the Compendium entry-integrity boundary. One serializer-neutral validator rejects duplicate or missing skills, equipped skills that were not learned, negative stats, and incomplete or unknown stat overrides. Save validation, actor registration, and direct recall use that authority before transaction work; host JSON remains host-owned.
+
 The console Cathedral still uses legacy datasets, live `Combatant` / `Persona` objects, legacy fusion adapters, and existing presentation flows.
 
 ## Problem
@@ -62,4 +64,4 @@ sample_spirit + sample_beast -> sample_construct rank operation
 
 Do not build a full fusion chart yet.
 
-Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 preserves typed recipes, CodeReview-7-2 enforces recall identity, CodeReview-7-3 centralizes commit coordination, and CodeReview-7-4 retains strategy context. Before Phase 8 begins, resolve CodeReview-7-5 in `docs/phase-7-code-review.md` by hardening Compendium entry/save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
+Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 preserves typed recipes, CodeReview-7-2 enforces recall identity, CodeReview-7-3 centralizes commit coordination, CodeReview-7-4 retains strategy context, and CodeReview-7-5 closes entry/save validation. Phase 8 may begin. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.

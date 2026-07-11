@@ -212,7 +212,13 @@ internal sealed class CleanSaveDemoHost
                     ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"),
                     "Frost Duelist",
                     5,
-                    [new KeyValuePair<ContentId, int>(ContentId.Parse("magic"), 8)],
+                    [
+                        new KeyValuePair<ContentId, int>(ContentId.Parse("strength"), 4),
+                        new KeyValuePair<ContentId, int>(ContentId.Parse("magic"), 8),
+                        new KeyValuePair<ContentId, int>(ContentId.Parse("vitality"), 5),
+                        new KeyValuePair<ContentId, int>(ContentId.Parse("agility"), 6),
+                        new KeyValuePair<ContentId, int>(ContentId.Parse("luck"), 4)
+                    ],
                     [ContentId.Parse("convergence.clean_battle_demo:frost_lance_demo")])
             ]),
             new RuntimeKnowledgeSnapshot(

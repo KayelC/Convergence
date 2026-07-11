@@ -76,6 +76,8 @@ Phase 7-34 requires explicit strategy policies. Neutral `create_entity` and `ran
 
 CodeReview-7-4 closes the strategy-context lifecycle: `FusionPlanningResult` retains the immutable context supplied to planning and accident inheritance passes it to every mutation policy. The original one-argument slot-count helper is explicitly context-free; hosts with context-sensitive slot policies use the overload that requires `FusionPolicyContext`.
 
+CodeReview-7-5 closes Compendium entry integrity for the approved scope. A shared internal validator checks authored stat shape and values plus learned/equipped skill identity. `RuntimeSaveValidator`, registration, and direct recall map the same findings into their public diagnostic contracts before any actor, stock, pricing, or wallet mutation path runs.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.

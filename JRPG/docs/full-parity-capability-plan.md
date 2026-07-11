@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 preserves policy context through accident mutation and makes standalone slot-policy context explicit. CodeReview-7-5 must be completed before Phase 8 begins.
+Phase 7 review status: review-closed for the approved original-content scope. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 preserves policy context through accident mutation and makes standalone slot-policy context explicit. CodeReview-7-5 rejects malformed Compendium entries at save, registration, and recall boundaries. Phase 8 may begin; capabilities remain `parallel_partial` and removal remains unauthorized.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -1004,7 +1004,7 @@ CodeReview-7-3 transaction amendment:
 - rejected commits report no applied consumption or transitions; planned evidence remains explicitly available from the prepared token;
 - Training Annex obtains `standard_stock_capacity` from the catalog ruleset binding and no longer creates a legacy capacity policy or executes stock transitions inside its fusion controller;
 - the host remains responsible only for proposed identity, presentation, confirmation, and applying an `Applied` result;
-- the capability remains `parallel_partial`; CodeReview-7-5 still gates Phase 8.
+- the capability remains `parallel_partial`; its Phase 7 review findings are closed and it no longer gates Phase 8.
 - Verification after the post-interruption source audit: the broad fusion, stock, persistence, host, boundary, and roadmap gate passed `198/198`; the full suite passed `930/930` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 34. `fusion_strategies`
@@ -1059,7 +1059,8 @@ Phase 7-35 result:
 - Recall placement is caller-selected through `CompendiumRecallStockKind`; the framework supports both Demon and Persona stock. `PartyStockTransitionService.AddPersonaToStock` closes the previous missing stock primitive.
 - `FamiliarEntityKnowledgeService` is explicitly invoked rather than hidden. It imports all non-Almighty elemental affinities, catalog ailment resistances, and Light/Dark instant-death resistances from typed entity definitions. Missing defense entries resolve to the framework's typed Normal value. The caller chooses which familiar entity IDs count, so games may use Compendium registration, current ownership, or another approved policy.
 - The Training Annex `Compendium` menu uses typed runtime/content selection IDs. Registering Ashling proves player knowledge can know its Ice weakness before a fresh attack; recruitment and committed fusion also import the newly owned entity, and recall reuses the same boundary. Encounter AI receives none of this persistent import.
-- Compendium state, learned/equipped skill distinctions, unspent stat points, wallet/stock changes, and recalled catalog actors survive manual/suspend save round trips. Save validation rejects duplicate Compendium entity records, ineligible/missing entities, missing skills, and equipped skills that were not learned.
+- Compendium state, learned/equipped skill distinctions, unspent stat points, wallet/stock changes, and recalled catalog actors survive manual/suspend save round trips. Save validation rejects duplicate Compendium entity records, ineligible/missing entities, duplicate or missing skills, equipped skills that were not learned, negative stat values, and incomplete or unknown authored stat overrides.
+- CodeReview-7-5 centralizes those invariants in a serializer-neutral framework validator. Registration and direct recall use the same checks before stock simulation, actor construction, pricing, or wallet mutation; host-owned JSON corruption tests cover the actual deserialize-and-validate path.
 - This remains `parallel_partial`: the clean original-content path owns the complete Compendium transaction proof, but `CompendiumRegistry`, the Cathedral presentation, and legacy production consumers remain active and are not authorized for removal.
 - Verification: the focused Phase 7-35, boundary, and protected-legacy gate passed `148/148`; the full suite passed `893/893` with no failures or skips. The framework build remained at `0` warnings, while the full solution retained `98` pre-existing legacy-host warnings. Clean battle, field, save, and Training Annex demos completed successfully; `git diff --check` passed with line-ending notices only; the framework forbidden-reference search returned no matches; and `Data/Jsons` remained unchanged.
 
@@ -1070,7 +1071,8 @@ CodeReview-7-2 integrity amendment:
 - Demon/Persona stock additions and replacements reject cross-role runtime-ID reuse with a typed transition code;
 - save validation rejects illegal cross-list identity reuse and party/stock references whose entity ID disagrees with the referenced actor snapshot;
 - active party plus Demon-stock overlap for the same owned demon remains legal by explicit rule rather than by omission;
-- the capability remains `parallel_partial`, and CodeReview-7-5 still gates Phase 8.
+- the capability remains `parallel_partial`, but its required Phase 7 review findings are closed and Phase 8 may begin.
+- CodeReview-7-5 verification: focused Compendium/persistence/host JSON tests passed `49/49`, the expanded Phase 7 gate passed `233/233`, and the full suite passed `937/937`. Framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 - Verification: the focused identity, recall, stock, persistence, host, and ledger gate passed `166/166`; the full suite passed `915/915` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 36. `console_presentation`

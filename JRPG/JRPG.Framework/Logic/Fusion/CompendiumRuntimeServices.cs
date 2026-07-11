@@ -12,6 +12,12 @@ public enum CompendiumRuntimeDiagnosticCode
     EntityNotEligible,
     ActorEntityMismatch,
     InvalidStatValue,
+    MissingStat,
+    UnknownStat,
+    DuplicateLearnedSkill,
+    DuplicateEquippedSkill,
+    MissingSkill,
+    EquippedSkillNotLearned,
     MissingEntry,
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
@@ -64,6 +70,7 @@ public enum CompendiumRecallTransactionCode
     Applied,
     MissingEntry,
     EntityNotEligible,
+    InvalidEntry,
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
     StockFull,
@@ -167,6 +174,7 @@ public interface ICompendiumRuntimeService
 public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
 {
     private readonly IEntityDefinitionRepository _entities;
+    private readonly ISkillDefinitionRepository _skills;
     private readonly ICatalogBattleActorFactory _actors;
     private readonly IResourceGrowthPolicy _resourceGrowth;
     private readonly ICompendiumService _compendium;
@@ -175,6 +183,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
 
     public CompendiumRuntimeService(
         IEntityDefinitionRepository entities,
+        ISkillDefinitionRepository skills,
         ICatalogBattleActorFactory actors,
         IResourceGrowthPolicy resourceGrowth,
         ICompendiumService? compendium = null,
@@ -182,6 +191,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         IEconomyTransactionService? economy = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _resourceGrowth = resourceGrowth ?? throw new ArgumentNullException(nameof(resourceGrowth));
         _compendium = compendium ?? new CompendiumService();
@@ -250,6 +260,17 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             actor.Progression.LifetimeExperience,
             actor.Progression.UnspentStatPoints,
             actor.Skills.EquippedSkillIds);
+        IReadOnlyList<CompendiumEntryIntegrityDiagnostic> entryDiagnostics =
+            CompendiumEntryIntegrity.Validate(entry, entity, _skills);
+        if (entryDiagnostics.Count > 0)
+        {
+            return RegistrationRejected(
+                state,
+                entry,
+                actor.Identity.InstanceId,
+                entryDiagnostics);
+        }
+
         CompendiumRegistrationResult registration = _compendium.Register(state, entry);
         return new CompendiumActorRegistrationResult(
             registration.Code,
@@ -289,6 +310,13 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 CompendiumRuntimeDiagnosticCode.EntityNotEligible,
                 $"Entity '{entry.EntityId}' is not eligible for Compendium recall.",
                 entry);
+        }
+
+        IReadOnlyList<CompendiumEntryIntegrityDiagnostic> entryDiagnostics =
+            CompendiumEntryIntegrity.Validate(entry, entity, _skills);
+        if (entryDiagnostics.Count > 0)
+        {
+            return RecallInvalidEntry(request, entry, entryDiagnostics);
         }
 
         if (RuntimePartyStockIdentityRules.ContainsInstanceId(
@@ -524,6 +552,61 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             state,
             state,
             diagnostics: [new CompendiumRuntimeDiagnostic(code, message, entityId, instanceId)]);
+
+    private static CompendiumActorRegistrationResult RegistrationRejected(
+        CompendiumStateSnapshot state,
+        CompendiumEntrySnapshot entry,
+        RuntimeInstanceId instanceId,
+        IEnumerable<CompendiumEntryIntegrityDiagnostic> diagnostics) =>
+        new(
+            CompendiumRegistrationCode.InvalidEntry,
+            state,
+            state,
+            diagnostics: RuntimeDiagnostics(diagnostics, entry.EntityId, instanceId));
+
+    private static CompendiumRecallTransactionResult RecallInvalidEntry(
+        CompendiumRecallTransactionRequest request,
+        CompendiumEntrySnapshot entry,
+        IEnumerable<CompendiumEntryIntegrityDiagnostic> diagnostics) =>
+        new(
+            CompendiumRecallTransactionCode.InvalidEntry,
+            request.Compendium,
+            request.PartyStock,
+            request.PartyStock,
+            request.Wallet,
+            request.Wallet,
+            entry: entry,
+            diagnostics: RuntimeDiagnostics(diagnostics, entry.EntityId, request.RecalledInstanceId));
+
+    private static IEnumerable<CompendiumRuntimeDiagnostic> RuntimeDiagnostics(
+        IEnumerable<CompendiumEntryIntegrityDiagnostic> diagnostics,
+        ContentId entityId,
+        RuntimeInstanceId instanceId) =>
+        diagnostics.Select(diagnostic => new CompendiumRuntimeDiagnostic(
+            RuntimeCode(diagnostic.Code),
+            diagnostic.Message,
+            entityId,
+            instanceId));
+
+    private static CompendiumRuntimeDiagnosticCode RuntimeCode(CompendiumEntryIntegrityCode code) =>
+        code switch
+        {
+            CompendiumEntryIntegrityCode.DuplicateLearnedSkill =>
+                CompendiumRuntimeDiagnosticCode.DuplicateLearnedSkill,
+            CompendiumEntryIntegrityCode.DuplicateEquippedSkill =>
+                CompendiumRuntimeDiagnosticCode.DuplicateEquippedSkill,
+            CompendiumEntryIntegrityCode.InvalidStatValue =>
+                CompendiumRuntimeDiagnosticCode.InvalidStatValue,
+            CompendiumEntryIntegrityCode.MissingStat =>
+                CompendiumRuntimeDiagnosticCode.MissingStat,
+            CompendiumEntryIntegrityCode.UnknownStat =>
+                CompendiumRuntimeDiagnosticCode.UnknownStat,
+            CompendiumEntryIntegrityCode.MissingSkill =>
+                CompendiumRuntimeDiagnosticCode.MissingSkill,
+            CompendiumEntryIntegrityCode.EquippedSkillNotLearned =>
+                CompendiumRuntimeDiagnosticCode.EquippedSkillNotLearned,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown Compendium integrity code.")
+        };
 
     private static CompendiumRecallTransactionResult RecallRejected(
         CompendiumRecallTransactionRequest request,

@@ -223,6 +223,68 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsDuplicateSkillsAndMalformedCompendiumStatOverrides()
+    {
+        ContentId entityId = Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId skillId = Id("convergence.clean_battle_demo:frost_lance_demo");
+        ContentId unknownStatId = Id("forged_stat");
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            compendium: new CompendiumStateSnapshot(
+            [
+                new CompendiumEntrySnapshot(
+                    entityId,
+                    "Frost Duelist",
+                    5,
+                    stats:
+                    [
+                        new KeyValuePair<ContentId, int>(Id("strength"), -1),
+                        new KeyValuePair<ContentId, int>(Id("magic"), 8),
+                        new KeyValuePair<ContentId, int>(Id("vitality"), 5),
+                        new KeyValuePair<ContentId, int>(Id("agility"), 6),
+                        new KeyValuePair<ContentId, int>(unknownStatId, 4)
+                    ],
+                    skillIds: [skillId, skillId],
+                    equippedSkillIds: [skillId, skillId])
+            ]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, LoadCatalog());
+
+        Assert.False(result.IsValid);
+        Assert.Collection(
+            result.Diagnostics,
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.InvalidCompendiumStatValue, diagnostic.Code);
+                Assert.Equal(Id("strength"), diagnostic.ContentId);
+                Assert.Equal("$.compendium.entries[0].stats['strength']", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.UnknownCompendiumStat, diagnostic.Code);
+                Assert.Equal(unknownStatId, diagnostic.ContentId);
+                Assert.Equal("$.compendium.entries[0].stats['forged_stat']", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.MissingCompendiumStat, diagnostic.Code);
+                Assert.Equal(Id("luck"), diagnostic.ContentId);
+                Assert.Equal("$.compendium.entries[0].stats", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateCompendiumLearnedSkill, diagnostic.Code);
+                Assert.Equal(skillId, diagnostic.ContentId);
+                Assert.Equal("$.compendium.entries[0].skillIds[1]", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateCompendiumEquippedSkill, diagnostic.Code);
+                Assert.Equal(skillId, diagnostic.ContentId);
+                Assert.Equal("$.compendium.entries[0].equippedSkillIds[1]", diagnostic.Path);
+            });
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_AllowsIntentionalActiveDemonOwnedStockOverlap()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -694,7 +756,13 @@ public sealed class RuntimePersistenceSnapshotTests
                     Id("convergence.clean_battle_demo:frost_duelist_demo"),
                     "Frost Duelist",
                     5,
-                    [new KeyValuePair<ContentId, int>(Id("magic"), 8)],
+                    [
+                        new KeyValuePair<ContentId, int>(Id("strength"), 4),
+                        new KeyValuePair<ContentId, int>(Id("magic"), 8),
+                        new KeyValuePair<ContentId, int>(Id("vitality"), 5),
+                        new KeyValuePair<ContentId, int>(Id("agility"), 6),
+                        new KeyValuePair<ContentId, int>(Id("luck"), 4)
+                    ],
                     [Id("convergence.clean_battle_demo:frost_lance_demo")])
             ]),
             knowledge ?? new RuntimeKnowledgeSnapshot(

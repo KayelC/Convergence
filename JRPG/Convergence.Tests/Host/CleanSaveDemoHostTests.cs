@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Convergence.Tests.Runtime;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Host;
@@ -137,6 +138,66 @@ public sealed class CleanSaveDemoHostTests
     public void CleanSaveJsonCodec_RejectsMalformedHostOwnedJson()
     {
         Assert.Throws<JsonException>(() => CleanSaveJsonCodec.Deserialize("{"));
+    }
+
+    [Fact]
+    public void HostOwnedJsonCorruption_ReportsDuplicateCompendiumSkillsAndNegativeStats()
+    {
+        string json = CleanSaveJsonCodec.Serialize(RuntimePersistenceSnapshotTests.CreateSaveSnapshot());
+        JsonObject root = JsonNode.Parse(json)?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        JsonObject entry = root["Compendium"]?["Entries"]?[0]?.AsObject()
+            ?? throw new InvalidOperationException("Expected a Compendium entry.");
+        JsonArray learnedSkills = entry["SkillIds"]?.AsArray()
+            ?? throw new InvalidOperationException("Expected learned skills.");
+        JsonArray equippedSkills = entry["EquippedSkillIds"]?.AsArray()
+            ?? throw new InvalidOperationException("Expected equipped skills.");
+        JsonObject stats = entry["Stats"]?.AsObject()
+            ?? throw new InvalidOperationException("Expected Compendium stats.");
+        learnedSkills.Add(learnedSkills[0]?.GetValue<string>());
+        equippedSkills.Add(equippedSkills[0]?.GetValue<string>());
+        stats["strength"] = -1;
+
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            restored,
+            RuntimePersistenceSnapshotTests.LoadCatalog());
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicateCompendiumLearnedSkill &&
+            diagnostic.Path == "$.compendium.entries[0].skillIds[1]");
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.DuplicateCompendiumEquippedSkill &&
+            diagnostic.Path == "$.compendium.entries[0].equippedSkillIds[1]");
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.InvalidCompendiumStatValue &&
+            diagnostic.Path == "$.compendium.entries[0].stats['strength']");
+    }
+
+    [Fact]
+    public void HostOwnedJsonCorruption_ReportsUnknownAndMissingCompendiumStats()
+    {
+        string json = CleanSaveJsonCodec.Serialize(RuntimePersistenceSnapshotTests.CreateSaveSnapshot());
+        JsonObject root = JsonNode.Parse(json)?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        JsonObject stats = root["Compendium"]?["Entries"]?[0]?["Stats"]?.AsObject()
+            ?? throw new InvalidOperationException("Expected Compendium stats.");
+        Assert.True(stats.Remove("luck"));
+        stats["forged_stat"] = 4;
+
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            restored,
+            RuntimePersistenceSnapshotTests.LoadCatalog());
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.UnknownCompendiumStat &&
+            diagnostic.ContentId == ContentId.Parse("forged_stat"));
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.MissingCompendiumStat &&
+            diagnostic.ContentId == ContentId.Parse("luck"));
     }
 
     [Fact]

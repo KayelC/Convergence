@@ -47,6 +47,7 @@ public sealed class CompendiumRuntimeServiceTests
         CatalogBattleActor actor = eligible.CreateActor("owned_ashling");
         var missingService = new CompendiumRuntimeService(
             new EmptyEntityRepository(),
+            eligible.Catalog,
             eligible.ActorFactory,
             new StandardResourceGrowthPolicy());
         CompendiumStateSnapshot state = new();
@@ -64,6 +65,46 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.False(rejected.Applied);
         Assert.Same(state, rejected.After);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.EntityNotEligible, Assert.Single(rejected.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void RegisterActor_RejectsMalformedSkillStateWithoutUpdatingTheCompendium()
+    {
+        TestContext context = CreateContext();
+        RuntimeActorSnapshot source = context.CreateActor("malformed_registration").State.ToSnapshot();
+        ContentId missingSkillId = Id("test.pack:missing_skill");
+        var malformed = new RuntimeActorSnapshot(
+            source.Identity,
+            source.Ownership,
+            source.Deployment,
+            source.Progression,
+            source.Resources,
+            source.Stats,
+            new RuntimeSkillStateSnapshot(
+                [missingSkillId, missingSkillId],
+                [missingSkillId, missingSkillId]),
+            source.Forms,
+            source.Equipment,
+            source.BattleStatus,
+            source.BattleActivations,
+            source.BaseResourceValues,
+            source.VitalResourceId,
+            source.CapabilityIds);
+        CompendiumStateSnapshot state = new();
+
+        CompendiumActorRegistrationResult result = context.CreateService().RegisterActor(state, malformed);
+
+        Assert.False(result.Applied);
+        Assert.Equal(CompendiumRegistrationCode.InvalidEntry, result.Code);
+        Assert.Same(state, result.Before);
+        Assert.Same(state, result.After);
+        Assert.Empty(state.Entries);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.DuplicateLearnedSkill);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.DuplicateEquippedSkill);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.MissingSkill);
     }
 
     [Fact]
@@ -233,7 +274,11 @@ public sealed class CompendiumRuntimeServiceTests
                 level: 1,
                 stats:
                 [
-                    new KeyValuePair<ContentId, int>(Id("vitality"), int.MaxValue)
+                    new KeyValuePair<ContentId, int>(Id("strength"), 4),
+                    new KeyValuePair<ContentId, int>(Id("magic"), 6),
+                    new KeyValuePair<ContentId, int>(Id("vitality"), int.MaxValue),
+                    new KeyValuePair<ContentId, int>(Id("agility"), 4),
+                    new KeyValuePair<ContentId, int>(Id("luck"), 3)
                 ])
         ]);
         RuntimePartyStockSnapshot party = EmptyParty();
@@ -253,6 +298,77 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Same(party, result.AfterPartyStock);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidRecallCost, Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void Recall_RejectsMalformedEntryBeforeActorCreationOrCurrencyMutation()
+    {
+        TestContext context = CreateContext();
+        var actors = new TrackingActorFactory(context.ActorFactory);
+        var economy = new TrackingEconomyService();
+        var service = new CompendiumRuntimeService(
+            context.Catalog,
+            context.Catalog,
+            actors,
+            new StandardResourceGrowthPolicy(),
+            economy: economy);
+        ContentId learnedSkillId = Id("test.pack:missing_learned_skill");
+        ContentId equippedSkillId = Id("test.pack:missing_equipped_skill");
+        var compendium = new CompendiumStateSnapshot(
+        [
+            new CompendiumEntrySnapshot(
+                context.Entity.Id,
+                context.Entity.DisplayName,
+                level: 3,
+                stats:
+                [
+                    new KeyValuePair<ContentId, int>(Id("strength"), -1),
+                    new KeyValuePair<ContentId, int>(Id("magic"), 6),
+                    new KeyValuePair<ContentId, int>(Id("vitality"), 5),
+                    new KeyValuePair<ContentId, int>(Id("agility"), 4),
+                    new KeyValuePair<ContentId, int>(Id("forged_stat"), 3)
+                ],
+                skillIds: [learnedSkillId, learnedSkillId],
+                equippedSkillIds: [equippedSkillId, equippedSkillId])
+        ]);
+        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimeWalletSnapshot wallet = new(10_000);
+
+        CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
+            compendium,
+            party,
+            wallet,
+            context.Entity.Id,
+            RuntimeInstanceId.Parse("invalid_recall"),
+            Id("player_controller"),
+            Id("player_team"),
+            CompendiumRecallStockKind.Demon));
+
+        Assert.False(result.Applied);
+        Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
+        Assert.Same(party, result.BeforePartyStock);
+        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(wallet, result.BeforeWallet);
+        Assert.Same(wallet, result.AfterWallet);
+        Assert.Equal(0, result.Cost);
+        Assert.Null(result.Actor);
+        Assert.Equal(0, actors.CreateCalls);
+        Assert.Equal(0, actors.RestoreCalls);
+        Assert.Equal(0, economy.SpendCalls);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.InvalidStatValue);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.UnknownStat);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.MissingStat);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.DuplicateLearnedSkill);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.DuplicateEquippedSkill);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.MissingSkill);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == CompendiumRuntimeDiagnosticCode.EquippedSkillNotLearned);
     }
 
     [Fact]
@@ -438,6 +554,7 @@ public sealed class CompendiumRuntimeServiceTests
         public CompendiumRuntimeService CreateService(IPartyStockTransitionService? partyStock = null) =>
             new(
                 Catalog,
+                Catalog,
                 ActorFactory,
                 new StandardResourceGrowthPolicy(),
                 partyStock: partyStock);
@@ -467,6 +584,40 @@ public sealed class CompendiumRuntimeServiceTests
                     [Id("hp")] = 25,
                     [Id("sp")] = 5
                 });
+    }
+
+    private sealed class TrackingActorFactory(ICatalogBattleActorFactory inner) : ICatalogBattleActorFactory
+    {
+        public int CreateCalls { get; private set; }
+        public int RestoreCalls { get; private set; }
+
+        public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
+        {
+            CreateCalls++;
+            return inner.Create(request);
+        }
+
+        public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+        {
+            RestoreCalls++;
+            return inner.Restore(snapshot);
+        }
+    }
+
+    private sealed class TrackingEconomyService : IEconomyTransactionService
+    {
+        private readonly IEconomyTransactionService _inner = new EconomyTransactionService();
+
+        public int SpendCalls { get; private set; }
+
+        public WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount) =>
+            _inner.AddMacca(snapshot, amount);
+
+        public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount)
+        {
+            SpendCalls++;
+            return _inner.SpendMacca(snapshot, amount);
+        }
     }
 
     private sealed class EmptyEntityRepository : IEntityDefinitionRepository

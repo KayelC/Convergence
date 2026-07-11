@@ -1,6 +1,6 @@
 # Phase 7 Code Review And Readiness
 
-> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 through CodeReview-7-4. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 through CodeReview-7-4 are complete; CodeReview-7-5 remains required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
+> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 through CodeReview-7-5. The required Phase 7 review queue is closed for the approved original-content scope.** This review began from source at `00ab189` and is updated from the implementation itself. Review closure does not authorize legacy removal or promote a capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -16,9 +16,9 @@ Phase 7 achieved meaningful framework-first progress:
 
 The current sample paths are green and are not false demonstrations. They execute real framework services and mutate real clean runtime snapshots.
 
-The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding. CodeReview-7-3 resolves fusion commit ownership by moving preparation, actor construction, parent consumption, typed result placement, and rollback decisions into one injected framework service. CodeReview-7-4 resolves accident-strategy context loss. The remaining required finding concerns Compendium entry validation.
+The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding. CodeReview-7-3 resolves fusion commit ownership by moving preparation, actor construction, parent consumption, typed result placement, and rollback decisions into one injected framework service. CodeReview-7-4 resolves accident-strategy context loss. CodeReview-7-5 resolves Compendium entry and save validation.
 
-**Verdict:** do not begin Phase 8-36 as though Phase 7 were closed. Resolve the Phase 7 review queue first, then rerun this audit. The current code remains suitable as the existing clean demonstration baseline while those corrections are made.
+**Verdict:** Phase 7 is review-closed for its approved scope and Phase 8-36 may begin. Fusion and Compendium remain `parallel_partial` because the protected legacy consumers still exist and the framework intentionally does not prescribe a complete game-specific fusion design.
 
 ## Audit Scope
 
@@ -117,7 +117,7 @@ At the initial review point, tests covered one entity/entity recipe and one race
 - The legacy dataset audit found 460 recipes using 30 unique race selector tokens and 4 unique entity selector tokens, with no unknown or ambiguous parent tokens.
 - Regression coverage now proves entity/entity and race/race catalog mapping, mixed selectors, reversed order, selector-ID collision handling, selector specificity, structured-result precedence, one/three-parent rejection, and fail-fast adapter behavior.
 
-This finding is closed. It does not close Phase 7 because CodeReview-7-5 remains after the separate identity, transaction, and policy-context corrections.
+This finding is closed. Phase 7 review closure required the separate identity, transaction, policy-context, and Compendium-integrity corrections, all of which are now complete.
 
 ### High, resolved by CodeReview-7-2: Compendium recall can return a party snapshot with a duplicate runtime instance ID
 
@@ -236,7 +236,7 @@ This contradicts the Phase 7-34 promise that optional host/session facts flow co
 
 This finding is closed. The correction changes no built-in fusion outcome; it makes developer-supplied policies receive consistent host/session facts across planning and accident mutation.
 
-### Medium: Compendium save validation does not enforce all entry invariants
+### Medium, resolved by CodeReview-7-5: Compendium save validation did not enforce all entry invariants
 
 Registration through `CompendiumRuntimeService.RegisterActor(...)` rejects non-integral, negative, or out-of-range base stats. A host-owned save can reconstruct `CompendiumEntrySnapshot` directly and bypass that registration path.
 
@@ -262,6 +262,17 @@ This matters because recall pricing counts `SkillIds.Count`, so duplicate saved 
 - Validate the entry before recall can spend currency or create an actor.
 - Add host-owned JSON corruption tests, not only directly constructed valid entries.
 - Keep graph/catalog checks in `RuntimeSaveValidator`; do not put JSON types into framework contracts.
+
+**Resolution, 2026-07-11:**
+
+- one internal serializer-neutral Compendium entry validator now owns duplicate learned/equipped skills, negative values, missing or unknown authored stats, missing catalog skills, and equipped-not-learned checks;
+- an empty saved stat block deliberately requests catalog defaults, while a nonempty override must contain exactly the entity's authored stat IDs;
+- `RuntimeSaveValidator` maps those issues to stable public save-validation codes and precise authored collection paths;
+- `CompendiumRuntimeService` requires both entity and skill repositories and runs the same validator during registration and before recall identity checks, stock simulation, pricing, actor creation, or wallet mutation;
+- invalid recall returns typed `InvalidEntry` diagnostics with unchanged party and wallet snapshots, zero cost, and no actor;
+- host-owned JSON corruption tests mutate serialized Compendium arrays and stat maps, deserialize through the normal console codec, and prove framework rejection without placing JSON types in framework contracts.
+
+This finding is closed. The check is enforced both when a complete save is validated and when a host calls recall directly without first validating a save.
 
 ### Low: Compendium pricing has no narrow policy boundary
 
@@ -420,11 +431,11 @@ The existing tests are valuable, but their green result should be read as proof 
 - sample actor IDs and menu flows remain in the Training Annex host.
 - familiar knowledge import is opt-in rather than automatic global state.
 
-### Still requiring correction
+### After required corrections
 
-- mutation context is replaced with an empty context during accident inheritance;
-- Compendium save validation does not yet reject every invalid stored stat or duplicate skill shape;
-- Compendium default pricing is fixed unless the whole service is replaced.
+- mutation context is retained through accident inheritance;
+- malformed Compendium stat and skill state is rejected at save, registration, and recall boundaries;
+- Compendium default pricing remains fixed unless the whole service is replaced. This is optional design hardening rather than a Phase 7 correctness gate.
 
 The large `TrainingAnnexFusionController` and `TrainingAnnexCompendiumController` are not themselves reasons to refactor console presentation now. Only the gameplay coordination identified above should move into the framework. Menu text and demonstration evidence can remain host-owned.
 
@@ -500,11 +511,26 @@ CodeReview-7-4 follow-up verification on 2026-07-11 produced:
 | `git diff --check` | passed |
 | Production/prototype `Data/Jsons` | unchanged |
 
+CodeReview-7-5 follow-up verification on 2026-07-11 produced:
+
+| Check | Result |
+| --- | --- |
+| Focused Compendium runtime, persistence, and host JSON tests | `49/49` passed, `0` failed, `0` skipped |
+| Expanded Phase 7 fusion, Compendium, stock, persistence, host, boundary, and roadmap gate | `233/233` passed, `0` failed, `0` skipped |
+| Full solution tests | `937/937` passed, `0` failed, `0` skipped |
+| Framework nonincremental build | succeeded, `0` warnings, `0` errors |
+| Full solution nonincremental build | succeeded, `98` protected legacy-host warnings, `0` errors |
+| Clean battle, field, save, and Training Annex demos | all passed; save snapshots validated with `0` diagnostics |
+| Documentation, parity-ledger, and framework-boundary guard tests | `10/10` passed |
+| Framework runtime forbidden-reference scan | no forbidden production references under `JRPG.Framework/Logic` |
+| `git diff --check` | passed |
+| Production/prototype `Data/Jsons` | unchanged |
+
 ## Readiness Decision
 
-Phase 7 is **implemented but not closed**. CodeReview-7-1 through CodeReview-7-4 are complete; one required review correction remains.
+Phase 7 is **implemented and review-closed for the approved original-content scope**. CodeReview-7-1 through CodeReview-7-5 are complete.
 
-It is safe to retain as the current clean demonstration baseline. It is not yet appropriate to move to Phase 8 under the assumption that fusion and Compendium contracts are finished.
+It is safe to retain as the current clean demonstration baseline and proceed to Phase 8-36. This does not mean every possible game-specific fusion chart, accident design, pricing model, or Cathedral replacement has been implemented.
 
 No legacy removal is authorized. Every Phase 7 capability remains `parallel_partial`.
 
@@ -518,8 +544,8 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
    Validated preparation and stale-safe commit now honor owner kind and injected stock/actor policies in typed immutable results.
 4. **CodeReview-7-4: Preserve strategy context through accident inheritance. Completed 2026-07-11.**
    Planning results retain immutable policy context, every accident mutation receives it, and explicit recording-policy regressions protect both mutation and standalone slot-helper context behavior.
-5. **CodeReview-7-5: Harden Compendium entry/save validation.**
-   Reject duplicate skills and invalid stats before recall or currency mutation.
+5. **CodeReview-7-5: Harden Compendium entry/save validation. Completed 2026-07-11.**
+   Shared serializer-neutral validation rejects duplicate skills and malformed stat overrides at save, registration, and pre-mutation recall boundaries, including host-owned JSON corruption cases.
 6. **Optional design hardening:** extract a narrow Compendium recall-pricing policy before production economy depends on the current sample formula.
 
-After follow-up 5 is complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.
+All required follow-ups are complete. Phase 8-36 can begin from this reviewed Phase 7 baseline; the optional pricing-policy extraction remains a future design choice.
