@@ -876,10 +876,10 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private void ValidateFusionRecipe(RecordSource<FusionRecipeDefinition> source)
         {
             FusionRecipeDefinition recipe = source.Definition;
-            if (recipe.Parents.Count < 2)
+            if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Fusion recipes require at least two parents.");
+                    "Schema v1 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();

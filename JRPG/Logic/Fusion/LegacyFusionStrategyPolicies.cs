@@ -75,7 +75,14 @@ internal sealed class LegacyUnstructuredFusionRecipePolicy : IFusionUnstructured
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(random);
 
-        string token = request.Recipe.ResultToken;
+        string? token = request.Recipe.CompatibilityResultToken;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
+                "Legacy fusion compatibility requires an explicit result token.");
+        }
+
         if (token is "1" or "-1")
         {
             return ResolveRank(request, token == "1" ? 1 : -1);

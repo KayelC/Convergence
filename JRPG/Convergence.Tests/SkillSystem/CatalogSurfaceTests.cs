@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
+using JRPGPrototype.Logic.Fusion;
 using Xunit;
 
 namespace Convergence.Tests.SkillSystem;
@@ -170,12 +171,91 @@ public sealed class CatalogSurfaceTests
             error.JsonPath == "$.dungeons[0].blocks[0]" &&
             error.Code == ContentValidationErrorCode.MinimumExceedsMaximum);
         Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.fusionRecipes[0].parents" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid &&
+            error.Message.Contains("exactly two", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, error =>
             error.JsonPath == "$.fusionRecipes[0].result.resultEntityId" &&
             error.Code == ContentValidationErrorCode.ShapeInvalid);
         Assert.Contains(result.Errors, error =>
             error.JsonPath == "$.rulesets[0].policyId" &&
             error.Code == ContentValidationErrorCode.RegistrationMissing);
         Assert.Null(result.ValidatedContent);
+    }
+
+    [Fact]
+    public void CatalogSurfaceValidation_RequiresExactlyTwoFusionParents()
+    {
+        ContentPackManifest manifest = new(
+            1,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("fusion", "fusion.json")]);
+        FusionRecipeDefinition oneParent = RecipeWithParents(
+            "one_parent",
+            [new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("race_a"))]);
+        FusionRecipeDefinition threeParents = RecipeWithParents(
+            "three_parents",
+            [
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("race_a")),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("race_b")),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Entity, Id("entity_c"))
+            ]);
+
+        ContentValidationResult result = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder().Build(),
+                fusionDocuments:
+                [
+                    Source(
+                        "fusion.json",
+                        "fusion.json",
+                        new DeserializedContentDocument<FusionRecipeDefinition>(1, [oneParent, threeParents]))
+                ]));
+
+        ContentValidationError[] cardinalityErrors = result.Errors
+            .Where(error =>
+                error.Code == ContentValidationErrorCode.ShapeInvalid &&
+                error.JsonPath.EndsWith(".parents", StringComparison.Ordinal) &&
+                error.Message.Contains("exactly two", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(
+            ["$.fusionRecipes[0].parents", "$.fusionRecipes[1].parents"],
+            cardinalityErrors.Select(error => error.JsonPath).ToArray());
+    }
+
+    [Fact]
+    public void CatalogFusionRepository_RejectsUnvalidatedNonBinaryRecipesInsteadOfOmittingThem()
+    {
+        FusionRecipeDefinition malformed = RecipeWithParents(
+            "test.pack:three_parents",
+            [
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("test.pack:race_a")),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("test.pack:race_b")),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Entity, Id("test.pack:entity_c"))
+            ]);
+        var catalog = new GameDataCatalog(
+            contentPacks: [],
+            skills: [],
+            entities: [],
+            races: [],
+            ailments: [],
+            items: [],
+            fusionRecipes:
+            [
+                new KeyValuePair<ContentId, FusionRecipeDefinition>(malformed.Id, malformed)
+            ]);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => new CatalogFusionContentRepository(catalog));
+
+        Assert.Contains("exactly two", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(malformed.Id.ToString(), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -322,6 +402,18 @@ public sealed class CatalogSurfaceTests
             .Build();
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static FusionRecipeDefinition RecipeWithParents(
+        string id,
+        IEnumerable<FusionParentSelectorDefinition> parents) =>
+        new(
+            Id(id),
+            id,
+            "Cardinality test recipe.",
+            parents,
+            new FusionResultDefinition(
+                FusionResultOperationKind.CreateEntity,
+                resultEntityId: Id("test.pack:result")));
 
     private static string FindRepositoryRoot()
     {

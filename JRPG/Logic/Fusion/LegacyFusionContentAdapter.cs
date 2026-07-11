@@ -22,11 +22,11 @@ namespace JRPGPrototype.Logic.Fusion
 
         public IEnumerable<FusionRecipeSnapshot> GetRecipes() =>
             Database.FusionRecipes.Select(recipe => new FusionRecipeSnapshot(
-                ToContentId(recipe.ParentA),
-                ToContentId(recipe.ParentB),
-                ToResultToken(recipe.Result),
+                ToParentSelector(recipe.ParentA),
+                ToParentSelector(recipe.ParentB),
                 AccidentPolicyId: LegacyFusionStrategyPolicies.AccidentPolicyId,
-                MutationPolicyId: LegacyFusionStrategyPolicies.MutationPolicyId));
+                MutationPolicyId: LegacyFusionStrategyPolicies.MutationPolicyId,
+                CompatibilityResultToken: ToResultToken(recipe.Result)));
 
         public bool TryGetEntity(ContentId entityId, out FusionEntitySnapshot? entity)
         {
@@ -124,6 +124,20 @@ namespace JRPGPrototype.Logic.Fusion
 
         private static string ToResultToken(string result) =>
             result is "1" or "-1" ? result : ToContentId(result).ToString();
+
+        private static FusionRecipeParentSelectorSnapshot ToParentSelector(string value)
+        {
+            PersonaData? entity = Database.Personas.Values.FirstOrDefault(persona =>
+                persona.Id.Equals(value, StringComparison.OrdinalIgnoreCase) ||
+                persona.Name.Equals(value, StringComparison.OrdinalIgnoreCase));
+            return entity is null
+                ? new FusionRecipeParentSelectorSnapshot(
+                    FusionParentSelectorKind.Race,
+                    ToContentId(value))
+                : new FusionRecipeParentSelectorSnapshot(
+                    FusionParentSelectorKind.Entity,
+                    ToContentId(entity.Id));
+        }
 
         private static ContentId ResolveEntityId(string? preferred, string? fallback)
         {

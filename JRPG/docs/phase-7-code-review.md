@@ -1,6 +1,6 @@
 # Phase 7 Code Review And Readiness
 
-> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** This review is derived from the source at `00ab189`, the six Phase 7 commits, focused and full test execution, nonincremental builds, and all four clean demos. It does not authorize legacy removal or promote a capability to `clean_parity`.
+> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 is complete; CodeReview-7-2 through CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -16,7 +16,7 @@ Phase 7 achieved meaningful framework-first progress:
 
 The current sample paths are green and are not false demonstrations. They execute real framework services and mutate real clean runtime snapshots.
 
-However, this review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. The most important problem is that the runtime fusion adapter does not faithfully preserve the already-approved content schema: it discards parent selector kinds and silently omits valid recipes with more than two parents. The second is that Compendium recall can accept a runtime instance ID already used in another party/stock collection.
+The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 now resolves the first: runtime recipes preserve authored selector kinds, schema v1 explicitly rejects non-binary recipe cardinality, and clean structured results no longer require fabricated legacy tokens. The remaining high-severity issue is that Compendium recall can accept a runtime instance ID already used in another party/stock collection.
 
 **Verdict:** do not begin Phase 8-36 as though Phase 7 were closed. Resolve the Phase 7 review queue first, then rerun this audit. The current code remains suitable as the existing clean demonstration baseline while those corrections are made.
 
@@ -71,13 +71,13 @@ The comparison baseline is `d2e7922`, the last pre-Phase 7 review/follow-up comm
 
 None.
 
-### High: The catalog fusion adapter loses parent selector kinds and silently drops valid recipe shapes
+### High, resolved by CodeReview-7-1: The catalog fusion adapter loses parent selector kinds and silently drops valid recipe shapes
 
 The authored definition is typed:
 
 - `FusionParentSelectorDefinition` stores both `FusionParentSelectorKind` and `ContentId`.
 - validation treats entity and race references differently;
-- validation currently accepts any recipe with at least two parents.
+- at the initial review point, validation accepted any recipe with at least two parents.
 
 The runtime adapter does not preserve that contract:
 
@@ -95,7 +95,7 @@ Consequences:
 
 There is a second compatibility leak in the same contract. `FusionRecipeSnapshot` still requires a string `ResultToken` even when a structured `FusionRecipeResultSnapshot` exists. The clean catalog adapter fabricates that token through `ToLegacyResultToken(...)`. This keeps legacy representation mandatory in the clean path and lets `TryResolveDirectCreateResult(...)` consult compatibility text before fully respecting the structured operation.
 
-Current tests cover one entity/entity recipe and one race/race recipe. They do not cover mixed selector kinds, selector-ID collisions, or more than two parents.
+At the initial review point, tests covered one entity/entity recipe and one race/race recipe. They did not cover mixed selector kinds, selector-ID collisions, or more than two parents.
 
 **Required correction: CodeReview-7-1**
 
@@ -106,6 +106,18 @@ Current tests cover one entity/entity recipe and one race/race recipe. They do n
   - or change validation to reject anything except the approved binary shape.
 - Never silently omit a validated recipe.
 - Add entity/entity, race/race, entity/race, reversed order, selector-ID collision, and unsupported-cardinality tests.
+
+**CodeReview-7-1 resolution, 2026-07-11:**
+
+- `FusionRecipeSnapshot` now owns two `FusionRecipeParentSelectorSnapshot` values, each preserving `FusionParentSelectorKind` and `ContentId`.
+- Schema v1 now explicitly requires exactly two recipe parents. Sacrificial fusion remains a separate planning input and is not represented as a third recipe parent.
+- The catalog adapter maps every validated binary recipe and throws if malformed unvalidated catalog data reaches it; it no longer filters recipes out.
+- Entity/entity, mixed, and race/race matches are parent-order neutral. More entity-specific matches take precedence, with authored repository order breaking equal-specificity ties.
+- Structured `FusionRecipeResultSnapshot` data is authoritative. `CompatibilityResultToken` is optional and populated only by the protected legacy adapter.
+- The legacy dataset audit found 460 recipes using 30 unique race selector tokens and 4 unique entity selector tokens, with no unknown or ambiguous parent tokens.
+- Regression coverage now proves entity/entity and race/race catalog mapping, mixed selectors, reversed order, selector-ID collision handling, selector specificity, structured-result precedence, one/three-parent rejection, and fail-fast adapter behavior.
+
+This finding is closed. It does not close Phase 7 because CodeReview-7-2 through CodeReview-7-5 remain.
 
 ### High: Compendium recall can return a party snapshot with a duplicate runtime instance ID
 
@@ -239,7 +251,7 @@ This review updates those references. No gameplay behavior or parity status chan
 
 The structured create and rank-offset sample paths work and use `GameDataCatalog`. Specific entity-pair lookup is attempted before race-pair lookup, and result IDs are catalog-validated.
 
-The pass is not contract-complete because the catalog adapter loses selector kinds and cardinality. CodeReview-7-1 is required before this capability can be considered a reliable general framework surface.
+The initial pass was not contract-complete because the catalog adapter lost selector kinds and cardinality. CodeReview-7-1 resolves that contract gap; the broader capability remains `parallel_partial` until the rest of the Phase 7 review queue is complete.
 
 ### 7-31: Slots, mutation, and accidents
 
@@ -369,16 +381,17 @@ The existing tests are valuable, but their green result should be read as proof 
 
 ### Still requiring correction
 
-- clean recipe snapshots still require a legacy-style result token;
+- Compendium recall does not yet enforce runtime-instance uniqueness across the whole party/stock graph;
 - the Training Annex fusion commit directly creates `LegacyStockCapacityPolicy` and Demon transitions;
 - mutation context is replaced with an empty context during accident inheritance;
+- Compendium save validation does not yet reject every invalid stored stat or duplicate skill shape;
 - Compendium default pricing is fixed unless the whole service is replaced.
 
 The large `TrainingAnnexFusionController` and `TrainingAnnexCompendiumController` are not themselves reasons to refactor console presentation now. Only the gameplay coordination identified above should move into the framework. Menu text and demonstration evidence can remain host-owned.
 
 ## Verification Evidence
 
-Live verification on 2026-07-11 produced:
+Initial review verification on 2026-07-11 produced:
 
 | Check | Result |
 | --- | --- |
@@ -393,9 +406,23 @@ Live verification on 2026-07-11 produced:
 
 The build warnings remain in protected legacy console-host code. No new warning was emitted by `JRPG.Framework`.
 
+CodeReview-7-1 follow-up verification on 2026-07-11 produced:
+
+| Check | Result |
+| --- | --- |
+| Focused typed-recipe/catalog contract tests | `33/33` passed |
+| Broad fusion/Compendium regression gate | `113/113` passed |
+| Full solution tests | `899/899` passed, `0` failed, `0` skipped |
+| Framework nonincremental build | succeeded, `0` warnings, `0` errors |
+| Full solution nonincremental build | succeeded, `98` protected legacy-host warnings, `0` errors |
+| Clean battle, field, save, and Training Annex demos | all passed |
+| Framework forbidden-reference scan | no forbidden production references |
+| `git diff --check` | passed |
+| Production/prototype `Data/Jsons` | unchanged |
+
 ## Readiness Decision
 
-Phase 7 is **implemented but not closed**.
+Phase 7 is **implemented but not closed**. CodeReview-7-1 is complete; four required review corrections remain.
 
 It is safe to retain as the current clean demonstration baseline. It is not yet appropriate to move to Phase 8 under the assumption that fusion and Compendium contracts are finished.
 
@@ -403,8 +430,8 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
 
 ## Required Follow-Up Queue
 
-1. **CodeReview-7-1: Preserve the authored fusion recipe contract.**
-   Keep selector kinds/cardinality, stop silently omitting valid content, and make legacy result tokens optional compatibility data.
+1. **CodeReview-7-1: Preserve the authored fusion recipe contract. Completed 2026-07-11.**
+   Runtime selector kinds are preserved, schema v1 is explicitly binary, malformed cardinality is rejected rather than omitted, and legacy result tokens are optional compatibility data.
 2. **CodeReview-7-2: Enforce global runtime identity during recall and stock changes.**
    Reject cross-collection runtime-ID collisions and strengthen save-reference validation.
 3. **CodeReview-7-3: Move clean fusion commit coordination into the framework.**
@@ -415,4 +442,4 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
    Reject duplicate skills and invalid stats before recall or currency mutation.
 6. **Optional design hardening:** extract a narrow Compendium recall-pricing policy before production economy depends on the current sample formula.
 
-After follow-ups 1-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.
+After follow-ups 2-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.

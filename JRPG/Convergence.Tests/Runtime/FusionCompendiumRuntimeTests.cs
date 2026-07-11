@@ -32,23 +32,20 @@ public sealed class FusionCompendiumRuntimeTests
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    Id("pixie"),
-                    Id("slime"),
-                    "direct_child",
+                    EntityParent("pixie"),
+                    EntityParent("slime"),
                     new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("direct_child")),
                     AccidentPolicyId: Id("accident")),
                 new FusionRecipeSnapshot(
-                    Id("fairy"),
-                    Id("element"),
-                    "rank_offset",
+                    RaceParent("fairy"),
+                    RaceParent("element"),
                     new FusionRecipeResultSnapshot(
                         FusionResultOperationKind.RankOffset,
                         ResultRaceId: Id("fairy"),
                         RankOffset: 1)),
                 new FusionRecipeSnapshot(
-                    Id("catalyst"),
-                    Id("pixie"),
-                    "stat_boost",
+                    EntityParent("catalyst"),
+                    EntityParent("pixie"),
                     new FusionRecipeResultSnapshot(
                         FusionResultOperationKind.StatBoost,
                         PolicyId: Id("stat_boost")))
@@ -115,9 +112,8 @@ public sealed class FusionCompendiumRuntimeTests
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    Id("pixie"),
-                    Id("slime"),
-                    "child",
+                    EntityParent("pixie"),
+                    EntityParent("slime"),
                     new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("child")))
             ],
             skills: [frostLance, iceBoost]);
@@ -207,6 +203,12 @@ public sealed class FusionCompendiumRuntimeTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static FusionRecipeParentSelectorSnapshot EntityParent(string id) =>
+        new(FusionParentSelectorKind.Entity, Id(id));
+
+    private static FusionRecipeParentSelectorSnapshot RaceParent(string id) =>
+        new(FusionParentSelectorKind.Race, Id(id));
 
     private static FusionEntitySnapshot Entity(
         string id,

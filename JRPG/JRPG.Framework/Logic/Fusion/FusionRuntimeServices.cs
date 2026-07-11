@@ -76,13 +76,35 @@ public sealed record FusionRecipeResultSnapshot
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 }
 
-public sealed record FusionRecipeSnapshot(
-    ContentId ParentAId,
-    ContentId ParentBId,
-    string ResultToken,
-    FusionRecipeResultSnapshot? Result = null,
-    ContentId? AccidentPolicyId = null,
-    ContentId? MutationPolicyId = null);
+public sealed record FusionRecipeParentSelectorSnapshot(
+    FusionParentSelectorKind Kind,
+    ContentId Id);
+
+public sealed record FusionRecipeSnapshot
+{
+    public FusionRecipeSnapshot(
+        FusionRecipeParentSelectorSnapshot FirstParent,
+        FusionRecipeParentSelectorSnapshot SecondParent,
+        FusionRecipeResultSnapshot? Result = null,
+        ContentId? AccidentPolicyId = null,
+        ContentId? MutationPolicyId = null,
+        string? CompatibilityResultToken = null)
+    {
+        this.FirstParent = FirstParent ?? throw new ArgumentNullException(nameof(FirstParent));
+        this.SecondParent = SecondParent ?? throw new ArgumentNullException(nameof(SecondParent));
+        this.Result = Result;
+        this.AccidentPolicyId = AccidentPolicyId;
+        this.MutationPolicyId = MutationPolicyId;
+        this.CompatibilityResultToken = CompatibilityResultToken;
+    }
+
+    public FusionRecipeParentSelectorSnapshot FirstParent { get; }
+    public FusionRecipeParentSelectorSnapshot SecondParent { get; }
+    public FusionRecipeResultSnapshot? Result { get; }
+    public ContentId? AccidentPolicyId { get; }
+    public ContentId? MutationPolicyId { get; }
+    public string? CompatibilityResultToken { get; }
+}
 
 public sealed record FusionEntitySnapshot
 {
@@ -257,9 +279,7 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return FromPolicy(policyResolution, isAccident, null, policy.Id);
         }
 
-        FusionRecipeSnapshot? recipe =
-            FindRecipe(a.EntityId, b.EntityId) ??
-            FindRecipe(a.RaceId, b.RaceId);
+        FusionRecipeSnapshot? recipe = FindRecipe(a, b);
 
         if (recipe is null)
         {
@@ -290,7 +310,7 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return ResolveAuthoredResult(recipe, a, b, isRecipeAccident, context);
         }
 
-        string token = recipe.ResultToken;
+        string? token = recipe.CompatibilityResultToken;
         if (TryToken(token, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _))
         {
             return Successful(
@@ -304,7 +324,9 @@ public sealed class FusionResultResolver : IFusionResultResolver
         {
             return Failed(
                 FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
-                $"Fusion recipe result token '{token}' requires an explicitly registered compatibility policy.");
+                token is null
+                    ? "Fusion recipe has neither a structured result nor a legacy compatibility result token."
+                    : $"Fusion recipe result token '{token}' requires an explicitly registered compatibility policy.");
         }
 
         FusionPolicyResolution unstructured = _policies.UnstructuredRecipePolicy.Resolve(
@@ -345,13 +367,16 @@ public sealed class FusionResultResolver : IFusionResultResolver
             }
         }
 
+        string? compatibilityToken = recipe.CompatibilityResultToken;
         if (recipe.Result is null &&
-            !(TryToken(recipe.ResultToken, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _)) &&
+            !(TryToken(compatibilityToken, out ContentId tokenId) && _content.TryGetEntity(tokenId, out _)) &&
             _policies.UnstructuredRecipePolicy is null)
         {
             return Failed(
                 FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
-                $"Fusion recipe result token '{recipe.ResultToken}' requires an explicitly registered compatibility policy.");
+                compatibilityToken is null
+                    ? "Fusion recipe has neither a structured result nor a legacy compatibility result token."
+                    : $"Fusion recipe result token '{compatibilityToken}' requires an explicitly registered compatibility policy.");
         }
 
         return null;
@@ -363,18 +388,25 @@ public sealed class FusionResultResolver : IFusionResultResolver
         ContentId secondParentId,
         ContentId secondRaceId)
     {
-        FusionRecipeSnapshot? recipe =
-            FindRecipe(firstParentId, secondParentId) ??
-            FindRecipe(firstRaceId, secondRaceId);
+        FusionRecipeSnapshot? recipe = FindRecipe(
+            firstParentId,
+            firstRaceId,
+            secondParentId,
+            secondRaceId);
 
-        if (recipe is null || !TryToken(recipe.ResultToken, out ContentId resultId))
+        if (recipe?.Result is FusionRecipeResultSnapshot authoredResult)
         {
-            if (recipe?.Result is { Operation: FusionResultOperationKind.CreateEntity, ResultEntityId: ContentId authoredResultId } &&
+            if (authoredResult is { Operation: FusionResultOperationKind.CreateEntity, ResultEntityId: ContentId authoredResultId } &&
                 _content.TryGetEntity(authoredResultId, out _))
             {
                 return authoredResultId;
             }
 
+            return null;
+        }
+
+        if (recipe is null || !TryToken(recipe.CompatibilityResultToken, out ContentId resultId))
+        {
             return null;
         }
 
@@ -489,13 +521,50 @@ public sealed class FusionResultResolver : IFusionResultResolver
         return FromPolicy(resolution, isAccident, recipe, policyId);
     }
 
-    private FusionRecipeSnapshot? FindRecipe(ContentId a, ContentId b) =>
-        _content.GetRecipes().FirstOrDefault(recipe =>
-            recipe.ParentAId == a && recipe.ParentBId == b ||
-            recipe.ParentAId == b && recipe.ParentBId == a);
+    private FusionRecipeSnapshot? FindRecipe(
+        FusionParticipantSnapshot first,
+        FusionParticipantSnapshot second) =>
+        FindRecipe(first.EntityId, first.RaceId, second.EntityId, second.RaceId);
 
-    private static bool TryToken(string token, out ContentId id) =>
-        ContentId.TryParse(token, out id);
+    private FusionRecipeSnapshot? FindRecipe(
+        ContentId firstEntityId,
+        ContentId firstRaceId,
+        ContentId secondEntityId,
+        ContentId secondRaceId) =>
+        _content.GetRecipes()
+            .Where(recipe =>
+                (Matches(recipe.FirstParent, firstEntityId, firstRaceId) &&
+                 Matches(recipe.SecondParent, secondEntityId, secondRaceId)) ||
+                (Matches(recipe.FirstParent, secondEntityId, secondRaceId) &&
+                 Matches(recipe.SecondParent, firstEntityId, firstRaceId)))
+            .OrderByDescending(SelectorSpecificity)
+            .FirstOrDefault();
+
+    private static bool Matches(
+        FusionRecipeParentSelectorSnapshot selector,
+        ContentId entityId,
+        ContentId raceId) =>
+        selector.Kind switch
+        {
+            FusionParentSelectorKind.Entity => selector.Id == entityId,
+            FusionParentSelectorKind.Race => selector.Id == raceId,
+            _ => false
+        };
+
+    private static int SelectorSpecificity(FusionRecipeSnapshot recipe) =>
+        (recipe.FirstParent.Kind == FusionParentSelectorKind.Entity ? 1 : 0) +
+        (recipe.SecondParent.Kind == FusionParentSelectorKind.Entity ? 1 : 0);
+
+    private static bool TryToken(string? token, out ContentId id)
+    {
+        if (token is not null)
+        {
+            return ContentId.TryParse(token, out id);
+        }
+
+        id = default;
+        return false;
+    }
 
     private bool TryRollAccident(
         ContentId? policyId,

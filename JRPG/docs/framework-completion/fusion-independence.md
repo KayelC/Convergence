@@ -14,6 +14,8 @@ The Training Annex clean host currently proves a tiny original-content fusion pa
 
 `JRPG.Framework` does not prescribe Moon Phase gates, a fixed sacrifice bonus, a fixed inheritance table, catalyst race names, or mutation/accident odds. Hosts supply a `FusionPolicyRegistry`. The old prototype rules are isolated in the console-only `LegacyFusionStrategyPolicies` compatibility configuration.
 
+CodeReview-7-1 establishes the clean recipe boundary: schema v1 is explicitly binary, parent selectors retain entity/race kind through runtime resolution, mixed selector recipes are legal, and structured operations are authoritative. The legacy result token is now optional compatibility data and clean catalog recipes do not generate one.
+
 The console Cathedral still uses legacy datasets, live `Combatant` / `Persona` objects, legacy fusion adapters, and existing presentation flows.
 
 ## Problem
@@ -54,4 +56,4 @@ sample_spirit + sample_beast -> sample_construct rank operation
 
 Do not build a full fusion chart yet.
 
-Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. Before presentation work continues, resolve the source-derived follow-ups in `docs/phase-7-code-review.md`: preserve typed recipe selector/cardinality data, centralize commit coordination, enforce recall identity, retain strategy context, and harden Compendium save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.
+Phase 7-35 completed the separate clean Compendium proof without expanding the recipe chart. CodeReview-7-1 has preserved typed recipe selector/cardinality data. Before presentation work continues, resolve CodeReview-7-2 through CodeReview-7-5 in `docs/phase-7-code-review.md`: enforce recall identity, centralize commit coordination, retain strategy context, and harden Compendium save validation. Keep future fusion policies concept-first and explicitly detached from ATLUS race charts, demon names, and spell families.

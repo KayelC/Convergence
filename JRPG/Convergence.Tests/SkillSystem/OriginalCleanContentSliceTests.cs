@@ -417,6 +417,25 @@ public sealed class OriginalCleanContentSliceTests
         var repository = new CatalogFusionContentRepository(catalog);
         FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
         var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50), policies);
+        FusionRecipeSnapshot directRecipe = Assert.Single(repository.GetRecipes(), recipe =>
+            recipe.Result is
+            {
+                Operation: FusionResultOperationKind.CreateEntity,
+                ResultEntityId: ContentId resultId
+            } && resultId == Qualified("ward_shell"));
+        FusionRecipeSnapshot raceRecipe = Assert.Single(repository.GetRecipes(), recipe =>
+            recipe.Result?.Operation == FusionResultOperationKind.RankOffset);
+
+        Assert.Equal(FusionParentSelectorKind.Entity, directRecipe.FirstParent.Kind);
+        Assert.Equal(Qualified("ashling"), directRecipe.FirstParent.Id);
+        Assert.Equal(FusionParentSelectorKind.Entity, directRecipe.SecondParent.Kind);
+        Assert.Equal(Qualified("bramble_runner"), directRecipe.SecondParent.Id);
+        Assert.Null(directRecipe.CompatibilityResultToken);
+        Assert.Equal(FusionParentSelectorKind.Race, raceRecipe.FirstParent.Kind);
+        Assert.Equal(Qualified("annex_spirit"), raceRecipe.FirstParent.Id);
+        Assert.Equal(FusionParentSelectorKind.Race, raceRecipe.SecondParent.Kind);
+        Assert.Equal(Qualified("annex_beast"), raceRecipe.SecondParent.Id);
+        Assert.Null(raceRecipe.CompatibilityResultToken);
 
         FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
             Participant(catalog.GetRequiredEntity(Qualified("ashling")), "ashling_parent"),

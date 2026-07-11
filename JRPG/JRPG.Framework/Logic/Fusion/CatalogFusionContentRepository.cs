@@ -1,4 +1,3 @@
-using System.Globalization;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 
@@ -14,8 +13,6 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _recipes = Array.AsReadOnly(_catalog.FusionRecipes.Values
             .Select(ToRecipeSnapshot)
-            .Where(recipe => recipe is not null)
-            .Cast<FusionRecipeSnapshot>()
             .ToArray());
     }
 
@@ -48,20 +45,20 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
     public IReadOnlyList<SkillDefinition> GetSkills() =>
         Array.AsReadOnly(_catalog.Skills.Values.ToArray());
 
-    private static FusionRecipeSnapshot? ToRecipeSnapshot(FusionRecipeDefinition recipe)
+    private static FusionRecipeSnapshot ToRecipeSnapshot(FusionRecipeDefinition recipe)
     {
         if (recipe.Parents.Count != 2)
         {
-            return null;
+            throw new InvalidOperationException(
+                $"Fusion recipe '{recipe.Id}' must contain exactly two parent selectors.");
         }
 
         FusionParentSelectorDefinition first = recipe.Parents[0];
         FusionParentSelectorDefinition second = recipe.Parents[1];
         FusionRecipeResultSnapshot result = ToResultSnapshot(recipe.Result);
         return new FusionRecipeSnapshot(
-            first.Id,
-            second.Id,
-            ToLegacyResultToken(recipe.Result),
+            new FusionRecipeParentSelectorSnapshot(first.Kind, first.Id),
+            new FusionRecipeParentSelectorSnapshot(second.Kind, second.Id),
             result,
             recipe.AccidentPolicyId,
             recipe.MutationPolicyId);
@@ -75,16 +72,4 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
             result.RankOffset,
             result.PolicyId,
             result.Parameters);
-
-    private static string ToLegacyResultToken(FusionResultDefinition result) =>
-        result.Operation switch
-        {
-            FusionResultOperationKind.CreateEntity when result.ResultEntityId is ContentId entityId =>
-                entityId.ToString(),
-            FusionResultOperationKind.RankOffset when result.ResultRaceId is ContentId raceId =>
-                raceId.ToString(),
-            FusionResultOperationKind.RankOffset when result.RankOffset is int offset =>
-                offset.ToString(CultureInfo.InvariantCulture),
-            _ => result.Operation.ToString()
-        };
 }

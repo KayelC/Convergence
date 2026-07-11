@@ -126,9 +126,8 @@ public sealed class FusionStrategyPolicyTests
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    Id("catalyst_core"),
-                    Id("target"),
-                    "stat_boost",
+                    EntityParent("catalyst_core"),
+                    EntityParent("target"),
                     new FusionRecipeResultSnapshot(
                         FusionResultOperationKind.StatBoost,
                         PolicyId: catalystPolicy.Id))
@@ -208,7 +207,10 @@ public sealed class FusionStrategyPolicyTests
         TestFusionRepository repository = Repository(
             recipes:
             [
-                new FusionRecipeSnapshot(Id("parent_a"), Id("parent_b"), "legacy_race_token")
+                new FusionRecipeSnapshot(
+                    EntityParent("parent_a"),
+                    EntityParent("parent_b"),
+                    CompatibilityResultToken: "legacy_race_token")
             ]);
         var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
 
@@ -221,6 +223,115 @@ public sealed class FusionStrategyPolicyTests
     }
 
     [Fact]
+    public void Resolver_MatchesMixedSelectorsInEitherParticipantOrder()
+    {
+        FusionRecipeSnapshot mixedRecipe = new(
+            EntityParent("parent_a"),
+            RaceParent("race_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("child")));
+        TestFusionRepository repository = Repository(recipes: [mixedRecipe]);
+        var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
+        FusionParticipantSnapshot first = Participant("parent_a", "race_a");
+        FusionParticipantSnapshot second = Participant("parent_b", "race_b");
+
+        FusionResolvedResult forward = resolver.Resolve(new FusionResultRequest(first, second));
+        FusionResolvedResult reversed = resolver.Resolve(new FusionResultRequest(second, first));
+
+        Assert.Equal(Id("child"), forward.ResultEntityId);
+        Assert.Equal(Id("child"), reversed.ResultEntityId);
+        Assert.Same(mixedRecipe, forward.MatchedRecipe);
+        Assert.Same(mixedRecipe, reversed.MatchedRecipe);
+    }
+
+    [Fact]
+    public void Resolver_UsesSelectorKindsToDisambiguateCollidingIds()
+    {
+        FusionRecipeSnapshot entityRecipe = new(
+            EntityParent("shared_a"),
+            EntityParent("shared_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("entity_child")));
+        FusionRecipeSnapshot raceRecipe = new(
+            RaceParent("shared_a"),
+            RaceParent("shared_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("race_child")));
+        var repository = new TestFusionRepository(
+            [
+                Entity("actual_a", "shared_a"),
+                Entity("actual_b", "shared_b"),
+                Entity("entity_child", "result"),
+                Entity("race_child", "result")
+            ],
+            [entityRecipe, raceRecipe],
+            []);
+        var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
+
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
+            Participant("actual_a", "shared_a"),
+            Participant("actual_b", "shared_b")));
+
+        Assert.Equal(Id("race_child"), result.ResultEntityId);
+        Assert.Same(raceRecipe, result.MatchedRecipe);
+    }
+
+    [Fact]
+    public void Resolver_PrefersTheMostSpecificMatchingTypedRecipe()
+    {
+        FusionRecipeSnapshot raceRecipe = new(
+            RaceParent("race_a"),
+            RaceParent("race_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("race_child")));
+        FusionRecipeSnapshot entityRecipe = new(
+            EntityParent("parent_a"),
+            EntityParent("parent_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("entity_child")));
+        var repository = new TestFusionRepository(
+            [
+                Entity("parent_a", "race_a"),
+                Entity("parent_b", "race_b"),
+                Entity("race_child", "result"),
+                Entity("entity_child", "result")
+            ],
+            [raceRecipe, entityRecipe],
+            []);
+        var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
+
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
+            Participant("parent_a", "race_a"),
+            Participant("parent_b", "race_b")));
+
+        Assert.Equal(Id("entity_child"), result.ResultEntityId);
+        Assert.Same(entityRecipe, result.MatchedRecipe);
+    }
+
+    [Fact]
+    public void Resolver_TreatsStructuredResultsAsAuthoritativeOverCompatibilityTokens()
+    {
+        FusionRecipeSnapshot recipe = new(
+            EntityParent("parent_a"),
+            EntityParent("parent_b"),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.RankOffset,
+                ResultRaceId: Id("race_child"),
+                RankOffset: 1),
+            CompatibilityResultToken: "target");
+        TestFusionRepository repository = Repository(recipes: [recipe]);
+        var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
+
+        ContentId? direct = resolver.TryResolveDirectCreateResult(
+            Id("parent_a"),
+            Id("race_a"),
+            Id("parent_b"),
+            Id("race_b"));
+        FusionResolvedResult resolved = resolver.Resolve(new FusionResultRequest(
+            Participant("parent_a", "race_a"),
+            Participant("parent_b", "race_b")));
+
+        Assert.Null(direct);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, resolved.Operation);
+        Assert.Equal(Id("child"), resolved.ResultEntityId);
+    }
+
+    [Fact]
     public void Resolver_ValidatesRegisteredCustomPolicyResults()
     {
         var policy = new UnknownEntityResultPolicy();
@@ -228,9 +339,8 @@ public sealed class FusionStrategyPolicyTests
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    Id("parent_a"),
-                    Id("parent_b"),
-                    "special",
+                    EntityParent("parent_a"),
+                    EntityParent("parent_b"),
                     new FusionRecipeResultSnapshot(
                         FusionResultOperationKind.Special,
                         PolicyId: policy.Id))
@@ -289,9 +399,8 @@ public sealed class FusionStrategyPolicyTests
         string? accidentPolicyId = null,
         string? mutationPolicyId = null) =>
         new(
-            Id(parentA),
-            Id(parentB),
-            child,
+            EntityParent(parentA),
+            EntityParent(parentB),
             new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id(child)),
             accidentPolicyId is null ? null : Id(accidentPolicyId),
             mutationPolicyId is null ? null : Id(mutationPolicyId));
@@ -353,6 +462,12 @@ public sealed class FusionStrategyPolicyTests
             new SkillInheritanceDefinition(true));
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static FusionRecipeParentSelectorSnapshot EntityParent(string id) =>
+        new(FusionParentSelectorKind.Entity, Id(id));
+
+    private static FusionRecipeParentSelectorSnapshot RaceParent(string id) =>
+        new(FusionParentSelectorKind.Race, Id(id));
 
     private sealed class TestFusionRepository : IFusionContentRepository
     {
