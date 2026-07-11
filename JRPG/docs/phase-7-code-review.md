@@ -1,6 +1,6 @@
 # Phase 7 Code Review And Readiness
 
-> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 through CodeReview-7-3. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1, CodeReview-7-2, and CodeReview-7-3 are complete; CodeReview-7-4 and CodeReview-7-5 remain required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
+> **Status: Initial implementation audit for Phase 7-30 through Phase 7-35, amended after CodeReview-7-1 through CodeReview-7-4. Phase 7 is stable for the demonstrated Training Annex paths, but it is not yet ready to be closed.** CodeReview-7-1 through CodeReview-7-4 are complete; CodeReview-7-5 remains required. This review began from source at `00ab189` and is updated from the implementation itself. It does not authorize legacy removal or promote a capability to `clean_parity`.
 
 ## Executive Verdict
 
@@ -16,7 +16,7 @@ Phase 7 achieved meaningful framework-first progress:
 
 The current sample paths are green and are not false demonstrations. They execute real framework services and mutate real clean runtime snapshots.
 
-The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding. CodeReview-7-3 resolves fusion commit ownership by moving preparation, actor construction, parent consumption, typed result placement, and rollback decisions into one injected framework service. The remaining required findings concern accident-strategy context and Compendium entry validation.
+The initial review found two high-severity framework contract/integrity gaps and three medium-severity ownership/validation gaps. CodeReview-7-1 resolves the recipe-contract finding. CodeReview-7-2 resolves the runtime-identity finding. CodeReview-7-3 resolves fusion commit ownership by moving preparation, actor construction, parent consumption, typed result placement, and rollback decisions into one injected framework service. CodeReview-7-4 resolves accident-strategy context loss. The remaining required finding concerns Compendium entry validation.
 
 **Verdict:** do not begin Phase 8-36 as though Phase 7 were closed. Resolve the Phase 7 review queue first, then rerun this audit. The current code remains suitable as the existing clean demonstration baseline while those corrections are made.
 
@@ -117,7 +117,7 @@ At the initial review point, tests covered one entity/entity recipe and one race
 - The legacy dataset audit found 460 recipes using 30 unique race selector tokens and 4 unique entity selector tokens, with no unknown or ambiguous parent tokens.
 - Regression coverage now proves entity/entity and race/race catalog mapping, mixed selectors, reversed order, selector-ID collision handling, selector specificity, structured-result precedence, one/three-parent rejection, and fail-fast adapter behavior.
 
-This finding is closed. It does not close Phase 7 because CodeReview-7-4 and CodeReview-7-5 remain after the separate identity and transaction corrections.
+This finding is closed. It does not close Phase 7 because CodeReview-7-5 remains after the separate identity, transaction, and policy-context corrections.
 
 ### High, resolved by CodeReview-7-2: Compendium recall can return a party snapshot with a duplicate runtime instance ID
 
@@ -206,7 +206,7 @@ The controller does this safely for its sample because all intermediate snapshot
 
 This finding is closed after the follow-up audit. A Godot host can use the same prepare/confirm/commit boundary without reproducing stock math or rollback ordering or supplying mutable result-construction choices after confirmation.
 
-### Medium: Accident inheritance drops the plan's policy context
+### Medium, resolved by CodeReview-7-4: Accident inheritance dropped the plan's policy context
 
 `FusionPlanningService.CreatePlan(...)` correctly passes `FusionPolicyContext` into:
 
@@ -226,6 +226,15 @@ This contradicts the Phase 7-34 promise that optional host/session facts flow co
 - Pass that context to every mutation call.
 - Review the context-free `GetInheritanceSlotCount(...)` helper and either mark it deliberately context-free or add an explicit context overload.
 - Add a recording mutation policy test that fails unless the exact authored context reaches accident inheritance.
+
+**Resolution, 2026-07-11:**
+
+- `FusionPlanningResult` now retains the exact immutable `FusionPolicyContext` used by planning, including unsuccessful planning results.
+- `CreateAccidentInheritance(...)` passes that retained context to every registered mutation-policy invocation. Callers cannot accidentally substitute a different context after preview/planning.
+- The existing one-argument `GetInheritanceSlotCount(...)` remains an intentional context-free compatibility helper and delegates through `FusionPolicyContext.Empty`; a second overload requires an explicit context for context-sensitive slot policies.
+- Recording slot and mutation policy tests assert object identity and authored flag/numeric values, so a future empty-context substitution will fail even when the built-in adjacent-tier policy would produce the same skill IDs.
+
+This finding is closed. The correction changes no built-in fusion outcome; it makes developer-supplied policies receive consistent host/session facts across planning and accident mutation.
 
 ### Medium: Compendium save validation does not enforce all entry invariants
 
@@ -298,7 +307,7 @@ The inheritance planner is one of the strongest Phase 7 components:
 - preserves the approved passive-fodder rule;
 - does not inspect display names or descriptions.
 
-Tiered slots and mutation are opt-in policies. The remaining defect is context loss in accident inheritance, covered by CodeReview-7-4.
+Tiered slots and mutation are opt-in policies. CodeReview-7-4 closes the context gap by retaining planning context through accident mutation and by making contextual versus context-free standalone slot calculation explicit.
 
 The clean transaction does not yet commit an actual accident outcome. That remains an honest scope boundary because the owner has not approved a final accident design.
 
@@ -476,9 +485,24 @@ CodeReview-7-3 follow-up verification on 2026-07-11 produced:
 | `git diff --check` | passed |
 | Production/prototype `Data/Jsons` | unchanged |
 
+CodeReview-7-4 follow-up verification on 2026-07-11 produced:
+
+| Check | Result |
+| --- | --- |
+| Focused fusion strategy and transaction tests | `27/27` passed, `0` failed, `0` skipped |
+| Broad fusion, stock, persistence, host, boundary, and roadmap gate | `200/200` passed, `0` failed, `0` skipped |
+| Full solution tests | `932/932` passed, `0` failed, `0` skipped |
+| Framework nonincremental build | succeeded, `0` warnings, `0` errors |
+| Full solution nonincremental build | succeeded, `98` protected legacy-host warnings, `0` errors |
+| Clean battle, field, save, and Training Annex demos | all passed; save snapshots validated with `0` diagnostics |
+| Documentation, parity-ledger, and framework-boundary guard tests | `10/10` passed |
+| Framework forbidden-reference and stale-context scans | no forbidden production references; accident inheritance contains no empty-context substitution |
+| `git diff --check` | passed |
+| Production/prototype `Data/Jsons` | unchanged |
+
 ## Readiness Decision
 
-Phase 7 is **implemented but not closed**. CodeReview-7-1 through CodeReview-7-3 are complete; two required review corrections remain.
+Phase 7 is **implemented but not closed**. CodeReview-7-1 through CodeReview-7-4 are complete; one required review correction remains.
 
 It is safe to retain as the current clean demonstration baseline. It is not yet appropriate to move to Phase 8 under the assumption that fusion and Compendium contracts are finished.
 
@@ -492,10 +516,10 @@ No legacy removal is authorized. Every Phase 7 capability remains `parallel_part
    Recall and stock transitions reject cross-collection runtime-ID collisions before mutation, while save validation enforces legal overlap and actor/entity reference consistency.
 3. **CodeReview-7-3: Move clean fusion commit coordination into the framework. Completed 2026-07-11.**
    Validated preparation and stale-safe commit now honor owner kind and injected stock/actor policies in typed immutable results.
-4. **CodeReview-7-4: Preserve strategy context through accident inheritance.**
-   Add a recording contextual mutation-policy regression.
+4. **CodeReview-7-4: Preserve strategy context through accident inheritance. Completed 2026-07-11.**
+   Planning results retain immutable policy context, every accident mutation receives it, and explicit recording-policy regressions protect both mutation and standalone slot-helper context behavior.
 5. **CodeReview-7-5: Harden Compendium entry/save validation.**
    Reject duplicate skills and invalid stats before recall or currency mutation.
 6. **Optional design hardening:** extract a narrow Compendium recall-pricing policy before production economy depends on the current sample formula.
 
-After follow-ups 4-5 are complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.
+After follow-up 5 is complete, rerun the focused Phase 7 gate, full suite, builds, demos, boundary scans, and this readiness review. Phase 8-36 can then begin from a genuinely reviewed Phase 7 baseline.

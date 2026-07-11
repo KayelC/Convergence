@@ -87,6 +87,33 @@ public sealed class FusionStrategyPolicyTests
     }
 
     [Fact]
+    public void InheritanceSlotHelper_UsesExplicitContextWhileTheCompatibilityOverloadIsContextFree()
+    {
+        var slotPolicy = new RecordingInheritanceSlotPolicy();
+        var policies = new FusionPolicyRegistry(
+            slotPolicy,
+            new FixedFusionSacrificePolicy(true));
+        var planner = new FusionPlanningService(
+            Repository(recipes: []),
+            new ThrowingFusionResultResolver(),
+            new ThrowingRandomSource(),
+            policies);
+        var context = new FusionPolicyContext(
+            [Id("advanced_slots")],
+            [new KeyValuePair<ContentId, decimal>(Id("progress"), 4)]);
+
+        int contextualCount = planner.GetInheritanceSlotCount([Skill("skill_1")], context);
+        int contextFreeCount = planner.GetInheritanceSlotCount([Skill("skill_1")]);
+
+        Assert.Equal(1, contextualCount);
+        Assert.Equal(1, contextFreeCount);
+        Assert.Collection(
+            slotPolicy.Contexts,
+            received => Assert.Same(context, received),
+            received => Assert.Same(FusionPolicyContext.Empty, received));
+    }
+
+    [Fact]
     public void Planner_RejectsDisabledSacrificeBeforeResolvingOrUsingRandomness()
     {
         TestFusionRepository repository = Repository(recipes: []);
@@ -199,6 +226,54 @@ public sealed class FusionStrategyPolicyTests
         Assert.False(result.IsSuccessful);
         Assert.Equal(FusionRuntimeDiagnosticCode.PolicyNotRegistered, Assert.Single(result.Result.Diagnostics).Code);
         Assert.Throws<InvalidOperationException>(() => planner.MutateSkill(Id("skill_1"), Id("missing_mutation")));
+    }
+
+    [Fact]
+    public void AccidentInheritance_PreservesThePlanningContextForEveryMutation()
+    {
+        var mutationPolicy = new RecordingMutationPolicy(Id("contextual_mutation"));
+        TestFusionRepository repository = Repository(
+            recipes:
+            [
+                CreateRecipe(
+                    "parent_a",
+                    "parent_b",
+                    "child",
+                    mutationPolicyId: mutationPolicy.Id.ToString())
+            ],
+            skills: [Skill("skill_1"), Skill("skill_2")]);
+        FusionPolicyRegistry policies = Policies(mutationPolicies: [mutationPolicy]);
+        var random = new MinimumRandomSource();
+        var resolver = new FusionResultResolver(repository, random, policies);
+        var planner = new FusionPlanningService(repository, resolver, random, policies);
+        var context = new FusionPolicyContext(
+            [Id("mutation_unlocked")],
+            [new KeyValuePair<ContentId, decimal>(Id("story_progress"), 7)]);
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1", "skill_2"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false,
+            context));
+
+        IReadOnlyList<ContentId> inherited = planner.CreateAccidentInheritance(
+            plan,
+            [Id("skill_1"), Id("skill_2")],
+            maximumSlots: 2);
+
+        Assert.True(plan.IsSuccessful);
+        Assert.Same(context, plan.PolicyContext);
+        Assert.Equal([Id("skill_1"), Id("skill_2")], inherited);
+        Assert.Collection(
+            mutationPolicy.Requests,
+            request => Assert.Same(context, request.Context),
+            request => Assert.Same(context, request.Context));
+        Assert.All(mutationPolicy.Requests, request =>
+        {
+            Assert.True(request.Context.HasFlag(Id("mutation_unlocked")));
+            Assert.True(request.Context.TryGetNumericValue(Id("story_progress"), out decimal progress));
+            Assert.Equal(7, progress);
+        });
     }
 
     [Fact]
@@ -525,6 +600,40 @@ public sealed class FusionStrategyPolicyTests
             ContentId secondParentId,
             ContentId secondRaceId) =>
             throw new InvalidOperationException("Resolution must not run for a rejected sacrifice request.");
+    }
+
+    private sealed class RecordingInheritanceSlotPolicy : IFusionInheritanceSlotPolicy
+    {
+        private readonly List<FusionPolicyContext> _contexts = [];
+
+        public IReadOnlyList<FusionPolicyContext> Contexts => _contexts;
+
+        public int GetMaximumSlots(FusionInheritanceSlotPolicyRequest request)
+        {
+            _contexts.Add(request.Context);
+            return request.LegalSkills.Count;
+        }
+    }
+
+    private sealed class RecordingMutationPolicy(ContentId id) : IFusionMutationPolicy
+    {
+        private readonly List<FusionMutationPolicyRequest> _requests = [];
+
+        public ContentId Id { get; } = id;
+        public IReadOnlyList<FusionMutationPolicyRequest> Requests => _requests;
+
+        public ContentId Mutate(FusionMutationPolicyRequest request, IRandomSource random)
+        {
+            _requests.Add(request);
+            return request.SkillId;
+        }
+    }
+
+    private sealed class MinimumRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => 0m;
     }
 
     private sealed class UnknownEntityResultPolicy : IFusionResultPolicy

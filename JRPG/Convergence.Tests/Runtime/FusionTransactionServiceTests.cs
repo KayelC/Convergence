@@ -184,7 +184,8 @@ public sealed class FusionTransactionServiceTests
             context.Plan.ExclusiveSkillIds,
             context.Plan.DisplaySkills,
             context.Plan.MaximumInheritanceSlots,
-            context.Plan.SacrificeDecision);
+            context.Plan.SacrificeDecision,
+            context.Plan.PolicyContext);
         RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
         var service = new FusionTransactionService(
             context.ActorFactory,
@@ -354,7 +355,8 @@ public sealed class FusionTransactionServiceTests
             Array.Empty<ContentId>(),
             Array.Empty<FusionInheritanceEntry>(),
             maximumInheritanceSlots: 0,
-            sacrificeDecision: null);
+            sacrificeDecision: null,
+            policyContext: FusionPolicyContext.Empty);
         FusionInheritancePlan selectionPlan = new FusionInheritancePlanner().CreatePlan(
             new FusionInheritancePlanRequest(
                 targetDefinition,

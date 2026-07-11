@@ -74,6 +74,8 @@ Phase 7-33 adds `Commit Fusion Transaction` to the clean Training Annex host. Co
 
 Phase 7-34 requires explicit strategy policies. Neutral `create_entity` and `rank_offset` results are authored operations. `stat_boost` and `special` results require registered policy handlers. Recipe accident and mutation IDs survive catalog mapping and missing runtime registrations reject with typed diagnostics. Sacrifice availability and bonus slots are decided by `IFusionSacrificePolicy`; slot scaling is decided by `IFusionInheritanceSlotPolicy`; optional host/session facts travel through `FusionPolicyContext`. The framework contains no Moon Phase, Mitama, Element-catalyst, catalyst-name, or fixed probability assumptions.
 
+CodeReview-7-4 closes the strategy-context lifecycle: `FusionPlanningResult` retains the immutable context supplied to planning and accident inheritance passes it to every mutation policy. The original one-argument slot-count helper is explicitly context-free; hosts with context-sensitive slot policies use the overload that requires `FusionPolicyContext`.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.

@@ -698,7 +698,8 @@ public sealed record FusionPlanningResult
         IReadOnlyList<ContentId> exclusiveSkillIds,
         IReadOnlyList<FusionInheritanceEntry> displaySkills,
         int maximumInheritanceSlots,
-        FusionSacrificePolicyDecision? sacrificeDecision)
+        FusionSacrificePolicyDecision? sacrificeDecision,
+        FusionPolicyContext policyContext)
     {
         Result = result;
         ResultEntity = resultEntity;
@@ -712,6 +713,7 @@ public sealed record FusionPlanningResult
         DisplaySkills = displaySkills;
         MaximumInheritanceSlots = maximumInheritanceSlots;
         SacrificeDecision = sacrificeDecision;
+        PolicyContext = policyContext ?? throw new ArgumentNullException(nameof(policyContext));
     }
 
     public FusionResolvedResult Result { get; }
@@ -727,12 +729,16 @@ public sealed record FusionPlanningResult
     public IReadOnlyList<FusionInheritanceEntry> DisplaySkills { get; }
     public int MaximumInheritanceSlots { get; }
     public FusionSacrificePolicyDecision? SacrificeDecision { get; }
+    public FusionPolicyContext PolicyContext { get; }
 }
 
 public interface IFusionPlanningService
 {
     FusionPlanningResult CreatePlan(FusionPlanningRequest request);
     int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills);
+    int GetInheritanceSlotCount(
+        IEnumerable<SkillDefinition> legalSkills,
+        FusionPolicyContext context);
     ContentId MutateSkill(ContentId skillId, ContentId policyId, FusionPolicyContext? context = null);
     IReadOnlyList<ContentId> CreateAccidentInheritance(
         FusionPlanningResult plan,
@@ -774,7 +780,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
             {
                 return Empty(FailedPlanningResult(
                     FusionRuntimeDiagnosticCode.InvalidSacrifice,
-                    "Sacrificial fusion requires a sacrifice participant."));
+                    "Sacrificial fusion requires a sacrifice participant."), context);
             }
 
             sacrificeDecision = _policies.SacrificePolicy.Assess(new FusionSacrificePolicyRequest(
@@ -786,14 +792,14 @@ public sealed class FusionPlanningService : IFusionPlanningService
             {
                 return Empty(FailedPlanningResult(
                     FusionRuntimeDiagnosticCode.SacrificeNotAllowed,
-                    sacrificeDecision.RejectionMessage ?? "Sacrificial fusion is not enabled."));
+                    sacrificeDecision.RejectionMessage ?? "Sacrificial fusion is not enabled."), context);
             }
         }
         else if (request.Sacrifice is not null)
         {
             return Empty(FailedPlanningResult(
                 FusionRuntimeDiagnosticCode.InvalidSacrifice,
-                "A sacrifice participant was supplied for a non-sacrificial fusion request."));
+                "A sacrifice participant was supplied for a non-sacrificial fusion request."), context);
         }
 
         FusionResolvedResult result = _resolver.Resolve(new FusionResultRequest(
@@ -804,7 +810,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
             result.ResultEntityId is not ContentId resultEntityId ||
             !_content.TryGetEntity(resultEntityId, out FusionEntitySnapshot? resultEntity))
         {
-            return Empty(result);
+            return Empty(result, context);
         }
 
         if (result.MatchedRecipe?.MutationPolicyId is ContentId mutationPolicyId &&
@@ -812,7 +818,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
         {
             return Empty(FailedPlanningResult(
                 FusionRuntimeDiagnosticCode.PolicyNotRegistered,
-                $"Fusion mutation policy '{mutationPolicyId}' is not registered."));
+                $"Fusion mutation policy '{mutationPolicyId}' is not registered."), context);
         }
 
         FusionParticipantSnapshot? previewBaseline = result.Operation == FusionRuntimeOperation.StatBoost
@@ -877,17 +883,24 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Snapshot(exclusive),
             Snapshot(display),
             maxSlots,
-            sacrificeDecision);
+            sacrificeDecision,
+            context);
     }
 
-    public int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills)
+    public int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills) =>
+        GetInheritanceSlotCount(legalSkills, FusionPolicyContext.Empty);
+
+    public int GetInheritanceSlotCount(
+        IEnumerable<SkillDefinition> legalSkills,
+        FusionPolicyContext context)
     {
         ArgumentNullException.ThrowIfNull(legalSkills);
+        ArgumentNullException.ThrowIfNull(context);
         return _policies.InheritanceSlotPolicy.GetMaximumSlots(
             new FusionInheritanceSlotPolicyRequest(
                 Array.AsReadOnly(legalSkills.ToArray()),
                 0,
-                FusionPolicyContext.Empty));
+                context));
     }
 
     public ContentId MutateSkill(
@@ -928,7 +941,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
         {
             for (int i = 0; i < shuffled.Count; i++)
             {
-                shuffled[i] = MutateSkill(shuffled[i], policyId, FusionPolicyContext.Empty);
+                shuffled[i] = MutateSkill(shuffled[i], policyId, plan.PolicyContext);
             }
         }
 
@@ -958,7 +971,9 @@ public sealed class FusionPlanningService : IFusionPlanningService
         return result;
     }
 
-    private static FusionPlanningResult Empty(FusionResolvedResult result) =>
+    private static FusionPlanningResult Empty(
+        FusionResolvedResult result,
+        FusionPolicyContext context) =>
         new(
             result,
             null,
@@ -971,7 +986,8 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Array.AsReadOnly(Array.Empty<ContentId>()),
             Array.AsReadOnly(Array.Empty<FusionInheritanceEntry>()),
             0,
-            null);
+            null,
+            context);
 
     private static FusionResolvedResult FailedPlanningResult(
         FusionRuntimeDiagnosticCode code,

@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 and CodeReview-7-5 must be completed before Phase 8 begins.
+Phase 7 review status: implemented but not closed. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 preserves policy context through accident mutation and makes standalone slot-policy context explicit. CodeReview-7-5 must be completed before Phase 8 begins.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -1004,7 +1004,7 @@ CodeReview-7-3 transaction amendment:
 - rejected commits report no applied consumption or transitions; planned evidence remains explicitly available from the prepared token;
 - Training Annex obtains `standard_stock_capacity` from the catalog ruleset binding and no longer creates a legacy capacity policy or executes stock transitions inside its fusion controller;
 - the host remains responsible only for proposed identity, presentation, confirmation, and applying an `Applied` result;
-- the capability remains `parallel_partial`; CodeReview-7-4 and CodeReview-7-5 still gate Phase 8.
+- the capability remains `parallel_partial`; CodeReview-7-5 still gates Phase 8.
 - Verification after the post-interruption source audit: the broad fusion, stock, persistence, host, boundary, and roadmap gate passed `198/198`; the full suite passed `930/930` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 34. `fusion_strategies`
@@ -1028,10 +1028,12 @@ Phase 7-34 result:
 - `TieredFusionInheritanceSlotPolicy`, `FixedFusionSacrificePolicy`, percentage/contextual accident policies, adjacent-tier mutation, and typed catalyst stat boosts are reusable opt-in implementations. Hosts may replace or omit them.
 - The framework no longer contains `mitama`, `element`-catalyst, Full Moon, catalyst-name, fixed `+2` sacrifice, fixed slot-table, or fixed 20% mutation assumptions. `FusionPreviewService` consumes typed policy-produced stat results instead of inspecting IDs or display names.
 - `CatalogFusionContentRepository` preserves authored accident IDs, mutation IDs, result-policy IDs, and result parameters in runtime recipe snapshots. Missing policy registrations fail with typed diagnostics before gameplay falls back or mutates state.
+- CodeReview-7-4 stores the immutable policy context on `FusionPlanningResult` and reuses it for every accident mutation. The standalone slot-count helper now exposes an explicit contextual overload while retaining its original context-free overload deliberately.
 - `--clean-training-annex-play` explicitly selects a neutral sample policy set: 1% accident chance, 20% adjacent-tier mutation, the reviewed slot tiers, and an enabled two-slot sacrifice bonus. Its fusion evidence records the policy IDs and bonus used.
 - The old Cathedral behavior remains available only through `LegacyFusionStrategyPolicies` in the console host. That adapter preserves the existing Moon Phase accident odds, legacy result tokens, catalyst stat boosts, rank handling, and external 20% mutation roll without teaching those concepts to `JRPG.Framework`.
 - This remains `parallel_partial`: the clean original-content consumer is policy-driven and legacy calculations delegate through a compatibility policy, but the Cathedral's live transaction strategy classes remain active and Compendium work remains Phase 7-35. No removal is authorized.
 - Verification: focused strategy-policy tests passed `9/9`, protected fusion compatibility tests passed `63/63`, all Training Annex host tests passed `86/86`, and the full suite passed `877/877` with no skips. The framework build remained at `0` warnings; the solution retained `98` pre-existing legacy-host warnings. Clean battle, field, save, and Training Annex demos passed. `git diff --check` passed with line-ending normalization notices only, framework forbidden-reference and legacy-fusion-token searches returned no matches, and `Data/Jsons` remained unchanged.
+- CodeReview-7-4 verification: focused strategy/transaction tests passed `27/27`, the broad Phase 7 gate passed `200/200`, and the full suite passed `932/932` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 35. `compendium`
 
@@ -1068,7 +1070,7 @@ CodeReview-7-2 integrity amendment:
 - Demon/Persona stock additions and replacements reject cross-role runtime-ID reuse with a typed transition code;
 - save validation rejects illegal cross-list identity reuse and party/stock references whose entity ID disagrees with the referenced actor snapshot;
 - active party plus Demon-stock overlap for the same owned demon remains legal by explicit rule rather than by omission;
-- the capability remains `parallel_partial`, and CodeReview-7-4 plus CodeReview-7-5 still gate Phase 8.
+- the capability remains `parallel_partial`, and CodeReview-7-5 still gates Phase 8.
 - Verification: the focused identity, recall, stock, persistence, host, and ledger gate passed `166/166`; the full suite passed `915/915` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 36. `console_presentation`

@@ -923,6 +923,8 @@ Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Res
 
 Phase 7-35 verification passed `148/148` focused capability, boundary, and protected-legacy tests and `893/893` full-suite tests with no failures or skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all clean demos pass, the framework boundary search returns no matches, and `Data/Jsons` is unchanged.
 
-The Phase 7 source review found framework corrections that must precede Phase 8-36. CodeReview-7-1 through CodeReview-7-3 have completed recipe fidelity, runtime identity, and transaction ownership. CodeReview-7-4 and CodeReview-7-5 still own policy-context propagation and Compendium save validation. No additional console presentation work should be invented while those framework corrections remain open.
+The Phase 7 source review found framework corrections that must precede Phase 8-36. CodeReview-7-1 through CodeReview-7-4 have completed recipe fidelity, runtime identity, transaction ownership, and policy-context propagation. CodeReview-7-5 still owns Compendium save validation. No additional console presentation work should be invented while that framework correction remains open.
+
+CodeReview-7-4 verification passed `27/27` focused strategy/transaction tests, `200/200` broad Phase 7 tests, and `932/932` full-suite tests. The framework build remained at `0` warnings, all four clean demos passed, and no content data changed.
 
 Then attach one feature at a time.
