@@ -38,7 +38,8 @@ public enum RuntimeSaveValidationCode
     DemonStockCapacityExceeded,
     ActiveFormDuplicatedInPersonaStock,
     PartyStockIdentityCollision,
-    ActorReferenceEntityMismatch
+    ActorReferenceEntityMismatch,
+    PersonaStockCapacityExceeded
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -426,13 +427,21 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 Path: "$.partyStock.activeParty"));
         }
 
-        int demonStockCapacity = stockCapacityPolicy.GetCapacity(partyStock.OwnerLevel);
-        if (partyStock.DemonStock.Count > demonStockCapacity)
+        int stockCapacity = stockCapacityPolicy.GetCapacity(partyStock.OwnerLevel);
+        if (partyStock.DemonStock.Count > stockCapacity)
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                 RuntimeSaveValidationCode.DemonStockCapacityExceeded,
-                $"Demon stock has {partyStock.DemonStock.Count} entries, exceeding the capacity of {demonStockCapacity}.",
+                $"Demon stock has {partyStock.DemonStock.Count} entries, exceeding the capacity of {stockCapacity}.",
                 Path: "$.partyStock.demonStock"));
+        }
+
+        if (partyStock.PersonaStock.Count > stockCapacity)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.PersonaStockCapacityExceeded,
+                $"Persona stock has {partyStock.PersonaStock.Count} entries, exceeding the capacity of {stockCapacity}.",
+                Path: "$.partyStock.personaStock"));
         }
 
         ValidateActorReferenceList(partyStock.ActiveParty, actors, diagnostics, "$.partyStock.activeParty");

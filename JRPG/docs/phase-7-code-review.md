@@ -27,11 +27,11 @@ The Phase 7 range changes 48 files with 9,844 insertions and 456 deletions. The 
 
 ## Verdict
 
-**Phase 7 is substantially implemented, but it is not review-closed yet. Phase 8 should wait for two remaining focused correctness follow-ups.**
+**Phase 7 is substantially implemented, but it is not review-closed yet. Phase 8 should wait for one remaining focused correctness follow-up.**
 
 No high-severity issue was found. Fusion commits are atomic at the immutable snapshot boundary, stale preparations are rejected, Compendium registration and recall reject malformed entries before transaction work, and framework/host dependencies remain correctly separated.
 
-The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset and preview-authority findings are now resolved. Two medium findings remain, while two lower-priority modularity concerns may be deferred but must remain explicit rather than being mistaken for completed framework behavior.
+The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset, preview-authority, and Persona stock-capacity findings are now resolved. One medium finding remains, while two lower-priority modularity concerns may be deferred but must remain explicit rather than being mistaken for completed framework behavior.
 
 ## Findings
 
@@ -100,7 +100,7 @@ Resolution:
 - policy-driven compatibility operations may still preserve a specifically identified transformed parent;
 - direct forward/reversed transaction coverage proves identical catalog stats, while a separate policy regression proves explicit transformed-parent state still works.
 
-### Medium: Save validation enforces Demon stock capacity but not Persona stock capacity
+### Medium, resolved 2026-07-12: Save validation enforced Demon stock capacity but not Persona stock capacity
 
 Source:
 
@@ -118,6 +118,14 @@ Required correction:
 - add a stable Persona-stock capacity diagnostic and path;
 - evaluate both stock families through the same injected policy;
 - add default and custom-capacity tests for Persona stock as well as Demon stock.
+
+Resolution:
+
+- `RuntimeSaveValidationCode.PersonaStockCapacityExceeded` was appended without renumbering existing diagnostic values;
+- `RuntimeSaveValidator` now obtains the owner-level capacity once from its injected `IStockCapacityPolicy` and applies it independently to Demon and Persona stock;
+- over-capacity Persona saves report the stable path `$.partyStock.personaStock`, while the existing Demon path and diagnostic remain unchanged;
+- active form remains separate from Persona stock capacity, matching `PartyStockTransitionService.AddPersonaToStock(...)`;
+- direct default-policy coverage rejects four Persona entries at owner level 1, while an injected capacity of four validates the same otherwise-valid save. Existing Demon default/custom coverage remains green.
 
 ### Medium: Duplicate persisted knowledge can validate successfully and then crash familiar import
 
@@ -223,9 +231,8 @@ The tests are not merely asserting console text produced by the same method:
 
 No skipped tests or obvious always-true assertions were found in the reviewed Phase 7 suites.
 
-The weakness is missing scenarios, not false-positive assertions. After the preview-authority correction, the current suite still does not cover:
+The weakness is missing scenarios, not false-positive assertions. After the preview-authority and stock-capacity corrections, the current suite still does not cover:
 
-- over-capacity Persona stock in a save;
 - duplicate persisted knowledge keys;
 - `AddPartyMember` collisions with form or stock roles.
 
@@ -235,8 +242,10 @@ The weakness is missing scenarios, not false-positive assertions. After the prev
 | --- | --- |
 | Focused rank-offset correction tests | `2/2` passed |
 | Focused preview-authority correction tests | `3/3` passed |
+| Focused Persona stock-capacity correction test | `1/1` passed |
+| Focused persistence and party/stock tests | `51/51` passed |
 | Focused fusion and compatibility regression tests | `95/95` passed |
-| Full solution tests | `941/941` passed, `0` skipped |
+| Full solution tests | `942/942` passed, `0` skipped |
 | Nonincremental framework build | `0` warnings, `0` errors |
 | Nonincremental solution build | `98` protected legacy-host warnings, `0` errors |
 | Clean battle demo | passed |
@@ -250,11 +259,10 @@ Green verification establishes that supported paths remain stable. It does not i
 
 ## Phase 8 Gate
 
-Before Phase 8 begins, complete these two remaining follow-ups in order:
+Before Phase 8 begins, complete the one remaining medium follow-up:
 
-1. Validate Persona stock capacity anywhere Demon stock capacity is validated.
-2. Validate or deterministically normalize duplicate persisted knowledge before familiar import.
+1. Validate or deterministically normalize duplicate persisted knowledge before familiar import.
 
 The `AddPartyMember` identity check should be included with the persistence/invariant follow-up if it can be done without changing intentional summon semantics. Compendium pricing policy extraction may be deferred and should remain documented as an open modularity decision.
 
-Until the two remaining medium findings are closed, Phase 7 remains implemented but **review-open**, all affected capabilities remain `parallel_partial`, and every `removalAuthorized` flag remains `false`.
+Until the remaining medium finding is closed, Phase 7 remains implemented but **review-open**, all affected capabilities remain `parallel_partial`, and every `removalAuthorized` flag remains `false`.
