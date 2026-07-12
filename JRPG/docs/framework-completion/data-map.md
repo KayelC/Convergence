@@ -25,7 +25,7 @@ Use generic placeholder content for tests and demos. Downstream games should rep
 | Encounters | Formations, enemy levels, reward policy hooks | `ashling_drill`, `mixed_drill`, `shell_check` | single enemy, two-enemy group, boss formation |
 | Dungeons / fields | Blocks, floors, fixed floors, encounter pools, terminals, barriers | `training_annex` with random, safe, fixed battle, and barrier floors | three-floor training area with safe room and boss gate |
 | Fusion recipes | Parent selectors, result operations, accidents/mutation hooks | Two Training Annex recipes execute for result calculation; mutation metadata now proves clean slot/planning and accident-mutation evidence | concept recipes using generic entities only |
-| Compendium state | Runtime snapshots and recall rules | Framework services exist, content is thin | use generic species IDs and placeholder recall pricing |
+| Compendium state | Runtime snapshots and optional recall rules | Framework services and host-selected fixed/linear/custom pricing policies exist; content is thin | use generic species IDs and choose registration-only, free, or game-owned recall pricing explicitly |
 | Rewards | EXP/Macca-like reward policies and parameters | Bound standard reward service | generic experience and currency values |
 | Host registrations | Contexts, resources, stats, events, handlers, policies | Tests register explicit values | documented registration sets per demo |
 | Save snapshots | Runtime actor, party, inventory, field, knowledge, session state | Clean save demo and Training Annex validate snapshots | host-owned save sample with generic IDs |

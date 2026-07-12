@@ -169,7 +169,11 @@ public sealed class FusionCompendiumRuntimeTests
     [Fact]
     public void CompendiumService_RegistersOverwritesPricesAndRejectsRecallBeforeMutation()
     {
-        var service = new CompendiumService();
+        var service = new CompendiumService(new LinearCompendiumRecallPricingPolicy(
+            defaultBasePrice: 2000,
+            levelFactor: 100,
+            statPointFactor: 50,
+            skillFactor: 200));
         var empty = new CompendiumStateSnapshot();
         var pixie = new CompendiumEntrySnapshot(
             Id("pixie"),
@@ -183,12 +187,20 @@ public sealed class FusionCompendiumRuntimeTests
 
         Assert.Equal(CompendiumRegistrationCode.Added, added.Code);
         Assert.Equal(CompendiumRegistrationCode.Updated, updated.Code);
-        Assert.Equal(2000 + 1000 + 350 + 400, service.CalculateRecallCost(pixie));
+        Assert.Equal(2000 + 1000 + 350 + 400, service.GetRecallPricing(pixie).Cost);
+
+        var customPricing = new LinearCompendiumRecallPricingPolicy(
+            defaultBasePrice: 17,
+            levelFactor: 3,
+            statPointFactor: 5,
+            skillFactor: 7);
+        Assert.Equal(17 + 30 + 35 + 14, customPricing.GetPricing(new(pixie)).Cost);
+        Assert.Equal(23 + 30 + 35 + 14, customPricing.GetPricing(new(pixie, basePrice: 23)).Cost);
 
         CompendiumRecallAssessment duplicate = service.AssessRecall(
             updated.After,
             Id("pixie"),
-            currentMacca: 99999,
+            availableCurrency: 99999,
             alreadyOwned: true,
             hasOpenStockSlot: true);
         Assert.Equal(CompendiumRecallCode.DuplicateOwned, duplicate.Code);
@@ -196,13 +208,64 @@ public sealed class FusionCompendiumRuntimeTests
         CompendiumRecallAssessment valid = service.AssessRecall(
             updated.After,
             Id("pixie"),
-            currentMacca: 99999,
+            availableCurrency: 99999,
             alreadyOwned: false,
             hasOpenStockSlot: true);
         Assert.True(valid.CanRecall);
     }
 
+    [Fact]
+    public void CompendiumService_RecallPricingIsExplicitAndCanBeFreeOrUnavailable()
+    {
+        var entry = new CompendiumEntrySnapshot(Id("sample"), "Sample", level: 1);
+        var registrationOnly = new CompendiumService();
+        var freeRecall = new CompendiumService(new FixedCompendiumRecallPricingPolicy(0));
+        var gatedRecall = new CompendiumService(new UnavailableRecallPricingPolicy());
+        CompendiumRegistrationResult registration = registrationOnly.Register(
+            new CompendiumStateSnapshot(),
+            entry);
+        CompendiumStateSnapshot state = registration.After;
+
+        CompendiumRecallPricingDecision unavailablePricing = registrationOnly.GetRecallPricing(entry);
+        CompendiumRecallAssessment unavailable = registrationOnly.AssessRecall(
+            state,
+            entry.EntityId,
+            availableCurrency: 0,
+            alreadyOwned: false,
+            hasOpenStockSlot: true);
+        CompendiumRecallAssessment free = freeRecall.AssessRecall(
+            state,
+            entry.EntityId,
+            availableCurrency: 0,
+            alreadyOwned: false,
+            hasOpenStockSlot: true);
+        CompendiumRecallAssessment gated = gatedRecall.AssessRecall(
+            state,
+            entry.EntityId,
+            availableCurrency: 0,
+            alreadyOwned: false,
+            hasOpenStockSlot: true);
+
+        Assert.Equal(CompendiumRegistrationCode.Added, registration.Code);
+        Assert.False(unavailablePricing.IsAvailable);
+        Assert.Equal(CompendiumRecallCode.RecallUnavailable, unavailable.Code);
+        Assert.DoesNotContain("Macca", Assert.Single(unavailable.Diagnostics).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(free.CanRecall);
+        Assert.Equal(0, free.Cost);
+        Assert.Equal(CompendiumRecallCode.RecallUnavailable, gated.Code);
+        Assert.Equal("Recall has not been unlocked.", Assert.Single(gated.Diagnostics).Message);
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private sealed class UnavailableRecallPricingPolicy : ICompendiumRecallPricingPolicy
+    {
+        public CompendiumRecallPricingDecision GetPricing(CompendiumRecallPricingRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            return CompendiumRecallPricingDecision.Unavailable("Recall has not been unlocked.");
+        }
+    }
 
     private static FusionRecipeParentSelectorSnapshot EntityParent(string id) =>
         new(FusionParentSelectorKind.Entity, Id(id));

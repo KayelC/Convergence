@@ -102,6 +102,7 @@ public sealed record RuntimeWalletSnapshot
     }
 
     public int Macca { get; }
+    public int Balance => Macca;
 }
 
 public sealed record InventoryTransitionResult
@@ -355,6 +356,12 @@ public interface IEconomyTransactionService
 {
     WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount);
     WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount);
+
+    WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
+        AddMacca(snapshot, amount);
+
+    WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount) =>
+        SpendMacca(snapshot, amount);
 }
 
 public sealed class EconomyTransactionService : IEconomyTransactionService

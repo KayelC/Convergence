@@ -358,6 +358,11 @@ internal sealed class CleanTrainingAnnexPlayHost
             catalog,
             actorFactory,
             growthServices.ResourceGrowthPolicy,
+            compendium: new CompendiumService(new LinearCompendiumRecallPricingPolicy(
+                defaultBasePrice: 2000,
+                levelFactor: 100,
+                statPointFactor: 50,
+                skillFactor: 200)),
             partyStock: partyStockTransitions,
             economy: economy);
         var familiarKnowledge = new FamiliarEntityKnowledgeService(catalog);

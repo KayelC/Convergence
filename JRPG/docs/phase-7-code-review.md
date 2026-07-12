@@ -27,11 +27,11 @@ The Phase 7 range changes 48 files with 9,844 insertions and 456 deletions. The 
 
 ## Verdict
 
-**Phase 7 is implemented and review-closed for Phase 8. All four medium correctness findings are resolved.**
+**Phase 7 is implemented and review-closed for Phase 8. All four medium findings and both low-priority findings are resolved.**
 
 No high-severity issue was found. Fusion commits are atomic at the immutable snapshot boundary, stale preparations are rejected, Compendium registration and recall reject malformed entries before transaction work, and framework/host dependencies remain correctly separated.
 
-The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset, preview-authority, Persona stock-capacity, and duplicate-knowledge findings are now resolved. Two lower-priority modularity concerns remain explicitly deferred; they do not block Phase 8 and must not be mistaken for completed framework behavior.
+The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset, preview-authority, Persona stock-capacity, and duplicate-knowledge findings are now resolved. The lower-priority `AddPartyMember` runtime-identity and Compendium pricing-policy gaps are also resolved. No source finding from this review remains deferred.
 
 ## Findings
 
@@ -162,31 +162,44 @@ Resolution:
 - no merge policy is inferred: conflicting or identical duplicate entries are both rejected, preserving one unambiguous authored value per knowledge key;
 - direct snapshot, host-owned JSON, and importer regressions cover all three channels and prove no exception or state mutation occurs.
 
-### Low: The global runtime-ID rule is not applied by `AddPartyMember`
+### Low, resolved 2026-07-12: The global runtime-ID rule was not applied by `AddPartyMember`
 
 Source:
 
 - `JRPG.Framework/Logic/Runtime/RuntimePartyStockIdentityRules.cs:18`
 - `JRPG.Framework/Logic/Runtime/PartyStockTransitions.cs:172`
 
-Phase 7 added a centralized cross-role runtime-ID rule and correctly applies it when adding or replacing Demon and Persona stock entries. `AddPartyMember(...)` still checks only active and reserve party collections.
+Phase 7 added a centralized cross-role runtime-ID rule and originally applied it only when adding or replacing Demon and Persona stock entries. `AddPartyMember(...)` checked only active and reserve party collections.
 
-It can accept an ID already used by the active form or either stock family. A later save validation may reject the graph, but the transition service should not construct it in the first place. Intentional Demon active-plus-owned overlap should continue through `SummonDemon(...)`, which copies the owned reference rather than accepting a second caller-authored identity.
+That allowed a caller-authored party member to reuse an ID already assigned to the active form, Persona stock, or Demon stock. A later save validation could reject the graph, but the transition service should not construct it in the first place.
 
-This is lower priority for Phase 7 because fusion and Compendium use the stock-specific transitions, but the current documentation overstates the rule as globally enforced.
+Resolution:
 
-### Low: Compendium recall pricing remains a fixed framework formula and currency name
+- `AddPartyMember(...)` now preserves `DuplicateOwned` for an ID already present in active or reserve party membership;
+- it preserves the exact owner-reference plus active-party representation when an active slot is open;
+- it consults `RuntimePartyStockIdentityRules` for every other collision and returns `RuntimeInstanceIdInUse` with an unchanged before/after snapshot when the active form, Persona stock, or Demon stock already uses the ID;
+- direct party addition cannot manufacture the intentional active-plus-owned Demon overlap;
+- `SummonDemon(...)` remains the explicit operation that activates an already-owned Demon while preserving its Demon-stock reference;
+- focused regressions cover every cross-role collision and prove the deliberate summon overlap remains valid.
+
+### Low, resolved 2026-07-12: Compendium recall pricing was a fixed framework formula and currency name
 
 Source:
 
 - `JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs:1229`
 - `JRPG.Framework/Logic/Fusion/FusionRuntimeServices.cs:1237`
 
-`CompendiumService` fixes the recall formula to base price plus level, stat, and skill terms, and its diagnostics name Macca. The runtime orchestration is injectable around actor, stock, resource, and economy services, but recall pricing itself is not a policy.
+`CompendiumService` fixed the recall formula to base price plus level, stat, and skill terms, and its diagnostics named Macca. The runtime orchestration was injectable around actor, stock, resource, and economy services, but recall pricing itself was not a policy.
 
-This is not a current correctness failure because tests and the Training Annex host intentionally use that formula. It is still a modularity debt for an open framework: a developer should eventually be able to supply a recall-pricing policy or omit paid recall entirely.
+Resolution:
 
-This item does not need to block Phase 8 if it is kept as an explicit deferred design decision.
+- `ICompendiumRecallPricingPolicy` now owns recall availability and cost calculation;
+- `CompendiumService` has no hidden pricing default: without a policy, registration remains available but recall returns typed `RecallUnavailable` diagnostics;
+- `FixedCompendiumRecallPricingPolicy(0)` supports free recall and `CompendiumRuntimeService` skips the payment port entirely for zero-cost recalls;
+- `LinearCompendiumRecallPricingPolicy` accepts host-selected base, level, stat-point, and skill factors rather than embedding one formula;
+- legacy Cathedral and Training Annex composition roots explicitly select the former `2000 + level * 100 + stat sum * 50 + skill count * 200` behavior, preserving their current output and costs;
+- framework Compendium APIs and diagnostics use generic balance, currency, and payment terminology; Macca labels remain in the legacy/console presentation layer;
+- focused tests use alternate coefficients to prove the policy inputs, not old constants, determine the result, and an architecture guard rejects host currency terminology in framework Compendium sources.
 
 ## Source-Derived Strengths
 
@@ -240,9 +253,7 @@ The tests are not merely asserting console text produced by the same method:
 
 No skipped tests or obvious always-true assertions were found in the reviewed Phase 7 suites.
 
-The medium-severity missing scenarios identified by this review are now covered. One deferred low-priority scenario remains:
-
-- `AddPartyMember` collisions with form or stock roles.
+Every medium- and low-priority scenario identified by this review is now covered. No source finding remains open.
 
 ## Verification
 
@@ -254,8 +265,10 @@ The medium-severity missing scenarios identified by this review are now covered.
 | Focused persistence and party/stock tests | `51/51` passed |
 | Focused duplicate-knowledge correction tests | `3/3` passed |
 | Focused persistence, Compendium, and host-save tests | `53/53` passed |
+| Focused party/stock transition tests after global-ID correction | `23/23` passed |
+| Focused Compendium policy, host, boundary, and legacy compatibility tests | `143/143` passed |
 | Focused fusion and compatibility regression tests | `95/95` passed |
-| Full solution tests | `945/945` passed, `0` skipped |
+| Full solution tests | `951/951` passed, `0` skipped |
 | Nonincremental framework build | `0` warnings, `0` errors |
 | Nonincremental solution build | `98` protected legacy-host warnings, `0` errors |
 | Clean battle demo | passed |
@@ -269,8 +282,6 @@ Green verification establishes that supported paths remain stable. It does not i
 
 ## Phase 8 Gate
 
-All four medium findings from the fresh Phase 7 review are resolved. Phase 8 may begin.
-
-The `AddPartyMember` identity check should be addressed in a later invariant-hardening pass without changing intentional summon semantics. Compendium pricing policy extraction remains a deferred modularity decision.
+All four medium findings and both low-priority findings from the fresh Phase 7 review are resolved. Phase 8 may begin.
 
 Review closure does not imply `clean_parity`: all affected capabilities remain `parallel_partial`, and every `removalAuthorized` flag remains `false`.

@@ -115,6 +115,24 @@ public sealed class FrameworkBoundaryTests
         }
     }
 
+    [Fact]
+    public void FrameworkCompendiumSources_DoNotOwnHostCurrencyTerminology()
+    {
+        string fusionRoot = RepositoryPath("JRPG.Framework", "Logic", "Fusion");
+        string[] files =
+        [
+            Path.Combine(fusionRoot, "FusionRuntimeServices.cs"),
+            Path.Combine(fusionRoot, "CompendiumRuntimeServices.cs"),
+            Path.Combine(fusionRoot, "CompendiumRecallPricingPolicies.cs")
+        ];
+
+        foreach (string file in files)
+        {
+            string source = File.ReadAllText(file);
+            Assert.DoesNotContain("Macca", source, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private static void AssertAllowed(Type type)
     {
         foreach (Type candidate in Expand(type))

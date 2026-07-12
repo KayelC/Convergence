@@ -22,6 +22,7 @@ public enum CompendiumRuntimeDiagnosticCode
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
     StockFull,
+    RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
     StockPlacementRejected,
@@ -74,6 +75,7 @@ public enum CompendiumRecallTransactionCode
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
     StockFull,
+    RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
     StockPlacementRejected,
@@ -162,7 +164,9 @@ public sealed record CompendiumRecallTransactionResult
 
 public interface ICompendiumRuntimeService
 {
-    int CalculateRecallCost(CompendiumEntrySnapshot entry, int? basePrice = null);
+    CompendiumRecallPricingDecision GetRecallPricing(
+        CompendiumEntrySnapshot entry,
+        int? basePrice = null);
 
     CompendiumActorRegistrationResult RegisterActor(
         CompendiumStateSnapshot state,
@@ -199,8 +203,10 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         _economy = economy ?? new EconomyTransactionService();
     }
 
-    public int CalculateRecallCost(CompendiumEntrySnapshot entry, int? basePrice = null) =>
-        _compendium.CalculateRecallCost(entry, basePrice);
+    public CompendiumRecallPricingDecision GetRecallPricing(
+        CompendiumEntrySnapshot entry,
+        int? basePrice = null) =>
+        _compendium.GetRecallPricing(entry, basePrice);
 
     public CompendiumActorRegistrationResult RegisterActor(
         CompendiumStateSnapshot state,
@@ -352,7 +358,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             assessment = _compendium.AssessRecall(
                 request.Compendium,
                 entry.EntityId,
-                request.Wallet.Macca,
+                request.Wallet.Balance,
                 alreadyOwned,
                 placement.Applied || placement.Code != PartyStockTransitionCode.StockFull,
                 request.BasePrice);
@@ -382,6 +388,13 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                     CompendiumRecallTransactionCode.StockFull,
                     CompendiumRuntimeDiagnosticCode.StockFull,
                     assessment.Diagnostics.FirstOrDefault()?.Message ?? "The destination stock is full.",
+                    entry,
+                    assessment.Cost),
+                CompendiumRecallCode.RecallUnavailable => RecallRejected(
+                    request,
+                    CompendiumRecallTransactionCode.RecallUnavailable,
+                    CompendiumRuntimeDiagnosticCode.RecallUnavailable,
+                    assessment.Diagnostics.FirstOrDefault()?.Message ?? "Compendium recall is not available.",
                     entry,
                     assessment.Cost),
                 CompendiumRecallCode.InsufficientCurrency => RecallRejected(
@@ -425,16 +438,22 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 assessment.Cost);
         }
 
-        WalletTransactionResult payment = _economy.SpendMacca(request.Wallet, assessment.Cost);
-        if (!payment.Applied)
+        RuntimeWalletSnapshot afterWallet = request.Wallet;
+        if (assessment.Cost > 0)
         {
-            return RecallRejected(
-                request,
-                CompendiumRecallTransactionCode.WalletRejected,
-                CompendiumRuntimeDiagnosticCode.WalletRejected,
-                payment.Diagnostics.FirstOrDefault()?.Message ?? "The recall payment was rejected.",
-                entry,
-                assessment.Cost);
+            WalletTransactionResult payment = _economy.Debit(request.Wallet, assessment.Cost);
+            if (!payment.Applied)
+            {
+                return RecallRejected(
+                    request,
+                    CompendiumRecallTransactionCode.WalletRejected,
+                    CompendiumRuntimeDiagnosticCode.WalletRejected,
+                    "The configured recall payment was rejected.",
+                    entry,
+                    assessment.Cost);
+            }
+
+            afterWallet = payment.After;
         }
 
         return new CompendiumRecallTransactionResult(
@@ -443,7 +462,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.PartyStock,
             placement.After,
             request.Wallet,
-            payment.After,
+            afterWallet,
             assessment.Cost,
             entry,
             materialized.RequireActor());

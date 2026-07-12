@@ -40,6 +40,7 @@ public enum FusionRuntimeDiagnosticCode
     DuplicateResult,
     StockFull,
     InsufficientCurrency,
+    RecallUnavailable,
     InvalidSelection,
     InvalidParticipant,
     DuplicateParticipant,
@@ -1179,6 +1180,7 @@ public enum CompendiumRecallCode
     MissingEntry,
     DuplicateOwned,
     StockFull,
+    RecallUnavailable,
     InsufficientCurrency
 }
 
@@ -1258,11 +1260,11 @@ public sealed record CompendiumRecallAssessment(
 public interface ICompendiumService
 {
     CompendiumRegistrationResult Register(CompendiumStateSnapshot state, CompendiumEntrySnapshot entry);
-    int CalculateRecallCost(CompendiumEntrySnapshot entry, int? basePrice = null);
+    CompendiumRecallPricingDecision GetRecallPricing(CompendiumEntrySnapshot entry, int? basePrice = null);
     CompendiumRecallAssessment AssessRecall(
         CompendiumStateSnapshot state,
         ContentId speciesId,
-        int currentMacca,
+        int availableCurrency,
         bool alreadyOwned,
         bool hasOpenStockSlot,
         int? basePrice = null);
@@ -1270,6 +1272,13 @@ public interface ICompendiumService
 
 public sealed class CompendiumService : ICompendiumService
 {
+    private readonly ICompendiumRecallPricingPolicy? _recallPricing;
+
+    public CompendiumService(ICompendiumRecallPricingPolicy? recallPricing = null)
+    {
+        _recallPricing = recallPricing;
+    }
+
     public CompendiumRegistrationResult Register(CompendiumStateSnapshot state, CompendiumEntrySnapshot entry)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -1288,44 +1297,44 @@ public sealed class CompendiumService : ICompendiumService
             entry);
     }
 
-    public int CalculateRecallCost(CompendiumEntrySnapshot entry, int? basePrice = null)
+    public CompendiumRecallPricingDecision GetRecallPricing(
+        CompendiumEntrySnapshot entry,
+        int? basePrice = null)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        if (basePrice < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(basePrice), "Recall base price cannot be negative.");
-        }
-
-        int price = basePrice ?? 2000;
-        long total = price
-            + ((long)entry.Level * 100)
-            + (entry.Stats.Values.Sum(value => (long)value) * 50)
-            + ((long)entry.SkillIds.Count * 200);
-        if (total is < 0 or > int.MaxValue)
-        {
-            throw new OverflowException("Compendium recall cost exceeds the supported currency range.");
-        }
-
-        return (int)total;
+        var request = new CompendiumRecallPricingRequest(entry, basePrice);
+        return _recallPricing?.GetPricing(request) ??
+            CompendiumRecallPricingDecision.Unavailable(
+                "Compendium recall is not enabled by the active host policy.");
     }
 
     public CompendiumRecallAssessment AssessRecall(
         CompendiumStateSnapshot state,
         ContentId speciesId,
-        int currentMacca,
+        int availableCurrency,
         bool alreadyOwned,
         bool hasOpenStockSlot,
         int? basePrice = null)
     {
         ArgumentNullException.ThrowIfNull(state);
-        if (currentMacca < 0) throw new ArgumentOutOfRangeException(nameof(currentMacca));
+        if (availableCurrency < 0) throw new ArgumentOutOfRangeException(nameof(availableCurrency));
 
         if (!state.TryGet(speciesId, out CompendiumEntrySnapshot? entry) || entry is null)
         {
             return RecallRejected(CompendiumRecallCode.MissingEntry, "The Compendium entry does not exist.", speciesId);
         }
 
-        int cost = CalculateRecallCost(entry, basePrice);
+        CompendiumRecallPricingDecision pricing = GetRecallPricing(entry, basePrice);
+        if (!pricing.IsAvailable)
+        {
+            return RecallRejected(
+                CompendiumRecallCode.RecallUnavailable,
+                pricing.RejectionMessage ?? "Compendium recall is not available.",
+                speciesId,
+                entry);
+        }
+
+        int cost = pricing.Cost;
         if (alreadyOwned)
         {
             return RecallRejected(CompendiumRecallCode.DuplicateOwned, "The Compendium entry is already owned.", speciesId, entry, cost);
@@ -1334,9 +1343,14 @@ public sealed class CompendiumService : ICompendiumService
         {
             return RecallRejected(CompendiumRecallCode.StockFull, "There is no open stock slot for the recalled entry.", speciesId, entry, cost);
         }
-        if (currentMacca < cost)
+        if (availableCurrency < cost)
         {
-            return RecallRejected(CompendiumRecallCode.InsufficientCurrency, "There is not enough Macca to recall this entry.", speciesId, entry, cost);
+            return RecallRejected(
+                CompendiumRecallCode.InsufficientCurrency,
+                "There is not enough available currency to recall this entry.",
+                speciesId,
+                entry,
+                cost);
         }
 
         return new CompendiumRecallAssessment(CompendiumRecallCode.Available, entry, cost);
@@ -1357,6 +1371,7 @@ public sealed class CompendiumService : ICompendiumService
                 CompendiumRecallCode.MissingEntry => FusionRuntimeDiagnosticCode.MissingEntity,
                 CompendiumRecallCode.DuplicateOwned => FusionRuntimeDiagnosticCode.DuplicateResult,
                 CompendiumRecallCode.StockFull => FusionRuntimeDiagnosticCode.StockFull,
+                CompendiumRecallCode.RecallUnavailable => FusionRuntimeDiagnosticCode.RecallUnavailable,
                 CompendiumRecallCode.InsufficientCurrency => FusionRuntimeDiagnosticCode.InsufficientCurrency,
                 _ => FusionRuntimeDiagnosticCode.NoFusionPossible
             }, message, speciesId)]);

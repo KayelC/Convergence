@@ -32,7 +32,11 @@ namespace JRPGPrototype.Logic.Fusion
         {
             _io = io;
             _demonEntries = new Dictionary<string, Combatant>(StringComparer.OrdinalIgnoreCase);
-            _service = new CompendiumService();
+            _service = new CompendiumService(new LinearCompendiumRecallPricingPolicy(
+                defaultBasePrice: 2000,
+                levelFactor: 100,
+                statPointFactor: 50,
+                skillFactor: 200));
             _state = new CompendiumStateSnapshot();
         }
 
@@ -110,7 +114,10 @@ namespace JRPGPrototype.Logic.Fusion
                 return 0;
             }
 
-            return _service.CalculateRecallCost(entry, ResolveRecallBasePrice(cleanId));
+            CompendiumRecallPricingDecision pricing = _service.GetRecallPricing(
+                entry,
+                ResolveRecallBasePrice(cleanId));
+            return pricing.IsAvailable ? pricing.Cost : 0;
         }
 
         internal CompendiumRecallAssessment AssessRecall(

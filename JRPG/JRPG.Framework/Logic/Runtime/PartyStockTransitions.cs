@@ -178,7 +178,19 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
             return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Party member is already present.", request.Member.InstanceId);
         }
 
-        if (before.ActiveParty.Count < before.MaxActivePartySize)
+        bool hasOpenActiveSlot = before.ActiveParty.Count < before.MaxActivePartySize;
+        bool isOwnerEnteringActiveParty = hasOpenActiveSlot && before.Owner == request.Member;
+        if (!isOwnerEnteringActiveParty &&
+            RuntimePartyStockIdentityRules.ContainsInstanceId(before, request.Member.InstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.RuntimeInstanceIdInUse,
+                "Party member runtime instance ID is already used by another party or stock reference.",
+                request.Member.InstanceId);
+        }
+
+        if (hasOpenActiveSlot)
         {
             return Applied(
                 before,

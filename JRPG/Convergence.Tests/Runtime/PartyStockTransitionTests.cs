@@ -44,6 +44,54 @@ public sealed class PartyStockTransitionTests
     }
 
     [Fact]
+    public void AddPartyMember_RejectsRuntimeIdsUsedByFormOrStockRoles()
+    {
+        RuntimeActorReferenceSnapshot collision = Actor("collision");
+        RuntimePartyStockSnapshot[] snapshots =
+        [
+            Snapshot(activeForm: collision),
+            Snapshot(personaStock: [collision]),
+            Snapshot(demonStock: [collision])
+        ];
+
+        foreach (RuntimePartyStockSnapshot snapshot in snapshots)
+        {
+            AssertIdentityCollision(
+                snapshot,
+                _service.AddPartyMember(new AddPartyMemberRequest(snapshot, collision)),
+                collision.InstanceId);
+        }
+    }
+
+    [Fact]
+    public void AddPartyMember_AllowsExactOwnerReferenceToEnterAnOpenActiveSlot()
+    {
+        RuntimeActorReferenceSnapshot owner = Actor("owner");
+        RuntimePartyStockSnapshot snapshot = new(owner, ownerLevel: 40);
+
+        PartyStockTransitionResult result = _service.AddPartyMember(new AddPartyMemberRequest(snapshot, owner));
+
+        Assert.True(result.Applied);
+        Assert.Equal(owner, Assert.Single(result.After.ActiveParty));
+        Assert.Empty(result.After.ReserveMembers);
+    }
+
+    [Fact]
+    public void AddPartyMember_RejectsOwnedDemonIdWhileSummonPreservesIntentionalOverlap()
+    {
+        RuntimeActorReferenceSnapshot demon = Actor("owned_demon");
+        RuntimePartyStockSnapshot snapshot = Snapshot(demonStock: [demon]);
+
+        PartyStockTransitionResult add = _service.AddPartyMember(new AddPartyMemberRequest(snapshot, demon));
+        PartyStockTransitionResult summon = _service.SummonDemon(new SummonDemonRequest(snapshot, demon.InstanceId));
+
+        AssertIdentityCollision(snapshot, add, demon.InstanceId);
+        Assert.True(summon.Applied);
+        Assert.Contains(summon.After.ActiveParty, actor => actor.InstanceId == demon.InstanceId);
+        Assert.Contains(summon.After.DemonStock, actor => actor.InstanceId == demon.InstanceId);
+    }
+
+    [Fact]
     public void DemonCommands_PreserveUnifiedActiveAndOwnedStock()
     {
         RuntimeActorReferenceSnapshot pixie = Actor("pixie");

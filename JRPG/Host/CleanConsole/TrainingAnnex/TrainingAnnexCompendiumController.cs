@@ -326,12 +326,20 @@ internal sealed class TrainingAnnexCompendiumController
             "Recall Registered Actor",
             compendium.Entries.Select(entry => new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectCompendiumEntry,
-                    $"{entry.DisplayName} - {_compendium.CalculateRecallCost(entry)} M",
+                    RecallLabel(entry),
                     SelectionIdentity: HostCommandSelectionIdentity.ForContent(entry.EntityId)))
                 .Append(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.Back,
                     "Back"))
                 .ToArray());
+
+    private string RecallLabel(CompendiumEntrySnapshot entry)
+    {
+        CompendiumRecallPricingDecision pricing = _compendium.GetRecallPricing(entry);
+        return pricing.IsAvailable
+            ? $"{entry.DisplayName} - {pricing.Cost} M"
+            : $"{entry.DisplayName} - [Recall unavailable]";
+    }
 
     private static TrainingAnnexCompendiumInteractionResult Unchanged(
         CompendiumStateSnapshot compendium,

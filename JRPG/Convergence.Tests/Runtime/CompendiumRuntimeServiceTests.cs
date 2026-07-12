@@ -185,6 +185,60 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Null(result.Actor);
     }
 
+    [Fact]
+    public void Recall_WithoutPricingPolicyIsUnavailableAndFreePolicyRequiresNoWalletBalance()
+    {
+        TestContext context = CreateContext();
+        CatalogBattleActor source = context.CreateActor("owned_ashling");
+        CompendiumStateSnapshot compendium = context.CreateService().RegisterActor(
+            new CompendiumStateSnapshot(),
+            source.State.ToSnapshot()).After;
+        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimeWalletSnapshot emptyWallet = new(0);
+        var registrationOnly = new CompendiumRuntimeService(
+            context.Catalog,
+            context.Catalog,
+            context.ActorFactory,
+            new StandardResourceGrowthPolicy());
+        var freeRecall = new CompendiumRuntimeService(
+            context.Catalog,
+            context.Catalog,
+            context.ActorFactory,
+            new StandardResourceGrowthPolicy(),
+            compendium: new CompendiumService(new FixedCompendiumRecallPricingPolicy(0)));
+
+        CompendiumRecallTransactionRequest unavailableRequest = new(
+            compendium,
+            party,
+            emptyWallet,
+            context.Entity.Id,
+            RuntimeInstanceId.Parse("unavailable_recall"),
+            Id("player_controller"),
+            Id("player_team"),
+            CompendiumRecallStockKind.Demon);
+        CompendiumRecallTransactionRequest freeRequest = new(
+            compendium,
+            party,
+            emptyWallet,
+            context.Entity.Id,
+            RuntimeInstanceId.Parse("free_recall"),
+            Id("player_controller"),
+            Id("player_team"),
+            CompendiumRecallStockKind.Demon);
+
+        CompendiumRecallTransactionResult unavailable = registrationOnly.Recall(unavailableRequest);
+        CompendiumRecallTransactionResult free = freeRecall.Recall(freeRequest);
+
+        Assert.Equal(CompendiumRecallTransactionCode.RecallUnavailable, unavailable.Code);
+        Assert.Same(party, unavailable.AfterPartyStock);
+        Assert.Same(emptyWallet, unavailable.AfterWallet);
+        Assert.Null(unavailable.Actor);
+        Assert.True(free.Applied);
+        Assert.Equal(0, free.Cost);
+        Assert.Same(emptyWallet, free.AfterWallet);
+        Assert.Single(free.AfterPartyStock.DemonStock);
+    }
+
     [Theory]
     [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.Owner)]
     [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ActiveParty)]
@@ -631,6 +685,11 @@ public sealed class CompendiumRuntimeServiceTests
                 Catalog,
                 ActorFactory,
                 new StandardResourceGrowthPolicy(),
+                compendium: new CompendiumService(new LinearCompendiumRecallPricingPolicy(
+                    defaultBasePrice: 2000,
+                    levelFactor: 100,
+                    statPointFactor: 50,
+                    skillFactor: 200)),
                 partyStock: partyStock);
     }
 
