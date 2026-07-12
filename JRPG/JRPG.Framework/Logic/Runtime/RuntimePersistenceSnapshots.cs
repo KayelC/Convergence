@@ -39,7 +39,10 @@ public enum RuntimeSaveValidationCode
     ActiveFormDuplicatedInPersonaStock,
     PartyStockIdentityCollision,
     ActorReferenceEntityMismatch,
-    PersonaStockCapacityExceeded
+    PersonaStockCapacityExceeded,
+    DuplicateElementalAffinityKnowledge,
+    DuplicateAilmentResistanceKnowledge,
+    DuplicateInstantDeathResistanceKnowledge
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -793,6 +796,26 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         HashSet<ContentId> knownActorEntities = actors.Values
             .Select(actor => actor.Identity.EntityDefinitionId)
             .ToHashSet();
+
+        foreach (RuntimeKnowledgeDuplicate duplicate in RuntimeKnowledgeIntegrity.FindDuplicates(knowledge))
+        {
+            RuntimeSaveValidationCode code = duplicate.Collection switch
+            {
+                RuntimeKnowledgeCollection.ElementalAffinities =>
+                    RuntimeSaveValidationCode.DuplicateElementalAffinityKnowledge,
+                RuntimeKnowledgeCollection.AilmentResistances =>
+                    RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge,
+                RuntimeKnowledgeCollection.InstantDeathResistances =>
+                    RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported knowledge collection '{duplicate.Collection}'.")
+            };
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                code,
+                $"Knowledge contains a duplicate key for {duplicate.KeyDescription}.",
+                ContentId: duplicate.EntityId,
+                Path: duplicate.SavePath));
+        }
 
         foreach (RuntimeElementalAffinityKnowledgeSnapshot entry in knowledge.ElementalAffinities)
         {

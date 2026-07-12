@@ -201,6 +201,77 @@ public sealed class CleanSaveDemoHostTests
     }
 
     [Fact]
+    public void HostOwnedJsonCorruption_ReportsDuplicateKnowledgeKeysInEveryChannel()
+    {
+        ContentId entityId = ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo");
+        ContentId ailmentId = ContentId.Parse("convergence.shared_effects_demo:poison_demo");
+        RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+            knowledge: new RuntimeKnowledgeSnapshot(
+                elementalAffinities:
+                [
+                    new RuntimeElementalAffinityKnowledgeSnapshot(
+                        entityId,
+                        DamageElement.Ice,
+                        ElementalAffinity.Weak)
+                ],
+                ailmentResistances:
+                [
+                    new RuntimeAilmentResistanceKnowledgeSnapshot(
+                        entityId,
+                        ailmentId,
+                        ResistanceLevel.Normal)
+                ],
+                instantDeathResistances:
+                [
+                    new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                        entityId,
+                        InstantDeathChannel.Light,
+                        ResistanceLevel.Normal)
+                ]));
+        JsonObject root = JsonNode.Parse(CleanSaveJsonCodec.Serialize(snapshot))?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        JsonObject knowledge = root["Knowledge"]?.AsObject()
+            ?? throw new InvalidOperationException("Expected host-owned knowledge data.");
+        foreach (string collectionName in new[]
+                 {
+                     "ElementalAffinities",
+                     "AilmentResistances",
+                     "InstantDeathResistances"
+                 })
+        {
+            JsonArray entries = knowledge[collectionName]?.AsArray()
+                ?? throw new InvalidOperationException($"Expected knowledge collection '{collectionName}'.");
+            entries.Add(entries[0]?.DeepClone());
+        }
+
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            restored,
+            RuntimePersistenceSnapshotTests.LoadCatalog());
+
+        Assert.Equal(2, restored.Knowledge.ElementalAffinities.Count);
+        Assert.Equal(2, restored.Knowledge.AilmentResistances.Count);
+        Assert.Equal(2, restored.Knowledge.InstantDeathResistances.Count);
+        Assert.Collection(
+            validation.Diagnostics,
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateElementalAffinityKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.elementalAffinities[1]", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.ailmentResistances[1]", diagnostic.Path);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.instantDeathResistances[1]", diagnostic.Path);
+            });
+    }
+
+    [Fact]
     public void HostOwnedJsonRoundTrip_PreservesSaveRecordMetadata()
     {
         RuntimeSaveRecord record = new(

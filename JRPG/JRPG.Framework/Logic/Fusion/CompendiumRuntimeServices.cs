@@ -636,13 +636,17 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
 
 public enum FamiliarKnowledgeImportDiagnosticCode
 {
-    EntityMissing
+    EntityMissing,
+    DuplicateElementalAffinityKnowledge,
+    DuplicateAilmentResistanceKnowledge,
+    DuplicateInstantDeathResistanceKnowledge
 }
 
 public sealed record FamiliarKnowledgeImportDiagnostic(
     FamiliarKnowledgeImportDiagnosticCode Code,
     string Message,
-    ContentId EntityId);
+    ContentId EntityId,
+    int? Index = null);
 
 public sealed record FamiliarKnowledgeImportResult
 {
@@ -699,6 +703,33 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
     {
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(familiarEntityIds);
+
+        IReadOnlyList<RuntimeKnowledgeDuplicate> duplicates =
+            RuntimeKnowledgeIntegrity.FindDuplicates(current);
+        if (duplicates.Count > 0)
+        {
+            FamiliarKnowledgeImportDiagnostic[] duplicateDiagnostics = duplicates
+                .Select(duplicate => new FamiliarKnowledgeImportDiagnostic(
+                    duplicate.Collection switch
+                    {
+                        RuntimeKnowledgeCollection.ElementalAffinities =>
+                            FamiliarKnowledgeImportDiagnosticCode.DuplicateElementalAffinityKnowledge,
+                        RuntimeKnowledgeCollection.AilmentResistances =>
+                            FamiliarKnowledgeImportDiagnosticCode.DuplicateAilmentResistanceKnowledge,
+                        RuntimeKnowledgeCollection.InstantDeathResistances =>
+                            FamiliarKnowledgeImportDiagnosticCode.DuplicateInstantDeathResistanceKnowledge,
+                        _ => throw new InvalidOperationException(
+                            $"Unsupported knowledge collection '{duplicate.Collection}'.")
+                    },
+                    $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
+                    duplicate.EntityId,
+                    duplicate.Index))
+                .ToArray();
+            return new FamiliarKnowledgeImportResult(
+                current,
+                current,
+                diagnostics: duplicateDiagnostics);
+        }
 
         var elemental = current.ElementalAffinities.ToDictionary(
             entry => (entry.EntityId, entry.Element),

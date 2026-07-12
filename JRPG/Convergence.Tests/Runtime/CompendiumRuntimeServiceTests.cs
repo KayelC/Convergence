@@ -413,6 +413,80 @@ public sealed class CompendiumRuntimeServiceTests
     }
 
     [Fact]
+    public void FamiliarKnowledgeImport_RejectsDuplicateCurrentKnowledgeWithoutThrowingOrMutating()
+    {
+        TestContext context = CreateContext();
+        var current = new RuntimeKnowledgeSnapshot(
+            elementalAffinities:
+            [
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    context.Entity.Id,
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak),
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    context.Entity.Id,
+                    DamageElement.Ice,
+                    ElementalAffinity.Resist)
+            ],
+            ailmentResistances:
+            [
+                new RuntimeAilmentResistanceKnowledgeSnapshot(
+                    context.Entity.Id,
+                    context.Ailment.Id,
+                    ResistanceLevel.Normal),
+                new RuntimeAilmentResistanceKnowledgeSnapshot(
+                    context.Entity.Id,
+                    context.Ailment.Id,
+                    ResistanceLevel.Resistant)
+            ],
+            instantDeathResistances:
+            [
+                new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                    context.Entity.Id,
+                    InstantDeathChannel.Dark,
+                    ResistanceLevel.Normal),
+                new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                    context.Entity.Id,
+                    InstantDeathChannel.Dark,
+                    ResistanceLevel.Immune)
+            ]);
+
+        FamiliarKnowledgeImportResult result = new FamiliarEntityKnowledgeService(context.Catalog)
+            .Import(current, [context.Entity.Id]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Same(current, result.Before);
+        Assert.Same(current, result.After);
+        Assert.Empty(result.ImportedEntityIds);
+        Assert.Collection(
+            result.Diagnostics,
+            diagnostic =>
+            {
+                Assert.Equal(
+                    FamiliarKnowledgeImportDiagnosticCode.DuplicateElementalAffinityKnowledge,
+                    diagnostic.Code);
+                Assert.Equal(context.Entity.Id, diagnostic.EntityId);
+                Assert.Equal(1, diagnostic.Index);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(
+                    FamiliarKnowledgeImportDiagnosticCode.DuplicateAilmentResistanceKnowledge,
+                    diagnostic.Code);
+                Assert.Equal(context.Entity.Id, diagnostic.EntityId);
+                Assert.Equal(1, diagnostic.Index);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(
+                    FamiliarKnowledgeImportDiagnosticCode.DuplicateInstantDeathResistanceKnowledge,
+                    diagnostic.Code);
+                Assert.Equal(context.Entity.Id, diagnostic.EntityId);
+                Assert.Equal(1, diagnostic.Index);
+            });
+    }
+
+    [Fact]
     public void FamiliarKnowledgeImportRegistered_UsesOnlyRegisteredEntitiesAndReportsMissingOnes()
     {
         TestContext context = CreateContext();

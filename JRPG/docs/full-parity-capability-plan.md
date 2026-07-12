@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 through CodeReview7-5 are present. A fresh source audit on 2026-07-11 reopened the review gate. The parent-order-neutral rank-offset, framework-owned preview-authority, and Persona stock-capacity save-validation corrections completed on 2026-07-12. Preview requests require a planner-issued validated token, and restored Demon/Persona stock now uses the same injected capacity policy as live transitions. One medium follow-up remains: duplicate persisted-knowledge validation. See [Phase 7 Fresh Code Review And Readiness](phase-7-code-review.md). Phase 8 waits for that correction; capabilities remain `parallel_partial` and removal remains unauthorized.
+Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 through CodeReview7-5 are present. A fresh source audit on 2026-07-11 reopened the review gate, and all four medium findings were corrected by 2026-07-12. Neutral rank results are parent-order independent, previews require planner-issued validated selections, restored Demon/Persona stock shares live capacity policy, and duplicate persisted knowledge is rejected before save restore or familiar import can consume it. Phase 7 is review-closed and Phase 8 may begin. Capabilities remain `parallel_partial` and removal remains unauthorized; see [Phase 7 Fresh Code Review And Readiness](phase-7-code-review.md).
 
 ### Phase 8: Presentation And Archive Gate
 

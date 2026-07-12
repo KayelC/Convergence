@@ -128,6 +128,74 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsDuplicateKnowledgeKeysWithIndexedPaths()
+    {
+        ContentId entityId = Id("convergence.clean_battle_demo:ember_duelist_demo");
+        ContentId ailmentId = Id("convergence.shared_effects_demo:poison_demo");
+        var knowledge = new RuntimeKnowledgeSnapshot(
+            elementalAffinities:
+            [
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    entityId,
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak),
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    entityId,
+                    DamageElement.Ice,
+                    ElementalAffinity.Resist)
+            ],
+            ailmentResistances:
+            [
+                new RuntimeAilmentResistanceKnowledgeSnapshot(
+                    entityId,
+                    ailmentId,
+                    ResistanceLevel.Normal),
+                new RuntimeAilmentResistanceKnowledgeSnapshot(
+                    entityId,
+                    ailmentId,
+                    ResistanceLevel.Immune)
+            ],
+            instantDeathResistances:
+            [
+                new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                    entityId,
+                    InstantDeathChannel.Light,
+                    ResistanceLevel.Normal),
+                new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                    entityId,
+                    InstantDeathChannel.Light,
+                    ResistanceLevel.Resistant)
+            ]);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(knowledge: knowledge),
+            LoadCatalog());
+
+        Assert.False(result.IsValid);
+        Assert.Collection(
+            result.Diagnostics,
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateElementalAffinityKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.elementalAffinities[1]", diagnostic.Path);
+                Assert.Equal(entityId, diagnostic.ContentId);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.ailmentResistances[1]", diagnostic.Path);
+                Assert.Equal(entityId, diagnostic.ContentId);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.instantDeathResistances[1]", diagnostic.Path);
+                Assert.Equal(entityId, diagnostic.ContentId);
+            });
+        Assert.Throws<RuntimeSaveValidationException>(() => result.RequireValidSnapshot());
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsPartyStockStructuralInvariantViolations()
     {
         GameDataCatalog catalog = LoadCatalog();
