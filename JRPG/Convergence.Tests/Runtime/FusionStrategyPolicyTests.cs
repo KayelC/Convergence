@@ -434,6 +434,45 @@ public sealed class FusionStrategyPolicyTests
     }
 
     [Fact]
+    public void Planner_PreservesParentStateOnlyWhenRankPolicyIdentifiesTransformedParent()
+    {
+        var policy = new ExplicitRankResultPolicy();
+        FusionRecipeSnapshot recipe = new(
+            EntityParent("parent_a"),
+            EntityParent("parent_b"),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.Special,
+                PolicyId: policy.Id));
+        TestFusionRepository repository = Repository(recipes: [recipe]);
+        FusionPolicyRegistry policies = Policies(resultPolicies: [policy]);
+        var random = new ThrowingRandomSource();
+        var planner = new FusionPlanningService(
+            repository,
+            new FusionResultResolver(repository, random, policies),
+            random,
+            policies);
+        FusionParticipantSnapshot first = Participant(
+            "parent_a",
+            "race_a",
+            stats: [("strength", 2)]);
+        FusionParticipantSnapshot transformed = Participant(
+            "parent_b",
+            "race_b",
+            stats: [("strength", 9)]);
+
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            first,
+            transformed,
+            Sacrifice: null,
+            IsSacrificial: false));
+        FusionPreviewSnapshot preview = Assert.IsType<FusionPreviewSnapshot>(
+            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(plan, [])));
+
+        Assert.Same(transformed, plan.PreviewBaseline);
+        Assert.Equal(9, preview.Stats[Id("strength")]);
+    }
+
+    [Fact]
     public void PolicyContext_DefensivelySnapshotsFlagsAndNumericValues()
     {
         var flags = new List<ContentId> { Id("feature_enabled") };
@@ -642,5 +681,16 @@ public sealed class FusionStrategyPolicyTests
 
         public FusionPolicyResolution Resolve(FusionResultPolicyRequest request) =>
             new(FusionRuntimeOperation.CreateNewEntity, ContentId.Parse("not_in_catalog"));
+    }
+
+    private sealed class ExplicitRankResultPolicy : IFusionResultPolicy
+    {
+        public ContentId Id { get; } = ContentId.Parse("explicit_rank_result");
+
+        public FusionPolicyResolution Resolve(FusionResultPolicyRequest request) =>
+            new(
+                FusionRuntimeOperation.RankUpParent,
+                ContentId.Parse("child"),
+                transformedParent: request.SecondParent);
     }
 }

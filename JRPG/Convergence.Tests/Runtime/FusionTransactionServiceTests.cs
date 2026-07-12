@@ -113,7 +113,7 @@ public sealed class FusionTransactionServiceTests
     }
 
     [Fact]
-    public void Commit_RankOperationConsumesBothParentsAndHydratesResolvedEntity()
+    public void Commit_StructuredRankOperationUsesCatalogStateRegardlessOfParentOrder()
     {
         TransactionContext context = CreateContext();
         FusionParticipantSnapshot echo = Participant(
@@ -122,47 +122,86 @@ public sealed class FusionTransactionServiceTests
         FusionParticipantSnapshot bramble = Participant(
             context.Catalog.GetRequiredEntity(Qualified("bramble_runner")),
             "rank_bramble_parent");
-        FusionPlanningResult plan = context.Planner.CreatePlan(new FusionPlanningRequest(
-            echo,
-            bramble,
-            Sacrifice: null,
-            IsSacrificial: false));
-        ValidatedFusionInheritanceSelection selection = Selection(
-            context.Repository,
-            plan,
-            [echo, bramble]);
         var owner = new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("owner"),
             Qualified("echo_adept"),
             "Owner");
-        RuntimePartyStockSnapshot party = new(
-            owner,
-            ownerLevel: 20,
-            demonStock: [Reference(echo), Reference(bramble)]);
         var service = new FusionTransactionService(
             context.ActorFactory,
             new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+        EntityDefinition expectedEntity = context.Catalog.GetRequiredEntity(Qualified("ward_shell"));
 
-        FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
-            plan,
-            selection,
-            party,
-            RuntimeInstanceId.Parse("rank_result"),
-            Id("player_team"),
-            Id("test_controller")));
-        FusionTransactionCommitResult result = service.Commit(new FusionTransactionCommitRequest(
-            assessment.RequirePreparedTransaction(),
-            party));
+        (FusionPlanningResult forwardPlan, PreparedFusionTransaction forwardPrepared, FusionTransactionCommitResult forward) =
+            Execute(echo, bramble, "rank_result_forward");
+        (FusionPlanningResult reversedPlan, PreparedFusionTransaction reversedPrepared, FusionTransactionCommitResult reversed) =
+            Execute(bramble, echo, "rank_result_reversed");
 
-        Assert.Equal(FusionRuntimeOperation.RankUpParent, plan.Result.Operation);
-        Assert.True(result.Applied);
-        Assert.Equal(Qualified("ward_shell"), result.ResultActor?.Entity.Id);
-        Assert.Equal(RuntimeInstanceId.Parse("rank_result"), result.ResultActorSnapshot?.Identity.InstanceId);
-        Assert.Equal([echo.InstanceId, bramble.InstanceId], result.ConsumedParticipantIds);
-        RuntimeActorReferenceSnapshot resultReference = Assert.Single(result.AfterPartyStock.DemonStock);
-        Assert.Equal(RuntimeInstanceId.Parse("rank_result"), resultReference.InstanceId);
-        Assert.Equal(Qualified("ward_shell"), resultReference.EntityDefinitionId);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, forwardPlan.Result.Operation);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, reversedPlan.Result.Operation);
+        Assert.Null(forwardPlan.PreviewBaseline);
+        Assert.Null(reversedPlan.PreviewBaseline);
+        Assert.Equal(forwardPrepared.Preview.EntityId, reversedPrepared.Preview.EntityId);
+        Assert.Equal(forwardPrepared.Preview.Stats, reversedPrepared.Preview.Stats);
+        AssertCatalogStats(forwardPrepared.Preview.Stats);
+        AssertCatalogStats(reversedPrepared.Preview.Stats);
+        Assert.True(forward.Applied);
+        Assert.True(reversed.Applied);
+        Assert.Equal(expectedEntity.Id, forward.ResultActor?.Entity.Id);
+        Assert.Equal(expectedEntity.Id, reversed.ResultActor?.Entity.Id);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("rank_result_forward"),
+            forward.ResultActorSnapshot!.Identity.InstanceId);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("rank_result_reversed"),
+            reversed.ResultActorSnapshot!.Identity.InstanceId);
+        AssertCatalogDecimalStats(forward.ResultActorSnapshot!.Stats.BaseStats);
+        AssertCatalogDecimalStats(reversed.ResultActorSnapshot!.Stats.BaseStats);
+        Assert.Equal([echo.InstanceId, bramble.InstanceId], forward.ConsumedParticipantIds);
+        Assert.Equal([bramble.InstanceId, echo.InstanceId], reversed.ConsumedParticipantIds);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(forward.AfterPartyStock.DemonStock).EntityDefinitionId);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(reversed.AfterPartyStock.DemonStock).EntityDefinitionId);
+
+        (FusionPlanningResult Plan, PreparedFusionTransaction Prepared, FusionTransactionCommitResult Result) Execute(
+            FusionParticipantSnapshot first,
+            FusionParticipantSnapshot second,
+            string resultInstanceId)
+        {
+            FusionPlanningResult plan = context.Planner.CreatePlan(new FusionPlanningRequest(
+                first,
+                second,
+                Sacrifice: null,
+                IsSacrificial: false));
+            ValidatedFusionInheritanceSelection selection = Selection(
+                context.Repository,
+                plan,
+                [first, second]);
+            RuntimePartyStockSnapshot party = new(
+                owner,
+                ownerLevel: 20,
+                demonStock: [Reference(first), Reference(second)]);
+            FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
+                FusionParticipantStockKind.Demon,
+                plan,
+                selection,
+                party,
+                RuntimeInstanceId.Parse(resultInstanceId),
+                Id("player_team"),
+                Id("test_controller")));
+            PreparedFusionTransaction prepared = assessment.RequirePreparedTransaction();
+            return (plan, prepared, service.Commit(new FusionTransactionCommitRequest(prepared, party)));
+        }
+
+        void AssertCatalogStats(IReadOnlyDictionary<ContentId, int> stats)
+        {
+            Assert.Equal(expectedEntity.Stats.Count, stats.Count);
+            Assert.All(expectedEntity.Stats, expected => Assert.Equal(expected.Value, stats[expected.Key]));
+        }
+
+        void AssertCatalogDecimalStats(IReadOnlyDictionary<ContentId, decimal> stats)
+        {
+            Assert.Equal(expectedEntity.Stats.Count, stats.Count);
+            Assert.All(expectedEntity.Stats, expected => Assert.Equal((decimal)expected.Value, stats[expected.Key]));
+        }
     }
 
     [Fact]

@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 review status: review-closed for the approved original-content scope. [Phase 7 Code Review And Readiness](phase-7-code-review.md) defines CodeReview-7-1 through CodeReview-7-5. CodeReview-7-1 preserves the authored binary recipe contract. CodeReview-7-2 enforces one global runtime-ID invariant. CodeReview-7-3 moves clean fusion preparation, parent consumption, result placement, actor construction, and rollback into an injected framework transaction service while leaving confirmation host-owned. CodeReview-7-4 preserves policy context through accident mutation and makes standalone slot-policy context explicit. CodeReview-7-5 rejects malformed Compendium entries at save, registration, and recall boundaries. Phase 8 may begin; capabilities remain `parallel_partial` and removal remains unauthorized.
+Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 through CodeReview7-5 are present. A fresh source audit on 2026-07-11 reopened the review gate. The parent-order-neutral rank-offset correction completed on 2026-07-12: neutral structured rank recipes now use catalog result state, while explicit policies may identify a transformed parent. Three medium follow-ups remain: framework-owned preview validation, Persona stock-capacity save validation, and duplicate persisted-knowledge validation. See [Phase 7 Fresh Code Review And Readiness](phase-7-code-review.md). Phase 8 waits for those corrections; capabilities remain `parallel_partial` and removal remains unauthorized.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -1004,7 +1004,7 @@ CodeReview-7-3 transaction amendment:
 - rejected commits report no applied consumption or transitions; planned evidence remains explicitly available from the prepared token;
 - Training Annex obtains `standard_stock_capacity` from the catalog ruleset binding and no longer creates a legacy capacity policy or executes stock transitions inside its fusion controller;
 - the host remains responsible only for proposed identity, presentation, confirmation, and applying an `Applied` result;
-- the capability remains `parallel_partial`; its Phase 7 review findings are closed and it no longer gates Phase 8.
+- the capability remains `parallel_partial`; transaction ownership is substantially corrected, but the fresh Phase 7 audit keeps the overall gate open for the remaining cross-cutting findings.
 - Verification after the post-interruption source audit: the broad fusion, stock, persistence, host, boundary, and roadmap gate passed `198/198`; the full suite passed `930/930` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
 ### 34. `fusion_strategies`
@@ -1071,7 +1071,7 @@ CodeReview-7-2 integrity amendment:
 - Demon/Persona stock additions and replacements reject cross-role runtime-ID reuse with a typed transition code;
 - save validation rejects illegal cross-list identity reuse and party/stock references whose entity ID disagrees with the referenced actor snapshot;
 - active party plus Demon-stock overlap for the same owned demon remains legal by explicit rule rather than by omission;
-- the capability remains `parallel_partial`, but its required Phase 7 review findings are closed and Phase 8 may begin.
+- the capability remains `parallel_partial`; the 2026-07-11 fresh source audit reopened the Phase 7 gate for the cross-cutting persistence and framework-contract findings recorded in `phase-7-code-review.md`.
 - CodeReview-7-5 verification: focused Compendium/persistence/host JSON tests passed `49/49`, the expanded Phase 7 gate passed `233/233`, and the full suite passed `937/937`. Framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 - Verification: the focused identity, recall, stock, persistence, host, and ledger gate passed `166/166`; the full suite passed `915/915` with no failures or skips. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 

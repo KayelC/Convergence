@@ -821,9 +821,9 @@ public sealed class FusionPlanningService : IFusionPlanningService
                 $"Fusion mutation policy '{mutationPolicyId}' is not registered."), context);
         }
 
-        FusionParticipantSnapshot? previewBaseline = result.Operation == FusionRuntimeOperation.StatBoost
-            ? result.TransformedParent
-            : result.TransformedParent ?? request.FirstParent;
+        // Parent state carries forward only when a policy explicitly identifies the transformed parent.
+        // Neutral structured rank-offset recipes therefore start from the resolved catalog entity.
+        FusionParticipantSnapshot? previewBaseline = result.TransformedParent;
 
         IReadOnlyList<ContentId> naturalSkills = result.Operation == FusionRuntimeOperation.StatBoost
             ? Snapshot(previewBaseline?.SkillIds)
