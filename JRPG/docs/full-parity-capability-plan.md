@@ -231,7 +231,7 @@ Goal: add fusion only after the owner approves the game-specific direction.
 
 Fusion is deliberately late because it is design-heavy. Do not deepen SMT-style assumptions by default.
 
-Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 through CodeReview7-5 are present. A fresh source audit on 2026-07-11 reopened the review gate. The parent-order-neutral rank-offset correction completed on 2026-07-12: neutral structured rank recipes now use catalog result state, while explicit policies may identify a transformed parent. Three medium follow-ups remain: framework-owned preview validation, Persona stock-capacity save validation, and duplicate persisted-knowledge validation. See [Phase 7 Fresh Code Review And Readiness](phase-7-code-review.md). Phase 8 waits for those corrections; capabilities remain `parallel_partial` and removal remains unauthorized.
+Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 through CodeReview7-5 are present. A fresh source audit on 2026-07-11 reopened the review gate. The parent-order-neutral rank-offset and framework-owned preview-authority corrections completed on 2026-07-12. Preview requests now require a validated inheritance token produced from the planning result's retained inheritance plan; hosts cannot pass raw skill IDs or reconstruct policy. Two medium follow-ups remain: Persona stock-capacity save validation and duplicate persisted-knowledge validation. See [Phase 7 Fresh Code Review And Readiness](phase-7-code-review.md). Phase 8 waits for those corrections; capabilities remain `parallel_partial` and removal remains unauthorized.
 
 ### Phase 8: Presentation And Archive Gate
 
@@ -965,7 +965,7 @@ Clean console proof:
 - Phase 7-32 result:
   - `--clean-training-annex-play` now has a `Preview Fusion Result` proof command.
   - The command builds a sacrificial clean catalog plan from Echo Adept, Bramble Runner, and Ashling through `CatalogFusionContentRepository`, `FusionResultResolver`, and `FusionPlanningService`.
-  - The console host presents inherited-skill choices, but the framework remains the rule authority: selection is rechecked through `FusionInheritanceSelectionValidator` before any preview is built.
+  - The console host presents inherited-skill choices, but the framework remains the rule authority: `FusionPlanningService` validates the selection against the retained authoritative plan and `FusionPreviewRequest` accepts only the resulting `ValidatedFusionInheritanceSelection` token.
   - The current sample selects `Frost Tip`, `Echo Strike`, and passive `Steady Breath`; shows `Shell Bash` as `already_known`; and shows `Toxin Touch` plus `Ash Spark` as `group_not_allowed`.
   - `FusionPreviewService` creates the preview snapshot for Ward Shell with natural skills `Shell Bash` and `Soften Guard`, then the host asks for confirmation.
   - Confirmation is intentionally non-mutating. Runtime party/stock state, inventory, wallet, Compendium, and parent actors are not changed in this phase.

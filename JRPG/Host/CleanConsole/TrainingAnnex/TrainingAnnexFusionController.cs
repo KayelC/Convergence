@@ -182,14 +182,8 @@ internal sealed class TrainingAnnexFusionController
             return null;
         }
 
-        FusionInheritancePlan selectionPlan = CreateSelectionPlan(
-            repository,
-            plan,
-            firstParent,
-            secondParent,
-            sacrificeParent);
         FusionInheritanceSelectionResult selection =
-            new FusionInheritanceSelectionValidator().Validate(selectionPlan, selectedSkillIds);
+            planner.ValidateInheritanceSelection(plan, selectedSkillIds);
         if (!selection.IsValid)
         {
             foreach (FusionInheritanceSelectionDiagnostic diagnostic in selection.Diagnostics)
@@ -212,7 +206,7 @@ internal sealed class TrainingAnnexFusionController
         ValidatedFusionInheritanceSelection validSelection = selection.RequireValidSelection();
         FusionPreviewSnapshot? preview = new FusionPreviewService().CreatePreview(new FusionPreviewRequest(
             plan,
-            validSelection.SelectedSkillIds));
+            validSelection));
         if (preview is null)
         {
             await _eventSink.PublishAsync(
@@ -322,14 +316,8 @@ internal sealed class TrainingAnnexFusionController
                 partyStock.DemonStock.Count);
         }
 
-        FusionInheritancePlan selectionPlan = CreateSelectionPlan(
-            repository,
-            plan,
-            firstParent,
-            secondParent);
-        var selectionValidator = new FusionInheritanceSelectionValidator();
-        ValidatedFusionInheritanceSelection emptySelection = selectionValidator
-            .Validate(selectionPlan, [])
+        ValidatedFusionInheritanceSelection emptySelection = planner
+            .ValidateInheritanceSelection(plan, [])
             .RequireValidSelection();
         RuntimeInstanceId proposedResultInstanceId = GenerateFusionInstanceId(
             roster,
@@ -392,7 +380,7 @@ internal sealed class TrainingAnnexFusionController
         }
 
         FusionInheritanceSelectionResult selection =
-            selectionValidator.Validate(selectionPlan, selectedSkillIds);
+            planner.ValidateInheritanceSelection(plan, selectedSkillIds);
         if (!selection.IsValid)
         {
             foreach (FusionInheritanceSelectionDiagnostic diagnostic in selection.Diagnostics)
@@ -659,38 +647,6 @@ internal sealed class TrainingAnnexFusionController
                     cancellationToken).ConfigureAwait(false);
             }
         }
-    }
-
-    private static FusionInheritancePlan CreateSelectionPlan(
-        IFusionContentRepository repository,
-        FusionPlanningResult plan,
-        params FusionParticipantSnapshot?[] participants)
-    {
-        var candidates = new List<SkillDefinition>();
-        var seen = new HashSet<ContentId>();
-        foreach (FusionParticipantSnapshot? participant in participants)
-        {
-            if (participant is null)
-            {
-                continue;
-            }
-
-            foreach (ContentId skillId in participant.SkillIds)
-            {
-                if (seen.Add(skillId) &&
-                    repository.TryGetSkill(skillId, out SkillDefinition? skill) &&
-                    skill is not null)
-                {
-                    candidates.Add(skill);
-                }
-            }
-        }
-
-        return new FusionInheritancePlanner().CreatePlan(new FusionInheritancePlanRequest(
-            plan.ResultEntity!.Definition,
-            candidates,
-            plan.NaturalSkillIds,
-            plan.MaximumInheritanceSlots));
     }
 
     private static FusionParticipantSnapshot ToFusionParticipant(TrainingAnnexRuntimeActor actor) =>

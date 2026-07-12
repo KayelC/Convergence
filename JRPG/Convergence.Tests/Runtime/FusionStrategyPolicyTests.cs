@@ -1,6 +1,7 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Fusion;
+using JRPGPrototype.Logic.Fusion.Inheritance;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -177,8 +178,11 @@ public sealed class FusionStrategyPolicyTests
             target,
             Sacrifice: null,
             IsSacrificial: false));
+        ValidatedFusionInheritanceSelection selection = planner
+            .ValidateInheritanceSelection(plan, [])
+            .RequireValidSelection();
         FusionPreviewSnapshot preview = Assert.IsType<FusionPreviewSnapshot>(
-            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(plan, [])));
+            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(plan, selection)));
 
         Assert.Equal(FusionRuntimeOperation.StatBoost, plan.Result.Operation);
         Assert.Equal(Id("training_catalyst_boost"), plan.Result.ResultPolicyId);
@@ -465,11 +469,120 @@ public sealed class FusionStrategyPolicyTests
             transformed,
             Sacrifice: null,
             IsSacrificial: false));
+        ValidatedFusionInheritanceSelection selection = planner
+            .ValidateInheritanceSelection(plan, [])
+            .RequireValidSelection();
         FusionPreviewSnapshot preview = Assert.IsType<FusionPreviewSnapshot>(
-            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(plan, [])));
+            new FusionPreviewService().CreatePreview(new FusionPreviewRequest(plan, selection)));
 
         Assert.Same(transformed, plan.PreviewBaseline);
         Assert.Equal(9, preview.Stats[Id("strength")]);
+    }
+
+    [Fact]
+    public void PreviewRequest_RequiresValidatedSelectionAndRejectsAnotherPlansSelection()
+    {
+        SkillDefinition firstSkill = Skill("skill_1");
+        SkillDefinition secondSkill = Skill("skill_2");
+        TestFusionRepository repository = Repository(
+            recipes: [CreateRecipe("parent_a", "parent_b", "child")],
+            skills: [firstSkill, secondSkill]);
+        FusionPolicyRegistry policies = Policies();
+        var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), policies);
+        var planner = new FusionPlanningService(
+            repository,
+            resolver,
+            new ThrowingRandomSource(),
+            policies);
+        FusionPlanningResult firstPlan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+        FusionPlanningResult secondPlan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_2"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+        FusionInheritanceSelectionResult impossibleSelection = planner
+            .ValidateInheritanceSelection(firstPlan, [secondSkill.Id]);
+        ValidatedFusionInheritanceSelection secondSelection = planner
+            .ValidateInheritanceSelection(secondPlan, [secondSkill.Id])
+            .RequireValidSelection();
+
+        FusionPreviewSnapshot? preview = new FusionPreviewService().CreatePreview(
+            new FusionPreviewRequest(firstPlan, secondSelection));
+
+        Assert.Null(preview);
+        Assert.False(impossibleSelection.IsValid);
+        Assert.Null(impossibleSelection.ValidatedSelection);
+        Assert.Equal(
+            FusionInheritanceSelectionDiagnosticCode.SkillUnknown,
+            Assert.Single(impossibleSelection.Diagnostics).Code);
+        var constructor = Assert.Single(typeof(FusionPreviewRequest).GetConstructors());
+        Assert.Equal(
+            [typeof(FusionPlanningResult), typeof(ValidatedFusionInheritanceSelection)],
+            constructor.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public void PlannerValidation_UsesFinalSlotLimitAndRejectsDuplicateSelections()
+    {
+        SkillDefinition firstSkill = Skill("skill_1");
+        SkillDefinition secondSkill = Skill("skill_2");
+        TestFusionRepository repository = Repository(
+            recipes: [CreateRecipe("parent_a", "parent_b", "child")],
+            skills: [firstSkill, secondSkill]);
+        FusionPolicyRegistry policies = Policies();
+        var planner = new FusionPlanningService(
+            repository,
+            new FusionResultResolver(repository, new ThrowingRandomSource(), policies),
+            new ThrowingRandomSource(),
+            policies);
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1", "skill_2"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+
+        FusionInheritanceSelectionResult result = planner.ValidateInheritanceSelection(
+            plan,
+            [firstSkill.Id, firstSkill.Id, secondSkill.Id]);
+
+        Assert.Equal(1, plan.MaximumInheritanceSlots);
+        Assert.False(result.IsValid);
+        Assert.Null(result.ValidatedSelection);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == FusionInheritanceSelectionDiagnosticCode.SelectionLimitExceeded);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == FusionInheritanceSelectionDiagnosticCode.SkillDuplicate);
+    }
+
+    [Fact]
+    public void Planner_RejectsSelectionsAgainstPlansWithoutAuthoritativeInheritanceState()
+    {
+        TestFusionRepository repository = Repository(recipes: []);
+        FusionPolicyRegistry policies = Policies();
+        var planner = new FusionPlanningService(
+            repository,
+            new ThrowingFusionResultResolver(),
+            new ThrowingRandomSource(),
+            policies);
+        FusionPlanningResult failedPlan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a"),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: true));
+
+        FusionInheritanceSelectionResult result = planner.ValidateInheritanceSelection(failedPlan, []);
+
+        Assert.False(result.IsValid);
+        Assert.Null(result.ValidatedSelection);
+        Assert.Equal(
+            FusionInheritanceSelectionDiagnosticCode.PlanUnavailable,
+            Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]

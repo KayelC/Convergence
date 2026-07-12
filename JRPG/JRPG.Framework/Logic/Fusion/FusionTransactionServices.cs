@@ -243,7 +243,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
 
         FusionPreviewSnapshot? preview = _previews.CreatePreview(new FusionPreviewRequest(
             plan,
-            request.InheritanceSelection.SelectedSkillIds));
+            request.InheritanceSelection));
         if (preview is null)
         {
             return Rejected(
@@ -626,11 +626,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         ValidatedFusionInheritanceSelection selection,
         RuntimePartyStockSnapshot partyStock)
     {
-        if (plan.ResultEntity is null ||
-            selection.ReceivingEntityId != plan.ResultEntity.Id ||
-            selection.MaximumSelections != plan.MaximumInheritanceSlots ||
-            selection.SelectedSkillIds.Count > plan.MaximumInheritanceSlots ||
-            selection.SelectedSkillIds.Any(skillId => !plan.PickableSkillIds.Contains(skillId)))
+        if (!FusionValidatedSelectionRules.BelongsToPlan(plan, selection))
         {
             return Rejected(
                 partyStock,

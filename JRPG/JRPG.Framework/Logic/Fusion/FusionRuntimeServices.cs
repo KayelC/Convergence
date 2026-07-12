@@ -699,7 +699,8 @@ public sealed record FusionPlanningResult
         IReadOnlyList<FusionInheritanceEntry> displaySkills,
         int maximumInheritanceSlots,
         FusionSacrificePolicyDecision? sacrificeDecision,
-        FusionPolicyContext policyContext)
+        FusionPolicyContext policyContext,
+        FusionInheritancePlan? inheritancePlan = null)
     {
         Result = result;
         ResultEntity = resultEntity;
@@ -714,6 +715,7 @@ public sealed record FusionPlanningResult
         MaximumInheritanceSlots = maximumInheritanceSlots;
         SacrificeDecision = sacrificeDecision;
         PolicyContext = policyContext ?? throw new ArgumentNullException(nameof(policyContext));
+        InheritancePlan = inheritancePlan;
     }
 
     public FusionResolvedResult Result { get; }
@@ -730,6 +732,7 @@ public sealed record FusionPlanningResult
     public int MaximumInheritanceSlots { get; }
     public FusionSacrificePolicyDecision? SacrificeDecision { get; }
     public FusionPolicyContext PolicyContext { get; }
+    internal FusionInheritancePlan? InheritancePlan { get; }
 }
 
 public interface IFusionPlanningService
@@ -744,6 +747,9 @@ public interface IFusionPlanningService
         FusionPlanningResult plan,
         IReadOnlyList<ContentId> legalSkillIds,
         int maximumSlots);
+    FusionInheritanceSelectionResult ValidateInheritanceSelection(
+        FusionPlanningResult plan,
+        IEnumerable<ContentId> selectedSkillIds);
 }
 
 public sealed class FusionPlanningService : IFusionPlanningService
@@ -751,6 +757,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
     private readonly IFusionContentRepository _content;
     private readonly IFusionResultResolver _resolver;
     private readonly IFusionInheritancePlanner _inheritancePlanner;
+    private readonly IFusionInheritanceSelectionValidator _selectionValidator;
     private readonly IRandomSource _random;
     private readonly FusionPolicyRegistry _policies;
 
@@ -759,13 +766,15 @@ public sealed class FusionPlanningService : IFusionPlanningService
         IFusionResultResolver resolver,
         IRandomSource random,
         FusionPolicyRegistry policies,
-        IFusionInheritancePlanner? inheritancePlanner = null)
+        IFusionInheritancePlanner? inheritancePlanner = null,
+        IFusionInheritanceSelectionValidator? selectionValidator = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _policies = policies ?? throw new ArgumentNullException(nameof(policies));
         _inheritancePlanner = inheritancePlanner ?? new FusionInheritancePlanner();
+        _selectionValidator = selectionValidator ?? new FusionInheritanceSelectionValidator();
     }
 
     public FusionPlanningResult CreatePlan(FusionPlanningRequest request)
@@ -870,6 +879,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
                 Array.AsReadOnly(legalSkills),
                 sacrificeDecision?.AdditionalInheritanceSlots ?? 0,
                 context));
+        FusionInheritancePlan selectionPlan = inheritancePlan.WithMaximumSelections(maxSlots);
 
         return new FusionPlanningResult(
             result,
@@ -884,7 +894,8 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Snapshot(display),
             maxSlots,
             sacrificeDecision,
-            context);
+            context,
+            selectionPlan);
     }
 
     public int GetInheritanceSlotCount(IEnumerable<SkillDefinition> legalSkills) =>
@@ -948,6 +959,25 @@ public sealed class FusionPlanningService : IFusionPlanningService
         return Snapshot(shuffled);
     }
 
+    public FusionInheritanceSelectionResult ValidateInheritanceSelection(
+        FusionPlanningResult plan,
+        IEnumerable<ContentId> selectedSkillIds)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(selectedSkillIds);
+
+        if (!plan.IsSuccessful || plan.InheritancePlan is null)
+        {
+            return new FusionInheritanceSelectionResult(
+                [new FusionInheritanceSelectionDiagnostic(
+                    FusionInheritanceSelectionDiagnosticCode.PlanUnavailable,
+                    "The fusion plan does not contain an authoritative inheritance plan.")],
+                validatedSelection: null);
+        }
+
+        return _selectionValidator.Validate(plan.InheritancePlan, selectedSkillIds);
+    }
+
     private List<SkillDefinition> CandidateSkillDefinitions(params FusionParticipantSnapshot?[] participants)
     {
         var result = new List<SkillDefinition>();
@@ -1004,9 +1034,40 @@ public sealed class FusionPlanningService : IFusionPlanningService
             Array.AsReadOnly([new FusionRuntimeDiagnostic(code, message)]));
 }
 
-public sealed record FusionPreviewRequest(
-    FusionPlanningResult Plan,
-    IEnumerable<ContentId> SelectedSkillIds);
+public sealed record FusionPreviewRequest
+{
+    public FusionPreviewRequest(
+        FusionPlanningResult plan,
+        ValidatedFusionInheritanceSelection inheritanceSelection)
+    {
+        Plan = plan ?? throw new ArgumentNullException(nameof(plan));
+        InheritanceSelection = inheritanceSelection ??
+            throw new ArgumentNullException(nameof(inheritanceSelection));
+    }
+
+    public FusionPlanningResult Plan { get; }
+    public ValidatedFusionInheritanceSelection InheritanceSelection { get; }
+}
+
+internal static class FusionValidatedSelectionRules
+{
+    public static bool BelongsToPlan(
+        FusionPlanningResult plan,
+        ValidatedFusionInheritanceSelection selection)
+    {
+        if (!plan.IsSuccessful || plan.ResultEntity is null ||
+            selection.ReceivingEntityId != plan.ResultEntity.Id ||
+            selection.MaximumSelections != plan.MaximumInheritanceSlots ||
+            selection.SelectedSkillIds.Count > plan.MaximumInheritanceSlots ||
+            selection.SelectedSkillIds.Distinct().Count() != selection.SelectedSkillIds.Count)
+        {
+            return false;
+        }
+
+        var pickableSkillIds = plan.PickableSkillIds.ToHashSet();
+        return selection.SelectedSkillIds.All(pickableSkillIds.Contains);
+    }
+}
 
 public sealed record FusionPreviewSnapshot
 {
@@ -1059,7 +1120,8 @@ public sealed class FusionPreviewService : IFusionPreviewService
     {
         ArgumentNullException.ThrowIfNull(request);
         FusionPlanningResult plan = request.Plan;
-        if (!plan.IsSuccessful || plan.ResultEntity is null)
+        if (!FusionValidatedSelectionRules.BelongsToPlan(plan, request.InheritanceSelection) ||
+            plan.ResultEntity is null)
         {
             return null;
         }
@@ -1097,7 +1159,7 @@ public sealed class FusionPreviewService : IFusionPreviewService
             entity.Rank,
             level,
             naturalSkills,
-            request.SelectedSkillIds,
+            request.InheritanceSelection.SelectedSkillIds,
             stats,
             experience,
             lifetimeExperience);

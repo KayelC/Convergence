@@ -122,6 +122,16 @@ public sealed record FusionInheritancePlan
     public ContentId ReceivingEntityId => ReceivingEntity.Id;
     public int MaximumSelections { get; }
     public IReadOnlyList<FusionInheritanceCandidate> Candidates { get; }
+
+    internal FusionInheritancePlan WithMaximumSelections(int maximumSelections)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumSelections);
+        return new FusionInheritancePlan(
+            ReceivingEntity,
+            maximumSelections,
+            Candidates,
+            Evaluator);
+    }
 }
 
 public interface IFusionInheritancePlanner
@@ -131,6 +141,7 @@ public interface IFusionInheritancePlanner
 
 public enum FusionInheritanceSelectionDiagnosticCode
 {
+    PlanUnavailable,
     SelectionLimitExceeded,
     SkillDuplicate,
     SkillUnknown,

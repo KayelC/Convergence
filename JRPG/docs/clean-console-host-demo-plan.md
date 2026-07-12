@@ -774,7 +774,7 @@ Fusion is not just a technical feature. It defines the identity of the game loop
 - `--clean-training-annex-play` now has a `Preview Fusion Result` proof command.
 - The command uses the same clean catalog fusion path as 7-30 and 7-31, then opens a tiny inherited-skill selection menu for the sacrificial Echo Adept + Bramble Runner + Ashling sample.
 - The host can select `Frost Tip`, `Echo Strike`, and passive `Steady Breath`; blocked or already-known rows remain visible with reason labels such as `already_known` and `group_not_allowed`.
-- Selected skills are validated by `FusionInheritanceSelectionValidator` before `FusionPreviewService` creates the Ward Shell preview.
+- Selected skills are validated through `FusionPlanningService` against the exact retained inheritance plan. `FusionPreviewService` accepts only the resulting validated selection token before creating the Ward Shell preview.
 - Confirmation records the preview as accepted, but deliberately mutates no runtime state. Party/stock, Compendium, inventory, wallet, and parent actors remain unchanged.
 - This is still non-mutating. Phase 7-33 owns committed clean fusion transactions and rollback behavior.
 - Verification: focused 7-32 tests passed `3/3`; parity/roadmap guard tests passed within the `13/13` focused guard run; full suite passed `864/864` with no skips. Framework build stayed at `0` warnings, solution build stayed at `98` legacy warnings, clean battle/field/save/Training Annex demos passed, and protected legacy JSON remained unchanged. Direct redirected CLI smoke for `--clean-training-annex-play` still hits the known `ConsoleIO` cursor-handle limitation; scripted interactive coverage remains test-owned through `ScriptedGameIO`.
@@ -923,7 +923,7 @@ Phase 7-30 adds clean catalog fusion result calculation to `Calculate Fusion Res
 
 Phase 7-35 verification passed `148/148` focused capability, boundary, and protected-legacy tests and `893/893` full-suite tests with no failures or skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all clean demos pass, the framework boundary search returns no matches, and `Data/Jsons` is unchanged.
 
-CodeReview-7-1 through CodeReview-7-5 are implemented and improved recipe fidelity, runtime identity, transaction ownership, policy-context propagation, and Compendium entry/save validation. The fresh 2026-07-11 source audit reopened the Phase 7 gate. Parent-order-neutral structured rank state was corrected on 2026-07-12; three framework-contract and persistence findings remain. Phase 8-36 waits for those targeted corrections and still must not invent additional console-only presentation work or imply `clean_parity`.
+CodeReview-7-1 through CodeReview-7-5 are implemented and improved recipe fidelity, runtime identity, transaction ownership, policy-context propagation, and Compendium entry/save validation. The fresh 2026-07-11 source audit reopened the Phase 7 gate. Parent-order-neutral structured rank state and framework-owned preview authority were corrected on 2026-07-12; two persistence findings remain. Phase 8-36 waits for those targeted corrections and still must not invent additional console-only presentation work or imply `clean_parity`.
 
 CodeReview-7-4 verification passed `27/27` focused strategy/transaction tests, `200/200` broad Phase 7 tests, and `932/932` full-suite tests. The framework build remained at `0` warnings, all four clean demos passed, and no content data changed.
 

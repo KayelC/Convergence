@@ -27,15 +27,15 @@ The Phase 7 range changes 48 files with 9,844 insertions and 456 deletions. The 
 
 ## Verdict
 
-**Phase 7 is substantially implemented, but it is not review-closed yet. Phase 8 should wait for three remaining focused correctness follow-ups.**
+**Phase 7 is substantially implemented, but it is not review-closed yet. Phase 8 should wait for two remaining focused correctness follow-ups.**
 
 No high-severity issue was found. Fusion commits are atomic at the immutable snapshot boundary, stale preparations are rejected, Compendium registration and recall reject malformed entries before transaction work, and framework/host dependencies remain correctly separated.
 
-The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset finding is now resolved. Three medium findings remain, while two lower-priority modularity concerns may be deferred but must remain explicit rather than being mistaken for completed framework behavior.
+The fresh audit found four medium-severity contract or persistence gaps that were not covered by the tests at review time. The rank-offset and preview-authority findings are now resolved. Two medium findings remain, while two lower-priority modularity concerns may be deferred but must remain explicit rather than being mistaken for completed framework behavior.
 
 ## Findings
 
-### Medium: Fusion previews can be constructed from unvalidated skill IDs
+### Medium, resolved 2026-07-12: Fusion previews could be constructed from unvalidated skill IDs
 
 Source:
 
@@ -59,6 +59,15 @@ Required correction:
 - make preview creation consume `ValidatedFusionInheritanceSelection`, or expose one framework planning/selection service that returns the validated token and preview together;
 - remove host reconstruction of candidate selection rules;
 - add direct tests for over-limit, duplicate, unknown, already-known, and ineligible preview requests.
+
+Resolution:
+
+- `FusionPlanningResult` now retains the authoritative evaluated inheritance plan with its final slot limit;
+- `IFusionPlanningService.ValidateInheritanceSelection(...)` validates host selections against that retained plan and returns the existing opaque `ValidatedFusionInheritanceSelection` token;
+- `FusionPreviewRequest` has one public constructor and requires that token, so raw skill-ID collections are no longer a public preview input;
+- `FusionPreviewService` and `FusionTransactionService` share the same plan-membership rule, rejecting a token whose receiving entity, slot limit, duplicate state, or selected IDs do not match the requested plan;
+- the Training Annex host no longer reconstructs candidates or invokes the low-level inheritance validator itself;
+- direct regressions prove an impossible ID cannot produce a token, a token from another plan cannot produce a preview, and the public request surface has no raw-ID constructor. Existing inheritance-selection tests continue to cover over-limit, duplicate, unknown, already-known, and ineligible diagnostics.
 
 ### Medium, resolved 2026-07-12: Structured rank-offset previews depended on caller parent order
 
@@ -214,9 +223,8 @@ The tests are not merely asserting console text produced by the same method:
 
 No skipped tests or obvious always-true assertions were found in the reviewed Phase 7 suites.
 
-The weakness is missing scenarios, not false-positive assertions. The current suite does not cover:
+The weakness is missing scenarios, not false-positive assertions. After the preview-authority correction, the current suite still does not cover:
 
-- invalid requests sent directly to `FusionPreviewService`;
 - over-capacity Persona stock in a save;
 - duplicate persisted knowledge keys;
 - `AddPartyMember` collisions with form or stock roles.
@@ -226,8 +234,9 @@ The weakness is missing scenarios, not false-positive assertions. The current su
 | Gate | Current result |
 | --- | --- |
 | Focused rank-offset correction tests | `2/2` passed |
+| Focused preview-authority correction tests | `3/3` passed |
 | Focused fusion and compatibility regression tests | `95/95` passed |
-| Full solution tests | `938/938` passed, `0` skipped |
+| Full solution tests | `941/941` passed, `0` skipped |
 | Nonincremental framework build | `0` warnings, `0` errors |
 | Nonincremental solution build | `98` protected legacy-host warnings, `0` errors |
 | Clean battle demo | passed |
@@ -241,12 +250,11 @@ Green verification establishes that supported paths remain stable. It does not i
 
 ## Phase 8 Gate
 
-Before Phase 8 begins, complete these three remaining follow-ups in order:
+Before Phase 8 begins, complete these two remaining follow-ups in order:
 
-1. Move preview selection authority fully into the framework and make invalid previews unconstructable.
-2. Validate Persona stock capacity anywhere Demon stock capacity is validated.
-3. Validate or deterministically normalize duplicate persisted knowledge before familiar import.
+1. Validate Persona stock capacity anywhere Demon stock capacity is validated.
+2. Validate or deterministically normalize duplicate persisted knowledge before familiar import.
 
 The `AddPartyMember` identity check should be included with the persistence/invariant follow-up if it can be done without changing intentional summon semantics. Compendium pricing policy extraction may be deferred and should remain documented as an open modularity decision.
 
-Until the three remaining medium findings are closed, Phase 7 remains implemented but **review-open**, all affected capabilities remain `parallel_partial`, and every `removalAuthorized` flag remains `false`.
+Until the two remaining medium findings are closed, Phase 7 remains implemented but **review-open**, all affected capabilities remain `parallel_partial`, and every `removalAuthorized` flag remains `false`.
