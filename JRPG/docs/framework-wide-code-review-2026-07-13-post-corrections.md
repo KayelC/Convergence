@@ -1,0 +1,164 @@
+# Framework-Wide Code Review After Corrections
+
+Date: 2026-07-13
+
+Branch: `track-12-recovery`
+
+Reviewed commit: `2830a3acf42c5f16ef070f9cd369471da757ccae` (`Review-Whole-12`)
+
+## Review Rule
+
+This is a fresh review of the current source and tests. Earlier review reports and their summaries were deliberately excluded while findings were formed. They were not used as a checklist or as evidence that a correction worked.
+
+The review covered the framework project structure and public boundaries, definitions and content loading, catalog qualification, validation, actor state, persistence and restore, action/effect execution, battle orchestration and lifecycle, combat policies, party and stock transitions, field and dungeon state, inventory and economy, negotiation and rewards, fusion and Compendium, host contracts, and the corresponding tests.
+
+## Verdict
+
+**Phase 8 should not begin yet.**
+
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. However, one high-severity lifecycle contract defect and three medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
+
+Recommended gate:
+
+1. Correct H1, M1, and M2 before Phase 8.
+2. Resolve M3 either by making the convenience runner use the canonical lifecycle or by explicitly reducing/removing its public authority.
+3. Correct the low findings before publishing the framework package; they do not need to block design discussion.
+
+## Findings
+
+### H1. Authored duration kinds are accepted but not executed completely
+
+**Evidence**
+
+- The public definition vocabulary exposes `instant`, `turns`, `phase`, `battle`, and `permanent` durations in `JRPG.Framework/Data/Definitions/SharedPrimitives.cs:44`.
+- Semantic validation accepts turn and phase duration data in `JRPG.Framework/Data/SkillSystem/Validation/SkillSystemContentValidator.cs:1546`.
+- Stateful effects store the supplied duration for ailments, stat stages, charges, shields, affinity Break, and affinity overrides.
+- Runtime ticking in `JRPG.Framework/Logic/Battle/Execution/BattleRuntimeState.cs:861` handles only `TurnDurationDefinition`. Every other duration returns without changing or expiring state.
+- The status lifecycle public service has turn-start, turn-end, application, and cleanup operations, but no phase-duration operation in `JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs:377`.
+- The encounter runner emits a phase-end lifecycle callback in `JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs:723`, but no canonical lifecycle implementation consumes that callback to expire `PhaseDurationDefinition` state.
+- Existing tests prove that phase, battle, and permanent durations can deserialize or survive snapshots; they do not prove their runtime expiry semantics.
+
+**Impact**
+
+An authored instant or phase-limited status can remain active beyond its promised scope. For example, an instant affinity Break is stored in actor state and cannot expire through the current tick path. This is a contract violation shared by several effect families and can alter later actions, phases, and restored state.
+
+**Required correction**
+
+- Define executable semantics for all five duration kinds at one canonical lifecycle boundary.
+- Ensure instant state expires at the approved effect/action boundary.
+- Expire phase state only for its authored phase ID.
+- Clear battle state at battle completion while preserving genuinely permanent state according to an explicit policy.
+- Add lifecycle tests for every duration kind across ailments, stat stages, charges, shields, Break, affinity overrides, and other statuses.
+
+### M1. Assessment and execution can resolve random targets twice
+
+**Evidence**
+
+- `BattleActionExecutor.ExecuteAsync` calls `Assess(request)` before dispatching execution in `JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs:490`.
+- Skill assessment resolves targets, then `ExecuteSkill` calls `SkillExecutor.Execute`; that method performs its own assessment again in `JRPG.Framework/Logic/Battle/Execution/SkillExecutor.cs:26`.
+- Item execution has the same second-assessment behavior in `JRPG.Framework/Logic/Battle/Execution/ItemExecutor.cs:201`.
+- Basic attack and other direct effect actions resolve once during action assessment and again in `ExecuteEffects` at `JRPG.Framework/Logic/Battle/Execution/BattleActionExecutor.cs:842`.
+- Random selection invokes the host policy during resolution in `JRPG.Framework/Logic/Battle/Execution/ConditionAndTargetResolution.cs:211` and `RuntimeTargetResolver.cs:55`.
+- Current tests use stable first/ordered target policies and do not assert that the policy is invoked once.
+
+**Impact**
+
+A stateful random policy can choose target A for the returned assessment and target B for execution. The host can display one target while the framework mutates another, and the random source advances more than once for a single command. This breaks assessment/execution parity and deterministic replay expectations.
+
+**Required correction**
+
+Resolve targets once into an immutable, request-bound assessment token and execute from that token, or collapse internal assessment and execution into one resolution transaction. Add call-count and alternating-target regressions for skills, items, basic attacks, and analyze/effect actions.
+
+### M2. Runtime stat and base-resource numeric domains are not protected at the restore boundary
+
+**Evidence**
+
+- `RuntimeStatBlockSnapshot` accepts arbitrary decimal values in `JRPG.Framework/Logic/Runtime/RuntimeStateSnapshots.cs:181`.
+- `RuntimeActorSnapshot` accepts arbitrary base-resource values in `RuntimeStateSnapshots.cs:443`.
+- `RuntimeActorState` copies both collections without a numeric-domain check in `JRPG.Framework/Logic/Battle/Execution/BattleRuntimeState.cs:103`.
+- Save validation delegates actor checks to `RuntimeActorSnapshotIntegrity` and catalog-reference checks, but does not validate stat or base-resource numeric domains in `JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs:424`.
+- `StandardStatResolutionPolicy` converts a decimal directly to `int` in `JRPG.Framework/Logic/Runtime/ProgressionPolicies.cs:176`; an out-of-range value throws `OverflowException`.
+- `StandardResourceGrowthPolicy` can calculate a negative maximum and then call `Math.Clamp` with an invalid range in `ProgressionPolicies.cs:314`.
+- Natural ailment recovery also converts a runtime decimal stat to `int` in `JRPG.Framework/Logic/Battle/Execution/BattleStatusLifecycle.cs:718`.
+
+**Impact**
+
+A host-created or restored snapshot can pass `IRuntimeSaveValidator`, restore successfully, and later escape the diagnostic boundary with an arithmetic exception during ordinary stat, growth, or ailment processing.
+
+**Required correction**
+
+Define contract-only numeric invariants at the shared runtime snapshot boundary. At minimum, reject conversion-unsafe stat values and negative base resources using stable diagnostics before restore. Add hostile snapshot tests proving validation aggregates the errors and that standard policies cannot throw after `RequireValidSnapshot()` succeeds.
+
+### M3. `AutomatedBattleRunner` bypasses the canonical status lifecycle and bound turn-economy policy
+
+**Evidence**
+
+- `AutomatedBattleRunner` is a public framework service in `JRPG.Framework/Logic/Battle/Runtime/AutomatedBattleRunner.cs:320`.
+- It constructs its own encounter services, including a direct `new PressTurnEngine()`, at `AutomatedBattleRunner.cs:350`.
+- Its private lifecycle port always reports `CanAct`, dispatches only `battle_start` and `owner_turn_end` passive events, and makes phase-end and battle-end lifecycle calls no-ops at `AutomatedBattleRunner.cs:423`.
+- It therefore does not run canonical guard clearing, ailment restrictions, poison/sleep processing, natural recovery, duration ticking, or battle-end status cleanup supplied by `BattleStatusLifecycleService`.
+
+**Impact**
+
+Two public clean battle entry points can produce different rules for the same actors and definitions. A host selecting the convenience runner can silently lose authored ailments and lifecycle behavior, while also bypassing its catalog-bound Press Turn factory.
+
+**Required correction**
+
+Either inject the canonical lifecycle and turn-economy factory into `AutomatedBattleRunner`, or explicitly demote the type to a narrowly named demo/test helper outside the authoritative framework surface. Add parity tests that run the same encounter through both supported entry points.
+
+### L1. Encounter requests do not reject duplicate runtime instance IDs
+
+`BattleEncounterRequest` snapshots participants but does not enforce unique `RuntimeInstanceId` values in `JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs:95`; `RunAsync` checks only round limit and nonempty participants at line 440. Events and target identity become ambiguous, and `AutomatedBattleTurnHandler` later uses `Single` by instance ID at `AutomatedBattleRunner.cs:513`. Reject duplicate participant identities at the encounter boundary with a typed fault/diagnostic and add a regression test.
+
+### L2. `EffectExecutionResult` collection immutability can be bypassed with record cloning
+
+The constructor defensively snapshots passive activations and host requests, but both collection properties remain public `init` properties in `JRPG.Framework/Logic/Battle/Execution/ExecutionContracts.cs:56`. External code can use `with` to replace either property with a mutable collection. Make the collection properties get-only or route cloning through a constructor that snapshots replacements; test mutation after cloning.
+
+### L3. Public shop price arithmetic accepts unchecked extreme inputs
+
+`ShopTransactionService.CalculateBuyPrice` and `CalculateSellPrice` use `double` and unchecked casts to `int` in `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs:719`. `RuntimeShopOfferSnapshot` is publicly constructible without validating base price, and arbitrary Luck values can create overflow/sentinel prices. Use decimal/checked arithmetic and stable rejection or an explicit clamping contract. Normal catalog-authored pricing tests do not cover this public boundary.
+
+## Verified Current Health
+
+The following conclusions come from direct source inspection rather than prior review claims:
+
+- The framework is a dependency-free `net9.0` class library. Newtonsoft remains in the compatibility console host only.
+- Public framework boundaries remain serializer-, filesystem-, console-, Godot-, and legacy-runtime neutral.
+- Definitions and most runtime result/snapshot types defensively copy supplied collections; nested custom parameters are normalized away from serializer-owned values.
+- `ContentId`, semantic versioning, manifest traversal, direct dependency visibility, qualification, catalog repositories, and semantic validation have clear typed boundaries.
+- Actor execution uses staged runtime copies and commits only after successful effect execution.
+- Encounter results contain detached actor snapshots rather than live mutable participants.
+- The synchronous encounter wrapper avoids capturing a host synchronization context, and asynchronous framework paths consistently avoid context capture.
+- Break is represented in executable actor state, participates in affinity resolution, ticks with turn durations, persists through snapshots, and is included in cleanup.
+- Party/stock transitions enforce role, capacity, ownership, and global identity invariants while retaining intentional active-and-owned demon overlap.
+- Persistence validates content-pack versions, actor/content references, party/stock roles and capacities, equipment ownership, knowledge uniqueness, and restored catalog provenance.
+- Fusion planning, preview, and transaction authority use typed validated selections and immutable snapshots. Rank-offset results are parent-order independent.
+- Compendium registration, familiar knowledge import, recall pricing policy, and duplicate knowledge handling are framework-owned and typed.
+- No production framework `TODO`, `FIXME`, or `NotImplementedException` markers were found.
+
+## Quality Gate Results
+
+- Full test suite: **1,027 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**. The warnings are compatibility-host/test nullable debt, not framework compilation warnings.
+- Framework package: produced `JRPG.Framework.1.0.0.nupkg` successfully. NuGet warns that the package has no readme; it should not be treated as publication-ready metadata yet.
+- `--clean-battle-demo`: exit `0`, player-team victory.
+- `--clean-field-demo`: exit `0`, all shared item/field effect cases completed.
+- `--clean-save-demo`: exit `0`, save contract version 6 restored with zero diagnostics.
+- `--clean-training-annex-demo`: exit `0`, original-content battle victory, rewards applied, save validated.
+- Framework forbidden-reference search: no prohibited production references found.
+- `git diff --check`: passed before this report was added.
+- `Data/Jsons`: unchanged.
+- Branch was clean and synchronized with `origin/track-12-recovery` at review start.
+
+## Phase 8 Readiness Gate
+
+The corrected framework is a credible foundation, but **it is not ready to enter Phase 8 as a closed runtime baseline today**. The immediate correction order should be:
+
+1. Complete duration lifecycle authority (H1).
+2. Make action assessment and execution share one resolved target set (M1).
+3. Enforce runtime numeric domains before restore/policy execution (M2).
+4. Unify or demote the automated battle convenience path (M3).
+5. Address L1-L3, rerun this gate, and only then begin Phase 8-36 host interchangeability.
+
+This conclusion does not invalidate the previous correction work. That work fixed substantial defects and is present in the current source. The remaining findings are narrower, but they cross public contracts and should be resolved before presentation interchangeability becomes the next layer built on top.
