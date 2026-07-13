@@ -132,8 +132,9 @@ Important rules:
 - Equipment ownership is stored as unique ID lists by category; Track L intentionally does not introduce per-copy equipment instances.
 - Clean equipped weapon profiles own basic-attack metadata for original-content consumers.
 - Clean accessory stat modifiers feed stat resolution for actor kinds whose stat policy uses equipment. They are not forced onto demon actors unless a ruleset/stat policy chooses that behavior.
-- Buy prices decrease with Luck down to a 50% multiplier: `(int)(basePrice * max(0.5, 1.0 - Luck * 0.01))`.
-- Sell prices start at 50% and increase with Luck: `(int)(basePrice * (0.50 + Luck * 0.01))`.
+- Buy prices decrease with Luck down to a 50% multiplier: `truncate(basePrice * max(0.5, 1.0 - Luck * 0.01))`.
+- Sell prices start at 50% and increase with Luck: `truncate(basePrice * (0.50 + Luck * 0.01))`.
+- Framework shop pricing uses exact decimal arithmetic. Base price and Luck must be nonnegative, and a result above `Int32.MaxValue` is rejected before inventory or wallet mutation with `InvalidShopPricing` rather than wrapped or clamped.
 - Missing sell metadata still falls back to base price `100`.
 - Framework shop transactions reject duplicate equipment, unavailable stock, insufficient Macca, and selling currently equipped gear before mutation.
 - Equipment metadata can be patched from shop entries if JSON-loaded objects are missing names or IDs.

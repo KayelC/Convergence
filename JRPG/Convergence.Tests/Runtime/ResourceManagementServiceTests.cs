@@ -238,6 +238,55 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void RuntimeShopOfferSnapshot_RejectsNegativeBasePriceAtConstructionAndCloneBoundaries()
+    {
+        ArgumentOutOfRangeException construction = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("invalid"), -1));
+        var valid = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("medicine"), 100);
+
+        ArgumentOutOfRangeException cloning = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _ = valid with { BasePrice = -1 });
+
+        Assert.Equal("BasePrice", construction.ParamName);
+        Assert.Equal("BasePrice", cloning.ParamName);
+        Assert.Equal(100, valid.BasePrice);
+
+        var (kind, contentId, basePrice, slot, stackLimit, stock) = valid;
+        Assert.Equal(ShopContentKind.Item, kind);
+        Assert.Equal(Id("medicine"), contentId);
+        Assert.Equal(100, basePrice);
+        Assert.Null(slot);
+        Assert.Null(stackLimit);
+        Assert.Null(stock);
+    }
+
+    [Fact]
+    public void ShopService_RejectsInvalidOrOverflowPricingWithoutMutation()
+    {
+        var shop = new ShopTransactionService();
+        ContentId medicine = Id("medicine");
+        var inventory = new RuntimeInventorySnapshot(
+            [new KeyValuePair<ContentId, int>(medicine, 1)]);
+        var wallet = new RuntimeWalletSnapshot(100);
+        var ordinaryOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, 100);
+        var extremeOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, int.MaxValue);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateBuyPrice(-1, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateBuyPrice(100, -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateSellPrice(100, -1));
+        Assert.Throws<OverflowException>(() => shop.CalculateSellPrice(int.MaxValue, int.MaxValue));
+        Assert.Equal(13, shop.CalculateBuyPrice(20, 35));
+        Assert.Equal(29, shop.CalculateSellPrice(50, 8));
+        Assert.Equal(1_073_741_823, shop.CalculateBuyPrice(int.MaxValue, int.MaxValue));
+
+        ShopTransactionResult invalidBuy = shop.Buy(inventory, wallet, ordinaryOffer, buyerLuck: -1);
+        ShopTransactionResult overflowingSell = shop.Sell(inventory, wallet, extremeOffer, sellerLuck: int.MaxValue);
+
+        AssertPricingRejectedWithoutMutation(invalidBuy, inventory, wallet, "cannot be negative");
+        AssertPricingRejectedWithoutMutation(overflowingSell, inventory, wallet, "integer range");
+    }
+
+    [Fact]
     public void ShopService_RejectsInsufficientCurrencyDuplicateEquipmentAndMissingStock()
     {
         var shop = new ShopTransactionService();
@@ -455,6 +504,24 @@ public sealed class ResourceManagementServiceTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static void AssertPricingRejectedWithoutMutation(
+        ShopTransactionResult result,
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        string expectedMessage)
+    {
+        Assert.False(result.Applied);
+        Assert.Equal(ResourceTransactionCode.InvalidShopPricing, result.Code);
+        Assert.Equal(0, result.Price);
+        Assert.Same(inventory, result.BeforeInventory);
+        Assert.Same(inventory, result.AfterInventory);
+        Assert.Same(wallet, result.BeforeWallet);
+        Assert.Same(wallet, result.AfterWallet);
+        ResourceTransactionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ResourceTransactionCode.InvalidShopPricing, diagnostic.Code);
+        Assert.Contains(expectedMessage, diagnostic.Message, StringComparison.Ordinal);
+    }
 
     private static ContentId Q(string localId) => ContentId.Parse($"test.pack:{localId}");
 

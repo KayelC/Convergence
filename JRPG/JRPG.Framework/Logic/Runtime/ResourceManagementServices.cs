@@ -19,7 +19,8 @@ public enum ResourceTransactionCode
     InsufficientCurrency,
     ShopStockUnavailable,
     NoRestorationNeeded,
-    NumericOverflow
+    NumericOverflow,
+    InvalidShopPricing
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -499,13 +500,61 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
         new(code, before, before, [new ResourceTransactionDiagnostic(code, message, contentId, slot)]);
 }
 
-public sealed record RuntimeShopOfferSnapshot(
-    ShopContentKind ContentKind,
-    ContentId ContentId,
-    int BasePrice,
-    EquipmentSlot? EquipmentSlot = null,
-    int? ItemStackLimit = null,
-    int? StockAvailable = null);
+public sealed record RuntimeShopOfferSnapshot
+{
+    private readonly int _basePrice;
+
+    public RuntimeShopOfferSnapshot(
+        ShopContentKind ContentKind,
+        ContentId ContentId,
+        int BasePrice,
+        EquipmentSlot? EquipmentSlot = null,
+        int? ItemStackLimit = null,
+        int? StockAvailable = null)
+    {
+        this.ContentKind = ContentKind;
+        this.ContentId = ContentId;
+        this.BasePrice = BasePrice;
+        this.EquipmentSlot = EquipmentSlot;
+        this.ItemStackLimit = ItemStackLimit;
+        this.StockAvailable = StockAvailable;
+    }
+
+    public ShopContentKind ContentKind { get; init; }
+    public ContentId ContentId { get; init; }
+    public int BasePrice
+    {
+        get => _basePrice;
+        init
+        {
+            if (value < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(BasePrice), value, "Shop base price cannot be negative.");
+            }
+
+            _basePrice = value;
+        }
+    }
+    public EquipmentSlot? EquipmentSlot { get; init; }
+    public int? ItemStackLimit { get; init; }
+    public int? StockAvailable { get; init; }
+
+    public void Deconstruct(
+        out ShopContentKind ContentKind,
+        out ContentId ContentId,
+        out int BasePrice,
+        out EquipmentSlot? EquipmentSlot,
+        out int? ItemStackLimit,
+        out int? StockAvailable)
+    {
+        ContentKind = this.ContentKind;
+        ContentId = this.ContentId;
+        BasePrice = this.BasePrice;
+        EquipmentSlot = this.EquipmentSlot;
+        ItemStackLimit = this.ItemStackLimit;
+        StockAvailable = this.StockAvailable;
+    }
+}
 
 public enum RuntimeShopOfferResolutionCode
 {
@@ -705,6 +754,10 @@ public interface IShopTransactionService
 
 public sealed class ShopTransactionService : IShopTransactionService
 {
+    private const decimal MinimumBuyMultiplier = 0.5m;
+    private const decimal BaseSellMultiplier = 0.50m;
+    private const decimal LuckPriceStep = 0.01m;
+
     private readonly IInventoryTransitionService _inventory;
     private readonly IEconomyTransactionService _economy;
 
@@ -716,17 +769,11 @@ public sealed class ShopTransactionService : IShopTransactionService
         _economy = economy ?? new EconomyTransactionService();
     }
 
-    public int CalculateBuyPrice(int basePrice, int luck)
-    {
-        double discountMult = Math.Max(0.5, 1.0 - (luck * 0.01));
-        return (int)(basePrice * discountMult);
-    }
+    public int CalculateBuyPrice(int basePrice, int luck) =>
+        RequirePrice(CalculatePrice(basePrice, luck, isBuying: true), basePrice, luck);
 
-    public int CalculateSellPrice(int basePrice, int luck)
-    {
-        double sellMult = 0.50 + (luck * 0.01);
-        return (int)(basePrice * sellMult);
-    }
+    public int CalculateSellPrice(int basePrice, int luck) =>
+        RequirePrice(CalculatePrice(basePrice, luck, isBuying: false), basePrice, luck);
 
     public ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
@@ -736,12 +783,18 @@ public sealed class ShopTransactionService : IShopTransactionService
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(wallet);
-        if (offer.StockAvailable is <= 0)
+        ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, buyerLuck, isBuying: true);
+        if (!pricing.IsValid)
         {
-            return Rejected(ResourceTransactionCode.ShopStockUnavailable, inventory, wallet, CalculateBuyPrice(offer.BasePrice, buyerLuck), "Shop stock is unavailable.", offer.ContentId, offer.EquipmentSlot);
+            return PricingRejected(inventory, wallet, offer, pricing);
         }
 
-        int price = CalculateBuyPrice(offer.BasePrice, buyerLuck);
+        if (offer.StockAvailable is <= 0)
+        {
+            return Rejected(ResourceTransactionCode.ShopStockUnavailable, inventory, wallet, pricing.Price, "Shop stock is unavailable.", offer.ContentId, offer.EquipmentSlot);
+        }
+
+        int price = pricing.Price;
         InventoryTransitionResult inventoryResult = AddPurchasedContent(inventory, offer);
         if (!inventoryResult.Applied)
         {
@@ -772,7 +825,13 @@ public sealed class ShopTransactionService : IShopTransactionService
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(wallet);
-        int price = CalculateSellPrice(offer.BasePrice, sellerLuck);
+        ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, sellerLuck, isBuying: false);
+        if (!pricing.IsValid)
+        {
+            return PricingRejected(inventory, wallet, offer, pricing);
+        }
+
+        int price = pricing.Price;
         InventoryTransitionResult inventoryResult = offer.ContentKind switch
         {
             ShopContentKind.Item => _inventory.RemoveItem(inventory, offer.ContentId, 1),
@@ -841,6 +900,92 @@ public sealed class ShopTransactionService : IShopTransactionService
         ContentId? contentId = null,
         EquipmentSlot? slot = null) =>
         new(code, inventory, inventory, wallet, wallet, price, [new ResourceTransactionDiagnostic(code, message, contentId, slot)]);
+
+    private static ShopTransactionResult PricingRejected(
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        RuntimeShopOfferSnapshot offer,
+        ShopPriceCalculation pricing) =>
+        Rejected(
+            ResourceTransactionCode.InvalidShopPricing,
+            inventory,
+            wallet,
+            price: 0,
+            pricing.Message,
+            offer.ContentId,
+            offer.EquipmentSlot);
+
+    private static ShopPriceCalculation CalculatePrice(int basePrice, int luck, bool isBuying)
+    {
+        string operation = isBuying ? "buy" : "sell";
+        if (basePrice < 0)
+        {
+            return ShopPriceCalculation.Invalid(
+                ShopPriceFailure.NegativeBasePrice,
+                $"Shop {operation} base price cannot be negative (received {basePrice}).");
+        }
+
+        if (luck < 0)
+        {
+            return ShopPriceCalculation.Invalid(
+                ShopPriceFailure.NegativeLuck,
+                $"Shop {operation} Luck cannot be negative (received {luck}).");
+        }
+
+        decimal multiplier = isBuying
+            ? Math.Max(MinimumBuyMultiplier, 1m - (luck * LuckPriceStep))
+            : BaseSellMultiplier + (luck * LuckPriceStep);
+        decimal calculated = decimal.Truncate(checked(basePrice * multiplier));
+        if (calculated > int.MaxValue)
+        {
+            return ShopPriceCalculation.Invalid(
+                ShopPriceFailure.ExceedsIntegerRange,
+                $"Shop {operation} price for base price {basePrice} and Luck {luck} exceeds the supported integer range.");
+        }
+
+        return ShopPriceCalculation.Valid(decimal.ToInt32(calculated));
+    }
+
+    private static int RequirePrice(
+        ShopPriceCalculation pricing,
+        int basePrice,
+        int luck) =>
+        pricing.Failure switch
+        {
+            ShopPriceFailure.None => pricing.Price,
+            ShopPriceFailure.NegativeBasePrice => throw new ArgumentOutOfRangeException(
+                nameof(basePrice),
+                basePrice,
+                pricing.Message),
+            ShopPriceFailure.NegativeLuck => throw new ArgumentOutOfRangeException(
+                nameof(luck),
+                luck,
+                pricing.Message),
+            ShopPriceFailure.ExceedsIntegerRange => throw new OverflowException(pricing.Message),
+            _ => throw new InvalidOperationException("Unknown shop pricing failure.")
+        };
+
+    private enum ShopPriceFailure
+    {
+        None,
+        NegativeBasePrice,
+        NegativeLuck,
+        ExceedsIntegerRange
+    }
+
+    private readonly record struct ShopPriceCalculation(
+        int Price,
+        ShopPriceFailure Failure,
+        string Message)
+    {
+        public bool IsValid => Failure == ShopPriceFailure.None;
+
+        public static ShopPriceCalculation Valid(int price) =>
+            new(price, ShopPriceFailure.None, string.Empty);
+
+        public static ShopPriceCalculation Invalid(ShopPriceFailure failure, string message) =>
+            new(0, failure, message);
+    }
 }
 
 public sealed record RuntimeHospitalPatientSnapshot
