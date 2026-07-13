@@ -59,8 +59,7 @@ internal static class BattleConditionEvaluator
                 ailment.AilmentIds.Any(actor.HasAilment),
             HasSkillConditionDefinition skill => Subject(skill.Subject, context)?.HasSkill(skill.SkillId) == true,
             HasBuffConditionDefinition buff => Subject(buff.Subject, context)?.HasBuff(buff.ModifierTrackId) == true,
-            HasAffinityConditionDefinition affinity =>
-                Subject(affinity.Subject, context)?.GetElementalAffinity(affinity.Element) == affinity.Affinity,
+            HasAffinityConditionDefinition affinity => EvaluateAffinity(affinity, context),
             HasCapabilityConditionDefinition capability =>
                 Subject(capability.Subject, context)?.HasCapability(capability.CapabilityId) == true,
             LifeStateConditionDefinition life => EvaluateLifeState(Subject(life.Subject, context), life.LifeState),
@@ -95,6 +94,33 @@ internal static class BattleConditionEvaluator
 
         decimal percentage = resource.Maximum == 0 ? 0 : resource.Current * 100m / resource.Maximum;
         return Compare(percentage, condition.Comparison, condition.Value);
+    }
+
+    private static bool EvaluateAffinity(
+        HasAffinityConditionDefinition condition,
+        BattleConditionContext context)
+    {
+        RuntimeActorState? actor = Subject(condition.Subject, context);
+        if (actor is null)
+        {
+            return false;
+        }
+
+        RuntimeActorState counterpart = actor.InstanceId == context.Actor.InstanceId
+            ? context.Target
+            : context.Actor;
+        var ownerContext = new BattleConditionContext(
+            actor,
+            counterpart,
+            context.Participants,
+            context.BattleKindId,
+            context.MoonPhaseId,
+            context.Services,
+            context.EffectElements);
+        return context.Services.RuleModifiers.ResolveElementalAffinity(
+            actor,
+            condition.Element,
+            new RuleModifierContext(ownerContext)) == condition.Affinity;
     }
 
     private static RuntimeActorState? Subject(ConditionSubject subject, BattleConditionContext context) =>

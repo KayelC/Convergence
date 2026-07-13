@@ -232,6 +232,8 @@ The JSON path is safer because `SkillSystemDtoMapper.MapJsonValue` recursively c
 
 **Required correction:** Recursively copy and validate the allowed parameter value algebra at the definition boundary, or replace `object?` with a closed serializer-neutral parameter value union.
 
+**Correction status (Review-Whole-7, 2026-07-13): completed.** `DefinitionCollections.SnapshotParameters` now recursively normalizes and freezes the complete parameter graph. The accepted algebra is limited to null, Boolean, string, integers representable as `Int64`, decimal, ordered lists, and string-keyed objects. Direct callers can no longer retain mutable nested collections or inject `JsonElement`, floating-point values, host objects, oversized integers, reference cycles, or excessively deep graphs. `FusionRecipeResultSnapshot` now uses the same boundary instead of making its own shallow copy.
+
 ### M9. Skill and item execution are not atomic when extension points fail
 
 `SkillExecutor` commits resource costs before executing effects (`SkillExecutor.cs:26-46`). If a custom effect, formula, damage policy, or condition handler throws, costs remain spent and no typed result is returned.
@@ -284,9 +286,13 @@ The generic replacements are sound, but older framework modules still encode pro
 
 `DeterministicBattleActionSelector.Score` examines only the first resolved target (`AutomatedBattleRunner.cs:129-163`). An all-target or random-target skill can therefore hit another target known to Null, Repel, or Absorb the element even though the selector claims to avoid those outcomes.
 
+**Correction status (Review-Whole-7, 2026-07-13): completed.** Scoring now evaluates every resolved target and every distinct authored damage element. Random-target actions conservatively evaluate every currently eligible target because execution may resolve a different random set after assessment. Any known Null, Repel, or Absorb rejects the candidate; Weak and Resist contributions remain deterministic and use overflow-safe accumulation.
+
 ### L2. Affinity conditions disagree with passive-resolved combat affinity
 
 `HasAffinityConditionDefinition` calls `GetElementalAffinity` without passive replacements (`ConditionAndTargetResolution.cs:62-63`). Damage execution resolves passive affinity replacements first (`EffectExecutors.cs:80-85`). A condition and the damage it gates can therefore see different affinities.
+
+**Correction status (Review-Whole-7, 2026-07-13): completed.** `RuleModifierResolver.ResolveElementalAffinity` is now the shared authority used by both affinity conditions and damage. A resolver-private cycle guard lets affinity-replacement conditions inspect the underlying effective base/temporary defense without recursively evaluating themselves forever; ordinary conditions observe the same passive-resolved affinity as damage.
 
 ### L3. Catalog actor creation accepts inconsistent level state and can escape its diagnostic boundary
 
@@ -359,6 +365,17 @@ The green suite is valuable evidence, but it does not invalidate the findings ab
 - Refined forbidden-dependency search: no framework matches for console/filesystem/Godot/Newtonsoft/legacy runtime dependencies.
 - `Data/Jsons`: unchanged.
 
+### Review-Whole-7 Verification
+
+- Focused definition, schema, fusion-parameter, passive-affinity, catalog-AI, and parity-guard coverage: **113 passed, 0 failed, 0 skipped**.
+- Complete solution: **1007 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Complete solution nonincremental build: **98 existing legacy console-host warnings, 0 errors**.
+- Clean battle, field, save-v5, and Training Annex demos: all exited `0` with their expected outcomes.
+- `git diff --check`: no whitespace errors; Git reported only working-tree line-ending normalization notices.
+- Refined forbidden-dependency search: no production framework matches for console/filesystem/Godot/Newtonsoft/legacy runtime dependencies.
+- `Data/Jsons`: unchanged.
+
 ## Recommended Correction Order
 
 Do not begin another feature phase before the first five correction groups are complete.
@@ -387,9 +404,11 @@ Do not begin another feature phase before the first five correction groups are c
    - Item reservation/commit/rollback transitions are typed; failed host commits cannot publish staged actor changes.
    - Combat, growth, inventory, and hospital boundaries validate configuration and use deliberate checked/saturating arithmetic.
    - Verification passed `102/102` focused tests and `999/999` full-suite tests; the framework retained `0` warnings.
-7. **Review-Whole-7: Definition immutability and runtime condition consistency**
-   - Close the custom parameter value algebra.
-   - Align passive-resolved affinities and multi-target knowledge scoring.
+7. **Review-Whole-7: Definition immutability and runtime condition consistency** - completed and verified 2026-07-13.
+   - Custom parameter graphs are recursively normalized, copied, depth/cycle checked, and restricted to the serializer-neutral value algebra.
+   - Affinity conditions and damage share passive-aware resolution with recursion protection.
+   - Multi-target AI scoring covers all resolved targets, and random-target scoring covers every eligible target that execution could choose.
+   - Verification passed `113/113` focused tests and `1007/1007` full-suite tests; the framework retained `0` warnings.
 8. **Review-Whole-8: Framework neutrality**
    - Isolate legacy dungeon/negotiation/economy terminology and policy.
    - Keep generic navigation, traversal, content, and host contracts as the reusable authority.
@@ -400,4 +419,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-6 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, fusion authority, atomic typed-effect execution, and unsafe arithmetic boundaries. The most important remaining risks are definition immutability, runtime-condition consistency, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-7 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, fusion authority, atomic typed-effect execution, unsafe arithmetic boundaries, definition immutability, and affinity-condition/AI consistency. The remaining named correction group is Review-Whole-8: isolate project-specific dungeon, negotiation, and economy terminology or policy from supposedly generic runtime services. Low findings L3-L6 also remain documented hardening work: actor-creation diagnostic integrity, immutable encounter results, synchronous-wrapper host safety, and executable Break ownership. Review-Whole-8 should be completed and those lower-risk findings deliberately scheduled before final framework release.

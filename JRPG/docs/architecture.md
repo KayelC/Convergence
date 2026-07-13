@@ -248,6 +248,8 @@ Phase 7-35 completes the original-content Compendium runtime proof without coupl
 
 CodeReview-7-2 makes runtime identity a framework invariant rather than a host naming convention. `RuntimePartyStockIdentityRules` is the shared internal ownership graph used by party/stock transitions, Compendium recall, and save validation. A runtime ID may identify only one actor. Direct party-member, Demon-stock, and Persona-stock additions reject an ID already used by an incompatible ownership role. The graph explicitly permits the exact owner reference to occupy an active-party slot and the same owned demon to appear in active party and Demon stock; `SummonDemon` is the explicit transition that creates the latter overlap. Every persisted party/stock reference must also identify the same catalog entity as its actor snapshot. Save validation applies the injected `IStockCapacityPolicy` independently to Demon and Persona stock, matching the live transition services.
 
+Review-Whole-7 makes direct C# definitions obey the same immutability boundary as JSON-authored definitions. Custom parameter dictionaries recursively normalize and freeze only null, Boolean, string, `Int64`-representable integer, decimal, ordered-list, and string-keyed-object values. Serializer nodes and host objects cannot enter catalog definitions through this extension surface. Runtime affinity queries that affect conditions or damage share `RuleModifierResolver`; cycle tracking remains private to the resolver rather than leaking mutable evaluation state into public condition records.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.

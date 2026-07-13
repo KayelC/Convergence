@@ -85,7 +85,12 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                 continue;
             }
 
-            int score = Score(skill, assessment.TargetIds, request.Participants, request.Knowledge);
+            int score = Score(
+                request.Actor.State,
+                skill,
+                assessment.TargetIds,
+                request.Participants,
+                request.Knowledge);
             if (score == int.MinValue)
             {
                 continue;
@@ -127,36 +132,62 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
     }
 
     private static int Score(
+        RuntimeActorState actor,
         SkillDefinition skill,
         IReadOnlyList<RuntimeInstanceId> targetIds,
         IReadOnlyList<CatalogBattleActor> participants,
         ElementalAffinityKnowledge knowledge)
     {
-        CatalogBattleActor? target = participants.FirstOrDefault(participant => targetIds.Contains(participant.State.InstanceId));
-        if (target is null)
+        CatalogBattleActor[] targets;
+        if (skill.Targeting?.Selection == TargetSelection.Random)
+        {
+            TargetingDefinition targeting = skill.Targeting;
+            targets = participants.Where(participant =>
+                participant.State.IsActive &&
+                RelationMatches(actor, participant.State, targeting.Relation) &&
+                (targeting.AllowSelf || targeting.Relation == TargetRelation.Self ||
+                    participant.State.InstanceId != actor.InstanceId) &&
+                LifeMatches(participant.State, targeting.LifeState)).ToArray();
+        }
+        else
+        {
+            HashSet<RuntimeInstanceId> selectedTargetIds = targetIds.ToHashSet();
+            targets = participants
+                .Where(participant => selectedTargetIds.Contains(participant.State.InstanceId))
+                .ToArray();
+        }
+        if (targets.Length == 0)
         {
             return 0;
         }
 
         int score = 0;
-        foreach (DamageElement element in skill.Effects.OfType<DamageEffectDefinition>().Select(effect => effect.Element).Distinct())
+        DamageElement[] elements = skill.Effects
+            .OfType<DamageEffectDefinition>()
+            .Select(effect => effect.Element)
+            .Distinct()
+            .ToArray();
+        foreach (CatalogBattleActor target in targets)
         {
-            if (!knowledge.TryGet(target.Entity.Id, element, out ElementalAffinity affinity))
+            foreach (DamageElement element in elements)
             {
-                continue;
-            }
+                if (!knowledge.TryGet(target.Entity.Id, element, out ElementalAffinity affinity))
+                {
+                    continue;
+                }
 
-            if (affinity is ElementalAffinity.Null or ElementalAffinity.Repel or ElementalAffinity.Absorb)
-            {
-                return int.MinValue;
-            }
+                if (affinity is ElementalAffinity.Null or ElementalAffinity.Repel or ElementalAffinity.Absorb)
+                {
+                    return int.MinValue;
+                }
 
-            score += affinity switch
-            {
-                ElementalAffinity.Weak => 100,
-                ElementalAffinity.Resist => -25,
-                _ => 0
-            };
+                score = affinity switch
+                {
+                    ElementalAffinity.Weak => (int)Math.Min(int.MaxValue, (long)score + 100L),
+                    ElementalAffinity.Resist => (int)Math.Max((long)int.MinValue + 1L, (long)score - 25L),
+                    _ => score
+                };
+            }
         }
 
         return score;

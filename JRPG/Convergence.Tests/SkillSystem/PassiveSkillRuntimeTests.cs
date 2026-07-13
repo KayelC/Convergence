@@ -384,6 +384,123 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(ElementalAffinity.Normal, owner.GetElementalAffinity(DamageElement.Almighty, [ElementalAffinity.Absorb]));
     }
 
+    [Fact]
+    public void AffinityConditions_UseTheSamePassiveResolvedAffinityAsDamage()
+    {
+        SkillDefinition nullFire = PassiveSkill(
+            "null_fire",
+            modifiers: [new ElementalAffinityRuleModifierDefinition(DamageElement.Fire, ElementalAffinity.Null)]);
+        RuntimeActorState attacker = Actor("attacker", EnemyTeam);
+        RuntimeActorState owner = Actor(
+            "owner",
+            PlayerTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]),
+            passiveSkills: [nullFire]);
+        BattleExecutionServices services = Services();
+        var context = new BattleConditionContext(
+            attacker,
+            owner,
+            [attacker, owner],
+            NormalBattle,
+            NewMoon,
+            services,
+            [DamageElement.Fire]);
+
+        Assert.True(BattleConditionEvaluator.Evaluate(
+            new HasAffinityConditionDefinition(
+                ConditionSubject.Target,
+                DamageElement.Fire,
+                ElementalAffinity.Null),
+            context));
+        Assert.Equal(
+            ElementalAffinity.Null,
+            services.RuleModifiers.ResolveElementalAffinity(
+                owner,
+                DamageElement.Fire,
+                new RuleModifierContext(context)));
+    }
+
+    [Fact]
+    public void ConditionalAffinityReplacement_UsesBaseAffinityToBreakSelfReference()
+    {
+        var condition = new HasAffinityConditionDefinition(
+            ConditionSubject.Actor,
+            DamageElement.Fire,
+            ElementalAffinity.Weak);
+        SkillDefinition conditionalNull = PassiveSkill(
+            "conditional_null_fire",
+            modifiers:
+            [
+                new ElementalAffinityRuleModifierDefinition(
+                    DamageElement.Fire,
+                    ElementalAffinity.Null,
+                    condition)
+            ]);
+        RuntimeActorState owner = Actor(
+            "owner",
+            PlayerTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]),
+            passiveSkills: [conditionalNull]);
+        BattleExecutionServices services = Services();
+        var context = new BattleConditionContext(
+            owner,
+            owner,
+            [owner],
+            NormalBattle,
+            NewMoon,
+            services,
+            [DamageElement.Fire]);
+
+        Assert.Equal(
+            ElementalAffinity.Null,
+            services.RuleModifiers.ResolveElementalAffinity(
+                owner,
+                DamageElement.Fire,
+                new RuleModifierContext(context)));
+    }
+
+    [Fact]
+    public void AffinityConditions_EvaluateReplacementConditionsFromThePassiveOwnersPerspective()
+    {
+        var lowHealthCondition = new ResourcePercentageConditionDefinition(
+            ConditionSubject.Actor,
+            Hp,
+            NumericComparison.LessThanOrEqual,
+            50);
+        SkillDefinition conditionalNull = PassiveSkill(
+            "low_health_null_fire",
+            modifiers:
+            [
+                new ElementalAffinityRuleModifierDefinition(
+                    DamageElement.Fire,
+                    ElementalAffinity.Null,
+                    lowHealthCondition)
+            ]);
+        RuntimeActorState attacker = Actor("attacker", EnemyTeam, hp: 100);
+        RuntimeActorState owner = Actor(
+            "owner",
+            PlayerTeam,
+            hp: 25,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]),
+            passiveSkills: [conditionalNull]);
+        BattleExecutionServices services = Services();
+        var context = new BattleConditionContext(
+            attacker,
+            owner,
+            [attacker, owner],
+            NormalBattle,
+            NewMoon,
+            services,
+            [DamageElement.Fire]);
+
+        Assert.True(BattleConditionEvaluator.Evaluate(
+            new HasAffinityConditionDefinition(
+                ConditionSubject.Target,
+                DamageElement.Fire,
+                ElementalAffinity.Null),
+            context));
+    }
+
     private static decimal ResolveDamage(
         IEnumerable<SkillDefinition> passives,
         BattleExecutionServices services)

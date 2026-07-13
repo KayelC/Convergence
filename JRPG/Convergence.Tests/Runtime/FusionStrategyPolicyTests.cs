@@ -10,6 +10,27 @@ namespace Convergence.Tests.Runtime;
 public sealed class FusionStrategyPolicyTests
 {
     [Fact]
+    public void RecipeResultParameters_AreRecursivelyImmutableForDirectRuntimeCallers()
+    {
+        var nested = new Dictionary<string, object?> { ["enabled"] = true };
+        var values = new List<object?> { 1, nested };
+        var result = new FusionRecipeResultSnapshot(
+            FusionResultOperationKind.CreateEntity,
+            ResultEntityId: Id("child"),
+            Parameters: [new KeyValuePair<string, object?>("values", values)]);
+
+        values[0] = 99;
+        nested["enabled"] = false;
+
+        IReadOnlyList<object?> frozen = Assert.IsAssignableFrom<IReadOnlyList<object?>>(
+            result.Parameters["values"]);
+        Assert.Equal(1L, frozen[0]);
+        Assert.Equal(
+            true,
+            Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(frozen[1])["enabled"]);
+    }
+
+    [Fact]
     public void Resolver_RequiresRegisteredAccidentPolicyAndDoesNotInventOne()
     {
         TestFusionRepository missingPolicyRepository = Repository(

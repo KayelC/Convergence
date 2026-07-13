@@ -314,6 +314,8 @@ Track O7 keeps that adapter-first boundary and adds typed presentation records f
 
 Track J does not migrate negotiation, recruitment, EXP/Macca reward ownership, inventory/equipment ownership, production skill reauthoring, or complete AI policy authoring. Those remain Track K and later work.
 
+Review-Whole-7 aligns battle conditions and strategy with actual combat resolution. `HasAffinityConditionDefinition` observes temporary defenses and passive affinity replacements through the same resolver used by damage. Self-referential affinity modifier conditions fall back to the underlying effective defense for that recursive check instead of recursing indefinitely. Automated strategy scores every target and every typed damage element; a random-target action is rejected when any currently eligible target is known to Null, Repel, or Absorb it because execution may select that target later.
+
 ## Archive Candidate Review
 
 Track T5 confirms that the clean Training Annex runtime slice is a forward-production proof, not a legacy retirement proof.

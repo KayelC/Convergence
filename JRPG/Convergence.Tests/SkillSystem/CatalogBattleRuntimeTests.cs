@@ -173,6 +173,61 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(Id("convergence.clean_battle_demo:ember_bolt_demo"), afterNull.Skill!.Id);
     }
 
+    [Theory]
+    [InlineData(TargetSelection.All)]
+    [InlineData(TargetSelection.Random)]
+    public void Selector_RejectsMultiTargetSkillWhenAnyResolvedTargetHasKnownBlockingAffinity(
+        TargetSelection selection)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        TargetCountDefinition? count = selection == TargetSelection.Random
+            ? new TargetCountDefinition(2, 2)
+            : null;
+        SkillDefinition unsafeFire = Active(
+            "unsafe_fire",
+            DamageElement.Fire,
+            new TargetingDefinition(
+                TargetRelation.Enemy,
+                selection,
+                TargetLifeState.Alive,
+                false,
+                count));
+        SkillDefinition safeIce = Active("safe_ice", DamageElement.Ice);
+        CatalogBattleActor actor = RuntimeCatalogActor(
+            "selector_actor",
+            "selector_actor",
+            PlayerTeam,
+            [unsafeFire, safeIce]);
+        CatalogBattleActor firstTarget = RuntimeCatalogActor(
+            "first_target",
+            "first_target",
+            EnemyTeam);
+        CatalogBattleActor secondSafeTarget = RuntimeCatalogActor(
+            "second_safe_target",
+            "second_safe_target",
+            EnemyTeam);
+        CatalogBattleActor blockingTarget = RuntimeCatalogActor(
+            "blocking_target",
+            "blocking_target",
+            EnemyTeam);
+        var knowledge = new ElementalAffinityKnowledge();
+        knowledge.Learn(firstTarget.Entity.Id, DamageElement.Fire, ElementalAffinity.Weak);
+        knowledge.Learn(blockingTarget.Entity.Id, DamageElement.Fire, ElementalAffinity.Null);
+        var executor = new SkillExecutor(Services(catalog));
+        var selector = new DeterministicBattleActionSelector(executor);
+
+        BattleActionSelection result = selector.Select(new BattleActionSelectionRequest(
+            actor,
+            [actor, firstTarget, secondSafeTarget, blockingTarget],
+            Battle,
+            NormalBattle,
+            NewMoon,
+            knowledge));
+
+        Assert.Equal(BattleActionSelectionStatus.Selected, result.Status);
+        Assert.Equal(safeIce.Id, result.Skill!.Id);
+    }
+
     [Fact]
     public void Runner_ExecutesDeterministicKnowledgePassiveAndPressTurnLifecycle()
     {
@@ -400,7 +455,10 @@ public sealed class CatalogBattleRuntimeTests
         new TestPowerPolicy(),
         new FirstRandomTargetPolicy());
 
-    private static SkillDefinition Active(string id, DamageElement element) => new(
+    private static SkillDefinition Active(
+        string id,
+        DamageElement element,
+        TargetingDefinition? targeting = null) => new(
         Id(id), id, id, SkillActivation.Active, SkillMenuGroup.Offense,
         element switch
         {
@@ -410,9 +468,33 @@ public sealed class CatalogBattleRuntimeTests
             _ => InheritanceGroup.Physical
         },
         new SkillInheritanceDefinition(true),
-        targeting: new TargetingDefinition(TargetRelation.Enemy, TargetSelection.Single, TargetLifeState.Alive, false),
+        targeting: targeting ?? new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.Single,
+            TargetLifeState.Alive,
+            false),
         effects: [new DamageEffectDefinition(element, 1, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1))],
         availability: new SkillAvailabilityDefinition([Battle]));
+
+    private static CatalogBattleActor RuntimeCatalogActor(
+        string entityId,
+        string instanceId,
+        ContentId teamId,
+        IEnumerable<SkillDefinition>? loadout = null)
+    {
+        SkillDefinition[] skills = loadout?.ToArray() ?? [];
+        EntityDefinition entity = Entity(
+            $"test.pack:{entityId}",
+            skills.Select(skill => skill.Id));
+        var state = new RuntimeActorState(
+            RuntimeInstanceId.Parse(instanceId),
+            entity.Id,
+            teamId,
+            Id("hp"),
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Id("hp"), 100, 100)]);
+        return new CatalogBattleActor(entity, state, skills);
+    }
 
     private static EntityDefinition Entity(
         string id,

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using JRPGPrototype.Data.Definitions;
 using Xunit;
 
@@ -263,6 +264,73 @@ public sealed class DomainDefinitionTests
         Assert.Single(skill.Costs);
         Assert.Single(skill.Inheritance.ExclusiveOwnerEntityIds);
         Assert.Equal(1m, custom.Parameters["ratio"]);
+    }
+
+    [Fact]
+    public void CustomParameters_RecursivelyNormalizeAndFreezeDirectClrValues()
+    {
+        var nested = new Dictionary<string, object?> { ["enabled"] = true };
+        var items = new List<object?> { 1, nested };
+        var parameters = new Dictionary<string, object?>
+        {
+            ["items"] = items,
+            ["ratio"] = 1.25m
+        };
+
+        var custom = new CustomEffectDefinition(ContentId.Parse("sample_handler"), parameters);
+
+        items[0] = 99;
+        nested["enabled"] = false;
+        parameters["ratio"] = 9m;
+
+        IReadOnlyList<object?> frozenItems = Assert.IsAssignableFrom<IReadOnlyList<object?>>(
+            custom.Parameters["items"]);
+        IReadOnlyDictionary<string, object?> frozenNested =
+            Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(frozenItems[1]);
+        Assert.Equal(1L, frozenItems[0]);
+        Assert.Equal(true, frozenNested["enabled"]);
+        Assert.Equal(1.25m, custom.Parameters["ratio"]);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<object?>)frozenItems).Add("late mutation"));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<string, object?>)frozenNested).Add("late", true));
+    }
+
+    [Fact]
+    public void CustomParameters_RejectForeignValuesAndReferenceCycles()
+    {
+        using JsonDocument document = JsonDocument.Parse("{\"value\":1}");
+        object[] unsupported =
+        [
+            document.RootElement,
+            new object(),
+            0.5d,
+            ulong.MaxValue,
+            new HashSet<object?> { 1L, 2L }
+        ];
+
+        foreach (object value in unsupported)
+        {
+            Assert.Throws<ArgumentException>(() => new CustomEffectDefinition(
+                ContentId.Parse("sample_handler"),
+                [new KeyValuePair<string, object?>("invalid", value)]));
+        }
+
+        var cycle = new List<object?>();
+        cycle.Add(cycle);
+        Assert.Throws<ArgumentException>(() => new CustomEffectDefinition(
+            ContentId.Parse("sample_handler"),
+            [new KeyValuePair<string, object?>("cycle", cycle)]));
+
+        object? deeplyNested = "leaf";
+        for (int depth = 0; depth < 66; depth++)
+        {
+            deeplyNested = new List<object?> { deeplyNested };
+        }
+
+        Assert.Throws<ArgumentException>(() => new CustomEffectDefinition(
+            ContentId.Parse("sample_handler"),
+            [new KeyValuePair<string, object?>("deep", deeplyNested)]));
     }
 
     [Fact]

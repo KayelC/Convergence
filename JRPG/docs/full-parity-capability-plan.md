@@ -926,6 +926,15 @@ Review-Whole-6 atomic-execution and arithmetic correction:
 - affected capabilities remain `parallel_partial`; protected legacy consumers are still active and no removal is authorized.
 - Verification passed `102/102` focused tests and `999/999` full-suite tests with no skips. The framework built with `0` warnings, the solution retained `98` legacy-host warnings, all four clean demos passed, boundary/diff checks passed, and `Data/Jsons` remained unchanged.
 
+Review-Whole-7 definition-immutability and runtime-consistency correction:
+
+- every custom parameter entry point recursively normalizes and freezes the same closed serializer-neutral value algebra, rejecting foreign objects, cycles, and excessive nesting;
+- fusion recipe result parameters no longer retain caller-owned nested collections;
+- affinity conditions and damage share the passive-aware `RuleModifierResolver` path, with deterministic self-reference protection;
+- AI affinity scoring evaluates every multi-target recipient and treats every eligible random target as a possible execution target;
+- affected capabilities remain `parallel_partial`; protected consumers are still active and no removal is authorized;
+- verification passed `113/113` focused tests and `1007/1007` full-suite tests with no skips. The framework built with `0` warnings, the solution retained `98` legacy-host warnings, all four clean demos passed, boundary/diff checks passed, and `Data/Jsons` remained unchanged.
+
 ### 29. `negotiation_and_recruitment`
 
 Current status: `parallel_partial`.

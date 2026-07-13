@@ -77,12 +77,10 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             context.Request.MoonPhaseId,
             context.Services,
             [definition.Element]);
-        IReadOnlyList<ElementalAffinity> replacements = context.Services.RuleModifiers
-            .ResolveElementalAffinityReplacements(
-                target,
-                definition.Element,
-                new RuleModifierContext(defenseConditionContext, context.Request.Skill));
-        ElementalAffinity affinity = target.GetElementalAffinity(definition.Element, replacements);
+        ElementalAffinity affinity = context.Services.RuleModifiers.ResolveElementalAffinity(
+            target,
+            definition.Element,
+            new RuleModifierContext(defenseConditionContext, context.Request.Skill));
         IReadOnlyList<DamageHitResolution> hits = context.Services.DamagePolicy.Resolve(
             new DamagePolicyRequest(context.Actor, target, definition, affinity));
         DamageHitResolution[] landed = hits.Where(hit => hit.Hit).ToArray();

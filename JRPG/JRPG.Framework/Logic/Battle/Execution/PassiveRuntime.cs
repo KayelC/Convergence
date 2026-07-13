@@ -276,6 +276,7 @@ public sealed class RuleModifierResolver
 {
     private readonly RuleModifierRegistry _modifierRegistry;
     private readonly StackingPolicyRegistry _stackingPolicies;
+    private readonly AffinityResolutionState _affinityResolutions = new();
 
     public RuleModifierResolver(
         RuleModifierRegistry? modifierRegistry = null,
@@ -302,13 +303,39 @@ public sealed class RuleModifierResolver
     public IReadOnlyList<ElementalAffinity> ResolveElementalAffinityReplacements(
         RuntimeActorState owner,
         DamageElement element,
-        RuleModifierContext context) =>
-        Array.AsReadOnly(
-            EnumerateApplicable(owner, context)
+        RuleModifierContext context)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(context);
+        var key = (Environment.CurrentManagedThreadId, owner.InstanceId, element);
+        if (!_affinityResolutions.TryEnter(key))
+        {
+            return Array.Empty<ElementalAffinity>();
+        }
+
+        try
+        {
+            return Array.AsReadOnly(EnumerateApplicable(owner, context)
                 .OfType<ElementalAffinityRuleModifierDefinition>()
                 .Where(modifier => modifier.Element == element)
                 .Select(modifier => modifier.Affinity)
                 .ToArray());
+        }
+        finally
+        {
+            _affinityResolutions.Exit(key);
+        }
+    }
+
+    public ElementalAffinity ResolveElementalAffinity(
+        RuntimeActorState owner,
+        DamageElement element,
+        RuleModifierContext context,
+        bool isBroken = false) =>
+        owner.GetElementalAffinity(
+            element,
+            ResolveElementalAffinityReplacements(owner, element, context),
+            isBroken);
 
     public ResistanceLevel ResolveAilmentResistance(
         RuntimeActorState owner,
@@ -352,6 +379,28 @@ public sealed class RuleModifierResolver
         ResistanceLevel.Vulnerable => 0,
         _ => throw new ArgumentOutOfRangeException(nameof(resistance), resistance, null)
     };
+
+    private sealed class AffinityResolutionState
+    {
+        private readonly object _gate = new();
+        private readonly HashSet<(int ThreadId, RuntimeInstanceId ActorId, DamageElement Element)> _active = [];
+
+        public bool TryEnter((int ThreadId, RuntimeInstanceId ActorId, DamageElement Element) key)
+        {
+            lock (_gate)
+            {
+                return _active.Add(key);
+            }
+        }
+
+        public void Exit((int ThreadId, RuntimeInstanceId ActorId, DamageElement Element) key)
+        {
+            lock (_gate)
+            {
+                _active.Remove(key);
+            }
+        }
+    }
 }
 
 public sealed record PassiveEventPolicy(bool AllowReentry = false, int? ActivationLimitPerBattle = null);

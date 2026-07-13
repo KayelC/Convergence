@@ -74,8 +74,7 @@ public sealed record FusionRecipeResultSnapshot
         this.ResultRaceId = ResultRaceId;
         this.RankOffset = RankOffset;
         this.PolicyId = PolicyId;
-        this.Parameters = new ReadOnlyDictionary<string, object?>(
-            (Parameters ?? []).ToDictionary(pair => pair.Key, pair => pair.Value));
+        this.Parameters = DefinitionCollections.SnapshotParameters(Parameters);
     }
 
     public FusionResultOperationKind Operation { get; }
