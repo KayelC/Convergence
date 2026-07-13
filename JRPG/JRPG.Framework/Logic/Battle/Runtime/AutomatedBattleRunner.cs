@@ -254,14 +254,14 @@ public sealed record BattleRuntimeEvent(
 
 public sealed record BattleActorFinalSnapshot
 {
-    internal BattleActorFinalSnapshot(CatalogBattleActor actor)
+    internal BattleActorFinalSnapshot(BattleEncounterParticipantSnapshot participant)
     {
-        InstanceId = actor.State.InstanceId;
-        EntityId = actor.Entity.Id;
-        TeamId = actor.State.TeamId;
-        IsDefeated = actor.State.IsDefeated;
+        InstanceId = participant.InstanceId;
+        EntityId = participant.EntityId;
+        TeamId = participant.TeamId;
+        IsDefeated = participant.IsDefeated;
         Resources = new ReadOnlyDictionary<ContentId, decimal>(
-            actor.State.Resources.ToDictionary(pair => pair.Key, pair => pair.Value.Current));
+            participant.State.Resources.ToDictionary(resource => resource.ResourceId, resource => resource.Current));
     }
 
     public RuntimeInstanceId InstanceId { get; }
@@ -299,7 +299,7 @@ public sealed record AutomatedBattleResult
     internal AutomatedBattleResult(
         AutomatedBattleOutcome outcome,
         ContentId? winningTeamId,
-        IEnumerable<CatalogBattleActor> participants,
+        IEnumerable<BattleEncounterParticipantSnapshot> participants,
         IEnumerable<BattleRuntimeEvent> events,
         string? faultMessage = null)
     {
@@ -373,7 +373,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 _ => AutomatedBattleOutcome.Draw
             },
             result.WinningTeamId,
-            request.Participants,
+            result.Participants,
             ToRuntimeEvents(result.Events),
             result.FaultMessage);
     }

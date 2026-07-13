@@ -72,6 +72,26 @@ public sealed record BattleEncounterParticipant
     public ContentId TeamId => State.TeamId;
 }
 
+public sealed record BattleEncounterParticipantSnapshot
+{
+    internal BattleEncounterParticipantSnapshot(BattleEncounterParticipant participant)
+    {
+        ArgumentNullException.ThrowIfNull(participant);
+        State = participant.State.ToSnapshot();
+        DisplayName = participant.DisplayName;
+    }
+
+    public RuntimeActorSnapshot State { get; }
+    public string DisplayName { get; }
+    public RuntimeInstanceId InstanceId => State.Identity.InstanceId;
+    public ContentId EntityId => State.Identity.EntityDefinitionId;
+    public ContentId TeamId => State.Ownership.TeamId;
+    public bool IsActive => State.Deployment.IsActive;
+    public bool IsDefeated => State.Resources
+        .Single(resource => resource.ResourceId == State.VitalResourceId)
+        .Current <= 0;
+}
+
 public sealed record BattleEncounterRequest
 {
     public BattleEncounterRequest(
@@ -107,14 +127,17 @@ public sealed record BattleEncounterResult
     {
         Outcome = outcome;
         WinningTeamId = winningTeamId;
-        Participants = Array.AsReadOnly(participants.ToArray());
+        Participants = Array.AsReadOnly(
+            (participants ?? throw new ArgumentNullException(nameof(participants)))
+            .Select(participant => new BattleEncounterParticipantSnapshot(participant))
+            .ToArray());
         Events = Array.AsReadOnly(events.ToArray());
         FaultMessage = faultMessage;
     }
 
     public BattleEncounterOutcome Outcome { get; }
     public ContentId? WinningTeamId { get; }
-    public IReadOnlyList<BattleEncounterParticipant> Participants { get; }
+    public IReadOnlyList<BattleEncounterParticipantSnapshot> Participants { get; }
     public IReadOnlyList<BattleEncounterEvent> Events { get; }
     public string? FaultMessage { get; }
 }

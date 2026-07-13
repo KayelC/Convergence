@@ -573,6 +573,7 @@ Phase 2-14 result:
 - The clean console output presents current and updated icon counts while suppressing unrelated framework structural events.
 - This remains `parallel_partial`: clean original-content battles now expose and consume Press Turns, but lifecycle/passives, battle knowledge persistence, richer AI/tactics, escape/swaps, and reward application still remain later Phase 2 passes at this point in the history.
 - Verification: focused Training Annex tests passed `29/29`; full suite passed `786/786` with no skips; framework build remained `0` warnings; solution build remained at `98` legacy warnings; clean battle, field, save, and Training Annex demos passed; `Data/Jsons` was unchanged.
+- The L4 integrity correction keeps live participants inside encounter execution and returns detached full actor snapshots after battle-end lifecycle processing. This protects completed results from later actor mutation without changing battle rules, capability status, or removal authorization.
 
 ### 15. `ailment_lifecycle`
 

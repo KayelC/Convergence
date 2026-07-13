@@ -42,6 +42,75 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(enemy.InstanceId, handler.Requests.Single().Actor.InstanceId);
     }
 
+    [Fact]
+    public void Runner_ResultCapturesImmutableFinalParticipantSnapshots()
+    {
+        BattleEncounterParticipant player = Participant("snapshot_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("snapshot_enemy", EnemyTeam);
+        var handler = new QueueTurnHandler(_ =>
+        {
+            player.State.SetResource(Hp, 4);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal([player.InstanceId, enemy.InstanceId], result.Participants.Select(item => item.InstanceId));
+        BattleEncounterParticipantSnapshot playerResult = result.Participants[0];
+        Assert.Equal("snapshot_player", playerResult.DisplayName);
+        Assert.Equal(4, playerResult.State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+
+        player.State.SetResource(Hp, 1);
+
+        Assert.Equal(4, playerResult.State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<BattleEncounterParticipantSnapshot>)result.Participants).Add(playerResult));
+    }
+
+    [Fact]
+    public void Runner_ResultCapturesStateAfterBattleEndLifecycle()
+    {
+        BattleEncounterParticipant player = Participant("cleanup_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request => request.Participants[0].State.SetResource(Hp, 7)
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("cleanup_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(7, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+    }
+
+    [Fact]
+    public void Runner_FaultBeforeStartAlsoReturnsDetachedParticipantSnapshots()
+    {
+        BattleEncounterParticipant player = Participant("fault_snapshot_player", PlayerTeam);
+
+        BattleEncounterResult result = Run(
+            [player, Participant("fault_snapshot_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(10, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+
+        player.State.SetResource(Hp, 2);
+
+        Assert.Equal(10, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+    }
+
     [Theory]
     [InlineData(PressTurnOutcome.Normal, false, false, 1, 0)]
     [InlineData(PressTurnOutcome.Weakness, false, false, 1, 1)]
@@ -589,6 +658,7 @@ public sealed class BattleEncounterRunnerTests
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
         public BattleTurnStartRestriction? Restriction { get; init; }
+        public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
@@ -630,8 +700,11 @@ public sealed class BattleEncounterRunnerTests
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
-            CancellationToken cancellationToken = default) =>
-            new(Array.Empty<BattleEncounterEvent>());
+            CancellationToken cancellationToken = default)
+        {
+            BattleEndAction?.Invoke(request);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
+        }
     }
 
     private sealed class RecordingSynchronizer : IBattleEncounterStateSynchronizer

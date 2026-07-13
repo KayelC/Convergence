@@ -254,6 +254,8 @@ Review-Whole-8 removes the remaining prototype assumptions from clean framework 
 
 The L3 correction makes catalog actor creation a closed diagnostic boundary. `CatalogBattleActorCreationRequest.Level` and an optional progression snapshot must agree; that single level drives unlocks, initialization, and the resulting actor state. Invalid policy output, including null initialization and duplicate resource IDs, produces typed `CatalogBattleActorDiagnostic` values rather than leaking collection-construction exceptions. Existing encounter, fusion, Compendium, persistence, Godot-contract, and clean-host consumers all use the same corrected factory contract.
 
+The L4 correction separates mutable encounter execution from immutable encounter history. Requests, lifecycle ports, command handlers, completion policies, and synchronizers continue receiving live `BattleEncounterParticipant` objects while a battle is running. Once the runner returns, `BattleEncounterResult.Participants` contains detached `BattleEncounterParticipantSnapshot` values with complete `RuntimeActorSnapshot` state captured after battle-end lifecycle cleanup. Fault-before-start results follow the same rule, and the automated battle facade projects its final actors from those snapshots rather than from mutable catalog actors.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.
