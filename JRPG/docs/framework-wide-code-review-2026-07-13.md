@@ -174,6 +174,8 @@ Adversarial tests call swap, return, replace, and consume against both the owner
 
 ### M6. Fusion resolution has unresolved authority gaps
 
+**Correction status:** Corrected by **Review-Whole-5** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
+
 Two independent gaps remain:
 
 1. Recipe matching is symmetric and sorted by selector specificity, but equal-specificity overlapping recipes are resolved by repository order (`FusionRuntimeServices.cs:533-565`). Content validation checks each recipe independently and does not reject an ambiguous pair (`SkillSystemContentValidator.cs:876-918`).
@@ -184,6 +186,12 @@ The normal preview and transaction paths now correctly require `ValidatedFusionI
 **Impact:** Equivalent content can yield different fusion results based on load order, and a host can bypass inheritance policy in accident generation.
 
 **Required correction:** Reject ambiguous recipes during content validation or add explicit deterministic priority. Derive accident candidates and limits from `FusionPlanningResult` internally and return a validated selection.
+
+**Implemented correction:** schema-v1 content validation now compares binary fusion recipes after individual reference validation. Equal-specificity recipes whose unordered selector domains overlap are rejected with `FusionRecipeAmbiguous`; the diagnostic identifies the later authored record and the earlier conflicting recipe, and explains that schema v1 has no priority field. Entity/race intersections use the referenced entity's typed race. `FusionResultResolver` independently collects all runtime matches and rejects multiple highest-specificity matches with `AmbiguousRecipe`, so an arbitrary repository or unresolved cross-pack overlap cannot recover repository-order behavior. A more-specific recipe may still intentionally override a broader recipe.
+
+`CreateAccidentInheritance` now accepts only a `FusionPlanningResult`. It derives selectable candidates from the retained inheritance plan, uses the plan-owned slot limit, applies only the recipe/default registered mutation policy with the plan's immutable policy context, rechecks every mutation result through typed skill lookup and inheritance policy, and returns `FusionAccidentInheritanceResult`. Its `ValidatedFusionInheritanceSelection` is bound to the exact internal plan authority; an equivalent second plan cannot reuse it in previews or transactions. Callers can no longer submit candidate IDs or a maximum. Mutation collisions, missing skills, and ineligible mutation outputs fail with typed diagnostics and no validated token.
+
+**Review-Whole-5 verification:** 214 focused fusion, content-validation, transaction, original-content, parity, and clean-host tests passed. The full suite passed with **984 passed, 0 failed, 0 skipped**. The framework built with **0 warnings and 0 errors**; the solution retained **98 legacy console-host warnings and 0 errors**. All four noninteractive clean demos exited `0`, the refined framework boundary search returned no matches, `git diff --check` passed with line-ending notices only, and `Data/Jsons` was unchanged.
 
 ### M7. The encounter runner hard-wires Press Turn instead of treating it as an optional module
 
@@ -356,9 +364,9 @@ Do not begin another feature phase before the first five correction groups are c
    - Every demon-specific mutation requires Demon Stock ownership.
    - Owner and ordinary-party-member attacks on the demon API are rejected without mutation.
    - Active-plus-owned demons and legitimate standby replacement/consumption remain supported.
-5. **Review-Whole-5: Fusion authority**
-   - Reject ambiguous recipes.
-   - Make accident inheritance plan-derived and validated.
+5. **Review-Whole-5: Fusion authority** - completed and verified 2026-07-13.
+   - Equal-specificity overlapping recipes fail content validation, while unvalidated runtime ambiguity also fails closed.
+   - Accident candidates and limits come only from the exact planning result; registered mutations are revalidated and return a plan-bound selection token.
 6. **Review-Whole-6: Atomic execution and boundary arithmetic**
    - Stage mutations or define no-fail commits.
    - Validate combat/growth/resource configuration and overflow paths.
@@ -375,4 +383,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-4 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, and Demon Stock role authorization. The most important remaining risks are fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-5 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, and fusion authority. The most important remaining risks are atomic execution, unchecked boundary arithmetic, definition immutability, runtime-condition consistency, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.

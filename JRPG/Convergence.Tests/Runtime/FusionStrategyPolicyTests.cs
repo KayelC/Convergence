@@ -260,17 +260,21 @@ public sealed class FusionStrategyPolicyTests
             IsSacrificial: false,
             context));
 
-        IReadOnlyList<ContentId> inherited = planner.CreateAccidentInheritance(
-            plan,
-            [Id("skill_1"), Id("skill_2")],
-            maximumSlots: 2);
+        FusionAccidentInheritanceResult accident = planner.CreateAccidentInheritance(plan);
+        IReadOnlyList<ContentId> inherited = accident.RequireValidSelection().SelectedSkillIds;
 
         Assert.True(plan.IsSuccessful);
+        Assert.True(accident.IsValid);
         Assert.Same(context, plan.PolicyContext);
-        Assert.Equal([Id("skill_1"), Id("skill_2")], inherited);
+        Assert.Equal(1, plan.MaximumInheritanceSlots);
+        Assert.Equal([Id("skill_1")], inherited);
+        Assert.Equal(
+            [
+                new FusionAccidentInheritanceMutation(Id("skill_1"), Id("skill_1"))
+            ],
+            accident.Mutations);
         Assert.Collection(
             mutationPolicy.Requests,
-            request => Assert.Same(context, request.Context),
             request => Assert.Same(context, request.Context));
         Assert.All(mutationPolicy.Requests, request =>
         {
@@ -380,6 +384,45 @@ public sealed class FusionStrategyPolicyTests
 
         Assert.Equal(Id("entity_child"), result.ResultEntityId);
         Assert.Same(entityRecipe, result.MatchedRecipe);
+    }
+
+    [Fact]
+    public void Resolver_RejectsEqualSpecificityMatchesRegardlessOfRepositoryOrder()
+    {
+        FusionRecipeSnapshot firstRecipe = new(
+            EntityParent("parent_a"),
+            RaceParent("race_b"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("child")));
+        FusionRecipeSnapshot secondRecipe = new(
+            EntityParent("parent_b"),
+            RaceParent("race_a"),
+            new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("target")));
+        FusionParticipantSnapshot first = Participant("parent_a", "race_a");
+        FusionParticipantSnapshot second = Participant("parent_b", "race_b");
+
+        foreach (FusionRecipeSnapshot[] recipes in new[]
+                 {
+                     new[] { firstRecipe, secondRecipe },
+                     new[] { secondRecipe, firstRecipe }
+                 })
+        {
+            TestFusionRepository repository = Repository(recipes: recipes);
+            var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
+
+            FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(first, second));
+
+            Assert.False(result.IsSuccessful);
+            Assert.Null(result.ResultEntityId);
+            Assert.Null(result.MatchedRecipe);
+            Assert.Equal(
+                FusionRuntimeDiagnosticCode.AmbiguousRecipe,
+                Assert.Single(result.Diagnostics).Code);
+            Assert.Null(resolver.TryResolveDirectCreateResult(
+                first.EntityId,
+                first.RaceId,
+                second.EntityId,
+                second.RaceId));
+        }
     }
 
     [Fact]
@@ -523,6 +566,97 @@ public sealed class FusionStrategyPolicyTests
         Assert.Equal(
             [typeof(FusionPlanningResult), typeof(ValidatedFusionInheritanceSelection)],
             constructor.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public void AccidentInheritance_DerivesCandidatesAndLimitFromTheExactPlan()
+    {
+        SkillDefinition firstSkill = Skill("skill_1");
+        SkillDefinition secondSkill = Skill("skill_2");
+        TestFusionRepository repository = Repository(
+            recipes: [CreateRecipe("parent_a", "parent_b", "child")],
+            skills: [firstSkill, secondSkill]);
+        FusionPolicyRegistry policies = Policies();
+        var planner = new FusionPlanningService(
+            repository,
+            new FusionResultResolver(repository, new ThrowingRandomSource(), policies),
+            new MinimumRandomSource(),
+            policies);
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1", "skill_2"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+
+        FusionAccidentInheritanceResult accident = planner.CreateAccidentInheritance(plan);
+        ValidatedFusionInheritanceSelection selection = accident.RequireValidSelection();
+        FusionPreviewSnapshot? preview = new FusionPreviewService().CreatePreview(
+            new FusionPreviewRequest(plan, selection));
+        FusionPlanningResult equivalentButDistinctPlan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1", "skill_2"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+        FusionPreviewSnapshot? wrongPlanPreview = new FusionPreviewService().CreatePreview(
+            new FusionPreviewRequest(equivalentButDistinctPlan, selection));
+
+        Assert.True(accident.IsValid);
+        Assert.Equal(1, plan.MaximumInheritanceSlots);
+        Assert.Equal([firstSkill.Id], selection.SelectedSkillIds);
+        Assert.Equal(
+            [new FusionAccidentInheritanceMutation(firstSkill.Id, firstSkill.Id)],
+            accident.Mutations);
+        Assert.NotNull(preview);
+        Assert.Equal(selection.SelectedSkillIds, preview!.InheritedSkillIds);
+        Assert.Null(wrongPlanPreview);
+
+        var method = Assert.Single(typeof(IFusionPlanningService).GetMethods(), candidate =>
+            candidate.Name == nameof(IFusionPlanningService.CreateAccidentInheritance));
+        Assert.Equal(typeof(FusionAccidentInheritanceResult), method.ReturnType);
+        Assert.Equal(
+            [typeof(FusionPlanningResult)],
+            method.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public void AccidentInheritance_RejectsAnIneligibleMutationResult()
+    {
+        SkillDefinition sourceSkill = Skill("skill_1");
+        SkillDefinition blockedSkill = Skill("blocked_skill", isInheritable: false);
+        var mutationPolicy = new RedirectMutationPolicy(Id("redirect_mutation"), blockedSkill.Id);
+        TestFusionRepository repository = Repository(
+            recipes:
+            [
+                CreateRecipe(
+                    "parent_a",
+                    "parent_b",
+                    "child",
+                    mutationPolicyId: mutationPolicy.Id.ToString())
+            ],
+            skills: [sourceSkill, blockedSkill]);
+        FusionPolicyRegistry policies = Policies(mutationPolicies: [mutationPolicy]);
+        var planner = new FusionPlanningService(
+            repository,
+            new FusionResultResolver(repository, new ThrowingRandomSource(), policies),
+            new MinimumRandomSource(),
+            policies);
+        FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
+            Participant("parent_a", "race_a", skills: ["skill_1"]),
+            Participant("parent_b", "race_b"),
+            Sacrifice: null,
+            IsSacrificial: false));
+
+        FusionAccidentInheritanceResult accident = planner.CreateAccidentInheritance(plan);
+
+        Assert.False(accident.IsValid);
+        Assert.Null(accident.ValidatedSelection);
+        Assert.Equal(
+            new FusionAccidentInheritanceMutation(sourceSkill.Id, blockedSkill.Id),
+            Assert.Single(accident.Mutations));
+        FusionInheritanceSelectionDiagnostic diagnostic = Assert.Single(accident.Diagnostics);
+        Assert.Equal(FusionInheritanceSelectionDiagnosticCode.SkillIneligible, diagnostic.Code);
+        Assert.Equal(blockedSkill.Id, diagnostic.SkillId);
+        Assert.Equal(FusionInheritanceDecisionCode.SkillNotInheritable, diagnostic.InheritanceDecisionCode);
     }
 
     [Fact]
@@ -678,7 +812,7 @@ public sealed class FusionStrategyPolicyTests
             skills?.Select(Id),
             stats?.Select(pair => new KeyValuePair<ContentId, int>(Id(pair.StatId), pair.Value)));
 
-    private static SkillDefinition Skill(string id) =>
+    private static SkillDefinition Skill(string id, bool isInheritable = true) =>
         new(
             Id(id),
             id,
@@ -686,7 +820,7 @@ public sealed class FusionStrategyPolicyTests
             SkillActivation.Active,
             SkillMenuGroup.Offense,
             InheritanceGroup.Physical,
-            new SkillInheritanceDefinition(true));
+            new SkillInheritanceDefinition(isInheritable));
 
     private static ContentId Id(string value) => ContentId.Parse(value);
 
@@ -739,6 +873,22 @@ public sealed class FusionStrategyPolicyTests
 
         public decimal NextUnitDecimal() =>
             throw new InvalidOperationException("Randomness was not expected for this test path.");
+    }
+
+    private sealed class RedirectMutationPolicy : IFusionMutationPolicy
+    {
+        private readonly ContentId _resultSkillId;
+
+        public RedirectMutationPolicy(ContentId id, ContentId resultSkillId)
+        {
+            Id = id;
+            _resultSkillId = resultSkillId;
+        }
+
+        public ContentId Id { get; }
+
+        public ContentId Mutate(FusionMutationPolicyRequest request, IRandomSource random) =>
+            _resultSkillId;
     }
 
     private sealed class ThrowingFusionResultResolver : IFusionResultResolver

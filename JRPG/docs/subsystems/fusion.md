@@ -80,6 +80,8 @@ CodeReview-7-4 closes the strategy-context lifecycle: `FusionPlanningResult` ret
 
 CodeReview-7-5 closes Compendium entry integrity for the approved scope. A shared internal validator checks authored stat shape and values plus learned/equipped skill identity. `RuntimeSaveValidator`, registration, and direct recall map the same findings into their public diagnostic contracts before any actor, stock, pricing, or wallet mutation path runs.
 
+Review-Whole-5 closes recipe and accident authority. Content validation rejects overlapping recipes at the same selector specificity, and `FusionResultResolver` independently rejects multiple highest-specificity matches so repository order is never a rule. `CreateAccidentInheritance` no longer accepts host-provided candidate IDs or slot counts. It selects from the retained plan, applies the registered mutation policy with that plan's context, validates the resulting typed skills, and returns an exact-plan `ValidatedFusionInheritanceSelection` plus immutable source/result mutation evidence. Missing, duplicate, or inheritance-forbidden mutation results produce diagnostics and no usable selection.
+
 ### Skill Inheritance
 
 The framework planner builds a unique parent skill pool, filters candidates through the typed Track 10 inheritance evaluator, returns ineligible skills separately for UI display, and calculates inheritance slots from legal unique skill count.

@@ -230,6 +230,75 @@ public sealed class CatalogSurfaceTests
     }
 
     [Fact]
+    public void CatalogSurfaceValidation_RejectsOverlappingEqualSpecificityFusionRecipes()
+    {
+        ContentPackManifest manifest = new(
+            1,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [
+                new ContentPackDocumentReference("entities", "entities.json"),
+                new ContentPackDocumentReference("races", "races.json"),
+                new ContentPackDocumentReference("fusion", "fusion.json")
+            ]);
+        EntityDefinition parentA = FusionEntity("parent_a", "race_a");
+        EntityDefinition parentB = FusionEntity("parent_b", "race_b");
+        EntityDefinition resultEntity = FusionEntity("result", "race_a");
+        FusionRecipeDefinition first = RecipeWithParents(
+            "first_overlap",
+            [
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Entity, parentA.Id),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, parentB.RaceId)
+            ]);
+        FusionRecipeDefinition second = RecipeWithParents(
+            "second_overlap",
+            [
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Entity, parentB.Id),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, parentA.RaceId)
+            ]);
+
+        ContentValidationResult result = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder().RegisterEntityKind("demon").Build(),
+                entityDocuments:
+                [
+                    Source(
+                        "entities.json",
+                        "entities.json",
+                        new DeserializedContentDocument<EntityDefinition>(1, [parentA, parentB, resultEntity]))
+                ],
+                raceDocuments:
+                [
+                    Source(
+                        "races.json",
+                        "races.json",
+                        new DeserializedContentDocument<RaceDefinition>(
+                            1,
+                            [new RaceDefinition(Id("race_a"), "Race A"), new RaceDefinition(Id("race_b"), "Race B")]))
+                ],
+                fusionDocuments:
+                [
+                    Source(
+                        "fusion.json",
+                        "fusion.json",
+                        new DeserializedContentDocument<FusionRecipeDefinition>(1, [first, second]))
+                ]));
+
+        ContentValidationError ambiguity = Assert.Single(result.Errors);
+        Assert.Equal(ContentValidationErrorCode.FusionRecipeAmbiguous, ambiguity.Code);
+        Assert.Equal("$.fusionRecipes[1].parents", ambiguity.JsonPath);
+        Assert.Equal(second.Id, ambiguity.RecordId);
+        Assert.Contains(first.Id.ToString(), ambiguity.Message, StringComparison.Ordinal);
+        Assert.Contains("no recipe-priority field", ambiguity.Suggestion, StringComparison.Ordinal);
+        Assert.Null(result.ValidatedContent);
+    }
+
+    [Fact]
     public void CatalogFusionRepository_RejectsUnvalidatedNonBinaryRecipesInsteadOfOmittingThem()
     {
         FusionRecipeDefinition malformed = RecipeWithParents(
@@ -414,6 +483,20 @@ public sealed class CatalogSurfaceTests
             new FusionResultDefinition(
                 FusionResultOperationKind.CreateEntity,
                 resultEntityId: Id("test.pack:result")));
+
+    private static EntityDefinition FusionEntity(string id, string raceId) =>
+        new(
+            Id(id),
+            id,
+            "Fusion ambiguity test entity.",
+            Id("demon"),
+            Id(raceId),
+            rank: 1,
+            baseLevel: 1,
+            new EntityCapabilitiesDefinition(true, true, true),
+            new EntityInheritanceRulesDefinition(
+                new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList)),
+            []);
 
     private static string FindRepositoryRoot()
     {

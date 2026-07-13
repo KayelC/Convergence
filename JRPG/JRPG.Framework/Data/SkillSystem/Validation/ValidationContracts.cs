@@ -39,7 +39,8 @@ public enum ContentValidationErrorCode
     EntityUnlockLevelInvalid,
     MutationTierInvalid,
     MutationTierDuplicate,
-    MutationTierGap
+    MutationTierGap,
+    FusionRecipeAmbiguous
 }
 
 public sealed record ContentValidationError(

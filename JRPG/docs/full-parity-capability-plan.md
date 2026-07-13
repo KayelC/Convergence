@@ -908,6 +908,15 @@ Review-Whole-4 role-invariant correction:
 - Valid active-plus-owned demon behavior remains unchanged, and standby owned demons may still be replaced or consumed.
 - Status remains `parallel_partial` because protected legacy party/stock consumers have not been retired. Review-Whole-4 passed `101/101` focused tests and `980/980` full-suite tests with no skips.
 
+Review-Whole-5 fusion-authority correction:
+
+- schema-v1 validation rejects unordered, equal-specificity recipe overlaps with a stable `FusionRecipeAmbiguous` diagnostic;
+- runtime resolution independently rejects multiple highest-specificity matches, including repositories that bypass pack validation;
+- accident inheritance accepts only the exact planning result, derives its own candidate pool and slot limit, revalidates registered mutation outputs, and issues an exact-plan validated selection;
+- hosts can no longer pass a claimed legal-skill list or maximum, and equivalent plans cannot exchange selection tokens;
+- fusion capabilities remain `parallel_partial`; protected Cathedral consumers are still active and no removal is authorized.
+- Verification passed `214/214` focused fusion/content/transaction/host tests and `984/984` full-suite tests with no skips. The framework built with `0` warnings, the solution retained `98` legacy-host warnings, all four clean demos passed, boundary/diff checks passed, and `Data/Jsons` remained unchanged.
+
 ### 29. `negotiation_and_recruitment`
 
 Current status: `parallel_partial`.

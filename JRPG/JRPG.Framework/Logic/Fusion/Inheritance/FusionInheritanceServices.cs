@@ -166,6 +166,7 @@ public sealed class FusionInheritanceSelectionValidator : IFusionInheritanceSele
 
         ValidatedFusionInheritanceSelection? validatedSelection = diagnostics.Count == 0
             ? new ValidatedFusionInheritanceSelection(
+                plan.Authority,
                 plan.ReceivingEntityId,
                 plan.MaximumSelections,
                 selectedSkills)

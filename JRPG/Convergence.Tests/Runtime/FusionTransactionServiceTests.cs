@@ -172,9 +172,9 @@ public sealed class FusionTransactionServiceTests
                 Sacrifice: null,
                 IsSacrificial: false));
             ValidatedFusionInheritanceSelection selection = Selection(
-                context.Repository,
+                context.Planner,
                 plan,
-                [first, second]);
+                selectedSkillIds: null);
             RuntimePartyStockSnapshot party = new(
                 owner,
                 ownerLevel: 20,
@@ -316,9 +316,8 @@ public sealed class FusionTransactionServiceTests
             sacrifice,
             IsSacrificial: true));
         ValidatedFusionInheritanceSelection selection = Selection(
-            context.Repository,
+            context.Planner,
             plan,
-            [echo, context.SecondParent, sacrifice],
             [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")]);
         var owner = new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("owner"),
@@ -382,6 +381,12 @@ public sealed class FusionTransactionServiceTests
             boostedStats,
             Array.Empty<FusionRuntimeDiagnostic>());
         var resultEntity = new FusionEntitySnapshot(targetDefinition);
+        FusionInheritancePlan selectionPlan = new FusionInheritancePlanner().CreatePlan(
+            new FusionInheritancePlanRequest(
+                targetDefinition,
+                Array.Empty<SkillDefinition>(),
+                target.SkillIds,
+                maximumSelections: 0));
         var plan = new FusionPlanningResult(
             resolution,
             resultEntity,
@@ -395,13 +400,8 @@ public sealed class FusionTransactionServiceTests
             Array.Empty<FusionInheritanceEntry>(),
             maximumInheritanceSlots: 0,
             sacrificeDecision: null,
-            policyContext: FusionPolicyContext.Empty);
-        FusionInheritancePlan selectionPlan = new FusionInheritancePlanner().CreatePlan(
-            new FusionInheritancePlanRequest(
-                targetDefinition,
-                Array.Empty<SkillDefinition>(),
-                target.SkillIds,
-                maximumSelections: 0));
+            policyContext: FusionPolicyContext.Empty,
+            inheritancePlan: selectionPlan);
         ValidatedFusionInheritanceSelection selection = new FusionInheritanceSelectionValidator()
             .Validate(selectionPlan, [])
             .RequireValidSelection();
@@ -546,9 +546,9 @@ public sealed class FusionTransactionServiceTests
             context.FirstParent,
             IsSacrificial: true));
         ValidatedFusionInheritanceSelection otherSelection = Selection(
-            context.Repository,
+            context.Planner,
             otherPlan,
-            [echo, context.SecondParent, context.FirstParent]);
+            selectedSkillIds: null);
         Assert.NotEqual(context.Plan.MaximumInheritanceSlots, otherSelection.MaximumSelections);
 
         FusionTransactionAssessment wrongSelection = service.Prepare(new FusionTransactionPreparationRequest(
@@ -705,7 +705,7 @@ public sealed class FusionTransactionServiceTests
             second,
             Sacrifice: null,
             IsSacrificial: false));
-        ValidatedFusionInheritanceSelection selection = Selection(repository, plan, [first, second]);
+        ValidatedFusionInheritanceSelection selection = Selection(planner, plan, selectedSkillIds: null);
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,
@@ -754,31 +754,12 @@ public sealed class FusionTransactionServiceTests
     }
 
     private static ValidatedFusionInheritanceSelection Selection(
-        IFusionContentRepository repository,
+        FusionPlanningService planner,
         FusionPlanningResult plan,
-        IReadOnlyList<FusionParticipantSnapshot> participants,
         IEnumerable<ContentId>? selectedSkillIds = null)
     {
-        var skills = new List<SkillDefinition>();
-        var seen = new HashSet<ContentId>();
-        foreach (ContentId skillId in participants.SelectMany(participant => participant.SkillIds))
-        {
-            if (seen.Add(skillId) &&
-                repository.TryGetSkill(skillId, out SkillDefinition? skill) &&
-                skill is not null)
-            {
-                skills.Add(skill);
-            }
-        }
-
-        FusionInheritancePlan selectionPlan = new FusionInheritancePlanner().CreatePlan(
-            new FusionInheritancePlanRequest(
-                plan.ResultEntity!.Definition,
-                skills,
-                plan.NaturalSkillIds,
-                plan.MaximumInheritanceSlots));
-        return new FusionInheritanceSelectionValidator()
-            .Validate(selectionPlan, selectedSkillIds ?? [])
+        return planner
+            .ValidateInheritanceSelection(plan, selectedSkillIds ?? [])
             .RequireValidSelection();
     }
 

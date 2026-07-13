@@ -178,6 +178,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateRemainingRecords(_fusion, _fusionIndex, ValidateFusionRecipe, processedFusion);
             ValidateRemainingRecords(_rulesets, _rulesetIndex, ValidateRuleset, processedRulesets);
 
+            ValidateFusionRecipeAmbiguities();
             ValidateMutationFamilies();
         }
 
@@ -916,6 +917,75 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     _registrations.PolicyIds, "policy");
             }
         }
+
+        private void ValidateFusionRecipeAmbiguities()
+        {
+            for (int recipeIndex = 0; recipeIndex < _fusion.Count; recipeIndex++)
+            {
+                RecordSource<FusionRecipeDefinition> recipe = _fusion[recipeIndex];
+                if (recipe.Definition.Parents.Count != 2)
+                {
+                    continue;
+                }
+
+                for (int previousIndex = 0; previousIndex < recipeIndex; previousIndex++)
+                {
+                    RecordSource<FusionRecipeDefinition> previous = _fusion[previousIndex];
+                    if (previous.Definition.Parents.Count != 2 ||
+                        FusionRecipeSpecificity(previous.Definition) != FusionRecipeSpecificity(recipe.Definition) ||
+                        !FusionRecipesOverlap(previous.Definition, recipe.Definition))
+                    {
+                        continue;
+                    }
+
+                    Add(
+                        recipe,
+                        recipe.Path + ".parents",
+                        ContentValidationErrorCode.FusionRecipeAmbiguous,
+                        $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
+                        "Make the parent selectors non-overlapping; schema v1 has no recipe-priority field.");
+                    break;
+                }
+            }
+        }
+
+        private bool FusionRecipesOverlap(
+            FusionRecipeDefinition first,
+            FusionRecipeDefinition second) =>
+            (SelectorsIntersect(first.Parents[0], second.Parents[0]) &&
+             SelectorsIntersect(first.Parents[1], second.Parents[1])) ||
+            (SelectorsIntersect(first.Parents[0], second.Parents[1]) &&
+             SelectorsIntersect(first.Parents[1], second.Parents[0]));
+
+        private bool SelectorsIntersect(
+            FusionParentSelectorDefinition first,
+            FusionParentSelectorDefinition second)
+        {
+            if (first.Kind == second.Kind)
+            {
+                return NormalizeContentReference(first.Id) == NormalizeContentReference(second.Id);
+            }
+
+            FusionParentSelectorDefinition entitySelector = first.Kind == FusionParentSelectorKind.Entity
+                ? first
+                : second;
+            FusionParentSelectorDefinition raceSelector = first.Kind == FusionParentSelectorKind.Race
+                ? first
+                : second;
+            if (!TryLocalReference(entitySelector.Id, out ContentId entityId) ||
+                !_entityIndex.TryGetValue(entityId, out List<RecordSource<EntityDefinition>>? entities) ||
+                entities.Count != 1)
+            {
+                // Cross-pack entity/race overlap is rechecked by the runtime resolver after qualification.
+                return false;
+            }
+
+            return NormalizeContentReference(entities[0].Definition.RaceId) ==
+                   NormalizeContentReference(raceSelector.Id);
+        }
+
+        private static int FusionRecipeSpecificity(FusionRecipeDefinition recipe) =>
+            recipe.Parents.Count(parent => parent.Kind == FusionParentSelectorKind.Entity);
 
         private void ValidateRuleset(RecordSource<RulesetDefinition> source)
         {

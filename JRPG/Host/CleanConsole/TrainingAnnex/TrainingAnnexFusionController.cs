@@ -578,14 +578,14 @@ internal sealed class TrainingAnnexFusionController
             sacrificeParent,
             IsSacrificial: true));
 
-        IReadOnlyList<ContentId> accidentInheritedSkillIds =
-            planner.CreateAccidentInheritance(
-                basePlan,
-                [TrainingAnnexHostSupport.EchoStrike],
-                maximumSlots: 1);
-        ContentId mutationResult = accidentInheritedSkillIds.Count == 0
-            ? TrainingAnnexHostSupport.EchoStrike
-            : accidentInheritedSkillIds[0];
+        FusionAccidentInheritanceResult accidentInheritance =
+            planner.CreateAccidentInheritance(basePlan);
+        ValidatedFusionInheritanceSelection accidentSelection =
+            accidentInheritance.RequireValidSelection();
+        IReadOnlyList<ContentId> accidentInheritedSkillIds = accidentSelection.SelectedSkillIds;
+        FusionAccidentInheritanceMutation? mutation = accidentInheritance.Mutations.FirstOrDefault();
+        ContentId mutationSource = mutation?.SourceSkillId ?? TrainingAnnexHostSupport.EchoStrike;
+        ContentId mutationResult = mutation?.ResultSkillId ?? mutationSource;
         var evidence = new TrainingAnnexFusionPlanningEvidence(
             "inheritance_slots_mutation_accident",
             basePlan.ResultEntity?.Id,
@@ -595,7 +595,7 @@ internal sealed class TrainingAnnexFusionController
             basePlan.PickableSkillIds,
             basePlan.DisplaySkills,
             accidentInheritedSkillIds,
-            TrainingAnnexHostSupport.EchoStrike,
+            mutationSource,
             mutationResult,
             basePlan.Result.MatchedRecipe?.AccidentPolicyId,
             basePlan.Result.MatchedRecipe?.MutationPolicyId,
@@ -939,7 +939,8 @@ internal sealed class TrainingAnnexFusionController
 
     private sealed class TrainingAnnexFusionAccidentRandomSource : IRandomSource
     {
-        private readonly Queue<int> _values = new([0, 0, 0]);
+        // Pick Echo Strike from the three plan-derived candidates, then mutate upward.
+        private readonly Queue<int> _values = new([1, 0, 2, 0, 0]);
 
         public int NextInt32(int minimumInclusive, int maximumExclusive)
         {

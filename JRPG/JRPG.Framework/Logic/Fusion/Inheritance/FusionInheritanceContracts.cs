@@ -109,16 +109,19 @@ public sealed record FusionInheritancePlan
         EntityDefinition receivingEntity,
         int maximumSelections,
         IEnumerable<FusionInheritanceCandidate> candidates,
-        IFusionInheritanceEvaluator evaluator)
+        IFusionInheritanceEvaluator evaluator,
+        object? authority = null)
     {
         ReceivingEntity = receivingEntity;
         MaximumSelections = maximumSelections;
         Candidates = Array.AsReadOnly(candidates.ToArray());
         Evaluator = evaluator;
+        Authority = authority ?? new object();
     }
 
     internal EntityDefinition ReceivingEntity { get; }
     internal IFusionInheritanceEvaluator Evaluator { get; }
+    internal object Authority { get; }
     public ContentId ReceivingEntityId => ReceivingEntity.Id;
     public int MaximumSelections { get; }
     public IReadOnlyList<FusionInheritanceCandidate> Candidates { get; }
@@ -130,7 +133,8 @@ public sealed record FusionInheritancePlan
             ReceivingEntity,
             maximumSelections,
             Candidates,
-            Evaluator);
+            Evaluator,
+            Authority);
     }
 }
 
@@ -193,16 +197,19 @@ public sealed class FusionInheritanceSelectionException : Exception
 public sealed record ValidatedFusionInheritanceSelection
 {
     internal ValidatedFusionInheritanceSelection(
+        object planAuthority,
         ContentId receivingEntityId,
         int maximumSelections,
         IEnumerable<SkillDefinition> selectedSkills)
     {
+        PlanAuthority = planAuthority ?? throw new ArgumentNullException(nameof(planAuthority));
         ReceivingEntityId = receivingEntityId;
         MaximumSelections = maximumSelections;
         SelectedSkills = Array.AsReadOnly(selectedSkills.ToArray());
         SelectedSkillIds = Array.AsReadOnly(SelectedSkills.Select(skill => skill.Id).ToArray());
     }
 
+    internal object PlanAuthority { get; }
     public ContentId ReceivingEntityId { get; }
     public int MaximumSelections { get; }
     public IReadOnlyList<SkillDefinition> SelectedSkills { get; }

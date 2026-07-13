@@ -49,7 +49,8 @@ public enum FusionRuntimeDiagnosticCode
     ResultActorSnapshotInvalid,
     StockTransitionRejected,
     ActorCreationFailed,
-    TransactionStateChanged
+    TransactionStateChanged,
+    AmbiguousRecipe
 }
 
 public sealed record FusionRuntimeDiagnostic(
@@ -288,7 +289,15 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return FromPolicy(policyResolution, isAccident, null, policy.Id);
         }
 
-        FusionRecipeSnapshot? recipe = FindRecipe(a, b);
+        FusionRecipeMatch recipeMatch = FindRecipe(a, b);
+        if (recipeMatch.IsAmbiguous)
+        {
+            return Failed(
+                FusionRuntimeDiagnosticCode.AmbiguousRecipe,
+                "Multiple equal-specificity fusion recipes matched the selected parents.");
+        }
+
+        FusionRecipeSnapshot? recipe = recipeMatch.Recipe;
 
         if (recipe is null)
         {
@@ -397,11 +406,17 @@ public sealed class FusionResultResolver : IFusionResultResolver
         ContentId secondParentId,
         ContentId secondRaceId)
     {
-        FusionRecipeSnapshot? recipe = FindRecipe(
+        FusionRecipeMatch recipeMatch = FindRecipe(
             firstParentId,
             firstRaceId,
             secondParentId,
             secondRaceId);
+        if (recipeMatch.IsAmbiguous)
+        {
+            return null;
+        }
+
+        FusionRecipeSnapshot? recipe = recipeMatch.Recipe;
 
         if (recipe?.Result is FusionRecipeResultSnapshot authoredResult)
         {
@@ -530,24 +545,38 @@ public sealed class FusionResultResolver : IFusionResultResolver
         return FromPolicy(resolution, isAccident, recipe, policyId);
     }
 
-    private FusionRecipeSnapshot? FindRecipe(
+    private FusionRecipeMatch FindRecipe(
         FusionParticipantSnapshot first,
         FusionParticipantSnapshot second) =>
         FindRecipe(first.EntityId, first.RaceId, second.EntityId, second.RaceId);
 
-    private FusionRecipeSnapshot? FindRecipe(
+    private FusionRecipeMatch FindRecipe(
         ContentId firstEntityId,
         ContentId firstRaceId,
         ContentId secondEntityId,
-        ContentId secondRaceId) =>
-        _content.GetRecipes()
+        ContentId secondRaceId)
+    {
+        FusionRecipeSnapshot[] matches = _content.GetRecipes()
             .Where(recipe =>
                 (Matches(recipe.FirstParent, firstEntityId, firstRaceId) &&
                  Matches(recipe.SecondParent, secondEntityId, secondRaceId)) ||
                 (Matches(recipe.FirstParent, secondEntityId, secondRaceId) &&
                  Matches(recipe.SecondParent, firstEntityId, firstRaceId)))
-            .OrderByDescending(SelectorSpecificity)
-            .FirstOrDefault();
+            .ToArray();
+        if (matches.Length == 0)
+        {
+            return default;
+        }
+
+        int highestSpecificity = matches.Max(SelectorSpecificity);
+        FusionRecipeSnapshot[] authoritativeMatches = matches
+            .Where(recipe => SelectorSpecificity(recipe) == highestSpecificity)
+            .Take(2)
+            .ToArray();
+        return authoritativeMatches.Length == 1
+            ? new FusionRecipeMatch(authoritativeMatches[0], IsAmbiguous: false)
+            : new FusionRecipeMatch(null, IsAmbiguous: true);
+    }
 
     private static bool Matches(
         FusionRecipeParentSelectorSnapshot selector,
@@ -563,6 +592,10 @@ public sealed class FusionResultResolver : IFusionResultResolver
     private static int SelectorSpecificity(FusionRecipeSnapshot recipe) =>
         (recipe.FirstParent.Kind == FusionParentSelectorKind.Entity ? 1 : 0) +
         (recipe.SecondParent.Kind == FusionParentSelectorKind.Entity ? 1 : 0);
+
+    private readonly record struct FusionRecipeMatch(
+        FusionRecipeSnapshot? Recipe,
+        bool IsAmbiguous);
 
     private static bool TryToken(string? token, out ContentId id)
     {
@@ -736,6 +769,31 @@ public sealed record FusionPlanningResult
     internal FusionInheritancePlan? InheritancePlan { get; }
 }
 
+public sealed record FusionAccidentInheritanceMutation(
+    ContentId SourceSkillId,
+    ContentId ResultSkillId);
+
+public sealed record FusionAccidentInheritanceResult
+{
+    internal FusionAccidentInheritanceResult(
+        IEnumerable<FusionInheritanceSelectionDiagnostic> diagnostics,
+        IEnumerable<FusionAccidentInheritanceMutation> mutations,
+        ValidatedFusionInheritanceSelection? validatedSelection)
+    {
+        Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
+        Mutations = Array.AsReadOnly(mutations.ToArray());
+        ValidatedSelection = validatedSelection;
+    }
+
+    public IReadOnlyList<FusionInheritanceSelectionDiagnostic> Diagnostics { get; }
+    public IReadOnlyList<FusionAccidentInheritanceMutation> Mutations { get; }
+    public ValidatedFusionInheritanceSelection? ValidatedSelection { get; }
+    public bool IsValid => Diagnostics.Count == 0 && ValidatedSelection is not null;
+
+    public ValidatedFusionInheritanceSelection RequireValidSelection() =>
+        ValidatedSelection ?? throw new FusionInheritanceSelectionException(Diagnostics);
+}
+
 public interface IFusionPlanningService
 {
     FusionPlanningResult CreatePlan(FusionPlanningRequest request);
@@ -744,10 +802,7 @@ public interface IFusionPlanningService
         IEnumerable<SkillDefinition> legalSkills,
         FusionPolicyContext context);
     ContentId MutateSkill(ContentId skillId, ContentId policyId, FusionPolicyContext? context = null);
-    IReadOnlyList<ContentId> CreateAccidentInheritance(
-        FusionPlanningResult plan,
-        IReadOnlyList<ContentId> legalSkillIds,
-        int maximumSlots);
+    FusionAccidentInheritanceResult CreateAccidentInheritance(FusionPlanningResult plan);
     FusionInheritanceSelectionResult ValidateInheritanceSelection(
         FusionPlanningResult plan,
         IEnumerable<ContentId> selectedSkillIds);
@@ -930,34 +985,86 @@ public sealed class FusionPlanningService : IFusionPlanningService
             _random);
     }
 
-    public IReadOnlyList<ContentId> CreateAccidentInheritance(
-        FusionPlanningResult plan,
-        IReadOnlyList<ContentId> legalSkillIds,
-        int maximumSlots)
+    public FusionAccidentInheritanceResult CreateAccidentInheritance(FusionPlanningResult plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(legalSkillIds);
-        if (maximumSlots < 0) throw new ArgumentOutOfRangeException(nameof(maximumSlots));
+        if (!plan.IsSuccessful || plan.InheritancePlan is null)
+        {
+            return new FusionAccidentInheritanceResult(
+                [new FusionInheritanceSelectionDiagnostic(
+                    FusionInheritanceSelectionDiagnosticCode.PlanUnavailable,
+                    "The fusion plan does not contain an authoritative inheritance plan.")],
+                [],
+                validatedSelection: null);
+        }
 
-        List<ContentId> shuffled = legalSkillIds
-            .Distinct()
-            .Select(id => new KeyValuePair<int, ContentId>(_random.NextInt32(0, int.MaxValue), id))
+        SkillDefinition[] selectedSources = plan.InheritancePlan.Candidates
+            .Where(candidate => candidate.IsSelectable)
+            .Select(candidate => candidate.Skill)
+            .DistinctBy(skill => skill.Id)
+            .Select(skill => new KeyValuePair<int, SkillDefinition>(
+                _random.NextInt32(0, int.MaxValue),
+                skill))
             .OrderBy(pair => pair.Key)
             .Select(pair => pair.Value)
-            .Take(maximumSlots)
-            .ToList();
+            .Take(plan.MaximumInheritanceSlots)
+            .ToArray();
 
         ContentId? mutationPolicyId = plan.Result.MatchedRecipe?.MutationPolicyId ??
             _policies.DefaultMutationPolicyId;
-        if (mutationPolicyId is ContentId policyId)
+        var mutations = new List<FusionAccidentInheritanceMutation>(selectedSources.Length);
+        var selectedSkills = new List<SkillDefinition>(selectedSources.Length);
+        var diagnostics = new List<FusionInheritanceSelectionDiagnostic>();
+        var seenResultIds = new HashSet<ContentId>();
+        foreach (SkillDefinition sourceSkill in selectedSources)
         {
-            for (int i = 0; i < shuffled.Count; i++)
+            ContentId resultId = mutationPolicyId is ContentId policyId
+                ? MutateSkill(sourceSkill.Id, policyId, plan.PolicyContext)
+                : sourceSkill.Id;
+            mutations.Add(new FusionAccidentInheritanceMutation(sourceSkill.Id, resultId));
+
+            if (!seenResultIds.Add(resultId))
             {
-                shuffled[i] = MutateSkill(shuffled[i], policyId, plan.PolicyContext);
+                diagnostics.Add(new FusionInheritanceSelectionDiagnostic(
+                    FusionInheritanceSelectionDiagnosticCode.SkillDuplicate,
+                    $"Accident mutation produced skill '{resultId}' more than once.",
+                    resultId));
+                continue;
             }
+
+            if (!_content.TryGetSkill(resultId, out SkillDefinition? resultSkill) || resultSkill is null)
+            {
+                diagnostics.Add(new FusionInheritanceSelectionDiagnostic(
+                    FusionInheritanceSelectionDiagnosticCode.SkillUnknown,
+                    $"Accident mutation produced unknown skill '{resultId}'.",
+                    resultId));
+                continue;
+            }
+
+            FusionInheritanceDecision decision = plan.InheritancePlan.Evaluator.Evaluate(
+                plan.InheritancePlan.ReceivingEntity,
+                resultSkill);
+            if (!decision.IsAllowed)
+            {
+                diagnostics.Add(new FusionInheritanceSelectionDiagnostic(
+                    FusionInheritanceSelectionDiagnosticCode.SkillIneligible,
+                    $"Accident mutation produced ineligible skill '{resultId}': {decision.ReasonCode}.",
+                    resultId,
+                    decision.Code));
+                continue;
+            }
+
+            selectedSkills.Add(resultSkill);
         }
 
-        return Snapshot(shuffled);
+        ValidatedFusionInheritanceSelection? validatedSelection = diagnostics.Count == 0
+            ? new ValidatedFusionInheritanceSelection(
+                plan.InheritancePlan.Authority,
+                plan.InheritancePlan.ReceivingEntityId,
+                plan.MaximumInheritanceSlots,
+                selectedSkills)
+            : null;
+        return new FusionAccidentInheritanceResult(diagnostics, mutations, validatedSelection);
     }
 
     public FusionInheritanceSelectionResult ValidateInheritanceSelection(
@@ -1056,7 +1163,8 @@ internal static class FusionValidatedSelectionRules
         FusionPlanningResult plan,
         ValidatedFusionInheritanceSelection selection)
     {
-        if (!plan.IsSuccessful || plan.ResultEntity is null ||
+        if (!plan.IsSuccessful || plan.ResultEntity is null || plan.InheritancePlan is null ||
+            !ReferenceEquals(selection.PlanAuthority, plan.InheritancePlan.Authority) ||
             selection.ReceivingEntityId != plan.ResultEntity.Id ||
             selection.MaximumSelections != plan.MaximumInheritanceSlots ||
             selection.SelectedSkillIds.Count > plan.MaximumInheritanceSlots ||
@@ -1065,8 +1173,10 @@ internal static class FusionValidatedSelectionRules
             return false;
         }
 
-        var pickableSkillIds = plan.PickableSkillIds.ToHashSet();
-        return selection.SelectedSkillIds.All(pickableSkillIds.Contains);
+        return selection.SelectedSkills.All(skill =>
+            plan.InheritancePlan.Evaluator
+                .Evaluate(plan.InheritancePlan.ReceivingEntity, skill)
+                .IsAllowed);
     }
 }
 

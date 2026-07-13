@@ -144,6 +144,8 @@ Phase 7-30 adds the first original clean fusion result proof. `CatalogFusionCont
 
 CodeReview-7-5 validates Compendium skill and stat snapshots before registration, recall, or save acceptance. Duplicate learned/equipped skills, missing catalog skills, equipped-not-learned skills, negative stats, and incomplete or unknown stat overrides return typed diagnostics without spending currency or constructing an actor.
 
+Review-Whole-5 makes fusion recipe and accident-selection authority deterministic. Equal-specificity recipes may not overlap; authored packs fail validation and arbitrary runtime repositories return `AmbiguousRecipe` instead of selecting the first record. Accident inheritance derives its shuffled pool and maximum from the exact evaluated plan, applies only a registered mutation policy, rejects unknown or ineligible mutation outputs, and returns a plan-bound validated selection. A broader race recipe and a more-specific entity recipe remain a valid intentional override.
+
 Supported fusion concepts:
 
 - Binary fusion.

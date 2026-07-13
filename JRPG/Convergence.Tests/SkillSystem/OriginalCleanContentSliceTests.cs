@@ -470,7 +470,11 @@ public sealed class OriginalCleanContentSliceTests
         var repository = new CatalogFusionContentRepository(catalog);
         FusionPolicyRegistry policies = TrainingAnnexFusionPolicies();
         var resolver = new FusionResultResolver(repository, new SequenceRandomSource(50, 50), policies);
-        var planner = new FusionPlanningService(repository, resolver, new SequenceRandomSource(0, 0, 0), policies);
+        var planner = new FusionPlanningService(
+            repository,
+            resolver,
+            new SequenceRandomSource(1, 0, 2, 0, 0),
+            policies);
 
         SkillDefinition echoStrike = catalog.GetRequiredSkill(Qualified("echo_strike"));
         SkillDefinition shellBash = catalog.GetRequiredSkill(Qualified("shell_bash"));
@@ -522,12 +526,15 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(3, sacrificialPlan.MaximumInheritanceSlots);
         Assert.Equal(2, sacrificialPlan.SacrificeDecision?.AdditionalInheritanceSlots);
 
-        IReadOnlyList<ContentId> accidentInheritance =
-            planner.CreateAccidentInheritance(
-                plan,
-                [Qualified("echo_strike")],
-                maximumSlots: 1);
-        Assert.Equal([Qualified("shell_bash")], accidentInheritance);
+        FusionAccidentInheritanceResult accidentInheritance =
+            planner.CreateAccidentInheritance(plan);
+        Assert.True(accidentInheritance.IsValid);
+        Assert.Equal(
+            [Qualified("shell_bash")],
+            accidentInheritance.RequireValidSelection().SelectedSkillIds);
+        Assert.Equal(
+            [new FusionAccidentInheritanceMutation(Qualified("echo_strike"), Qualified("shell_bash"))],
+            accidentInheritance.Mutations);
     }
 
     [Fact]
