@@ -124,6 +124,84 @@ public sealed class PartyStockTransitionTests
         Assert.Equal(["pixie"], dismissed.After.DemonStock.Select(actor => actor.InstanceId.ToString()));
     }
 
+    [Theory]
+    [InlineData("owner")]
+    [InlineData("ally")]
+    public void DemonCommands_RejectActiveActorsWithoutDemonStockOwnership(string subjectId)
+    {
+        RuntimeActorReferenceSnapshot owner = Actor("owner");
+        RuntimeActorReferenceSnapshot ally = Actor("ally");
+        RuntimeActorReferenceSnapshot standby = Actor("owned_demon");
+        RuntimeActorReferenceSnapshot subject = subjectId == "owner" ? owner : ally;
+        var snapshot = new RuntimePartyStockSnapshot(
+            owner,
+            ownerLevel: 40,
+            activeParty: [owner, ally],
+            demonStock: [standby]);
+
+        PartyStockTransitionResult[] results =
+        [
+            _service.SwapActiveDemon(new SwapActiveDemonRequest(
+                snapshot,
+                subject.InstanceId,
+                standby.InstanceId)),
+            _service.ReturnDemon(new ReturnDemonRequest(snapshot, subject.InstanceId)),
+            _service.ReplaceDemon(new ReplaceDemonRequest(
+                snapshot,
+                subject.InstanceId,
+                Actor($"replacement_{subjectId}"))),
+            _service.ConsumeDemon(new ConsumeDemonRequest(snapshot, subject.InstanceId))
+        ];
+
+        foreach (PartyStockTransitionResult result in results)
+        {
+            AssertRoleRejection(snapshot, result, subject.InstanceId, PartyStockTransitionCode.NotOwned);
+        }
+    }
+
+    [Fact]
+    public void DemonDeploymentCommands_RequireBothOwnershipAndActiveMembership()
+    {
+        RuntimeActorReferenceSnapshot standby = Actor("standby");
+        RuntimeActorReferenceSnapshot replacement = Actor("replacement");
+        RuntimePartyStockSnapshot snapshot = Snapshot(demonStock: [standby, replacement]);
+
+        PartyStockTransitionResult swap = _service.SwapActiveDemon(new SwapActiveDemonRequest(
+            snapshot,
+            standby.InstanceId,
+            replacement.InstanceId));
+        PartyStockTransitionResult returned = _service.ReturnDemon(new ReturnDemonRequest(
+            snapshot,
+            standby.InstanceId));
+
+        AssertRoleRejection(snapshot, swap, standby.InstanceId, PartyStockTransitionCode.NotActive);
+        AssertRoleRejection(snapshot, returned, standby.InstanceId, PartyStockTransitionCode.NotActive);
+    }
+
+    [Fact]
+    public void DemonStockReplacementAndConsumption_DoNotRequireActiveDeployment()
+    {
+        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
+        RuntimeActorReferenceSnapshot consumedDemon = Actor("consumed_demon");
+        RuntimeActorReferenceSnapshot newDemon = Actor("new_demon");
+        RuntimePartyStockSnapshot snapshot = Snapshot(demonStock: [oldDemon, consumedDemon]);
+
+        PartyStockTransitionResult replaced = _service.ReplaceDemon(new ReplaceDemonRequest(
+            snapshot,
+            oldDemon.InstanceId,
+            newDemon));
+        PartyStockTransitionResult consumed = _service.ConsumeDemon(new ConsumeDemonRequest(
+            replaced.After,
+            consumedDemon.InstanceId));
+
+        Assert.True(replaced.Applied);
+        Assert.Equal(["new_demon", "consumed_demon"], replaced.After.DemonStock.Select(DemonId));
+        Assert.Equal(["hero"], replaced.After.ActiveParty.Select(DemonId));
+        Assert.True(consumed.Applied);
+        Assert.Equal(["new_demon"], consumed.After.DemonStock.Select(DemonId));
+        Assert.Equal(["hero"], consumed.After.ActiveParty.Select(DemonId));
+    }
+
     [Fact]
     public void AddDemonToStock_AppendsOwnedDemonAndRejectsDuplicateOrFullStock()
     {
@@ -319,7 +397,7 @@ public sealed class PartyStockTransitionTests
     }
 
     [Fact]
-    public void DuplicateOwnershipAndFullStockFailures_DoNotMutate()
+    public void DuplicateOwnershipAndMalformedOverCapacityFailures_DoNotMutate()
     {
         RuntimeActorReferenceSnapshot demon = Actor("pixie");
         RuntimePartyStockSnapshot duplicateSnapshot = Snapshot(activeParty: [Actor("hero")], demonStock: [demon]);
@@ -332,15 +410,15 @@ public sealed class PartyStockTransitionTests
         Assert.Equal(PartyStockTransitionCode.DuplicateOwned, duplicate.Code);
         Assert.Equal(duplicateSnapshot, duplicate.After);
 
-        RuntimeActorReferenceSnapshot activeOnly = Actor("active_only");
+        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
         RuntimePartyStockSnapshot fullSnapshot = Snapshot(
             ownerLevel: 1,
-            activeParty: [Actor("hero"), activeOnly],
-            demonStock: [Actor("a"), Actor("b"), Actor("c")]);
+            activeParty: [Actor("hero")],
+            demonStock: [oldDemon, Actor("a"), Actor("b"), Actor("c")]);
 
         PartyStockTransitionResult full = _service.ReplaceDemon(new ReplaceDemonRequest(
             fullSnapshot,
-            activeOnly.InstanceId,
+            oldDemon.InstanceId,
             Actor("overflow")));
 
         Assert.Equal(PartyStockTransitionCode.StockFull, full.Code);
@@ -390,4 +468,21 @@ public sealed class PartyStockTransitionTests
         Assert.Equal(PartyStockTransitionCode.RuntimeInstanceIdInUse, diagnostic.Code);
         Assert.Equal(instanceId, diagnostic.SubjectInstanceId);
     }
+
+    private static void AssertRoleRejection(
+        RuntimePartyStockSnapshot expectedSnapshot,
+        PartyStockTransitionResult result,
+        RuntimeInstanceId instanceId,
+        PartyStockTransitionCode expectedCode)
+    {
+        Assert.False(result.Applied);
+        Assert.Equal(expectedCode, result.Code);
+        Assert.Same(expectedSnapshot, result.Before);
+        Assert.Same(expectedSnapshot, result.After);
+        PartyStockTransitionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        Assert.Equal(instanceId, diagnostic.SubjectInstanceId);
+    }
+
+    private static string DemonId(RuntimeActorReferenceSnapshot actor) => actor.InstanceId.ToString();
 }

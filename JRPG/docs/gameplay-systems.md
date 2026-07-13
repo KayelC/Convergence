@@ -235,6 +235,8 @@ The preserved defaults are:
 - Persona swaps exchange the active Persona with a stock entry and then use existing HP/SP recalculation and capping;
 - adapter-owned per-session runtime IDs bridge legacy object references into framework commands without exposing legacy types to the framework.
 
+Review-Whole-4 closes a role-authorization gap in these transitions. Demon swap, return, replace, and consume commands now require Demon Stock ownership; swap and return also require the owned demon to be active. This preserves the unified active-plus-owned model while preventing the owner or an ordinary party member from being mutated through a demon-specific command. Standby owned demons remain valid replacement and consumption targets.
+
 This is still not legacy removal. Field menus, battle COMP menus, compendium, fusion conductors, factories, and save/persistence ownership remain console-host systems until their later migration tracks.
 
 Track O4 gives the field party/stock organization screens explicit console-host result contracts for selected/back/unavailable states, demon stock commands, summon targets, Persona stock actions, and mutation presentation events. The mutation path still applies through the Track F adapter and the live `PartyManager`, preserving active party capacity, active slot behavior, active plus owned demon overlap, return-to-COMP behavior, Persona swap HP/SP capping, and the existing console messages.

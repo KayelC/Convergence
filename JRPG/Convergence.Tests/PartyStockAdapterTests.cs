@@ -39,7 +39,7 @@ public sealed class PartyStockAdapterTests
     }
 
     [Fact]
-    public void PartyManager_ActiveReserveAndDemonCommandsPreserveLegacyBehavior()
+    public void PartyManager_ActiveReserveCommandsRejectDemonOperationsForOrdinaryMembers()
     {
         Combatant owner = new("Hero", ClassType.Operator);
         var party = new PartyManager(owner);
@@ -62,12 +62,23 @@ public sealed class PartyStockAdapterTests
         Assert.Equal(-1, third.PartySlot);
 
         Combatant pixie = Demon("pixie");
+        owner.DemonStock.Add(pixie);
+
+        Assert.False(party.SummonDemon(owner, pixie));
+        Assert.False(party.ReturnDemon(owner, reserve));
+        Assert.Contains(reserve, party.ActiveParty);
+        Assert.Contains(pixie, owner.DemonStock);
+    }
+
+    [Fact]
+    public void PartyManager_OwnedDemonCommandsPreserveActiveAndStockOverlap()
+    {
+        Combatant owner = new("Hero", ClassType.Operator);
+        var party = new PartyManager(owner);
+        Combatant pixie = Demon("pixie");
         Combatant jack = Demon("jack");
         owner.DemonStock.AddRange([pixie, jack]);
 
-        Assert.False(party.SummonDemon(owner, pixie));
-
-        party.ReturnDemon(owner, reserve);
         Assert.True(party.SummonDemon(owner, pixie));
         Assert.Contains(pixie, party.ActiveParty);
         Assert.Contains(pixie, owner.DemonStock);

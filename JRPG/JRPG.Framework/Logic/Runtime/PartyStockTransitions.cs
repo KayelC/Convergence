@@ -312,6 +312,15 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyStockSnapshot before = request.Snapshot;
+        if (!Contains(before.DemonStock, request.ActiveDemonInstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.NotOwned,
+                "Active demon is not owned in Demon Stock.",
+                request.ActiveDemonInstanceId);
+        }
+
         int activeIndex = IndexOf(before.ActiveParty, request.ActiveDemonInstanceId);
         if (activeIndex < 0)
         {
@@ -337,6 +346,15 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyStockSnapshot before = request.Snapshot;
+        if (!Contains(before.DemonStock, request.DemonInstanceId))
+        {
+            return Rejected(
+                before,
+                PartyStockTransitionCode.NotOwned,
+                "Demon is not owned in Demon Stock.",
+                request.DemonInstanceId);
+        }
+
         if (!Contains(before.ActiveParty, request.DemonInstanceId))
         {
             return Rejected(before, PartyStockTransitionCode.NotActive, "Demon is not active.", request.DemonInstanceId);
@@ -367,12 +385,15 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyStockSnapshot before = request.Snapshot;
-        bool inActive = Contains(before.ActiveParty, request.OldDemonInstanceId);
-        bool inStock = Contains(before.DemonStock, request.OldDemonInstanceId);
-        if (!inActive && !inStock)
+        if (!Contains(before.DemonStock, request.OldDemonInstanceId))
         {
-            return Rejected(before, PartyStockTransitionCode.NotOwned, "Demon to replace is not present.", request.OldDemonInstanceId);
+            return Rejected(
+                before,
+                PartyStockTransitionCode.NotOwned,
+                "Demon to replace is not owned in Demon Stock.",
+                request.OldDemonInstanceId);
         }
+
         if (Contains(before.ActiveParty, request.NewDemon.InstanceId) || Contains(before.DemonStock, request.NewDemon.InstanceId))
         {
             return Rejected(before, PartyStockTransitionCode.DuplicateOwned, "Replacement demon is already present.", request.NewDemon.InstanceId);
@@ -389,7 +410,9 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
         RuntimeActorReferenceSnapshot[] active = before.ActiveParty
             .Select(actor => actor.InstanceId == request.OldDemonInstanceId ? request.NewDemon : actor)
             .ToArray();
-        RuntimeActorReferenceSnapshot[] demonStock = ReplaceOrAppendDemon(before, request);
+        RuntimeActorReferenceSnapshot[] demonStock = before.DemonStock
+            .Select(actor => actor.InstanceId == request.OldDemonInstanceId ? request.NewDemon : actor)
+            .ToArray();
         if (demonStock.Length > _stockCapacityPolicy.GetCapacity(before.OwnerLevel))
         {
             return Rejected(before, PartyStockTransitionCode.StockFull, "Demon stock is full.", request.NewDemon.InstanceId);
@@ -402,9 +425,13 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyStockSnapshot before = request.Snapshot;
-        if (!Contains(before.ActiveParty, request.DemonInstanceId) && !Contains(before.DemonStock, request.DemonInstanceId))
+        if (!Contains(before.DemonStock, request.DemonInstanceId))
         {
-            return Rejected(before, PartyStockTransitionCode.NotOwned, "Demon is not present.", request.DemonInstanceId);
+            return Rejected(
+                before,
+                PartyStockTransitionCode.NotOwned,
+                "Demon is not owned in Demon Stock.",
+                request.DemonInstanceId);
         }
 
         RuntimePartyStockSnapshot after = before.With(
@@ -495,20 +522,6 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
             before.With(personaStock: personaStock),
             request.OldPersonaInstanceId,
             request.NewPersona.InstanceId);
-    }
-
-    private RuntimeActorReferenceSnapshot[] ReplaceOrAppendDemon(
-        RuntimePartyStockSnapshot before,
-        ReplaceDemonRequest request)
-    {
-        if (Contains(before.DemonStock, request.OldDemonInstanceId))
-        {
-            return before.DemonStock
-                .Select(actor => actor.InstanceId == request.OldDemonInstanceId ? request.NewDemon : actor)
-                .ToArray();
-        }
-
-        return before.DemonStock.Append(request.NewDemon).ToArray();
     }
 
     private static PartyStockTransitionResult Applied(

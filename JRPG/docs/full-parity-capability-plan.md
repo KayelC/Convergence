@@ -901,6 +901,13 @@ Clean console proof:
   - This remains `parallel_partial`: original clean content can mutate party/stock state manually, but recruitment, fusion, battle COMP usage, and Godot presentation are still separate capability work.
   - Phase 5-28 verification passed `76/76` focused Training Annex host tests and `847/847` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, and `Data/Jsons` is unchanged.
 
+Review-Whole-4 role-invariant correction:
+
+- `DemonStock` membership is now required by every demon-specific mutation; swap and return additionally require active deployment.
+- The owner and ordinary active party members are rejected by swap, return, replace, and consume with stable diagnostics and unchanged snapshots.
+- Valid active-plus-owned demon behavior remains unchanged, and standby owned demons may still be replaced or consumed.
+- Status remains `parallel_partial` because protected legacy party/stock consumers have not been retired. Review-Whole-4 passed `101/101` focused tests and `980/980` full-suite tests with no skips.
+
 ### 29. `negotiation_and_recruitment`
 
 Current status: `parallel_partial`.

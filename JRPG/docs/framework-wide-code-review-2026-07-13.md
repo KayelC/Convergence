@@ -151,6 +151,8 @@ The schema and validator accept more behavior than the lifecycle runtime preserv
 
 ### M5. Demon-stock commands can mutate non-demon party members
 
+**Correction status:** Corrected by **Review-Whole-4** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
+
 Several methods named and typed as demon operations do not require the affected actor to exist in `DemonStock`:
 
 - `SwapActiveDemon` checks only that the outgoing actor is active (`PartyStockTransitions.cs:311-334`);
@@ -163,6 +165,12 @@ The current tests use correctly stock-owned demons and do not exercise owner or 
 **Impact:** A direct framework caller can remove, replace, or consume the protagonist or a normal party member through a demon API.
 
 **Required correction:** Require Demon Stock ownership for every demon operation while preserving the intentional active-plus-owned overlap.
+
+**Implemented correction:** `PartyStockTransitionService` now treats membership in `RuntimePartyStockSnapshot.DemonStock` as the role proof for every demon-specific mutation. `SwapActiveDemon` and `ReturnDemon` require both ownership and active deployment; `ReplaceDemon` and `ConsumeDemon` require ownership but continue to work for either active or standby demons. The active-only replacement fallback was removed, so replacing a normal party member can no longer manufacture a new Demon Stock entry. Rejections use the existing stable `NotOwned` or `NotActive` codes and return the exact unchanged input snapshot.
+
+Adversarial tests call swap, return, replace, and consume against both the owner and an ordinary active ally. Positive tests retain active-plus-owned summon/swap/return behavior and prove standby demons may still be replaced or consumed. A stale console-adapter characterization that used `ReturnDemon` to remove an ordinary party member was corrected to assert rejection before continuing through a properly owned demon workflow.
+
+**Review-Whole-4 verification:** 101 focused party/stock, adapter, battle-action, fusion, Compendium, and presentation tests passed. The full suite passed with **980 passed, 0 failed, 0 skipped**. The framework built with **0 warnings and 0 errors**; the solution retained **98 legacy console-host warnings and 0 errors**. All four noninteractive clean demos exited `0`, framework boundary searches were clean, and `Data/Jsons` was unchanged.
 
 ### M6. Fusion resolution has unresolved authority gaps
 
@@ -344,9 +352,10 @@ Do not begin another feature phase before the first five correction groups are c
    - Unify typed ailment application.
    - Preserve limited-action IDs and custom behavior execution.
    - Fix trigger conditions/failure policies and stat-stage bounds.
-4. **Review-Whole-4: Party/stock role invariants**
-   - Require stock ownership for Demon operations.
-   - Add owner and ordinary-party-member rejection tests.
+4. **Review-Whole-4: Party/stock role invariants** - completed and verified 2026-07-13.
+   - Every demon-specific mutation requires Demon Stock ownership.
+   - Owner and ordinary-party-member attacks on the demon API are rejected without mutation.
+   - Active-plus-owned demons and legitimate standby replacement/consumption remain supported.
 5. **Review-Whole-5: Fusion authority**
    - Reject ambiguous recipes.
    - Make accident inheritance plan-derived and validated.
@@ -366,4 +375,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-3 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, and incomplete authored ailment execution. The most important remaining risks are stock-role authorization, fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-4 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, and Demon Stock role authorization. The most important remaining risks are fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
