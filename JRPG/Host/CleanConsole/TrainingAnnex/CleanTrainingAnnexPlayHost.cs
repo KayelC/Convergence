@@ -297,6 +297,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             return 4;
         }
 
+        IStockCapacityPolicy stockCapacityPolicy = stockCapacityBinding.RequireService();
+
         RulesetBindingResult<ResourceManagementRulesetServices> resourceManagementBinding =
             rulesetResolver.BindResourceManagementServices(
                 catalog,
@@ -348,7 +350,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
         IPartyStockTransitionService partyStockTransitions = new PartyStockTransitionService(
-            stockCapacityBinding.RequireService());
+            stockCapacityPolicy);
         IFusionTransactionService fusionTransactionService = new FusionTransactionService(
             actorFactory,
             partyStockTransitions);
@@ -396,7 +398,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                 TrainingAnnexHostSupport.FieldMenuSaveContext,
                 TrainingAnnexHostSupport.DungeonMenuSaveContext
             ]));
-        var persistence = new TrainingAnnexPersistenceController(_saveSlots, _eventSink);
+        var persistence = new TrainingAnnexPersistenceController(
+            _saveSlots,
+            _eventSink,
+            stockCapacityPolicy);
         RuntimeWalletSnapshot wallet = _initialWallet ?? new RuntimeWalletSnapshot(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
@@ -735,7 +740,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     levelUpCount = growth.LevelUps.Count;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
-                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(stockCapacityPolicy).Validate(
                         TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
                             partyStock,

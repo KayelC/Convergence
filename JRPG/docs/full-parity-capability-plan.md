@@ -186,7 +186,7 @@ Goal: add non-battle resource systems to the clean demo.
 | ---: | --- | --- | --- |
 | 21 | `inventory_quantities` | `parallel_partial` | Make clean inventory quantities authoritative in the clean demo. |
 | 22 | `equipment_ownership` | `parallel_partial` | Add clean ownership/equip behavior and stat/basic-attack impact. |
-| 23 | `economy` | `parallel_partial` | Add clean wallet/Macca transactions. |
+| 23 | `economy` | `parallel_partial` | Add clean wallet/currency transactions; hosts choose the currency name. |
 | 24 | `shops` | `parallel_partial` | Add a clean shop interaction over original shop content. |
 | 25 | `hospital` | `parallel_partial` | Add clean restoration service only if the demo needs an equivalent recovery facility. |
 
@@ -429,7 +429,7 @@ Phase 1-08 result:
 - Checkpoint unlocks and boss-defeat registration are idempotent. Barrier behavior is demonstrated as a policy rejection that preserves the original state.
 - The Training Annex console host presents node choices as lists, but a Godot doorway, collision trigger, scene script, or VN hotspot can request the same transition.
 - Leaving the Annex is coordinated through the separate generic navigation service. Dungeon traversal does not automatically change outer-world location.
-- The generic service never selects or starts encounters. The existing floor-oriented `RuntimeFieldDungeonService` remains an optional compatibility/sample module; host/entity-triggered encounters remain Phase 1-09.
+- The generic service never selects or starts encounters. The floor-oriented `RuntimeFieldDungeonService` is a console-host compatibility module, not part of `JRPG.Framework`; host/entity-triggered encounters remain Phase 1-09.
 - This remains `parallel_partial`: the generic framework mechanic and clean host proof exist, while the protected legacy dungeon consumer remains active and encounter authority is still separate.
 
 ### 09. `encounters`
@@ -790,8 +790,8 @@ Phase 4-23 result:
 
 - `--clean-training-annex-play` now binds `convergence.training_annex_slice:standard_economy` before the session starts and exits with typed `economy` diagnostics when the ruleset is missing, miscategorized, or unsupported. There is no direct-service fallback.
 - The bound `ResourceManagementRulesetServices` instance supplies the clean host's inventory, equipment, and economy transaction services, keeping the Phase 4 resource systems under one authored policy boundary.
-- The host owns one live `RuntimeWalletSnapshot`, accepts a host-selected starting balance, applies battle Macca through `IEconomyTransactionService`, records the actual immutable `WalletTransactionResult`, and carries the resulting wallet through save validation and restore.
-- `EconomyTransactionService.AddMacca(...)` now rejects integer overflow with `InvalidCurrencyAmount` and preserves the original wallet snapshot instead of throwing across the transaction boundary. Negative and insufficient-funds operations remain non-mutating typed rejections.
+- The host owns one live `RuntimeWalletSnapshot`, accepts a host-selected starting balance, applies battle currency through `IEconomyTransactionService`, presents that currency as Macca, records the actual immutable `WalletTransactionResult`, and carries the resulting wallet through save validation and restore.
+- `EconomyTransactionService.Credit(...)` rejects integer overflow with `InvalidCurrencyAmount` and preserves the original wallet snapshot instead of throwing across the transaction boundary. Negative and insufficient-funds operations remain non-mutating typed rejections.
 - Focused tests prove reward income adds to an injected balance rather than resetting or assuming zero, invalid economy bindings fail before any command read, and rejected/overflowing operations preserve the exact before-state.
 - This remains `parallel_partial`: clean reward income is now policy-bound and authoritative, and Phase 4-24 adds real clean spending through catalog-backed shop transactions. Broader production economy parity still waits on content/consumer migration and removal authorization. No artificial spend command was added solely to satisfy this checkpoint.
 - Phase 4-23 verification passed `73/73` focused tests and `830/830` full-suite tests with no skips. The framework build remained at `0` warnings, the solution remained at `98` pre-existing legacy-host warnings, all four noninteractive clean demos exited successfully, framework boundary searches were clean, and `Data/Jsons` was unchanged.
@@ -949,10 +949,10 @@ Clean console proof:
 
 - Phase 6-29 result:
   - `--clean-training-annex-play` now exposes `Negotiate / Recruit` as a host-owned menu over the clean Training Annex party/stock, wallet, and roster state.
-  - `TrainingAnnexNegotiationController` drives the flow through `NegotiationSessionService`, `RecruitmentTransactionService`, `PartyStockTransitionService.AddDemonToStock`, and the bound economy service. The host owns prompts and presentation; framework services own session outcome, recruitment validation, stock mutation rules, and Macca spending.
-  - The clean Training Annex negotiation content now has enough authored prompt material for a real success path. The success path recruits `bramble_runner` into Demon stock, spends Macca through the economy service, and records typed evidence for outcome, reason, mood score, wallet before/after, stock before/after, and transition codes.
+  - `TrainingAnnexNegotiationController` drives the flow through `NegotiationSessionService`, `RecruitmentTransactionService`, `PartyStockTransitionService.AddDemonToStock`, and the bound economy service. The host owns prompts, presentation, and Macca naming; framework services own neutral session outcomes, recruitment validation, stock mutation rules, and currency debit.
+  - The clean Training Annex negotiation content now has enough authored prompt and demand material for a real success path. The success path recruits `bramble_runner` into Demon stock, spends host-presented Macca through neutral economy services, and records typed evidence for outcome, reason, mood score, wallet before/after, stock before/after, and transition codes.
   - Refusal preserves wallet and stock, and a repeated familiar encounter follows the familiar path without duplicate recruitment.
-  - This remains `parallel_partial`: authored demand records exist in content, but the current `NegotiationSessionService` still calculates the Macca demand internally. Binding demand amount/type selection directly to authored clean content remains future framework work.
+  - Review-Whole-8 makes the authored demand authoritative for the clean slice and requires an explicit `INegotiationSessionPolicy` for thresholds, gates, gifts, fallback demands, and demandless outcomes. This remains `parallel_partial` because broader content and protected consumer migration are still incomplete, not because the framework hides a Macca demand formula.
   - Phase 6-29 verification passed `104/104` focused Training Annex, party-stock, parity-ledger, and original-content tests, plus `851/851` full-suite tests with no skips. The framework build has `0` warnings, the complete solution retains `98` pre-existing legacy-host warnings, all four noninteractive clean demos pass, `git diff --check` passes, and the framework forbidden-reference search returns no matches. The only `Data/Jsons` change is the clean Training Annex negotiation sample; protected legacy/prototype data remains untouched.
 
 ### 30. `fusion_result_calculation`

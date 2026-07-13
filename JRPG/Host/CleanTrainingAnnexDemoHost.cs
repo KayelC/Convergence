@@ -255,7 +255,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         await PrintAsync(
             sequence++,
             "reward",
-            $"Awarded {reward.TotalExperience} EXP and {reward.TotalMacca} Macca; level {growth.Progression.Level}.",
+            $"Awarded {reward.TotalExperience} EXP and {reward.TotalCurrency} Macca; level {growth.Progression.Level}.",
             cancellationToken).ConfigureAwait(false);
 
         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(
@@ -325,7 +325,7 @@ internal sealed class CleanTrainingAnnexDemoHost
                 activeParty: [echoReference]),
             new RuntimeInventorySnapshot(inventory),
             new RuntimeEquipmentSnapshot(),
-            new RuntimeWalletSnapshot(reward.TotalMacca),
+            new RuntimeWalletSnapshot(reward.TotalCurrency),
             field,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),
@@ -394,7 +394,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             battle.Outcome,
             battle.WinningTeamId,
             reward.TotalExperience,
-            reward.TotalMacca,
+            reward.TotalCurrency,
             growth.Progression.Experience,
             growth.Progression.LifetimeExperience,
             growth.Progression.Level,

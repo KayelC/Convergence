@@ -87,7 +87,7 @@ namespace JRPGPrototype.Logic.Battle
                 }
             }
 
-            economy.AddMacca(calculation.Result.TotalMacca);
+            economy.AddMacca(calculation.Result.TotalCurrency);
         }
 
         private static ContentId ToContentId(string? preferred, string? fallback, string defaultValue)

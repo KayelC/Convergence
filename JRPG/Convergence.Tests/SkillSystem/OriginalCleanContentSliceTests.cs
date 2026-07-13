@@ -183,7 +183,7 @@ public sealed class OriginalCleanContentSliceTests
             ],
             [new BattleRewardRecipientSnapshot(Qualified("echo_adept"), IsAlive: true, HasActiveForm: true)]));
         Assert.True(reward.TotalExperience > 0);
-        Assert.True(reward.TotalMacca > 0);
+        Assert.True(reward.TotalCurrency > 0);
 
         Assert.IsType<StandardStatResolutionPolicy>(resolver.BindStatResolutionPolicy(
             catalog,
@@ -191,9 +191,12 @@ public sealed class OriginalCleanContentSliceTests
         Assert.IsType<StandardResourceGrowthPolicy>(resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService().ResourceGrowthPolicy);
-        Assert.IsType<LegacyStockCapacityPolicy>(resolver.BindStockCapacityPolicy(
-            catalog,
-            Qualified("standard_stock_capacity")).RequireService());
+        TieredStockCapacityPolicy stockPolicy = Assert.IsType<TieredStockCapacityPolicy>(
+            resolver.BindStockCapacityPolicy(
+                catalog,
+                Qualified("standard_stock_capacity")).RequireService());
+        Assert.Equal(3, stockPolicy.GetCapacity(1));
+        Assert.Equal(12, stockPolicy.GetCapacity(40));
         Assert.NotNull(resolver.BindResourceManagementServices(
             catalog,
             Qualified("standard_economy")).RequireService().Inventory);

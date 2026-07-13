@@ -1,5 +1,6 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle;
@@ -30,10 +31,14 @@ public sealed class NegotiationRewardPresentationTests
                 ]));
         NegotiationDemandSelection demand = await adapter.ReadDemandAsync(
             new NegotiationDemandPrompt(
-                NegotiationDemandKind.Macca,
-                "Pixie: \"A gift of 40 Macca should suffice.\"",
+                new NegotiationRuntimeDemand(
+                    ContentId.Parse("legacy_currency"),
+                    NegotiationDemandKind.Currency,
+                    weight: 1,
+                    currencyAmount: 40),
+                "Provide 40 currency?",
                 [
-                    new NegotiationDemandOption(NegotiationDemandDecision.Accept, "Give 40 Macca"),
+                    new NegotiationDemandOption(NegotiationDemandDecision.Accept, "Provide 40"),
                     new NegotiationDemandOption(NegotiationDemandDecision.Refuse, "Refuse")
                 ]));
 
@@ -58,27 +63,29 @@ public sealed class NegotiationRewardPresentationTests
     }
 
     [Theory]
-    [InlineData(NegotiationEventKind.Information, "Info", ConsoleColor.White, 0)]
-    [InlineData(NegotiationEventKind.Warning, "Warn", ConsoleColor.White, 0)]
-    [InlineData(NegotiationEventKind.Failure, "The Full Moon blocks talk.", ConsoleColor.Red, 1000)]
-    [InlineData(NegotiationEventKind.Failure, "The required donation of 40 Macca is missing.", ConsoleColor.Red, 1000)]
-    [InlineData(NegotiationEventKind.Failure, "Pixie refuses to talk!", ConsoleColor.White, 1000)]
-    [InlineData(NegotiationEventKind.Failure, "Pixie seems unresponsive...", ConsoleColor.White, 800)]
-    [InlineData(NegotiationEventKind.FamiliarDialogue, "Pixie: \"We meet again.\"", ConsoleColor.Cyan, 0)]
-    [InlineData(NegotiationEventKind.DemandIntro, "Pixie: \"Talk is cheap.\"", ConsoleColor.White, 800)]
-    [InlineData(NegotiationEventKind.MoodPositive, "Pixie seems pleased.", ConsoleColor.White, 0)]
-    [InlineData(NegotiationEventKind.MoodNeutral, "Pixie is considering your words...", ConsoleColor.White, 0)]
-    [InlineData(NegotiationEventKind.MoodNegative, "Pixie grows angry!", ConsoleColor.Red, 800)]
+    [InlineData(NegotiationEventKind.Information, NegotiationEventCode.Generic, "Info", ConsoleColor.White, 0, 0)]
+    [InlineData(NegotiationEventKind.Warning, NegotiationEventCode.Generic, "Warn", ConsoleColor.White, 0, 0)]
+    [InlineData(NegotiationEventKind.Failure, NegotiationEventCode.PolicyBlocked, "The Pixie is agitated due to the Full Moon and cannot be reasoned with!", ConsoleColor.Red, 1000, 0)]
+    [InlineData(NegotiationEventKind.Failure, NegotiationEventCode.InsufficientCurrency, "The required donation of 40 Macca is missing.", ConsoleColor.Red, 1000, 40)]
+    [InlineData(NegotiationEventKind.Failure, NegotiationEventCode.OpeningRefused, "Pixie is on guard and refuses to talk!", ConsoleColor.White, 1000, 0)]
+    [InlineData(NegotiationEventKind.Failure, NegotiationEventCode.MissingQuestions, "Pixie seems unresponsive...", ConsoleColor.White, 800, 0)]
+    [InlineData(NegotiationEventKind.FamiliarDialogue, NegotiationEventCode.FamiliarDialogue, "Pixie: \"We meet again.\"", ConsoleColor.Cyan, 0, 0)]
+    [InlineData(NegotiationEventKind.DemandIntro, NegotiationEventCode.DemandIntro, "Pixie: \"Your words are intriguing. But talk is cheap.\"", ConsoleColor.White, 800, 0)]
+    [InlineData(NegotiationEventKind.MoodPositive, NegotiationEventCode.MoodPositive, "Pixie seems pleased with your answers.", ConsoleColor.White, 0, 0)]
+    [InlineData(NegotiationEventKind.MoodNeutral, NegotiationEventCode.MoodNeutral, "Pixie is considering your words...", ConsoleColor.White, 0, 0)]
+    [InlineData(NegotiationEventKind.MoodNegative, NegotiationEventCode.MoodNegative, "Pixie grows angry!", ConsoleColor.Red, 800, 0)]
     public void EventPresentation_PreservesCurrentColorDelayAndMessage(
         NegotiationEventKind kind,
+        NegotiationEventCode code,
         string message,
         ConsoleColor color,
-        int delay)
+        int delay,
+        int amount)
     {
-        NegotiationEvent source = new(kind, message);
+        NegotiationEvent source = new(kind, code, message, Amount: amount);
 
         NegotiationEventPresentationResult presentation =
-            LegacyNegotiationPresentationAdapter.PresentEvent(source);
+            LegacyNegotiationPresentationAdapter.PresentEvent(source, "Pixie");
 
         Assert.Equal(NegotiationPresentationKind.Shown, presentation.Kind);
         Assert.Same(source, presentation.SourceEvent);
@@ -107,7 +114,7 @@ public sealed class NegotiationRewardPresentationTests
             new Random(1)).StartNegotiationDetailed(actor, target, [target]);
 
         Assert.Equal(NegotiationResult.Failure, result.LegacyResult);
-        Assert.Equal(NegotiationOutcomeReason.MoonBlocked, result.SessionResult.Reason);
+        Assert.Equal(NegotiationOutcomeReason.PolicyBlocked, result.SessionResult.Reason);
         Assert.Empty(result.AnswerPrompts);
         Assert.Empty(result.DemandPrompts);
         Assert.Equal(0, result.Mutation.MaccaSpent);
@@ -170,7 +177,7 @@ public sealed class NegotiationRewardPresentationTests
             new Random(2)).StartNegotiationDetailed(familiarActor, familiarTarget, [familiarTarget]);
 
         Assert.Equal(NegotiationResult.FamiliarFlee, familiar.LegacyResult);
-        Assert.Equal(NegotiationOutcomeReason.FamiliarDemon, familiar.SessionResult.Reason);
+        Assert.Equal(NegotiationOutcomeReason.FamiliarTarget, familiar.SessionResult.Reason);
         Assert.Contains(familiar.Events, ev => ev.SourceEvent.Kind == NegotiationEventKind.FamiliarDialogue);
         Assert.Equal(familiar.SessionResult.FamiliarGift, familiar.Mutation.FamiliarGift);
 
@@ -191,7 +198,7 @@ public sealed class NegotiationRewardPresentationTests
         Assert.Equal(NegotiationResult.Failure, refusal.LegacyResult);
         Assert.Contains(
             refusal.SessionResult.Reason,
-            new[] { NegotiationOutcomeReason.MaccaRefused, NegotiationOutcomeReason.ItemRefused });
+            new[] { NegotiationOutcomeReason.CurrencyRefused, NegotiationOutcomeReason.ItemRefused });
         Assert.Equal(maccaBeforeRefusal, refusalEconomy.Macca);
         Assert.Equal(4, refusalIo.Menus.Count);
         Assert.NotEmpty(refusal.AnswerPrompts);

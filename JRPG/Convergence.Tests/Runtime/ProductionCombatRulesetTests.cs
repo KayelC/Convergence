@@ -170,7 +170,7 @@ public sealed class ProductionCombatRulesetTests
             stats: new ProductionCombatStats(20, 20, 20, 20, 20));
 
         Assert.Equal(46, ruleset.CalculateExperienceYield(enemy));
-        Assert.Equal(125, ruleset.CalculateMaccaYield(enemy));
+        Assert.Equal(125, ruleset.CalculateCurrencyYield(enemy));
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public sealed class ProductionCombatRulesetTests
                 decimal.MaxValue));
 
         Assert.Equal(int.MaxValue, ruleset.CalculateExperienceYield(enemy));
-        Assert.Equal(int.MaxValue, ruleset.CalculateMaccaYield(enemy));
+        Assert.Equal(int.MaxValue, ruleset.CalculateCurrencyYield(enemy));
     }
 
     private static ProductionCombatRuleset Rules(params decimal[] units) =>

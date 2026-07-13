@@ -36,7 +36,7 @@ public sealed class RuntimeRulesetBindingTests
             [new BattleRewardEnemySnapshot(Id("enemy"), 2, 10, 10, 10, 10, 10)],
             [new BattleRewardRecipientSnapshot(Id("hero"), IsAlive: true, HasActiveForm: true)]));
         Assert.True(reward.TotalExperience > 0);
-        Assert.True(reward.TotalMacca > 0);
+        Assert.True(reward.TotalCurrency > 0);
         Assert.Equal(2, reward.Applications.Count);
 
         IStatResolutionPolicy stats = resolver.BindStatResolutionPolicy(
@@ -71,7 +71,7 @@ public sealed class RuntimeRulesetBindingTests
             .RequireService();
         Assert.Equal(90, resources.Shop.CalculateBuyPrice(100, luck: 10));
         Assert.Equal(60, resources.Shop.CalculateSellPrice(100, luck: 10));
-        Assert.True(resources.Economy.SpendMacca(new RuntimeWalletSnapshot(10), 5).Applied);
+        Assert.True(resources.Economy.Debit(new RuntimeWalletSnapshot(10), 5).Applied);
         Assert.Equal(30, resources.Hospital.CalculateRestorationCost(new RuntimeHospitalPatientSnapshot(
             RuntimeInstanceId.Parse("patient"),
             currentHp: 5,
@@ -120,6 +120,39 @@ public sealed class RuntimeRulesetBindingTests
 
         Assert.Equal(2m, ruleset.Config.WeakDamageMultiplier);
         Assert.Equal(0.25m, ruleset.Config.ResistDamageMultiplier);
+    }
+
+    [Fact]
+    public void StockCapacityBinding_RequiresAuthoredTiersInsteadOfSupplyingAHiddenCurve()
+    {
+        ContentId missingTiersId = Id("test.pack:missing_tiers");
+        ContentId malformedTiersId = Id("test.pack:malformed_tiers");
+        var resolver = new RuntimeRulesetBindingResolver();
+
+        RulesetBindingResult<IStockCapacityPolicy> missing = resolver.BindStockCapacityPolicy(
+            Catalog(new RulesetDefinition(
+                missingTiersId,
+                "Missing tiers",
+                "No implicit capacity curve is allowed.",
+                RulesetCategory.StockCapacity,
+                StandardRulesetPolicyIds.StandardStockCapacity)),
+            missingTiersId);
+        RulesetBindingResult<IStockCapacityPolicy> malformed = resolver.BindStockCapacityPolicy(
+            Catalog(new RulesetDefinition(
+                malformedTiersId,
+                "Malformed tiers",
+                "Invalid authored policy.",
+                RulesetCategory.StockCapacity,
+                StandardRulesetPolicyIds.StandardStockCapacity,
+                [new KeyValuePair<string, object?>("tiers", "legacy defaults")])),
+            malformedTiersId);
+
+        Assert.False(missing.IsSuccess);
+        Assert.Null(missing.Service);
+        Assert.Equal(RulesetBindingDiagnosticCode.MissingParameter, Assert.Single(missing.Diagnostics).Code);
+        Assert.False(malformed.IsSuccess);
+        Assert.Null(malformed.Service);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterType, Assert.Single(malformed.Diagnostics).Code);
     }
 
     [Fact]

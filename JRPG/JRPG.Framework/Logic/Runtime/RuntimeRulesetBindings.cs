@@ -25,6 +25,7 @@ public enum RulesetBindingDiagnosticCode
     MissingRuleset,
     CategoryMismatch,
     UnsupportedPolicy,
+    MissingParameter,
     UnknownParameter,
     InvalidParameterType,
     InvalidParameterValue
@@ -202,11 +203,7 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
             rulesetId,
             RulesetCategory.StockCapacity,
             StandardRulesetPolicyIds.StandardStockCapacity,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                return new LegacyStockCapacityPolicy();
-            });
+            CreateStockCapacityPolicy);
 
     public RulesetBindingResult<ResourceManagementRulesetServices> BindResourceManagementServices(
         GameDataCatalog catalog,
@@ -350,6 +347,117 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         }
 
         return config;
+    }
+
+    private static IStockCapacityPolicy CreateStockCapacityPolicy(
+        RulesetDefinition definition,
+        List<RulesetBindingDiagnostic> diagnostics)
+    {
+        foreach (string key in definition.Parameters.Keys.Where(key => key != "tiers"))
+        {
+            diagnostics.Add(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.UnknownParameter,
+                definition.Id,
+                $"Ruleset '{definition.Id}' parameter '{key}' is not supported by policy '{definition.PolicyId}'.",
+                ParameterName: key,
+                ActualCategory: definition.Category,
+                PolicyId: definition.PolicyId));
+        }
+
+        if (!definition.Parameters.TryGetValue("tiers", out object? value))
+        {
+            diagnostics.Add(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.MissingParameter,
+                definition.Id,
+                $"Ruleset '{definition.Id}' requires a 'tiers' parameter.",
+                ParameterName: "tiers",
+                ActualCategory: definition.Category,
+                PolicyId: definition.PolicyId));
+            return NoLimitStockCapacityPolicy.Instance;
+        }
+
+        if (value is not IReadOnlyList<object?> authoredTiers || authoredTiers.Count == 0)
+        {
+            diagnostics.Add(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.InvalidParameterType,
+                definition.Id,
+                $"Ruleset '{definition.Id}' parameter 'tiers' must be a nonempty list.",
+                ParameterName: "tiers",
+                ActualCategory: definition.Category,
+                PolicyId: definition.PolicyId));
+            return NoLimitStockCapacityPolicy.Instance;
+        }
+
+        var tiers = new List<StockCapacityTier>();
+        for (int index = 0; index < authoredTiers.Count; index++)
+        {
+            if (authoredTiers[index] is not IReadOnlyDictionary<string, object?> tier ||
+                !TryReadInt(tier, "minimumLevel", out int minimumLevel) ||
+                !TryReadInt(tier, "capacity", out int capacity) ||
+                tier.Keys.Any(key => key is not ("minimumLevel" or "capacity")) ||
+                minimumLevel <= 0 ||
+                capacity < 0)
+            {
+                diagnostics.Add(new RulesetBindingDiagnostic(
+                    RulesetBindingDiagnosticCode.InvalidParameterValue,
+                    definition.Id,
+                    $"Ruleset '{definition.Id}' stock-capacity tier {index} must contain only a positive 'minimumLevel' and a nonnegative 'capacity'.",
+                    ParameterName: $"tiers[{index}]",
+                    ActualCategory: definition.Category,
+                    PolicyId: definition.PolicyId));
+                continue;
+            }
+
+            tiers.Add(new StockCapacityTier(minimumLevel, capacity));
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return NoLimitStockCapacityPolicy.Instance;
+        }
+
+        try
+        {
+            return new TieredStockCapacityPolicy(tiers);
+        }
+        catch (ArgumentException exception)
+        {
+            diagnostics.Add(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.InvalidParameterValue,
+                definition.Id,
+                exception.Message,
+                ParameterName: "tiers",
+                ActualCategory: definition.Category,
+                PolicyId: definition.PolicyId));
+            return NoLimitStockCapacityPolicy.Instance;
+        }
+    }
+
+    private static bool TryReadInt(
+        IReadOnlyDictionary<string, object?> values,
+        string key,
+        out int result)
+    {
+        result = 0;
+        if (!values.TryGetValue(key, out object? value))
+        {
+            return false;
+        }
+
+        return value switch
+        {
+            int intValue => Assign(intValue, out result),
+            long longValue when longValue is >= int.MinValue and <= int.MaxValue => Assign((int)longValue, out result),
+            decimal decimalValue when decimalValue == decimal.Truncate(decimalValue) &&
+                                      decimalValue is >= int.MinValue and <= int.MaxValue => Assign((int)decimalValue, out result),
+            _ => false
+        };
+    }
+
+    private static bool Assign(int value, out int destination)
+    {
+        destination = value;
+        return true;
     }
 
     private static void RequireNoParameters(

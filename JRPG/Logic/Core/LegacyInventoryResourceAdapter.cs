@@ -122,13 +122,13 @@ namespace JRPGPrototype.Logic.Core
 
         public bool AddMacca(EconomyManager economy, int amount)
         {
-            WalletTransactionResult result = _economy.AddMacca(Snapshot(economy), amount);
+            WalletTransactionResult result = _economy.Credit(Snapshot(economy), amount);
             return Apply(economy, result);
         }
 
         public bool SpendMacca(EconomyManager economy, int amount)
         {
-            WalletTransactionResult result = _economy.SpendMacca(Snapshot(economy), amount);
+            WalletTransactionResult result = _economy.Debit(Snapshot(economy), amount);
             return Apply(economy, result);
         }
 
@@ -244,7 +244,7 @@ namespace JRPGPrototype.Logic.Core
         }
 
         private static void Apply(EconomyManager economy, RuntimeWalletSnapshot snapshot) =>
-            economy.ReplaceMacca(snapshot.Macca);
+            economy.ReplaceMacca(snapshot.Balance);
 
         private static RuntimeShopOfferSnapshot Offer(ShopEntry entry) =>
             new(

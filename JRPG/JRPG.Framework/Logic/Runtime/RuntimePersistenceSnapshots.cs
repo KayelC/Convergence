@@ -285,7 +285,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
     public RuntimeSaveValidator(IStockCapacityPolicy? stockCapacityPolicy = null)
     {
-        _stockCapacityPolicy = stockCapacityPolicy ?? new LegacyStockCapacityPolicy();
+        _stockCapacityPolicy = stockCapacityPolicy ?? NoLimitStockCapacityPolicy.Instance;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)

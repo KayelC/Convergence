@@ -51,8 +51,8 @@ internal sealed class TrainingAnnexNegotiationController
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
         ArgumentNullException.ThrowIfNull(randomSource);
 
-        _stockCapacity = stockCapacity ?? new LegacyStockCapacityPolicy();
-        _negotiations = new NegotiationSessionService(randomSource);
+        _stockCapacity = stockCapacity ?? NoLimitStockCapacityPolicy.Instance;
+        _negotiations = new NegotiationSessionService(randomSource, new TrainingAnnexNegotiationPolicy());
         _recruitment = recruitment ?? new RecruitmentTransactionService();
         _partyStock = partyStock ?? new PartyStockTransitionService(_stockCapacity);
     }
@@ -86,7 +86,7 @@ internal sealed class TrainingAnnexNegotiationController
         }
 
         await _eventSink.PublishAsync(
-            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Macca} M.",
+            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Balance} M.",
             cancellationToken).ConfigureAwait(false);
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
@@ -106,8 +106,13 @@ internal sealed class TrainingAnnexNegotiationController
         }
 
         commands.Add(targetSelection.Command);
-        var negotiationCommands = new TrainingAnnexNegotiationCommandSource(_commandSource, commands);
-        var negotiationEvents = new TrainingAnnexNegotiationEventSink(_eventSink);
+        var negotiationCommands = new TrainingAnnexNegotiationCommandSource(
+            _commandSource,
+            commands,
+            target.Actor.Entity.DisplayName);
+        var negotiationEvents = new TrainingAnnexNegotiationEventSink(
+            _eventSink,
+            target.Actor.Entity.DisplayName);
         NegotiationSessionResult session = await _negotiations.RunAsync(
             BuildRequest(negotiation, target, roster.Player, party, wallet),
             negotiationCommands,
@@ -117,7 +122,7 @@ internal sealed class TrainingAnnexNegotiationController
         if (session.Outcome != NegotiationOutcomeKind.Success)
         {
             await _eventSink.PublishAsync(
-                $"Negotiation ended: {session.Outcome} ({session.Reason}); wallet and Demon stock are unchanged.",
+                $"Negotiation ended: {session.Outcome} ({LegacyReasonLabel(session.Reason)}); wallet and Demon stock are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
@@ -157,9 +162,9 @@ internal sealed class TrainingAnnexNegotiationController
         }
 
         RuntimeWalletSnapshot nextWallet = wallet;
-        if (session.MaccaSpent > 0)
+        if (session.CurrencySpent > 0)
         {
-            WalletTransactionResult spend = economy.SpendMacca(wallet, session.MaccaSpent);
+            WalletTransactionResult spend = economy.Debit(wallet, session.CurrencySpent);
             if (!spend.Applied)
             {
                 await _eventSink.PublishAsync(
@@ -176,7 +181,7 @@ internal sealed class TrainingAnnexNegotiationController
 
         recruitedThisSession.Add(target.Actor.Entity.Id);
         await _eventSink.PublishAsync(
-            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Demon stock; wallet {wallet.Macca}->{nextWallet.Macca} M; Demon stock {party.DemonStock.Count}->{stock.After.DemonStock.Count}.",
+            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Demon stock; wallet {wallet.Balance}->{nextWallet.Balance} M; Demon stock {party.DemonStock.Count}->{stock.After.DemonStock.Count}.",
             cancellationToken).ConfigureAwait(false);
         return Result(
             stock.After,
@@ -203,11 +208,11 @@ internal sealed class TrainingAnnexNegotiationController
             actorLevel: player.Level,
             targetLevel: target.Level,
             actorLuck: StatAsInt(playerSnapshot, StandardProgressionIds.Luck),
-            livingEnemyCount: 1,
-            isMoonBlocked: false,
-            isTargetAlreadyOwned: AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
-            hasOpenDemonStockSlot: HasOpenDemonStockSlot(party),
-            currentMacca: wallet.Macca,
+            activeOpponentCount: 1,
+            contextIds: [],
+            isTargetFamiliar: AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
+            hasRecruitmentCapacity: HasOpenDemonStockSlot(party),
+            currentCurrency: wallet.Balance,
             questions: negotiation.Questions.Select(question => new NegotiationQuestionPrompt(
                 question.Text,
                 question.Answers.Select(answer => new NegotiationAnswerOption(answer.Text, answer.Score)))),
@@ -270,9 +275,9 @@ internal sealed class TrainingAnnexNegotiationController
         {
             return new NegotiationRuntimeDemand(
                 demand.DemandId,
-                NegotiationDemandKind.Macca,
+                NegotiationDemandKind.Currency,
                 demand.Weight,
-                maccaAmount: RequiredPositiveIntParameter(demand, "amount"));
+                currencyAmount: RequiredPositiveIntParameter(demand, "amount"));
         }
 
         throw new InvalidOperationException(
@@ -348,13 +353,13 @@ internal sealed class TrainingAnnexNegotiationController
             session.Outcome,
             session.Reason,
             session.MoodScore,
-            session.MaccaSpent,
+            session.CurrencySpent,
             session.ItemSpentId,
             recruitment?.Status,
             recruitment?.ErrorCode,
             stock?.Code,
-            beforeWallet.Macca,
-            afterWallet.Macca,
+            beforeWallet.Balance,
+            afterWallet.Balance,
             beforeParty.DemonStock.Count,
             afterParty.DemonStock.Count,
             recruited,
@@ -363,9 +368,20 @@ internal sealed class TrainingAnnexNegotiationController
     private static int StatAsInt(RuntimeActorSnapshot actor, ContentId statId) =>
         (int)Math.Round(actor.Stats.EffectiveStats.GetValueOrDefault(statId), MidpointRounding.AwayFromZero);
 
+    private static string LegacyReasonLabel(NegotiationOutcomeReason reason) => reason switch
+    {
+        NegotiationOutcomeReason.PolicyBlocked => "MoonBlocked",
+        NegotiationOutcomeReason.FamiliarTarget => "FamiliarDemon",
+        NegotiationOutcomeReason.CapacityUnavailable => "StockFull",
+        NegotiationOutcomeReason.InsufficientCurrency => "InsufficientMacca",
+        NegotiationOutcomeReason.CurrencyRefused => "MaccaRefused",
+        _ => reason.ToString()
+    };
+
     private sealed class TrainingAnnexNegotiationCommandSource(
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
-        ICollection<CleanTrainingAnnexPlayCommand> commandLog) : INegotiationCommandSource
+        ICollection<CleanTrainingAnnexPlayCommand> commandLog,
+        string targetName) : INegotiationCommandSource
     {
         public async ValueTask<NegotiationAnswerSelection> ReadAnswerAsync(
             NegotiationQuestionPrompt prompt,
@@ -406,12 +422,27 @@ internal sealed class TrainingAnnexNegotiationController
             NegotiationDemandPrompt prompt,
             CancellationToken cancellationToken = default)
         {
+            string header = prompt.Kind switch
+            {
+                NegotiationDemandKind.Currency =>
+                    $"{targetName}: \"A gift of {prompt.Demand.CurrencyAmount} Macca should suffice.\"",
+                NegotiationDemandKind.Item =>
+                    $"{targetName}: \"A {prompt.Demand.Item!.DisplayName} would be useful.\"",
+                _ => prompt.Prompt
+            };
             HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection = await commands.ReadAsync(
                 new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
-                    prompt.Prompt,
+                    header,
                     prompt.Options.Select(option => new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                             CleanTrainingAnnexPlayCommand.SelectNegotiationDemand,
-                            option.Label,
+                            option.Decision switch
+                            {
+                                NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Currency =>
+                                    $"Give {prompt.Demand.CurrencyAmount} Macca",
+                                NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Item =>
+                                    $"Give {prompt.Demand.Item!.DisplayName}",
+                                _ => "Refuse"
+                            },
                             SelectionIdentity: HostCommandSelectionIdentity.ForContent(
                                 ContentId.Parse(option.Decision == NegotiationDemandDecision.Accept
                                     ? "accept"
@@ -434,14 +465,37 @@ internal sealed class TrainingAnnexNegotiationController
         }
     }
 
-    private sealed class TrainingAnnexNegotiationEventSink(IHostEventSink<string> events)
+    private sealed class TrainingAnnexNegotiationEventSink(
+        IHostEventSink<string> events,
+        string targetName)
         : IHostEventSink<NegotiationEvent>
     {
         public ValueTask PublishAsync(
             NegotiationEvent value,
             CancellationToken cancellationToken = default) =>
             events.PublishAsync(
-                $"Negotiation event: {value.Kind}; {value.Message}",
+                $"Negotiation event: {value.Kind}; {Present(value)}",
                 cancellationToken);
+
+        private string Present(NegotiationEvent value) => value.Code switch
+        {
+            NegotiationEventCode.PolicyBlocked =>
+                $"The {targetName} is agitated due to the Full Moon and cannot be reasoned with!",
+            NegotiationEventCode.CapacityUnavailable => "Your Demon Stock is full!",
+            NegotiationEventCode.OpeningRefused => $"{targetName} is on guard and refuses to talk!",
+            NegotiationEventCode.MissingQuestions => $"{targetName} seems unresponsive...",
+            NegotiationEventCode.Cancelled => $"{targetName} seems disappointed...",
+            NegotiationEventCode.MoodPositive => $"{targetName} seems pleased with your answers.",
+            NegotiationEventCode.MoodNeutral => $"{targetName} is considering your words...",
+            NegotiationEventCode.MoodNegative => $"{targetName} grows angry!",
+            NegotiationEventCode.TargetLevelTooHigh =>
+                $"{targetName}: \"You have courage, but you are not yet worthy to command me. Perhaps we shall meet again.\"",
+            NegotiationEventCode.DemandIntro =>
+                $"{targetName}: \"Your words are intriguing. But talk is cheap.\"",
+            NegotiationEventCode.InsufficientCurrency =>
+                $"The required donation of {value.Amount} Macca is missing.",
+            NegotiationEventCode.DemandlessRejected => $"{targetName}: \"Hmph. You waste my time.\"",
+            _ => value.Message
+        };
     }
 }

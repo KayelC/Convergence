@@ -16,13 +16,16 @@ internal sealed class TrainingAnnexPersistenceController
 
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
     private readonly IHostEventSink<string> _eventSink;
+    private readonly IStockCapacityPolicy _stockCapacityPolicy;
 
     public TrainingAnnexPersistenceController(
         TrainingAnnexSaveSlotStore saveSlots,
-        IHostEventSink<string> eventSink)
+        IHostEventSink<string> eventSink,
+        IStockCapacityPolicy? stockCapacityPolicy = null)
     {
         _saveSlots = saveSlots ?? throw new ArgumentNullException(nameof(saveSlots));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
+        _stockCapacityPolicy = stockCapacityPolicy ?? NoLimitStockCapacityPolicy.Instance;
     }
 
     public async ValueTask<TrainingAnnexSaveActionResult> SaveCurrentSessionAsync(
@@ -67,7 +70,8 @@ internal sealed class TrainingAnnexPersistenceController
             preparedBattleOutcome,
             preparedBattleWinningTeamId,
             compendium);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(snapshot, catalog);
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(_stockCapacityPolicy)
+            .Validate(snapshot, catalog);
         if (!validation.IsValid)
         {
             await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} save", validation, cancellationToken)
@@ -119,7 +123,8 @@ internal sealed class TrainingAnnexPersistenceController
             return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
         }
 
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(record!.Snapshot, catalog);
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(_stockCapacityPolicy)
+            .Validate(record!.Snapshot, catalog);
         if (!validation.IsValid)
         {
             await PublishSaveValidationDiagnosticsAsync($"{KindLabel(kind)} load", validation, cancellationToken)

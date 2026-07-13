@@ -375,7 +375,7 @@ internal static class CleanSaveJsonCodec
             ToDto(snapshot.PartyStock),
             ToDto(snapshot.Inventory),
             ToDto(snapshot.Equipment),
-            snapshot.Wallet.Macca,
+            snapshot.Wallet.Balance,
             ToDto(snapshot.Field),
             ToDto(snapshot.Compendium),
             ToDto(snapshot.Knowledge),

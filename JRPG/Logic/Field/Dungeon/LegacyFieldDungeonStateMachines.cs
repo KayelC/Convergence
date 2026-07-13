@@ -65,7 +65,7 @@ public sealed record RuntimeDungeonEvent
         Floor = floor;
         ContentId = contentId;
         Message = message;
-        EnemyIds = RuntimeSnapshotCollections.List(enemyIds);
+        EnemyIds = LegacyDungeonSnapshotCollections.List(enemyIds);
     }
 
     public RuntimeDungeonEventKind Kind { get; }
@@ -101,9 +101,9 @@ public sealed record RuntimeDungeonProgressSnapshot
         DungeonId = dungeonId;
         CurrentFloor = currentFloor;
         MaxFloorReached = maxFloorReached;
-        UnlockedTerminals = RuntimeSnapshotCollections.List(
+        UnlockedTerminals = LegacyDungeonSnapshotCollections.List(
             (unlockedTerminals ?? [1]).Append(1).Where(floor => floor > 0).Distinct().OrderBy(floor => floor));
-        DefeatedBossIds = RuntimeSnapshotCollections.List((defeatedBossIds ?? []).Distinct());
+        DefeatedBossIds = LegacyDungeonSnapshotCollections.List((defeatedBossIds ?? []).Distinct());
     }
 
     public ContentId DungeonId { get; }
@@ -138,20 +138,6 @@ public sealed record RuntimeDungeonProgressSnapshot
         With(defeatedBossIds: DefeatedBossIds.Append(bossId));
 
     public bool IsBossDefeated(ContentId bossId) => DefeatedBossIds.Contains(bossId);
-}
-
-public sealed record RuntimeFieldSnapshot
-{
-    public RuntimeFieldSnapshot(
-        RuntimeNavigationSnapshot navigation,
-        RuntimeDungeonTraversalSnapshot? dungeonTraversal = null)
-    {
-        Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        DungeonTraversal = dungeonTraversal;
-    }
-
-    public RuntimeNavigationSnapshot Navigation { get; }
-    public RuntimeDungeonTraversalSnapshot? DungeonTraversal { get; }
 }
 
 public sealed record RuntimeDungeonFixedFloorSnapshot
@@ -205,8 +191,8 @@ public sealed record RuntimeDungeonBlockSnapshot
         DisplayName = displayName;
         StartFloor = startFloor;
         EndFloor = endFloor;
-        EnemyPoolIds = RuntimeSnapshotCollections.List(enemyPoolIds);
-        FixedFloors = RuntimeSnapshotCollections.List(fixedFloors);
+        EnemyPoolIds = LegacyDungeonSnapshotCollections.List(enemyPoolIds);
+        FixedFloors = LegacyDungeonSnapshotCollections.List(fixedFloors);
     }
 
     public ContentId Id { get; }
@@ -233,7 +219,7 @@ public sealed record RuntimeDungeonContentSnapshot
 
         Id = id;
         DisplayName = displayName;
-        Blocks = RuntimeSnapshotCollections.List(blocks);
+        Blocks = LegacyDungeonSnapshotCollections.List(blocks);
     }
 
     public ContentId Id { get; }
@@ -261,7 +247,7 @@ public sealed record RuntimeDungeonFloorSnapshot
         Kind = kind;
         Description = description ?? string.Empty;
         HasTerminal = hasTerminal;
-        EnemyIds = RuntimeSnapshotCollections.List(enemyIds);
+        EnemyIds = LegacyDungeonSnapshotCollections.List(enemyIds);
     }
 
     public int FloorNumber { get; }
@@ -286,7 +272,7 @@ public sealed record RuntimeDungeonTransitionResult
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
         Floor = floor;
-        Events = RuntimeSnapshotCollections.List(events);
+        Events = LegacyDungeonSnapshotCollections.List(events);
         Message = message;
     }
 
@@ -509,7 +495,7 @@ public sealed class RuntimeFieldDungeonService : IRuntimeFieldDungeonService
             options.Add(new RuntimeFieldActionOption(RuntimeFieldActionKind.OrganizeParty, "Organize Party"));
         }
 
-        return RuntimeSnapshotCollections.List(options);
+        return LegacyDungeonSnapshotCollections.List(options);
     }
 
     private RuntimeDungeonTransitionResult ResetToEntry(
@@ -604,7 +590,7 @@ public sealed class RuntimeFieldDungeonService : IRuntimeFieldDungeonService
     {
         if (block.EnemyPoolIds.Count == 0)
         {
-            return RuntimeSnapshotCollections.List([ContentId.Parse("legacy_455f736c696d65")]);
+            return LegacyDungeonSnapshotCollections.List([ContentId.Parse("legacy_455f736c696d65")]);
         }
 
         int count = _random.NextInt32(1, 4);
@@ -615,6 +601,12 @@ public sealed class RuntimeFieldDungeonService : IRuntimeFieldDungeonService
             encounter.Add(block.EnemyPoolIds[index]);
         }
 
-        return RuntimeSnapshotCollections.List(encounter);
+        return LegacyDungeonSnapshotCollections.List(encounter);
     }
+}
+
+internal static class LegacyDungeonSnapshotCollections
+{
+    public static IReadOnlyList<T> List<T>(IEnumerable<T>? values) =>
+        Array.AsReadOnly((values ?? []).ToArray());
 }

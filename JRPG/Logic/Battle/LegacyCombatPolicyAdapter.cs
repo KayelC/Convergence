@@ -26,7 +26,7 @@ namespace JRPGPrototype.Logic.Battle
             _ruleset.CalculateExperienceYield(ToProfile(enemy));
 
         public int CalculateMaccaYield(Combatant enemy) =>
-            _ruleset.CalculateMaccaYield(ToProfile(enemy));
+            _ruleset.CalculateCurrencyYield(ToProfile(enemy));
 
         public int CalculateDamage(
             Combatant attacker,

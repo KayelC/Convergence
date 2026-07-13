@@ -6,7 +6,14 @@ namespace Convergence.Tests.Runtime;
 
 public sealed class PartyStockTransitionTests
 {
-    private readonly PartyStockTransitionService _service = new();
+    private readonly PartyStockTransitionService _service = new(new TieredStockCapacityPolicy(
+    [
+        new StockCapacityTier(1, 3),
+        new StockCapacityTier(10, 5),
+        new StockCapacityTier(20, 7),
+        new StockCapacityTier(30, 10),
+        new StockCapacityTier(40, 12)
+    ]));
 
     [Theory]
     [InlineData(1, 3)]
@@ -18,11 +25,57 @@ public sealed class PartyStockTransitionTests
     [InlineData(30, 10)]
     [InlineData(39, 10)]
     [InlineData(40, 12)]
-    public void LegacyStockCapacityPolicy_PreservesLevelThresholds(int level, int expected)
+    public void TieredStockCapacityPolicy_UsesDeveloperAuthoredThresholds(int level, int expected)
     {
-        var policy = new LegacyStockCapacityPolicy();
+        var policy = new TieredStockCapacityPolicy(
+        [
+            new StockCapacityTier(1, 3),
+            new StockCapacityTier(10, 5),
+            new StockCapacityTier(20, 7),
+            new StockCapacityTier(30, 10),
+            new StockCapacityTier(40, 12)
+        ]);
 
         Assert.Equal(expected, policy.GetCapacity(level));
+    }
+
+    [Fact]
+    public void DefaultTransitionService_DoesNotImposeAStockCapacityCurve()
+    {
+        var service = new PartyStockTransitionService();
+        RuntimeActorReferenceSnapshot[] stock = Enumerable.Range(0, 20)
+            .Select(index => Actor($"demon_{index}"))
+            .ToArray();
+        RuntimePartyStockSnapshot snapshot = Snapshot(demonStock: stock);
+
+        PartyStockTransitionResult result = service.AddDemonToStock(
+            new AddDemonToStockRequest(snapshot, Actor("demon_20")));
+
+        Assert.True(result.Applied);
+        Assert.Equal(21, result.After.DemonStock.Count);
+    }
+
+    [Fact]
+    public void TieredStockCapacityPolicy_CopiesAndValidatesAuthoredTiers()
+    {
+        var authored = new List<StockCapacityTier>
+        {
+            new(1, 2),
+            new(10, 4)
+        };
+        var policy = new TieredStockCapacityPolicy(authored);
+
+        authored.Clear();
+
+        Assert.Equal(2, policy.GetCapacity(1));
+        Assert.Equal(4, policy.GetCapacity(10));
+        Assert.Throws<ArgumentException>(() => new TieredStockCapacityPolicy([new StockCapacityTier(2, 1)]));
+        Assert.Throws<ArgumentException>(() => new TieredStockCapacityPolicy(
+        [
+            new StockCapacityTier(1, 1),
+            new StockCapacityTier(1, 2)
+        ]));
+        Assert.Throws<NotSupportedException>(() => ((IList<StockCapacityTier>)policy.Tiers).Add(new(20, 6)));
     }
 
     [Fact]

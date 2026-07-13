@@ -192,19 +192,19 @@ public sealed class ResourceManagementServiceTests
         var service = new EconomyTransactionService();
         var empty = new RuntimeWalletSnapshot(0);
 
-        WalletTransactionResult added = service.AddMacca(empty, 100);
-        WalletTransactionResult spent = service.SpendMacca(added.After, 40);
-        WalletTransactionResult insufficient = service.SpendMacca(spent.After, 100);
-        WalletTransactionResult negative = service.AddMacca(spent.After, -1);
+        WalletTransactionResult added = service.Credit(empty, 100);
+        WalletTransactionResult spent = service.Debit(added.After, 40);
+        WalletTransactionResult insufficient = service.Debit(spent.After, 100);
+        WalletTransactionResult negative = service.Credit(spent.After, -1);
         var maximum = new RuntimeWalletSnapshot(int.MaxValue);
-        WalletTransactionResult overflow = service.AddMacca(maximum, 1);
+        WalletTransactionResult overflow = service.Credit(maximum, 1);
 
-        Assert.Equal(100, added.After.Macca);
-        Assert.Equal(60, spent.After.Macca);
+        Assert.Equal(100, added.After.Balance);
+        Assert.Equal(60, spent.After.Balance);
         Assert.False(insufficient.Applied);
         Assert.Same(spent.After, insufficient.Before);
         Assert.Same(insufficient.Before, insufficient.After);
-        Assert.Equal(60, insufficient.After.Macca);
+        Assert.Equal(60, insufficient.After.Balance);
         Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, negative.Code);
         Assert.Same(spent.After, negative.After);
         Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, overflow.Code);
@@ -230,10 +230,10 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(90, shop.CalculateBuyPrice(100, 10));
         Assert.Equal(60, shop.CalculateSellPrice(100, 10));
         Assert.True(bought.Applied);
-        Assert.Equal(0, bought.AfterWallet.Macca);
+        Assert.Equal(0, bought.AfterWallet.Balance);
         Assert.Equal(1, bought.AfterInventory.GetQuantity(Id("medicine")));
         Assert.True(sold.Applied);
-        Assert.Equal(60, sold.AfterWallet.Macca);
+        Assert.Equal(60, sold.AfterWallet.Balance);
         Assert.Equal(0, sold.AfterInventory.GetQuantity(Id("medicine")));
     }
 
@@ -261,7 +261,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult insufficient = shop.Buy(new RuntimeInventorySnapshot(), wallet, priceyItem, buyerLuck: 0);
 
         Assert.Equal(ResourceTransactionCode.EquipmentDuplicate, duplicate.Code);
-        Assert.Equal(1_000, duplicate.AfterWallet.Macca);
+        Assert.Equal(1_000, duplicate.AfterWallet.Balance);
         Assert.Equal(ResourceTransactionCode.ShopStockUnavailable, stock.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
     }
@@ -419,14 +419,14 @@ public sealed class ResourceManagementServiceTests
 
         Assert.True(restored.Applied);
         Assert.Equal(120, restored.Cost);
-        Assert.Equal(0, restored.AfterWallet.Macca);
+        Assert.Equal(0, restored.AfterWallet.Balance);
         Assert.Equal(restored.AfterPatient.MaxHp, restored.AfterPatient.CurrentHp);
         Assert.Equal(restored.AfterPatient.MaxSp, restored.AfterPatient.CurrentSp);
         Assert.False(restored.AfterPatient.HasAilment);
         Assert.False(restored.AfterPatient.HasEncounterPersistence);
         Assert.Equal(ResourceTransactionCode.NoRestorationNeeded, fullHealth.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
-        Assert.Equal(1, insufficient.AfterWallet.Macca);
+        Assert.Equal(1, insufficient.AfterWallet.Balance);
     }
 
     [Fact]

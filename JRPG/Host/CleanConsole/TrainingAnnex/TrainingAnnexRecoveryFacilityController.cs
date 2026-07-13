@@ -56,7 +56,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         var evidence = new List<TrainingAnnexHospitalRestorationEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet {wallet.Macca} M.",
+            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet {wallet.Balance} M.",
             cancellationToken).ConfigureAwait(false);
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
             await _commandSource.ReadAsync(
@@ -84,7 +84,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         ApplyRestoration(patient.Actor.State, restoration.AfterPatient);
         wallet = restoration.AfterWallet;
         await _eventSink.PublishAsync(
-            $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP {restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet {restoration.BeforeWallet.Macca}->{restoration.AfterWallet.Macca}.",
+            $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP {restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet {restoration.BeforeWallet.Balance}->{restoration.AfterWallet.Balance}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
     }
@@ -165,8 +165,8 @@ internal sealed class TrainingAnnexRecoveryFacilityController
             result.BeforePatient.PatientId,
             result.Code,
             result.Cost,
-            result.BeforeWallet.Macca,
-            result.AfterWallet.Macca,
+            result.BeforeWallet.Balance,
+            result.AfterWallet.Balance,
             result.BeforePatient.CurrentHp,
             result.AfterPatient.CurrentHp,
             result.BeforePatient.MaxHp,

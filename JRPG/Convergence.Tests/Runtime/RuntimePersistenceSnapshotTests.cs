@@ -468,7 +468,8 @@ public sealed class RuntimePersistenceSnapshotTests
             actors: [frost, ember, ward],
             partyStock: invalidParty);
 
-        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator(new FixedStockCapacityPolicy(3))
+            .Validate(snapshot, catalog);
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -734,7 +735,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_UsesInjectedStockCapacityPolicy()
+    public void RuntimeSaveValidator_UsesOnlyExplicitStockCapacityPolicy()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeActorSnapshot frost = CreateActor(
@@ -764,16 +765,19 @@ public sealed class RuntimePersistenceSnapshotTests
                 demonStock: [frostRef, emberRef, wardRef, veilRef]));
 
         RuntimeSaveValidationResult defaultResult = new RuntimeSaveValidator().Validate(snapshot, catalog);
-        RuntimeSaveValidationResult customResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(4))
+        RuntimeSaveValidationResult constrainedResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(3))
+            .Validate(snapshot, catalog);
+        RuntimeSaveValidationResult permissiveResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(4))
             .Validate(snapshot, catalog);
 
-        Assert.Contains(defaultResult.Diagnostics, diagnostic =>
+        Assert.True(defaultResult.IsValid);
+        Assert.Contains(constrainedResult.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.DemonStockCapacityExceeded);
-        Assert.True(customResult.IsValid, string.Join(Environment.NewLine, customResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        Assert.True(permissiveResult.IsValid, string.Join(Environment.NewLine, permissiveResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
     }
 
     [Fact]
-    public void RuntimeSaveValidator_UsesDefaultAndInjectedCapacityForPersonaStock()
+    public void RuntimeSaveValidator_UsesExplicitCapacityForPersonaStock()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeActorSnapshot owner = CreateActor(
@@ -804,21 +808,24 @@ public sealed class RuntimePersistenceSnapshotTests
             partyStock: party);
 
         RuntimeSaveValidationResult defaultResult = new RuntimeSaveValidator().Validate(snapshot, catalog);
-        RuntimeSaveValidationResult customResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(4))
+        RuntimeSaveValidationResult constrainedResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(3))
+            .Validate(snapshot, catalog);
+        RuntimeSaveValidationResult permissiveResult = new RuntimeSaveValidator(new FixedStockCapacityPolicy(4))
             .Validate(snapshot, catalog);
 
         RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(
-            defaultResult.Diagnostics,
+            constrainedResult.Diagnostics,
             candidate => candidate.Code == RuntimeSaveValidationCode.PersonaStockCapacityExceeded);
         Assert.Equal("$.partyStock.personaStock", diagnostic.Path);
         Assert.Contains("4 entries", diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains("capacity of 3", diagnostic.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(
-            defaultResult.Diagnostics,
+            constrainedResult.Diagnostics,
             candidate => candidate.Code == RuntimeSaveValidationCode.DemonStockCapacityExceeded);
+        Assert.True(defaultResult.IsValid);
         Assert.True(
-            customResult.IsValid,
-            string.Join(Environment.NewLine, customResult.Diagnostics.Select(candidate => candidate.Message)));
+            permissiveResult.IsValid,
+            string.Join(Environment.NewLine, permissiveResult.Diagnostics.Select(candidate => candidate.Message)));
     }
 
     [Fact]

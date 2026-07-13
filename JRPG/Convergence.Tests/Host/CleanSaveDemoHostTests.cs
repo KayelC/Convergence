@@ -30,7 +30,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             snapshot.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
             restored.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
-        Assert.Equal(snapshot.Wallet.Macca, restored.Wallet.Macca);
+        Assert.Equal(snapshot.Wallet.Balance, restored.Wallet.Balance);
         Assert.Equal(
             snapshot.Field!.DungeonTraversal!.CurrentNodeId,
             restored.Field!.DungeonTraversal!.CurrentNodeId);
@@ -291,7 +291,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(42, restored.Sequence);
         Assert.Equal(record.Snapshot.ContractVersion, restored.Snapshot.ContractVersion);
         Assert.Equal(record.Snapshot.ContentPacks, restored.Snapshot.ContentPacks);
-        Assert.Equal(record.Snapshot.Wallet.Macca, restored.Snapshot.Wallet.Macca);
+        Assert.Equal(record.Snapshot.Wallet.Balance, restored.Snapshot.Wallet.Balance);
     }
 
     [Fact]

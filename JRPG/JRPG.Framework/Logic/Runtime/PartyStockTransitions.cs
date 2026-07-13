@@ -112,8 +112,14 @@ public interface IStockCapacityPolicy
     int GetCapacity(int ownerLevel);
 }
 
-public sealed class LegacyStockCapacityPolicy : IStockCapacityPolicy
+public sealed class NoLimitStockCapacityPolicy : IStockCapacityPolicy
 {
+    public static NoLimitStockCapacityPolicy Instance { get; } = new();
+
+    private NoLimitStockCapacityPolicy()
+    {
+    }
+
     public int GetCapacity(int ownerLevel)
     {
         if (ownerLevel <= 0)
@@ -121,11 +127,66 @@ public sealed class LegacyStockCapacityPolicy : IStockCapacityPolicy
             throw new ArgumentOutOfRangeException(nameof(ownerLevel), "Owner level must be positive.");
         }
 
-        if (ownerLevel < 10) return 3;
-        if (ownerLevel < 20) return 5;
-        if (ownerLevel < 30) return 7;
-        if (ownerLevel < 40) return 10;
-        return 12;
+        return int.MaxValue;
+    }
+}
+
+public sealed record StockCapacityTier
+{
+    public StockCapacityTier(int minimumLevel, int capacity)
+    {
+        if (minimumLevel <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minimumLevel), "Minimum level must be positive.");
+        }
+        if (capacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity cannot be negative.");
+        }
+
+        MinimumLevel = minimumLevel;
+        Capacity = capacity;
+    }
+
+    public int MinimumLevel { get; }
+    public int Capacity { get; }
+}
+
+public sealed class TieredStockCapacityPolicy : IStockCapacityPolicy
+{
+    private readonly IReadOnlyList<StockCapacityTier> _tiers;
+
+    public TieredStockCapacityPolicy(IEnumerable<StockCapacityTier> tiers)
+    {
+        StockCapacityTier[] copy = (tiers ?? throw new ArgumentNullException(nameof(tiers)))
+            .OrderBy(tier => tier.MinimumLevel)
+            .ToArray();
+        if (copy.Length == 0)
+        {
+            throw new ArgumentException("At least one stock-capacity tier is required.", nameof(tiers));
+        }
+        if (copy[0].MinimumLevel != 1)
+        {
+            throw new ArgumentException("Stock-capacity tiers must define level 1.", nameof(tiers));
+        }
+        if (copy.Select(tier => tier.MinimumLevel).Distinct().Count() != copy.Length)
+        {
+            throw new ArgumentException("Stock-capacity tier minimum levels must be unique.", nameof(tiers));
+        }
+
+        _tiers = Array.AsReadOnly(copy);
+    }
+
+    public IReadOnlyList<StockCapacityTier> Tiers => _tiers;
+
+    public int GetCapacity(int ownerLevel)
+    {
+        if (ownerLevel <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(ownerLevel), "Owner level must be positive.");
+        }
+
+        return _tiers.Last(tier => tier.MinimumLevel <= ownerLevel).Capacity;
     }
 }
 
@@ -166,7 +227,7 @@ public sealed class PartyStockTransitionService : IPartyStockTransitionService
 
     public PartyStockTransitionService(IStockCapacityPolicy? stockCapacityPolicy = null)
     {
-        _stockCapacityPolicy = stockCapacityPolicy ?? new LegacyStockCapacityPolicy();
+        _stockCapacityPolicy = stockCapacityPolicy ?? NoLimitStockCapacityPolicy.Instance;
     }
 
     public PartyStockTransitionResult AddPartyMember(AddPartyMemberRequest request)

@@ -43,9 +43,18 @@
     {
       "id": "standard_stock_capacity",
       "displayName": "Training Annex Stock Capacity",
-      "description": "Binds the slice to the standard stock-capacity policy.",
+      "description": "Defines the slice's tiered stock-capacity policy.",
       "category": "stock_capacity",
-      "policyId": "standard_stock_capacity"
+      "policyId": "standard_stock_capacity",
+      "parameters": {
+        "tiers": [
+          { "minimumLevel": 1, "capacity": 3 },
+          { "minimumLevel": 10, "capacity": 5 },
+          { "minimumLevel": 20, "capacity": 7 },
+          { "minimumLevel": 30, "capacity": 10 },
+          { "minimumLevel": 40, "capacity": 12 }
+        ]
+      }
     },
     {
       "id": "standard_economy",

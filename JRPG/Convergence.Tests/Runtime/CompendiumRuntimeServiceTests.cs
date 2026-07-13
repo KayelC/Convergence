@@ -132,7 +132,7 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.True(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.Applied, result.Code);
-        Assert.Equal(wallet.Macca - result.Cost, result.AfterWallet.Macca);
+        Assert.Equal(wallet.Balance - result.Cost, result.AfterWallet.Balance);
         RuntimeActorReferenceSnapshot stockEntry = Assert.Single(result.AfterPartyStock.DemonStock);
         Assert.Equal(RuntimeInstanceId.Parse("recalled_ashling"), stockEntry.InstanceId);
         CatalogBattleActor recalled = Assert.IsType<CatalogBattleActor>(result.Actor);
@@ -145,7 +145,7 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Empty(recalledSnapshot.BattleStatus.Ailments);
         Assert.Empty(recalledSnapshot.Equipment.EquippedItemIds);
         Assert.Empty(party.DemonStock);
-        Assert.Equal(10_000, wallet.Macca);
+        Assert.Equal(10_000, wallet.Balance);
     }
 
     [Theory]
@@ -743,13 +743,13 @@ public sealed class CompendiumRuntimeServiceTests
 
         public int SpendCalls { get; private set; }
 
-        public WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount) =>
-            _inner.AddMacca(snapshot, amount);
+        public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
+            _inner.Credit(snapshot, amount);
 
-        public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount)
+        public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount)
         {
             SpendCalls++;
-            return _inner.SpendMacca(snapshot, amount);
+            return _inner.Debit(snapshot, amount);
         }
     }
 

@@ -12,7 +12,21 @@ public sealed class NegotiationRewardRuntimeTests
     public async Task NegotiationSession_PreservesDemandFlowAndDeferredMutation()
     {
         var random = new SequenceRandomSource(ints: [0, 0, 0, 0]);
-        var service = new NegotiationSessionService(random);
+        var policy = new TestNegotiationPolicy(
+            fallbackDemands:
+            [
+                new NegotiationRuntimeDemand(
+                    ContentId.Parse("currency"),
+                    NegotiationDemandKind.Currency,
+                    weight: 1,
+                    currencyAmount: 40),
+                new NegotiationRuntimeDemand(
+                    ContentId.Parse("healing_item"),
+                    NegotiationDemandKind.Item,
+                    weight: 1,
+                    item: new NegotiationAvailableItem("101", "Medicine"))
+            ]);
+        var service = new NegotiationSessionService(random, policy);
         var commands = new QueueNegotiationCommands(
             answers: [0, 0, 0],
             demands: [NegotiationDemandDecision.Accept, NegotiationDemandDecision.Refuse]);
@@ -24,11 +38,11 @@ public sealed class NegotiationRewardRuntimeTests
                 actorLevel: 50,
                 targetLevel: 2,
                 actorLuck: 0,
-                livingEnemyCount: 1,
-                isMoonBlocked: false,
-                isTargetAlreadyOwned: false,
-                hasOpenDemonStockSlot: true,
-                currentMacca: 1000,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 1000,
                 questions:
                 [
                     Question("Do you like me?", 2),
@@ -42,7 +56,7 @@ public sealed class NegotiationRewardRuntimeTests
         Assert.Equal(NegotiationOutcomeKind.Failure, result.Outcome);
         Assert.Equal(NegotiationOutcomeReason.ItemRefused, result.Reason);
         Assert.Equal(6, result.MoodScore);
-        Assert.Equal(40, result.MaccaSpent);
+        Assert.Equal(40, result.CurrencySpent);
         Assert.Null(result.ItemSpentId);
         Assert.Contains(result.Events, ev => ev.Kind == NegotiationEventKind.DemandIntro);
         Assert.Equal(result.Events, events.Events);
@@ -52,7 +66,16 @@ public sealed class NegotiationRewardRuntimeTests
     public async Task NegotiationSession_UsesAuthoredDemandInsteadOfCalculatedMaccaFormula()
     {
         var random = new SequenceRandomSource(ints: [0, 0, 0]);
-        var service = new NegotiationSessionService(random);
+        var policy = new TestNegotiationPolicy(
+            fallbackDemands:
+            [
+                new NegotiationRuntimeDemand(
+                    ContentId.Parse("fallback"),
+                    NegotiationDemandKind.Currency,
+                    weight: 1,
+                    currencyAmount: 99)
+            ]);
+        var service = new NegotiationSessionService(random, policy);
         var commands = new QueueNegotiationCommands(
             answers: [0, 0],
             demands: [NegotiationDemandDecision.Accept]);
@@ -63,11 +86,11 @@ public sealed class NegotiationRewardRuntimeTests
                 actorLevel: 50,
                 targetLevel: 9,
                 actorLuck: 0,
-                livingEnemyCount: 1,
-                isMoonBlocked: false,
-                isTargetAlreadyOwned: false,
-                hasOpenDemonStockSlot: true,
-                currentMacca: 100,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 100,
                 questions:
                 [
                     Question("Do you like me?", 2),
@@ -76,25 +99,28 @@ public sealed class NegotiationRewardRuntimeTests
                 demands:
                 [
                     new NegotiationRuntimeDemand(
-                        ContentId.Parse("sample_macca"),
-                        NegotiationDemandKind.Macca,
+                        ContentId.Parse("sample_currency"),
+                        NegotiationDemandKind.Currency,
                         weight: 1,
-                        maccaAmount: 25)
+                        currencyAmount: 25)
                 ]),
             commands);
 
         Assert.Equal(NegotiationOutcomeKind.Success, result.Outcome);
-        Assert.Equal(25, result.MaccaSpent);
+        Assert.Equal(25, result.CurrencySpent);
+        Assert.Equal(0, policy.FallbackDemandCalls);
         NegotiationDemandPrompt prompt = Assert.Single(commands.DemandPrompts);
-        Assert.Equal(NegotiationDemandKind.Macca, prompt.Kind);
-        Assert.Equal("Pixie: \"A gift of 25 Macca should suffice.\"", prompt.Prompt);
-        Assert.Equal(["Give 25 Macca", "Refuse"], prompt.Options.Select(option => option.Label));
+        Assert.Equal(NegotiationDemandKind.Currency, prompt.Kind);
+        Assert.Equal("Provide 25 currency?", prompt.Prompt);
+        Assert.Equal(["Provide 25", "Refuse"], prompt.Options.Select(option => option.Label));
     }
 
     [Fact]
     public async Task NegotiationSession_RejectsUnaffordableAuthoredDemandBeforePrompting()
     {
-        var service = new NegotiationSessionService(new SequenceRandomSource(ints: [0, 0, 0]));
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0, 0]),
+            new TestNegotiationPolicy());
         var commands = new QueueNegotiationCommands(
             answers: [0, 0],
             demands: [NegotiationDemandDecision.Accept]);
@@ -105,11 +131,11 @@ public sealed class NegotiationRewardRuntimeTests
                 actorLevel: 50,
                 targetLevel: 9,
                 actorLuck: 0,
-                livingEnemyCount: 1,
-                isMoonBlocked: false,
-                isTargetAlreadyOwned: false,
-                hasOpenDemonStockSlot: true,
-                currentMacca: 24,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 24,
                 questions:
                 [
                     Question("Do you like me?", 2),
@@ -118,27 +144,33 @@ public sealed class NegotiationRewardRuntimeTests
                 demands:
                 [
                     new NegotiationRuntimeDemand(
-                        ContentId.Parse("sample_macca"),
-                        NegotiationDemandKind.Macca,
+                        ContentId.Parse("sample_currency"),
+                        NegotiationDemandKind.Currency,
                         weight: 1,
-                        maccaAmount: 25)
+                        currencyAmount: 25)
                 ]),
             commands);
 
         Assert.Equal(NegotiationOutcomeKind.Failure, result.Outcome);
-        Assert.Equal(NegotiationOutcomeReason.InsufficientMacca, result.Reason);
-        Assert.Equal(0, result.MaccaSpent);
+        Assert.Equal(NegotiationOutcomeReason.InsufficientCurrency, result.Reason);
+        Assert.Equal(0, result.CurrencySpent);
         Assert.Empty(commands.DemandPrompts);
         Assert.Contains(
             result.Events,
             negotiationEvent => negotiationEvent.Kind == NegotiationEventKind.Failure &&
-                negotiationEvent.Message == "The required donation of 25 Macca is missing.");
+                negotiationEvent.Code == NegotiationEventCode.InsufficientCurrency &&
+                negotiationEvent.Amount == 25);
     }
 
     [Fact]
     public async Task NegotiationSession_FamiliarRewardsAreReturnedWithoutHostMutation()
     {
-        var service = new NegotiationSessionService(new SequenceRandomSource(ints: [0, 75]));
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 75]),
+            new TestNegotiationPolicy(
+                familiarGift: new NegotiationFamiliarGift(
+                    NegotiationFamiliarGiftKind.Currency,
+                    Currency: 60)));
 
         NegotiationSessionResult result = await service.RunAsync(
             new NegotiationSessionRequest(
@@ -146,18 +178,18 @@ public sealed class NegotiationRewardRuntimeTests
                 actorLevel: 50,
                 targetLevel: 3,
                 actorLuck: 0,
-                livingEnemyCount: 1,
-                isMoonBlocked: false,
-                isTargetAlreadyOwned: true,
-                hasOpenDemonStockSlot: true,
-                currentMacca: 0,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: true,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 0,
                 familiarDialogueLines: ["We meet again."]),
             new QueueNegotiationCommands([], []));
 
         Assert.Equal(NegotiationOutcomeKind.FamiliarFlee, result.Outcome);
-        Assert.Equal(NegotiationOutcomeReason.FamiliarDemon, result.Reason);
-        Assert.Equal(NegotiationFamiliarGiftKind.Macca, result.FamiliarGift.Kind);
-        Assert.Equal(60, result.FamiliarGift.Macca);
+        Assert.Equal(NegotiationOutcomeReason.FamiliarTarget, result.Reason);
+        Assert.Equal(NegotiationFamiliarGiftKind.Currency, result.FamiliarGift.Kind);
+        Assert.Equal(60, result.FamiliarGift.Currency);
         Assert.Contains(result.Events, ev => ev.Kind == NegotiationEventKind.FamiliarDialogue);
     }
 
@@ -207,7 +239,7 @@ public sealed class NegotiationRewardRuntimeTests
             ]));
 
         Assert.Equal(46, result.TotalExperience);
-        Assert.Equal(125, result.TotalMacca);
+        Assert.Equal(125, result.TotalCurrency);
         Assert.Equal(
             [
                 new BattleRewardApplication(ContentId.Parse("hero"), BattleRewardRecipientKind.Actor, 46),
@@ -267,6 +299,43 @@ public sealed class NegotiationRewardRuntimeTests
             _events.Add(hostEvent);
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class TestNegotiationPolicy : INegotiationSessionPolicy
+    {
+        private readonly IReadOnlyList<NegotiationRuntimeDemand> _fallbackDemands;
+        private readonly NegotiationFamiliarGift _familiarGift;
+
+        public TestNegotiationPolicy(
+            IEnumerable<NegotiationRuntimeDemand>? fallbackDemands = null,
+            NegotiationFamiliarGift? familiarGift = null)
+        {
+            _fallbackDemands = Array.AsReadOnly((fallbackDemands ?? []).ToArray());
+            _familiarGift = familiarGift ?? NegotiationFamiliarGift.None;
+        }
+
+        public int QuestionLimit => 3;
+        public int PositiveMoodThreshold => 4;
+        public int NeutralMoodThreshold => 1;
+        public int FallbackDemandCalls { get; private set; }
+
+        public NegotiationGateDecision EvaluateGate(NegotiationSessionRequest request) => new(true);
+
+        public bool CanBegin(NegotiationSessionRequest request, IRandomSource random) => true;
+
+        public NegotiationFamiliarGift SelectFamiliarGift(
+            NegotiationSessionRequest request,
+            IRandomSource random) => _familiarGift;
+
+        public IReadOnlyList<NegotiationRuntimeDemand> CreateFallbackDemands(
+            NegotiationSessionRequest request,
+            IRandomSource random)
+        {
+            FallbackDemandCalls++;
+            return _fallbackDemands;
+        }
+
+        public bool ResolveDemandlessSuccess(NegotiationSessionRequest request, IRandomSource random) => true;
     }
 
     private sealed class SequenceRandomSource : IRandomSource

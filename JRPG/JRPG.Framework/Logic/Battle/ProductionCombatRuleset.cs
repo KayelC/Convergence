@@ -29,10 +29,10 @@ public sealed record ProductionCombatRulesetConfig
     public decimal ExpectedStatBase { get; init; } = 15m;
     public decimal StatDensityDivisor { get; init; } = 100m;
     public decimal MaximumStatDensityMultiplier { get; init; } = 2m;
-    public decimal MaccaBaseMultiplier { get; init; } = 0.25m;
-    public decimal MaccaLuckMultiplier { get; init; } = 5m;
-    public decimal MaccaVarianceMinimum { get; init; } = 0.9m;
-    public decimal MaccaVarianceMaximum { get; init; } = 1.1m;
+    public decimal CurrencyBaseMultiplier { get; init; } = 0.25m;
+    public decimal CurrencyLuckMultiplier { get; init; } = 5m;
+    public decimal CurrencyVarianceMinimum { get; init; } = 0.9m;
+    public decimal CurrencyVarianceMaximum { get; init; } = 1.1m;
     public decimal InitiativeVarianceMinimum { get; init; } = 0.9m;
     public decimal InitiativeVarianceMaximum { get; init; } = 1.1m;
 
@@ -72,13 +72,13 @@ public sealed record ProductionCombatRulesetConfig
         RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
         RequirePositive(StatDensityDivisor, nameof(StatDensityDivisor));
         RequirePositive(MaximumStatDensityMultiplier, nameof(MaximumStatDensityMultiplier));
-        RequireNonNegative(MaccaBaseMultiplier, nameof(MaccaBaseMultiplier));
-        RequireNonNegative(MaccaLuckMultiplier, nameof(MaccaLuckMultiplier));
+        RequireNonNegative(CurrencyBaseMultiplier, nameof(CurrencyBaseMultiplier));
+        RequireNonNegative(CurrencyLuckMultiplier, nameof(CurrencyLuckMultiplier));
         RequireOrderedNonNegativeRange(
-            MaccaVarianceMinimum,
-            MaccaVarianceMaximum,
-            nameof(MaccaVarianceMinimum),
-            nameof(MaccaVarianceMaximum));
+            CurrencyVarianceMinimum,
+            CurrencyVarianceMaximum,
+            nameof(CurrencyVarianceMinimum),
+            nameof(CurrencyVarianceMaximum));
         RequireOrderedNonNegativeRange(
             InitiativeVarianceMinimum,
             InitiativeVarianceMaximum,
@@ -648,17 +648,17 @@ public sealed class ProductionCombatRuleset :
         return Math.Max(1, SaturatingFloorToInt(SaturatingMultiply(baseYield, statMultiplier)));
     }
 
-    public int CalculateMaccaYield(ProductionCombatantProfile enemy)
+    public int CalculateCurrencyYield(ProductionCombatantProfile enemy)
     {
         ArgumentNullException.ThrowIfNull(enemy);
 
         decimal level = enemy.Level;
-        decimal baseMacca = SaturatingMultiply(
-            _config.MaccaBaseMultiplier,
+        decimal baseCurrency = SaturatingMultiply(
+            _config.CurrencyBaseMultiplier,
             SaturatingMultiply(level, level));
-        decimal luckBonus = SaturatingMultiply(enemy.Stats.Luck, _config.MaccaLuckMultiplier);
-        decimal variance = RollVariance(_config.MaccaVarianceMinimum, _config.MaccaVarianceMaximum);
-        return SaturatingFloorToInt(SaturatingMultiply(SaturatingAdd(baseMacca, luckBonus), variance));
+        decimal luckBonus = SaturatingMultiply(enemy.Stats.Luck, _config.CurrencyLuckMultiplier);
+        decimal variance = RollVariance(_config.CurrencyVarianceMinimum, _config.CurrencyVarianceMaximum);
+        return SaturatingFloorToInt(SaturatingMultiply(SaturatingAdd(baseCurrency, luckBonus), variance));
     }
 
     public bool RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility)

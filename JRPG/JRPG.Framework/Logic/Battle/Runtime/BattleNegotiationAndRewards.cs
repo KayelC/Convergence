@@ -17,17 +17,17 @@ public enum NegotiationOutcomeKind
 public enum NegotiationOutcomeReason
 {
     None,
-    MoonBlocked,
-    FamiliarDemon,
-    StockFull,
+    PolicyBlocked,
+    FamiliarTarget,
+    CapacityUnavailable,
     GuardRefusal,
     MissingQuestions,
     Cancelled,
     MoodFailure,
     MoodFlee,
     TargetLevelTooHigh,
-    InsufficientMacca,
-    MaccaRefused,
+    InsufficientCurrency,
+    CurrencyRefused,
     ItemRefused,
     Trick
 }
@@ -44,7 +44,31 @@ public enum NegotiationEventKind
     MoodNegative
 }
 
-public sealed record NegotiationEvent(NegotiationEventKind Kind, string Message);
+public enum NegotiationEventCode
+{
+    Generic,
+    PolicyBlocked,
+    FamiliarDialogue,
+    FamiliarGift,
+    CapacityUnavailable,
+    OpeningRefused,
+    MissingQuestions,
+    Cancelled,
+    MoodPositive,
+    MoodNeutral,
+    MoodNegative,
+    TargetLevelTooHigh,
+    DemandIntro,
+    InsufficientCurrency,
+    DemandlessRejected
+}
+
+public sealed record NegotiationEvent(
+    NegotiationEventKind Kind,
+    NegotiationEventCode Code,
+    string Message,
+    NegotiationFamiliarGift? FamiliarGift = null,
+    int Amount = 0);
 
 public sealed record NegotiationAnswerOption(string Text, int Score);
 
@@ -64,7 +88,7 @@ public sealed record NegotiationAvailableItem(string ItemId, string DisplayName)
 
 public enum NegotiationDemandKind
 {
-    Macca,
+    Currency,
     Item
 }
 
@@ -79,16 +103,17 @@ public sealed record NegotiationDemandOption(NegotiationDemandDecision Decision,
 public sealed record NegotiationDemandPrompt
 {
     public NegotiationDemandPrompt(
-        NegotiationDemandKind kind,
+        NegotiationRuntimeDemand demand,
         string prompt,
         IEnumerable<NegotiationDemandOption> options)
     {
-        Kind = kind;
+        Demand = demand ?? throw new ArgumentNullException(nameof(demand));
         Prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
         Options = Array.AsReadOnly((options ?? throw new ArgumentNullException(nameof(options))).ToArray());
     }
 
-    public NegotiationDemandKind Kind { get; }
+    public NegotiationRuntimeDemand Demand { get; }
+    public NegotiationDemandKind Kind => Demand.Kind;
     public string Prompt { get; }
     public IReadOnlyList<NegotiationDemandOption> Options { get; }
 }
@@ -99,16 +124,16 @@ public sealed record NegotiationRuntimeDemand
         ContentId demandId,
         NegotiationDemandKind kind,
         int weight,
-        int? maccaAmount = null,
+        int? currencyAmount = null,
         NegotiationAvailableItem? item = null)
     {
         if (weight <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(weight), "Negotiation demand weight must be positive.");
         }
-        if (kind == NegotiationDemandKind.Macca && maccaAmount is not > 0)
+        if (kind == NegotiationDemandKind.Currency && currencyAmount is not > 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maccaAmount), "Macca demands require a positive amount.");
+            throw new ArgumentOutOfRangeException(nameof(currencyAmount), "Currency demands require a positive amount.");
         }
         if (kind == NegotiationDemandKind.Item && item is null)
         {
@@ -118,14 +143,14 @@ public sealed record NegotiationRuntimeDemand
         DemandId = demandId;
         Kind = kind;
         Weight = weight;
-        MaccaAmount = maccaAmount;
+        CurrencyAmount = currencyAmount;
         Item = item;
     }
 
     public ContentId DemandId { get; }
     public NegotiationDemandKind Kind { get; }
     public int Weight { get; }
-    public int? MaccaAmount { get; }
+    public int? CurrencyAmount { get; }
     public NegotiationAvailableItem? Item { get; }
 }
 
@@ -174,16 +199,16 @@ public enum NegotiationFamiliarGiftKind
 {
     None,
     Item,
-    Macca,
-    HealParty
+    Currency,
+    RestoreParty
 }
 
 public sealed record NegotiationFamiliarGift(
     NegotiationFamiliarGiftKind Kind,
     string? ItemId = null,
     int Quantity = 0,
-    int Macca = 0,
-    decimal HealPercent = 0m)
+    int Currency = 0,
+    decimal RestorePercent = 0m)
 {
     public static NegotiationFamiliarGift None { get; } = new(NegotiationFamiliarGiftKind.None);
 }
@@ -195,11 +220,11 @@ public sealed record NegotiationSessionRequest
         int actorLevel,
         int targetLevel,
         int actorLuck,
-        int livingEnemyCount,
-        bool isMoonBlocked,
-        bool isTargetAlreadyOwned,
-        bool hasOpenDemonStockSlot,
-        int currentMacca,
+        int activeOpponentCount,
+        IEnumerable<ContentId>? contextIds,
+        bool isTargetFamiliar,
+        bool hasRecruitmentCapacity,
+        int currentCurrency,
         IEnumerable<NegotiationQuestionPrompt>? questions = null,
         IEnumerable<string>? familiarDialogueLines = null,
         string? specificFamiliarDialogue = null,
@@ -208,18 +233,18 @@ public sealed record NegotiationSessionRequest
     {
         if (actorLevel <= 0) throw new ArgumentOutOfRangeException(nameof(actorLevel));
         if (targetLevel <= 0) throw new ArgumentOutOfRangeException(nameof(targetLevel));
-        if (livingEnemyCount <= 0) throw new ArgumentOutOfRangeException(nameof(livingEnemyCount));
-        if (currentMacca < 0) throw new ArgumentOutOfRangeException(nameof(currentMacca));
+        if (activeOpponentCount <= 0) throw new ArgumentOutOfRangeException(nameof(activeOpponentCount));
+        if (currentCurrency < 0) throw new ArgumentOutOfRangeException(nameof(currentCurrency));
 
-        TargetName = string.IsNullOrWhiteSpace(targetName) ? "Demon" : targetName;
+        TargetName = string.IsNullOrWhiteSpace(targetName) ? "Target" : targetName;
         ActorLevel = actorLevel;
         TargetLevel = targetLevel;
         ActorLuck = actorLuck;
-        LivingEnemyCount = livingEnemyCount;
-        IsMoonBlocked = isMoonBlocked;
-        IsTargetAlreadyOwned = isTargetAlreadyOwned;
-        HasOpenDemonStockSlot = hasOpenDemonStockSlot;
-        CurrentMacca = currentMacca;
+        ActiveOpponentCount = activeOpponentCount;
+        ContextIds = Array.AsReadOnly((contextIds ?? []).Distinct().ToArray());
+        IsTargetFamiliar = isTargetFamiliar;
+        HasRecruitmentCapacity = hasRecruitmentCapacity;
+        CurrentCurrency = currentCurrency;
         Questions = Array.AsReadOnly((questions ?? []).ToArray());
         FamiliarDialogueLines = Array.AsReadOnly((familiarDialogueLines ?? []).ToArray());
         SpecificFamiliarDialogue = specificFamiliarDialogue;
@@ -231,11 +256,11 @@ public sealed record NegotiationSessionRequest
     public int ActorLevel { get; }
     public int TargetLevel { get; }
     public int ActorLuck { get; }
-    public int LivingEnemyCount { get; }
-    public bool IsMoonBlocked { get; }
-    public bool IsTargetAlreadyOwned { get; }
-    public bool HasOpenDemonStockSlot { get; }
-    public int CurrentMacca { get; }
+    public int ActiveOpponentCount { get; }
+    public IReadOnlyList<ContentId> ContextIds { get; }
+    public bool IsTargetFamiliar { get; }
+    public bool HasRecruitmentCapacity { get; }
+    public int CurrentCurrency { get; }
     public IReadOnlyList<NegotiationQuestionPrompt> Questions { get; }
     public IReadOnlyList<string> FamiliarDialogueLines { get; }
     public string? SpecificFamiliarDialogue { get; }
@@ -249,7 +274,7 @@ public sealed record NegotiationSessionResult
         NegotiationOutcomeKind outcome,
         NegotiationOutcomeReason reason = NegotiationOutcomeReason.None,
         int moodScore = 0,
-        int maccaSpent = 0,
+        int currencySpent = 0,
         string? itemSpentId = null,
         NegotiationFamiliarGift? familiarGift = null,
         IEnumerable<NegotiationEvent>? events = null)
@@ -257,7 +282,7 @@ public sealed record NegotiationSessionResult
         Outcome = outcome;
         Reason = reason;
         MoodScore = moodScore;
-        MaccaSpent = maccaSpent;
+        CurrencySpent = currencySpent;
         ItemSpentId = itemSpentId;
         FamiliarGift = familiarGift ?? NegotiationFamiliarGift.None;
         Events = Array.AsReadOnly((events ?? []).ToArray());
@@ -266,7 +291,7 @@ public sealed record NegotiationSessionResult
     public NegotiationOutcomeKind Outcome { get; }
     public NegotiationOutcomeReason Reason { get; }
     public int MoodScore { get; }
-    public int MaccaSpent { get; }
+    public int CurrencySpent { get; }
     public string? ItemSpentId { get; }
     public NegotiationFamiliarGift FamiliarGift { get; }
     public IReadOnlyList<NegotiationEvent> Events { get; }
@@ -281,13 +306,42 @@ public interface INegotiationSessionService
         CancellationToken cancellationToken = default);
 }
 
+public sealed record NegotiationGateDecision(
+    bool IsAllowed,
+    NegotiationOutcomeReason RejectionReason = NegotiationOutcomeReason.PolicyBlocked);
+
+public interface INegotiationSessionPolicy
+{
+    int QuestionLimit { get; }
+    int PositiveMoodThreshold { get; }
+    int NeutralMoodThreshold { get; }
+
+    NegotiationGateDecision EvaluateGate(NegotiationSessionRequest request);
+    bool CanBegin(NegotiationSessionRequest request, IRandomSource random);
+    NegotiationFamiliarGift SelectFamiliarGift(NegotiationSessionRequest request, IRandomSource random);
+    IReadOnlyList<NegotiationRuntimeDemand> CreateFallbackDemands(
+        NegotiationSessionRequest request,
+        IRandomSource random);
+    bool ResolveDemandlessSuccess(NegotiationSessionRequest request, IRandomSource random);
+}
+
 public sealed class NegotiationSessionService : INegotiationSessionService
 {
     private readonly IRandomSource _random;
+    private readonly INegotiationSessionPolicy _policy;
 
-    public NegotiationSessionService(IRandomSource random)
+    public NegotiationSessionService(IRandomSource random, INegotiationSessionPolicy policy)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
+        if (_policy.QuestionLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(policy), "Negotiation question limit must be positive.");
+        }
+        if (_policy.PositiveMoodThreshold <= _policy.NeutralMoodThreshold)
+        {
+            throw new ArgumentException("Positive mood threshold must exceed the neutral mood threshold.", nameof(policy));
+        }
     }
 
     public async ValueTask<NegotiationSessionResult> RunAsync(
@@ -300,9 +354,8 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         ArgumentNullException.ThrowIfNull(commands);
 
         var emitted = new List<NegotiationEvent>();
-        async ValueTask EmitAsync(NegotiationEventKind kind, string message)
+        async ValueTask EmitAsync(NegotiationEvent negotiationEvent)
         {
-            var negotiationEvent = new NegotiationEvent(kind, message);
             emitted.Add(negotiationEvent);
             if (events is not null)
             {
@@ -310,44 +363,51 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             }
         }
 
-        if (request.IsMoonBlocked)
+        NegotiationGateDecision gate = _policy.EvaluateGate(request);
+        if (!gate.IsAllowed)
         {
-            await EmitAsync(
+            await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.Failure,
-                $"The {request.TargetName} is agitated due to the Full Moon and cannot be reasoned with!");
-            return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.MoonBlocked);
+                NegotiationEventCode.PolicyBlocked,
+                "Negotiation is unavailable under the active host policy."));
+            return Result(NegotiationOutcomeKind.Failure, gate.RejectionReason);
         }
 
-        if (request.IsTargetAlreadyOwned)
+        if (request.IsTargetFamiliar)
         {
             return await ResolveFamiliarAsync(request, emitted, EmitAsync).ConfigureAwait(false);
         }
 
-        if (!request.HasOpenDemonStockSlot)
+        if (!request.HasRecruitmentCapacity)
         {
-            await EmitAsync(NegotiationEventKind.Failure, "Your Demon Stock is full!");
-            return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.StockFull);
+            await EmitAsync(new NegotiationEvent(
+                NegotiationEventKind.Failure,
+                NegotiationEventCode.CapacityUnavailable,
+                "Recruitment capacity is unavailable."));
+            return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.CapacityUnavailable);
         }
 
-        if (!CheckNegotiationChance(request.LivingEnemyCount))
+        if (!_policy.CanBegin(request, _random))
         {
-            await EmitAsync(
+            await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.Failure,
-                $"{request.TargetName} is on guard and refuses to talk!");
+                NegotiationEventCode.OpeningRefused,
+                "The target refused to begin negotiations."));
             return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.GuardRefusal);
         }
 
         if (request.Questions.Count == 0)
         {
-            await EmitAsync(
+            await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.Failure,
-                $"{request.TargetName} seems unresponsive...");
+                NegotiationEventCode.MissingQuestions,
+                "No negotiation questions are available."));
             return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.MissingQuestions);
         }
 
         int moodScore = 0;
         var questions = request.Questions.ToList();
-        for (int i = 0; i < 3 && questions.Count > 0; i++)
+        for (int i = 0; i < _policy.QuestionLimit && questions.Count > 0; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             int questionIndex = _random.NextInt32(0, questions.Count);
@@ -358,9 +418,10 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 .ConfigureAwait(false);
             if (answer.Cancelled)
             {
-                await EmitAsync(
+                await EmitAsync(new NegotiationEvent(
                     NegotiationEventKind.Failure,
-                    $"{request.TargetName} seems disappointed...");
+                    NegotiationEventCode.Cancelled,
+                    "Negotiation was cancelled."));
                 return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.Cancelled, moodScore);
             }
 
@@ -372,40 +433,45 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             moodScore += question.Answers[answer.SelectedIndex].Score;
         }
 
-        if (moodScore >= 4)
+        if (moodScore >= _policy.PositiveMoodThreshold)
         {
-            await EmitAsync(
+            await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.MoodPositive,
-                $"{request.TargetName} seems pleased with your answers.");
+                NegotiationEventCode.MoodPositive,
+                "The target responded positively."));
             return await ResolveDemandsAsync(request, commands, emitted, EmitAsync, moodScore, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        if (moodScore > 0)
+        if (moodScore >= _policy.NeutralMoodThreshold)
         {
-            await EmitAsync(
+            await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.MoodNeutral,
-                $"{request.TargetName} is considering your words...");
+                NegotiationEventCode.MoodNeutral,
+                "The target ended the exchange without joining."));
             return Result(NegotiationOutcomeKind.Flee, NegotiationOutcomeReason.MoodFlee, moodScore);
         }
 
-        await EmitAsync(NegotiationEventKind.MoodNegative, $"{request.TargetName} grows angry!");
+        await EmitAsync(new NegotiationEvent(
+            NegotiationEventKind.MoodNegative,
+            NegotiationEventCode.MoodNegative,
+            "The target responded negatively."));
         return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.MoodFailure, moodScore);
 
         NegotiationSessionResult Result(
             NegotiationOutcomeKind outcome,
             NegotiationOutcomeReason reason,
             int score = 0,
-            int maccaSpent = 0,
+            int currencySpent = 0,
             string? itemSpent = null,
             NegotiationFamiliarGift? gift = null) =>
-            new(outcome, reason, score, maccaSpent, itemSpent, gift, emitted);
+            new(outcome, reason, score, currencySpent, itemSpent, gift, emitted);
     }
 
     private async ValueTask<NegotiationSessionResult> ResolveFamiliarAsync(
         NegotiationSessionRequest request,
         List<NegotiationEvent> emitted,
-        Func<NegotiationEventKind, string, ValueTask> emit)
+        Func<NegotiationEvent, ValueTask> emit)
     {
         string dialogue = $"{request.TargetName} looks at you with a sense of familiarity...";
         if (!string.IsNullOrWhiteSpace(request.SpecificFamiliarDialogue))
@@ -417,61 +483,46 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             dialogue = $"{request.TargetName}: \"{request.FamiliarDialogueLines[_random.NextInt32(0, request.FamiliarDialogueLines.Count)]}\"";
         }
 
-        await emit(NegotiationEventKind.FamiliarDialogue, dialogue).ConfigureAwait(false);
+        await emit(new NegotiationEvent(
+            NegotiationEventKind.FamiliarDialogue,
+            NegotiationEventCode.FamiliarDialogue,
+            dialogue)).ConfigureAwait(false);
 
-        int roll = _random.NextInt32(0, 100);
-        NegotiationFamiliarGift gift;
-        if (roll < 50)
+        NegotiationFamiliarGift gift = _policy.SelectFamiliarGift(request, _random);
+        string giftMessage = gift.Kind switch
         {
-            await emit(
-                NegotiationEventKind.Information,
-                $"{request.TargetName} gives you a Medicine and departs.").ConfigureAwait(false);
-            gift = new NegotiationFamiliarGift(NegotiationFamiliarGiftKind.Item, ItemId: "101", Quantity: 1);
-        }
-        else if (roll < 80)
-        {
-            int macca = request.TargetLevel * 20;
-            await emit(
-                NegotiationEventKind.Information,
-                $"{request.TargetName} gives you {macca} Macca and departs.").ConfigureAwait(false);
-            gift = new NegotiationFamiliarGift(NegotiationFamiliarGiftKind.Macca, Macca: macca);
-        }
-        else
-        {
-            await emit(
-                NegotiationEventKind.Information,
-                $"{request.TargetName} casts a gentle light upon your party before departing.").ConfigureAwait(false);
-            gift = new NegotiationFamiliarGift(NegotiationFamiliarGiftKind.HealParty, HealPercent: 0.15m);
-        }
+            NegotiationFamiliarGiftKind.Item => "The familiar target provided an item and departed.",
+            NegotiationFamiliarGiftKind.Currency => "The familiar target provided currency and departed.",
+            NegotiationFamiliarGiftKind.RestoreParty => "The familiar target restored the party and departed.",
+            _ => "The familiar target departed."
+        };
+        await emit(new NegotiationEvent(
+            NegotiationEventKind.Information,
+            NegotiationEventCode.FamiliarGift,
+            giftMessage,
+            FamiliarGift: gift)).ConfigureAwait(false);
 
         return new NegotiationSessionResult(
             NegotiationOutcomeKind.FamiliarFlee,
-            NegotiationOutcomeReason.FamiliarDemon,
+            NegotiationOutcomeReason.FamiliarTarget,
             familiarGift: gift,
             events: emitted);
-    }
-
-    private bool CheckNegotiationChance(int livingEnemyCount)
-    {
-        if (livingEnemyCount <= 1) return true;
-        if (livingEnemyCount == 2) return _random.NextInt32(0, 100) < 75;
-        if (livingEnemyCount == 3) return _random.NextInt32(0, 100) < 50;
-        return _random.NextInt32(0, 100) < 25;
     }
 
     private async ValueTask<NegotiationSessionResult> ResolveDemandsAsync(
         NegotiationSessionRequest request,
         INegotiationCommandSource commands,
         List<NegotiationEvent> emitted,
-        Func<NegotiationEventKind, string, ValueTask> emit,
+        Func<NegotiationEvent, ValueTask> emit,
         int moodScore,
         CancellationToken cancellationToken)
     {
         if (request.TargetLevel > request.ActorLevel)
         {
-            await emit(
-                NegotiationEventKind.Warning,
-                $"{request.TargetName}: \"You have courage, but you are not yet worthy to command me. Perhaps we shall meet again.\"")
+            await emit(new NegotiationEvent(
+                    NegotiationEventKind.Warning,
+                    NegotiationEventCode.TargetLevelTooHigh,
+                    "The target cannot be recruited at the actor's current level."))
                 .ConfigureAwait(false);
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Flee,
@@ -480,185 +531,116 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 events: emitted);
         }
 
-        if (request.Demands.Count > 0)
+        IReadOnlyList<NegotiationRuntimeDemand> demands = request.Demands.Count > 0
+            ? [SelectAuthoredDemand(request.Demands)]
+            : _policy.CreateFallbackDemands(request, _random);
+        if (demands.Count > 0)
         {
-            return await ResolveAuthoredDemandAsync(
-                request,
-                commands,
-                emitted,
-                emit,
-                moodScore,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        double baseCost = Math.Pow(request.TargetLevel, 2) * 10;
-        double luckDiscount = baseCost * (request.ActorLuck / 100.0);
-        int maccaDemand = (int)Math.Max(request.TargetLevel * 5, baseCost - luckDiscount);
-        NegotiationAvailableItem? itemDemand = request.AvailableHealingItems.FirstOrDefault();
-        bool demandsItem = itemDemand is not null && _random.NextInt32(0, 100) < 50;
-
-        await emit(
-            NegotiationEventKind.DemandIntro,
-            $"{request.TargetName}: \"Your words are intriguing. But talk is cheap.\"")
-            .ConfigureAwait(false);
-
-        int maccaSpent = 0;
-        if (maccaDemand > 0)
-        {
-            if (request.CurrentMacca < maccaDemand)
-            {
-                await emit(
-                    NegotiationEventKind.Failure,
-                    $"The required donation of {maccaDemand} Macca is missing.").ConfigureAwait(false);
-                return new NegotiationSessionResult(
-                    NegotiationOutcomeKind.Failure,
-                    NegotiationOutcomeReason.InsufficientMacca,
-                    moodScore,
-                    events: emitted);
-            }
-
-            var prompt = new NegotiationDemandPrompt(
-                NegotiationDemandKind.Macca,
-                $"{request.TargetName}: \"A gift of {maccaDemand} Macca should suffice.\"",
-                [
-                    new NegotiationDemandOption(NegotiationDemandDecision.Accept, $"Give {maccaDemand} Macca"),
-                    new NegotiationDemandOption(NegotiationDemandDecision.Refuse, "Refuse")
-                ]);
-            NegotiationDemandSelection choice = await commands.ReadDemandAsync(prompt, cancellationToken)
+            await emit(new NegotiationEvent(
+                    NegotiationEventKind.DemandIntro,
+                    NegotiationEventCode.DemandIntro,
+                    "The target requests a concession before recruitment."))
                 .ConfigureAwait(false);
-            if (choice.Cancelled || choice.Decision != NegotiationDemandDecision.Accept)
-            {
-                return new NegotiationSessionResult(
-                    NegotiationOutcomeKind.Failure,
-                    NegotiationOutcomeReason.MaccaRefused,
-                    moodScore,
-                    events: emitted);
-            }
 
-            maccaSpent = maccaDemand;
-            if (!demandsItem || itemDemand is null)
+            int currencySpent = 0;
+            string? itemSpentId = null;
+            foreach (NegotiationRuntimeDemand demand in demands)
             {
-                return new NegotiationSessionResult(
-                    NegotiationOutcomeKind.Success,
-                    NegotiationOutcomeReason.None,
-                    moodScore,
-                    maccaSpent,
-                    events: emitted);
-            }
-        }
+                NegotiationSessionResult resolution = demand.Kind switch
+                {
+                    NegotiationDemandKind.Currency => await ResolveCurrencyDemandAsync(
+                        request,
+                        commands,
+                        emit,
+                        emitted,
+                        demand,
+                        moodScore,
+                        currencySpent,
+                        cancellationToken).ConfigureAwait(false),
+                    NegotiationDemandKind.Item => await ResolveItemDemandAsync(
+                        request,
+                        commands,
+                        emitted,
+                        demand,
+                        moodScore,
+                        cancellationToken).ConfigureAwait(false),
+                    _ => throw new InvalidOperationException($"Unsupported negotiation demand kind '{demand.Kind}'.")
+                };
 
-        if (demandsItem && itemDemand is not null)
-        {
-            var prompt = new NegotiationDemandPrompt(
-                NegotiationDemandKind.Item,
-                $"{request.TargetName}: \"A {itemDemand.DisplayName} would be lovely.\"",
-                [
-                    new NegotiationDemandOption(NegotiationDemandDecision.Accept, $"Give {itemDemand.DisplayName}"),
-                    new NegotiationDemandOption(NegotiationDemandDecision.Refuse, "Refuse")
-                ]);
-            NegotiationDemandSelection choice = await commands.ReadDemandAsync(prompt, cancellationToken)
-                .ConfigureAwait(false);
-            if (choice.Cancelled || choice.Decision != NegotiationDemandDecision.Accept)
-            {
-                return new NegotiationSessionResult(
-                    NegotiationOutcomeKind.Failure,
-                    NegotiationOutcomeReason.ItemRefused,
-                    moodScore,
-                    maccaSpent,
-                    events: emitted);
+                currencySpent = checked(currencySpent + resolution.CurrencySpent);
+                itemSpentId = resolution.ItemSpentId ?? itemSpentId;
+                if (resolution.Outcome != NegotiationOutcomeKind.Success)
+                {
+                    return new NegotiationSessionResult(
+                        resolution.Outcome,
+                        resolution.Reason,
+                        moodScore,
+                        currencySpent,
+                        itemSpentId,
+                        events: emitted);
+                }
             }
 
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Success,
                 NegotiationOutcomeReason.None,
                 moodScore,
-                maccaSpent,
-                itemDemand.ItemId,
+                currencySpent,
+                itemSpentId,
                 events: emitted);
         }
 
-        if (_random.NextInt32(0, 100) < 50)
+        if (_policy.ResolveDemandlessSuccess(request, _random))
         {
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Success,
                 NegotiationOutcomeReason.None,
                 moodScore,
-                maccaSpent,
                 events: emitted);
         }
 
-        await emit(NegotiationEventKind.Warning, $"{request.TargetName}: \"Hmph. You waste my time.\"")
+        await emit(new NegotiationEvent(
+                NegotiationEventKind.Warning,
+                NegotiationEventCode.DemandlessRejected,
+                "The target ended negotiations without an agreement."))
             .ConfigureAwait(false);
         return new NegotiationSessionResult(
             NegotiationOutcomeKind.Trick,
             NegotiationOutcomeReason.Trick,
             moodScore,
-            maccaSpent,
             events: emitted);
     }
 
-    private async ValueTask<NegotiationSessionResult> ResolveAuthoredDemandAsync(
+    private async ValueTask<NegotiationSessionResult> ResolveCurrencyDemandAsync(
         NegotiationSessionRequest request,
         INegotiationCommandSource commands,
-        List<NegotiationEvent> emitted,
-        Func<NegotiationEventKind, string, ValueTask> emit,
-        int moodScore,
-        CancellationToken cancellationToken)
-    {
-        NegotiationRuntimeDemand demand = SelectAuthoredDemand(request.Demands);
-        await emit(
-            NegotiationEventKind.DemandIntro,
-            $"{request.TargetName}: \"Your words are intriguing. But talk is cheap.\"")
-            .ConfigureAwait(false);
-
-        return demand.Kind switch
-        {
-            NegotiationDemandKind.Macca => await ResolveAuthoredMaccaDemandAsync(
-                request,
-                commands,
-                emit,
-                emitted,
-                demand,
-                moodScore,
-                cancellationToken).ConfigureAwait(false),
-            NegotiationDemandKind.Item => await ResolveAuthoredItemDemandAsync(
-                request,
-                commands,
-                emitted,
-                demand,
-                moodScore,
-                cancellationToken).ConfigureAwait(false),
-            _ => throw new InvalidOperationException($"Unsupported negotiation demand kind '{demand.Kind}'.")
-        };
-    }
-
-    private async ValueTask<NegotiationSessionResult> ResolveAuthoredMaccaDemandAsync(
-        NegotiationSessionRequest request,
-        INegotiationCommandSource commands,
-        Func<NegotiationEventKind, string, ValueTask> emit,
+        Func<NegotiationEvent, ValueTask> emit,
         IReadOnlyList<NegotiationEvent> emitted,
         NegotiationRuntimeDemand demand,
         int moodScore,
+        int alreadyCommittedCurrency,
         CancellationToken cancellationToken)
     {
-        int maccaDemand = demand.MaccaAmount!.Value;
-        if (request.CurrentMacca < maccaDemand)
+        int currencyDemand = demand.CurrencyAmount!.Value;
+        if (currencyDemand > request.CurrentCurrency - alreadyCommittedCurrency)
         {
-            await emit(
+            await emit(new NegotiationEvent(
                 NegotiationEventKind.Failure,
-                $"The required donation of {maccaDemand} Macca is missing.").ConfigureAwait(false);
+                NegotiationEventCode.InsufficientCurrency,
+                $"The required currency amount of {currencyDemand} is unavailable.",
+                Amount: currencyDemand)).ConfigureAwait(false);
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Failure,
-                NegotiationOutcomeReason.InsufficientMacca,
+                NegotiationOutcomeReason.InsufficientCurrency,
                 moodScore,
                 events: emitted);
         }
 
         var prompt = new NegotiationDemandPrompt(
-            NegotiationDemandKind.Macca,
-            $"{request.TargetName}: \"A gift of {maccaDemand} Macca should suffice.\"",
+            demand,
+            $"Provide {currencyDemand} currency?",
             [
-                new NegotiationDemandOption(NegotiationDemandDecision.Accept, $"Give {maccaDemand} Macca"),
+                new NegotiationDemandOption(NegotiationDemandDecision.Accept, $"Provide {currencyDemand}"),
                 new NegotiationDemandOption(NegotiationDemandDecision.Refuse, "Refuse")
             ]);
         NegotiationDemandSelection choice = await commands.ReadDemandAsync(prompt, cancellationToken)
@@ -667,7 +649,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         {
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Failure,
-                NegotiationOutcomeReason.MaccaRefused,
+                NegotiationOutcomeReason.CurrencyRefused,
                 moodScore,
                 events: emitted);
         }
@@ -676,11 +658,11 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             NegotiationOutcomeKind.Success,
             NegotiationOutcomeReason.None,
             moodScore,
-            maccaDemand,
+            currencyDemand,
             events: emitted);
     }
 
-    private async ValueTask<NegotiationSessionResult> ResolveAuthoredItemDemandAsync(
+    private async ValueTask<NegotiationSessionResult> ResolveItemDemandAsync(
         NegotiationSessionRequest request,
         INegotiationCommandSource commands,
         IReadOnlyList<NegotiationEvent> emitted,
@@ -690,7 +672,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
     {
         NegotiationAvailableItem itemDemand = demand.Item!;
         var prompt = new NegotiationDemandPrompt(
-            NegotiationDemandKind.Item,
+            demand,
             $"{request.TargetName}: \"A {itemDemand.DisplayName} would be lovely.\"",
             [
                 new NegotiationDemandOption(NegotiationDemandDecision.Accept, $"Give {itemDemand.DisplayName}"),
@@ -843,16 +825,16 @@ public sealed record BattleRewardResult
 {
     public BattleRewardResult(
         int totalExperience,
-        int totalMacca,
+        int totalCurrency,
         IEnumerable<BattleRewardApplication>? applications = null)
     {
         TotalExperience = totalExperience;
-        TotalMacca = totalMacca;
+        TotalCurrency = totalCurrency;
         Applications = Array.AsReadOnly((applications ?? []).ToArray());
     }
 
     public int TotalExperience { get; }
-    public int TotalMacca { get; }
+    public int TotalCurrency { get; }
     public IReadOnlyList<BattleRewardApplication> Applications { get; }
 }
 
@@ -879,7 +861,7 @@ public sealed class BattleRewardService : IBattleRewardService
         }
 
         int totalExperience = request.Enemies.Sum(CalculateExperienceYield);
-        int totalMacca = request.Enemies.Sum(CalculateMaccaYield);
+        int totalCurrency = request.Enemies.Sum(CalculateCurrencyYield);
         var applications = new List<BattleRewardApplication>();
         foreach (BattleRewardRecipientSnapshot recipient in request.Recipients.Where(recipient => recipient.IsAlive))
         {
@@ -896,7 +878,7 @@ public sealed class BattleRewardService : IBattleRewardService
             }
         }
 
-        return new BattleRewardResult(totalExperience, totalMacca, applications);
+        return new BattleRewardResult(totalExperience, totalCurrency, applications);
     }
 
     private int CalculateExperienceYield(BattleRewardEnemySnapshot enemy) =>
@@ -904,8 +886,8 @@ public sealed class BattleRewardService : IBattleRewardService
             enemy.Level,
             Stats(enemy)));
 
-    private int CalculateMaccaYield(BattleRewardEnemySnapshot enemy) =>
-        _ruleset.CalculateMaccaYield(new(
+    private int CalculateCurrencyYield(BattleRewardEnemySnapshot enemy) =>
+        _ruleset.CalculateCurrencyYield(new(
             enemy.Level,
             Stats(enemy)));
 

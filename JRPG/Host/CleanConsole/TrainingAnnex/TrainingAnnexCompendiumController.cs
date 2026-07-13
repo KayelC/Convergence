@@ -216,7 +216,7 @@ internal sealed class TrainingAnnexCompendiumController
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
         await _eventSink.PublishAsync(
-            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Macca}->{recall.AfterWallet.Macca} M; Demon stock {recall.BeforePartyStock.DemonStock.Count}->{recall.AfterPartyStock.DemonStock.Count}.",
+            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} M; Demon stock {recall.BeforePartyStock.DemonStock.Count}->{recall.AfterPartyStock.DemonStock.Count}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexCompendiumInteractionResult(
             compendium,
@@ -362,8 +362,8 @@ internal sealed class TrainingAnnexCompendiumController
             registration.Code,
             null,
             0,
-            wallet.Macca,
-            wallet.Macca,
+            wallet.Balance,
+            wallet.Balance,
             partyStock.DemonStock.Count,
             partyStock.DemonStock.Count,
             ImportedElementCount(imported, entityId),
@@ -382,8 +382,8 @@ internal sealed class TrainingAnnexCompendiumController
             null,
             recall.Code,
             recall.Cost,
-            recall.BeforeWallet.Macca,
-            recall.AfterWallet.Macca,
+            recall.BeforeWallet.Balance,
+            recall.AfterWallet.Balance,
             recall.BeforePartyStock.DemonStock.Count,
             recall.AfterPartyStock.DemonStock.Count,
             ImportedElementCount(imported, entityId),

@@ -75,7 +75,7 @@ internal sealed class TrainingAnnexShopController
         var equipmentEvidence = new List<TrainingAnnexEquipmentChangeEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Shop opened: {shop.DisplayName}; wallet {wallet.Macca} M.",
+            $"Shop opened: {shop.DisplayName}; wallet {wallet.Balance} M.",
             cancellationToken).ConfigureAwait(false);
         foreach (RuntimeShopOfferResolutionDiagnostic diagnostic in offerDiagnostics)
         {
@@ -433,7 +433,7 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop,
         RuntimeWalletSnapshot wallet) =>
         new(
-            $"{shop.DisplayName} - Wallet {wallet.Macca} M",
+            $"{shop.DisplayName} - Wallet {wallet.Balance} M",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ShopBuy,
@@ -595,8 +595,8 @@ internal sealed class TrainingAnnexShopController
             isPurchase,
             result.Code,
             result.Price,
-            result.BeforeWallet.Macca,
-            result.AfterWallet.Macca,
+            result.BeforeWallet.Balance,
+            result.AfterWallet.Balance,
             OwnedCount(result.BeforeInventory, offer),
             OwnedCount(result.AfterInventory, offer),
             offer.EquipmentSlot);
@@ -635,7 +635,7 @@ internal sealed class TrainingAnnexShopController
             ? $"quantity {result.BeforeInventory.GetQuantity(offer.Runtime.ContentId)}->{inventory.GetQuantity(offer.Runtime.ContentId)}"
             : $"owned {OwnedCount(result.BeforeInventory, offer.Runtime)}->{OwnedCount(inventory, offer.Runtime)}";
         await _eventSink.PublishAsync(
-            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} M; wallet {result.BeforeWallet.Macca}->{result.AfterWallet.Macca}; {owned}.",
+            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} M; wallet {result.BeforeWallet.Balance}->{result.AfterWallet.Balance}; {owned}.",
             cancellationToken).ConfigureAwait(false);
     }
 }

@@ -137,7 +137,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
         Assert.Equal(0, summary.ManualSaveCount);
@@ -477,7 +477,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(50, negotiation.WalletAfter);
         Assert.Equal(2, negotiation.DemonStockCountBefore);
         Assert.Equal(3, negotiation.DemonStockCountAfter);
-        Assert.Equal(50, summary.Wallet.Macca);
+        Assert.Equal(50, summary.Wallet.Balance);
         Assert.Contains(
             summary.PartyStock.DemonStock,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
@@ -657,7 +657,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1_150, recall.WalletAfter);
         Assert.Equal(2, recall.DemonStockBefore);
         Assert.Equal(3, recall.DemonStockAfter);
-        Assert.Equal(1_150, summary.Wallet.Macca);
+        Assert.Equal(1_150, summary.Wallet.Balance);
         Assert.Contains(summary.PartyStock.DemonStock, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
@@ -683,7 +683,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexCompendiumEvidence recall = summary.CompendiumEvidence[1];
         Assert.False(recall.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.InsufficientCurrency, recall.RecallCode);
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(2, summary.PartyStock.DemonStock.Count);
         Assert.DoesNotContain(summary.PartyStock.DemonStock, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1"));
@@ -732,7 +732,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(1, summary.ManualSaveCount);
         Assert.Equal(1, summary.ManualLoadCount);
-        Assert.Equal(1_150, summary.Wallet.Macca);
+        Assert.Equal(1_150, summary.Wallet.Balance);
         Assert.Contains(summary.PartyStock.DemonStock, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
@@ -1051,7 +1051,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(30, negotiation.MaccaSpent);
         Assert.Equal(100, negotiation.WalletBefore);
         Assert.Equal(70, negotiation.WalletAfter);
-        Assert.Equal(70, summary.Wallet.Macca);
+        Assert.Equal(70, summary.Wallet.Balance);
         Assert.Contains(
             "Recruitment applied: Bramble Runner joined Demon stock; wallet 100->70 M; Demon stock 2->3.",
             output.ToString(),
@@ -1075,7 +1075,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
         Assert.Equal(NegotiationOutcomeKind.Failure, negotiation.Outcome);
-        Assert.Equal(NegotiationOutcomeReason.MaccaRefused, negotiation.Reason);
+        Assert.Equal(NegotiationOutcomeReason.CurrencyRefused, negotiation.Reason);
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
         Assert.Null(negotiation.StockTransitionCode);
@@ -1083,7 +1083,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(100, negotiation.WalletAfter);
         Assert.Equal(2, negotiation.DemonStockCountBefore);
         Assert.Equal(2, negotiation.DemonStockCountAfter);
-        Assert.Equal(100, summary.Wallet.Macca);
+        Assert.Equal(100, summary.Wallet.Balance);
         Assert.DoesNotContain(
             summary.PartyStock.DemonStock,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
@@ -1107,7 +1107,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
         Assert.Equal(NegotiationOutcomeKind.Failure, negotiation.Outcome);
-        Assert.Equal(NegotiationOutcomeReason.InsufficientMacca, negotiation.Reason);
+        Assert.Equal(NegotiationOutcomeReason.InsufficientCurrency, negotiation.Reason);
         Assert.Equal(0, negotiation.MaccaSpent);
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
@@ -1116,7 +1116,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(40, negotiation.WalletAfter);
         Assert.Equal(2, negotiation.DemonStockCountBefore);
         Assert.Equal(2, negotiation.DemonStockCountAfter);
-        Assert.Equal(40, summary.Wallet.Macca);
+        Assert.Equal(40, summary.Wallet.Balance);
         Assert.DoesNotContain(
             summary.Commands,
             command => command == CleanTrainingAnnexPlayCommand.SelectNegotiationDemand);
@@ -1149,7 +1149,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexNegotiationEvidence second = summary.Negotiations[1];
         Assert.True(first.Recruited);
         Assert.Equal(NegotiationOutcomeKind.FamiliarFlee, second.Outcome);
-        Assert.Equal(NegotiationOutcomeReason.FamiliarDemon, second.Reason);
+        Assert.Equal(NegotiationOutcomeReason.FamiliarTarget, second.Reason);
         Assert.False(second.Recruited);
         Assert.Equal(3, second.DemonStockCountBefore);
         Assert.Equal(3, second.DemonStockCountAfter);
@@ -1349,21 +1349,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.AfterBlinkingIcons == 0);
         Assert.NotNull(summary.PreparedBattleRewardPreview);
         Assert.Equal(1, summary.PreparedBattleRewardPreview!.TotalExperience);
-        Assert.Equal(14, summary.PreparedBattleRewardPreview.TotalMacca);
+        Assert.Equal(14, summary.PreparedBattleRewardPreview.TotalCurrency);
         Assert.NotNull(summary.AppliedBattleReward);
         Assert.Equal(1, summary.AppliedBattleReward!.TotalExperience);
-        Assert.Equal(14, summary.AppliedBattleReward.TotalMacca);
+        Assert.Equal(14, summary.AppliedBattleReward.TotalCurrency);
         Assert.Equal(0, summary.AppliedBattleRewardLevelUpCount);
         WalletTransactionResult walletTransaction = Assert.IsType<WalletTransactionResult>(
             summary.AppliedWalletTransaction);
         Assert.True(walletTransaction.Applied);
-        Assert.Equal(0, walletTransaction.Before.Macca);
-        Assert.Equal(14, walletTransaction.After.Macca);
+        Assert.Equal(0, walletTransaction.Before.Balance);
+        Assert.Equal(14, walletTransaction.After.Balance);
         Assert.True(summary.GrowthApplied);
         Assert.Equal(0, summary.LevelUpCount);
         Assert.Equal(1, summary.PlayerProgression.Experience);
         Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
-        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(14, summary.Wallet.Balance);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_exp")]);
         Assert.Equal(14, summary.SessionProgress.Counters[ContentId.Parse("training_annex_macca")]);
@@ -1400,7 +1400,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
         Assert.Null(summary.AppliedBattleReward);
         Assert.Null(summary.AppliedWalletTransaction);
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
         Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
@@ -2521,7 +2521,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, transaction.OwnedCountBefore);
         Assert.Equal(2, transaction.OwnedCountAfter);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(52, summary.Wallet.Macca);
+        Assert.Equal(52, summary.Wallet.Balance);
         Assert.Equal(2, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(
             [
@@ -2565,7 +2565,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(EquipmentSlot.Armor, equipment.Slot);
         Assert.True(equipment.Applied);
         Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
-        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(14, summary.Wallet.Balance);
         Assert.Contains(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
         Assert.Equal(Qualified("padded_jacket"), summary.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
         Assert.Contains(EquipmentSlot.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
@@ -2615,7 +2615,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.DoesNotContain(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
 
@@ -2657,7 +2657,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("annex_tonic"), diagnostic.ContentId);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(100, summary.Wallet.Macca);
+        Assert.Equal(100, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
 
         GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
@@ -2700,7 +2700,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(27, transaction.WalletAfter);
         Assert.Equal(1, transaction.OwnedCountBefore);
         Assert.Equal(0, transaction.OwnedCountAfter);
-        Assert.Equal(27, summary.Wallet.Macca);
+        Assert.Equal(27, summary.Wallet.Balance);
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
 
         GameIoMenuCall sellMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Sell");
@@ -2749,7 +2749,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(restoration.HasAilmentAfter);
         Assert.False(restoration.HadEncounterPersistenceBefore);
         Assert.False(restoration.HasEncounterPersistenceAfter);
-        Assert.Equal(10, summary.Wallet.Macca);
+        Assert.Equal(10, summary.Wallet.Balance);
         Assert.Equal(80, Resource(summary, "hp").Current);
         Assert.Equal(
             [
@@ -2811,7 +2811,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(restoration.HasAilmentAfter);
         Assert.True(restoration.HadEncounterPersistenceBefore);
         Assert.False(restoration.HasEncounterPersistenceAfter);
-        Assert.Equal(10, result.Wallet.Macca);
+        Assert.Equal(10, result.Wallet.Balance);
         Assert.Equal(80, state.GetRequiredResource(StandardProgressionIds.Hp).Current);
         Assert.Empty(state.Ailments);
         Assert.False(state.IsGuarding);
@@ -2840,7 +2840,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(70, Resource(summary, "hp").Current);
 
         GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
@@ -2873,7 +2873,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(20, summary.Wallet.Macca);
+        Assert.Equal(20, summary.Wallet.Balance);
         Assert.Equal(80, Resource(summary, "hp").Current);
 
         GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
@@ -3093,7 +3093,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(2, summary.PlayerProgression.UnspentStatPoints);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(0, summary.Wallet.Macca);
+        Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
         Assert.Empty(summary.BattleKnowledge.ElementalAffinities);
         Assert.Equal(
@@ -3513,7 +3513,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         Assert.False(result.Applied);
         Assert.Equal(before.Progression, roster.Player.Actor.State.ToSnapshot().Progression);
-        Assert.Equal(0, result.Wallet.Macca);
+        Assert.Equal(0, result.Wallet.Balance);
         Assert.False(result.WalletTransaction.Applied);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.WalletTransaction.Code);
         Assert.Same(result.WalletTransaction.Before, result.WalletTransaction.After);
@@ -3544,9 +3544,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         WalletTransactionResult transaction = Assert.IsType<WalletTransactionResult>(
             summary.AppliedWalletTransaction);
         Assert.True(transaction.Applied);
-        Assert.Equal(100, transaction.Before.Macca);
-        Assert.Equal(114, transaction.After.Macca);
-        Assert.Equal(114, summary.Wallet.Macca);
+        Assert.Equal(100, transaction.Before.Balance);
+        Assert.Equal(114, transaction.After.Balance);
+        Assert.Equal(114, summary.Wallet.Balance);
         Assert.Contains("wallet 100->114", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -3578,7 +3578,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
         Assert.Equal(1, summary.PlayerProgression.Experience);
         Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
-        Assert.Equal(14, summary.Wallet.Macca);
+        Assert.Equal(14, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
@@ -3824,14 +3824,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private sealed class RejectingEconomyTransactionService : IEconomyTransactionService
     {
-        public WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount) =>
+        public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
             new(
                 ResourceTransactionCode.InsufficientCurrency,
                 snapshot,
                 snapshot,
                 [new ResourceTransactionDiagnostic(ResourceTransactionCode.InsufficientCurrency, "blocked for test")]);
 
-        public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount) =>
+        public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount) =>
             new(
                 ResourceTransactionCode.InsufficientCurrency,
                 snapshot,

@@ -192,7 +192,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return new(
                 NegotiationPresentationKind.Shown,
                 result,
-                $"Gained {result.TotalExperience} EXP and {result.TotalMacca} Macca.");
+                $"Gained {result.TotalExperience} EXP and {result.TotalCurrency} Macca.");
         }
     }
 
@@ -241,14 +241,14 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var options = prompt.Options.Select(option => option.Label).ToArray();
-            int choice = _io.RenderMenu(prompt.Prompt, options.ToList(), 0);
+            (string header, string[] options) = LegacyDemandPresentation(prompt, _targetName);
+            int choice = _io.RenderMenu(header, options.ToList(), 0);
             NegotiationDemandSelection selection = choice < 0
                 ? NegotiationDemandSelection.Cancel()
                 : NegotiationDemandSelection.Selected(prompt.Options[choice].Decision);
             _demandPrompts.Add(new NegotiationDemandPromptPresentationResult(
                 choice < 0 ? NegotiationPresentationKind.Back : NegotiationPresentationKind.Selected,
-                prompt.Prompt,
+                header,
                 options,
                 selection,
                 choice < 0 ? null : choice));
@@ -260,7 +260,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            NegotiationEventPresentationResult presentation = PresentEvent(hostEvent);
+            NegotiationEventPresentationResult presentation = PresentEvent(hostEvent, _targetName);
             _events.Add(presentation);
             if (presentation.Kind == NegotiationPresentationKind.Shown)
             {
@@ -274,44 +274,92 @@ namespace JRPGPrototype.Logic.Battle.Bridges
             return ValueTask.CompletedTask;
         }
 
-        public static NegotiationEventPresentationResult PresentEvent(NegotiationEvent hostEvent)
+        public static NegotiationEventPresentationResult PresentEvent(
+            NegotiationEvent hostEvent,
+            string targetName = "Target")
         {
             ArgumentNullException.ThrowIfNull(hostEvent);
+            string message = Message(hostEvent, targetName);
             return new NegotiationEventPresentationResult(
                 NegotiationPresentationKind.Shown,
                 hostEvent,
-                hostEvent.Message,
+                message,
                 Color(hostEvent),
                 WaitMilliseconds(hostEvent));
         }
 
-        private static ConsoleColor Color(NegotiationEvent hostEvent) => hostEvent.Kind switch
+        private static (string Header, string[] Options) LegacyDemandPresentation(
+            NegotiationDemandPrompt prompt,
+            string targetName)
         {
-            NegotiationEventKind.FamiliarDialogue => ConsoleColor.Cyan,
-            NegotiationEventKind.MoodNegative => ConsoleColor.Red,
-            NegotiationEventKind.Failure when hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
-                hostEvent.Message.Contains("required donation", StringComparison.Ordinal) => ConsoleColor.Red,
+            string header = prompt.Kind switch
+            {
+                NegotiationDemandKind.Currency =>
+                    $"{targetName}: \"A gift of {prompt.Demand.CurrencyAmount} Macca should suffice.\"",
+                NegotiationDemandKind.Item =>
+                    $"{targetName}: \"A {prompt.Demand.Item!.DisplayName} would be lovely.\"",
+                _ => prompt.Prompt
+            };
+            string[] options = prompt.Options.Select(option => option.Decision switch
+            {
+                NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Currency =>
+                    $"Give {prompt.Demand.CurrencyAmount} Macca",
+                NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Item =>
+                    $"Give {prompt.Demand.Item!.DisplayName}",
+                _ => "Refuse"
+            }).ToArray();
+            return (header, options);
+        }
+
+        private static string Message(NegotiationEvent hostEvent, string targetName) => hostEvent.Code switch
+        {
+            NegotiationEventCode.PolicyBlocked =>
+                $"The {targetName} is agitated due to the Full Moon and cannot be reasoned with!",
+            NegotiationEventCode.CapacityUnavailable => "Your Demon Stock is full!",
+            NegotiationEventCode.OpeningRefused => $"{targetName} is on guard and refuses to talk!",
+            NegotiationEventCode.MissingQuestions => $"{targetName} seems unresponsive...",
+            NegotiationEventCode.Cancelled => $"{targetName} seems disappointed...",
+            NegotiationEventCode.MoodPositive => $"{targetName} seems pleased with your answers.",
+            NegotiationEventCode.MoodNeutral => $"{targetName} is considering your words...",
+            NegotiationEventCode.MoodNegative => $"{targetName} grows angry!",
+            NegotiationEventCode.TargetLevelTooHigh =>
+                $"{targetName}: \"You have courage, but you are not yet worthy to command me. Perhaps we shall meet again.\"",
+            NegotiationEventCode.DemandIntro =>
+                $"{targetName}: \"Your words are intriguing. But talk is cheap.\"",
+            NegotiationEventCode.InsufficientCurrency =>
+                $"The required donation of {hostEvent.Amount} Macca is missing.",
+            NegotiationEventCode.DemandlessRejected => $"{targetName}: \"Hmph. You waste my time.\"",
+            NegotiationEventCode.FamiliarGift => FamiliarGiftMessage(hostEvent.FamiliarGift, targetName),
+            _ => hostEvent.Message
+        };
+
+        private static string FamiliarGiftMessage(NegotiationFamiliarGift? gift, string targetName) => gift?.Kind switch
+        {
+            NegotiationFamiliarGiftKind.Item => $"{targetName} gives you a Medicine and departs.",
+            NegotiationFamiliarGiftKind.Currency => $"{targetName} gives you {gift.Currency} Macca and departs.",
+            NegotiationFamiliarGiftKind.RestoreParty =>
+                $"{targetName} casts a gentle light upon your party before departing.",
+            _ => $"{targetName} departs."
+        };
+
+        private static ConsoleColor Color(NegotiationEvent hostEvent) => hostEvent.Code switch
+        {
+            NegotiationEventCode.FamiliarDialogue => ConsoleColor.Cyan,
+            NegotiationEventCode.MoodNegative => ConsoleColor.Red,
+            NegotiationEventCode.PolicyBlocked or NegotiationEventCode.InsufficientCurrency => ConsoleColor.Red,
             _ => ConsoleColor.White
         };
 
-        private static int WaitMilliseconds(NegotiationEvent hostEvent)
+        private static int WaitMilliseconds(NegotiationEvent hostEvent) => hostEvent.Code switch
         {
-            if (hostEvent.Kind == NegotiationEventKind.DemandIntro ||
-                hostEvent.Kind == NegotiationEventKind.MoodNegative ||
-                hostEvent.ReasonlessMessageIsUnresponsive())
-            {
-                return 800;
-            }
-
-            if (hostEvent.Message.Contains("Full Moon", StringComparison.Ordinal) ||
-                hostEvent.Message.Contains("Demon Stock is full", StringComparison.Ordinal) ||
-                hostEvent.Message.Contains("refuses to talk", StringComparison.Ordinal) ||
-                hostEvent.Message.Contains("required donation", StringComparison.Ordinal))
-            {
-                return 1000;
-            }
-
-            return 0;
-        }
+            NegotiationEventCode.DemandIntro or
+            NegotiationEventCode.MoodNegative or
+            NegotiationEventCode.MissingQuestions => 800,
+            NegotiationEventCode.PolicyBlocked or
+            NegotiationEventCode.CapacityUnavailable or
+            NegotiationEventCode.OpeningRefused or
+            NegotiationEventCode.InsufficientCurrency => 1000,
+            _ => 0
+        };
     }
 }

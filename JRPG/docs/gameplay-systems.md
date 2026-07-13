@@ -81,13 +81,13 @@ Player-facing behavior:
 - Familiar demons can use alternate dialogue paths.
 - Successful recruitment can feed compendium registration after battle.
 
-The original clean Training Annex path now has a separate framework-first proof. `--clean-training-annex-play` exposes `Negotiate / Recruit`, presents clean prompt choices through the host, and resolves success/refusal/familiar outcomes through framework negotiation and recruitment services. A successful clean negotiation spends Macca through the bound economy service and adds Bramble Runner to Demon stock through `PartyStockTransitionService.AddDemonToStock`. This does not depend on legacy `questions.json` or `NegotiationEngine`, and it does not make authored demand records authoritative yet; demand-policy binding remains future work.
+The original clean Training Annex path now has a separate framework-first proof. `--clean-training-annex-play` exposes `Negotiate / Recruit`, presents clean prompt choices through the host, and resolves success/refusal/familiar outcomes through framework negotiation and recruitment services. Its clean host policy maps the authored demand records, while framework session behavior is supplied explicitly through `INegotiationSessionPolicy`. A successful negotiation debits neutral framework currency, presents that balance as Macca, and adds Bramble Runner to Demon stock through `PartyStockTransitionService.AddDemonToStock`. It does not depend on legacy `questions.json`, `NegotiationEngine`, or hidden framework demand defaults.
 
 ## Field, City, And Dungeon
 
 `FieldConductor` owns non-combat navigation. It coordinates city services, inventory, status, party organization, dungeon entry, and fusion access.
 
-Track M keeps the same console conductor and menus, but moves dungeon state transitions into the framework. `DungeonManager` now adapts legacy dungeon JSON into immutable runtime snapshots and delegates floor evaluation, movement, terminal unlocks, boss defeat state, barriers, dungeon exit, and random encounter selection to `RuntimeFieldDungeonService`.
+Track M keeps the same console conductor and menus through a floor-oriented compatibility state machine. Review-Whole-8 places that `RuntimeFieldDungeonService` and its legacy JSON adapter in `JRPG.ConsoleHost`; it still owns floor evaluation, movement, terminal unlocks, boss state, barriers, exits, and fallback encounter selection for the protected prototype. The framework's reusable authority is the separate generic navigation and dungeon-node traversal services, which require host-supplied policies and do not assume floors, menus, terminals, or encounters.
 
 Track O9 keeps the same visible dungeon traversal flow while adding typed console-host presentation results for floor actions, entry/terminal floor selection, movement, floor-entry events, barriers, boss requests, boss-defeat registration, and dungeon exits. Framework dungeon events are consumed deterministically, but structural events such as floor entry, terminal unlocks, encounter requests, and dungeon exit remain suppressed unless they replace an existing legacy message.
 
@@ -104,7 +104,7 @@ Dungeon state is still stored in `DungeonState`: current dungeon ID, current flo
 
 `InventoryManager` stores consumable quantities and owned equipment IDs. `EconomyManager` stores Macca. `ShopEngine` calculates buy/sell prices and executes transactions.
 
-Track L moves the transaction rules behind those console facades into `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs`. `LegacyInventoryResourceAdapter` translates numeric legacy IDs, live equipment slots, and Macca state into immutable framework snapshots, then applies successful results back to `InventoryManager`, `EconomyManager`, and `Combatant`.
+Track L moves the transaction rules behind those console facades into `JRPG.Framework/Logic/Runtime/ResourceManagementServices.cs`. `LegacyInventoryResourceAdapter` translates numeric legacy IDs, live equipment slots, and host-owned Macca state into immutable framework inventory/equipment snapshots and a neutral wallet balance, then applies successful results back to `InventoryManager`, `EconomyManager`, and `Combatant`.
 
 Phase 4-22 adds a clean equipment profile layer for original content. `RuntimeEquipmentProfileResolver` reads the actor's `RuntimeEquipmentSnapshot`, resolves equipped catalog definitions, exposes weapon basic-attack data, sums accessory stat modifiers, and reports missing or slot-mismatched equipment diagnostics. `--clean-training-annex-play` seeds and equips `practice_blade` and `focus_charm` through framework transactions, and manual Attack uses the equipped weapon profile rather than a hardcoded sample weapon.
 
@@ -230,7 +230,7 @@ Track F moves active/reserve party transitions, stock capacity, unified demon st
 The preserved defaults are:
 
 - active party capacity remains four;
-- stock capacity remains 3/5/7/10/12 by owner level;
+- the legacy console host explicitly injects its historical 3/5/7/10/12 stock-capacity curve; the framework default is deliberately unlimited and clean rulesets must author any tiers they require;
 - active demons remain in `DemonStock` while also appearing in `ActiveParty`;
 - returned demons leave `ActiveParty` but remain owned;
 - dismissed or consumed demons leave both active party and stock;
@@ -245,7 +245,7 @@ Track O4 gives the field party/stock organization screens explicit console-host 
 
 ## Production Combat Ruleset Foundation
 
-Track G moves damage, hit/evasion, critical, instant-death, initiative, EXP, Macca, Weak/Resist, guard, rigid-body, charge, drain, and reflection formulas into `ProductionCombatRuleset` in the framework. The console `CombatMath` and `DamageHandler` APIs remain in place for existing battle callers, but now delegate through a console-owned adapter that translates live `Combatant` state into clean policy inputs.
+Track G moves damage, hit/evasion, critical, instant-death, initiative, EXP, neutral currency yield, Weak/Resist, guard, rigid-body, charge, drain, and reflection formulas into `ProductionCombatRuleset` in the framework. The console `CombatMath` and `DamageHandler` APIs remain in place for existing battle callers, but now delegate through a console-owned adapter that translates live `Combatant` state into clean policy inputs and presents currency as Macca.
 
 The production damage order is:
 

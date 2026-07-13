@@ -36,7 +36,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
 
-        WalletTransactionResult walletMutation = economy.AddMacca(wallet, reward.TotalMacca);
+        WalletTransactionResult walletMutation = economy.Credit(wallet, reward.TotalCurrency);
 
         if (!walletMutation.Applied)
         {
@@ -67,10 +67,10 @@ internal sealed class TrainingAnnexBattleRewardApplicator
 
         RuntimeActorSnapshot after = progressionMutation.After;
         await _eventSink.PublishAsync(
-            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalMacca} Macca.",
+            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalCurrency} Macca.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Macca}->{walletMutation.After.Macca}.",
+            $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Balance}->{walletMutation.After.Balance}.",
             cancellationToken).ConfigureAwait(false);
 
         return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After, walletMutation);
@@ -83,7 +83,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
         var counters = before.Counters.ToDictionary(pair => pair.Key, pair => pair.Value);
         AddCounter(counters, ContentId.Parse("training_annex_victories"), 1);
         AddCounter(counters, ContentId.Parse("training_annex_exp"), reward.TotalExperience);
-        AddCounter(counters, ContentId.Parse("training_annex_macca"), reward.TotalMacca);
+        AddCounter(counters, ContentId.Parse("training_annex_macca"), reward.TotalCurrency);
         return new RuntimeSessionProgressSnapshot(
             before.MoonPhaseId,
             before.ElapsedTicks,

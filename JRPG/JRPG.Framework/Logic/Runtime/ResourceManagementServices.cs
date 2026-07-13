@@ -92,18 +92,17 @@ public sealed record RuntimeInventorySnapshot
 
 public sealed record RuntimeWalletSnapshot
 {
-    public RuntimeWalletSnapshot(int macca)
+    public RuntimeWalletSnapshot(int balance)
     {
-        if (macca < 0)
+        if (balance < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(macca), "Macca cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(balance), "Currency balance cannot be negative.");
         }
 
-        Macca = macca;
+        Balance = balance;
     }
 
-    public int Macca { get; }
-    public int Balance => Macca;
+    public int Balance { get; }
 }
 
 public sealed record InventoryTransitionResult
@@ -364,53 +363,47 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
 
 public interface IEconomyTransactionService
 {
-    WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount);
-    WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount);
-
-    WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
-        AddMacca(snapshot, amount);
-
-    WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount) =>
-        SpendMacca(snapshot, amount);
+    WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount);
+    WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount);
 }
 
 public sealed class EconomyTransactionService : IEconomyTransactionService
 {
-    public WalletTransactionResult AddMacca(RuntimeWalletSnapshot snapshot, int amount)
+    public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         if (amount < 0)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Macca amount cannot be negative.");
+            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency amount cannot be negative.");
         }
 
-        if (amount > int.MaxValue - snapshot.Macca)
+        if (amount > int.MaxValue - snapshot.Balance)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Macca balance cannot exceed the supported integer range.");
+            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency balance cannot exceed the supported integer range.");
         }
 
         return new WalletTransactionResult(
             ResourceTransactionCode.Applied,
             snapshot,
-            new RuntimeWalletSnapshot(snapshot.Macca + amount));
+            new RuntimeWalletSnapshot(snapshot.Balance + amount));
     }
 
-    public WalletTransactionResult SpendMacca(RuntimeWalletSnapshot snapshot, int amount)
+    public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         if (amount < 0)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Macca amount cannot be negative.");
+            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency amount cannot be negative.");
         }
-        if (snapshot.Macca < amount)
+        if (snapshot.Balance < amount)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InsufficientCurrency, "Not enough Macca.");
+            return Rejected(snapshot, ResourceTransactionCode.InsufficientCurrency, "Insufficient currency.");
         }
 
         return new WalletTransactionResult(
             ResourceTransactionCode.Applied,
             snapshot,
-            new RuntimeWalletSnapshot(snapshot.Macca - amount));
+            new RuntimeWalletSnapshot(snapshot.Balance - amount));
     }
 
     private static WalletTransactionResult Rejected(
@@ -755,7 +748,7 @@ public sealed class ShopTransactionService : IShopTransactionService
             return FromInventory(inventoryResult, wallet, price);
         }
 
-        WalletTransactionResult walletResult = _economy.SpendMacca(wallet, price);
+        WalletTransactionResult walletResult = _economy.Debit(wallet, price);
         if (!walletResult.Applied)
         {
             return FromWallet(walletResult, inventory, price);
@@ -793,7 +786,7 @@ public sealed class ShopTransactionService : IShopTransactionService
             return FromInventory(inventoryResult, wallet, price);
         }
 
-        WalletTransactionResult walletResult = _economy.AddMacca(wallet, price);
+        WalletTransactionResult walletResult = _economy.Credit(wallet, price);
         if (!walletResult.Applied)
         {
             return FromWallet(walletResult, inventory, price);
@@ -948,7 +941,7 @@ public sealed class HospitalRestorationService : IHospitalRestorationService
             return Rejected(ResourceTransactionCode.NoRestorationNeeded, patient, wallet, cost, "The patient does not need restoration.");
         }
 
-        WalletTransactionResult spend = _economy.SpendMacca(wallet, cost);
+        WalletTransactionResult spend = _economy.Debit(wallet, cost);
         if (!spend.Applied)
         {
             return new HospitalRestorationResult(

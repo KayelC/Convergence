@@ -280,6 +280,8 @@ The generic replacements are sound, but older framework modules still encode pro
 
 **Required correction:** Keep the newer generic navigation/traversal services as the clean authority. Move compatibility policy, IDs, messages, currencies, and fallback content into the legacy host or optional policy packages.
 
+**Correction status (Review-Whole-8, 2026-07-13): completed.** The floor-oriented `RuntimeFieldDungeonService`, its lobby/terminal/city presentation concepts, and the legacy fallback enemy now compile only in `JRPG.ConsoleHost`; the framework retains the generic, policy-injected navigation and dungeon-traversal services and neutral optional field snapshots. Framework wallets and rewards expose `Balance`, `Credit`, `Debit`, and `Currency` rather than Macca. `NegotiationSessionService` now requires an explicit `INegotiationSessionPolicy`; Full Moon gating, Medicine ID `101`, familiar-gift odds, and the fallback donation formula live in the legacy host policy, while the clean Training Annex policy maps authored demand content explicitly. Stock capacity has no hidden legacy curve: the neutral default is unlimited, catalog rulesets must author their tiers, and the old `3/5/7/10/12` curve is injected only by the legacy host. Architecture tests reject reintroduction of these prototype terms and services under `JRPG.Framework`.
+
 ## Low Findings
 
 ### L1. AI affinity scoring is incomplete for multi-target actions
@@ -319,7 +321,7 @@ The following claims are supported by current source and verification, not docum
 - Catalog loading rejects noncanonical paths, duplicates, missing/unexpected documents, dependency cycles, transitive-only references, and wrong-type external references.
 - Content validation aggregates deterministic diagnostics and keeps elemental, ailment, and instant-death defenses separate.
 - Catalog IDs are canonically qualified and local-ID repository lookups are rejected.
-- Ordinary definition and snapshot collections are defensively copied; the exception is nested custom parameter values described in M8.
+- Definition and snapshot collections are defensively copied, including recursively normalized custom parameter graphs.
 - Generic navigation and dungeon traversal are policy-injected and do not force menus, scenes, stairs, or encounters.
 - Persistent player knowledge and encounter-local AI knowledge are separated in the clean Training Annex host.
 - Recent fusion protections are present: rank-offset parent order is neutral, previews require validated inheritance, transaction preparation is checked, and Compendium pricing is injectable.
@@ -376,6 +378,17 @@ The green suite is valuable evidence, but it does not invalidate the findings ab
 - Refined forbidden-dependency search: no production framework matches for console/filesystem/Godot/Newtonsoft/legacy runtime dependencies.
 - `Data/Jsons`: unchanged.
 
+### Review-Whole-8 Verification
+
+- Focused neutrality, negotiation, economy, stock-capacity, ruleset, persistence, original-content, and clean-host coverage: **260 passed, 0 failed, 0 skipped**.
+- Complete solution: **1013 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Complete solution nonincremental build: **98 existing legacy console-host warnings, 0 errors**.
+- Clean battle, field, save-v5, and Training Annex demos: all exited `0` with their expected outcomes.
+- `git diff --check`: no whitespace errors; Git reported only working-tree line-ending normalization notices.
+- Neutrality and forbidden-dependency searches: no production framework matches for prototype currency, negotiation, dungeon compatibility, console, filesystem, Godot, Newtonsoft, or legacy runtime dependencies.
+- Content: only the two clean sample ruleset documents changed, to author stock-capacity tiers explicitly; protected legacy/prototype JSON remained unchanged.
+
 ## Recommended Correction Order
 
 Do not begin another feature phase before the first five correction groups are complete.
@@ -409,9 +422,10 @@ Do not begin another feature phase before the first five correction groups are c
    - Affinity conditions and damage share passive-aware resolution with recursion protection.
    - Multi-target AI scoring covers all resolved targets, and random-target scoring covers every eligible target that execution could choose.
    - Verification passed `113/113` focused tests and `1007/1007` full-suite tests; the framework retained `0` warnings.
-8. **Review-Whole-8: Framework neutrality**
-   - Isolate legacy dungeon/negotiation/economy terminology and policy.
-   - Keep generic navigation, traversal, content, and host contracts as the reusable authority.
+8. **Review-Whole-8: Framework neutrality** - completed and verified 2026-07-13.
+   - The floor/menu-oriented dungeon compatibility implementation is host-owned; generic navigation and traversal remain framework-owned.
+   - Currency APIs are neutral, negotiation behavior requires injected policy, and stock-capacity tiers are explicit rather than hidden defaults.
+   - Legacy Macca, Full Moon, Medicine, fallback-demand, fallback-enemy, and stock-curve decisions remain available only through console-host adapters and policies.
 
 After these corrections, rerun this review against source and adversarial tests before moving into the next planned capability phase.
 
@@ -419,4 +433,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-7 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, fusion authority, atomic typed-effect execution, unsafe arithmetic boundaries, definition immutability, and affinity-condition/AI consistency. The remaining named correction group is Review-Whole-8: isolate project-specific dungeon, negotiation, and economy terminology or policy from supposedly generic runtime services. Low findings L3-L6 also remain documented hardening work: actor-creation diagnostic integrity, immutable encounter results, synchronous-wrapper host safety, and executable Break ownership. Review-Whole-8 should be completed and those lower-risk findings deliberately scheduled before final framework release.
+However, the framework is not yet feature-complete. Review-Whole-1 through Review-Whole-8 have now corrected every medium finding from this review: save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, fusion authority, atomic typed-effect execution, unsafe arithmetic boundaries, definition immutability, affinity-condition/AI consistency, and framework neutrality. Low findings L3-L6 remain documented hardening work: actor-creation diagnostic integrity, immutable encounter results, synchronous-wrapper host safety, and executable Break ownership. Those lower-risk findings and the capability roadmap still require deliberate completion before final framework release.

@@ -8,7 +8,7 @@ namespace JRPGPrototype.Logic.Core
     {
         public static LegacyPartyStockAdapter Shared { get; } = new(
             LegacyRuntimeIdentityRegistry.Shared,
-            new PartyStockTransitionService(),
+            new PartyStockTransitionService(new LegacyStockCapacityPolicy()),
             new LegacyStockCapacityPolicy());
 
         private readonly LegacyRuntimeIdentityRegistry _ids;

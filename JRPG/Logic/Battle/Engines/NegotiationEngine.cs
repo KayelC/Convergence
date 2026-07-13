@@ -112,7 +112,9 @@ namespace JRPGPrototype.Logic.Battle.Engines
             List<Combatant> enemies)
         {
             NegotiationSessionRequest request = CreateRequest(actor, target, enemies);
-            var service = new NegotiationSessionService(new LegacyRandomSource(_rnd));
+            var service = new NegotiationSessionService(
+                new LegacyRandomSource(_rnd),
+                new LegacyNegotiationSessionPolicy());
             var presentation = new LegacyNegotiationPresentationAdapter(_io, target.Name);
             NegotiationSessionResult result = service.RunAsync(
                     request,
@@ -127,7 +129,7 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 ToLegacyResult(result),
                 result,
                 new NegotiationMutationPresentationResult(
-                    result.MaccaSpent,
+                    result.CurrencySpent,
                     result.ItemSpentId,
                     result.FamiliarGift),
                 presentation.AnswerPrompts,
@@ -161,11 +163,13 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 Math.Max(1, actor.Level),
                 Math.Max(1, target.Level),
                 actor.GetStat(StatType.Lu),
-                Math.Max(1, enemies.Count(e => !e.IsDead)),
-                MoonPhaseSystem.IsNegotiationBlocked(),
-                _party.IsDemonOwned(actor, target.SourceId),
-                _party.HasOpenDemonStockSlot(actor),
-                _economy.Macca,
+                activeOpponentCount: Math.Max(1, enemies.Count(e => !e.IsDead)),
+                contextIds: MoonPhaseSystem.IsNegotiationBlocked()
+                    ? [LegacyNegotiationSessionPolicy.BlockedContextId]
+                    : [],
+                isTargetFamiliar: _party.IsDemonOwned(actor, target.SourceId),
+                hasRecruitmentCapacity: _party.HasOpenDemonStockSlot(actor),
+                currentCurrency: _economy.Macca,
                 questionPool.Select(question => new NegotiationQuestionPrompt(
                     question.Text,
                     question.Answers.Select(answer => new NegotiationAnswerOption(answer.Text, answer.Value)))),
@@ -176,9 +180,9 @@ namespace JRPGPrototype.Logic.Battle.Engines
 
         private void ApplyResult(NegotiationSessionResult result)
         {
-            if (result.MaccaSpent > 0)
+            if (result.CurrencySpent > 0)
             {
-                _economy.SpendMacca(result.MaccaSpent);
+                _economy.SpendMacca(result.CurrencySpent);
             }
             if (result.ItemSpentId is string itemId)
             {
@@ -191,15 +195,15 @@ namespace JRPGPrototype.Logic.Battle.Engines
                 case NegotiationFamiliarGiftKind.Item when gift.ItemId is string giftItem:
                     _inventory.AddItem(giftItem, gift.Quantity);
                     break;
-                case NegotiationFamiliarGiftKind.Macca:
-                    _economy.AddMacca(gift.Macca);
+                case NegotiationFamiliarGiftKind.Currency:
+                    _economy.AddMacca(gift.Currency);
                     break;
-                case NegotiationFamiliarGiftKind.HealParty:
+                case NegotiationFamiliarGiftKind.RestoreParty:
                     foreach (var member in _party.GetAliveMembers())
                     {
                         member.CurrentHP = (int)Math.Min(
                             member.MaxHP,
-                            member.CurrentHP + (member.MaxHP * (double)gift.HealPercent));
+                            member.CurrentHP + (member.MaxHP * (double)gift.RestorePercent));
                     }
                     break;
             }
@@ -231,9 +235,4 @@ namespace JRPGPrototype.Logic.Battle.Engines
             };
     }
 
-    internal static class NegotiationEventExtensions
-    {
-        public static bool ReasonlessMessageIsUnresponsive(this NegotiationEvent hostEvent) =>
-            hostEvent.Message.Contains("seems unresponsive", StringComparison.Ordinal);
-    }
 }
