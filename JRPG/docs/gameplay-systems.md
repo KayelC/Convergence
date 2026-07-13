@@ -304,6 +304,8 @@ The preserved parity rules are:
 - stat stages clamp at `-4..+4`, while legacy redundancy still treats `+3/-3` as already enough;
 - zero evasion multipliers are valid for legacy immobilization-style ailments.
 
+The H1 lifecycle correction completes the authored duration contract for every clean state family. `instant` lasts through one ordered action, `turns` follows its registered tick event and reserve-suspension flag, `phase` follows an explicit phase ID, `battle` ends with the encounter, and `permanent` survives automatic cleanup. Expiry applies equally to ailments, stat stages, charges, shields, affinity overrides, affinity Breaks, and other statuses; explicit-removal flags do not turn a finite duration into a permanent one.
+
 `convergence.status_lifecycle_demo` reauthors the 11 legacy ailments as clean content for tests and future hosts. The legacy `status_ailments.json` file remains unchanged and continues to feed ordinary console loading.
 
 ## Framework Battle Orchestration Foundation

@@ -372,9 +372,67 @@ public sealed record BattleStatusCleanupRequest(
     RuntimeActorState Actor,
     BattleStatusCleanupScope Scope);
 
-public sealed record BattleStatusLifecycleResult(IReadOnlyList<BattleStatusLifecycleEvent> Events);
+public sealed record BattleActionEndLifecycleRequest
+{
+    public BattleActionEndLifecycleRequest(IEnumerable<RuntimeActorState> participants)
+    {
+        ArgumentNullException.ThrowIfNull(participants);
+        RuntimeActorState[] snapshot = participants.ToArray();
+        if (snapshot.Any(actor => actor is null))
+        {
+            throw new ArgumentException("Duration lifecycle participants cannot contain null actors.", nameof(participants));
+        }
 
-public interface IBattleStatusLifecycleService
+        Participants = Array.AsReadOnly(
+            snapshot.Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance).ToArray());
+    }
+
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+}
+
+public sealed record BattlePhaseEndLifecycleRequest
+{
+    public BattlePhaseEndLifecycleRequest(
+        IEnumerable<RuntimeActorState> participants,
+        ContentId phaseId)
+    {
+        ArgumentNullException.ThrowIfNull(participants);
+        RuntimeActorState[] snapshot = participants.ToArray();
+        if (snapshot.Any(actor => actor is null))
+        {
+            throw new ArgumentException("Duration lifecycle participants cannot contain null actors.", nameof(participants));
+        }
+
+        Participants = Array.AsReadOnly(
+            snapshot.Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance).ToArray());
+        PhaseId = phaseId;
+    }
+
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+    public ContentId PhaseId { get; }
+}
+
+public sealed record BattleStatusLifecycleResult
+{
+    public BattleStatusLifecycleResult(IEnumerable<BattleStatusLifecycleEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        Events = Array.AsReadOnly(events.ToArray());
+    }
+
+    public IReadOnlyList<BattleStatusLifecycleEvent> Events { get; }
+}
+
+public interface IBattleDurationLifecycleService
+{
+    BattleStatusLifecycleResult ProcessActionEnd(BattleActionEndLifecycleRequest request);
+
+    BattleStatusLifecycleResult ProcessPhaseEnd(BattlePhaseEndLifecycleRequest request);
+
+    BattleStatusLifecycleResult Cleanup(BattleStatusCleanupRequest request);
+}
+
+public interface IBattleStatusLifecycleService : IBattleDurationLifecycleService
 {
     BattleTurnStartLifecycleResult ProcessTurnStart(BattleTurnStartLifecycleRequest request);
 
@@ -392,7 +450,66 @@ public interface IBattleStatusLifecycleService
         int delta,
         DurationDefinition? duration = null);
 
-    BattleStatusLifecycleResult Cleanup(BattleStatusCleanupRequest request);
+}
+
+public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleService
+{
+    public BattleStatusLifecycleResult ProcessActionEnd(BattleActionEndLifecycleRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Expire(
+            request.Participants,
+            actor => actor.ExpireInstantDurations());
+    }
+
+    public BattleStatusLifecycleResult ProcessPhaseEnd(BattlePhaseEndLifecycleRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Expire(
+            request.Participants,
+            actor => actor.ExpirePhaseDurations(request.PhaseId));
+    }
+
+    public BattleStatusLifecycleResult Cleanup(BattleStatusCleanupRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
+        actor.ClearTransientStatuses();
+        if (request.Scope is BattleStatusCleanupScope.BattleEnd or BattleStatusCleanupScope.FieldTransition)
+        {
+            actor.ClearEncounterStatuses();
+        }
+
+        return new BattleStatusLifecycleResult(
+        [
+            new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.CleanupApplied,
+                actor.InstanceId,
+                Detail: request.Scope.ToString())
+        ]);
+    }
+
+    private static BattleStatusLifecycleResult Expire(
+        IEnumerable<RuntimeActorState> participants,
+        Func<RuntimeActorState, IReadOnlyList<BattleDurationTickResult>> expire)
+    {
+        var events = new List<BattleStatusLifecycleEvent>();
+        foreach (RuntimeActorState actor in participants)
+        {
+            foreach (BattleDurationTickResult duration in expire(actor))
+            {
+                events.Add(new BattleStatusLifecycleEvent(
+                    duration.StateKind == BattleDurationStateKind.Ailment
+                        ? BattleStatusLifecycleEventKind.AilmentExpired
+                        : BattleStatusLifecycleEventKind.StatusExpired,
+                    actor.InstanceId,
+                    duration.Id,
+                    Detail: $"{duration.StateKind}:{duration.PreviousDuration.Kind}"));
+            }
+        }
+
+        return new BattleStatusLifecycleResult(events);
+    }
 }
 
 public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
@@ -400,6 +517,8 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     private readonly IRandomSource _random;
     private readonly IReadOnlyDictionary<ContentId, ICustomAilmentTurnBehaviorHandler> _customTurnBehaviorHandlers;
     private readonly IBattleTurnRestrictionPolicy _turnRestrictionPolicy;
+    private readonly IBattleDurationLifecycleService _durationLifecycle =
+        new BattleDurationLifecycleService();
 
     public BattleStatusLifecycleService(
         IRandomSource random,
@@ -506,6 +625,12 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         (services ?? throw new ArgumentNullException(nameof(services)))
             .AilmentApplications.Apply(request, services);
 
+    public BattleStatusLifecycleResult ProcessActionEnd(BattleActionEndLifecycleRequest request) =>
+        _durationLifecycle.ProcessActionEnd(request);
+
+    public BattleStatusLifecycleResult ProcessPhaseEnd(BattlePhaseEndLifecycleRequest request) =>
+        _durationLifecycle.ProcessPhaseEnd(request);
+
     public BattleStatusLifecycleResult ApplyStatStage(
         RuntimeActorState target,
         ContentId modifierTrackId,
@@ -524,24 +649,8 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         ]);
     }
 
-    public BattleStatusLifecycleResult Cleanup(BattleStatusCleanupRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
-        actor.ClearTransientStatuses();
-        if (request.Scope is BattleStatusCleanupScope.BattleEnd or BattleStatusCleanupScope.FieldTransition)
-        {
-            actor.ClearEncounterStatuses();
-        }
-
-        return new BattleStatusLifecycleResult(
-        [
-            new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.CleanupApplied,
-                actor.InstanceId,
-                Detail: request.Scope.ToString())
-        ]);
-    }
+    public BattleStatusLifecycleResult Cleanup(BattleStatusCleanupRequest request) =>
+        _durationLifecycle.Cleanup(request);
 
     private BattleTurnStartRestriction ResolveTurnStartRestriction(
         RuntimeActorState actor,

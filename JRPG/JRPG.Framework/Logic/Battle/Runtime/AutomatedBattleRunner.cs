@@ -425,6 +425,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
         private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
         private readonly BattleExecutionServices _services;
+        private readonly IBattleDurationLifecycleService _durationLifecycle =
+            new BattleDurationLifecycleService();
 
         public AutomatedBattleLifecyclePort(BattleExecutionServices services)
         {
@@ -449,14 +451,32 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
             BattleEncounterLifecycleRequest request,
             ContentId teamId,
-            CancellationToken cancellationToken = default) =>
-            new(Array.Empty<BattleEncounterEvent>());
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BattleStatusLifecycleResult result = _durationLifecycle.ProcessPhaseEnd(
+                new BattlePhaseEndLifecycleRequest(
+                    request.Participants.Select(participant => participant.State),
+                    teamId));
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapDurationEvents(result.Events));
+        }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
-            CancellationToken cancellationToken = default) =>
-            new(Array.Empty<BattleEncounterEvent>());
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var events = new List<BattleStatusLifecycleEvent>();
+            foreach (BattleEncounterParticipant participant in request.Participants)
+            {
+                events.AddRange(_durationLifecycle.Cleanup(new BattleStatusCleanupRequest(
+                    participant.State,
+                    BattleStatusCleanupScope.BattleEnd)).Events);
+            }
+
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapDurationEvents(events));
+        }
 
         private IReadOnlyList<BattleEncounterEvent> Dispatch(
             ContentId eventId,
@@ -482,6 +502,16 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 
             return Array.AsReadOnly(events.ToArray());
         }
+
+        private static IReadOnlyList<BattleEncounterEvent> MapDurationEvents(
+            IEnumerable<BattleStatusLifecycleEvent> events) =>
+            Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.StatusChanged,
+                $"Duration lifecycle: {statusEvent.Kind} {statusEvent.RelatedId}.",
+                statusEvent.ActorId,
+                SourceId: statusEvent.RelatedId,
+                Value: statusEvent.Value)).ToArray());
     }
 
     private sealed class AutomatedBattleTurnHandler : IBattleEncounterTurnHandler

@@ -390,6 +390,36 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_ConsumesPhaseAndBattleDurationBoundariesWithoutClearingPermanentState()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        ContentId phaseStatus = Id("phase_status");
+        ContentId battleStatus = Id("battle_status");
+        ContentId permanentStatus = Id("permanent_status");
+        frost.State.AddOtherStatus(phaseStatus, new PhaseDurationDefinition(PlayerTeam));
+        frost.State.AddOtherStatus(battleStatus, new BattleDurationDefinition());
+        frost.State.AddOtherStatus(permanentStatus, new PermanentDurationDefinition());
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+
+        new AutomatedBattleRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [frost, ember],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.DoesNotContain(phaseStatus, frost.State.OtherStatuses);
+        Assert.DoesNotContain(battleStatus, frost.State.OtherStatuses);
+        Assert.Contains(permanentStatus, frost.State.OtherStatuses);
+    }
+
+    [Fact]
     public void Runner_DispatchesBattleStartBeforeTheFirstRound()
     {
         GameDataCatalog catalog = LoadDemoCatalog();

@@ -16,17 +16,17 @@ The review covered the framework project structure and public boundaries, defini
 
 **Phase 8 should not begin yet.**
 
-The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. However, one high-severity lifecycle contract defect and three medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect identified by this review was corrected in the working tree on 2026-07-13. Three medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
 
 Recommended gate:
 
-1. Correct H1, M1, and M2 before Phase 8.
+1. Correct M1 and M2 before Phase 8. H1 is complete.
 2. Resolve M3 either by making the convenience runner use the canonical lifecycle or by explicitly reducing/removing its public authority.
 3. Correct the low findings before publishing the framework package; they do not need to block design discussion.
 
 ## Findings
 
-### H1. Authored duration kinds are accepted but not executed completely
+### H1. Authored duration kinds are accepted but not executed completely (corrected 2026-07-13)
 
 **Evidence**
 
@@ -49,6 +49,27 @@ An authored instant or phase-limited status can remain active beyond its promise
 - Expire phase state only for its authored phase ID.
 - Clear battle state at battle completion while preserving genuinely permanent state according to an explicit policy.
 - Add lifecycle tests for every duration kind across ailments, stat stages, charges, shields, Break, affinity overrides, and other statuses.
+
+**Resolution**
+
+- `BattleDurationLifecycleService` is now the canonical action-end, phase-end, and cleanup boundary used by `BattleStatusLifecycleService`.
+- `RuntimeActorState` expires instant and matching-phase state across all seven duration-bearing state families, ticks turn durations for generic other statuses, removes battle-scoped state at encounter cleanup, and preserves permanent state.
+- `OrderedEffectExecutor` owns a nesting-aware action scope, so instant state remains available to later effects and nested trigger actions but expires before the next independent action.
+- The Training Annex lifecycle port and `AutomatedBattleRunner` now consume encounter phase-end and battle-end duration boundaries.
+- Focused regressions cover all five duration kinds across every state family, nested ordered actions, and a complete automated encounter boundary.
+
+H1 is resolved in the current working tree. M1, M2, and M3 remain open, so this correction alone does not open the Phase 8 gate.
+
+**H1 verification**
+
+- Focused duration, active execution, and automated runtime tests: **77 passed, 0 failed, 0 skipped**.
+- Full solution tests: **1,035 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**; the warning count is unchanged and remains isolated to compatibility-host nullable debt.
+- Framework package: `JRPG.Framework.1.0.0.nupkg` created successfully; the existing missing-readme packaging advisory remains.
+- Clean battle, field, save, and Training Annex demos: all exited `0`; battle and Training Annex outcomes remained victories, and save validation remained at zero diagnostics.
+- Framework host/legacy forbidden-reference search and serializer-boundary search: no prohibited references found.
+- `git diff --check`: passed. `Data/Jsons`: unchanged.
 
 ### M1. Assessment and execution can resolve random targets twice
 
@@ -155,7 +176,7 @@ The following conclusions come from direct source inspection rather than prior r
 
 The corrected framework is a credible foundation, but **it is not ready to enter Phase 8 as a closed runtime baseline today**. The immediate correction order should be:
 
-1. Complete duration lifecycle authority (H1).
+1. ~~Complete duration lifecycle authority (H1).~~ Corrected on 2026-07-13; final gate verification is recorded with the implementation.
 2. Make action assessment and execution share one resolved target set (M1).
 3. Enforce runtime numeric domains before restore/policy execution (M2).
 4. Unify or demote the automated battle convenience path (M3).

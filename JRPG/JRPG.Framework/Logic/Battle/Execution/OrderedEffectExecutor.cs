@@ -21,6 +21,10 @@ internal sealed record OrderedEffectExecution(
 
 internal sealed class OrderedEffectExecutor
 {
+    private static readonly AsyncLocal<ActionDurationScope?> CurrentDurationScope = new();
+    private static readonly IBattleDurationLifecycleService DurationLifecycle =
+        new BattleDurationLifecycleService();
+
     private readonly BattleExecutionServices _services;
     private readonly EffectExecutorRegistry _effectExecutors;
 
@@ -33,6 +37,48 @@ internal sealed class OrderedEffectExecutor
     }
 
     public OrderedEffectExecution Execute(
+        EffectActionExecutionRequest request,
+        IReadOnlyList<EffectDefinition> effects,
+        ResolvedRuntimeTargetSet targets)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(effects);
+        ArgumentNullException.ThrowIfNull(targets);
+
+        ActionDurationScope? scope = CurrentDurationScope.Value;
+        bool ownsScope = scope is null;
+        if (ownsScope)
+        {
+            scope = new ActionDurationScope();
+            CurrentDurationScope.Value = scope;
+        }
+
+        scope!.Track(request.Actor);
+        scope.Track(request.Participants);
+        scope.Track(targets.Targets);
+
+        try
+        {
+            return ExecuteCore(request, effects, targets);
+        }
+        finally
+        {
+            if (ownsScope)
+            {
+                try
+                {
+                    DurationLifecycle.ProcessActionEnd(
+                        new BattleActionEndLifecycleRequest(scope.Actors));
+                }
+                finally
+                {
+                    CurrentDurationScope.Value = null;
+                }
+            }
+        }
+    }
+
+    private OrderedEffectExecution ExecuteCore(
         EffectActionExecutionRequest request,
         IReadOnlyList<EffectDefinition> effects,
         ResolvedRuntimeTargetSet targets)
@@ -114,5 +160,29 @@ internal sealed class OrderedEffectExecutor
         return new OrderedEffectExecution(
             Array.AsReadOnly(results.ToArray()),
             targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
+    }
+
+    private sealed class ActionDurationScope
+    {
+        private readonly List<RuntimeActorState> _actors = [];
+        private readonly HashSet<RuntimeActorState> _known = new(ReferenceEqualityComparer.Instance);
+
+        public IReadOnlyList<RuntimeActorState> Actors => _actors;
+
+        public void Track(RuntimeActorState actor)
+        {
+            if (_known.Add(actor))
+            {
+                _actors.Add(actor);
+            }
+        }
+
+        public void Track(IEnumerable<RuntimeActorState> actors)
+        {
+            foreach (RuntimeActorState actor in actors)
+            {
+                Track(actor);
+            }
+        }
     }
 }

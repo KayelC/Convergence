@@ -1483,14 +1483,36 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
         BattleEncounterLifecycleRequest request,
         ContentId teamId,
-        CancellationToken cancellationToken = default) =>
-        new(Array.Empty<BattleEncounterEvent>());
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        BattleStatusLifecycleResult result = _lifecycle.ProcessPhaseEnd(
+            new BattlePhaseEndLifecycleRequest(
+                request.Participants.Select(participant => participant.State),
+                teamId));
+        _tracker.RecordStatusEvents(result.Events);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
+    }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
         BattleEncounterLifecycleRequest request,
         BattleEncounterOutcome outcome,
-        CancellationToken cancellationToken = default) =>
-        new(Array.Empty<BattleEncounterEvent>());
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var statusEvents = new List<BattleStatusLifecycleEvent>();
+        foreach (BattleEncounterParticipant participant in request.Participants)
+        {
+            BattleStatusLifecycleResult result = _lifecycle.Cleanup(
+                new BattleStatusCleanupRequest(
+                    participant.State,
+                    BattleStatusCleanupScope.BattleEnd));
+            statusEvents.AddRange(result.Events);
+        }
+
+        _tracker.RecordStatusEvents(statusEvents);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(statusEvents));
+    }
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>

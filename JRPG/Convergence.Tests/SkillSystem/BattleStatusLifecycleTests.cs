@@ -386,6 +386,109 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void ActionEnd_ExpiresInstantDurationsAcrossEveryStateFamily()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState actor = Actor("actor");
+        SeedDurationStates(actor, new InstantDurationDefinition(), "instant");
+        var participants = new List<RuntimeActorState> { actor, actor };
+        var request = new BattleActionEndLifecycleRequest(participants);
+        participants.Clear();
+
+        BattleStatusLifecycleResult result = service.ProcessActionEnd(request);
+
+        Assert.Single(request.Participants);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeActorState>)request.Participants).Add(actor));
+        AssertNoDurationStates(actor, "instant");
+        Assert.Equal(7, result.Events.Count);
+        Assert.Equal(1, result.Events.Count(status =>
+            status.Kind == BattleStatusLifecycleEventKind.AilmentExpired));
+        Assert.Equal(6, result.Events.Count(status =>
+            status.Kind == BattleStatusLifecycleEventKind.StatusExpired));
+        Assert.All(result.Events, status => Assert.Contains("Instant", status.Detail));
+    }
+
+    [Fact]
+    public void TurnDurations_TickEveryStateFamilyOnlyOnTheirAuthoredEvent()
+    {
+        RuntimeActorState actor = Actor("actor");
+        SeedDurationStates(actor, new TurnDurationDefinition(1, OwnerTurnEnd, false), "turn");
+
+        Assert.Empty(actor.TickAilmentDurations(ContentId.Parse("other_event")));
+        Assert.Empty(actor.TickTimedStatuses(ContentId.Parse("other_event")));
+
+        BattleDurationTickResult[] ticks = actor.TickAilmentDurations(OwnerTurnEnd)
+            .Concat(actor.TickTimedStatuses(OwnerTurnEnd))
+            .ToArray();
+
+        AssertNoDurationStates(actor, "turn");
+        Assert.Equal(7, ticks.Length);
+        Assert.Equal(Enum.GetValues<BattleDurationStateKind>(),
+            ticks.Select(tick => tick.StateKind).Order().ToArray());
+        Assert.All(ticks, tick => Assert.True(tick.Expired));
+    }
+
+    [Fact]
+    public void PhaseEnd_ExpiresOnlyTheMatchingPhaseAcrossEveryStateFamily()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        ContentId playerPhase = ContentId.Parse("player_phase");
+        RuntimeActorState matching = Actor("matching");
+        RuntimeActorState other = Actor("other");
+        RuntimeActorState permanent = Actor("permanent");
+        SeedDurationStates(matching, new PhaseDurationDefinition(playerPhase), "matching");
+        SeedDurationStates(other, new PhaseDurationDefinition(ContentId.Parse("enemy_phase")), "other");
+        SeedDurationStates(permanent, new PermanentDurationDefinition(), "permanent");
+
+        BattleStatusLifecycleResult result = service.ProcessPhaseEnd(
+            new BattlePhaseEndLifecycleRequest([matching, other, permanent], playerPhase));
+
+        AssertNoDurationStates(matching, "matching");
+        AssertAllDurationStatesPresent(other, "other");
+        AssertAllDurationStatesPresent(permanent, "permanent");
+        Assert.Equal(7, result.Events.Count);
+        Assert.All(result.Events, status => Assert.Contains("Phase", status.Detail));
+    }
+
+    [Fact]
+    public void BattleCleanup_ExpiresBattleStateAndPreservesEveryPermanentStateFamily()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState battle = Actor("battle_actor");
+        RuntimeActorState permanent = Actor("permanent_actor");
+        SeedDurationStates(battle, new BattleDurationDefinition(), "battle");
+        SeedDurationStates(permanent, new PermanentDurationDefinition(), "permanent");
+        AilmentDefinition turnAilment = IndependentAilment(
+            "turn_ailment",
+            new NormalAilmentTurnBehaviorDefinition());
+        permanent.ApplyAilment(turnAilment, Turns(2));
+
+        service.Cleanup(new BattleStatusCleanupRequest(battle, BattleStatusCleanupScope.BattleEnd));
+        service.Cleanup(new BattleStatusCleanupRequest(permanent, BattleStatusCleanupScope.BattleEnd));
+
+        AssertNoDurationStates(battle, "battle");
+        AssertAllDurationStatesPresent(permanent, "permanent");
+        Assert.True(permanent.HasAilment(turnAilment.Id));
+    }
+
+    [Fact]
+    public void SwapCleanup_PreservesPermanentChargesAndShields()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState actor = Actor("actor");
+        actor.SetGuarding(true);
+        actor.GrantCharge(ChargeKind.Physical, 2m, new PermanentDurationDefinition());
+        actor.GrantShield(ShieldKind.Physical, new PermanentDurationDefinition());
+
+        service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap));
+
+        Assert.False(actor.IsGuarding);
+        Assert.Contains(ChargeKind.Physical, actor.Charges.Keys);
+        Assert.Contains(ShieldKind.Physical, actor.Shields.Keys);
+    }
+
+    [Fact]
     public void AffinityBreakDuration_SuspendsInReserveAndExpiresOnItsAuthoredTick()
     {
         RuntimeActorState actor = Actor("actor", isActive: false);
@@ -447,6 +550,46 @@ public sealed class BattleStatusLifecycleTests
 
     private static TurnDurationDefinition Turns(int value) =>
         new(value, OwnerTurnEnd, true);
+
+    private static void SeedDurationStates(
+        RuntimeActorState actor,
+        DurationDefinition duration,
+        string suffix)
+    {
+        actor.ApplyAilment(
+            IndependentAilment(
+                $"ailment_{suffix}",
+                new NormalAilmentTurnBehaviorDefinition()),
+            duration);
+        actor.ChangeStatStage(ContentId.Parse($"stat_{suffix}"), 1, duration);
+        actor.GrantCharge(ChargeKind.Physical, 2m, duration);
+        actor.GrantShield(ShieldKind.Physical, duration);
+        actor.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Resist, duration);
+        actor.BreakAffinity(DamageElement.Fire, duration);
+        actor.AddOtherStatus(ContentId.Parse($"status_{suffix}"), duration);
+    }
+
+    private static void AssertAllDurationStatesPresent(RuntimeActorState actor, string suffix)
+    {
+        Assert.True(actor.HasAilment(ContentId.Parse($"ailment_{suffix}")));
+        Assert.Contains(ContentId.Parse($"stat_{suffix}"), actor.StatStages.Keys);
+        Assert.Contains(ChargeKind.Physical, actor.Charges.Keys);
+        Assert.Contains(ShieldKind.Physical, actor.Shields.Keys);
+        Assert.Contains(DamageElement.Ice, actor.AffinityOverrides.Keys);
+        Assert.Contains(DamageElement.Fire, actor.AffinityBreaks.Keys);
+        Assert.Contains(ContentId.Parse($"status_{suffix}"), actor.OtherStatuses);
+    }
+
+    private static void AssertNoDurationStates(RuntimeActorState actor, string suffix)
+    {
+        Assert.False(actor.HasAilment(ContentId.Parse($"ailment_{suffix}")));
+        Assert.DoesNotContain(ContentId.Parse($"stat_{suffix}"), actor.StatStages.Keys);
+        Assert.DoesNotContain(ChargeKind.Physical, actor.Charges.Keys);
+        Assert.DoesNotContain(ShieldKind.Physical, actor.Shields.Keys);
+        Assert.DoesNotContain(DamageElement.Ice, actor.AffinityOverrides.Keys);
+        Assert.DoesNotContain(DamageElement.Fire, actor.AffinityBreaks.Keys);
+        Assert.DoesNotContain(ContentId.Parse($"status_{suffix}"), actor.OtherStatuses);
+    }
 
     private static AilmentDefinition Ailment(
         string id,

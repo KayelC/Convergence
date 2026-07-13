@@ -693,6 +693,86 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void InstantDuration_RemainsVisibleWithinTheOrderedActionAndExpiresBeforeTheNextAction()
+    {
+        var profile = new CombatDefenseProfile(
+        [
+            new KeyValuePair<DamageElement, ElementalAffinity>(
+                DamageElement.Fire,
+                ElementalAffinity.Weak)
+        ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, defense: profile);
+        var executor = new SkillExecutor(Services());
+        SkillDefinition skill = ActiveSkill(
+        [
+            new BreakAffinityEffectDefinition(
+                [DamageElement.Fire],
+                new InstantDurationDefinition()),
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+        ]);
+
+        SkillExecutionResult result = executor.Execute(Request(
+            skill,
+            actor,
+            [actor, target],
+            [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        EffectExecutionResult damage = Assert.Single(result.Effects, effect => effect.EffectIndex == 1);
+        Assert.Equal(ElementalAffinity.Normal, damage.ResolvedAffinity);
+        Assert.Empty(target.AffinityBreaks);
+        Assert.Equal(ElementalAffinity.Weak, target.GetElementalAffinity(DamageElement.Fire));
+    }
+
+    [Fact]
+    public void InstantDuration_IsNotExpiredByANestedOrderedEffectAction()
+    {
+        ContentId nestedHandlerId = ContentId.Parse("run_nested_action");
+        var profile = new CombatDefenseProfile(
+        [
+            new KeyValuePair<DamageElement, ElementalAffinity>(
+                DamageElement.Fire,
+                ElementalAffinity.Weak)
+        ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, defense: profile);
+        BattleExecutionServices services = Services(
+            customEffects: [new(nestedHandlerId, new NestedActionCustomEffectHandler())]);
+        var executor = new SkillExecutor(services);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new BreakAffinityEffectDefinition(
+                [DamageElement.Fire],
+                new InstantDurationDefinition()),
+            new CustomEffectDefinition(nestedHandlerId),
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+        ]);
+
+        SkillExecutionResult result = executor.Execute(Request(
+            skill,
+            actor,
+            [actor, target],
+            [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        EffectExecutionResult damage = Assert.Single(result.Effects, effect => effect.EffectIndex == 2);
+        Assert.Equal(ElementalAffinity.Normal, damage.ResolvedAffinity);
+        Assert.Empty(target.AffinityBreaks);
+        Assert.Equal(ElementalAffinity.Weak, target.GetElementalAffinity(DamageElement.Fire));
+    }
+
+    [Fact]
     public void Execute_AnalyzeEscapeAndCustomEffectsRemainHostNeutral()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
@@ -1024,6 +1104,40 @@ public sealed class ActiveSkillExecutionTests
         {
             context.Actor.AddResource(resourceId, amount);
             return new EffectExecutionResult(999, RuntimeInstanceId.Parse("forged_target"), EffectExecutionOutcome.Success, Value: amount);
+        }
+    }
+
+    private sealed class NestedActionCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context)
+        {
+            RuntimeActorState target = context.Target
+                ?? throw new InvalidOperationException("The nested-action test requires a target.");
+            SkillDefinition nestedSkill = ActiveSkill(
+                [new AnalyzeEffectDefinition([AnalysisLayer.Stats])],
+                targeting: new TargetingDefinition(
+                    TargetRelation.Any,
+                    TargetSelection.Single,
+                    TargetLifeState.Any,
+                    true));
+            SkillExecutionResult nested = new SkillExecutor(context.Services).Execute(
+                new SkillExecutionRequest(
+                    nestedSkill,
+                    context.Actor,
+                    context.Request.Participants,
+                    context.Request.ContextId,
+                    context.Request.BattleKindId,
+                    context.Request.MoonPhaseId,
+                    [target.InstanceId]));
+            if (nested.Status == SkillExecutionStatus.Rejected)
+            {
+                throw new InvalidOperationException("The nested action was rejected during the duration-scope test.");
+            }
+
+            return new EffectExecutionResult(
+                context.EffectIndex,
+                target.InstanceId,
+                EffectExecutionOutcome.Success);
         }
     }
 

@@ -76,11 +76,24 @@ public sealed record BattleShieldState(DurationDefinition? Duration);
 public sealed record BattleAffinityBreakState(DurationDefinition Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
 public sealed record BattleOtherStatusState(DurationDefinition Duration, bool IsRemovable = true);
+
+public enum BattleDurationStateKind
+{
+    Ailment,
+    StatStage,
+    Charge,
+    Shield,
+    AffinityOverride,
+    AffinityBreak,
+    OtherStatus
+}
+
 public sealed record BattleDurationTickResult(
     ContentId Id,
     DurationDefinition PreviousDuration,
     DurationDefinition? CurrentDuration,
-    bool Expired);
+    bool Expired,
+    BattleDurationStateKind StateKind);
 
 public sealed class RuntimeActorState
 {
@@ -387,7 +400,12 @@ public sealed class RuntimeActorState
                 continue;
             }
 
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.Ailment));
             if (expired)
             {
                 _ailments.Remove(id);
@@ -413,7 +431,12 @@ public sealed class RuntimeActorState
                 continue;
             }
 
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.StatStage));
             if (expired)
             {
                 _statStages.Remove(id);
@@ -433,7 +456,12 @@ public sealed class RuntimeActorState
             }
 
             ContentId id = ContentId.Parse("charge_" + kind.ToString().ToLowerInvariant());
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.Charge));
             if (expired)
             {
                 _charges.Remove(kind);
@@ -453,7 +481,12 @@ public sealed class RuntimeActorState
             }
 
             ContentId id = ContentId.Parse("shield_" + kind.ToString().ToLowerInvariant());
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.Shield));
             if (expired)
             {
                 _shields.Remove(kind);
@@ -472,7 +505,12 @@ public sealed class RuntimeActorState
             }
 
             ContentId id = ContentId.Parse("affinity_override_" + element.ToString().ToLowerInvariant());
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.AffinityOverride));
             if (expired)
             {
                 _affinityOverrides.Remove(element);
@@ -491,7 +529,12 @@ public sealed class RuntimeActorState
             }
 
             ContentId id = ContentId.Parse("affinity_break_" + element.ToString().ToLowerInvariant());
-            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.AffinityBreak));
             if (expired)
             {
                 _affinityBreaks.Remove(element);
@@ -502,22 +545,117 @@ public sealed class RuntimeActorState
             }
         }
 
+        foreach ((ContentId id, BattleOtherStatusState state) in _otherStatuses.ToArray())
+        {
+            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            results.Add(new BattleDurationTickResult(
+                id,
+                state.Duration,
+                current,
+                expired,
+                BattleDurationStateKind.OtherStatus));
+            if (expired)
+            {
+                _otherStatuses.Remove(id);
+            }
+            else if (current is not null)
+            {
+                _otherStatuses[id] = state with { Duration = current };
+            }
+        }
+
         return Array.AsReadOnly(results.ToArray());
     }
+
+    public IReadOnlyList<BattleDurationTickResult> ExpireInstantDurations() =>
+        ExpireDurations(duration => duration is InstantDurationDefinition);
+
+    public IReadOnlyList<BattleDurationTickResult> ExpirePhaseDurations(ContentId phaseId) =>
+        ExpireDurations(duration =>
+            duration is PhaseDurationDefinition phase && phase.PhaseId == phaseId);
 
     public void ClearTransientStatuses()
     {
         IsGuarding = false;
-        _charges.Clear();
-        _shields.Clear();
+        foreach (ChargeKind kind in _charges
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _charges.Remove(kind);
+        }
+
+        foreach (ShieldKind kind in _shields
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _shields.Remove(kind);
+        }
     }
 
     public void ClearEncounterStatuses()
     {
-        _statStages.Clear();
-        _affinityBreaks.Clear();
-        _affinityOverrides.Clear();
-        _otherStatuses.Clear();
+        foreach (ContentId id in _ailments
+                     .Where(pair => pair.Value.Duration is
+                         InstantDurationDefinition or PhaseDurationDefinition or BattleDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _ailments.Remove(id);
+        }
+
+        foreach (ContentId id in _statStages
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _statStages.Remove(id);
+        }
+
+        foreach (ChargeKind kind in _charges
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _charges.Remove(kind);
+        }
+
+        foreach (ShieldKind kind in _shields
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _shields.Remove(kind);
+        }
+
+        foreach (DamageElement element in _affinityOverrides
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _affinityOverrides.Remove(element);
+        }
+
+        foreach (DamageElement element in _affinityBreaks
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _affinityBreaks.Remove(element);
+        }
+
+        foreach (ContentId id in _otherStatuses
+                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Select(pair => pair.Key)
+                     .ToArray())
+        {
+            _otherStatuses.Remove(id);
+        }
     }
 
     public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
@@ -857,6 +995,110 @@ public sealed class RuntimeActorState
             _statStages.Remove(id);
         }
     }
+
+    private IReadOnlyList<BattleDurationTickResult> ExpireDurations(
+        Func<DurationDefinition, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        var results = new List<BattleDurationTickResult>();
+
+        foreach ((ContentId id, ActiveAilmentState state) in _ailments.ToArray())
+        {
+            if (!predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _ailments.Remove(id);
+            results.Add(Expired(id, state.Duration, BattleDurationStateKind.Ailment));
+        }
+
+        foreach ((ContentId id, BattleStatStageState state) in _statStages.ToArray())
+        {
+            if (state.Duration is null || !predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _statStages.Remove(id);
+            results.Add(Expired(id, state.Duration, BattleDurationStateKind.StatStage));
+        }
+
+        foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
+        {
+            if (state.Duration is null || !predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _charges.Remove(kind);
+            results.Add(Expired(
+                ContentId.Parse("charge_" + kind.ToString().ToLowerInvariant()),
+                state.Duration,
+                BattleDurationStateKind.Charge));
+        }
+
+        foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
+        {
+            if (state.Duration is null || !predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _shields.Remove(kind);
+            results.Add(Expired(
+                ContentId.Parse("shield_" + kind.ToString().ToLowerInvariant()),
+                state.Duration,
+                BattleDurationStateKind.Shield));
+        }
+
+        foreach ((DamageElement element, BattleAffinityOverrideState state) in _affinityOverrides.ToArray())
+        {
+            if (!predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _affinityOverrides.Remove(element);
+            results.Add(Expired(
+                ContentId.Parse("affinity_override_" + element.ToString().ToLowerInvariant()),
+                state.Duration,
+                BattleDurationStateKind.AffinityOverride));
+        }
+
+        foreach ((DamageElement element, BattleAffinityBreakState state) in _affinityBreaks.ToArray())
+        {
+            if (!predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _affinityBreaks.Remove(element);
+            results.Add(Expired(
+                ContentId.Parse("affinity_break_" + element.ToString().ToLowerInvariant()),
+                state.Duration,
+                BattleDurationStateKind.AffinityBreak));
+        }
+
+        foreach ((ContentId id, BattleOtherStatusState state) in _otherStatuses.ToArray())
+        {
+            if (!predicate(state.Duration))
+            {
+                continue;
+            }
+
+            _otherStatuses.Remove(id);
+            results.Add(Expired(id, state.Duration, BattleDurationStateKind.OtherStatus));
+        }
+
+        return Array.AsReadOnly(results.ToArray());
+    }
+
+    private static BattleDurationTickResult Expired(
+        ContentId id,
+        DurationDefinition duration,
+        BattleDurationStateKind stateKind) =>
+        new(id, duration, CurrentDuration: null, Expired: true, StateKind: stateKind);
 
     private static bool TryTickDuration(
         DurationDefinition duration,

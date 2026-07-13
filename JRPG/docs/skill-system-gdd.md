@@ -241,7 +241,7 @@ Within a trigger, the passive owner is the condition `actor`; each event-selecte
 
 The dispatcher suppresses recursive activation of the same owner, passive, trigger, and event unless the code-owned event policy explicitly permits re-entry. Activation limits are also event-policy rules rather than authored JSON. `owner_would_be_defeated` permits one activation per passive trigger per battle, allowing Endure to restore HP after the owner temporarily reaches zero; a later lethal event leaves the owner defeated.
 
-Battle lifecycle owners dispatch events such as `battle_start` and `owner_turn_end`. Passive activation results remain nested in the originating skill result for presentation, while Press Turn aggregation uses only the original active effect outcomes. Ailment-owned trigger dispatch and passive-duration expiration remain deferred until their lifecycle consumers are migrated.
+Battle lifecycle owners dispatch events such as `battle_start` and `owner_turn_end`. Passive activation results remain nested in the originating skill result for presentation, while Press Turn aggregation uses only the original active effect outcomes. Ailment-owned triggers reuse the same ordered effect pipeline and duration boundary as active skills, items, and passive triggers.
 
 ## Inheritance Groups
 
@@ -523,7 +523,8 @@ An active skill follows one deterministic transaction:
 5. Commit the resolved costs in authored order.
 6. Execute effects in authored order and targets in resolved target order.
 7. Evaluate each effect's `when` tree for the current target immediately before that effect executes.
-8. Return immutable effect results, diagnostics, escape requests, and Press Turn inputs to the host.
+8. Expire `instant` state after the outermost ordered action, including any nested trigger effects.
+9. Return immutable effect results, diagnostics, escape requests, and Press Turn inputs to the host.
 
 Single-target selections must contain only unique eligible instance IDs. Random target selection belongs to an explicit host policy and its result is checked against the eligible target set. `none`/`none` targeting is reserved for untargeted mechanics such as escape and registered custom actions. Ordinary target-mutating effects reject untargeted execution before costs are spent.
 
@@ -553,6 +554,18 @@ Ordinary failures obey the effect's authored policy:
 Battle interruptions override every authored failure policy. Repel reflects resolved damage to the actor and interrupts the action. Absorb restores the target and interrupts the action. Both produce phase-termination input for Press Turn. Miss and Null are failures, Weakness and Critical are successful advantage results, and every per-target outcome remains available to presentation and turn-system adapters.
 
 Temporary affinity Breaks and overrides are runtime statuses, not changes to authored defense data. `break_affinity` names the affected elements and a typed duration; it never infers behavior from a skill name. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Break state ticks through the shared status lifecycle, may suspend while its owner is in reserve when its authored turn duration requests that behavior, clears at battle-end cleanup, and is removable through the `affinity_break` status kind. Track 9 consumes passive affinity replacements, Ice damage modifiers, physical-skill cost modifiers, typed ailment replacements, and registered passive events.
+
+### Duration Lifecycle
+
+The runtime executes all five authored duration kinds through `BattleDurationLifecycleService`. The same rules apply to ailments, stat stages, charges, shields, affinity overrides, affinity Breaks, and registered other statuses:
+
+- `instant` remains active for all later effects in the current outermost ordered action, then expires before another action begins;
+- `turns` decrements only when its authored event ID is dispatched and pauses while the actor is in reserve when `suspendWhileReserve` is true;
+- `phase` expires only when the encounter lifecycle ends the matching host-supplied phase ID;
+- `battle` expires during battle-end cleanup;
+- `permanent` survives action, turn, phase, swap, battle-end, and field-transition cleanup until an explicit removal mechanic removes it.
+
+Duration expiry is independent of an ailment or status being curable. `isRemovable` controls explicit cure/removal operations; it cannot prevent the authored lifetime from ending. Turn-counted ailments continue across battle cleanup for compatibility with field-persistent ailments, while non-permanent combat modifiers are encounter-scoped. Hosts own the meaning of phase IDs and must pass the matching ID through the encounter lifecycle; the framework does not infer phases from display text.
 
 ### Host Policy Boundary
 
