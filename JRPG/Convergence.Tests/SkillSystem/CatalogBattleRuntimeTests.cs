@@ -94,6 +94,101 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_RejectsMismatchedRequestAndProgressionLevelsBeforeInitialization()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var initialization = new RecordingInitializationPolicy();
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            initialization);
+
+        CatalogBattleActorCreationResult result = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            5,
+            new RuntimeProgressionSnapshot(6, 0, 0, 0)));
+
+        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.ProgressionLevelMismatch, diagnostic.Code);
+        Assert.Contains("'5'", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("'6'", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Equal(0, initialization.CallCount);
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public void ActorFactory_UsesOneLevelForUnlocksInitializationAndRuntimeProgression()
+    {
+        SkillDefinition unlocked = Active("test.pack:unlocked", DamageElement.Ice);
+        EntityDefinition entity = Entity(
+            "test.pack:entity",
+            [],
+            [new SkillUnlockDefinition(5, unlocked.Id)]);
+        var initialization = new RecordingInitializationPolicy();
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(unlocked),
+            initialization);
+        var progression = new RuntimeProgressionSnapshot(5, 12, 40, 2);
+
+        CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            5,
+            progression)).RequireActor();
+
+        Assert.Equal(1, initialization.CallCount);
+        Assert.Equal(5, initialization.LastLevel);
+        Assert.Same(progression, actor.State.Progression);
+        Assert.Equal([unlocked.Id], actor.SkillLoadout.Select(skill => skill.Id));
+    }
+
+    [Fact]
+    public void ActorFactory_RejectsDuplicateInitializationResourcesWithoutThrowing()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            new DuplicateResourceInitializationPolicy());
+
+        CatalogBattleActorCreationResult result = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            1));
+
+        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.InitializationResourceDuplicate, diagnostic.Code);
+        Assert.Equal(Id("hp"), diagnostic.ResourceId);
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public void ActorFactory_RejectsNullInitializationWithoutEscapingItsDiagnosticBoundary()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            new NullInitializationPolicy());
+
+        CatalogBattleActorCreationResult result = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            1));
+
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.InitializationReturnedNull,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
     public void ActorFactory_RestoreUsesCompleteSnapshotWithoutReinitializingRuntimeState()
     {
         EntityDefinition entity = Entity("test.pack:entity", []);
@@ -583,6 +678,35 @@ public sealed class CatalogBattleRuntimeTests
                 new BattleResourceState(Id("sp"), sp, sp)
             ]);
         }
+    }
+
+    private sealed class RecordingInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public int CallCount { get; private set; }
+        public int? LastLevel { get; private set; }
+
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level)
+        {
+            CallCount++;
+            LastLevel = level;
+            return new BattleActorInitialization(Id("hp"), [new BattleResourceState(Id("hp"), 10, 10)]);
+        }
+    }
+
+    private sealed class DuplicateResourceInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level) =>
+            new(
+                Id("hp"),
+                [
+                    new BattleResourceState(Id("hp"), 10, 10),
+                    new BattleResourceState(Id("hp"), 8, 10)
+                ]);
+    }
+
+    private sealed class NullInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level) => null!;
     }
 
     private sealed class ThrowingInitializationPolicy : IBattleActorInitializationPolicy

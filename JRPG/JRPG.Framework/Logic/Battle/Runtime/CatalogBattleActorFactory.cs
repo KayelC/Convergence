@@ -44,11 +44,15 @@ public interface IBattleActorInitializationPolicy
 public enum CatalogBattleActorDiagnosticCode
 {
     InvalidLevel,
+    ProgressionLevelMismatch,
     EntityIdNotQualified,
     EntityMissing,
     SkillMissing,
     InitializationFailed,
+    InitializationReturnedNull,
+    InitializationResourceDuplicate,
     VitalResourceMissing,
+    RuntimeStateConstructionFailed,
     SnapshotActorKindMismatch,
     SnapshotSkillMissing,
     SnapshotAilmentMissing,
@@ -59,7 +63,8 @@ public sealed record CatalogBattleActorDiagnostic(
     CatalogBattleActorDiagnosticCode Code,
     string Message,
     ContentId? EntityId = null,
-    ContentId? SkillId = null);
+    ContentId? SkillId = null,
+    ContentId? ResourceId = null);
 
 public sealed class CatalogBattleActor
 {
@@ -136,14 +141,28 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var diagnostics = new List<CatalogBattleActorDiagnostic>();
+        bool levelIsConsistent = true;
         if (request.Level <= 0)
         {
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.InvalidLevel,
                 "Runtime actor level must be positive.",
                 request.EntityId));
+            levelIsConsistent = false;
         }
+
+        if (request.Progression is not null && request.Progression.Level != request.Level)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.ProgressionLevelMismatch,
+                $"Requested level '{request.Level}' does not match progression level '{request.Progression.Level}'.",
+                request.EntityId));
+            levelIsConsistent = false;
+        }
+
+        int actorLevel = request.Progression?.Level ?? request.Level;
 
         if (!request.EntityId.IsQualified)
         {
@@ -169,7 +188,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         {
             if (seenSkillIds.Add(skillId)) orderedSkillIds.Add(skillId);
         }
-        foreach (SkillUnlockDefinition unlock in entity.SkillUnlocks.Where(unlock => unlock.Level <= request.Level))
+        foreach (SkillUnlockDefinition unlock in entity.SkillUnlocks.Where(
+                     unlock => levelIsConsistent && unlock.Level <= actorLevel))
         {
             if (seenSkillIds.Add(unlock.SkillId)) orderedSkillIds.Add(unlock.SkillId);
         }
@@ -196,10 +216,10 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
-        BattleActorInitialization initialization;
+        BattleActorInitialization? initialization;
         try
         {
-            initialization = _initialization.Initialize(entity, request.Level);
+            initialization = _initialization.Initialize(entity, actorLevel);
         }
         catch (Exception exception)
         {
@@ -210,48 +230,84 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
+        if (initialization is null)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.InitializationReturnedNull,
+                "The actor initialization policy returned no initialization state.",
+                entity.Id));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
+        foreach (ContentId duplicateResourceId in initialization.Resources
+                     .GroupBy(resource => resource.Id)
+                     .Where(group => group.Skip(1).Any())
+                     .Select(group => group.Key))
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.InitializationResourceDuplicate,
+                $"Initialization provided resource '{duplicateResourceId}' more than once.",
+                entity.Id,
+                ResourceId: duplicateResourceId));
+        }
+
         if (!initialization.Resources.Any(resource => resource.Id == initialization.VitalResourceId))
         {
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.VitalResourceMissing,
                 $"Initialization did not provide vital resource '{initialization.VitalResourceId}'.",
                 entity.Id));
+        }
+
+        if (diagnostics.Count > 0)
+        {
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
         RuntimeProgressionSnapshot progression = request.Progression ??
-            new RuntimeProgressionSnapshot(request.Level, 0, 0, 0);
-        var state = new RuntimeActorState(
-            request.InstanceId,
-            entity.Id,
-            request.TeamId,
-            initialization.VitalResourceId,
-            CombatDefenseProfile.FromEntityDefinition(entity),
-            initialization.Resources,
-            entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
-            loadout.Select(skill => skill.Id),
-            capabilityIds: [],
-            passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive),
-            isActive: request.IsActive,
-            identity: new RuntimeActorIdentitySnapshot(
+            new RuntimeProgressionSnapshot(actorLevel, 0, 0, 0);
+        try
+        {
+            var state = new RuntimeActorState(
                 request.InstanceId,
                 entity.Id,
-                entity.EntityKindId,
-                entity.DisplayName),
-            ownership: new RuntimeActorOwnershipSnapshot(
-                request.ControllerId ?? ContentId.Parse("runtime"),
-                request.TeamId),
-            deployment: new RuntimeActorDeploymentSnapshot(request.Deployment, request.IsActive),
-            progression: progression,
-            baseResourceValues: initialization.BaseResourceValues.Select(pair =>
-                new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
-            baseStats: entity.Stats.Select(pair =>
-                new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
-            skillState: new RuntimeSkillStateSnapshot(
+                request.TeamId,
+                initialization.VitalResourceId,
+                CombatDefenseProfile.FromEntityDefinition(entity),
+                initialization.Resources,
+                entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
                 loadout.Select(skill => skill.Id),
-                loadout.Select(skill => skill.Id)));
+                capabilityIds: [],
+                passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive),
+                isActive: request.IsActive,
+                identity: new RuntimeActorIdentitySnapshot(
+                    request.InstanceId,
+                    entity.Id,
+                    entity.EntityKindId,
+                    entity.DisplayName),
+                ownership: new RuntimeActorOwnershipSnapshot(
+                    request.ControllerId ?? ContentId.Parse("runtime"),
+                    request.TeamId),
+                deployment: new RuntimeActorDeploymentSnapshot(request.Deployment, request.IsActive),
+                progression: progression,
+                baseResourceValues: initialization.BaseResourceValues.Select(pair =>
+                    new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+                baseStats: entity.Stats.Select(pair =>
+                    new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+                skillState: new RuntimeSkillStateSnapshot(
+                    loadout.Select(skill => skill.Id),
+                    loadout.Select(skill => skill.Id)));
 
-        return new CatalogBattleActorCreationResult(new CatalogBattleActor(entity, state, loadout), diagnostics);
+            return new CatalogBattleActorCreationResult(new CatalogBattleActor(entity, state, loadout), diagnostics);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.RuntimeStateConstructionFailed,
+                $"Initialization produced invalid runtime actor state: {exception.Message}",
+                entity.Id));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
     }
 
     public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)

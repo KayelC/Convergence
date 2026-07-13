@@ -290,6 +290,7 @@ Phase 1-02 result:
 - Echo Adept plus Ashling, Bramble Runner, and Ward Shell are hydrated as framework `CatalogBattleActor` / runtime actor state from the clean catalog and encounter definitions.
 - Actor inspection now shows player/enemy role, instance ID, level, resources, stats, active skills, and passives.
 - Startup snapshot validation now covers the clean actor roster, not only the player actor.
+- The L3 integrity correction requires request level and optional progression level to match, uses that single value for unlocks/initialization/runtime state, and reports malformed initialization resources through typed diagnostics rather than exceptions.
 - This is `parallel_partial`, not `clean_parity`: the original clean slice proves the framework actor path, but protected legacy actor categories such as Human, Persona User, Wild Card, and Operator are still legacy/adapter-owned.
 
 ### 03. `resource_recalculation`

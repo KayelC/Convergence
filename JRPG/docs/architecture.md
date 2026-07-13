@@ -252,6 +252,8 @@ Review-Whole-7 makes direct C# definitions obey the same immutability boundary a
 
 Review-Whole-8 removes the remaining prototype assumptions from clean framework authority. Wallet and reward APIs use neutral currency terminology; negotiation requires an injected session policy; stock capacity is either explicitly tiered or deliberately unlimited; and the floor/menu-oriented dungeon module lives only in the console host. The legacy host still presents Macca, Full Moon, Medicine, Demon Stock, and its historical stock curve through adapters, while another host can supply entirely different policies and vocabulary.
 
+The L3 correction makes catalog actor creation a closed diagnostic boundary. `CatalogBattleActorCreationRequest.Level` and an optional progression snapshot must agree; that single level drives unlocks, initialization, and the resulting actor state. Invalid policy output, including null initialization and duplicate resource IDs, produces typed `CatalogBattleActorDiagnostic` values rather than leaking collection-construction exceptions. Existing encounter, fusion, Compendium, persistence, Godot-contract, and clean-host consumers all use the same corrected factory contract.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.
