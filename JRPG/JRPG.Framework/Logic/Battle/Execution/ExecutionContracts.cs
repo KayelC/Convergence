@@ -56,6 +56,10 @@ public sealed record SkillExecutionDiagnostic(
 
 public sealed record EffectExecutionResult
 {
+    private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
+        Array.Empty<PassiveTriggerExecutionResult>();
+    private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
+
     public EffectExecutionResult(
         int EffectIndex,
         RuntimeInstanceId? TargetId,
@@ -93,9 +97,17 @@ public sealed record EffectExecutionResult
     public ContentId? RelatedId { get; init; }
     public string? Detail { get; init; }
     public bool EscapeRequested { get; init; }
-    public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; init; }
+    public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations
+    {
+        get => _passiveActivations;
+        init => _passiveActivations = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
     public ElementalAffinity? ResolvedAffinity { get; init; }
-    public IReadOnlyList<ContentId> HostActionRequestIds { get; init; }
+    public IReadOnlyList<ContentId> HostActionRequestIds
+    {
+        get => _hostActionRequestIds;
+        init => _hostActionRequestIds = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
 }
 
 public sealed record EffectExecutionEnvironment

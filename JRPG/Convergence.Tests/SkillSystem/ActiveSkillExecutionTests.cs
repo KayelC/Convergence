@@ -862,6 +862,59 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void EffectExecutionResult_SnapshotsConstructorAndRecordCloneCollections()
+    {
+        var originalActivation = new PassiveTriggerExecutionResult(
+            ContentId.Parse("original_passive"),
+            0,
+            ContentId.Parse("original_event"),
+            RuntimeInstanceId.Parse("original_target"),
+            PassiveTriggerOutcome.Executed,
+            []);
+        var replacementActivation = new PassiveTriggerExecutionResult(
+            ContentId.Parse("replacement_passive"),
+            1,
+            ContentId.Parse("replacement_event"),
+            RuntimeInstanceId.Parse("replacement_target"),
+            PassiveTriggerOutcome.Executed,
+            []);
+        var originalActivations = new List<PassiveTriggerExecutionResult> { originalActivation };
+        var originalHostRequests = new List<ContentId> { ContentId.Parse("original_request") };
+        var replacementActivations = new List<PassiveTriggerExecutionResult> { replacementActivation };
+        var replacementHostRequests = new List<ContentId> { ContentId.Parse("replacement_request") };
+        var original = new EffectExecutionResult(
+            0,
+            RuntimeInstanceId.Parse("target"),
+            EffectExecutionOutcome.Success,
+            PassiveActivations: originalActivations,
+            HostActionRequestIds: originalHostRequests);
+
+        EffectExecutionResult clone = original with
+        {
+            Detail = "cloned",
+            PassiveActivations = replacementActivations,
+            HostActionRequestIds = replacementHostRequests
+        };
+
+        originalActivations.Clear();
+        originalHostRequests.Clear();
+        replacementActivations.Clear();
+        replacementHostRequests.Clear();
+
+        Assert.Equal("cloned", clone.Detail);
+        Assert.Equal(originalActivation, Assert.Single(original.PassiveActivations));
+        Assert.Equal(ContentId.Parse("original_request"), Assert.Single(original.HostActionRequestIds));
+        Assert.Equal(replacementActivation, Assert.Single(clone.PassiveActivations));
+        Assert.Equal(ContentId.Parse("replacement_request"), Assert.Single(clone.HostActionRequestIds));
+        Assert.NotSame(replacementActivations, clone.PassiveActivations);
+        Assert.NotSame(replacementHostRequests, clone.HostActionRequestIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<PassiveTriggerExecutionResult>)clone.PassiveActivations).Add(originalActivation));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)clone.HostActionRequestIds).Add(ContentId.Parse("forged_request")));
+    }
+
+    [Fact]
     public void ExecutionPublicApiDoesNotExposeLegacyOrHostSpecificTypes()
     {
         Type[] publicTypes = typeof(SkillExecutor).Assembly.GetTypes()

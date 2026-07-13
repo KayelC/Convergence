@@ -528,6 +528,8 @@ An active skill follows one deterministic transaction:
 8. Expire `instant` state after the outermost ordered action, including any nested trigger effects.
 9. Return immutable effect results, diagnostics, escape requests, and Press Turn inputs to the host.
 
+The two collection properties on `EffectExecutionResult` are snapshots at every public assignment boundary. This includes record-clone replacements made by registered custom handlers: the outer passive-activation collection and host-action request IDs are copied into read-only storage rather than retaining host-owned lists. Scalar record copies may share those already immutable snapshots.
+
 Single-target selections must contain only unique eligible instance IDs. Random target selection belongs to an explicit host policy and its result is checked against the eligible target set. `none`/`none` targeting is reserved for untargeted mechanics such as escape and registered custom actions. Ordinary target-mutating effects reject untargeted execution before costs are spent.
 
 ### Effects And Outcomes
