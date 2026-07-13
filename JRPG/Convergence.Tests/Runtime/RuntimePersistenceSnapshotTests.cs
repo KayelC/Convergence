@@ -6,6 +6,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -32,6 +33,216 @@ public sealed class RuntimePersistenceSnapshotTests
             Id("convergence.catalog_surface_sample:tartarus_sample"),
             valid.Field!.DungeonTraversal!.DungeonId);
         Assert.Equal(2, valid.Checkpoints.Entries.Count);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_ApprovedActorsRestoreThroughCatalogFactory()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(CreateSaveSnapshot(), catalog);
+        var factory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog);
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));
+        foreach (RuntimeActorSnapshot actor in validation.RequireValidSnapshot().Actors)
+        {
+            CatalogBattleActorCreationResult restored = factory.Restore(actor);
+
+            Assert.True(
+                restored.IsSuccess,
+                string.Join(Environment.NewLine, restored.Diagnostics.Select(item => item.Message)));
+            RuntimeActorSnapshot roundTrip = restored.RequireActor().State.ToSnapshot();
+            Assert.Equal(actor.Identity, roundTrip.Identity);
+            Assert.Equal(actor.Ownership, roundTrip.Ownership);
+            Assert.Equal(actor.Progression, roundTrip.Progression);
+            Assert.Equal(actor.Resources, roundTrip.Resources);
+            Assert.Equal(actor.Skills.LearnedSkillIds, roundTrip.Skills.LearnedSkillIds);
+            Assert.Equal(actor.Skills.EquippedSkillIds, roundTrip.Skills.EquippedSkillIds);
+        }
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_AndActorRestoreShareStructuralIntegrityRules()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        ContentId iceBoost = Id("convergence.skill_system_redesign_sample:ice_boost_sample");
+        ContentId poison = Id("convergence.shared_effects_demo:poison_demo");
+        var duration = new TurnDurationDefinition(2, Id("owner_turn_end"), false);
+        var activation = new RuntimePassiveActivationSnapshot(
+            iceBoost,
+            Id("owner_turn_end"),
+            triggerIndex: 0,
+            activationCount: 1);
+        RuntimeActorSnapshot malformed = CopyActor(
+            frost,
+            resources: [frost.Resources[0], frost.Resources[0], frost.Resources[1]],
+            skills: new RuntimeSkillStateSnapshot(
+                [frost.Skills.LearnedSkillIds[0], iceBoost, frost.Skills.LearnedSkillIds[0]],
+                [iceBoost, iceBoost]),
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                ailments:
+                [
+                    new RuntimeTimedStateSnapshot(poison, duration),
+                    new RuntimeTimedStateSnapshot(poison, duration)
+                ],
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(Id("sealed"), duration),
+                    new RuntimeTimedStateSnapshot(Id("sealed"), duration)
+                ],
+                statStages:
+                [
+                    new RuntimeStatStageSnapshot(Id("attack"), 1, duration),
+                    new RuntimeStatStageSnapshot(Id("attack"), 1, duration)
+                ],
+                charges:
+                [
+                    new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
+                    new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration)
+                ],
+                shields:
+                [
+                    new RuntimeShieldSnapshot(ShieldKind.Physical, duration),
+                    new RuntimeShieldSnapshot(ShieldKind.Physical, duration)
+                ],
+                affinityOverrides:
+                [
+                    new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Resist, duration),
+                    new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Resist, duration)
+                ],
+                analysis:
+                [
+                    new RuntimeAnalysisSnapshot(
+                        RuntimeInstanceId.Parse("analysis_target"),
+                        [AnalysisLayer.Stats, AnalysisLayer.Stats]),
+                    new RuntimeAnalysisSnapshot(
+                        RuntimeInstanceId.Parse("analysis_target"),
+                        [AnalysisLayer.Affinities])
+                ]),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                [activation, activation],
+                [
+                    new RuntimePassiveSkillStateSnapshot(iceBoost, true),
+                    new RuntimePassiveSkillStateSnapshot(iceBoost, false)
+                ]),
+            capabilityIds: [Id("analyze"), Id("analyze")]);
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        Assert.False(validation.IsValid);
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorResource, "$.actors[0].resources[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorLearnedSkill, "$.actors[0].skills.learnedSkillIds[2]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorEquippedSkill, "$.actors[0].skills.equippedSkillIds[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorCapability, "$.actors[0].capabilityIds[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAilment, "$.actors[0].battleStatus.ailments[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorStatus, "$.actors[0].battleStatus.statuses[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorStatStage, "$.actors[0].battleStatus.statStages[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorCharge, "$.actors[0].battleStatus.charges[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorShield, "$.actors[0].battleStatus.shields[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityOverride, "$.actors[0].battleStatus.affinityOverrides[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisLayer, "$.actors[0].battleStatus.analysis[0].layers[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisTarget, "$.actors[0].battleStatus.analysis[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePassiveSkillState, "$.actors[0].battleActivations.passiveSkillStates[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePassiveActivation, "$.actors[0].battleActivations.passiveActivations[1]");
+
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
+            malformed,
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[iceBoost]],
+            [catalog.Ailments[poison]]));
+        Assert.Contains("$.resources[1]", directRestore.Message, StringComparison.Ordinal);
+
+        CatalogBattleActorCreationResult catalogRestore = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog).Restore(malformed);
+        Assert.False(catalogRestore.IsSuccess);
+        Assert.Contains(catalogRestore.Diagnostics, item => item.Code == CatalogBattleActorDiagnosticCode.SnapshotInvalid);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsUnloadedPassivesSkillShapeAndActorKindMismatch()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        ContentId frostLance = Id("convergence.clean_battle_demo:frost_lance_demo");
+        ContentId emberBolt = Id("convergence.clean_battle_demo:ember_bolt_demo");
+        ContentId iceBoost = Id("convergence.skill_system_redesign_sample:ice_boost_sample");
+        RuntimeActorSnapshot malformed = CopyActor(
+            frost,
+            identity: new RuntimeActorIdentitySnapshot(
+                frost.Identity.InstanceId,
+                frost.Identity.EntityDefinitionId,
+                Id("operator"),
+                frost.Identity.DisplayName),
+            skills: new RuntimeSkillStateSnapshot(
+                [frostLance, iceBoost],
+                [frostLance, emberBolt]),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                [new RuntimePassiveActivationSnapshot(iceBoost, Id("owner_turn_end"), 0, 1)],
+                [new RuntimePassiveSkillStateSnapshot(iceBoost, true)]));
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        Assert.False(validation.IsValid);
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.ActorKindMismatch, "$.actors[0].identity.actorKindId");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.ActorEquippedSkillNotLearned, "$.actors[0].skills.equippedSkillIds[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.PassiveStateSkillNotLoaded, "$.actors[0].battleActivations.passiveSkillStates[0]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded, "$.actors[0].battleActivations.passiveActivations[0]");
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMalformedActorFormsAndEquipmentOwnership()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        ContentId shortsword = Id("convergence.catalog_surface_sample:shortsword_sample");
+        RuntimeActorReferenceSnapshot wrongEmberReference = new(
+            ember.Identity.InstanceId,
+            frost.Identity.EntityDefinitionId,
+            ember.Identity.DisplayName);
+        RuntimeActorSnapshot malformedFrost = CopyActor(
+            frost,
+            forms: new RuntimeFormStockSnapshot(
+                activeForm: new RuntimeActorReferenceSnapshot(
+                    RuntimeInstanceId.Parse("missing_form"),
+                    frost.Identity.EntityDefinitionId,
+                    "Missing Form"),
+                personaStock: [wrongEmberReference, wrongEmberReference]),
+            equipment: new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, shortsword)
+            ]));
+        RuntimeActorSnapshot malformedEmber = CopyActor(
+            ember,
+            equipment: new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, shortsword)
+            ]));
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformedFrost, malformedEmber]),
+            catalog);
+
+        Assert.False(validation.IsValid);
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.MissingActiveFormReference, "$.actors[0].forms.activeForm");
+        Assert.Contains(validation.Diagnostics, item =>
+            item.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch &&
+            item.Path == "$.actors[0].forms.personaStock[0].entityDefinitionId");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorFormReference, "$.actors[0].forms.personaStock[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentSlotMismatch, "$.actors[0].equipment.equippedItemIds.armor");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquippedEquipmentNotOwned, "$.actors[0].equipment.equippedItemIds.armor");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors, "$.actors[1].equipment.equippedItemIds.weapon");
     }
 
     [Fact]
@@ -913,14 +1124,18 @@ public sealed class RuntimePersistenceSnapshotTests
 
     private static RuntimeSaveGameSnapshot Copy(
         RuntimeSaveGameSnapshot snapshot,
-        IEnumerable<ContentPackIdentity>? contentPacks = null) =>
+        IEnumerable<ContentPackIdentity>? contentPacks = null,
+        IEnumerable<RuntimeActorSnapshot>? actors = null,
+        RuntimePartyStockSnapshot? partyStock = null,
+        RuntimeInventorySnapshot? inventory = null,
+        RuntimeEquipmentSnapshot? equipment = null) =>
         new(
             snapshot.FrameworkVersion,
             contentPacks ?? snapshot.ContentPacks,
-            snapshot.Actors,
-            snapshot.PartyStock,
-            snapshot.Inventory,
-            snapshot.Equipment,
+            actors ?? snapshot.Actors,
+            partyStock ?? snapshot.PartyStock,
+            inventory ?? snapshot.Inventory,
+            equipment ?? snapshot.Equipment,
             snapshot.Wallet,
             snapshot.Field,
             snapshot.Compendium,
@@ -929,6 +1144,32 @@ public sealed class RuntimePersistenceSnapshotTests
             snapshot.Checkpoints,
             snapshot.HostContext,
             snapshot.ContractVersion);
+
+    private static RuntimeActorSnapshot CopyActor(
+        RuntimeActorSnapshot snapshot,
+        RuntimeActorIdentitySnapshot? identity = null,
+        IEnumerable<RuntimeResourceSnapshot>? resources = null,
+        RuntimeSkillStateSnapshot? skills = null,
+        RuntimeFormStockSnapshot? forms = null,
+        RuntimeEquipmentSnapshot? equipment = null,
+        RuntimeBattleStatusSnapshot? battleStatus = null,
+        RuntimeBattleActivationSnapshot? battleActivations = null,
+        IEnumerable<ContentId>? capabilityIds = null) =>
+        new(
+            identity ?? snapshot.Identity,
+            snapshot.Ownership,
+            snapshot.Deployment,
+            snapshot.Progression,
+            resources ?? snapshot.Resources,
+            snapshot.Stats,
+            skills ?? snapshot.Skills,
+            forms ?? snapshot.Forms,
+            equipment ?? snapshot.Equipment,
+            battleStatus ?? snapshot.BattleStatus,
+            battleActivations ?? snapshot.BattleActivations,
+            snapshot.BaseResourceValues,
+            snapshot.VitalResourceId,
+            capabilityIds ?? snapshot.CapabilityIds);
 
     internal static RuntimeActorSnapshot CreateActor(
         RuntimeInstanceId instanceId,
@@ -1048,6 +1289,13 @@ public sealed class RuntimePersistenceSnapshotTests
 
     private static ContentId Id(string value) => ContentId.Parse(value);
 
+    private static void AssertDiagnostic(
+        RuntimeSaveValidationResult result,
+        RuntimeSaveValidationCode code,
+        string path) =>
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == code && diagnostic.Path == path);
+
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
@@ -1092,5 +1340,13 @@ public sealed class RuntimePersistenceSnapshotTests
     private sealed class FixedStockCapacityPolicy(int capacity) : IStockCapacityPolicy
     {
         public int GetCapacity(int ownerLevel) => capacity;
+    }
+
+    private sealed class RestoreOnlyInitializationPolicy : IBattleActorInitializationPolicy
+    {
+        public BattleActorInitialization Initialize(EntityDefinition entity, int level) =>
+            new(
+                Id("hp"),
+                [new BattleResourceState(Id("hp"), 1, 1)]);
     }
 }

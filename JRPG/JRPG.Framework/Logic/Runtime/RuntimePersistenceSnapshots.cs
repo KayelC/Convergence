@@ -42,7 +42,29 @@ public enum RuntimeSaveValidationCode
     PersonaStockCapacityExceeded,
     DuplicateElementalAffinityKnowledge,
     DuplicateAilmentResistanceKnowledge,
-    DuplicateInstantDeathResistanceKnowledge
+    DuplicateInstantDeathResistanceKnowledge,
+    ActorKindMismatch,
+    DuplicateActorResource,
+    DuplicateActorLearnedSkill,
+    DuplicateActorEquippedSkill,
+    ActorEquippedSkillNotLearned,
+    DuplicateActorCapability,
+    DuplicateActorAilment,
+    DuplicateActorStatus,
+    DuplicateActorStatStage,
+    DuplicateActorCharge,
+    DuplicateActorShield,
+    DuplicateActorAffinityOverride,
+    DuplicateActorAnalysisTarget,
+    DuplicateActorAnalysisLayer,
+    DuplicatePassiveSkillState,
+    PassiveStateSkillNotLoaded,
+    DuplicatePassiveActivation,
+    PassiveActivationSkillNotLoaded,
+    DuplicateActorFormReference,
+    EquippedEquipmentNotOwned,
+    EquipmentSlotMismatch,
+    EquipmentAssignedToMultipleActors
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -295,7 +317,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     Path: $"$.actors[{index}].identity.instanceId"));
             }
 
-            if (!catalog.Entities.ContainsKey(actor.Identity.EntityDefinitionId))
+            if (!catalog.Entities.TryGetValue(actor.Identity.EntityDefinitionId, out EntityDefinition? entity))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.MissingCatalogEntity,
@@ -304,13 +326,34 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     actor.Identity.EntityDefinitionId,
                     $"$.actors[{index}].identity.entityDefinitionId"));
             }
+            else if (actor.Identity.ActorKindId != entity.EntityKindId)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActorKindMismatch,
+                    $"Actor kind '{actor.Identity.ActorKindId}' does not match entity kind '{entity.EntityKindId}'.",
+                    instanceId,
+                    actor.Identity.EntityDefinitionId,
+                    $"$.actors[{index}].identity.actorKindId"));
+            }
 
-            ValidateActorCatalogReferences(actor, catalog, diagnostics, index);
+            ValidateActorRestoreContract(actor, catalog, diagnostics, index);
+        }
+
+        for (int index = 0; index < snapshot.Actors.Count; index++)
+        {
+            ValidateActorFormReferences(snapshot.Actors[index], actors, diagnostics, index);
         }
 
         ValidatePartyReferences(snapshot.PartyStock, actors, _stockCapacityPolicy, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
-        ValidateEquipment(snapshot.Equipment, catalog, diagnostics);
+        ValidateEquipment(
+            snapshot.Equipment,
+            snapshot.Inventory,
+            catalog,
+            diagnostics,
+            "$.equipment",
+            null);
+        ValidateActorEquipment(snapshot.Actors, snapshot.Inventory, catalog, diagnostics);
         if (snapshot.Field is not null)
         {
             ValidateField(snapshot.Field, catalog, diagnostics);
@@ -375,37 +418,161 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
     }
 
-    private static void ValidateActorCatalogReferences(
+    private static void ValidateActorRestoreContract(
         RuntimeActorSnapshot actor,
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         int actorIndex)
     {
-        foreach (ContentId skillId in actor.Skills.LearnedSkillIds.Concat(actor.Skills.EquippedSkillIds).Distinct())
+        HashSet<ContentId> equippedPassiveSkillIds = actor.Skills.EquippedSkillIds
+            .Where(skillId =>
+                catalog.Skills.TryGetValue(skillId, out SkillDefinition? skill) &&
+                skill.Activation == SkillActivation.Passive)
+            .ToHashSet();
+        IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
+            RuntimeActorSnapshotIntegrity.ValidateForRestore(
+                actor,
+                equippedPassiveSkillIds,
+                catalog.Ailments.Keys);
+        foreach (RuntimeActorSnapshotIntegrityDiagnostic issue in integrityDiagnostics)
         {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                SaveCode(issue.Code),
+                issue.Message,
+                actor.Identity.InstanceId,
+                issue.ContentId,
+                ActorPath(actorIndex, issue.Path)));
+        }
+
+        ValidateActorSkillCatalogReferences(
+            actor.Skills.LearnedSkillIds,
+            catalog,
+            diagnostics,
+            actor.Identity.InstanceId,
+            $"$.actors[{actorIndex}].skills.learnedSkillIds");
+        ValidateActorSkillCatalogReferences(
+            actor.Skills.EquippedSkillIds,
+            catalog,
+            diagnostics,
+            actor.Identity.InstanceId,
+            $"$.actors[{actorIndex}].skills.equippedSkillIds");
+    }
+
+    private static void ValidateActorSkillCatalogReferences(
+        IReadOnlyList<ContentId> skillIds,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        RuntimeInstanceId instanceId,
+        string path)
+    {
+        for (int index = 0; index < skillIds.Count; index++)
+        {
+            ContentId skillId = skillIds[index];
             if (!catalog.Skills.ContainsKey(skillId))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.MissingCatalogSkill,
-                    $"Skill '{skillId}' referenced by actor '{actor.Identity.InstanceId}' is not present in the catalog.",
-                    actor.Identity.InstanceId,
+                    $"Skill '{skillId}' referenced by actor '{instanceId}' is not present in the catalog.",
+                    instanceId,
                     skillId,
-                    $"$.actors[{actorIndex}].skills"));
+                    $"{path}[{index}]"));
+            }
+        }
+    }
+
+    private static RuntimeSaveValidationCode SaveCode(RuntimeActorSnapshotIntegrityCode code) =>
+        code switch
+        {
+            RuntimeActorSnapshotIntegrityCode.DuplicateResource => RuntimeSaveValidationCode.DuplicateActorResource,
+            RuntimeActorSnapshotIntegrityCode.DuplicateLearnedSkill => RuntimeSaveValidationCode.DuplicateActorLearnedSkill,
+            RuntimeActorSnapshotIntegrityCode.DuplicateEquippedSkill => RuntimeSaveValidationCode.DuplicateActorEquippedSkill,
+            RuntimeActorSnapshotIntegrityCode.EquippedSkillNotLearned => RuntimeSaveValidationCode.ActorEquippedSkillNotLearned,
+            RuntimeActorSnapshotIntegrityCode.DuplicateCapability => RuntimeSaveValidationCode.DuplicateActorCapability,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAilment => RuntimeSaveValidationCode.DuplicateActorAilment,
+            RuntimeActorSnapshotIntegrityCode.MissingAilmentDefinition => RuntimeSaveValidationCode.MissingCatalogAilment,
+            RuntimeActorSnapshotIntegrityCode.DuplicateStatus => RuntimeSaveValidationCode.DuplicateActorStatus,
+            RuntimeActorSnapshotIntegrityCode.DuplicateStatStage => RuntimeSaveValidationCode.DuplicateActorStatStage,
+            RuntimeActorSnapshotIntegrityCode.DuplicateCharge => RuntimeSaveValidationCode.DuplicateActorCharge,
+            RuntimeActorSnapshotIntegrityCode.DuplicateShield => RuntimeSaveValidationCode.DuplicateActorShield,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAffinityOverride => RuntimeSaveValidationCode.DuplicateActorAffinityOverride,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisTarget => RuntimeSaveValidationCode.DuplicateActorAnalysisTarget,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisLayer => RuntimeSaveValidationCode.DuplicateActorAnalysisLayer,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePassiveSkillState => RuntimeSaveValidationCode.DuplicatePassiveSkillState,
+            RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded => RuntimeSaveValidationCode.PassiveStateSkillNotLoaded,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePassiveActivation => RuntimeSaveValidationCode.DuplicatePassiveActivation,
+            RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded => RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown actor snapshot integrity code.")
+        };
+
+    private static string ActorPath(int actorIndex, string relativePath) =>
+        $"$.actors[{actorIndex}]" + relativePath[1..];
+
+    private static void ValidateActorFormReferences(
+        RuntimeActorSnapshot actor,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        int actorIndex)
+    {
+        string formsPath = $"$.actors[{actorIndex}].forms";
+        if (actor.Forms.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        {
+            ValidateActorReference(
+                activeForm,
+                actors,
+                diagnostics,
+                formsPath + ".activeForm",
+                RuntimeSaveValidationCode.MissingActiveFormReference,
+                $"Actor '{actor.Identity.InstanceId}' active form");
+        }
+
+        HashSet<RuntimeInstanceId> personaIds = ValidateActorFormReferenceList(
+            actor,
+            actor.Forms.PersonaStock,
+            actors,
+            diagnostics,
+            formsPath + ".personaStock");
+        ValidateActorFormReferenceList(
+            actor,
+            actor.Forms.DemonStock,
+            actors,
+            diagnostics,
+            formsPath + ".demonStock",
+            personaIds);
+    }
+
+    private static HashSet<RuntimeInstanceId> ValidateActorFormReferenceList(
+        RuntimeActorSnapshot owner,
+        IReadOnlyList<RuntimeActorReferenceSnapshot> references,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        string path,
+        ISet<RuntimeInstanceId>? conflictingStockIds = null)
+    {
+        var seen = new HashSet<RuntimeInstanceId>();
+        for (int index = 0; index < references.Count; index++)
+        {
+            RuntimeActorReferenceSnapshot reference = references[index];
+            string referencePath = $"{path}[{index}]";
+            ValidateActorReference(
+                reference,
+                actors,
+                diagnostics,
+                referencePath,
+                RuntimeSaveValidationCode.MissingActorReference,
+                $"Actor '{owner.Identity.InstanceId}' form-stock reference");
+
+            if (!seen.Add(reference.InstanceId) || conflictingStockIds?.Contains(reference.InstanceId) == true)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DuplicateActorFormReference,
+                    $"Actor form reference '{reference.InstanceId}' appears in more than one position or stock role.",
+                    reference.InstanceId,
+                    reference.EntityDefinitionId,
+                    referencePath));
             }
         }
 
-        foreach (RuntimeTimedStateSnapshot ailment in actor.BattleStatus.Ailments)
-        {
-            if (!catalog.Ailments.ContainsKey(ailment.Id))
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.MissingCatalogAilment,
-                    $"Ailment '{ailment.Id}' referenced by actor '{actor.Identity.InstanceId}' is not present in the catalog.",
-                    actor.Identity.InstanceId,
-                    ailment.Id,
-                    $"$.actors[{actorIndex}].battleStatus.ailments"));
-            }
-        }
+        return seen;
     }
 
     private static void ValidatePartyReferences(
@@ -655,36 +822,113 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             }
         }
 
-        foreach (ContentId equipmentId in inventory.OwnedEquipmentIds.SelectMany(slot => slot.Value))
+        foreach ((EquipmentSlot slot, IReadOnlyList<ContentId> equipmentIds) in
+                 inventory.OwnedEquipmentIds.OrderBy(pair => pair.Key))
         {
-            if (!catalog.Equipment.ContainsKey(equipmentId))
+            for (int index = 0; index < equipmentIds.Count; index++)
             {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.MissingCatalogEquipment,
-                    $"Equipment '{equipmentId}' is not present in the catalog.",
-                    ContentId: equipmentId,
-                    Path: "$.inventory.ownedEquipmentIds"));
+                ContentId equipmentId = equipmentIds[index];
+                string path = $"$.inventory.ownedEquipmentIds.{SlotPath(slot)}[{index}]";
+                if (!catalog.Equipment.TryGetValue(equipmentId, out EquipmentDefinition? definition))
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.MissingCatalogEquipment,
+                        $"Equipment '{equipmentId}' is not present in the catalog.",
+                        ContentId: equipmentId,
+                        Path: path));
+                }
+                else if (definition.Slot != slot)
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                        $"Equipment '{equipmentId}' is stored as '{slot}', but its catalog slot is '{definition.Slot}'.",
+                        ContentId: equipmentId,
+                        Path: path));
+                }
             }
         }
     }
 
     private static void ValidateEquipment(
         RuntimeEquipmentSnapshot equipment,
+        RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
-        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        string path,
+        RuntimeInstanceId? actorInstanceId)
     {
-        foreach (ContentId equipmentId in equipment.EquippedItemIds.Values)
+        foreach ((EquipmentSlot slot, ContentId equipmentId) in equipment.EquippedItemIds.OrderBy(pair => pair.Key))
         {
-            if (!catalog.Equipment.ContainsKey(equipmentId))
+            string equipmentPath = $"{path}.equippedItemIds.{SlotPath(slot)}";
+            if (!catalog.Equipment.TryGetValue(equipmentId, out EquipmentDefinition? definition))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.MissingCatalogEquipment,
                     $"Equipped item '{equipmentId}' is not present in the catalog.",
+                    actorInstanceId,
                     ContentId: equipmentId,
-                    Path: "$.equipment.equippedItemIds"));
+                    Path: equipmentPath));
+            }
+            else if (definition.Slot != slot)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                    $"Equipped item '{equipmentId}' is assigned to '{slot}', but its catalog slot is '{definition.Slot}'.",
+                    actorInstanceId,
+                    equipmentId,
+                    equipmentPath));
+            }
+
+            if (!inventory.OwnsEquipment(equipmentId, slot))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.EquippedEquipmentNotOwned,
+                    $"Equipped item '{equipmentId}' is not owned in slot '{slot}'.",
+                    actorInstanceId,
+                    equipmentId,
+                    equipmentPath));
             }
         }
     }
+
+    private static void ValidateActorEquipment(
+        IReadOnlyList<RuntimeActorSnapshot> actors,
+        RuntimeInventorySnapshot inventory,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        var assignments = new Dictionary<ContentId, RuntimeInstanceId>();
+        for (int actorIndex = 0; actorIndex < actors.Count; actorIndex++)
+        {
+            RuntimeActorSnapshot actor = actors[actorIndex];
+            string equipmentPath = $"$.actors[{actorIndex}].equipment";
+            ValidateEquipment(
+                actor.Equipment,
+                inventory,
+                catalog,
+                diagnostics,
+                equipmentPath,
+                actor.Identity.InstanceId);
+
+            foreach ((EquipmentSlot slot, ContentId equipmentId) in actor.Equipment.EquippedItemIds.OrderBy(pair => pair.Key))
+            {
+                if (assignments.TryAdd(equipmentId, actor.Identity.InstanceId) ||
+                    assignments[equipmentId] == actor.Identity.InstanceId)
+                {
+                    continue;
+                }
+
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors,
+                    $"Equipment '{equipmentId}' is assigned to more than one actor.",
+                    actor.Identity.InstanceId,
+                    equipmentId,
+                    $"{equipmentPath}.equippedItemIds.{SlotPath(slot)}"));
+            }
+        }
+    }
+
+    private static string SlotPath(EquipmentSlot slot) => slot.ToString().ToLowerInvariant();
 
     private static void ValidateField(
         RuntimeFieldSnapshot field,

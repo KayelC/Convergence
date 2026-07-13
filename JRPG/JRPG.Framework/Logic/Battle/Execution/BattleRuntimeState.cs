@@ -144,6 +144,21 @@ public sealed class RuntimeActorState
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(defenseProfile);
+        SkillDefinition[] passiveDefinitions = (passiveSkills ?? []).ToArray();
+        AilmentDefinition[] ailmentDefinitions = (ailments ?? []).ToArray();
+        IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
+            RuntimeActorSnapshotIntegrity.ValidateForRestore(
+                snapshot,
+                passiveDefinitions.Select(skill => skill.Id),
+                ailmentDefinitions.Select(ailment => ailment.Id));
+        if (integrityDiagnostics.Count > 0)
+        {
+            RuntimeActorSnapshotIntegrityDiagnostic first = integrityDiagnostics[0];
+            throw new ArgumentException(
+                $"Runtime actor snapshot '{snapshot.Identity.InstanceId}' is invalid at '{first.Path}': {first.Message}",
+                nameof(snapshot));
+        }
+
         var state = new RuntimeActorState(
             snapshot.Identity.InstanceId,
             snapshot.Identity.EntityDefinitionId,
@@ -157,7 +172,7 @@ public sealed class RuntimeActorState
             snapshot.Stats.EffectiveStats,
             snapshot.Skills.LearnedSkillIds,
             capabilityIds ?? snapshot.CapabilityIds,
-            passiveSkills,
+            passiveDefinitions,
             snapshot.Deployment.IsActive,
             snapshot.Identity,
             snapshot.Ownership,
@@ -170,7 +185,7 @@ public sealed class RuntimeActorState
             snapshot.Equipment);
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
-            (ailments ?? []).ToDictionary(ailment => ailment.Id));
+            ailmentDefinitions.ToDictionary(ailment => ailment.Id));
         state.RestoreBattleActivations(snapshot.BattleActivations);
         return state;
     }

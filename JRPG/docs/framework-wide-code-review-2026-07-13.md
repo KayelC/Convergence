@@ -30,9 +30,13 @@ No runtime code was changed during this review.
 
 There is no evidence of a remote-code-execution or data-exfiltration vulnerability. This is an in-process game-rules library, so the principal risks are invalid state acceptance, partial mutation, nonterminating execution, inconsistent rules, and framework coupling.
 
+These counts describe the source at reviewed commit `9c0d5d4`. Post-review corrections are recorded beneath the applicable finding and do not silently rewrite the original assessment.
+
 ## Medium Findings
 
 ### M1. Save validation and actor restoration do not enforce the same contract
+
+**Correction status:** Corrected by **Review-Whole-1** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
 
 `RuntimeSaveValidator.ValidateActorCatalogReferences` validates actor skill and ailment catalog references, but it does not validate the actor-local structure that `RuntimeActorState.Restore` requires.
 
@@ -54,6 +58,18 @@ The validator can therefore return `IsValid == true` and allow `RequireValidSnap
 **Impact:** A host can accept a corrupt or tampered save as valid and fail only during restore. Validation cannot currently serve as the promised restore gate.
 
 **Required correction:** Define actor-snapshot integrity once and use it from both save validation and actor restoration. Add adversarial tests proving every validator-approved actor can be restored.
+
+**Implemented correction:**
+
+- `RuntimeActorSnapshotIntegrity` now defines the intrinsic restore contract once. Both `RuntimeSaveValidator` and `RuntimeActorState.Restore` use it.
+- Validation rejects duplicate resources, learned/equipped skills, capabilities, ailments, statuses, stat tracks, charges, shields, affinity overrides, analysis targets/layers, passive states, and passive activation keys.
+- Equipped skills must be learned. Passive state and activation entries must refer to passives actually loaded for restoration.
+- Save-level graph checks now validate actor kinds, actor-local form references, form entity identity, actor equipment catalog/slot/ownership, and unique equipment assignment across actors.
+- Existing `RuntimeSaveValidationCode` numeric values were preserved by appending the new stable codes instead of inserting them among older members.
+- Save contract version `5` remains unchanged because no serialized field or meaning changed; invalid snapshots are rejected earlier.
+- Adversarial tests prove corrupt structures receive precise actor-indexed paths, direct actor restoration uses the same guard, catalog restoration rejects malformed snapshots, and every actor in the representative validator-approved save restores successfully through `CatalogBattleActorFactory`.
+
+**Review-Whole-1 verification:** 23 focused persistence tests and 60 related state/fusion/Compendium/save-host tests passed. The full suite passed with **955 passed, 0 failed, 0 skipped**. The framework built with **0 warnings and 0 errors**; the solution retained **98 legacy console-host warnings and 0 errors**. All four noninteractive clean demos exited `0`, framework boundary searches were clean, and `Data/Jsons` was unchanged.
 
 ### M2. Battle orchestration can mutate before cancellation and can fail to terminate
 
@@ -273,10 +289,10 @@ The green suite is valuable evidence, but it does not invalidate the findings ab
 
 Do not begin another feature phase before the first five correction groups are complete.
 
-1. **Review-Whole-1: Persistence/restore parity**
-   - Centralize actor snapshot integrity.
-   - Validate actor-local resources, statuses, passives, forms, equipment, and ownership.
-   - Prove validator success implies restore success.
+1. **Review-Whole-1: Persistence/restore parity** - completed and verified 2026-07-13.
+   - Actor snapshot integrity is centralized and shared by validation and restoration.
+   - Actor-local resources, statuses, passives, forms, equipment, and ownership are validated.
+   - Representative validator-approved actors restore through the catalog factory; adversarial false-valid cases are rejected before restore.
 2. **Review-Whole-2: Encounter cancellation, liveness, and turn economy**
    - Move cancellation to the first instruction.
    - Validate initiative output.
