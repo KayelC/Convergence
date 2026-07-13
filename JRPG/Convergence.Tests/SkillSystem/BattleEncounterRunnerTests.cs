@@ -1,5 +1,6 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
@@ -67,13 +68,14 @@ public sealed class BattleEncounterRunnerTests
             new FixedInitiative(PlayerTeam, EnemyTeam),
             new RecordingLifecycle(),
             handler,
-            new CompleteAfterTurnsPolicy(1));
+            new CompleteAfterTurnsPolicy(1),
+            () => new PressTurnEngine());
 
         BattleEncounterEvent changed = Assert.Single(result.Events, battleEvent =>
-            battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged);
-        Assert.NotNull(changed.PressTurnState);
-        Assert.Equal(expectedFullIcons, changed.PressTurnState!.FullIcons);
-        Assert.Equal(expectedBlinkingIcons, changed.PressTurnState.BlinkingIcons);
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+        var pressTurn = Assert.IsType<PressTurnEconomySnapshot>(changed.TurnEconomyState);
+        Assert.Equal(expectedFullIcons, pressTurn.FullIcons);
+        Assert.Equal(expectedBlinkingIcons, pressTurn.BlinkingIcons);
     }
 
     [Fact]
@@ -180,7 +182,229 @@ public sealed class BattleEncounterRunnerTests
             battleEvent.Kind == BattleEncounterEventKind.ActionRejected &&
             battleEvent.Message == "selection became invalid");
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged);
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public async Task Runner_PreCancelledTokenTouchesNoEncounterPortOrActorState()
+    {
+        BattleEncounterParticipant player = Participant("cancelled_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("cancelled_enemy", EnemyTeam);
+        var initiative = new CountingInitiative(PlayerTeam, EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        var synchronizer = new RecordingSynchronizer();
+        var eventSink = new RecordingEventSink();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                initiative,
+                lifecycle,
+                handler,
+                new CompleteAfterTurnsPolicy(1),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1),
+                synchronizer,
+                eventSink),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(0, initiative.Calls);
+        Assert.Equal(0, synchronizer.Calls);
+        Assert.Equal(0, lifecycle.BattleStartCalls);
+        Assert.Empty(handler.Requests);
+        Assert.Empty(eventSink.Events);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task Runner_CancellationAfterStartupEventPreventsLaterLifecycleMutation()
+    {
+        BattleEncounterParticipant player = Participant("cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("cancel_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        using var cancellation = new CancellationTokenSource();
+        var eventSink = new CancellingEventSink(cancellation, BattleEncounterEventKind.BattleStarted);
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                lifecycle,
+                new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+                new CompleteAfterTurnsPolicy(1),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1),
+                events: eventSink),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(0, lifecycle.BattleStartCalls);
+        Assert.Contains(eventSink.Events, battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleStarted);
+        Assert.DoesNotContain(eventSink.Events, battleEvent => battleEvent.Kind == BattleEncounterEventKind.InitiativeRolled);
+    }
+
+    [Fact]
+    public async Task Runner_CancellationFromTurnEconomyFactoryPreventsEconomyInitialization()
+    {
+        BattleEncounterParticipant player = Participant("factory_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("factory_cancel_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        var economy = new RecordingTurnEconomy();
+        using var cancellation = new CancellationTokenSource();
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                lifecycle,
+                handler,
+                new CompleteAfterTurnsPolicy(1),
+                () =>
+                {
+                    cancellation.Cancel();
+                    return economy;
+                },
+                new BattlePhaseProgressPolicy(8, 1)),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(0, economy.StartPhaseCalls);
+        Assert.Equal(0, economy.ApplyCalls);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Runner_CancellationDuringTurnHandlerPreventsEconomyAndTurnEndMutation()
+    {
+        BattleEncounterParticipant player = Participant("handler_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("handler_cancel_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        var economy = new RecordingTurnEconomy();
+        using var cancellation = new CancellationTokenSource();
+        var handler = new QueueTurnHandler(_ =>
+        {
+            cancellation.Cancel();
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                lifecycle,
+                handler,
+                new CompleteAfterTurnsPolicy(1),
+                () => economy,
+                new BattlePhaseProgressPolicy(8, 1)),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(1, economy.StartPhaseCalls);
+        Assert.Equal(0, economy.ApplyCalls);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public void Runner_RejectsInitiativeUnlessItIsAnExactTeamPermutation()
+    {
+        ContentId[][] invalidOrders =
+        [
+            [PlayerTeam],
+            [PlayerTeam, PlayerTeam],
+            [PlayerTeam, Id("unknown_team")],
+            [PlayerTeam, EnemyTeam, EnemyTeam]
+        ];
+
+        foreach (ContentId[] invalidOrder in invalidOrders)
+        {
+            var lifecycle = new RecordingLifecycle();
+            var handler = new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+            var synchronizer = new RecordingSynchronizer();
+            BattleEncounterResult result = Run(
+                [Participant("initiative_player", PlayerTeam), Participant("initiative_enemy", EnemyTeam)],
+                new FixedInitiative(invalidOrder),
+                lifecycle,
+                handler,
+                new CompleteAfterTurnsPolicy(1),
+                synchronizer: synchronizer);
+
+            Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+            Assert.Contains("Initiative must return every participating team exactly once", result.FaultMessage);
+            Assert.Equal(0, synchronizer.Calls);
+            Assert.Equal(0, lifecycle.BattleStartCalls);
+            Assert.Empty(handler.Requests);
+            Assert.Equal(
+                [BattleEncounterEventKind.BattleFaulted, BattleEncounterEventKind.BattleEnded],
+                result.Events.Select(battleEvent => battleEvent.Kind));
+        }
+    }
+
+    [Fact]
+    public void Runner_FaultsDeterministicallyWhenFreeActionsDoNotAdvanceThePhase()
+    {
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.None));
+
+        BattleEncounterResult result = Run(
+            [Participant("free_player", PlayerTeam), Participant("free_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            phaseProgress: new BattlePhaseProgressPolicy(8, 2));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Contains("consecutive free-action limit of 2", result.FaultMessage);
+    }
+
+    [Fact]
+    public void Runner_CommandLimitBoundsAnEconomyThatContinuouslyAddsTurns()
+    {
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("expanding_player", PlayerTeam), Participant("expanding_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => new ExpandingTurnEconomy(),
+            new BattlePhaseProgressPolicy(3, 1));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Contains("phase command limit of 3", result.FaultMessage);
+    }
+
+    [Fact]
+    public void Runner_UsesStandardActionEconomyWithoutPressTurnState()
+    {
+        BattleEncounterResult result = Run(
+            [Participant("standard_player", PlayerTeam), Participant("standard_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.FromPressTurn(
+                    new PressTurnResolution(PressTurnOutcome.Weakness, false, false)))),
+            new CompleteAfterTurnsPolicy(1));
+
+        BattleEncounterEvent changed = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+        var state = Assert.IsType<StandardActionTurnEconomySnapshot>(changed.TurnEconomyState);
+        Assert.Equal(StandardActionTurnEconomy.EconomyId, state.EconomyId);
+        Assert.Equal(0, state.RemainingActions);
     }
 
     [Fact]
@@ -206,10 +430,22 @@ public sealed class BattleEncounterRunnerTests
         IBattleEncounterInitiativePolicy initiative,
         IBattleEncounterLifecyclePort lifecycle,
         IBattleEncounterTurnHandler handler,
-        IBattleEncounterCompletionPolicy completion) =>
+        IBattleEncounterCompletionPolicy completion,
+        Func<IBattleTurnEconomy>? turnEconomyFactory = null,
+        BattlePhaseProgressPolicy? phaseProgress = null,
+        IBattleEncounterStateSynchronizer? synchronizer = null,
+        IBattleEncounterEventSink? events = null) =>
         new BattleEncounterRunner().Run(
             new BattleEncounterRequest(participants, Battle, Kind, Moon, 5),
-            new BattleEncounterServices(initiative, lifecycle, handler, completion));
+            new BattleEncounterServices(
+                initiative,
+                lifecycle,
+                handler,
+                completion,
+                turnEconomyFactory ?? (() => new StandardActionTurnEconomy()),
+                phaseProgress ?? new BattlePhaseProgressPolicy(32, 4),
+                synchronizer,
+                events));
 
     private static int Index(BattleEncounterResult result, BattleEncounterEventKind kind) =>
         result.Events.First(battleEvent => battleEvent.Kind == kind).Sequence;
@@ -276,6 +512,17 @@ public sealed class BattleEncounterRunnerTests
         public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request) => teamOrder;
     }
 
+    private sealed class CountingInitiative(params ContentId[] teamOrder) : IBattleEncounterInitiativePolicy
+    {
+        public int Calls { get; private set; }
+
+        public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request)
+        {
+            Calls++;
+            return teamOrder;
+        }
+    }
+
     private sealed class QueueTurnHandler(Func<BattleEncounterTurnRequest, BattleEncounterCommandResult> handler)
         : IBattleEncounterTurnHandler
     {
@@ -312,6 +559,7 @@ public sealed class BattleEncounterRunnerTests
     {
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
+        public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
 
@@ -319,6 +567,7 @@ public sealed class BattleEncounterRunnerTests
             BattleEncounterLifecycleRequest request,
             CancellationToken cancellationToken = default)
         {
+            BattleStartCalls++;
             BattleStartTeamOrder = request.TeamOrder;
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
         }
@@ -351,5 +600,102 @@ public sealed class BattleEncounterRunnerTests
             BattleEncounterOutcome outcome,
             CancellationToken cancellationToken = default) =>
             new(Array.Empty<BattleEncounterEvent>());
+    }
+
+    private sealed class RecordingSynchronizer : IBattleEncounterStateSynchronizer
+    {
+        public int Calls { get; private set; }
+
+        public void Synchronize(IReadOnlyList<BattleEncounterParticipant> participants) => Calls++;
+    }
+
+    private sealed class RecordingEventSink : IBattleEncounterEventSink
+    {
+        public List<BattleEncounterEvent> Events { get; } = [];
+
+        public ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Events.Add(battleEvent);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CancellingEventSink(
+        CancellationTokenSource cancellation,
+        BattleEncounterEventKind cancelAfter) : IBattleEncounterEventSink
+    {
+        public List<BattleEncounterEvent> Events { get; } = [];
+
+        public ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Events.Add(battleEvent);
+            if (battleEvent.Kind == cancelAfter)
+            {
+                cancellation.Cancel();
+            }
+
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class ExpandingTurnEconomy : IBattleTurnEconomy
+    {
+        private static readonly ContentId Economy = Id("expanding_turns");
+        private int _remaining;
+
+        public void StartPhase(int activeActorCount) => _remaining = activeActorCount;
+        public bool HasTurnsRemaining() => _remaining > 0;
+        public BattleTurnEconomySnapshot CaptureSnapshot() => new ExpandingTurnEconomySnapshot(_remaining);
+
+        public void Apply(ActionTurnConsumption consumption)
+        {
+            ArgumentNullException.ThrowIfNull(consumption);
+            if (consumption.Kind != ActionTurnConsumptionKind.None)
+            {
+                _remaining++;
+            }
+        }
+
+        private sealed record ExpandingTurnEconomySnapshot : BattleTurnEconomySnapshot
+        {
+            public ExpandingTurnEconomySnapshot(int remainingActions)
+                : base(Economy, remainingActions)
+            {
+            }
+        }
+    }
+
+    private sealed class RecordingTurnEconomy : IBattleTurnEconomy
+    {
+        private int _remaining;
+
+        public int StartPhaseCalls { get; private set; }
+        public int ApplyCalls { get; private set; }
+
+        public void StartPhase(int activeActorCount)
+        {
+            StartPhaseCalls++;
+            _remaining = activeActorCount;
+        }
+
+        public bool HasTurnsRemaining() => _remaining > 0;
+
+        public BattleTurnEconomySnapshot CaptureSnapshot() =>
+            new StandardActionTurnEconomySnapshot(_remaining);
+
+        public void Apply(ActionTurnConsumption consumption)
+        {
+            ApplyCalls++;
+            if (consumption.Kind != ActionTurnConsumptionKind.None && _remaining > 0)
+            {
+                _remaining--;
+            }
+        }
     }
 }

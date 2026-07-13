@@ -197,7 +197,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.NotNull(resolver.BindResourceManagementServices(
             catalog,
             Qualified("standard_economy")).RequireService().Inventory);
-        Assert.NotNull(resolver.BindPressTurnFactory(
+        Assert.NotNull(resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_press_turn")).RequireService());
         Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);

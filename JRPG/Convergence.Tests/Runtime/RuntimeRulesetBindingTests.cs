@@ -80,15 +80,17 @@ public sealed class RuntimeRulesetBindingTests
             maxSp: 10,
             hasAilment: false)));
 
-        Func<JRPGPrototype.Logic.Battle.Engines.PressTurnEngine> pressTurns = resolver.BindPressTurnFactory(
+        BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_press_turn_sample"))
             .RequireService();
-        var pressTurn = pressTurns();
+        var pressTurn = Assert.IsType<JRPGPrototype.Logic.Battle.Engines.PressTurnEngine>(
+            turnEconomy.CreateEconomy());
         pressTurn.StartPhase(2);
         pressTurn.ConsumeAction(new PressTurnResolution(PressTurnOutcome.Weakness, false, false));
         Assert.Equal(1, pressTurn.FullIcons);
         Assert.Equal(1, pressTurn.BlinkingIcons);
+        Assert.True(turnEconomy.PhaseProgress.MaximumCommands > 0);
 
         RulesetDefinition moonPhase = resolver.BindMoonPhaseRuleset(
             catalog,

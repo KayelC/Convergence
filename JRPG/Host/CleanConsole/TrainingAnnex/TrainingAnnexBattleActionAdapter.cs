@@ -401,7 +401,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
     private readonly BattleExecutionServices _services;
     private readonly IBattleRewardService _rewardService;
-    private readonly Func<PressTurnEngine> _pressTurnFactory;
+    private readonly BattleTurnEconomyRuleset _turnEconomy;
     private readonly IBattleStatusLifecycleService _statusLifecycle;
     private readonly IRuntimeEquipmentProfileResolver _equipmentProfileResolver;
 
@@ -411,7 +411,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
         BattleExecutionServices services,
         IBattleRewardService rewardService,
-        Func<PressTurnEngine> pressTurnFactory,
+        BattleTurnEconomyRuleset turnEconomy,
         IBattleStatusLifecycleService statusLifecycle,
         IRuntimeEquipmentProfileResolver? equipmentProfileResolver = null)
     {
@@ -420,7 +420,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         _commands = commands ?? throw new ArgumentNullException(nameof(commands));
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
-        _pressTurnFactory = pressTurnFactory ?? throw new ArgumentNullException(nameof(pressTurnFactory));
+        _turnEconomy = turnEconomy ?? throw new ArgumentNullException(nameof(turnEconomy));
         _statusLifecycle = statusLifecycle ?? throw new ArgumentNullException(nameof(statusLifecycle));
         _equipmentProfileResolver = equipmentProfileResolver ?? new RuntimeEquipmentProfileResolver();
     }
@@ -468,8 +468,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
             lifecyclePort,
             turnHandler,
             new LastTeamStandingCompletionPolicy(),
-            events: new TrainingAnnexPressTurnEventSink(_events, pressTurns),
-            pressTurnFactory: _pressTurnFactory);
+            _turnEconomy.CreateEconomy,
+            _turnEconomy.PhaseProgress,
+            events: new TrainingAnnexPressTurnEventSink(_events, pressTurns));
 
         await _events.PublishAsync(
             $"Clean battle started: {prepared.Encounter.DisplayName}.",
@@ -604,6 +605,12 @@ internal sealed class TrainingAnnexBattleActionAdapter
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (request.TurnEconomyState is not PressTurnEconomySnapshot)
+            {
+                return BattleEncounterCommandResult.Faulted(
+                    $"Training Annex requires the {PressTurnEngine.EconomyId} turn economy.");
+            }
+
             CatalogBattleActor actor = _actors.Single(candidate =>
                 candidate.State.InstanceId == request.Actor.InstanceId);
 
@@ -927,11 +934,12 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 _encounterAiKnowledgeEvidence.AddRange(learned);
             }
             _lifecycle.RecordActionEffects(actor.State.InstanceId, actionId, command, execution);
+            PressTurnEconomySnapshot pressTurn = PressTurnState(request);
             _pressTurns.RecordBefore(
                 actor.State.InstanceId,
                 actionId,
-                request.FullPressTurnIcons,
-                request.BlinkingPressTurnIcons,
+                pressTurn.FullIcons,
+                pressTurn.BlinkingIcons,
                 execution.TurnConsumption);
             await _events.PublishAsync(
                 $"Battle action executed: {actor.Entity.DisplayName} used {ActionLabel(command)}.",
@@ -965,10 +973,17 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
         private ValueTask PublishCurrentPressTurnAsync(
             BattleEncounterTurnRequest request,
-            CancellationToken cancellationToken) =>
-            _events.PublishAsync(
-                $"Press Turn before command: {request.FullPressTurnIcons} full, {request.BlinkingPressTurnIcons} blinking.",
+            CancellationToken cancellationToken)
+        {
+            PressTurnEconomySnapshot state = PressTurnState(request);
+            return _events.PublishAsync(
+                $"Press Turn before command: {state.FullIcons} full, {state.BlinkingIcons} blinking.",
                 cancellationToken);
+        }
+
+        private static PressTurnEconomySnapshot PressTurnState(BattleEncounterTurnRequest request) =>
+            request.TurnEconomyState as PressTurnEconomySnapshot
+            ?? throw new InvalidOperationException("Training Annex received a non-Press-Turn economy state.");
 
         private IReadOnlyList<SkillDefinition> KnownBattleSkills(CatalogBattleActor actor)
         {
@@ -1589,8 +1604,8 @@ internal sealed class TrainingAnnexPressTurnEventSink(
         BattleEncounterEvent battleEvent,
         CancellationToken cancellationToken = default)
     {
-        if (battleEvent.Kind == BattleEncounterEventKind.PressTurnChanged &&
-            battleEvent.PressTurnState is PressTurnStateSnapshot pressTurnState)
+        if (battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged &&
+            battleEvent.TurnEconomyState is PressTurnEconomySnapshot pressTurnState)
         {
             tracker.TryRecordAfter(
                 battleEvent.ActorId,

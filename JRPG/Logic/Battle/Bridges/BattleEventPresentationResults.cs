@@ -94,7 +94,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
                 BattleEncounterEventKind.RoundStarted => Suppressed(battleEvent),
                 BattleEncounterEventKind.PhaseStarted => Suppressed(battleEvent),
                 BattleEncounterEventKind.TurnStarted => Suppressed(battleEvent),
-                BattleEncounterEventKind.PressTurnChanged => Suppressed(battleEvent),
+                BattleEncounterEventKind.TurnEconomyChanged => Suppressed(battleEvent),
                 BattleEncounterEventKind.PhaseEnded => Suppressed(battleEvent),
 
                 BattleEncounterEventKind.TurnRestricted => HostOwned(battleEvent),

@@ -634,7 +634,7 @@ namespace JRPGPrototype.Logic.Battle.Bridges
 
         public string GetBattleContext(Combatant actor)
         {
-            string icons = $"Turns: {_turnEngine.GetIconsDisplay()}\n";
+            string icons = $"Turns: {PressTurnIconFormatter.Format(_turnEngine)}\n";
             string separator = "==================================================\n";
 
             string enemyGroup = "ENEMIES:\n";

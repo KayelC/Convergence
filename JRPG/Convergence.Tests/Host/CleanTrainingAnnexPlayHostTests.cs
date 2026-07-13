@@ -6,6 +6,7 @@ using JRPGPrototype.Host;
 using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Fusion;
@@ -1585,10 +1586,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         await sink.PublishAsync(new BattleEncounterEvent(
             1,
-            BattleEncounterEventKind.PressTurnChanged,
+            BattleEncounterEventKind.TurnEconomyChanged,
             "Localized presentation text with no parseable icon counts.",
             actorId,
-            PressTurnState: new PressTurnStateSnapshot(0, 1)));
+            TurnEconomyState: new PressTurnEconomySnapshot(0, 1)));
 
         TrainingAnnexPressTurnEvidence evidence = Assert.Single(tracker.Evidence);
         Assert.Equal(0, evidence.AfterFullIcons);

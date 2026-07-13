@@ -18,6 +18,7 @@ using JRPGPrototype.Logic.Runtime;
 using JRPGPrototype.Logic.Fusion;
 using EncounterActionTurnConsumption = JRPGPrototype.Logic.Battle.Execution.ActionTurnConsumption;
 using EncounterBattleResourceState = JRPGPrototype.Logic.Battle.Execution.BattleResourceState;
+using EncounterBattlePhaseProgressPolicy = JRPGPrototype.Logic.Battle.Execution.BattlePhaseProgressPolicy;
 using EncounterBattleTurnStartLifecycleResult = JRPGPrototype.Logic.Battle.Execution.BattleTurnStartLifecycleResult;
 using EncounterBattleTurnStartOutcome = JRPGPrototype.Logic.Battle.Execution.BattleTurnStartOutcome;
 using EncounterPressTurnOutcome = JRPGPrototype.Logic.Battle.Execution.PressTurnOutcome;
@@ -144,9 +145,12 @@ namespace JRPGPrototype.Logic.Battle
                     adapter,
                     adapter,
                     adapter,
+                    () => _turnEngine,
+                    new EncounterBattlePhaseProgressPolicy(
+                        maximumCommands: 256,
+                        maximumConsecutiveFreeActions: 32),
                     adapter,
-                    eventPresentation,
-                    pressTurnFactory: () => _turnEngine));
+                    eventPresentation));
 
             BattleEnded = true;
             if (result.Outcome == BattleEncounterOutcome.Escape)
@@ -196,7 +200,7 @@ namespace JRPGPrototype.Logic.Battle
                 if (turnState == TurnStartResult.Skip)
                 {
                     _messenger.Publish($"{actor.Name} is unable to move!", ConsoleColor.Magenta, 800);
-                    _turnEngine.ConsumeAction(HitType.Normal, false); // Losing turn skips 1 icon
+                    _turnEngine.Apply(EncounterActionTurnConsumption.Normal); // Losing turn consumes one action.
                 }
                 else if (turnState == TurnStartResult.FleeBattle)
                 {
@@ -219,7 +223,7 @@ namespace JRPGPrototype.Logic.Battle
                         _enemies.Remove(actor);
                         actorRemoved = true;
                     }
-                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                    _turnEngine.Apply(EncounterActionTurnConsumption.Normal);
                 }
                 else
                 {
@@ -606,21 +610,7 @@ namespace JRPGPrototype.Logic.Battle
 
         private void ApplyFrameworkTurnConsumption(EncounterActionTurnConsumption consumption)
         {
-            switch (consumption.Kind)
-            {
-                case JRPGPrototype.Logic.Battle.Execution.ActionTurnConsumptionKind.Pass:
-                    _turnEngine.Pass();
-                    break;
-                case JRPGPrototype.Logic.Battle.Execution.ActionTurnConsumptionKind.PressTurn when consumption.PressTurn is not null:
-                    _turnEngine.ConsumeAction(consumption.PressTurn);
-                    break;
-                case JRPGPrototype.Logic.Battle.Execution.ActionTurnConsumptionKind.TerminatePhase:
-                    _turnEngine.TerminatePhase();
-                    break;
-                case JRPGPrototype.Logic.Battle.Execution.ActionTurnConsumptionKind.Normal:
-                    _turnEngine.ConsumeAction(HitType.Normal, false);
-                    break;
-            }
+            _turnEngine.Apply(consumption);
         }
 
         private BattleEncounterCommandResult HandleTacticsForFramework(Combatant actor)
@@ -761,7 +751,7 @@ namespace JRPGPrototype.Logic.Battle
                 else
                 {
                     _messenger.Publish("Failed to escape!", ConsoleColor.Yellow, 1000);
-                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                    _turnEngine.Apply(EncounterActionTurnConsumption.Normal);
                 }
             }
             else if (tactic.Action == BattleTacticsAction.Strategy)
@@ -793,10 +783,11 @@ namespace JRPGPrototype.Logic.Battle
                     _turnEngine.TerminatePhase();
                     break;
                 case BattleNegotiationTurnEffect.Miss:
-                    _turnEngine.ConsumeAction(HitType.Miss, false);
+                    _turnEngine.Apply(EncounterActionTurnConsumption.FromPressTurn(
+                        new EncounterPressTurnResolution(EncounterPressTurnOutcome.Miss, false, false)));
                     break;
                 default:
-                    _turnEngine.ConsumeAction(HitType.Normal, false);
+                    _turnEngine.Apply(EncounterActionTurnConsumption.Normal);
                     break;
             }
         }

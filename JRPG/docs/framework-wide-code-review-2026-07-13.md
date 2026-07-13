@@ -73,6 +73,8 @@ The validator can therefore return `IsValid == true` and allow `RequireValidSnap
 
 ### M2. Battle orchestration can mutate before cancellation and can fail to terminate
 
+**Correction status:** Corrected by **Review-Whole-2** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
+
 `BattleEncounterRunner.RunAsync` performs synchronization, resets passive activations, publishes actor events, determines initiative, and runs battle-start lifecycle before its first explicit cancellation check at line 462.
 
 The phase loop also has no progress guard. A turn handler that repeatedly returns `ActionTurnConsumption.None` without a requested outcome leaves Press Turn icons unchanged forever. The round limit does not help because execution never leaves the current phase loop.
@@ -88,6 +90,16 @@ Initiative output is only checked for being nonempty. Duplicate, missing, or unk
 **Impact:** Pre-cancelled requests can mutate state if injected ports do not independently check the token. A faulty or hostile host adapter can hang the battle indefinitely.
 
 **Required correction:** Check cancellation before any mutation or publication, validate initiative as an exact permutation of participating teams, and add a typed per-phase progress/free-action policy.
+
+**Implemented correction:**
+
+- `BattleEncounterRunner.RunAsync` checks cancellation as its first operation and again immediately before synchronizers, passive resets, policy/port calls, turn-economy mutation, lifecycle calls, and event publication.
+- Initiative is snapshotted and must be an exact, duplicate-free permutation of participating team IDs. Invalid output faults before synchronization, passive reset, or battle-start lifecycle.
+- Every phase receives a mandatory `BattlePhaseProgressPolicy` with finite command and consecutive-free-action limits. Repeated `ActionTurnConsumption.None` results now fault deterministically instead of hanging inside a phase.
+- The command limit independently bounds faulty custom economies that continually replenish actions. Non-`None` consumption that fails to advance economy state is also rejected as a typed battle fault.
+- Adversarial tests cover pre-cancellation with zero port calls, cancellation between startup events and lifecycle, cancellation during economy creation and command handling, missing/duplicate/unknown initiative teams, repeated free actions, and a deliberately expanding custom economy.
+
+**Review-Whole-2 verification:** 42 focused encounter/turn-economy/ruleset/presentation tests passed. The full suite passed with **965 passed, 0 failed, 0 skipped**. The framework built with **0 warnings and 0 errors**; the solution retained **98 legacy console-host warnings and 0 errors**. All four noninteractive clean demos exited `0`, framework boundary searches were clean, and `Data/Jsons` was unchanged.
 
 ### M3. Typed ailment effects bypass the lifecycle guard rule
 
@@ -149,6 +161,8 @@ The normal preview and transaction paths now correctly require `ValidatedFusionI
 
 ### M7. The encounter runner hard-wires Press Turn instead of treating it as an optional module
 
+**Correction status:** Corrected by **Review-Whole-2** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
+
 `BattleEncounterServices` always exposes a concrete `PressTurnEngine` factory and silently creates a standard engine when none is supplied (`BattleEncounterRunner.cs:337-363`). Every phase is then controlled by Press Turn icons (`BattleEncounterRunner.cs:475-482`).
 
 The engine also still exposes:
@@ -162,6 +176,17 @@ The engine also still exposes:
 **Impact:** Developers who do not want Press Turn cannot use the framework encounter runner without pretending to use it or replacing the runner. This conflicts with the framework-first modularity goal.
 
 **Required correction:** Extract a generic turn-economy interface. Press Turn should be one optional implementation. Move icon formatting to hosts and retire the legacy overload from the clean contract.
+
+**Implemented correction:**
+
+- `IBattleTurnEconomy` and immutable `BattleTurnEconomySnapshot` now form the encounter boundary. `BattleEncounterServices` requires an explicit economy factory and no longer silently constructs Press Turn.
+- `StandardActionTurnEconomy` supplies a neutral one-action-per-actor option. `PressTurnEngine` is an optional implementation selected explicitly by the existing `standard_press_turn` ruleset.
+- `RuntimeRulesetBindingResolver.BindTurnEconomy` returns `BattleTurnEconomyRuleset`, pairing the selected economy factory with its finite phase-progress policy without exposing a concrete engine to the runner.
+- Encounter turn requests and events now carry generic typed economy state. Press Turn uses `PressTurnEconomySnapshot` for full/blinking counts; the framework event message is generic.
+- Console icon formatting moved to `PressTurnIconFormatter`. The legacy `HitType` enum moved back to the console host, and the clean `PressTurnEngine` no longer exposes a `HitType` overload or console-formatted text.
+- Tests prove the same encounter runner works with `StandardActionTurnEconomy`, while all Press Turn outcome and host-presentation behavior remains covered.
+
+**Review-Whole-2 verification:** Included in the 42 focused and **965 total** passing tests recorded under M2. The warning, demo, boundary, and content-preservation results are identical.
 
 ### M8. Custom parameters are only shallowly immutable and are not type-safe for direct callers
 
@@ -293,11 +318,10 @@ Do not begin another feature phase before the first five correction groups are c
    - Actor snapshot integrity is centralized and shared by validation and restoration.
    - Actor-local resources, statuses, passives, forms, equipment, and ownership are validated.
    - Representative validator-approved actors restore through the catalog factory; adversarial false-valid cases are rejected before restore.
-2. **Review-Whole-2: Encounter cancellation, liveness, and turn economy**
-   - Move cancellation to the first instruction.
-   - Validate initiative output.
-   - Prevent nonprogressing free-action loops.
-   - Introduce an optional turn-economy abstraction with Press Turn as one implementation.
+2. **Review-Whole-2: Encounter cancellation, liveness, and turn economy** - completed and verified 2026-07-13.
+   - Cancellation precedes encounter mutation/publication, and initiative must be an exact team permutation.
+   - Mandatory finite phase-progress limits prevent nonprogressing and self-replenishing loops.
+   - `IBattleTurnEconomy` is the runner boundary; Press Turn and neutral standard actions are explicit implementations.
 3. **Review-Whole-3: Ailment authority and lifecycle completeness**
    - Unify typed ailment application.
    - Preserve limited-action IDs and custom behavior execution.
@@ -324,4 +348,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Its most important remaining risks are not presentation work: they are save/restore contract mismatch, battle-loop liveness, contradictory ailment paths, stock-role authorization, fusion authority, and mandatory/project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 and Review-Whole-2 have corrected save/restore contract mismatch, battle-loop liveness, and mandatory Press Turn coupling. The most important remaining risks are contradictory ailment paths, stock-role authorization, fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.

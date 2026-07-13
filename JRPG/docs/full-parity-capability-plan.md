@@ -567,7 +567,7 @@ Clean console proof:
 Phase 2-14 result:
 
 - `--clean-training-annex-play` now binds `standard_press_turn` from the Training Annex ruleset document before the session starts. Missing, wrong-category, or unsupported Press Turn rulesets stop startup with binding diagnostics instead of falling back to an implicit engine.
-- The prepared Ashling battle passes the bound `PressTurnEngine` factory into `BattleEncounterRunner`; the host no longer assumes a hard-coded turn engine for that clean path.
+- The prepared Ashling battle binds `standard_press_turn` explicitly. Review-Whole-2 generalizes that result to `BattleTurnEconomyRuleset`, and `BattleEncounterRunner` now accepts only the generic economy factory plus a finite phase-progress policy. Games that omit Press Turn may use `StandardActionTurnEconomy` or supply their own implementation.
 - The manual battle summary records host-side Press Turn evidence for each committed action: actor, action, before icons, turn-consumption kind, resolved Press Turn outcome, and after icons.
 - The clean console output presents current and updated icon counts while suppressing unrelated framework structural events.
 - This remains `parallel_partial`: clean original-content battles now expose and consume Press Turns, but lifecycle/passives, battle knowledge persistence, richer AI/tactics, escape/swaps, and reward application still remain later Phase 2 passes at this point in the history.

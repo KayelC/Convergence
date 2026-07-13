@@ -117,7 +117,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             catalog,
             Qualified("standard_growth")).RequireService();
         resolver.BindStatResolutionPolicy(catalog, Qualified("standard_stat")).RequireService();
-        resolver.BindPressTurnFactory(catalog, Qualified("standard_press_turn")).RequireService();
+        resolver.BindTurnEconomy(catalog, Qualified("standard_press_turn")).RequireService();
         resolver.BindStockCapacityPolicy(catalog, Qualified("standard_stock_capacity")).RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)

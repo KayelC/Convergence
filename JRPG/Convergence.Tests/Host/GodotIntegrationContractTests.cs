@@ -162,10 +162,12 @@ public sealed class GodotIntegrationContractTests
                 roundLimit: 1),
             new BattleEncounterServices(
                 new ParticipantOrderInitiativePolicy(),
-                NoopBattleEncounterLifecyclePort.Instance,
-                new PassTurnHandler(),
-                new LastTeamStandingCompletionPolicy(),
-                events: eventSink));
+                 NoopBattleEncounterLifecyclePort.Instance,
+                 new PassTurnHandler(),
+                 new LastTeamStandingCompletionPolicy(),
+                 () => new StandardActionTurnEconomy(),
+                 new BattlePhaseProgressPolicy(8, 1),
+                 events: eventSink));
 
         Assert.Equal(BattleEncounterOutcome.Draw, encounter.Outcome);
         Assert.Contains(eventSink.Events, mapped => mapped.Kind == BattleEncounterEventKind.BattleStarted);

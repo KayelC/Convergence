@@ -320,7 +320,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             new ParticipantOrderInitiativePolicy(),
             new AutomatedBattleLifecyclePort(_services),
             new AutomatedBattleTurnHandler(_executor, _selector, _services, request.Participants),
-            new LastTeamStandingCompletionPolicy());
+            new LastTeamStandingCompletionPolicy(),
+            () => new PressTurnEngine(),
+            new BattlePhaseProgressPolicy(
+                maximumCommands: 256,
+                maximumConsecutiveFreeActions: 32));
         BattleEncounterResult result = new BattleEncounterRunner().Run(
             new BattleEncounterRequest(
                 participants,
@@ -358,7 +362,9 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterEventKind.CommandPassed => BattleRuntimeEventKind.SkillPassed,
                 BattleEncounterEventKind.EffectResolved => BattleRuntimeEventKind.EffectResolved,
                 BattleEncounterEventKind.PassiveActivated => BattleRuntimeEventKind.PassiveActivated,
-                BattleEncounterEventKind.PressTurnChanged => BattleRuntimeEventKind.PressTurnChanged,
+                BattleEncounterEventKind.TurnEconomyChanged
+                    when battleEvent.TurnEconomyState is PressTurnEconomySnapshot =>
+                    BattleRuntimeEventKind.PressTurnChanged,
                 BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
                 BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
                 BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,

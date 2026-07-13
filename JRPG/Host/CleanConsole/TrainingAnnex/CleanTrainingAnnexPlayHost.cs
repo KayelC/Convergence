@@ -274,8 +274,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         IBattleRewardService rewardService = rewardBinding.RequireService();
-        RulesetBindingResult<Func<PressTurnEngine>> pressTurnBinding =
-            rulesetResolver.BindPressTurnFactory(
+        RulesetBindingResult<BattleTurnEconomyRuleset> pressTurnBinding =
+            rulesetResolver.BindTurnEconomy(
                 catalog,
                 TrainingAnnexHostSupport.Qualified("standard_press_turn"));
         if (!pressTurnBinding.IsSuccess)
@@ -285,7 +285,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             return 4;
         }
 
-        Func<PressTurnEngine> pressTurnFactory = pressTurnBinding.RequireService();
+        BattleTurnEconomyRuleset turnEconomy = pressTurnBinding.RequireService();
         RulesetBindingResult<IStockCapacityPolicy> stockCapacityBinding =
             rulesetResolver.BindStockCapacityPolicy(
                 catalog,
@@ -961,7 +961,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             _commandSource,
                             executionServices,
                             rewardService,
-                            pressTurnFactory,
+                            turnEconomy,
                             new BattleStatusLifecycleService(_randomSource),
                             equipmentProfileResolver)
                         .RunAsync(

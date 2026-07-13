@@ -315,7 +315,7 @@ Current result:
 
 Phase 2-13 advances the interactive shell from temporary demo combat policies to catalog-bound framework combat math. Its summary now exposes resolved hit, critical, affinity, damage/recovery, effect, and Press Turn outcomes, plus a reward preview from the bound reward service.
 
-Phase 2-14 binds the interactive shell to catalog-authored `standard_press_turn` before startup, injects the bound factory into `BattleEncounterRunner`, and records host-visible Press Turn evidence for committed actions. The clean console host now presents current and updated icon counts while leaving the icon economy inside framework `PressTurnEngine`.
+Phase 2-14 binds the interactive shell to catalog-authored `standard_press_turn` before startup and records host-visible Press Turn evidence for committed actions. Review-Whole-2 later changes the runner boundary to explicit `IBattleTurnEconomy` plus `BattlePhaseProgressPolicy`: Press Turn remains the Training Annex choice, while games may instead inject `StandardActionTurnEconomy` or another bounded implementation. Icon formatting now lives in the host.
 
 Phase 2-14 verification: focused Training Annex tests passed `29/29`, the full suite passed `786/786`, the framework build stayed at `0` warnings, the solution build stayed at `98` existing legacy warnings, and clean battle/field/save/Training Annex demos all completed successfully.
 

@@ -3,6 +3,7 @@ using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Engines;
+using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 
 namespace JRPGPrototype.Logic.Runtime;
@@ -73,6 +74,20 @@ public sealed record ResourceManagementRulesetServices(
     IShopTransactionService Shop,
     IHospitalRestorationService Hospital);
 
+public sealed record BattleTurnEconomyRuleset
+{
+    public BattleTurnEconomyRuleset(
+        Func<IBattleTurnEconomy> createEconomy,
+        BattlePhaseProgressPolicy phaseProgress)
+    {
+        CreateEconomy = createEconomy ?? throw new ArgumentNullException(nameof(createEconomy));
+        PhaseProgress = phaseProgress ?? throw new ArgumentNullException(nameof(phaseProgress));
+    }
+
+    public Func<IBattleTurnEconomy> CreateEconomy { get; }
+    public BattlePhaseProgressPolicy PhaseProgress { get; }
+}
+
 public interface IRuntimeRulesetBindingResolver
 {
     RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
@@ -101,7 +116,7 @@ public interface IRuntimeRulesetBindingResolver
         GameDataCatalog catalog,
         ContentId rulesetId);
 
-    RulesetBindingResult<Func<PressTurnEngine>> BindPressTurnFactory(
+    RulesetBindingResult<BattleTurnEconomyRuleset> BindTurnEconomy(
         GameDataCatalog catalog,
         ContentId rulesetId);
 
@@ -215,10 +230,10 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                     new HospitalRestorationService(economy));
             });
 
-    public RulesetBindingResult<Func<PressTurnEngine>> BindPressTurnFactory(
+    public RulesetBindingResult<BattleTurnEconomyRuleset> BindTurnEconomy(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<Func<PressTurnEngine>>(
+        Bind<BattleTurnEconomyRuleset>(
             catalog,
             rulesetId,
             RulesetCategory.PressTurn,
@@ -226,7 +241,11 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
             (definition, diagnostics) =>
             {
                 RequireNoParameters(definition, diagnostics);
-                return () => new PressTurnEngine();
+                return new BattleTurnEconomyRuleset(
+                    () => new PressTurnEngine(),
+                    new BattlePhaseProgressPolicy(
+                        maximumCommands: 256,
+                        maximumConsecutiveFreeActions: 32));
             });
 
     public RulesetBindingResult<RulesetDefinition> BindMoonPhaseRuleset(

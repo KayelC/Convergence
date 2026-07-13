@@ -42,18 +42,18 @@ Player-facing behavior:
 
 ## Battle
 
-Battles use an SMT-style Press Turn loop.
+The current legacy console battle explicitly selects the Press Turn economy. The framework encounter runner does not require it: a host supplies any `IBattleTurnEconomy`, including the neutral one-action-per-actor implementation.
 
 Core flow:
 
 1. `BattleConductor.StartBattle` announces enemies and creates a console adapter for `BattleEncounterRunner`.
 2. `BattleEncounterRunner` resolves initiative through the adapter, then dispatches battle-start lifecycle.
-3. Each active team begins a phase with one full turn icon per alive actor through `PressTurnEngine.StartPhase`.
+3. Each active team begins a phase through the host-selected turn economy. The console path selects `PressTurnEngine`, which starts with one full icon per alive actor.
 4. Actors process turn-start restrictions once through the framework lifecycle boundary.
 5. Player choices are collected by `InteractionBridge`; enemy choices are selected by `BehaviorEngine` through the framework turn handler.
 6. `ActionProcessor` executes legacy attacks, skills, items, swaps, negotiation, and analysis as a host-owned action adapter.
 7. Effects are resolved by `BattleEffectRegistry` strategies and `CombatMath`.
-8. `BattleEncounterRunner` consumes, chains, passes, or terminates Press Turn icons from typed turn-consumption results.
+8. `BattleEncounterRunner` sends typed turn-consumption results to the selected economy. Press Turn may chain or penalize icons; the neutral economy consumes one action.
 9. Turn-end lifecycle runs after committed actions, passes, skips, and host-mediated turn-consuming commands.
 10. Battle completion returns victory, defeat, escape, draw, cancellation, or fault to the console host.
 11. Battle rewards, recruitment side effects, cleanup, and compendium registration remain console-owned after the runner reports the outcome.
@@ -172,7 +172,7 @@ Track Q1 adds the production-content audit ledger before any real content conver
 
 Phase 2-13 makes the Training Annex clean battle a direct catalog-ruleset consumer. Damage, accuracy, criticals, affinities, ailment and instant-death checks, chance rolls, and power amounts share one bound `ProductionCombatRuleset`; victory calculates a reward preview from the same bound combat ruleset.
 
-Phase 2-14 makes the same clean battle a catalog-bound Press Turn consumer. `standard_press_turn` must bind successfully before the Training Annex play session starts, and the bound factory is supplied to `BattleEncounterRunner`. The clean host records/presents icon counts before player commands and after committed actions, including Weak/Critical chaining, Miss/Null penalties, Repel/Absorb phase termination, Pass conversion, and normal consumption. This remains host presentation over framework rules, not a legacy `BattleConductor` dependency.
+Phase 2-14 makes the same clean battle a catalog-bound Press Turn consumer. `standard_press_turn` must bind successfully before the Training Annex play session starts. Review-Whole-2 wraps that selection in `BattleTurnEconomyRuleset`, so the runner sees only the generic economy contract and finite phase-progress policy. The clean host records/presents icon counts before player commands and after committed actions, including Weak/Critical chaining, Miss/Null penalties, Repel/Absorb phase termination, Pass conversion, and normal consumption. This remains host presentation over an optional framework rule, not a legacy `BattleConductor` dependency.
 
 Phase 2-15 connects that clean Training Annex battle to framework status lifecycle. The clean host now records ailment application and cure evidence from typed actions, lets `BattleStatusLifecycleService` process turn-start restrictions and turn-end ailment triggers/recovery/duration ticks, and presents lifecycle resource/status events. This pass intentionally suppresses passive trigger dispatch so passive lifecycle remains the next separate capability.
 
@@ -273,7 +273,7 @@ Field recovery skills and items in the clean field demo now use this action faca
 
 Track O6 connects framework battle encounter events to a console-host presentation adapter. The adapter consumes every event deterministically, suppresses generic structural narration that would change the visible console output, and routes migrated lifecycle-shell messages such as skip, flee, return-to-COMP, and demon defeat return through typed presentation results. Richer AI/tactics migration, production content reauthoring, and legacy skill/item execution replacement remain later tracks.
 
-CodeReview-2 hardens the original clean battle consumer. Dynamic target rows carry `RuntimeInstanceId`; skill and item rows carry `ContentId`; and the host resolves those typed identities rather than display labels, row position, or content-specific enum cases. Press Turn changes carry `PressTurnStateSnapshot`, leaving message wording free for localization or another presentation host.
+CodeReview-2 hardens the original clean battle consumer. Dynamic target rows carry `RuntimeInstanceId`; skill and item rows carry `ContentId`; and the host resolves those typed identities rather than display labels, row position, or content-specific enum cases. Turn-economy changes carry `BattleTurnEconomySnapshot`; Press Turn supplies its typed full/blinking subtype, leaving message wording free for localization or another presentation host.
 
 ## Clean Status Lifecycle Foundation
 
@@ -296,7 +296,7 @@ The preserved parity rules are:
 
 ## Framework Battle Orchestration Foundation
 
-Track J moves the encounter loop itself into `BattleEncounterRunner`. The framework now owns the ordered battle state machine, including initiative policy, battle-start lifecycle, phase setup, turn-start lifecycle, command execution boundary, Press Turn consumption, turn-end lifecycle, phase-end cleanup, participant refresh, completion checks, cancellation, typed faults, and serializer-neutral battle events.
+Track J moves the encounter loop itself into `BattleEncounterRunner`. The framework now owns the ordered battle state machine, including initiative policy, battle-start lifecycle, phase setup, turn-start lifecycle, command execution boundary, turn-economy consumption, turn-end lifecycle, phase-end cleanup, participant refresh, completion checks, cancellation, typed faults, and serializer-neutral battle events. Review-Whole-2 validates initiative as an exact team permutation, checks cancellation before startup mutation, and applies mandatory finite command/free-action limits to every phase.
 
 The ordinary console battle now runs through this framework runner. The console adapter still owns the live `Combatant` objects, `InteractionBridge` menus, `ActionProcessor` legacy skill and item execution, `BehaviorEngine` AI heuristics, `NegotiationEngine`, reward payout, data files, message colors, waits, and final cleanup. This is adapter-first migration: the flow is reusable, but the legacy content and effect semantics are still protected until their later tracks.
 

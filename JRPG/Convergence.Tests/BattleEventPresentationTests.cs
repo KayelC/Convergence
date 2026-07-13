@@ -47,7 +47,7 @@ public sealed class BattleEventPresentationTests
         [
             Event(2, BattleEncounterEventKind.ActorCreated),
             Event(3, BattleEncounterEventKind.PhaseStarted),
-            Event(4, BattleEncounterEventKind.PressTurnChanged)
+            Event(4, BattleEncounterEventKind.TurnEconomyChanged)
         ];
 
         foreach (BattleEncounterEvent battleEvent in events)
@@ -170,7 +170,7 @@ public sealed class BattleEventPresentationTests
             BattleEncounterEventKind.RoundStarted => BattleEventPresentationKind.Suppressed,
             BattleEncounterEventKind.PhaseStarted => BattleEventPresentationKind.Suppressed,
             BattleEncounterEventKind.TurnStarted => BattleEventPresentationKind.Suppressed,
-            BattleEncounterEventKind.PressTurnChanged => BattleEventPresentationKind.Suppressed,
+            BattleEncounterEventKind.TurnEconomyChanged => BattleEventPresentationKind.Suppressed,
             BattleEncounterEventKind.PhaseEnded => BattleEventPresentationKind.Suppressed,
             _ => BattleEventPresentationKind.HostOwned
         };
