@@ -300,6 +300,73 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_ThrowingEffectRollsBackPriorEffectsAndSkillCosts()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 40);
+        ContentId handlerId = ContentId.Parse("throw_after_mutation");
+        ContentId attack = ContentId.Parse("attack");
+        SkillDefinition skill = ActiveSkill(
+        [
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)),
+            new ApplyAilmentEffectDefinition(Poison, 100),
+            new ModifyStatStageEffectDefinition([attack], 1),
+            new GrantChargeEffectDefinition(ChargeKind.Magical, 2m),
+            new GrantShieldEffectDefinition(ShieldKind.Magical),
+            new OverrideAffinityEffectDefinition(
+                [DamageElement.Fire],
+                ElementalAffinity.Null,
+                new BattleDurationDefinition()),
+            new AnalyzeEffectDefinition([AnalysisLayer.Stats]),
+            new CustomEffectDefinition(handlerId)
+        ],
+        costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(5))]);
+        BattleExecutionServices services = Services(
+            customEffects: [new(handlerId, new ThrowingCustomEffectHandler())]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            SkillExecutionDiagnosticCode.ExecutionFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.False(result.CostsCommitted);
+        Assert.Equal(20, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(40, target.GetRequiredResource(Hp).Current);
+        Assert.False(target.HasAilment(Poison));
+        Assert.Empty(target.StatStages);
+        Assert.Empty(target.Charges);
+        Assert.Empty(target.Shields);
+        Assert.Empty(target.AffinityOverrides);
+        Assert.Empty(actor.GetAnalysis(target.InstanceId));
+        Assert.Empty(result.Effects);
+    }
+
+    [Fact]
+    public void Assess_ThrowingFormulaReturnsTypedFailureWithoutMutation()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        ContentId formulaId = ContentId.Parse("throwing_formula");
+        SkillDefinition skill = ActiveSkill(
+            [new AnalyzeEffectDefinition([AnalysisLayer.Stats])],
+            costs: [new SkillCostDefinition(Sp, new FormulaAmountDefinition(formulaId))]);
+        BattleExecutionServices services = Services(
+            formulas: [new(formulaId, new ThrowingFormulaHandler())]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            SkillExecutionDiagnosticCode.ExecutionFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(20, actor.GetRequiredResource(Sp).Current);
+        Assert.Empty(actor.GetAnalysis(target.InstanceId));
+    }
+
+    [Fact]
     public void Execute_RejectsInvalidRandomPolicyResult()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
@@ -868,6 +935,12 @@ public sealed class ActiveSkillExecutionTests
         }
     }
 
+    private sealed class ThrowingFormulaHandler : IFormulaAmountHandler
+    {
+        public decimal Resolve(FormulaAmountDefinition amount, AmountResolutionContext context) =>
+            throw new InvalidOperationException("Formula extension failed deliberately.");
+    }
+
     private sealed class DelegateEscapeRuleHandler(Func<EffectExecutionContext, bool> canEscape)
         : IEscapeRuleHandler
     {
@@ -881,6 +954,12 @@ public sealed class ActiveSkillExecutionTests
             context.Actor.AddResource(resourceId, amount);
             return new EffectExecutionResult(999, RuntimeInstanceId.Parse("forged_target"), EffectExecutionOutcome.Success, Value: amount);
         }
+    }
+
+    private sealed class ThrowingCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
+            throw new InvalidOperationException("Custom effect failed deliberately.");
     }
 
     private sealed class ConstantCustomConditionHandler(bool value) : ICustomConditionHandler

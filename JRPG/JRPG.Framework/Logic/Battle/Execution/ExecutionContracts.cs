@@ -43,7 +43,8 @@ public enum SkillExecutionDiagnosticCode
     CustomEffectHandlerMissing,
     CustomConditionHandlerMissing,
     EscapeRuleHandlerMissing,
-    AilmentMissing
+    AilmentMissing,
+    ExecutionFailed
 }
 
 public sealed record SkillExecutionDiagnostic(

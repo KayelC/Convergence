@@ -568,6 +568,97 @@ public sealed class RuntimeActorState
             VitalResourceId,
             _capabilityIds.OrderBy(id => id.ToString(), StringComparer.Ordinal));
 
+    internal RuntimeActorState CreateExecutionClone()
+    {
+        var clone = new RuntimeActorState(
+            InstanceId,
+            EntityId,
+            TeamId,
+            VitalResourceId,
+            DefenseProfile,
+            _resources.Values,
+            _effectiveStats,
+            _skillIds,
+            _capabilityIds,
+            Passives.Entries.Select(entry => entry.Skill),
+            IsActive,
+            Identity,
+            Ownership,
+            Deployment,
+            Progression,
+            _baseResourceValues,
+            _baseStats,
+            Skills,
+            Forms,
+            Equipment);
+        clone.ApplyExecutionStateFrom(this);
+        return clone;
+    }
+
+    internal void ApplyExecutionStateFrom(RuntimeActorState source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (source.InstanceId != InstanceId ||
+            source.EntityId != EntityId ||
+            source.TeamId != TeamId ||
+            source.VitalResourceId != VitalResourceId)
+        {
+            throw new ArgumentException(
+                "Execution state can only be committed to the actor it was staged from.",
+                nameof(source));
+        }
+
+        Dictionary<ContentId, BattleResourceState> resources = source._resources
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Copy());
+        Dictionary<ContentId, ActiveAilmentState> ailments = new(source._ailments);
+        Dictionary<ContentId, BattleStatStageState> statStages = new(source._statStages);
+        Dictionary<ChargeKind, BattleChargeState> charges = new(source._charges);
+        Dictionary<ShieldKind, BattleShieldState> shields = new(source._shields);
+        Dictionary<DamageElement, BattleAffinityOverrideState> affinityOverrides =
+            new(source._affinityOverrides);
+        Dictionary<ContentId, BattleOtherStatusState> otherStatuses =
+            new(source._otherStatuses);
+        ContentId[] skillIds = source._skillIds.ToArray();
+        ContentId[] capabilityIds = source._capabilityIds.ToArray();
+        Dictionary<RuntimeInstanceId, HashSet<AnalysisLayer>> analysis = source._analysis
+            .ToDictionary(pair => pair.Key, pair => new HashSet<AnalysisLayer>(pair.Value));
+        IReadOnlyDictionary<ContentId, decimal> baseStats = Snapshot(source._baseStats);
+        IReadOnlyDictionary<ContentId, decimal> effectiveStats = Snapshot(source._effectiveStats);
+        IReadOnlyDictionary<ContentId, decimal> baseResourceValues =
+            Snapshot(source._baseResourceValues);
+
+        _resources.Clear();
+        foreach ((ContentId id, BattleResourceState resource) in resources)
+        {
+            _resources.Add(id, resource);
+        }
+
+        ReplaceDictionary(_ailments, ailments);
+        ReplaceDictionary(_statStages, statStages);
+        ReplaceDictionary(_charges, charges);
+        ReplaceDictionary(_shields, shields);
+        ReplaceDictionary(_affinityOverrides, affinityOverrides);
+        ReplaceDictionary(_otherStatuses, otherStatuses);
+
+        _skillIds.Clear();
+        _skillIds.UnionWith(skillIds);
+        _capabilityIds.Clear();
+        _capabilityIds.UnionWith(capabilityIds);
+        ReplaceDictionary(_analysis, analysis);
+
+        _baseStats = baseStats;
+        _effectiveStats = effectiveStats;
+        _baseResourceValues = baseResourceValues;
+        Deployment = source.Deployment;
+        Progression = source.Progression;
+        Skills = source.Skills;
+        Forms = source.Forms;
+        Equipment = source.Equipment;
+        _isActive = source._isActive;
+        IsGuarding = source.IsGuarding;
+        Passives.ReplaceFrom(source.Passives);
+    }
+
     internal void ApplyProgression(
         RuntimeProgressionSnapshot progression,
         RuntimeStatBlockSnapshot stats,
@@ -692,6 +783,18 @@ public sealed class RuntimeActorState
                 pair.Value.Duration)),
             IsGuarding,
             _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)));
+
+    private static void ReplaceDictionary<TKey, TValue>(
+        IDictionary<TKey, TValue> destination,
+        IEnumerable<KeyValuePair<TKey, TValue>> source)
+        where TKey : notnull
+    {
+        destination.Clear();
+        foreach ((TKey key, TValue value) in source)
+        {
+            destination.Add(key, value);
+        }
+    }
 
     private void RemoveStatStages(Func<int, bool> predicate)
     {

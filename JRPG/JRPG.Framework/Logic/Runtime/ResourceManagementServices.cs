@@ -18,7 +18,8 @@ public enum ResourceTransactionCode
     EquippedItemCannotBeRemoved,
     InsufficientCurrency,
     ShopStockUnavailable,
-    NoRestorationNeeded
+    NoRestorationNeeded,
+    NumericOverflow
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -242,7 +243,16 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
         }
 
         int current = snapshot.GetQuantity(itemId);
-        int next = checked(current + quantity);
+        if (quantity > int.MaxValue - current)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.NumericOverflow,
+                $"Item '{itemId}' quantity would exceed the supported integer range.",
+                itemId);
+        }
+
+        int next = current + quantity;
         if (stackLimit is int limit && next > limit)
         {
             return Rejected(snapshot, ResourceTransactionCode.ItemStackExceeded, $"Item '{itemId}' would exceed stack limit {limit}.", itemId);
@@ -924,7 +934,8 @@ public sealed class HospitalRestorationService : IHospitalRestorationService
     public int CalculateRestorationCost(RuntimeHospitalPatientSnapshot patient)
     {
         ArgumentNullException.ThrowIfNull(patient);
-        return patient.MissingHp + (patient.MissingSp * 5);
+        long cost = (long)patient.MissingHp + ((long)patient.MissingSp * 5L);
+        return cost >= int.MaxValue ? int.MaxValue : (int)cost;
     }
 
     public HospitalRestorationResult Restore(RuntimeHospitalPatientSnapshot patient, RuntimeWalletSnapshot wallet)

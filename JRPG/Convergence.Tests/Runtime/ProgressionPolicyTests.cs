@@ -129,6 +129,12 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void ExperienceCurve_SaturatesAtTheSupportedLongRange()
+    {
+        Assert.Equal(long.MaxValue, _curve.GetRequiredExperience(int.MaxValue));
+    }
+
+    [Fact]
     public void LevelGrowth_AppliesMultiLevelHumanoidGrowthWithDeterministicBaseResourceRolls()
     {
         var growth = new StandardLevelGrowthPolicy(_curve, _resources);
@@ -201,6 +207,58 @@ public sealed class ProgressionPolicyTests
         Assert.False(result.Applied);
         Assert.Equal(progression, result.Progression);
         Assert.Equal(ProgressionMutationErrorCode.NegativeExperience, Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void LevelGrowth_RejectsOverflowWithoutPublishingPartialProgression()
+    {
+        var progression = new RuntimeProgressionSnapshot(5, 10, long.MaxValue, 2);
+        var stats = new RuntimeStatBlockSnapshot(BaseStats(8), BaseStats(8));
+        var growth = new StandardLevelGrowthPolicy(_curve, _resources);
+
+        LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
+            progression,
+            stats,
+            StandardProgressionIds.Human,
+            experienceAward: 1,
+            new SequenceRandomSource(),
+            ProgressionSubjectKind.Actor));
+
+        Assert.False(result.Applied);
+        Assert.Same(progression, result.Progression);
+        Assert.Same(stats, result.Stats);
+        Assert.Equal(
+            ProgressionMutationErrorCode.NumericOverflow,
+            Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void LevelGrowth_RejectsNonpositiveExperienceCurveResults()
+    {
+        var progression = new RuntimeProgressionSnapshot(1, 0, 0, 0);
+        var stats = new RuntimeStatBlockSnapshot(BaseStats(1), BaseStats(1));
+        var growth = new StandardLevelGrowthPolicy(new ZeroExperienceCurve(), _resources);
+
+        LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
+            progression,
+            stats,
+            StandardProgressionIds.Human,
+            experienceAward: 1,
+            new SequenceRandomSource(),
+            ProgressionSubjectKind.Actor));
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            ProgressionMutationErrorCode.InvalidExperienceRequirement,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Same(progression, result.Progression);
+    }
+
+    [Fact]
+    public void LevelGrowthPolicy_RejectsNonpositiveStatCapAtConstruction()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StandardLevelGrowthPolicy(_curve, _resources, statCap: 0));
     }
 
     [Fact]
@@ -347,5 +405,10 @@ public sealed class ProgressionPolicyTests
         }
 
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class ZeroExperienceCurve : IExperienceCurve
+    {
+        public long GetRequiredExperience(int level) => 0;
     }
 }

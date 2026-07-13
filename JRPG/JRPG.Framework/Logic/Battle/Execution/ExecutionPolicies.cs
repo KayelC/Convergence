@@ -64,6 +64,7 @@ public interface IPowerAmountPolicy
 
 public interface IFormulaAmountHandler
 {
+    // Formula evaluation must not mutate host-owned state. Execution may be retried or discarded.
     decimal Resolve(FormulaAmountDefinition amount, AmountResolutionContext context);
 }
 
@@ -99,11 +100,14 @@ public interface IEscapeRuleHandler
 
 public interface ICustomConditionHandler
 {
+    // Conditions are assessments and must not mutate host-owned state.
     bool Evaluate(CustomConditionDefinition condition, BattleConditionContext context);
 }
 
 public interface ICustomEffectHandler
 {
+    // Runtime actors in the context are staged. Host-side work must be represented by result requests,
+    // not performed directly, because a later effect or inventory commit may reject the action.
     EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context);
 }
 

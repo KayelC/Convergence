@@ -39,6 +39,23 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void InventoryService_RejectsQuantityOverflowWithTypedUnchangedResult()
+    {
+        var service = new InventoryTransitionService();
+        ContentId medicine = Id("medicine");
+        var maximum = new RuntimeInventorySnapshot(
+            [new KeyValuePair<ContentId, int>(medicine, int.MaxValue)]);
+
+        InventoryTransitionResult result = service.AddItem(maximum, medicine, 1);
+
+        Assert.False(result.Applied);
+        Assert.Equal(ResourceTransactionCode.NumericOverflow, result.Code);
+        Assert.Same(maximum, result.Before);
+        Assert.Same(maximum, result.After);
+        Assert.Equal(int.MaxValue, result.After.GetQuantity(medicine));
+    }
+
+    [Fact]
     public void InventoryService_EnforcesUniqueEquipmentOwnershipAndEquippedSaleBlock()
     {
         var service = new InventoryTransitionService();
@@ -410,6 +427,31 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(ResourceTransactionCode.NoRestorationNeeded, fullHealth.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
         Assert.Equal(1, insufficient.AfterWallet.Macca);
+    }
+
+    [Fact]
+    public void HospitalService_SaturatesExtremeCostWithoutArithmeticOverflow()
+    {
+        var service = new HospitalRestorationService();
+        var patient = new RuntimeHospitalPatientSnapshot(
+            RuntimeInstanceId.Parse("patient"),
+            currentHp: 0,
+            maxHp: int.MaxValue,
+            currentSp: 0,
+            maxSp: int.MaxValue,
+            hasAilment: false);
+        var wallet = new RuntimeWalletSnapshot(0);
+
+        int cost = service.CalculateRestorationCost(patient);
+        HospitalRestorationResult result = service.Restore(patient, wallet);
+
+        Assert.Equal(int.MaxValue, cost);
+        Assert.False(result.Applied);
+        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.Code);
+        Assert.Same(patient, result.BeforePatient);
+        Assert.Same(patient, result.AfterPatient);
+        Assert.Same(wallet, result.BeforeWallet);
+        Assert.Same(wallet, result.AfterWallet);
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);

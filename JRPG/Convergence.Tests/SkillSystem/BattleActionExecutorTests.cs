@@ -117,6 +117,80 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task ItemAction_ThrowingEffectRollsBackReservationAndActorState()
+    {
+        ContentId handlerId = Id("throwing_item_effect");
+        BattleActionExecutor executor = Executor(
+            customEffects: [new(handlerId, new ThrowingCustomEffectHandler())]);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition item = ConsumableItem(
+            "unstable_medicine",
+            [
+                new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)),
+                new CustomEffectDefinition(handlerId)
+            ]);
+        var inventory = new TestItemInventory(item.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(item, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == BattleActionDiagnosticCode.ItemRejected &&
+            diagnostic.Message.Contains("failed before commit", StringComparison.Ordinal));
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.False(result.ItemConsumptionCommitted);
+        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleActionEventKind.ItemRolledBack);
+    }
+
+    [Fact]
+    public async Task ItemAction_RejectedCommitLeavesStagedEffectsUnpublished()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new RejectingCommitInventory(medicine.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ItemCommitFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.True(inventory.WasRolledBack);
+        Assert.False(result.ItemConsumptionCommitted);
+    }
+
+    [Fact]
+    public async Task ItemAction_ThrowingReservationReturnsTypedFailureWithoutMutation()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new ThrowingReserveInventory(medicine.Id);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ItemReservationFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task ItemAction_CancellationOccursBeforeReservation()
     {
         BattleActionExecutor executor = Executor();
@@ -188,7 +262,8 @@ public sealed class BattleActionExecutorTests
         executor.ExecuteAsync(Request(command, actor, participants)).AsTask();
 
     private static BattleActionExecutor Executor(
-        IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null)
+        IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null)
     {
         var services = new BattleExecutionServices(
             EmptyAilments.Instance,
@@ -198,7 +273,8 @@ public sealed class BattleActionExecutorTests
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             new OrderedRandomTargetPolicy(),
-            escapeRuleHandlers: escapeRules);
+            escapeRuleHandlers: escapeRules,
+            customEffectHandlers: customEffects);
         return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
     }
 
@@ -241,6 +317,9 @@ public sealed class BattleActionExecutorTests
             availability: new SkillAvailabilityDefinition([Battle]));
 
     private static ItemDefinition ConsumableItem(string id, EffectDefinition effect) =>
+        ConsumableItem(id, [effect]);
+
+    private static ItemDefinition ConsumableItem(string id, IEnumerable<EffectDefinition> effects) =>
         new(
             Id(id),
             id,
@@ -248,7 +327,7 @@ public sealed class BattleActionExecutorTests
             ItemKind.Consumable,
             99,
             10,
-            new ItemUsageDefinition([Battle], SingleAlly(), [effect]));
+            new ItemUsageDefinition([Battle], SingleAlly(), effects));
 
     private static TargetingDefinition SingleEnemy() =>
         new(TargetRelation.Enemy, TargetSelection.Single, TargetLifeState.Alive, false);
@@ -321,6 +400,12 @@ public sealed class BattleActionExecutorTests
         public bool CanEscape(EscapeEffectDefinition effect, EffectExecutionContext context) => true;
     }
 
+    private sealed class ThrowingCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
+            throw new InvalidOperationException("Custom item effect failed deliberately.");
+    }
+
     private sealed class TestItemInventory(ContentId itemId, int quantity) : IItemActionInventory
     {
         public int Quantity { get; private set; } = quantity;
@@ -347,18 +432,72 @@ public sealed class BattleActionExecutorTests
             public bool IsCommitted { get; private set; }
             public bool IsRolledBack { get; private set; }
 
-            public void Commit()
+            public ItemActionReservationTransitionResult Commit()
             {
-                if (IsCommitted || IsRolledBack) return;
+                if (IsCommitted || IsRolledBack)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
+                }
+
                 inventory.Quantity -= Quantity;
                 IsCommitted = true;
+                return ItemActionReservationTransitionResult.Success;
             }
 
-            public void Rollback()
+            public ItemActionReservationTransitionResult Rollback()
             {
-                if (IsCommitted || IsRolledBack) return;
+                if (IsCommitted || IsRolledBack)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
+                }
+
                 IsRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
             }
         }
+    }
+
+    private sealed class RejectingCommitInventory(ContentId itemId, int quantity) : IItemActionInventory
+    {
+        public int Quantity { get; private set; } = quantity;
+        public bool WasRolledBack { get; private set; }
+
+        public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
+            requestedItemId == itemId && Quantity >= requestedQuantity;
+
+        public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity) =>
+            new Reservation(this, requestedItemId, requestedQuantity);
+
+        private sealed class Reservation(
+            RejectingCommitInventory inventory,
+            ContentId itemId,
+            int quantity) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = itemId;
+            public int Quantity { get; } = quantity;
+            public bool IsCommitted { get; private set; }
+            public bool IsRolledBack { get; private set; }
+
+            public ItemActionReservationTransitionResult Commit() =>
+                ItemActionReservationTransitionResult.Rejected("Host inventory rejected the commit.");
+
+            public ItemActionReservationTransitionResult Rollback()
+            {
+                IsRolledBack = true;
+                inventory.WasRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+        }
+    }
+
+    private sealed class ThrowingReserveInventory(ContentId itemId) : IItemActionInventory
+    {
+        public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
+            requestedItemId == itemId && requestedQuantity == 1;
+
+        public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity) =>
+            throw new InvalidOperationException("Host inventory failed during reservation.");
     }
 }

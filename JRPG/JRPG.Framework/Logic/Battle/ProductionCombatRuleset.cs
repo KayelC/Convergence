@@ -35,6 +35,112 @@ public sealed record ProductionCombatRulesetConfig
     public decimal MaccaVarianceMaximum { get; init; } = 1.1m;
     public decimal InitiativeVarianceMinimum { get; init; } = 0.9m;
     public decimal InitiativeVarianceMaximum { get; init; } = 1.1m;
+
+    public void Validate()
+    {
+        RequirePositive(DamageFormulaScalar, nameof(DamageFormulaScalar));
+        RequireOrderedNonNegativeRange(
+            DamageVarianceMinimum,
+            DamageVarianceMaximum,
+            nameof(DamageVarianceMinimum),
+            nameof(DamageVarianceMaximum));
+        RequireNonNegative(ChargeMultiplier, nameof(ChargeMultiplier));
+        RequireNonNegative(CriticalDamageMultiplier, nameof(CriticalDamageMultiplier));
+        RequireNonNegative(WeakDamageMultiplier, nameof(WeakDamageMultiplier));
+        RequireNonNegative(ResistDamageMultiplier, nameof(ResistDamageMultiplier));
+        RequireNonNegative(GuardDamageMultiplier, nameof(GuardDamageMultiplier));
+        RequirePercent(DefaultHitAccuracy, nameof(DefaultHitAccuracy));
+        RequireOrderedPercentRange(
+            HitChanceMinimum,
+            HitChanceMaximum,
+            nameof(HitChanceMinimum),
+            nameof(HitChanceMaximum));
+        RequireOrderedPercentRange(
+            CriticalChanceMinimum,
+            CriticalChanceMaximum,
+            nameof(CriticalChanceMinimum),
+            nameof(CriticalChanceMaximum));
+        RequirePercent(CriticalChanceBase, nameof(CriticalChanceBase));
+        RequireOrderedPercentRange(
+            InstantDeathChanceMinimum,
+            InstantDeathChanceMaximum,
+            nameof(InstantDeathChanceMinimum),
+            nameof(InstantDeathChanceMaximum));
+        RequirePercent(DefaultInstantDeathChance, nameof(DefaultInstantDeathChance));
+        RequirePositive(EnemiesPerLevelForExperience, nameof(EnemiesPerLevelForExperience));
+        RequireNonNegative(ExpectedStatLevelMultiplier, nameof(ExpectedStatLevelMultiplier));
+        RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
+        RequirePositive(StatDensityDivisor, nameof(StatDensityDivisor));
+        RequirePositive(MaximumStatDensityMultiplier, nameof(MaximumStatDensityMultiplier));
+        RequireNonNegative(MaccaBaseMultiplier, nameof(MaccaBaseMultiplier));
+        RequireNonNegative(MaccaLuckMultiplier, nameof(MaccaLuckMultiplier));
+        RequireOrderedNonNegativeRange(
+            MaccaVarianceMinimum,
+            MaccaVarianceMaximum,
+            nameof(MaccaVarianceMinimum),
+            nameof(MaccaVarianceMaximum));
+        RequireOrderedNonNegativeRange(
+            InitiativeVarianceMinimum,
+            InitiativeVarianceMaximum,
+            nameof(InitiativeVarianceMinimum),
+            nameof(InitiativeVarianceMaximum));
+    }
+
+    private static void RequirePositive(decimal value, string name)
+    {
+        if (value <= 0)
+        {
+            throw new ArgumentOutOfRangeException(name, value, "Configuration value must be positive.");
+        }
+    }
+
+    private static void RequireNonNegative(decimal value, string name)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(name, value, "Configuration value cannot be negative.");
+        }
+    }
+
+    private static void RequirePercent(int value, string name)
+    {
+        if (value is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(name, value, "Configuration percentage must be within 0-100.");
+        }
+    }
+
+    private static void RequireOrderedPercentRange(
+        int minimum,
+        int maximum,
+        string minimumName,
+        string maximumName)
+    {
+        RequirePercent(minimum, minimumName);
+        RequirePercent(maximum, maximumName);
+        if (minimum > maximum)
+        {
+            throw new ArgumentException(
+                $"Configuration range '{minimumName}'-'{maximumName}' must be ordered.",
+                minimumName);
+        }
+    }
+
+    private static void RequireOrderedNonNegativeRange(
+        decimal minimum,
+        decimal maximum,
+        string minimumName,
+        string maximumName)
+    {
+        RequireNonNegative(minimum, minimumName);
+        RequireNonNegative(maximum, maximumName);
+        if (minimum > maximum)
+        {
+            throw new ArgumentException(
+                $"Configuration range '{minimumName}'-'{maximumName}' must be ordered.",
+                minimumName);
+        }
+    }
 }
 
 public sealed record ProductionCombatStats(
@@ -76,12 +182,35 @@ public sealed record ProductionCombatantProfile
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
         Status = status ?? new ProductionCombatStatus();
         Modifiers = modifiers ?? new ProductionCombatModifiers();
+        ValidateStats(Stats);
+        ValidateModifiers(Modifiers);
     }
 
     public int Level { get; }
     public ProductionCombatStats Stats { get; }
     public ProductionCombatStatus Status { get; }
     public ProductionCombatModifiers Modifiers { get; }
+
+    private static void ValidateStats(ProductionCombatStats stats)
+    {
+        if (stats.Strength < 0 || stats.Magic < 0 || stats.Vitality < 0 ||
+            stats.Agility < 0 || stats.Luck < 0 || stats.Defense < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(stats), "Combat stats cannot be negative.");
+        }
+    }
+
+    private static void ValidateModifiers(ProductionCombatModifiers modifiers)
+    {
+        if (modifiers.DamageDealtMultiplier < 0 ||
+            modifiers.DamageTakenMultiplier < 0 ||
+            modifiers.HitMultiplier < 0 ||
+            modifiers.EvasionMultiplier < 0 ||
+            modifiers.CriticalChanceMultiplier < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(modifiers), "Combat multipliers cannot be negative.");
+        }
+    }
 }
 
 public sealed record ProductionHitCheckRequest(
@@ -189,6 +318,7 @@ public sealed class ProductionCombatRuleset :
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? new ProductionCombatRulesetConfig();
+        _config.Validate();
     }
 
     public ProductionCombatRulesetConfig Config => _config;
@@ -247,6 +377,7 @@ public sealed class ProductionCombatRuleset :
     public ProductionDamageResolutionResult ResolveDamage(ProductionDamageResolutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentOutOfRangeException.ThrowIfNegative(request.Power);
 
         int hitCount = ResolveHitCount(request.Hits);
         List<ProductionDamageResolutionHit> hits = new(hitCount);
@@ -299,6 +430,7 @@ public sealed class ProductionCombatRuleset :
     public ProductionRawDamageResult CalculateRawDamage(ProductionRawDamageRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentOutOfRangeException.ThrowIfNegative(request.Power);
 
         bool critical = false;
         decimal damage = CalculateBaseDamage(
@@ -329,6 +461,7 @@ public sealed class ProductionCombatRuleset :
     public ProductionDamageApplicationResult ApplyDamage(ProductionDamageApplicationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentOutOfRangeException.ThrowIfNegative(request.Damage);
 
         ElementalAffinity affinity = NormalizeGuardedAffinity(
             request.Affinity,
@@ -494,32 +627,44 @@ public sealed class ProductionCombatRuleset :
     {
         ArgumentNullException.ThrowIfNull(enemy);
 
-        decimal baseYield = (1.5m * (decimal)Math.Pow(enemy.Level, 3)) / _config.EnemiesPerLevelForExperience;
-        decimal expectedStats = (enemy.Level * _config.ExpectedStatLevelMultiplier) + _config.ExpectedStatBase;
-        decimal actualStats =
-            enemy.Stats.Strength +
-            enemy.Stats.Magic +
-            enemy.Stats.Vitality +
-            enemy.Stats.Agility +
-            enemy.Stats.Luck;
-        decimal statMultiplier = 1m +
-            Math.Max(0m, (actualStats - expectedStats) / _config.StatDensityDivisor);
+        decimal level = enemy.Level;
+        decimal levelCubed = SaturatingMultiply(SaturatingMultiply(level, level), level);
+        decimal baseYield = SaturatingDivide(
+            SaturatingMultiply(1.5m, levelCubed),
+            _config.EnemiesPerLevelForExperience);
+        decimal expectedStats = SaturatingAdd(
+            SaturatingMultiply(level, _config.ExpectedStatLevelMultiplier),
+            _config.ExpectedStatBase);
+        decimal actualStats = SaturatingSum(
+            enemy.Stats.Strength,
+            enemy.Stats.Magic,
+            enemy.Stats.Vitality,
+            enemy.Stats.Agility,
+            enemy.Stats.Luck);
+        decimal statMultiplier = SaturatingAdd(
+            1m,
+            Math.Max(0m, SaturatingDivide(actualStats - expectedStats, _config.StatDensityDivisor)));
         statMultiplier = Math.Min(_config.MaximumStatDensityMultiplier, statMultiplier);
-        return Math.Max(1, (int)Math.Floor(baseYield * statMultiplier));
+        return Math.Max(1, SaturatingFloorToInt(SaturatingMultiply(baseYield, statMultiplier)));
     }
 
     public int CalculateMaccaYield(ProductionCombatantProfile enemy)
     {
         ArgumentNullException.ThrowIfNull(enemy);
 
-        decimal baseMacca = _config.MaccaBaseMultiplier * (decimal)Math.Pow(enemy.Level, 2);
-        decimal luckBonus = enemy.Stats.Luck * _config.MaccaLuckMultiplier;
+        decimal level = enemy.Level;
+        decimal baseMacca = SaturatingMultiply(
+            _config.MaccaBaseMultiplier,
+            SaturatingMultiply(level, level));
+        decimal luckBonus = SaturatingMultiply(enemy.Stats.Luck, _config.MaccaLuckMultiplier);
         decimal variance = RollVariance(_config.MaccaVarianceMinimum, _config.MaccaVarianceMaximum);
-        return (int)Math.Floor((baseMacca + luckBonus) * variance);
+        return SaturatingFloorToInt(SaturatingMultiply(SaturatingAdd(baseMacca, luckBonus), variance));
     }
 
     public bool RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(playerAverageAgility);
+        ArgumentOutOfRangeException.ThrowIfNegative(enemyAverageAgility);
         decimal playerRoll = playerAverageAgility *
             RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum);
         decimal enemyRoll = enemyAverageAgility *
@@ -556,14 +701,25 @@ public sealed class ProductionCombatRuleset :
         _ => damage
     };
 
-    private int ResolveHitCount(HitCountDefinition hits)
+    internal int ResolveHitCount(HitCountDefinition hits)
     {
+        ArgumentNullException.ThrowIfNull(hits);
+        if (hits.Minimum <= 0 || hits.Maximum < hits.Minimum)
+        {
+            throw new ArgumentOutOfRangeException(nameof(hits), "Hit counts must be positive and ordered.");
+        }
+        if (hits.Distribution == HitDistribution.Fixed && hits.Minimum != hits.Maximum)
+        {
+            throw new ArgumentException("Fixed hit counts require equal minimum and maximum values.", nameof(hits));
+        }
+
         if (hits.Minimum == hits.Maximum || hits.Distribution == HitDistribution.Fixed)
         {
             return hits.Minimum;
         }
 
-        return _random.NextInt32(hits.Minimum, hits.Maximum + 1);
+        int width = checked((int)(((long)hits.Maximum - hits.Minimum) + 1L));
+        return checked(hits.Minimum + _random.NextInt32(0, width));
     }
 
     private bool RollPercent(int chance)
@@ -591,7 +747,7 @@ public sealed class ProductionCombatRuleset :
     private static int ClampPercent(decimal chance, int minimum, int maximum) =>
         (int)Math.Clamp(Math.Floor(chance), minimum, maximum);
 
-    private static ProductionCombatantProfile FromRuntimeActor(RuntimeActorState actor)
+    internal static ProductionCombatantProfile FromRuntimeActor(RuntimeActorState actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
 
@@ -618,7 +774,7 @@ public sealed class ProductionCombatRuleset :
         }
 
         return new ProductionCombatantProfile(
-            level: 1,
+            actor.Progression.Level,
             new ProductionCombatStats(strength, magic, vitality, agility, luck),
             new ProductionCombatStatus(
                 IsGuarding: actor.IsGuarding,
@@ -630,5 +786,67 @@ public sealed class ProductionCombatRuleset :
                 DamageTakenMultiplier: damageTaken,
                 EvasionMultiplier: evasion,
                 CriticalChanceTakenBonus: criticalTakenBonus));
+    }
+
+    private static decimal SaturatingMultiply(decimal left, decimal right)
+    {
+        try
+        {
+            return checked(left * right);
+        }
+        catch (OverflowException)
+        {
+            return Math.Sign(left) == Math.Sign(right) ? decimal.MaxValue : decimal.MinValue;
+        }
+    }
+
+    private static decimal SaturatingAdd(decimal left, decimal right)
+    {
+        try
+        {
+            return checked(left + right);
+        }
+        catch (OverflowException)
+        {
+            return left >= 0 && right >= 0 ? decimal.MaxValue : decimal.MinValue;
+        }
+    }
+
+    private static decimal SaturatingDivide(decimal dividend, decimal divisor)
+    {
+        try
+        {
+            return dividend / divisor;
+        }
+        catch (OverflowException)
+        {
+            return Math.Sign(dividend) == Math.Sign(divisor) ? decimal.MaxValue : decimal.MinValue;
+        }
+    }
+
+    private static decimal SaturatingSum(params decimal[] values)
+    {
+        decimal result = 0m;
+        foreach (decimal value in values)
+        {
+            result = SaturatingAdd(result, value);
+        }
+
+        return result;
+    }
+
+    private static int SaturatingFloorToInt(decimal value)
+    {
+        decimal floored = Math.Floor(value);
+        if (floored >= int.MaxValue)
+        {
+            return int.MaxValue;
+        }
+        if (floored <= int.MinValue)
+        {
+            return int.MinValue;
+        }
+
+        return decimal.ToInt32(floored);
     }
 }

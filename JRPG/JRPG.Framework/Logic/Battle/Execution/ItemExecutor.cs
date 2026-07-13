@@ -28,7 +28,8 @@ public enum ItemExecutionDiagnosticCode
     CustomConditionHandlerMissing,
     EscapeRuleHandlerMissing,
     AilmentMissing,
-    NoApplicableEffect
+    NoApplicableEffect,
+    ExecutionFailed
 }
 
 public sealed record ItemExecutionDiagnostic(
@@ -130,6 +131,24 @@ public sealed class ItemExecutor : IItemExecutor
     public ItemExecutionAssessment Assess(ItemExecutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        try
+        {
+            return AssessCore(request);
+        }
+        catch (Exception exception)
+        {
+            return new ItemExecutionAssessment(
+            [
+                new ItemExecutionDiagnostic(
+                    ItemExecutionDiagnosticCode.ExecutionFailed,
+                    $"Item assessment failed: {exception.Message}")
+            ],
+            targets: null);
+        }
+    }
+
+    private ItemExecutionAssessment AssessCore(ItemExecutionRequest request)
+    {
         var diagnostics = new List<ItemExecutionDiagnostic>();
         ItemUsageDefinition? usage = request.Item.Usage;
 
@@ -188,10 +207,33 @@ public sealed class ItemExecutor : IItemExecutor
             return ItemExecutionResult.Rejected(assessment.Diagnostics);
         }
 
-        OrderedEffectExecution execution = _orderedEffects.Execute(
-            CreateActionRequest(request, request.Item.Usage),
-            request.Item.Usage.Effects,
-            assessment.Targets);
+        OrderedEffectExecution execution;
+        RuntimeActorExecutionTransaction transaction;
+        try
+        {
+            transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
+            var stagedRequest = new ItemExecutionRequest(
+                request.Item,
+                transaction.Actor,
+                transaction.Participants,
+                request.Environment,
+                request.SelectedTargetIds);
+            execution = _orderedEffects.Execute(
+                CreateActionRequest(stagedRequest, request.Item.Usage),
+                request.Item.Usage.Effects,
+                transaction.Map(assessment.Targets));
+        }
+        catch (Exception exception)
+        {
+            return ItemExecutionResult.Rejected(
+            [
+                new ItemExecutionDiagnostic(
+                    ItemExecutionDiagnosticCode.ExecutionFailed,
+                    $"Item execution failed before commit: {exception.Message}")
+            ]);
+        }
+
+        transaction.Commit();
         bool meaningful = execution.Effects.Any(IsMeaningfulSuccess);
         ItemConsumptionDecision consumption = meaningful
             ? ItemConsumptionDecision.ConsumeOne

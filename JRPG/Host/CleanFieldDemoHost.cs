@@ -307,25 +307,29 @@ internal sealed class CleanFieldDemoHost
             public bool IsCommitted { get; private set; }
             public bool IsRolledBack { get; private set; }
 
-            public void Commit()
+            public ItemActionReservationTransitionResult Commit()
             {
                 if (IsCommitted || IsRolledBack)
                 {
-                    return;
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
                 }
 
                 quantities[ItemId] -= Quantity;
                 IsCommitted = true;
+                return ItemActionReservationTransitionResult.Success;
             }
 
-            public void Rollback()
+            public ItemActionReservationTransitionResult Rollback()
             {
                 if (IsCommitted || IsRolledBack)
                 {
-                    return;
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
                 }
 
                 IsRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
             }
         }
     }

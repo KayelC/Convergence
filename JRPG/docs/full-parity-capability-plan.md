@@ -917,6 +917,15 @@ Review-Whole-5 fusion-authority correction:
 - fusion capabilities remain `parallel_partial`; protected Cathedral consumers are still active and no removal is authorized.
 - Verification passed `214/214` focused fusion/content/transaction/host tests and `984/984` full-suite tests with no skips. The framework built with `0` warnings, the solution retained `98` legacy-host warnings, all four clean demos passed, boundary/diff checks passed, and `Data/Jsons` remained unchanged.
 
+Review-Whole-6 atomic-execution and arithmetic correction:
+
+- skill, item, and direct typed-effect execution stage complete actor state, including costs, resources, statuses, defenses, analysis, and passive activation state;
+- registered extension failures reject without publishing staged actor changes;
+- item reservations expose typed atomic commit/rollback transitions, and actor state is published only after inventory commit succeeds;
+- combat configuration, hit counts, runtime levels, reward calculations, growth, inventory quantities, and hospital costs now have explicit validation and checked/saturating boundary behavior;
+- affected capabilities remain `parallel_partial`; protected legacy consumers are still active and no removal is authorized.
+- Verification passed `102/102` focused tests and `999/999` full-suite tests with no skips. The framework built with `0` warnings, the solution retained `98` legacy-host warnings, all four clean demos passed, boundary/diff checks passed, and `Data/Jsons` remained unchanged.
+
 ### 29. `negotiation_and_recruitment`
 
 Current status: `parallel_partial`.

@@ -33,27 +33,64 @@ public sealed class SkillExecutor : ISkillExecutor
             return SkillExecutionResult.Rejected(assessment.Diagnostics);
         }
 
-        ResolvedTargetSet targets = assessment.Targets;
-        CommitCosts(request.Actor, assessment.Costs);
-        OrderedEffectExecution execution = _orderedEffects.Execute(
-            request.ToEffectActionRequest(),
-            request.Skill.Effects,
-            new ResolvedRuntimeTargetSet(targets.Targets, targets.IsUntargeted));
+        OrderedEffectExecution execution;
+        RuntimeActorExecutionTransaction transaction;
+        try
+        {
+            transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
+            ResolvedTargetSet targets = transaction.Map(assessment.Targets);
+            var stagedRequest = new SkillExecutionRequest(
+                request.Skill,
+                transaction.Actor,
+                transaction.Participants,
+                request.Environment,
+                request.SelectedTargetIds);
+            CommitCosts(transaction.Actor, assessment.Costs);
+            execution = _orderedEffects.Execute(
+                stagedRequest.ToEffectActionRequest(),
+                request.Skill.Effects,
+                new ResolvedRuntimeTargetSet(targets.Targets, targets.IsUntargeted));
+        }
+        catch (Exception exception)
+        {
+            return SkillExecutionResult.Rejected(
+            [
+                new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.ExecutionFailed,
+                    $"Skill execution failed before commit: {exception.Message}")
+            ]);
+        }
+
+        transaction.Commit();
 
         return new SkillExecutionResult(
             execution.Interrupted ? SkillExecutionStatus.Interrupted : SkillExecutionStatus.Executed,
             execution.Effects,
-            costsCommitted: request.Skill.Costs.Count > 0);
+            costsCommitted: assessment.Costs.Count > 0);
     }
 
     public SkillExecutionAssessment Assess(SkillExecutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        List<SkillExecutionDiagnostic> diagnostics = Preflight(
-            request,
-            out ResolvedTargetSet? targets,
-            out IReadOnlyList<ResolvedSkillCost> costs);
-        return new SkillExecutionAssessment(diagnostics, targets, costs);
+        try
+        {
+            List<SkillExecutionDiagnostic> diagnostics = Preflight(
+                request,
+                out ResolvedTargetSet? targets,
+                out IReadOnlyList<ResolvedSkillCost> costs);
+            return new SkillExecutionAssessment(diagnostics, targets, costs);
+        }
+        catch (Exception exception)
+        {
+            return new SkillExecutionAssessment(
+            [
+                new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.ExecutionFailed,
+                    $"Skill assessment failed: {exception.Message}")
+            ],
+            targets: null,
+            costs: []);
+        }
     }
 
     private List<SkillExecutionDiagnostic> Preflight(

@@ -59,7 +59,9 @@ public enum ProgressionMutationErrorCode
     MissingStatPoints,
     StatAtCap,
     MissingResource,
-    InvalidLevel
+    InvalidLevel,
+    NumericOverflow,
+    InvalidExperienceRequirement
 }
 
 public sealed record StatModifierTrackAlias(ContentId TrackId, ContentId StatId);
@@ -351,7 +353,10 @@ public sealed class CubicExperienceCurve : IExperienceCurve
             throw new ArgumentOutOfRangeException(nameof(level), "Level must be positive.");
         }
 
-        return (long)(1.5 * Math.Pow(level, 3));
+        decimal scaled = checked(1.5m * level * level * level);
+        return scaled >= long.MaxValue
+            ? long.MaxValue
+            : decimal.ToInt64(Math.Floor(scaled));
     }
 }
 
@@ -465,6 +470,11 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
     {
         _experienceCurve = experienceCurve ?? new CubicExperienceCurve();
         _resourceGrowthPolicy = resourceGrowthPolicy ?? new StandardResourceGrowthPolicy();
+        if (statCap <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(statCap), "Stat cap must be positive.");
+        }
+
         _statCap = statCap;
     }
 
@@ -479,76 +489,112 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                 "Experience awards cannot be negative.");
         }
 
-        int level = request.Progression.Level;
-        long experience = request.Progression.Experience + request.ExperienceAward;
-        long lifetimeExperience = request.Progression.LifetimeExperience + request.ExperienceAward;
-        int statPoints = request.Progression.UnspentStatPoints;
-        var baseStats = request.Stats.BaseStats.ToDictionary(pair => pair.Key, pair => pair.Value);
-        var effectiveStats = request.Stats.EffectiveStats.ToDictionary(pair => pair.Key, pair => pair.Value);
-        var baseResources = request.BaseResourceValues.ToDictionary(pair => pair.Key, pair => pair.Value);
-        IReadOnlyList<RuntimeResourceSnapshot> resources = request.Resources;
-        List<LevelUpEvent> levelUps = [];
-
-        while (experience >= _experienceCurve.GetRequiredExperience(level))
+        try
         {
-            experience -= _experienceCurve.GetRequiredExperience(level);
-            level++;
+            int level = request.Progression.Level;
+            long experience = checked(request.Progression.Experience + request.ExperienceAward);
+            long lifetimeExperience = checked(
+                request.Progression.LifetimeExperience + request.ExperienceAward);
+            int statPoints = request.Progression.UnspentStatPoints;
+            var baseStats = request.Stats.BaseStats.ToDictionary(pair => pair.Key, pair => pair.Value);
+            var effectiveStats = request.Stats.EffectiveStats.ToDictionary(pair => pair.Key, pair => pair.Value);
+            var baseResources = request.BaseResourceValues.ToDictionary(pair => pair.Key, pair => pair.Value);
+            IReadOnlyList<RuntimeResourceSnapshot> resources = request.Resources;
+            List<LevelUpEvent> levelUps = [];
 
-            if (request.SubjectKind == ProgressionSubjectKind.Form)
+            while (true)
             {
-                ContentId stat = StandardProgressionIds.CoreStats[
-                    request.RandomSource.NextInt32(0, StandardProgressionIds.CoreStats.Count)];
-                decimal current = baseStats.GetValueOrDefault(stat);
-                decimal increase = current < _statCap ? 1m : 0m;
-                if (increase > 0)
+                long requiredExperience = _experienceCurve.GetRequiredExperience(level);
+                if (requiredExperience <= 0)
                 {
-                    baseStats[stat] = current + increase;
-                    effectiveStats[stat] = effectiveStats.GetValueOrDefault(stat) + increase;
+                    return Rejected(
+                        request,
+                        ProgressionMutationErrorCode.InvalidExperienceRequirement,
+                        $"Experience requirement for level {level} must be positive.");
+                }
+                if (experience < requiredExperience)
+                {
+                    break;
+                }
+                if (level == int.MaxValue)
+                {
+                    return Rejected(
+                        request,
+                        ProgressionMutationErrorCode.NumericOverflow,
+                        "Level cannot exceed the supported integer range.");
                 }
 
+                experience -= requiredExperience;
+                level = checked(level + 1);
+
+                if (request.SubjectKind == ProgressionSubjectKind.Form)
+                {
+                    ContentId stat = StandardProgressionIds.CoreStats[
+                        request.RandomSource.NextInt32(0, StandardProgressionIds.CoreStats.Count)];
+                    decimal current = baseStats.GetValueOrDefault(stat);
+                    decimal increase = current < _statCap ? 1m : 0m;
+                    if (increase > 0)
+                    {
+                        baseStats[stat] = checked(current + increase);
+                        effectiveStats[stat] = checked(
+                            effectiveStats.GetValueOrDefault(stat) + increase);
+                    }
+
+                    levelUps.Add(new LevelUpEvent(
+                        level,
+                        statIncreases: increase > 0
+                            ? [new KeyValuePair<ContentId, decimal>(stat, increase)]
+                            : []));
+                    continue;
+                }
+
+                statPoints = checked(statPoints + 1);
+                Dictionary<ContentId, decimal> baseResourceIncreases = [];
+                if (request.SubjectKindId != StandardProgressionIds.Demon)
+                {
+                    decimal hpIncrease = request.RandomSource.NextInt32(6, 11);
+                    decimal spIncrease = request.RandomSource.NextInt32(3, 8);
+                    baseResources[StandardProgressionIds.Hp] = checked(
+                        baseResources.GetValueOrDefault(StandardProgressionIds.Hp) + hpIncrease);
+                    baseResources[StandardProgressionIds.Sp] = checked(
+                        baseResources.GetValueOrDefault(StandardProgressionIds.Sp) + spIncrease);
+                    baseResourceIncreases[StandardProgressionIds.Hp] = hpIncrease;
+                    baseResourceIncreases[StandardProgressionIds.Sp] = spIncrease;
+                }
+
+                IReadOnlyList<RuntimeResourceSnapshot> before = resources;
+                ResourceRecalculationResult recalculated = _resourceGrowthPolicy.Recalculate(
+                    new ResourceRecalculationRequest(
+                        resources,
+                        baseResources,
+                        effectiveStats,
+                        ResourceCurrentAdjustmentMode.LevelUpDelta));
+                resources = recalculated.Resources;
                 levelUps.Add(new LevelUpEvent(
                     level,
-                    statIncreases: increase > 0 ? [new KeyValuePair<ContentId, decimal>(stat, increase)] : []));
-                continue;
+                    baseResourceIncreases: baseResourceIncreases,
+                    statPointsAwarded: 1,
+                    resourcesBefore: before,
+                    resourcesAfter: resources));
             }
 
-            statPoints++;
-            Dictionary<ContentId, decimal> baseResourceIncreases = [];
-            if (request.SubjectKindId != StandardProgressionIds.Demon)
-            {
-                decimal hpIncrease = request.RandomSource.NextInt32(6, 11);
-                decimal spIncrease = request.RandomSource.NextInt32(3, 8);
-                baseResources[StandardProgressionIds.Hp] = baseResources.GetValueOrDefault(StandardProgressionIds.Hp) + hpIncrease;
-                baseResources[StandardProgressionIds.Sp] = baseResources.GetValueOrDefault(StandardProgressionIds.Sp) + spIncrease;
-                baseResourceIncreases[StandardProgressionIds.Hp] = hpIncrease;
-                baseResourceIncreases[StandardProgressionIds.Sp] = spIncrease;
-            }
-
-            IReadOnlyList<RuntimeResourceSnapshot> before = resources;
-            ResourceRecalculationResult recalculated = _resourceGrowthPolicy.Recalculate(
-                new ResourceRecalculationRequest(
-                    resources,
-                    baseResources,
-                    effectiveStats,
-                    ResourceCurrentAdjustmentMode.LevelUpDelta));
-            resources = recalculated.Resources;
-            levelUps.Add(new LevelUpEvent(
-                level,
-                baseResourceIncreases: baseResourceIncreases,
-                statPointsAwarded: 1,
-                resourcesBefore: before,
-                resourcesAfter: resources));
+            var progression = new RuntimeProgressionSnapshot(level, experience, lifetimeExperience, statPoints);
+            var stats = new RuntimeStatBlockSnapshot(baseStats, effectiveStats);
+            return new LevelGrowthResult(
+                ProgressionMutationStatus.Applied,
+                progression,
+                stats,
+                resources,
+                baseResources,
+                levelUps);
         }
-
-        var progression = new RuntimeProgressionSnapshot(level, experience, lifetimeExperience, statPoints);
-        var stats = new RuntimeStatBlockSnapshot(baseStats, effectiveStats);
-        return new LevelGrowthResult(
-            ProgressionMutationStatus.Applied,
-            progression,
-            stats,
-            resources,
-            baseResources,
-            levelUps);
+        catch (OverflowException)
+        {
+            return Rejected(
+                request,
+                ProgressionMutationErrorCode.NumericOverflow,
+                "Progression arithmetic exceeded the supported numeric range.");
+        }
     }
 
     private static LevelGrowthResult Rejected(

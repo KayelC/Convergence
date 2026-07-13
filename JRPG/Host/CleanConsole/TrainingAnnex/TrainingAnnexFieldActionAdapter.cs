@@ -138,24 +138,39 @@ internal sealed class TrainingAnnexItemActionInventory : IItemActionInventory
         public bool IsCommitted => reservation.IsCommitted;
         public bool IsRolledBack => reservation.IsRolledBack;
 
-        public void Commit()
+        public ItemActionReservationTransitionResult Commit()
         {
-            InventoryTransitionResult result = reservation.Commit();
-            if (!result.Applied)
+            try
             {
-                throw new InvalidOperationException(
-                    result.Diagnostics.FirstOrDefault()?.Message ?? "Item reservation commit failed.");
-            }
+                InventoryTransitionResult result = reservation.Commit();
+                if (!result.Applied)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        result.Diagnostics.FirstOrDefault()?.Message ?? "Item reservation commit failed.");
+                }
 
-            owner.Snapshot = result.After;
+                owner.Snapshot = result.After;
+                return ItemActionReservationTransitionResult.Success;
+            }
+            catch (Exception exception)
+            {
+                return ItemActionReservationTransitionResult.Rejected(exception.Message);
+            }
         }
 
-        public void Rollback()
+        public ItemActionReservationTransitionResult Rollback()
         {
-            InventoryTransitionResult result = reservation.Rollback();
-            if (!result.Applied)
+            try
             {
-                throw new InvalidOperationException("Item reservation rollback failed.");
+                InventoryTransitionResult result = reservation.Rollback();
+                return result.Applied
+                    ? ItemActionReservationTransitionResult.Success
+                    : ItemActionReservationTransitionResult.Rejected(
+                        result.Diagnostics.FirstOrDefault()?.Message ?? "Item reservation rollback failed.");
+            }
+            catch (Exception exception)
+            {
+                return ItemActionReservationTransitionResult.Rejected(exception.Message);
             }
         }
     }

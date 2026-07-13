@@ -242,6 +242,8 @@ The JSON path is safer because `SkillSystemDtoMapper.MapJsonValue` recursively c
 
 **Required correction:** Define a no-fail commit contract after successful reservation, or stage effect mutations and commit inventory plus actor state atomically. Convert extension failures into typed diagnostics.
 
+**Correction status (Review-Whole-6, 2026-07-13): completed.** Skill, item, and direct typed-effect execution now operate on execution-local actor clones. Resource costs and every mutable actor-state group are published only after the ordered effect pipeline succeeds. Item actions add a second outer staging boundary: host inventory reservation commits first through a typed atomic transition, and actor state is published only after that commit succeeds. Rejected or throwing reservation, commit, formula, condition, damage, or custom-effect paths return typed diagnostics and leave framework actor state unchanged. Extension contracts now state that host-owned side effects must not be performed during speculative evaluation.
+
 ### M10. Public policy/configuration numeric boundaries are insufficiently validated
 
 Several public APIs can throw unexpectedly or produce invalid results from otherwise constructible inputs:
@@ -259,6 +261,8 @@ Several public APIs can throw unexpectedly or produce invalid results from other
 **Impact:** Public framework services that normally return diagnostics can instead throw or calculate negative/nonsensical values at boundary inputs.
 
 **Required correction:** Validate policy construction, use checked/saturating arithmetic deliberately, and translate boundary failures into stable diagnostic results.
+
+**Correction status (Review-Whole-6, 2026-07-13): completed.** `ProductionCombatRulesetConfig` validates divisors, ranges, percentages, and nonnegative multipliers at construction; inclusive hit-count selection no longer computes `Maximum + 1`; runtime combat profiles use the actor's real progression level; and reward calculations deliberately saturate at supported integer limits. Growth validates its stat cap and experience requirements, uses checked mutation arithmetic, and returns stable overflow diagnostics with unchanged snapshots. Cubic EXP, inventory quantity addition, and hospital costs now use explicit saturation or typed rejection rather than accidental overflow.
 
 ### M11. Compatibility mechanics and project terminology still live inside clean framework code
 
@@ -344,6 +348,17 @@ Commands were run from the reviewed checkout:
 
 The green suite is valuable evidence, but it does not invalidate the findings above. The missing adversarial combinations are precisely where several defects remain.
 
+### Review-Whole-6 Verification
+
+- Focused execution and arithmetic coverage: **102 passed, 0 failed, 0 skipped**.
+- Complete solution: **999 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Complete solution nonincremental build: **98 existing legacy console-host warnings, 0 errors**.
+- Clean battle, field, save-v5, and Training Annex demos: all exited `0` with their expected outcomes.
+- `git diff --check`: no whitespace errors; Git reported only working-tree line-ending normalization notices.
+- Refined forbidden-dependency search: no framework matches for console/filesystem/Godot/Newtonsoft/legacy runtime dependencies.
+- `Data/Jsons`: unchanged.
+
 ## Recommended Correction Order
 
 Do not begin another feature phase before the first five correction groups are complete.
@@ -367,9 +382,11 @@ Do not begin another feature phase before the first five correction groups are c
 5. **Review-Whole-5: Fusion authority** - completed and verified 2026-07-13.
    - Equal-specificity overlapping recipes fail content validation, while unvalidated runtime ambiguity also fails closed.
    - Accident candidates and limits come only from the exact planning result; registered mutations are revalidated and return a plan-bound selection token.
-6. **Review-Whole-6: Atomic execution and boundary arithmetic**
-   - Stage mutations or define no-fail commits.
-   - Validate combat/growth/resource configuration and overflow paths.
+6. **Review-Whole-6: Atomic execution and boundary arithmetic** - completed and verified 2026-07-13.
+   - Skills, items, and direct typed effects stage complete actor state and publish it only after successful execution.
+   - Item reservation/commit/rollback transitions are typed; failed host commits cannot publish staged actor changes.
+   - Combat, growth, inventory, and hospital boundaries validate configuration and use deliberate checked/saturating arithmetic.
+   - Verification passed `102/102` focused tests and `999/999` full-suite tests; the framework retained `0` warnings.
 7. **Review-Whole-7: Definition immutability and runtime condition consistency**
    - Close the custom parameter value algebra.
    - Align passive-resolved affinities and multi-target knowledge scoring.
@@ -383,4 +400,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-5 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, and fusion authority. The most important remaining risks are atomic execution, unchecked boundary arithmetic, definition immutability, runtime-condition consistency, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-6 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, incomplete authored ailment execution, Demon Stock role authorization, fusion authority, atomic typed-effect execution, and unsafe arithmetic boundaries. The most important remaining risks are definition immutability, runtime-condition consistency, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.

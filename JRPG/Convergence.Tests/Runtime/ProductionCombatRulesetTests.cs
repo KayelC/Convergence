@@ -1,7 +1,9 @@
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
 namespace Convergence.Tests.Runtime;
@@ -180,6 +182,78 @@ public sealed class ProductionCombatRulesetTests
         Assert.False(ruleset.RollInitiative(playerAverageAgility: 1, enemyAverageAgility: 100));
     }
 
+    [Fact]
+    public void ConstructorRejectsUnsafeConfigurationBeforeRuntimeUse()
+    {
+        ProductionCombatRulesetConfig[] invalidConfigurations =
+        [
+            new() { EnemiesPerLevelForExperience = 0 },
+            new() { StatDensityDivisor = 0 },
+            new() { HitChanceMinimum = 90, HitChanceMaximum = 10 },
+            new() { DamageVarianceMinimum = 1.1m, DamageVarianceMaximum = 0.9m },
+            new() { CriticalChanceMaximum = 101 },
+            new() { GuardDamageMultiplier = -0.1m }
+        ];
+
+        Assert.All(invalidConfigurations, config =>
+            Assert.ThrowsAny<ArgumentException>(() =>
+                new ProductionCombatRuleset(new SequenceRandomSource([]), config)));
+    }
+
+    [Fact]
+    public void UniformHitCountSupportsIntMaximumWithoutOverflowingTheExclusiveBound()
+    {
+        var ruleset = new ProductionCombatRuleset(new MaximumIntRandomSource());
+
+        int result = ruleset.ResolveHitCount(new HitCountDefinition(
+            int.MaxValue - 1,
+            int.MaxValue,
+            HitDistribution.Uniform));
+
+        Assert.Equal(int.MaxValue, result);
+    }
+
+    [Fact]
+    public void RuntimeCombatProfileUsesCanonicalActorProgressionLevel()
+    {
+        var actor = new RuntimeActorState(
+            RuntimeInstanceId.Parse("leveled_actor"),
+            ContentId.Parse("leveled_entity"),
+            ContentId.Parse("player_team"),
+            StandardProgressionIds.Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(StandardProgressionIds.Hp, 100, 100)],
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Agility, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Luck, 10)
+            ],
+            progression: new RuntimeProgressionSnapshot(37, 0, 0, 0));
+
+        ProductionCombatantProfile profile = ProductionCombatRuleset.FromRuntimeActor(actor);
+
+        Assert.Equal(37, profile.Level);
+    }
+
+    [Fact]
+    public void ExtremeRewardInputsSaturateInsteadOfThrowingOrWrapping()
+    {
+        ProductionCombatRuleset ruleset = Rules(0.5m);
+        ProductionCombatantProfile enemy = Actor(
+            level: int.MaxValue,
+            stats: new ProductionCombatStats(
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue));
+
+        Assert.Equal(int.MaxValue, ruleset.CalculateExperienceYield(enemy));
+        Assert.Equal(int.MaxValue, ruleset.CalculateMaccaYield(enemy));
+    }
+
     private static ProductionCombatRuleset Rules(params decimal[] units) =>
         new(new SequenceRandomSource(units));
 
@@ -202,5 +276,11 @@ public sealed class ProductionCombatRulesetTests
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
 
         public decimal NextUnitDecimal() => _units.Count == 0 ? 0.5m : _units.Dequeue();
+    }
+
+    private sealed class MaximumIntRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
+        public decimal NextUnitDecimal() => 0.999999m;
     }
 }

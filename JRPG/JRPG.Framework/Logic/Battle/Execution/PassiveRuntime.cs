@@ -125,6 +125,23 @@ public sealed class BattlePassiveCollection
         }
     }
 
+    internal void ReplaceFrom(BattlePassiveCollection source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        BattlePassiveEntry[] entries = source._entries.ToArray();
+        KeyValuePair<PassiveActivationKey, int>[] activations =
+            source._activationCounts.ToArray();
+
+        _entries.Clear();
+        _entries.AddRange(entries);
+        _activationCounts.Clear();
+        foreach ((PassiveActivationKey key, int count) in activations)
+        {
+            _activationCounts.Add(key, count);
+        }
+    }
+
     internal IEnumerable<SkillDefinition> EnabledSkills =>
         _entries.Where(entry => entry.IsEnabled).Select(entry => entry.Skill);
 

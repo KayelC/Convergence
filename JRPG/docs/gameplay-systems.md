@@ -263,6 +263,8 @@ Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing
 
 Phase 2-13 switches the original Training Annex clean consumer to this binding. Only `weakMultiplier` and `resistMultiplier` are authored parameters today; the remaining formula defaults remain code-owned policy configuration. Protected legacy battle consumers remain adapter-backed and no removal is authorized.
 
+Review-Whole-6 validates every public `ProductionCombatRulesetConfig` before use, includes the actor's real runtime level in combat/reward profiles, makes inclusive hit counts safe at `int.MaxValue`, and deliberately saturates extreme reward values. Progression, inventory quantities, and hospital costs likewise use checked or saturating arithmetic with typed rejection where mutation services already expose diagnostics.
+
 ## Clean Action Execution Foundation
 
 Track H adds a framework-owned action facade for the clean path. `BattleActionExecutor` accepts typed commands for basic attack, skill, item, guard, pass, analyze, escape, Persona swap, demon summon/return/swap, tactics change, negotiation, and host-special actions. Assessment and execution share the same services, so eligibility, target resolution, cost checks, item availability, and party-stock transitions cannot drift apart inside the clean API.
@@ -274,6 +276,8 @@ The framework action result reports:
 - item consumption decisions and whether a host reservation committed;
 - party-stock transition results;
 - Press Turn consumption, normal consumption, pass consumption, phase termination, or free/no-turn actions.
+
+Review-Whole-6 makes this facade atomic for framework actor state. Typed skill/item/effect execution runs against staged actor clones, and failures from registered formulas, conditions, damage policies, or custom effects return diagnostics without spending costs or publishing earlier effects. Item inventory is a host-owned boundary: reservation, commit, and rollback return typed transition results, and actor changes are published only after a successful inventory commit. Host extensions must describe host-side work through returned requests rather than performing unrelated external mutation during speculative execution.
 
 Field recovery skills and items in the clean field demo now use this action facade with an explicit host-owned inventory reservation adapter. Track O5 connects the interactive player battle menu to the action vocabulary through a console-host command shell. Attack, Skill, Item, Escape, Tactics, and Talk remain host-mediated legacy commands, while Guard, Pass, Analyze, Persona swap, demon summon, demon return, and demon swap use concrete framework command types and assessment before the console applies the existing mutation path.
 

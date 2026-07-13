@@ -46,7 +46,11 @@ public enum BattleActionDiagnosticCode
     EffectExecutorMissing,
     PartyStockRejected,
     UnsupportedAction,
-    HostActionRequired
+    HostActionRequired,
+    ExecutionFailed,
+    ItemReservationFailed,
+    ItemCommitFailed,
+    ItemRollbackFailed
 }
 
 public enum BattleActionEventKind
@@ -369,13 +373,27 @@ public interface IItemActionReservation
     int Quantity { get; }
     bool IsCommitted { get; }
     bool IsRolledBack { get; }
-    void Commit();
-    void Rollback();
+
+    // Host implementations must apply each transition atomically and report rejection without mutation.
+    ItemActionReservationTransitionResult Commit();
+    ItemActionReservationTransitionResult Rollback();
+}
+
+public sealed record ItemActionReservationTransitionResult(
+    bool Applied,
+    string? Message = null)
+{
+    public static ItemActionReservationTransitionResult Success { get; } = new(true);
+
+    public static ItemActionReservationTransitionResult Rejected(string message) =>
+        new(false, string.IsNullOrWhiteSpace(message) ? "Item reservation transition was rejected." : message);
 }
 
 public interface IItemActionInventory
 {
     bool HasAvailable(ContentId itemId, int quantity);
+
+    // Reserve must either return a live reservation or fail without changing inventory state.
     IItemActionReservation Reserve(ContentId itemId, int quantity);
 }
 
@@ -411,50 +429,62 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     public BattleActionAssessment Assess(BattleActionExecutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return request.Command switch
+        try
         {
-            SkillBattleActionCommand skill => AssessSkill(request, skill),
-            ItemBattleActionCommand item => AssessItem(request, item),
-            BasicAttackBattleActionCommand attack => AssessEffectAction(
-                request,
-                attack.Kind,
-                attack.ActionId,
-                attack.Targeting,
-                attack.SelectedTargetIds,
-                [BasicAttackEffect(attack.BasicAttack)]),
-            AnalyzeBattleActionCommand analyze => AssessEffectAction(
-                request,
-                analyze.Kind,
-                ContentId.Parse("analyze"),
-                SingleAnyTargeting(),
-                [analyze.TargetId],
-                [new AnalyzeEffectDefinition(analyze.Layers)]),
-            EscapeAttemptBattleActionCommand escape => AssessEffectAction(
-                request,
-                escape.Kind,
-                escape.EligibilityRuleId,
-                Untargeted(),
-                [],
-                [new EscapeEffectDefinition(escape.EligibilityRuleId, escape.Chance)]),
-            GuardBattleActionCommand => new BattleActionAssessment(BattleActionKind.Guard, turnConsumption: ActionTurnConsumption.Normal),
-            PassBattleActionCommand => new BattleActionAssessment(BattleActionKind.Pass, turnConsumption: ActionTurnConsumption.Pass),
-            PersonaSwapBattleActionCommand persona => AssessPartyStock(persona.Kind, _partyStock.SwapActivePersona(
-                new SwapActivePersonaRequest(persona.Snapshot, persona.PersonaInstanceId))),
-            DemonSummonBattleActionCommand summon => AssessPartyStock(summon.Kind, _partyStock.SummonDemon(
-                new SummonDemonRequest(summon.Snapshot, summon.DemonInstanceId))),
-            DemonReturnBattleActionCommand returned => AssessPartyStock(returned.Kind, _partyStock.ReturnDemon(
-                new ReturnDemonRequest(returned.Snapshot, returned.DemonInstanceId))),
-            DemonSwapBattleActionCommand swap => AssessPartyStock(swap.Kind, _partyStock.SwapActiveDemon(
-                new SwapActiveDemonRequest(swap.Snapshot, swap.ActiveDemonInstanceId, swap.StandbyDemonInstanceId))),
-            HostMediatedBattleActionCommand mediated => new BattleActionAssessment(
-                mediated.Kind,
-                targetIds: [],
-                turnConsumption: mediated.TurnConsumption),
-            _ => new BattleActionAssessment(
+            return request.Command switch
+            {
+                SkillBattleActionCommand skill => AssessSkill(request, skill),
+                ItemBattleActionCommand item => AssessItem(request, item),
+                BasicAttackBattleActionCommand attack => AssessEffectAction(
+                    request,
+                    attack.Kind,
+                    attack.ActionId,
+                    attack.Targeting,
+                    attack.SelectedTargetIds,
+                    [BasicAttackEffect(attack.BasicAttack)]),
+                AnalyzeBattleActionCommand analyze => AssessEffectAction(
+                    request,
+                    analyze.Kind,
+                    ContentId.Parse("analyze"),
+                    SingleAnyTargeting(),
+                    [analyze.TargetId],
+                    [new AnalyzeEffectDefinition(analyze.Layers)]),
+                EscapeAttemptBattleActionCommand escape => AssessEffectAction(
+                    request,
+                    escape.Kind,
+                    escape.EligibilityRuleId,
+                    Untargeted(),
+                    [],
+                    [new EscapeEffectDefinition(escape.EligibilityRuleId, escape.Chance)]),
+                GuardBattleActionCommand => new BattleActionAssessment(BattleActionKind.Guard, turnConsumption: ActionTurnConsumption.Normal),
+                PassBattleActionCommand => new BattleActionAssessment(BattleActionKind.Pass, turnConsumption: ActionTurnConsumption.Pass),
+                PersonaSwapBattleActionCommand persona => AssessPartyStock(persona.Kind, _partyStock.SwapActivePersona(
+                    new SwapActivePersonaRequest(persona.Snapshot, persona.PersonaInstanceId))),
+                DemonSummonBattleActionCommand summon => AssessPartyStock(summon.Kind, _partyStock.SummonDemon(
+                    new SummonDemonRequest(summon.Snapshot, summon.DemonInstanceId))),
+                DemonReturnBattleActionCommand returned => AssessPartyStock(returned.Kind, _partyStock.ReturnDemon(
+                    new ReturnDemonRequest(returned.Snapshot, returned.DemonInstanceId))),
+                DemonSwapBattleActionCommand swap => AssessPartyStock(swap.Kind, _partyStock.SwapActiveDemon(
+                    new SwapActiveDemonRequest(swap.Snapshot, swap.ActiveDemonInstanceId, swap.StandbyDemonInstanceId))),
+                HostMediatedBattleActionCommand mediated => new BattleActionAssessment(
+                    mediated.Kind,
+                    targetIds: [],
+                    turnConsumption: mediated.TurnConsumption),
+                _ => new BattleActionAssessment(
+                    request.Command.Kind,
+                    [new BattleActionDiagnostic(BattleActionDiagnosticCode.UnsupportedAction, "The action command is not supported.")],
+                    turnConsumption: ActionTurnConsumption.None)
+            };
+        }
+        catch (Exception exception)
+        {
+            return new BattleActionAssessment(
                 request.Command.Kind,
-                [new BattleActionDiagnostic(BattleActionDiagnosticCode.UnsupportedAction, "The action command is not supported.")],
-                turnConsumption: ActionTurnConsumption.None)
-        };
+                [new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ExecutionFailed,
+                    $"Action assessment failed: {exception.Message}")],
+                turnConsumption: ActionTurnConsumption.None);
+        }
     }
 
     public ValueTask<BattleActionExecutionResult> ExecuteAsync(
@@ -648,12 +678,40 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     {
         IItemActionReservation? reservation = null;
         List<BattleActionEvent> events = [];
+        RuntimeActorExecutionTransaction transaction;
+        try
+        {
+            transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
+        }
+        catch (Exception exception)
+        {
+            return Rejected(command.Kind,
+            [
+                new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ExecutionFailed,
+                    $"Item execution could not stage actor state: {exception.Message}")
+            ]);
+        }
+
         try
         {
             if (request.ItemInventory is not null)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                reservation = request.ItemInventory.Reserve(command.Item.Id, command.Quantity);
+                try
+                {
+                    reservation = request.ItemInventory.Reserve(command.Item.Id, command.Quantity);
+                }
+                catch (Exception exception)
+                {
+                    return Rejected(command.Kind,
+                    [
+                        new BattleActionDiagnostic(
+                            BattleActionDiagnosticCode.ItemReservationFailed,
+                            $"Item reservation failed: {exception.Message}")
+                    ]);
+                }
+
                 events.Add(new BattleActionEvent(
                     BattleActionEventKind.ItemReserved,
                     $"Reserved item '{command.Item.Id}'.",
@@ -664,14 +722,20 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             cancellationToken.ThrowIfCancellationRequested();
             ItemExecutionResult item = _items.Execute(new ItemExecutionRequest(
                 command.Item,
-                request.Actor,
-                request.Participants,
+                transaction.Actor,
+                transaction.Participants,
                 request.Environment,
                 command.SelectedTargetIds));
             if (item.Status == ItemExecutionStatus.Rejected)
             {
-                reservation?.Rollback();
-                if (reservation is not null)
+                List<BattleActionDiagnostic> diagnostics =
+                    item.Diagnostics.Select(ToActionDiagnostic).ToList();
+                if (reservation is not null &&
+                    !TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+                {
+                    diagnostics.Add(rollbackDiagnostic!);
+                }
+                else if (reservation is not null)
                 {
                     events.Add(new BattleActionEvent(
                         BattleActionEventKind.ItemRolledBack,
@@ -680,16 +744,35 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                         SourceId: command.Item.Id));
                 }
 
-                return Rejected(command.Kind, item.Diagnostics.Select(ToActionDiagnostic), events);
+                return Rejected(command.Kind, diagnostics, events);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             bool committed = false;
             if (item.Consumption == ItemConsumptionDecision.ConsumeOne)
             {
-                reservation?.Commit();
-                committed = reservation is not null;
                 if (reservation is not null)
                 {
+                    if (!TryCommitReservation(reservation, out BattleActionDiagnostic? commitDiagnostic))
+                    {
+                        var diagnostics = new List<BattleActionDiagnostic> { commitDiagnostic! };
+                        if (!TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+                        {
+                            diagnostics.Add(rollbackDiagnostic!);
+                        }
+                        else
+                        {
+                            events.Add(new BattleActionEvent(
+                                BattleActionEventKind.ItemRolledBack,
+                                $"Rolled back item '{command.Item.Id}'.",
+                                request.Actor.InstanceId,
+                                SourceId: command.Item.Id));
+                        }
+
+                        return Rejected(command.Kind, diagnostics, events);
+                    }
+
+                    committed = true;
                     events.Add(new BattleActionEvent(
                         BattleActionEventKind.ItemCommitted,
                         $"Committed item '{command.Item.Id}'.",
@@ -699,9 +782,13 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             }
             else
             {
-                reservation?.Rollback();
                 if (reservation is not null)
                 {
+                    if (!TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+                    {
+                        return Rejected(command.Kind, [rollbackDiagnostic!], events);
+                    }
+
                     events.Add(new BattleActionEvent(
                         BattleActionEventKind.ItemRolledBack,
                         $"Rolled back item '{command.Item.Id}'.",
@@ -710,6 +797,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 }
             }
 
+            transaction.Commit();
             events.AddRange(EffectEvents(request.Actor.InstanceId, command.Item.Id, item.Effects));
             return new BattleActionExecutionResult(
                 item.Status == ItemExecutionStatus.Interrupted
@@ -724,10 +812,30 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 escapeRequested: item.EscapeRequested,
                 hostActionRequestIds: item.HostActionRequestIds);
         }
-        catch
+        catch (OperationCanceledException)
         {
-            reservation?.Rollback();
+            if (reservation is not null && !reservation.IsCommitted && !reservation.IsRolledBack)
+            {
+                TryRollbackReservation(reservation, out _);
+            }
+
             throw;
+        }
+        catch (Exception exception)
+        {
+            var diagnostics = new List<BattleActionDiagnostic>
+            {
+                new(
+                    BattleActionDiagnosticCode.ExecutionFailed,
+                    $"Item action failed before actor-state commit: {exception.Message}")
+            };
+            if (reservation is not null && !reservation.IsCommitted && !reservation.IsRolledBack &&
+                !TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+            {
+                diagnostics.Add(rollbackDiagnostic!);
+            }
+
+            return Rejected(command.Kind, diagnostics, events);
         }
     }
 
@@ -765,7 +873,31 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             }
         }
 
-        OrderedEffectExecution execution = _orderedEffects.Execute(action, effects, targets);
+        OrderedEffectExecution execution;
+        RuntimeActorExecutionTransaction transaction;
+        try
+        {
+            transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
+            var stagedAction = new EffectActionExecutionRequest(
+                sourceId,
+                transaction.Actor,
+                transaction.Participants,
+                request.Environment,
+                targeting,
+                selectedTargetIds);
+            execution = _orderedEffects.Execute(stagedAction, effects, transaction.Map(targets));
+        }
+        catch (Exception exception)
+        {
+            return Rejected(kind,
+            [
+                new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ExecutionFailed,
+                    $"Action execution failed before commit: {exception.Message}")
+            ]);
+        }
+
+        transaction.Commit();
         PressTurnResolution pressTurn = AggregatePressTurn(execution.Effects);
         ActionTurnConsumption turn = defaultTurnKind == ActionTurnConsumptionKind.PressTurn
             ? ActionTurnConsumption.FromPressTurn(pressTurn)
@@ -865,6 +997,60 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             diagnostic.Message,
             diagnostic.EffectIndex,
             diagnostic.TargetId);
+
+    private static bool TryCommitReservation(
+        IItemActionReservation reservation,
+        out BattleActionDiagnostic? diagnostic)
+    {
+        try
+        {
+            ItemActionReservationTransitionResult result = reservation.Commit();
+            if (result.Applied && reservation.IsCommitted)
+            {
+                diagnostic = null;
+                return true;
+            }
+
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemCommitFailed,
+                result.Message ?? "Item reservation commit was rejected.");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemCommitFailed,
+                $"Item reservation commit failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    private static bool TryRollbackReservation(
+        IItemActionReservation reservation,
+        out BattleActionDiagnostic? diagnostic)
+    {
+        try
+        {
+            ItemActionReservationTransitionResult result = reservation.Rollback();
+            if (result.Applied && reservation.IsRolledBack)
+            {
+                diagnostic = null;
+                return true;
+            }
+
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemRollbackFailed,
+                result.Message ?? "Item reservation rollback was rejected.");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemRollbackFailed,
+                $"Item reservation rollback failed: {exception.Message}");
+            return false;
+        }
+    }
 
     private static IReadOnlyList<BattleActionEvent> EffectEvents(
         RuntimeInstanceId actorId,
