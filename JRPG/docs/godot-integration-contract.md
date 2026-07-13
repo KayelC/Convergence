@@ -15,6 +15,7 @@ A Godot host must provide these adapters around the existing framework contracts
 - Content acquisition: read JSON or imported resources from Godot-owned locations such as `res://`, then supply JSON text and diagnostic source names through `IContentPackTextSource`.
 - Input: translate player input, UI button signals, and menu cancellation into `IHostCommandSource<TCommand>` results.
 - Presentation: consume framework events through event sinks and map them to UI, animation, audio, waits, and scene transitions.
+- Scheduling: await `IBattleEncounterRunner.RunAsync`; do not use the concrete compatibility-only synchronous wrapper from Godot. Framework continuations have no engine-thread affinity, so a Godot event sink or command adapter must marshal Node, signal, animation, and UI work onto the host-owned scheduler.
 - Randomness: provide an `IRandomSource` seeded or unseeded according to the host's run mode.
 - Scene identity: map framework `RuntimeInstanceId` or battle instance IDs to host-owned node/scene handles.
 - Navigation input: translate doorway triggers, map selections, VN hotspots, or scripts into generic `RuntimeNavigationTransition` requests. Godot still owns movement and scene changes.

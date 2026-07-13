@@ -73,6 +73,98 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_SynchronousCompatibilityWrapperDoesNotDeadlockSingleThreadedContext()
+    {
+        BattleEncounterParticipant player = Participant("sync_context_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("sync_context_enemy", EnemyTeam);
+        var initiative = new CountingInitiative(PlayerTeam, EnemyTeam);
+        var ports = new AsynchronousEncounterPorts();
+        var context = new NonPumpingSynchronizationContext();
+        BattleEncounterResult? result = null;
+        Exception? failure = null;
+        bool contextWasRestored = false;
+        var thread = new Thread(() =>
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            try
+            {
+                result = new BattleEncounterRunner().Run(
+                    new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
+                    new BattleEncounterServices(
+                        initiative,
+                        ports,
+                        ports,
+                        new CompleteAfterTurnsPolicy(1),
+                        () => new StandardActionTurnEconomy(),
+                        new BattlePhaseProgressPolicy(8, 1),
+                        events: ports));
+                contextWasRestored = ReferenceEquals(SynchronizationContext.Current, context);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+        })
+        {
+            IsBackground = true
+        };
+
+        thread.Start();
+
+        Assert.True(thread.Join(TimeSpan.FromSeconds(5)), "The synchronous encounter wrapper deadlocked.");
+        Assert.Null(failure);
+        Assert.NotNull(result);
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(1, initiative.Calls);
+        Assert.Equal(0, context.PostCount);
+        Assert.True(contextWasRestored);
+        Assert.True(ports.PublishCalls > 0);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task Runner_AsyncPathDoesNotCaptureCallerSynchronizationContext()
+    {
+        BattleEncounterParticipant player = Participant("async_context_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("async_context_enemy", EnemyTeam);
+        var ports = new AsynchronousEncounterPorts();
+        var context = new NonPumpingSynchronizationContext();
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        Task<BattleEncounterResult> run;
+
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            run = new BattleEncounterRunner().RunAsync(
+                new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
+                new BattleEncounterServices(
+                    new FixedInitiative(PlayerTeam, EnemyTeam),
+                    ports,
+                    ports,
+                    new CompleteAfterTurnsPolicy(1),
+                    () => new StandardActionTurnEconomy(),
+                    new BattlePhaseProgressPolicy(8, 1),
+                    events: ports)).AsTask();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        BattleEncounterResult result = await run.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(0, context.PostCount);
+        Assert.True(ports.PublishCalls > 0);
+        Assert.Equal(1, ports.BattleStartCalls);
+        Assert.Equal(1, ports.TurnStartCalls);
+        Assert.Equal(1, ports.TurnHandlerCalls);
+        Assert.Equal(1, ports.TurnEndCalls);
+        Assert.Equal(1, ports.BattleEndCalls);
+    }
+
+    [Fact]
     public void Runner_ResultCapturesStateAfterBattleEndLifecycle()
     {
         BattleEncounterParticipant player = Participant("cleanup_player", PlayerTeam);
@@ -618,6 +710,92 @@ public sealed class BattleEncounterRunnerTests
         {
             Calls++;
             return teamOrder;
+        }
+    }
+
+    private sealed class NonPumpingSynchronizationContext : SynchronizationContext
+    {
+        private int _postCount;
+
+        public int PostCount => Volatile.Read(ref _postCount);
+
+        public override void Post(SendOrPostCallback d, object? state) =>
+            Interlocked.Increment(ref _postCount);
+    }
+
+    private sealed class AsynchronousEncounterPorts :
+        IBattleEncounterLifecyclePort,
+        IBattleEncounterTurnHandler,
+        IBattleEncounterEventSink
+    {
+        public int PublishCalls { get; private set; }
+        public int BattleStartCalls { get; private set; }
+        public int TurnStartCalls { get; private set; }
+        public int TurnHandlerCalls { get; private set; }
+        public int TurnEndCalls { get; private set; }
+        public int BattleEndCalls { get; private set; }
+
+        public async ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            PublishCalls++;
+        }
+
+        public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            BattleStartCalls++;
+            return [];
+        }
+
+        public async ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            TurnStartCalls++;
+            return new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []);
+        }
+
+        public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            TurnHandlerCalls++;
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        }
+
+        public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            TurnEndCalls++;
+            return [];
+        }
+
+        public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            return [];
+        }
+
+        public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            BattleEndCalls++;
+            return [];
         }
     }
 

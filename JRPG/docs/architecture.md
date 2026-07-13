@@ -256,6 +256,8 @@ The L3 correction makes catalog actor creation a closed diagnostic boundary. `Ca
 
 The L4 correction separates mutable encounter execution from immutable encounter history. Requests, lifecycle ports, command handlers, completion policies, and synchronizers continue receiving live `BattleEncounterParticipant` objects while a battle is running. Once the runner returns, `BattleEncounterResult.Participants` contains detached `BattleEncounterParticipantSnapshot` values with complete `RuntimeActorSnapshot` state captured after battle-end lifecycle cleanup. Fault-before-start results follow the same rule, and the automated battle facade projects its final actors from those snapshots rather than from mutable catalog actors.
 
+The L5 correction makes encounter threading explicit. `IBattleEncounterRunner` exposes only `RunAsync`, and framework orchestration never captures a caller synchronization context. The concrete synchronous `Run` helper exists only for compatibility callers that require no thread affinity: it detaches and restores the caller context around the blocking operation. Engine and UI hosts await `RunAsync`; event sinks and command adapters marshal presentation or Node work onto their host-owned scheduler when necessary.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.
