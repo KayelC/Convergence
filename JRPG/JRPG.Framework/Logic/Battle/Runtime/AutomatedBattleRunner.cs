@@ -96,7 +96,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                 continue;
             }
 
-            var candidate = new Candidate(skill, targetIds, assessment, score, loadoutIndex);
+            var candidate = new Candidate(skill, assessment.TargetIds, assessment, score, loadoutIndex);
             if (best is null || candidate.Score > best.Score ||
                 candidate.Score == best.Score && candidate.LoadoutIndex < best.LoadoutIndex)
             {
@@ -576,14 +576,22 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 selection.SelectedTargetIds.FirstOrDefault(),
                 selection.Skill.Id));
 
-            SkillExecutionResult execution = _executor.Execute(new SkillExecutionRequest(
-                selection.Skill,
-                actor.State,
-                _actors.Select(participant => participant.State),
-                request.Encounter.ContextId,
-                request.Encounter.BattleKindId,
-                request.Encounter.MoonPhaseId,
-                selection.SelectedTargetIds));
+            if (selection.Assessment is not SkillExecutionAssessment prepared)
+            {
+                const string fault = "The selected automated action has no prepared assessment.";
+                events.Add(new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.BattleFaulted,
+                    fault,
+                    actor.State.InstanceId,
+                    SourceId: selection.Skill.Id));
+                return new ValueTask<BattleEncounterCommandResult>(
+                    BattleEncounterCommandResult.Faulted(fault, events));
+            }
+
+            SkillExecutionResult execution = _executor.Execute(
+                prepared.Preparation.Request,
+                prepared);
             if (execution.Status == SkillExecutionStatus.Rejected)
             {
                 string fault = $"Selected skill '{selection.Skill.Id}' was rejected: " +

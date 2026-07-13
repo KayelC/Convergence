@@ -44,6 +44,7 @@ public enum SkillExecutionDiagnosticCode
     CustomConditionHandlerMissing,
     EscapeRuleHandlerMissing,
     AilmentMissing,
+    AssessmentInvalid,
     ExecutionFailed
 }
 
@@ -155,19 +156,25 @@ public sealed record SkillExecutionAssessment
     internal SkillExecutionAssessment(
         IEnumerable<SkillExecutionDiagnostic> diagnostics,
         ResolvedTargetSet? targets,
-        IEnumerable<ResolvedSkillCost> costs)
+        IEnumerable<ResolvedSkillCost> costs,
+        object authority,
+        SkillExecutionRequest request)
     {
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
         TargetIds = Array.AsReadOnly(targets?.Targets.Select(target => target.InstanceId).ToArray() ?? []);
-        Targets = targets;
+        HasResolvedTargets = targets is not null;
+        IsUntargeted = targets?.IsUntargeted == true;
         Costs = Array.AsReadOnly(costs.ToArray());
+        Preparation = new ExecutionAssessmentToken<SkillExecutionRequest>(authority, request);
     }
 
-    public bool CanExecute => Diagnostics.Count == 0 && Targets is not null;
+    public bool CanExecute => Diagnostics.Count == 0 && HasResolvedTargets;
     public IReadOnlyList<SkillExecutionDiagnostic> Diagnostics { get; }
     public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
-    internal ResolvedTargetSet? Targets { get; }
+    internal bool HasResolvedTargets { get; }
+    internal bool IsUntargeted { get; }
     internal IReadOnlyList<ResolvedSkillCost> Costs { get; }
+    internal ExecutionAssessmentToken<SkillExecutionRequest> Preparation { get; }
 }
 
 internal sealed record ResolvedSkillCost(ContentId ResourceId, decimal Amount);

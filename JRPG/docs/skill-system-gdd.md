@@ -555,6 +555,12 @@ Battle interruptions override every authored failure policy. Repel reflects reso
 
 Temporary affinity Breaks and overrides are runtime statuses, not changes to authored defense data. `break_affinity` names the affected elements and a typed duration; it never infers behavior from a skill name. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Break state ticks through the shared status lifecycle, may suspend while its owner is in reserve when its authored turn duration requests that behavior, clears at battle-end cleanup, and is removable through the `affinity_break` status kind. Track 9 consumes passive affinity replacements, Ice damage modifiers, physical-skill cost modifiers, typed ailment replacements, and registered passive events.
 
+### Assessment And Target Authority
+
+Random targets are resolved exactly once for one action decision. Skill, item, and battle-action assessments snapshot the ordered target IDs and whether the action is untargeted. The resulting assessment is bound to the executor and logical request that created it and may be executed only once. Execution rebinds those IDs into the staged actor transaction; it does not call a random-target policy again.
+
+The one-call execution APIs assess and execute as one operation. A host that presents an assessment before confirmation must pass that same assessment to the prepared-execution overload. Cancellation before execution does not consume the assessment or reserve an item. Reusing an assessment, passing it to another executor/request, or rebinding targets to a different participant graph produces a typed `assessment_invalid` rejection without mutation.
+
 ### Duration Lifecycle
 
 The runtime executes all five authored duration kinds through `BattleDurationLifecycleService`. The same rules apply to ailments, stat stages, charges, shields, affinity overrides, affinity Breaks, and registered other statuses:

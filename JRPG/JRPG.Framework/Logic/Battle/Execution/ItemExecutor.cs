@@ -29,6 +29,7 @@ public enum ItemExecutionDiagnosticCode
     EscapeRuleHandlerMissing,
     AilmentMissing,
     NoApplicableEffect,
+    AssessmentInvalid,
     ExecutionFailed
 }
 
@@ -66,17 +67,23 @@ public sealed record ItemExecutionAssessment
 {
     internal ItemExecutionAssessment(
         IEnumerable<ItemExecutionDiagnostic> diagnostics,
-        ResolvedRuntimeTargetSet? targets)
+        ResolvedRuntimeTargetSet? targets,
+        object authority,
+        ItemExecutionRequest request)
     {
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
         TargetIds = Array.AsReadOnly(targets?.Targets.Select(target => target.InstanceId).ToArray() ?? []);
-        Targets = targets;
+        HasResolvedTargets = targets is not null;
+        IsUntargeted = targets?.IsUntargeted == true;
+        Preparation = new ExecutionAssessmentToken<ItemExecutionRequest>(authority, request);
     }
 
-    public bool CanExecute => Diagnostics.Count == 0 && Targets is not null;
+    public bool CanExecute => Diagnostics.Count == 0 && HasResolvedTargets;
     public IReadOnlyList<ItemExecutionDiagnostic> Diagnostics { get; }
     public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
-    internal ResolvedRuntimeTargetSet? Targets { get; }
+    internal bool HasResolvedTargets { get; }
+    internal bool IsUntargeted { get; }
+    internal ExecutionAssessmentToken<ItemExecutionRequest> Preparation { get; }
 }
 
 public sealed record ItemExecutionResult
@@ -109,8 +116,14 @@ public sealed record ItemExecutionResult
 
 public interface IItemExecutor
 {
+    /// <summary>Prepares one immutable, single-use target decision.</summary>
     ItemExecutionAssessment Assess(ItemExecutionRequest request);
+
+    /// <summary>Assesses and executes as one operation.</summary>
     ItemExecutionResult Execute(ItemExecutionRequest request);
+
+    /// <summary>Executes the exact decision returned by a prior assessment.</summary>
+    ItemExecutionResult Execute(ItemExecutionRequest request, ItemExecutionAssessment assessment);
 }
 
 public sealed class ItemExecutor : IItemExecutor
@@ -118,6 +131,7 @@ public sealed class ItemExecutor : IItemExecutor
     private readonly BattleExecutionServices _services;
     private readonly EffectExecutorRegistry _effectExecutors;
     private readonly OrderedEffectExecutor _orderedEffects;
+    private readonly object _assessmentAuthority = new();
 
     public ItemExecutor(
         BattleExecutionServices services,
@@ -143,7 +157,9 @@ public sealed class ItemExecutor : IItemExecutor
                     ItemExecutionDiagnosticCode.ExecutionFailed,
                     $"Item assessment failed: {exception.Message}")
             ],
-            targets: null);
+            targets: null,
+            authority: _assessmentAuthority,
+            request: request);
         }
     }
 
@@ -164,7 +180,11 @@ public sealed class ItemExecutor : IItemExecutor
             diagnostics.Add(new ItemExecutionDiagnostic(
                 ItemExecutionDiagnosticCode.UsageMissing,
                 $"Item '{request.Item.Id}' has no usage definition."));
-            return new ItemExecutionAssessment(diagnostics, null);
+            return new ItemExecutionAssessment(
+                diagnostics,
+                targets: null,
+                authority: _assessmentAuthority,
+                request: request);
         }
 
         if (!usage.ContextIds.Contains(request.Environment.ContextId))
@@ -195,16 +215,51 @@ public sealed class ItemExecutor : IItemExecutor
                 $"Item '{request.Item.Id}' would have no effect on the selected target(s)."));
         }
 
-        return new ItemExecutionAssessment(diagnostics, targets);
+        return new ItemExecutionAssessment(
+            diagnostics,
+            targets,
+            _assessmentAuthority,
+            request);
     }
 
     public ItemExecutionResult Execute(ItemExecutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ItemExecutionAssessment assessment = Assess(request);
-        if (!assessment.CanExecute || assessment.Targets is null || request.Item.Usage is null)
+        return Execute(request, Assess(request));
+    }
+
+    public ItemExecutionResult Execute(
+        ItemExecutionRequest request,
+        ItemExecutionAssessment assessment)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(assessment);
+        if (!assessment.CanExecute || request.Item.Usage is null)
         {
             return ItemExecutionResult.Rejected(assessment.Diagnostics);
+        }
+
+        if (!assessment.Preparation.IsOwnedBy(_assessmentAuthority) ||
+            !RequestsAreEquivalent(assessment.Preparation.Request, request))
+        {
+            return InvalidAssessment("The item assessment belongs to another executor or request.");
+        }
+
+        if (!PreparedTargetResolver.TryRebind(
+                request.Participants,
+                assessment.TargetIds,
+                assessment.IsUntargeted,
+                out ResolvedRuntimeTargetSet? preparedTargets) ||
+            preparedTargets is null)
+        {
+            return InvalidAssessment("The item assessment targets no longer match the execution request.");
+        }
+
+        if (!assessment.Preparation.TryConsume(_assessmentAuthority, out ExecutionAssessmentTokenFailure failure))
+        {
+            return InvalidAssessment(failure == ExecutionAssessmentTokenFailure.AlreadyConsumed
+                ? "The item assessment has already been executed."
+                : "The item assessment was not created by this executor.");
         }
 
         OrderedEffectExecution execution;
@@ -221,7 +276,7 @@ public sealed class ItemExecutor : IItemExecutor
             execution = _orderedEffects.Execute(
                 CreateActionRequest(stagedRequest, request.Item.Usage),
                 request.Item.Usage.Effects,
-                transaction.Map(assessment.Targets));
+                transaction.Map(preparedTargets));
         }
         catch (Exception exception)
         {
@@ -244,6 +299,26 @@ public sealed class ItemExecutor : IItemExecutor
             execution.Effects,
             consumption);
     }
+
+    private static bool RequestsAreEquivalent(
+        ItemExecutionRequest assessed,
+        ItemExecutionRequest execution) =>
+        ReferenceEquals(assessed.Item, execution.Item) &&
+        assessed.Actor.InstanceId == execution.Actor.InstanceId &&
+        assessed.Participants.Select(actor => actor.InstanceId)
+            .SequenceEqual(execution.Participants.Select(actor => actor.InstanceId)) &&
+        assessed.SelectedTargetIds.SequenceEqual(execution.SelectedTargetIds) &&
+        assessed.Environment.ContextId == execution.Environment.ContextId &&
+        assessed.Environment.BattleKindId == execution.Environment.BattleKindId &&
+        assessed.Environment.MoonPhaseId == execution.Environment.MoonPhaseId;
+
+    private static ItemExecutionResult InvalidAssessment(string message) =>
+        ItemExecutionResult.Rejected(
+        [
+            new ItemExecutionDiagnostic(
+                ItemExecutionDiagnosticCode.AssessmentInvalid,
+                message)
+        ]);
 
     private static EffectActionExecutionRequest CreateActionRequest(
         ItemExecutionRequest request,

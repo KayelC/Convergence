@@ -390,6 +390,49 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_ExecutesTheSelectorsPreparedRandomAssessmentWithoutRerolling()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition randomAttack = Active(
+            "test.pack:random_attack",
+            DamageElement.Fire,
+            new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.Random,
+                TargetLifeState.Alive,
+                false,
+                new TargetCountDefinition(1, 1)));
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "random_player",
+            "random_player",
+            PlayerTeam,
+            [randomAttack]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "random_enemy",
+            "random_enemy",
+            EnemyTeam,
+            [randomAttack]);
+        var randomTargets = new CountingRandomTargetPolicy();
+        BattleExecutionServices services = Services(catalog, randomTargets);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = new AutomatedBattleRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(2, randomTargets.CallCount);
+        Assert.Equal(2, result.Events.Count(battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.EffectResolved));
+    }
+
+    [Fact]
     public void Runner_ConsumesPhaseAndBattleDurationBoundariesWithoutClearingPermanentState()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -571,14 +614,16 @@ public sealed class CatalogBattleRuntimeTests
                 teamId,
                 5)).RequireActor();
 
-    private static BattleExecutionServices Services(GameDataCatalog catalog) => new(
+    private static BattleExecutionServices Services(
+        GameDataCatalog catalog,
+        IRandomTargetSelectionPolicy? randomTargetPolicy = null) => new(
         catalog,
         new TestDamagePolicy(),
         new NeverInstantDeathPolicy(),
         new TestAilmentPolicy(),
         new AlwaysChancePolicy(),
         new TestPowerPolicy(),
-        new FirstRandomTargetPolicy());
+        randomTargetPolicy ?? new FirstRandomTargetPolicy());
 
     private static SkillDefinition Active(
         string id,
@@ -788,6 +833,20 @@ public sealed class CatalogBattleRuntimeTests
             IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
+    }
+
+    private sealed class CountingRandomTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request)
+        {
+            CallCount++;
+            return candidates.Take(count.Minimum).ToArray();
+        }
     }
 
     private sealed class InvalidTargetSelector : IBattleActionSelector

@@ -271,6 +271,8 @@ Review-Whole-6 validates every public `ProductionCombatRulesetConfig` before use
 
 Track H adds a framework-owned action facade for the clean path. `BattleActionExecutor` accepts typed commands for basic attack, skill, item, guard, pass, analyze, escape, Persona swap, demon summon/return/swap, tactics change, negotiation, and host-special actions. Assessment and execution share the same services, so eligibility, target resolution, cost checks, item availability, and party-stock transitions cannot drift apart inside the clean API.
 
+The M1 correction makes target resolution transactional. A random-target policy runs once while preparing an action, and the immutable assessment records the ordered runtime IDs that presentation may show. Prepared execution consumes that same single-use assessment and maps those IDs into staged actor state instead of selecting again. The same rule covers skills, items, basic attacks, analyze/direct effects, and automated action selection; cancellation before execution does not consume the decision.
+
 The framework action result reports:
 
 - ordered action events for presentation adapters;

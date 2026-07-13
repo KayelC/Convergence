@@ -47,6 +47,7 @@ public enum BattleActionDiagnosticCode
     PartyStockRejected,
     UnsupportedAction,
     HostActionRequired,
+    AssessmentInvalid,
     ExecutionFailed,
     ItemReservationFailed,
     ItemCommitFailed,
@@ -298,9 +299,13 @@ public sealed record BattleActionExecutionRequest
 public sealed record BattleActionAssessment
 {
     internal BattleActionAssessment(
+        object authority,
+        BattleActionExecutionRequest request,
         BattleActionKind kind,
         IEnumerable<BattleActionDiagnostic>? diagnostics = null,
         IEnumerable<RuntimeInstanceId>? targetIds = null,
+        bool hasResolvedTargets = false,
+        bool isUntargeted = false,
         ActionTurnConsumption? turnConsumption = null,
         SkillExecutionAssessment? skillAssessment = null,
         ItemExecutionAssessment? itemAssessment = null,
@@ -309,10 +314,13 @@ public sealed record BattleActionAssessment
         Kind = kind;
         Diagnostics = Array.AsReadOnly(diagnostics?.ToArray() ?? []);
         TargetIds = Array.AsReadOnly(targetIds?.ToArray() ?? []);
+        HasResolvedTargets = hasResolvedTargets;
+        IsUntargeted = isUntargeted;
         TurnConsumption = turnConsumption ?? ActionTurnConsumption.Normal;
         SkillAssessment = skillAssessment;
         ItemAssessment = itemAssessment;
         PartyStockTransition = partyStockTransition;
+        Preparation = new ExecutionAssessmentToken<BattleActionExecutionRequest>(authority, request);
     }
 
     public BattleActionKind Kind { get; }
@@ -323,6 +331,9 @@ public sealed record BattleActionAssessment
     public SkillExecutionAssessment? SkillAssessment { get; }
     public ItemExecutionAssessment? ItemAssessment { get; }
     public PartyStockTransitionResult? PartyStockTransition { get; }
+    internal bool HasResolvedTargets { get; }
+    internal bool IsUntargeted { get; }
+    internal ExecutionAssessmentToken<BattleActionExecutionRequest> Preparation { get; }
 }
 
 public sealed record BattleActionExecutionResult
@@ -399,9 +410,18 @@ public interface IItemActionInventory
 
 public interface IBattleActionExecutor
 {
+    /// <summary>Prepares one immutable, single-use action decision for host presentation.</summary>
     BattleActionAssessment Assess(BattleActionExecutionRequest request);
+
+    /// <summary>Assesses and executes as one operation without exposing an intermediate decision.</summary>
     ValueTask<BattleActionExecutionResult> ExecuteAsync(
         BattleActionExecutionRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Executes the exact decision previously returned for this request.</summary>
+    ValueTask<BattleActionExecutionResult> ExecuteAsync(
+        BattleActionExecutionRequest request,
+        BattleActionAssessment assessment,
         CancellationToken cancellationToken = default);
 }
 
@@ -412,6 +432,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     private readonly BattleExecutionServices _services;
     private readonly IPartyStockTransitionService _partyStock;
     private readonly OrderedEffectExecutor _orderedEffects;
+    private readonly object _assessmentAuthority = new();
 
     public BattleActionExecutor(
         ISkillExecutor skills,
@@ -456,21 +477,29 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     Untargeted(),
                     [],
                     [new EscapeEffectDefinition(escape.EligibilityRuleId, escape.Chance)]),
-                GuardBattleActionCommand => new BattleActionAssessment(BattleActionKind.Guard, turnConsumption: ActionTurnConsumption.Normal),
-                PassBattleActionCommand => new BattleActionAssessment(BattleActionKind.Pass, turnConsumption: ActionTurnConsumption.Pass),
-                PersonaSwapBattleActionCommand persona => AssessPartyStock(persona.Kind, _partyStock.SwapActivePersona(
+                GuardBattleActionCommand => CreateAssessment(
+                    request,
+                    BattleActionKind.Guard,
+                    turnConsumption: ActionTurnConsumption.Normal),
+                PassBattleActionCommand => CreateAssessment(
+                    request,
+                    BattleActionKind.Pass,
+                    turnConsumption: ActionTurnConsumption.Pass),
+                PersonaSwapBattleActionCommand persona => AssessPartyStock(request, persona.Kind, _partyStock.SwapActivePersona(
                     new SwapActivePersonaRequest(persona.Snapshot, persona.PersonaInstanceId))),
-                DemonSummonBattleActionCommand summon => AssessPartyStock(summon.Kind, _partyStock.SummonDemon(
+                DemonSummonBattleActionCommand summon => AssessPartyStock(request, summon.Kind, _partyStock.SummonDemon(
                     new SummonDemonRequest(summon.Snapshot, summon.DemonInstanceId))),
-                DemonReturnBattleActionCommand returned => AssessPartyStock(returned.Kind, _partyStock.ReturnDemon(
+                DemonReturnBattleActionCommand returned => AssessPartyStock(request, returned.Kind, _partyStock.ReturnDemon(
                     new ReturnDemonRequest(returned.Snapshot, returned.DemonInstanceId))),
-                DemonSwapBattleActionCommand swap => AssessPartyStock(swap.Kind, _partyStock.SwapActiveDemon(
+                DemonSwapBattleActionCommand swap => AssessPartyStock(request, swap.Kind, _partyStock.SwapActiveDemon(
                     new SwapActiveDemonRequest(swap.Snapshot, swap.ActiveDemonInstanceId, swap.StandbyDemonInstanceId))),
-                HostMediatedBattleActionCommand mediated => new BattleActionAssessment(
+                HostMediatedBattleActionCommand mediated => CreateAssessment(
+                    request,
                     mediated.Kind,
                     targetIds: [],
                     turnConsumption: mediated.TurnConsumption),
-                _ => new BattleActionAssessment(
+                _ => CreateAssessment(
+                    request,
                     request.Command.Kind,
                     [new BattleActionDiagnostic(BattleActionDiagnosticCode.UnsupportedAction, "The action command is not supported.")],
                     turnConsumption: ActionTurnConsumption.None)
@@ -478,7 +507,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         }
         catch (Exception exception)
         {
-            return new BattleActionAssessment(
+            return CreateAssessment(
+                request,
                 request.Command.Kind,
                 [new BattleActionDiagnostic(
                     BattleActionDiagnosticCode.ExecutionFailed,
@@ -493,18 +523,45 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        return ExecuteAsync(request, Assess(request), cancellationToken);
+    }
 
-        BattleActionAssessment assessment = Assess(request);
+    public ValueTask<BattleActionExecutionResult> ExecuteAsync(
+        BattleActionExecutionRequest request,
+        BattleActionAssessment assessment,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(assessment);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!assessment.Preparation.IsOwnedBy(_assessmentAuthority) ||
+            !ReferenceEquals(assessment.Preparation.Request, request))
+        {
+            return new ValueTask<BattleActionExecutionResult>(InvalidAssessment(
+                request.Command.Kind,
+                "The battle-action assessment belongs to another executor or request."));
+        }
+
         if (!assessment.CanExecute)
         {
             return new ValueTask<BattleActionExecutionResult>(Rejected(request.Command.Kind, assessment.Diagnostics));
         }
 
+        if (!assessment.Preparation.TryConsume(_assessmentAuthority, out ExecutionAssessmentTokenFailure failure))
+        {
+            return new ValueTask<BattleActionExecutionResult>(InvalidAssessment(
+                request.Command.Kind,
+                failure == ExecutionAssessmentTokenFailure.AlreadyConsumed
+                    ? "The battle-action assessment has already been executed."
+                    : "The battle-action assessment was not created by this executor."));
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         return new ValueTask<BattleActionExecutionResult>(request.Command switch
         {
-            SkillBattleActionCommand skill => ExecuteSkill(request, skill),
-            ItemBattleActionCommand item => ExecuteItem(request, item, cancellationToken),
+            SkillBattleActionCommand skill => ExecuteSkill(request, skill, assessment),
+            ItemBattleActionCommand item => ExecuteItem(request, item, assessment, cancellationToken),
             BasicAttackBattleActionCommand attack => ExecuteEffects(
                 request,
                 attack.Kind,
@@ -512,7 +569,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 attack.Targeting,
                 attack.SelectedTargetIds,
                 [BasicAttackEffect(attack.BasicAttack)],
-                ActionTurnConsumptionKind.PressTurn),
+                ActionTurnConsumptionKind.PressTurn,
+                assessment),
             AnalyzeBattleActionCommand analyze => ExecuteEffects(
                 request,
                 analyze.Kind,
@@ -520,28 +578,18 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 SingleAnyTargeting(),
                 [analyze.TargetId],
                 [new AnalyzeEffectDefinition(analyze.Layers)],
-                ActionTurnConsumptionKind.Normal),
-            EscapeAttemptBattleActionCommand escape => ExecuteEscape(request, escape),
+                ActionTurnConsumptionKind.Normal,
+                assessment),
+            EscapeAttemptBattleActionCommand escape => ExecuteEscape(request, escape, assessment),
             GuardBattleActionCommand => ExecuteGuard(request),
             PassBattleActionCommand => Executed(
                 BattleActionKind.Pass,
                 ActionTurnConsumption.Pass,
                 events: [new BattleActionEvent(BattleActionEventKind.Executed, "Action passed.", request.Actor.InstanceId)]),
-            PersonaSwapBattleActionCommand persona => ExecutePartyStock(
-                persona.Kind,
-                _partyStock.SwapActivePersona(new SwapActivePersonaRequest(persona.Snapshot, persona.PersonaInstanceId))),
-            DemonSummonBattleActionCommand summon => ExecutePartyStock(
-                summon.Kind,
-                _partyStock.SummonDemon(new SummonDemonRequest(summon.Snapshot, summon.DemonInstanceId))),
-            DemonReturnBattleActionCommand returned => ExecutePartyStock(
-                returned.Kind,
-                _partyStock.ReturnDemon(new ReturnDemonRequest(returned.Snapshot, returned.DemonInstanceId))),
-            DemonSwapBattleActionCommand swap => ExecutePartyStock(
-                swap.Kind,
-                _partyStock.SwapActiveDemon(new SwapActiveDemonRequest(
-                    swap.Snapshot,
-                    swap.ActiveDemonInstanceId,
-                    swap.StandbyDemonInstanceId))),
+            PersonaSwapBattleActionCommand persona => ExecutePartyStock(persona.Kind, assessment.PartyStockTransition),
+            DemonSummonBattleActionCommand summon => ExecutePartyStock(summon.Kind, assessment.PartyStockTransition),
+            DemonReturnBattleActionCommand returned => ExecutePartyStock(returned.Kind, assessment.PartyStockTransition),
+            DemonSwapBattleActionCommand swap => ExecutePartyStock(swap.Kind, assessment.PartyStockTransition),
             HostMediatedBattleActionCommand mediated => ExecuteHostMediated(request, mediated),
             _ => Rejected(request.Command.Kind, [new BattleActionDiagnostic(BattleActionDiagnosticCode.UnsupportedAction, "The action command is not supported.")])
         });
@@ -555,11 +603,14 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             request.Participants,
             request.Environment,
             command.SelectedTargetIds));
-        return new BattleActionAssessment(
+        return CreateAssessment(
+            request,
             command.Kind,
             skill.Diagnostics.Select(ToActionDiagnostic),
             skill.TargetIds,
-            skill.CanExecute ? ActionTurnConsumption.Normal : ActionTurnConsumption.None,
+            hasResolvedTargets: skill.HasResolvedTargets,
+            isUntargeted: skill.IsUntargeted,
+            turnConsumption: skill.CanExecute ? ActionTurnConsumption.Normal : ActionTurnConsumption.None,
             skillAssessment: skill);
     }
 
@@ -580,11 +631,16 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 $"Item '{command.Item.Id}' is not available in the requested quantity."));
         }
 
-        return new BattleActionAssessment(
+        return CreateAssessment(
+            request,
             command.Kind,
             diagnostics,
             item.TargetIds,
-            item.CanExecute && diagnostics.Count == 0 ? ActionTurnConsumption.Normal : ActionTurnConsumption.None,
+            hasResolvedTargets: item.HasResolvedTargets,
+            isUntargeted: item.IsUntargeted,
+            turnConsumption: item.CanExecute && diagnostics.Count == 0
+                ? ActionTurnConsumption.Normal
+                : ActionTurnConsumption.None,
             itemAssessment: item);
     }
 
@@ -627,33 +683,45 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         }
 
         return diagnostics.Count == 0
-            ? new BattleActionAssessment(kind, targetIds: targets!.Targets.Select(target => target.InstanceId))
-            : new BattleActionAssessment(kind, diagnostics);
+            ? CreateAssessment(
+                request,
+                kind,
+                targetIds: targets!.Targets.Select(target => target.InstanceId),
+                hasResolvedTargets: true,
+                isUntargeted: targets.IsUntargeted)
+            : CreateAssessment(request, kind, diagnostics);
     }
 
-    private static BattleActionAssessment AssessPartyStock(
+    private BattleActionAssessment AssessPartyStock(
+        BattleActionExecutionRequest request,
         BattleActionKind kind,
         PartyStockTransitionResult transition) =>
         transition.Applied
-            ? new BattleActionAssessment(
+            ? CreateAssessment(
+                request,
                 kind,
                 targetIds: transition.AffectedInstanceIds,
                 partyStockTransition: transition)
-            : new BattleActionAssessment(
+            : CreateAssessment(
+                request,
                 kind,
                 transition.Diagnostics.Select(diagnostic => new BattleActionDiagnostic(
                     BattleActionDiagnosticCode.PartyStockRejected,
                     diagnostic.Message)),
                 partyStockTransition: transition);
 
-    private BattleActionExecutionResult ExecuteSkill(BattleActionExecutionRequest request, SkillBattleActionCommand command)
+    private BattleActionExecutionResult ExecuteSkill(
+        BattleActionExecutionRequest request,
+        SkillBattleActionCommand command,
+        BattleActionAssessment assessment)
     {
-        SkillExecutionResult skill = _skills.Execute(new SkillExecutionRequest(
-            command.Skill,
-            request.Actor,
-            request.Participants,
-            request.Environment,
-            command.SelectedTargetIds));
+        if (assessment.SkillAssessment is not SkillExecutionAssessment prepared)
+        {
+            return InvalidAssessment(command.Kind, "The prepared skill assessment is missing.");
+        }
+
+        SkillExecutionRequest skillRequest = prepared.Preparation.Request;
+        SkillExecutionResult skill = _skills.Execute(skillRequest, prepared);
         if (skill.Status == SkillExecutionStatus.Rejected)
         {
             return Rejected(command.Kind, skill.Diagnostics.Select(ToActionDiagnostic));
@@ -674,8 +742,14 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     private BattleActionExecutionResult ExecuteItem(
         BattleActionExecutionRequest request,
         ItemBattleActionCommand command,
+        BattleActionAssessment assessment,
         CancellationToken cancellationToken)
     {
+        if (assessment.ItemAssessment is not ItemExecutionAssessment prepared)
+        {
+            return InvalidAssessment(command.Kind, "The prepared item assessment is missing.");
+        }
+
         IItemActionReservation? reservation = null;
         List<BattleActionEvent> events = [];
         RuntimeActorExecutionTransaction transaction;
@@ -725,7 +799,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 transaction.Actor,
                 transaction.Participants,
                 request.Environment,
-                command.SelectedTargetIds));
+                command.SelectedTargetIds),
+                prepared);
             if (item.Status == ItemExecutionStatus.Rejected)
             {
                 List<BattleActionDiagnostic> diagnostics =
@@ -846,31 +921,18 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         TargetingDefinition targeting,
         IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<EffectDefinition> effects,
-        ActionTurnConsumptionKind defaultTurnKind)
+        ActionTurnConsumptionKind defaultTurnKind,
+        BattleActionAssessment assessment)
     {
-        var action = new EffectActionExecutionRequest(
-            sourceId,
-            request.Actor,
-            request.Participants,
-            request.Environment,
-            targeting,
-            selectedTargetIds);
-        if (!RuntimeTargetResolver.TryResolve(action, _services, out ResolvedRuntimeTargetSet? targets, out string? diagnostic) ||
+        if (!assessment.HasResolvedTargets ||
+            !PreparedTargetResolver.TryRebind(
+                request.Participants,
+                assessment.TargetIds,
+                assessment.IsUntargeted,
+                out ResolvedRuntimeTargetSet? targets) ||
             targets is null)
         {
-            return Rejected(kind, [new BattleActionDiagnostic(
-                BattleActionDiagnosticCode.TargetSelectionInvalid,
-                diagnostic ?? "Action target selection failed.")]);
-        }
-
-        foreach (EffectDefinition effect in effects)
-        {
-            if (!_services.EffectExecutors.Supports(effect.GetType()))
-            {
-                return Rejected(kind, [new BattleActionDiagnostic(
-                    BattleActionDiagnosticCode.EffectExecutorMissing,
-                    $"No executor is registered for '{effect.GetType().Name}'.")]);
-            }
+            return InvalidAssessment(kind, "The prepared action targets no longer match the execution request.");
         }
 
         OrderedEffectExecution execution;
@@ -913,7 +975,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
 
     private BattleActionExecutionResult ExecuteEscape(
         BattleActionExecutionRequest request,
-        EscapeAttemptBattleActionCommand command)
+        EscapeAttemptBattleActionCommand command,
+        BattleActionAssessment assessment)
     {
         BattleActionExecutionResult result = ExecuteEffects(
             request,
@@ -922,7 +985,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             Untargeted(),
             [],
             [new EscapeEffectDefinition(command.EligibilityRuleId, command.Chance)],
-            ActionTurnConsumptionKind.Normal);
+            ActionTurnConsumptionKind.Normal,
+            assessment);
         return result.EscapeRequested
             ? result with { TurnConsumption = ActionTurnConsumption.None }
             : result with { TurnConsumption = ActionTurnConsumption.Normal };
@@ -939,8 +1003,13 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
 
     private static BattleActionExecutionResult ExecutePartyStock(
         BattleActionKind kind,
-        PartyStockTransitionResult transition)
+        PartyStockTransitionResult? transition)
     {
+        if (transition is null)
+        {
+            return InvalidAssessment(kind, "The prepared party/stock transition is missing.");
+        }
+
         if (!transition.Applied)
         {
             return Rejected(kind, transition.Diagnostics.Select(diagnostic => new BattleActionDiagnostic(
@@ -983,6 +1052,37 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         IEnumerable<BattleActionDiagnostic> diagnostics,
         IEnumerable<BattleActionEvent>? events = null) =>
         new(BattleActionExecutionStatus.Rejected, kind, ActionTurnConsumption.None, diagnostics: diagnostics, events: events);
+
+    private static BattleActionExecutionResult InvalidAssessment(
+        BattleActionKind kind,
+        string message) =>
+        Rejected(
+            kind,
+            [new BattleActionDiagnostic(BattleActionDiagnosticCode.AssessmentInvalid, message)]);
+
+    private BattleActionAssessment CreateAssessment(
+        BattleActionExecutionRequest request,
+        BattleActionKind kind,
+        IEnumerable<BattleActionDiagnostic>? diagnostics = null,
+        IEnumerable<RuntimeInstanceId>? targetIds = null,
+        bool hasResolvedTargets = false,
+        bool isUntargeted = false,
+        ActionTurnConsumption? turnConsumption = null,
+        SkillExecutionAssessment? skillAssessment = null,
+        ItemExecutionAssessment? itemAssessment = null,
+        PartyStockTransitionResult? partyStockTransition = null) =>
+        new(
+            _assessmentAuthority,
+            request,
+            kind,
+            diagnostics,
+            targetIds,
+            hasResolvedTargets,
+            isUntargeted,
+            turnConsumption,
+            skillAssessment,
+            itemAssessment,
+            partyStockTransition);
 
     private static BattleActionDiagnostic ToActionDiagnostic(SkillExecutionDiagnostic diagnostic) =>
         new(

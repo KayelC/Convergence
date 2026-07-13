@@ -72,7 +72,7 @@ internal sealed class TrainingAnnexFieldActionAdapter
         BattleActionExecutionResult? execution = null;
         if (assessment.CanExecute)
         {
-            execution = await _actions.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
+            execution = await _actions.ExecuteAsync(request, assessment, cancellationToken).ConfigureAwait(false);
         }
 
         RuntimeActorSnapshot after = actor.Actor.State.ToSnapshot();

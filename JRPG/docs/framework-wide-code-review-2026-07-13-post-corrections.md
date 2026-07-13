@@ -16,11 +16,11 @@ The review covered the framework project structure and public boundaries, defini
 
 **Phase 8 should not begin yet.**
 
-The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect identified by this review was corrected in the working tree on 2026-07-13. Three medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect and M1 target-authority defect identified by this review were corrected in the working tree on 2026-07-13. Two medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
 
 Recommended gate:
 
-1. Correct M1 and M2 before Phase 8. H1 is complete.
+1. Correct M2 before Phase 8. H1 and M1 are complete.
 2. Resolve M3 either by making the convenience runner use the canonical lifecycle or by explicitly reducing/removing its public authority.
 3. Correct the low findings before publishing the framework package; they do not need to block design discussion.
 
@@ -71,7 +71,7 @@ H1 is resolved in the current working tree. M1, M2, and M3 remain open, so this 
 - Framework host/legacy forbidden-reference search and serializer-boundary search: no prohibited references found.
 - `git diff --check`: passed. `Data/Jsons`: unchanged.
 
-### M1. Assessment and execution can resolve random targets twice
+### M1. Assessment and execution can resolve random targets twice (corrected 2026-07-13)
 
 **Evidence**
 
@@ -89,6 +89,28 @@ A stateful random policy can choose target A for the returned assessment and tar
 **Required correction**
 
 Resolve targets once into an immutable, request-bound assessment token and execute from that token, or collapse internal assessment and execution into one resolution transaction. Add call-count and alternating-target regressions for skills, items, basic attacks, and analyze/effect actions.
+
+**Resolution**
+
+- Skill, item, and battle-action assessments now snapshot ordered target IDs and untargeted state instead of retaining live resolved-target collections.
+- Every assessment carries an executor-owned, logical-request-bound, single-use preparation token. Wrong-executor, wrong-request, and reused tokens return typed `AssessmentInvalid` diagnostics without mutation.
+- One-call execution prepares once internally. Hosts that display an assessment can pass that exact assessment to the prepared-execution overload.
+- Execution rebinds the prepared IDs into the staged actor transaction. Skill, item, basic-attack, analyze, escape/direct-effect, and automated-selector paths no longer invoke random selection during execution.
+- The Training Annex battle and field adapters now execute the same assessment they present, and cancellation before execution leaves the token and item inventory untouched.
+
+M1 is resolved in the current working tree. M2 and M3 remain open, so the Phase 8 gate remains closed.
+
+**M1 verification**
+
+- Focused battle-action and automated-runtime regressions: **42 passed, 0 failed, 0 skipped**.
+- Full solution tests: **1,042 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**; the warning count remains isolated to compatibility-host nullable debt.
+- Framework package: created successfully.
+- Clean battle, field, save, and Training Annex demos: all exited `0`; battle outcomes and save validation remained unchanged.
+- Framework host/legacy forbidden-reference and serializer-boundary searches: no prohibited references found.
+- Target-resolution search: resolver calls remain only in assessment methods; prepared execution consumes recorded IDs.
+- `git diff --check`: passed. `Data/Jsons`: unchanged.
 
 ### M2. Runtime stat and base-resource numeric domains are not protected at the restore boundary
 

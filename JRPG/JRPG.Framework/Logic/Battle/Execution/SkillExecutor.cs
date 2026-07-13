@@ -4,8 +4,14 @@ namespace JRPGPrototype.Logic.Battle.Execution;
 
 public interface ISkillExecutor
 {
+    /// <summary>Prepares one immutable, single-use target and cost decision.</summary>
     SkillExecutionAssessment Assess(SkillExecutionRequest request);
+
+    /// <summary>Assesses and executes as one operation.</summary>
     SkillExecutionResult Execute(SkillExecutionRequest request);
+
+    /// <summary>Executes the exact decision returned by a prior assessment.</summary>
+    SkillExecutionResult Execute(SkillExecutionRequest request, SkillExecutionAssessment assessment);
 }
 
 public sealed class SkillExecutor : ISkillExecutor
@@ -13,6 +19,7 @@ public sealed class SkillExecutor : ISkillExecutor
     private readonly BattleExecutionServices _services;
     private readonly EffectExecutorRegistry _effectExecutors;
     private readonly OrderedEffectExecutor _orderedEffects;
+    private readonly object _assessmentAuthority = new();
 
     public SkillExecutor(
         BattleExecutionServices services,
@@ -26,11 +33,41 @@ public sealed class SkillExecutor : ISkillExecutor
     public SkillExecutionResult Execute(SkillExecutionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return Execute(request, Assess(request));
+    }
 
-        SkillExecutionAssessment assessment = Assess(request);
-        if (!assessment.CanExecute || assessment.Targets is null)
+    public SkillExecutionResult Execute(
+        SkillExecutionRequest request,
+        SkillExecutionAssessment assessment)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(assessment);
+        if (!assessment.CanExecute)
         {
             return SkillExecutionResult.Rejected(assessment.Diagnostics);
+        }
+
+        if (!assessment.Preparation.IsOwnedBy(_assessmentAuthority) ||
+            !RequestsAreEquivalent(assessment.Preparation.Request, request))
+        {
+            return InvalidAssessment("The skill assessment belongs to another executor or request.");
+        }
+
+        if (!PreparedTargetResolver.TryRebind(
+                request.Participants,
+                assessment.TargetIds,
+                assessment.IsUntargeted,
+                out ResolvedRuntimeTargetSet? preparedTargets) ||
+            preparedTargets is null)
+        {
+            return InvalidAssessment("The skill assessment targets no longer match the execution request.");
+        }
+
+        if (!assessment.Preparation.TryConsume(_assessmentAuthority, out ExecutionAssessmentTokenFailure failure))
+        {
+            return InvalidAssessment(failure == ExecutionAssessmentTokenFailure.AlreadyConsumed
+                ? "The skill assessment has already been executed."
+                : "The skill assessment was not created by this executor.");
         }
 
         OrderedEffectExecution execution;
@@ -38,7 +75,6 @@ public sealed class SkillExecutor : ISkillExecutor
         try
         {
             transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
-            ResolvedTargetSet targets = transaction.Map(assessment.Targets);
             var stagedRequest = new SkillExecutionRequest(
                 request.Skill,
                 transaction.Actor,
@@ -49,7 +85,7 @@ public sealed class SkillExecutor : ISkillExecutor
             execution = _orderedEffects.Execute(
                 stagedRequest.ToEffectActionRequest(),
                 request.Skill.Effects,
-                new ResolvedRuntimeTargetSet(targets.Targets, targets.IsUntargeted));
+                transaction.Map(preparedTargets));
         }
         catch (Exception exception)
         {
@@ -78,7 +114,12 @@ public sealed class SkillExecutor : ISkillExecutor
                 request,
                 out ResolvedTargetSet? targets,
                 out IReadOnlyList<ResolvedSkillCost> costs);
-            return new SkillExecutionAssessment(diagnostics, targets, costs);
+            return new SkillExecutionAssessment(
+                diagnostics,
+                targets,
+                costs,
+                _assessmentAuthority,
+                request);
         }
         catch (Exception exception)
         {
@@ -89,9 +130,31 @@ public sealed class SkillExecutor : ISkillExecutor
                     $"Skill assessment failed: {exception.Message}")
             ],
             targets: null,
-            costs: []);
+            costs: [],
+            authority: _assessmentAuthority,
+            request: request);
         }
     }
+
+    private static bool RequestsAreEquivalent(
+        SkillExecutionRequest assessed,
+        SkillExecutionRequest execution) =>
+        ReferenceEquals(assessed.Skill, execution.Skill) &&
+        assessed.Actor.InstanceId == execution.Actor.InstanceId &&
+        assessed.Participants.Select(actor => actor.InstanceId)
+            .SequenceEqual(execution.Participants.Select(actor => actor.InstanceId)) &&
+        assessed.SelectedTargetIds.SequenceEqual(execution.SelectedTargetIds) &&
+        assessed.ContextId == execution.ContextId &&
+        assessed.BattleKindId == execution.BattleKindId &&
+        assessed.MoonPhaseId == execution.MoonPhaseId;
+
+    private static SkillExecutionResult InvalidAssessment(string message) =>
+        SkillExecutionResult.Rejected(
+        [
+            new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.AssessmentInvalid,
+                message)
+        ]);
 
     private List<SkillExecutionDiagnostic> Preflight(
         SkillExecutionRequest request,

@@ -72,12 +72,147 @@ public sealed class BattleActionExecutorTests
         var request = Request(command, actor, [actor, target]);
 
         BattleActionAssessment assessment = executor.Assess(request);
-        BattleActionExecutionResult result = await executor.ExecuteAsync(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
 
         Assert.True(assessment.CanExecute);
         Assert.Equal(7, actor.GetRequiredResource(Sp).Current);
         Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
         Assert.Equal(ActionTurnConsumptionKind.PressTurn, result.TurnConsumption.Kind);
+    }
+
+    [Fact]
+    public async Task RandomSkill_OneStepExecutionResolvesAndMutatesExactlyOneTarget()
+    {
+        var randomTargets = new AlternatingSkillRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(randomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        SkillDefinition skill = ActiveSkill(
+            "random_frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))],
+            RandomEnemy());
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new SkillBattleActionCommand(skill), actor, [actor, first, second]));
+
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task RandomItem_PreparedAssessmentExecutesTheDisplayedTargetWithoutRerolling()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamA, hp: 20);
+        RuntimeActorState second = Actor("second", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "random_medicine",
+            [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))],
+            RandomAlly());
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine),
+            actor,
+            [actor, first, second],
+            inventory);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([first.InstanceId], assessment.TargetIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeInstanceId>)assessment.TargetIds).Add(second.InstanceId));
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Equal(40, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(20, second.GetRequiredResource(Hp).Current);
+        Assert.Equal(0, inventory.Quantity);
+    }
+
+    [Fact]
+    public async Task RandomBasicAttack_PreparedAssessmentIsSingleUseAndNeverRerolls()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            RandomEnemy());
+        BattleActionExecutionRequest request = Request(command, actor, [actor, first, second]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult executed = await executor.ExecuteAsync(request, assessment);
+        BattleActionExecutionResult reused = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([first.InstanceId], assessment.TargetIds);
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(executed.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, reused.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(reused.Diagnostics).Code);
+    }
+
+    [Fact]
+    public async Task Analyze_PreparedAssessmentExecutesItsDisplayedTargetWithoutRandomSelection()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var command = new AnalyzeBattleActionCommand(target.InstanceId, [AnalysisLayer.Affinities]);
+        BattleActionExecutionRequest request = Request(command, actor, [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([target.InstanceId], assessment.TargetIds);
+        Assert.Equal(0, randomTargets.CallCount);
+        Assert.Equal(target.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Contains(AnalysisLayer.Affinities, actor.GetAnalysis(target.InstanceId));
+    }
+
+    [Fact]
+    public async Task PreparedAssessment_RejectsAnotherRequestWithoutConsumptionOrMutation()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        BattleActionExecutor otherExecutor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            RandomEnemy());
+        BattleActionExecutionRequest assessedRequest = Request(command, actor, [actor, first, second]);
+        BattleActionExecutionRequest differentRequest = Request(command, actor, [actor, first, second]);
+
+        BattleActionAssessment assessment = executor.Assess(assessedRequest);
+        BattleActionExecutionResult wrongExecutor = await otherExecutor.ExecuteAsync(assessedRequest, assessment);
+        BattleActionExecutionResult mismatch = await executor.ExecuteAsync(differentRequest, assessment);
+        BattleActionExecutionResult executed = await executor.ExecuteAsync(assessedRequest, assessment);
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, wrongExecutor.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(wrongExecutor.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, mismatch.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(mismatch.Diagnostics).Code);
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(executed.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
     }
 
     [Fact]
@@ -210,6 +345,39 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task PreparedItemCancellationDoesNotConsumeAssessmentOrReserveInventory()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamA, hp: 20);
+        RuntimeActorState second = Actor("second", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "random_medicine",
+            [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))],
+            RandomAlly());
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine),
+            actor,
+            [actor, first, second],
+            inventory);
+        BattleActionAssessment assessment = executor.Assess(request);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await executor.ExecuteAsync(request, assessment, cancellation.Token));
+        BattleActionExecutionResult retried = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(1, inventory.ReservationsCreated);
+        Assert.Equal(BattleActionExecutionStatus.Executed, retried.Status);
+        Assert.Equal(40, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(20, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task AnalyzeEscapeHostAndPartyCommands_ReturnStructuredResults()
     {
         ContentId escapeRule = Id("standard_escape");
@@ -263,7 +431,9 @@ public sealed class BattleActionExecutorTests
 
     private static BattleActionExecutor Executor(
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
-        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null)
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
+        IRandomTargetSelectionPolicy? randomTargetPolicy = null,
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
     {
         var services = new BattleExecutionServices(
             EmptyAilments.Instance,
@@ -272,9 +442,10 @@ public sealed class BattleActionExecutorTests
             new NeverAilmentPolicy(),
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
-            new OrderedRandomTargetPolicy(),
+            randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
             escapeRuleHandlers: escapeRules,
-            customEffectHandlers: customEffects);
+            customEffectHandlers: customEffects,
+            runtimeRandomTargetPolicy: runtimeRandomTargetPolicy);
         return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
     }
 
@@ -302,7 +473,8 @@ public sealed class BattleActionExecutorTests
     private static SkillDefinition ActiveSkill(
         string id,
         IEnumerable<SkillCostDefinition> costs,
-        IEnumerable<EffectDefinition> effects) =>
+        IEnumerable<EffectDefinition> effects,
+        TargetingDefinition? targeting = null) =>
         new(
             Id(id),
             id,
@@ -312,7 +484,7 @@ public sealed class BattleActionExecutorTests
             InheritanceGroup.Ice,
             new SkillInheritanceDefinition(true),
             costs: costs,
-            targeting: SingleEnemy(),
+            targeting: targeting ?? SingleEnemy(),
             effects: effects,
             availability: new SkillAvailabilityDefinition([Battle]));
 
@@ -320,6 +492,12 @@ public sealed class BattleActionExecutorTests
         ConsumableItem(id, [effect]);
 
     private static ItemDefinition ConsumableItem(string id, IEnumerable<EffectDefinition> effects) =>
+        ConsumableItem(id, effects, SingleAlly());
+
+    private static ItemDefinition ConsumableItem(
+        string id,
+        IEnumerable<EffectDefinition> effects,
+        TargetingDefinition targeting) =>
         new(
             Id(id),
             id,
@@ -327,13 +505,29 @@ public sealed class BattleActionExecutorTests
             ItemKind.Consumable,
             99,
             10,
-            new ItemUsageDefinition([Battle], SingleAlly(), effects));
+            new ItemUsageDefinition([Battle], targeting, effects));
 
     private static TargetingDefinition SingleEnemy() =>
         new(TargetRelation.Enemy, TargetSelection.Single, TargetLifeState.Alive, false);
 
     private static TargetingDefinition SingleAlly() =>
         new(TargetRelation.Ally, TargetSelection.Single, TargetLifeState.Alive, true);
+
+    private static TargetingDefinition RandomEnemy() =>
+        new(
+            TargetRelation.Enemy,
+            TargetSelection.Random,
+            TargetLifeState.Alive,
+            false,
+            new TargetCountDefinition(1, 1));
+
+    private static TargetingDefinition RandomAlly() =>
+        new(
+            TargetRelation.Ally,
+            TargetSelection.Random,
+            TargetLifeState.Alive,
+            false,
+            new TargetCountDefinition(1, 1));
 
     private static RuntimePartyStockSnapshot PartyStock() =>
         new(
@@ -393,6 +587,34 @@ public sealed class BattleActionExecutorTests
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());
+    }
+
+    private sealed class AlternatingSkillRandomTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request)
+        {
+            int index = CallCount++ % candidates.Count;
+            return [candidates[index]];
+        }
+    }
+
+    private sealed class AlternatingRuntimeRandomTargetPolicy : IRuntimeRandomTargetSelectionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            EffectActionExecutionRequest request)
+        {
+            int index = CallCount++ % candidates.Count;
+            return [candidates[index]];
+        }
     }
 
     private sealed class AlwaysEscapeRule : IEscapeRuleHandler

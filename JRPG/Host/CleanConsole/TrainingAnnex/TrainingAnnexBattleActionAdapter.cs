@@ -907,7 +907,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             }
 
             BattleActionExecutionResult execution =
-                await _actions.ExecuteAsync(actionRequest, cancellationToken).ConfigureAwait(false);
+                await _actions.ExecuteAsync(actionRequest, assessment, cancellationToken).ConfigureAwait(false);
             if (execution.Status == BattleActionExecutionStatus.Rejected)
             {
                 string diagnostics = string.Join("; ", execution.Diagnostics.Select(diagnostic => diagnostic.Message));
