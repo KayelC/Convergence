@@ -85,6 +85,15 @@ public sealed class CleanSaveDemoHostTests
                         ElementalAffinity.Resist,
                         new BattleDurationDefinition())
                 ],
+                affinityBreaks:
+                [
+                    new RuntimeAffinityBreakSnapshot(
+                        DamageElement.Fire,
+                        new TurnDurationDefinition(
+                            2,
+                            ContentId.Parse("owner_turn_end"),
+                            true))
+                ],
                 isGuarding: true,
                 analysis:
                 [
@@ -110,6 +119,8 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(original.VitalResourceId, restoredActor.VitalResourceId);
         Assert.IsType<PermanentDurationDefinition>(Assert.Single(restoredActor.BattleStatus.Statuses).Duration);
         Assert.IsType<PhaseDurationDefinition>(Assert.Single(restoredActor.BattleStatus.StatStages).Duration);
+        Assert.IsType<TurnDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Duration);
+        Assert.Equal(DamageElement.Fire, Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Element);
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
         Assert.True(restoredActor.BattleStatus.IsGuarding);
         Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);
@@ -127,7 +138,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v5", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v6", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);

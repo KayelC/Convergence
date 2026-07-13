@@ -300,6 +300,53 @@ public sealed class CatalogLoaderTests
     }
 
     [Fact]
+    public void CatalogQualification_PreservesTypedAffinityBreakEffects()
+    {
+        ContentPackTextBundle bundle = Bundle(
+            Manifest(
+                "break.pack",
+                documents: "[{\"type\":\"skills\",\"path\":\"skills.json\"}]"),
+            Document("skills.json",
+                """
+                {
+                  "schemaVersion": 1,
+                  "skills": [{
+                    "id": "fire_break",
+                    "displayName": "Fire Break",
+                    "description": "Temporarily normalizes Fire affinity.",
+                    "activation": "active",
+                    "menuGroup": "utility",
+                    "inheritanceGroupId": "utility",
+                    "inheritance": { "isInheritable": true },
+                    "targeting": {
+                      "relation": "enemy", "selection": "single",
+                      "lifeState": "alive", "allowSelf": false
+                    },
+                    "availability": { "contexts": ["battle"] },
+                    "effects": [{
+                      "type": "break_affinity",
+                      "elementIds": ["fire"],
+                      "duration": {
+                        "type": "turns", "value": 3,
+                        "tick": "owner_turn_end", "suspendWhileReserve": true
+                      }
+                    }]
+                  }]
+                }
+                """));
+
+        CatalogLoadResult result = Load(bundle);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine,
+            result.Diagnostics.Select(error => $"{error.Code} {error.JsonPath}: {error.Message}")));
+        SkillDefinition skill = result.RequireCatalog().GetRequiredSkill(Id("break.pack:fire_break"));
+        BreakAffinityEffectDefinition effect = Assert.IsType<BreakAffinityEffectDefinition>(
+            Assert.Single(skill.Effects));
+        Assert.Equal([DamageElement.Fire], effect.Elements);
+        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(effect.Duration).Value);
+    }
+
+    [Fact]
     public void PathAndDocumentDiagnostics_AggregateInDeterministicOrder()
     {
         ContentPackTextBundle bundle = Bundle(
@@ -512,6 +559,7 @@ public sealed class CatalogLoaderTests
 
     private static SkillSystemRegistrationSnapshot ReferenceRegistrations() =>
         new SkillSystemRegistrationBuilder()
+            .RegisterContext("battle")
             .RegisterEntityKind("demon")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("owner_turn_end")
@@ -520,6 +568,7 @@ public sealed class CatalogLoaderTests
             .SupportCondition<EffectElementConditionDefinition>()
             .SupportCondition<HasAilmentConditionDefinition>()
             .SupportEffect<RemoveAilmentEffectDefinition>()
+            .SupportEffect<BreakAffinityEffectDefinition>()
             .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
             .Build();
 

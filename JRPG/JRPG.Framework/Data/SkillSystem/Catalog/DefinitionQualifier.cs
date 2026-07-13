@@ -238,6 +238,9 @@ internal static class DefinitionQualifier
             effect.Shield,
             effect.Duration is null ? null : Duration(effect.Duration),
             OptionalCondition(packId, effect.When), effect.OnFailure),
+        BreakAffinityEffectDefinition effect => new BreakAffinityEffectDefinition(
+            effect.Elements, Duration(effect.Duration),
+            OptionalCondition(packId, effect.When), effect.OnFailure),
         OverrideAffinityEffectDefinition effect => new OverrideAffinityEffectDefinition(
             effect.Elements, effect.Affinity, Duration(effect.Duration),
             OptionalCondition(packId, effect.When), effect.OnFailure),

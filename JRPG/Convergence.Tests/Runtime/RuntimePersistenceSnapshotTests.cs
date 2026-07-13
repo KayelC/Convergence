@@ -110,6 +110,12 @@ public sealed class RuntimePersistenceSnapshotTests
                     new RuntimeShieldSnapshot(ShieldKind.Physical, duration),
                     new RuntimeShieldSnapshot(ShieldKind.Physical, duration)
                 ],
+                affinityBreaks:
+                [
+                    new RuntimeAffinityBreakSnapshot(DamageElement.Fire, duration),
+                    new RuntimeAffinityBreakSnapshot(DamageElement.Fire, duration),
+                    new RuntimeAffinityBreakSnapshot(DamageElement.Almighty, duration)
+                ],
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Resist, duration),
@@ -145,6 +151,8 @@ public sealed class RuntimePersistenceSnapshotTests
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorStatStage, "$.actors[0].battleStatus.statStages[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorCharge, "$.actors[0].battleStatus.charges[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorShield, "$.actors[0].battleStatus.shields[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityBreak, "$.actors[0].battleStatus.affinityBreaks[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.InvalidActorAffinityBreakElement, "$.actors[0].battleStatus.affinityBreaks[2].element");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityOverride, "$.actors[0].battleStatus.affinityOverrides[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisLayer, "$.actors[0].battleStatus.analysis[0].layers[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisTarget, "$.actors[0].battleStatus.analysis[1]");

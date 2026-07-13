@@ -1220,22 +1220,20 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 case GrantShieldEffectDefinition shield when shield.Duration is not null:
                     ValidateDuration(source, shield.Duration, path + ".duration");
                     break;
+                case BreakAffinityEffectDefinition affinityBreak:
+                    ValidateAffinityElements(
+                        source,
+                        affinityBreak.Elements,
+                        path + ".elementIds",
+                        "Affinity Break effects");
+                    ValidateDuration(source, affinityBreak.Duration, path + ".duration");
+                    break;
                 case OverrideAffinityEffectDefinition affinity:
-                    if (affinity.Elements.Count == 0)
-                    {
-                        Add(source, path + ".elementIds", ContentValidationErrorCode.ShapeInvalid,
-                            "Affinity overrides require at least one element.");
-                    }
-                    ValidateDuplicates(source, affinity.Elements, path + ".elementIds");
-                    for (int index = 0; index < affinity.Elements.Count; index++)
-                    {
-                        if (affinity.Elements[index] == DamageElement.Almighty)
-                        {
-                            Add(source, path + $".elementIds[{index}]",
-                                ContentValidationErrorCode.AlmightyAffinityForbidden,
-                                "Almighty cannot receive an authored affinity override.");
-                        }
-                    }
+                    ValidateAffinityElements(
+                        source,
+                        affinity.Elements,
+                        path + ".elementIds",
+                        "Affinity overrides");
                     ValidateDuration(source, affinity.Duration, path + ".duration");
                     break;
                 case RemoveStatusEffectDefinition removeStatus:
@@ -1282,6 +1280,30 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     ValidateParameters(source, custom.HandlerId, custom.Parameters, path + ".parameters",
                         _registrations.CustomEffectValidators, "custom effect handler");
                     break;
+            }
+        }
+
+        private void ValidateAffinityElements<TDefinition>(
+            RecordSource<TDefinition> source,
+            IReadOnlyList<DamageElement> elements,
+            string path,
+            string subject)
+        {
+            if (elements.Count == 0)
+            {
+                Add(source, path, ContentValidationErrorCode.ShapeInvalid,
+                    $"{subject} require at least one element.");
+            }
+
+            ValidateDuplicates(source, elements, path);
+            for (int index = 0; index < elements.Count; index++)
+            {
+                if (elements[index] == DamageElement.Almighty)
+                {
+                    Add(source, $"{path}[{index}]",
+                        ContentValidationErrorCode.AlmightyAffinityForbidden,
+                        "Almighty cannot receive an authored affinity change.");
+                }
             }
         }
 

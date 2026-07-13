@@ -324,6 +324,12 @@ Unlocks and initialization use `request.Level`, while runtime progression may us
 
 `ElementalAffinityResolver` supports `isBroken` (`ElementalAffinityResolver.cs:8-31`), but there is no typed Break status/effect and production execution never passes `true`. Break is currently a manually invocable resolver branch, not content-executable framework behavior.
 
+**Correction status (L6, 2026-07-13): completed.** `BreakAffinityEffectDefinition` and the strict `break_affinity` discriminator now carry an immutable nonempty element list and typed duration from authored JSON through deserialization, validation, catalog qualification, and ordered effect execution. Almighty, duplicate, and empty element operands are rejected. `RuntimeActorState` owns separate timed Break entries by element; the normal passive-aware affinity and damage path derives resolver input from that state rather than accepting a caller-supplied Break flag. Matching shields still win, Break normalizes active overrides and passive/base responses only for affected elements, and other elements remain untouched. Break state participates in transactional cloning/rollback, reserve-aware turn ticking, typed removal, battle cleanup, immutable snapshots, actor restore, save validation, and host-owned JSON round trips. The prerelease save contract is now version `6`.
+
+The mechanic remains optional: a content pack must author `break_affinity`, and a host must explicitly register `BreakAffinityEffectDefinition` as supported. No framework default enables a Break skill, and no display name or description is inspected.
+
+**Verification:** the focused definition/schema/catalog/execution/lifecycle/persistence/save suite passed **185/185** tests; the complete solution passed **1027/1027** with no failures or skips. The framework nonincremental build retained **0 warnings**, the complete solution retained **98 protected legacy-host warnings**, and clean battle, field, save-v6, and Training Annex demos all exited `0`. `git diff --check` passed, the refined framework forbidden-reference search found no matches, and `Data/Jsons` remained unchanged.
+
 ## Verified Strengths
 
 The following claims are supported by current source and verification, not documentation summaries:

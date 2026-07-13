@@ -73,6 +73,7 @@ public static class BattleStatStageRange
 }
 public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? Duration);
 public sealed record BattleShieldState(DurationDefinition? Duration);
+public sealed record BattleAffinityBreakState(DurationDefinition Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
 public sealed record BattleOtherStatusState(DurationDefinition Duration, bool IsRemovable = true);
 public sealed record BattleDurationTickResult(
@@ -88,6 +89,7 @@ public sealed class RuntimeActorState
     private readonly Dictionary<ContentId, BattleStatStageState> _statStages = [];
     private readonly Dictionary<ChargeKind, BattleChargeState> _charges = [];
     private readonly Dictionary<ShieldKind, BattleShieldState> _shields = [];
+    private readonly Dictionary<DamageElement, BattleAffinityBreakState> _affinityBreaks = [];
     private readonly Dictionary<DamageElement, BattleAffinityOverrideState> _affinityOverrides = [];
     private readonly Dictionary<ContentId, BattleOtherStatusState> _otherStatuses = [];
     private readonly HashSet<ContentId> _skillIds;
@@ -247,6 +249,8 @@ public sealed class RuntimeActorState
         new ReadOnlyDictionary<ChargeKind, BattleChargeState>(_charges);
     public IReadOnlyDictionary<ShieldKind, BattleShieldState> Shields =>
         new ReadOnlyDictionary<ShieldKind, BattleShieldState>(_shields);
+    public IReadOnlyDictionary<DamageElement, BattleAffinityBreakState> AffinityBreaks =>
+        new ReadOnlyDictionary<DamageElement, BattleAffinityBreakState>(_affinityBreaks);
     public IReadOnlyDictionary<DamageElement, BattleAffinityOverrideState> AffinityOverrides =>
         new ReadOnlyDictionary<DamageElement, BattleAffinityOverrideState>(_affinityOverrides);
     public IReadOnlySet<ContentId> OtherStatuses => new ReadOnlySet<ContentId>(_otherStatuses.Keys);
@@ -269,8 +273,7 @@ public sealed class RuntimeActorState
 
     public ElementalAffinity GetElementalAffinity(
         DamageElement element,
-        IEnumerable<ElementalAffinity>? passiveReplacements = null,
-        bool isBroken = false)
+        IEnumerable<ElementalAffinity>? passiveReplacements = null)
     {
         _affinityOverrides.TryGetValue(element, out BattleAffinityOverrideState? activeOverride);
         return ElementalAffinityResolver.Resolve(
@@ -278,7 +281,7 @@ public sealed class RuntimeActorState
             element,
             passiveReplacements,
             activeShields: _shields.Keys,
-            isBroken: isBroken,
+            isBroken: _affinityBreaks.ContainsKey(element),
             activeOverride: activeOverride?.Affinity);
     }
 
@@ -346,6 +349,17 @@ public sealed class RuntimeActorState
 
     public void GrantShield(ShieldKind kind, DurationDefinition? duration) =>
         _shields[kind] = new BattleShieldState(duration);
+
+    public void BreakAffinity(DamageElement element, DurationDefinition duration)
+    {
+        if (element == DamageElement.Almighty)
+        {
+            throw new ArgumentException("Almighty cannot receive an affinity Break.", nameof(element));
+        }
+
+        _affinityBreaks[element] = new BattleAffinityBreakState(
+            duration ?? throw new ArgumentNullException(nameof(duration)));
+    }
 
     public void SetGuarding(bool isGuarding) => IsGuarding = isGuarding;
 
@@ -469,6 +483,25 @@ public sealed class RuntimeActorState
             }
         }
 
+        foreach ((DamageElement element, BattleAffinityBreakState state) in _affinityBreaks.ToArray())
+        {
+            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            {
+                continue;
+            }
+
+            ContentId id = ContentId.Parse("affinity_break_" + element.ToString().ToLowerInvariant());
+            results.Add(new BattleDurationTickResult(id, state.Duration, current, expired));
+            if (expired)
+            {
+                _affinityBreaks.Remove(element);
+            }
+            else if (current is not null)
+            {
+                _affinityBreaks[element] = state with { Duration = current };
+            }
+        }
+
         return Array.AsReadOnly(results.ToArray());
     }
 
@@ -482,13 +515,15 @@ public sealed class RuntimeActorState
     public void ClearEncounterStatuses()
     {
         _statStages.Clear();
+        _affinityBreaks.Clear();
         _affinityOverrides.Clear();
         _otherStatuses.Clear();
     }
 
     public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
     {
-        int before = _statStages.Count + _charges.Count + _shields.Count + _affinityOverrides.Count + _otherStatuses.Count;
+        int before = _statStages.Count + _charges.Count + _shields.Count + _affinityBreaks.Count +
+            _affinityOverrides.Count + _otherStatuses.Count;
         HashSet<StatusEffectKind> requested = new(kinds);
         if (requested.Contains(StatusEffectKind.Buff))
         {
@@ -506,6 +541,10 @@ public sealed class RuntimeActorState
         {
             _shields.Clear();
         }
+        if (requested.Contains(StatusEffectKind.AffinityBreak))
+        {
+            _affinityBreaks.Clear();
+        }
         if (requested.Contains(StatusEffectKind.AffinityOverride))
         {
             _affinityOverrides.Clear();
@@ -521,7 +560,8 @@ public sealed class RuntimeActorState
             }
         }
 
-        int after = _statStages.Count + _charges.Count + _shields.Count + _affinityOverrides.Count + _otherStatuses.Count;
+        int after = _statStages.Count + _charges.Count + _shields.Count + _affinityBreaks.Count +
+            _affinityOverrides.Count + _otherStatuses.Count;
         return before - after;
     }
 
@@ -614,6 +654,8 @@ public sealed class RuntimeActorState
         Dictionary<ContentId, BattleStatStageState> statStages = new(source._statStages);
         Dictionary<ChargeKind, BattleChargeState> charges = new(source._charges);
         Dictionary<ShieldKind, BattleShieldState> shields = new(source._shields);
+        Dictionary<DamageElement, BattleAffinityBreakState> affinityBreaks =
+            new(source._affinityBreaks);
         Dictionary<DamageElement, BattleAffinityOverrideState> affinityOverrides =
             new(source._affinityOverrides);
         Dictionary<ContentId, BattleOtherStatusState> otherStatuses =
@@ -637,6 +679,7 @@ public sealed class RuntimeActorState
         ReplaceDictionary(_statStages, statStages);
         ReplaceDictionary(_charges, charges);
         ReplaceDictionary(_shields, shields);
+        ReplaceDictionary(_affinityBreaks, affinityBreaks);
         ReplaceDictionary(_affinityOverrides, affinityOverrides);
         ReplaceDictionary(_otherStatuses, otherStatuses);
 
@@ -735,6 +778,14 @@ public sealed class RuntimeActorState
             _shields.Add(shield.Kind, new BattleShieldState(shield.Duration));
         }
 
+        _affinityBreaks.Clear();
+        foreach (RuntimeAffinityBreakSnapshot affinityBreak in status.AffinityBreaks)
+        {
+            _affinityBreaks.Add(
+                affinityBreak.Element,
+                new BattleAffinityBreakState(affinityBreak.Duration));
+        }
+
         _affinityOverrides.Clear();
         foreach (RuntimeAffinityOverrideSnapshot affinity in status.AffinityOverrides)
         {
@@ -782,7 +833,10 @@ public sealed class RuntimeActorState
                 pair.Value.Affinity,
                 pair.Value.Duration)),
             IsGuarding,
-            _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)));
+            _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)),
+            _affinityBreaks.Select(pair => new RuntimeAffinityBreakSnapshot(
+                pair.Key,
+                pair.Value.Duration)));
 
     private static void ReplaceDictionary<TKey, TValue>(
         IDictionary<TKey, TValue> destination,

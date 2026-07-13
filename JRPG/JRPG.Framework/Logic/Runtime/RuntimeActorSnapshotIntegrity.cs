@@ -16,6 +16,8 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateStatStage,
     DuplicateCharge,
     DuplicateShield,
+    DuplicateAffinityBreak,
+    InvalidAffinityBreakElement,
     DuplicateAffinityOverride,
     DuplicateAnalysisTarget,
     DuplicateAnalysisLayer,
@@ -162,6 +164,24 @@ internal static class RuntimeActorSnapshotIntegrity
             "shield kind",
             _ => null,
             diagnostics);
+        ValidateUnique(
+            snapshot.BattleStatus.AffinityBreaks,
+            affinityBreak => affinityBreak.Element,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAffinityBreak,
+            "$.battleStatus.affinityBreaks",
+            "affinity-break element",
+            _ => null,
+            diagnostics);
+        for (int index = 0; index < snapshot.BattleStatus.AffinityBreaks.Count; index++)
+        {
+            if (snapshot.BattleStatus.AffinityBreaks[index].Element == DamageElement.Almighty)
+            {
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.InvalidAffinityBreakElement,
+                    "Almighty cannot receive an affinity Break.",
+                    $"$.battleStatus.affinityBreaks[{index}].element"));
+            }
+        }
         ValidateUnique(
             snapshot.BattleStatus.AffinityOverrides,
             affinity => affinity.Element,

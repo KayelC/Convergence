@@ -99,6 +99,23 @@ public sealed record GrantShieldEffectDefinition(
     EffectFailurePolicy OnFailure = EffectFailurePolicy.Continue)
     : EffectDefinition(When, OnFailure);
 
+public sealed record BreakAffinityEffectDefinition : EffectDefinition
+{
+    public BreakAffinityEffectDefinition(
+        IEnumerable<DamageElement> elements,
+        DurationDefinition duration,
+        ConditionDefinition? when = null,
+        EffectFailurePolicy onFailure = EffectFailurePolicy.Continue)
+        : base(when, onFailure)
+    {
+        Elements = DefinitionCollections.Snapshot(elements);
+        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
+    }
+
+    public IReadOnlyList<DamageElement> Elements { get; }
+    public DurationDefinition Duration { get; }
+}
+
 public sealed record OverrideAffinityEffectDefinition : EffectDefinition
 {
     public OverrideAffinityEffectDefinition(

@@ -258,6 +258,7 @@ internal sealed class EffectDtoConverter : DiscriminatedDtoConverter<EffectDto>
         ["modify_stat_stage"] = typeof(ModifyStatStageEffectDto),
         ["grant_charge"] = typeof(GrantChargeEffectDto),
         ["grant_shield"] = typeof(GrantShieldEffectDto),
+        ["break_affinity"] = typeof(BreakAffinityEffectDto),
         ["override_affinity"] = typeof(OverrideAffinityEffectDto),
         ["remove_status_effect"] = typeof(RemoveStatusEffectDto),
         ["reduce_resource"] = typeof(ResourceAmountEffectDto),

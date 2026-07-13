@@ -79,6 +79,7 @@ public sealed class SchemaDeserializationTests
                 { "type": "modify_stat_stage", "modifierTrackIds": ["defense"], "stageDelta": 1, "duration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": true } },
                 { "type": "grant_charge", "charge": "physical", "multiplier": 2.5, "duration": { "type": "phase", "phaseId": "next_attack" } },
                 { "type": "grant_shield", "shield": "magical", "duration": { "type": "permanent" } },
+                { "type": "break_affinity", "elementIds": ["fire", "ice"], "duration": { "type": "battle" } },
                 { "type": "override_affinity", "elementIds": ["fire", "ice"], "affinityId": "normal", "duration": { "type": "instant" } },
                 { "type": "remove_status_effect", "statusKinds": ["buff", "charge"], "statusIds": ["focus"] },
                 { "type": "reduce_resource", "resourceId": "hp", "amount": { "type": "power", "power": 80 }, "canReduceToZero": true },
@@ -98,7 +99,7 @@ public sealed class SchemaDeserializationTests
                 typeof(DamageEffectDefinition), typeof(InstantKillEffectDefinition), typeof(ApplyAilmentEffectDefinition),
                 typeof(RestoreResourceEffectDefinition), typeof(RemoveAilmentEffectDefinition), typeof(ReviveEffectDefinition),
                 typeof(ModifyStatStageEffectDefinition), typeof(GrantChargeEffectDefinition), typeof(GrantShieldEffectDefinition),
-                typeof(OverrideAffinityEffectDefinition), typeof(RemoveStatusEffectDefinition), typeof(ReduceResourceEffectDefinition),
+                typeof(BreakAffinityEffectDefinition), typeof(OverrideAffinityEffectDefinition), typeof(RemoveStatusEffectDefinition), typeof(ReduceResourceEffectDefinition),
                 typeof(SetResourceEffectDefinition), typeof(AnalyzeEffectDefinition), typeof(EscapeEffectDefinition),
                 typeof(CustomEffectDefinition)
             },
@@ -107,7 +108,10 @@ public sealed class SchemaDeserializationTests
         Assert.IsType<ChanceCriticalDefinition>(Assert.IsType<DamageEffectDefinition>(skill.Effects[0]).Critical);
         Assert.IsType<ChannelInstantDeathResistanceCheckDefinition>(
             Assert.IsType<InstantKillEffectDefinition>(skill.Effects[1]).ResistanceCheck);
-        Assert.IsType<FormulaAmountDefinition>(Assert.IsType<SetResourceEffectDefinition>(skill.Effects[12]).Amount);
+        BreakAffinityEffectDefinition affinityBreak = Assert.IsType<BreakAffinityEffectDefinition>(skill.Effects[9]);
+        Assert.Equal([DamageElement.Fire, DamageElement.Ice], affinityBreak.Elements);
+        Assert.IsType<BattleDurationDefinition>(affinityBreak.Duration);
+        Assert.IsType<FormulaAmountDefinition>(Assert.IsType<SetResourceEffectDefinition>(skill.Effects[13]).Amount);
     }
 
     [Fact]

@@ -231,6 +231,8 @@ public sealed class ContentValidationTests
                     DamageElement.Almighty, 1, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1),
                     When: new AllConditionDefinition([])),
                 new RemoveAilmentEffectDefinition(AilmentRemovalScope.Selected),
+                new BreakAffinityEffectDefinition(
+                    [DamageElement.Almighty], new InstantDurationDefinition()),
                 new OverrideAffinityEffectDefinition(
                     [DamageElement.Almighty], ElementalAffinity.Resist, new InstantDurationDefinition()),
                 new RemoveStatusEffectDefinition([]),
@@ -255,15 +257,44 @@ public sealed class ContentValidationTests
             entities: [entity],
             races: [new RaceDefinition(Id("race"), "Race")]));
 
-        Assert.True(result.Errors.Count(error => error.Code == ContentValidationErrorCode.AlmightyAffinityForbidden) >= 3);
+        Assert.True(result.Errors.Count(error => error.Code == ContentValidationErrorCode.AlmightyAffinityForbidden) >= 4);
         Assert.Contains(result.Errors, error => error.JsonPath == "$.skills[0].effects[0].when.all" &&
             error.Code == ContentValidationErrorCode.ShapeInvalid);
         Assert.Contains(result.Errors, error => error.JsonPath == "$.skills[0].effects[1]" &&
             error.Code == ContentValidationErrorCode.ShapeInvalid);
-        Assert.Contains(result.Errors, error => error.JsonPath == "$.skills[0].effects[3]" &&
+        Assert.Contains(result.Errors, error => error.JsonPath == "$.skills[0].effects[4]" &&
             error.Code == ContentValidationErrorCode.ShapeInvalid);
         Assert.Contains(result.Errors, error => error.JsonPath == "$.skills[1].modifiers[1]" &&
             error.Code == ContentValidationErrorCode.ShapeInvalid);
+    }
+
+    [Fact]
+    public void AffinityBreak_RequiresAffectedNonAlmightyElementsAndAValidDuration()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "invalid_breaks",
+            [
+                new BreakAffinityEffectDefinition([], new InstantDurationDefinition()),
+                new BreakAffinityEffectDefinition(
+                    [DamageElement.Fire, DamageElement.Fire, DamageElement.Almighty],
+                    new TurnDurationDefinition(0, Id("owner_turn_end"), false))
+            ]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(), skills: [skill]));
+
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[0].elementIds" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[1].elementIds[1]" &&
+            error.Code == ContentValidationErrorCode.ListDuplicateValue);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[1].elementIds[2]" &&
+            error.Code == ContentValidationErrorCode.AlmightyAffinityForbidden);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[1].duration.value" &&
+            error.Code == ContentValidationErrorCode.ValueMustBePositive);
     }
 
     [Fact]

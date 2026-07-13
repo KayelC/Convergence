@@ -377,6 +377,7 @@ public sealed class EffectExecutorRegistry
         .Register(new ModifyStatStageEffectExecutor())
         .Register(new GrantChargeEffectExecutor())
         .Register(new GrantShieldEffectExecutor())
+        .Register(new BreakAffinityEffectExecutor())
         .Register(new OverrideAffinityEffectExecutor())
         .Register(new RemoveStatusEffectExecutor())
         .Register(new ReduceResourceEffectExecutor())

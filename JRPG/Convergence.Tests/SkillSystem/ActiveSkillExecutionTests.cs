@@ -313,6 +313,9 @@ public sealed class ActiveSkillExecutionTests
             new ModifyStatStageEffectDefinition([attack], 1),
             new GrantChargeEffectDefinition(ChargeKind.Magical, 2m),
             new GrantShieldEffectDefinition(ShieldKind.Magical),
+            new BreakAffinityEffectDefinition(
+                [DamageElement.Fire],
+                new BattleDurationDefinition()),
             new OverrideAffinityEffectDefinition(
                 [DamageElement.Fire],
                 ElementalAffinity.Null,
@@ -338,6 +341,7 @@ public sealed class ActiveSkillExecutionTests
         Assert.Empty(target.StatStages);
         Assert.Empty(target.Charges);
         Assert.Empty(target.Shields);
+        Assert.Empty(target.AffinityBreaks);
         Assert.Empty(target.AffinityOverrides);
         Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.Empty(result.Effects);
@@ -623,6 +627,72 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void AffinityBreak_ExecutesAsTimedElementSpecificStateAndDrivesDamageResolution()
+    {
+        ContentId ownerTurnEnd = ContentId.Parse("owner_turn_end");
+        var duration = new TurnDurationDefinition(2, ownerTurnEnd, false);
+        var profile = new CombatDefenseProfile(
+        [
+            new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Fire, ElementalAffinity.Absorb),
+            new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Ice, ElementalAffinity.Null)
+        ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, defense: profile);
+        target.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Resist, new BattleDurationDefinition());
+        var executor = new SkillExecutor(Services());
+
+        SkillExecutionResult applied = ExecuteEffect(
+            executor,
+            new BreakAffinityEffectDefinition([DamageElement.Fire], duration),
+            actor,
+            target);
+
+        Assert.Equal(SkillExecutionStatus.Executed, applied.Status);
+        Assert.Equal(duration, target.AffinityBreaks[DamageElement.Fire].Duration);
+        Assert.Equal(ElementalAffinity.Normal, target.GetElementalAffinity(DamageElement.Fire));
+        Assert.Equal(
+            ElementalAffinity.Normal,
+            target.GetElementalAffinity(DamageElement.Fire, [ElementalAffinity.Absorb]));
+        Assert.Equal(ElementalAffinity.Null, target.GetElementalAffinity(DamageElement.Ice));
+        Assert.Throws<ArgumentException>(() =>
+            target.BreakAffinity(DamageElement.Almighty, duration));
+
+        target.GrantShield(ShieldKind.Magical, null);
+        Assert.Equal(ElementalAffinity.Repel, target.GetElementalAffinity(DamageElement.Fire));
+        target.RemoveStatuses([StatusEffectKind.Shield], []);
+
+        SkillExecutionResult damage = ExecuteEffect(
+            executor,
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits()),
+            actor,
+            target);
+        Assert.Equal(ElementalAffinity.Normal, Assert.Single(damage.Effects).ResolvedAffinity);
+        Assert.Equal(90, target.GetRequiredResource(Hp).Current);
+
+        BattleDurationTickResult firstTick = Assert.Single(target.TickTimedStatuses(ownerTurnEnd));
+        Assert.False(firstTick.Expired);
+        Assert.Equal(1, Assert.IsType<TurnDurationDefinition>(firstTick.CurrentDuration).Value);
+        BattleDurationTickResult secondTick = Assert.Single(target.TickTimedStatuses(ownerTurnEnd));
+        Assert.True(secondTick.Expired);
+        Assert.Empty(target.AffinityBreaks);
+        Assert.Equal(ElementalAffinity.Resist, target.GetElementalAffinity(DamageElement.Fire));
+
+        target.BreakAffinity(DamageElement.Fire, duration);
+        ExecuteEffect(
+            executor,
+            new RemoveStatusEffectDefinition([StatusEffectKind.AffinityBreak]),
+            actor,
+            target);
+        Assert.Empty(target.AffinityBreaks);
+        Assert.Equal(ElementalAffinity.Resist, target.GetElementalAffinity(DamageElement.Fire));
+    }
+
+    [Fact]
     public void Execute_AnalyzeEscapeAndCustomEffectsRemainHostNeutral()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
@@ -669,6 +739,7 @@ public sealed class ActiveSkillExecutionTests
             typeof(ModifyStatStageEffectDefinition),
             typeof(GrantChargeEffectDefinition),
             typeof(GrantShieldEffectDefinition),
+            typeof(BreakAffinityEffectDefinition),
             typeof(OverrideAffinityEffectDefinition),
             typeof(RemoveStatusEffectDefinition),
             typeof(ReduceResourceEffectDefinition),

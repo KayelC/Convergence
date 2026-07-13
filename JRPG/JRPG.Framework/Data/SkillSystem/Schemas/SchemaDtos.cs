@@ -629,6 +629,12 @@ internal sealed class GrantShieldEffectDto : EffectDto
     public DurationDto? Duration { get; init; }
 }
 
+internal sealed class BreakAffinityEffectDto : EffectDto
+{
+    public required List<DamageElement> ElementIds { get; init; }
+    public required DurationDto Duration { get; init; }
+}
+
 internal sealed class OverrideAffinityEffectDto : EffectDto
 {
     public required List<DamageElement> ElementIds { get; init; }

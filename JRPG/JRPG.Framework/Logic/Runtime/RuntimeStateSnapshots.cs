@@ -340,6 +340,18 @@ public sealed record RuntimeAffinityOverrideSnapshot
     public DurationDefinition Duration { get; }
 }
 
+public sealed record RuntimeAffinityBreakSnapshot
+{
+    public RuntimeAffinityBreakSnapshot(DamageElement element, DurationDefinition duration)
+    {
+        Element = element;
+        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
+    }
+
+    public DamageElement Element { get; }
+    public DurationDefinition Duration { get; }
+}
+
 public sealed record RuntimeAnalysisSnapshot
 {
     public RuntimeAnalysisSnapshot(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
@@ -362,7 +374,8 @@ public sealed record RuntimeBattleStatusSnapshot
         IEnumerable<RuntimeShieldSnapshot>? shields = null,
         IEnumerable<RuntimeAffinityOverrideSnapshot>? affinityOverrides = null,
         bool isGuarding = false,
-        IEnumerable<RuntimeAnalysisSnapshot>? analysis = null)
+        IEnumerable<RuntimeAnalysisSnapshot>? analysis = null,
+        IEnumerable<RuntimeAffinityBreakSnapshot>? affinityBreaks = null)
     {
         Ailments = RuntimeSnapshotCollections.List(ailments);
         Statuses = RuntimeSnapshotCollections.List(statuses);
@@ -370,6 +383,7 @@ public sealed record RuntimeBattleStatusSnapshot
         Charges = RuntimeSnapshotCollections.List(charges);
         Shields = RuntimeSnapshotCollections.List(shields);
         AffinityOverrides = RuntimeSnapshotCollections.List(affinityOverrides);
+        AffinityBreaks = RuntimeSnapshotCollections.List(affinityBreaks);
         IsGuarding = isGuarding;
         Analysis = RuntimeSnapshotCollections.List(analysis);
     }
@@ -380,6 +394,7 @@ public sealed record RuntimeBattleStatusSnapshot
     public IReadOnlyList<RuntimeChargeSnapshot> Charges { get; }
     public IReadOnlyList<RuntimeShieldSnapshot> Shields { get; }
     public IReadOnlyList<RuntimeAffinityOverrideSnapshot> AffinityOverrides { get; }
+    public IReadOnlyList<RuntimeAffinityBreakSnapshot> AffinityBreaks { get; }
     public bool IsGuarding { get; }
     public IReadOnlyList<RuntimeAnalysisSnapshot> Analysis { get; }
 }

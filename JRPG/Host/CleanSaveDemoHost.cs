@@ -435,6 +435,9 @@ internal static class CleanSaveJsonCodec
             actor.BattleStatus.StatStages.Select(stage => new HostStatStageDto(stage.ModifierTrackId.ToString(), stage.Stage, ToDto(stage.Duration))).ToArray(),
             actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, ToDto(charge.Duration))).ToArray(),
             actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), ToDto(shield.Duration))).ToArray(),
+            actor.BattleStatus.AffinityBreaks.Select(affinityBreak => new HostAffinityBreakDto(
+                affinityBreak.Element.ToString(),
+                ToDto(affinityBreak.Duration)!)).ToArray(),
             actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(affinity.Element.ToString(), affinity.Affinity.ToString(), ToDto(affinity.Duration)!)).ToArray(),
             actor.BattleStatus.IsGuarding,
             actor.BattleStatus.Analysis.Select(analysis => new HostAnalysisDto(analysis.TargetInstanceId.ToString(), analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
@@ -474,7 +477,11 @@ internal static class CleanSaveJsonCodec
                 dto.IsGuarding,
                 dto.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
                     Instance(analysis.TargetInstanceId),
-                    analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer))))),
+                    analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer)))),
+                (dto.AffinityBreaks ?? []).Select(affinityBreak => new RuntimeAffinityBreakSnapshot(
+                    Enum.Parse<DamageElement>(affinityBreak.Element),
+                    FromDto(affinityBreak.Duration) ??
+                        throw new InvalidOperationException("Affinity Break duration is required.")))),
             new RuntimeBattleActivationSnapshot(
                 (dto.PassiveActivations ?? []).Select(passive => new RuntimePassiveActivationSnapshot(
                     Id(passive.SkillId),
@@ -731,6 +738,7 @@ internal static class CleanSaveJsonCodec
         HostStatStageDto[] StatStages,
         HostChargeDto[] Charges,
         HostShieldDto[] Shields,
+        HostAffinityBreakDto[]? AffinityBreaks,
         HostAffinityOverrideDto[] AffinityOverrides,
         bool IsGuarding,
         HostAnalysisDto[] Analysis,
@@ -743,6 +751,7 @@ internal static class CleanSaveJsonCodec
     private sealed record HostStatStageDto(string ModifierTrackId, int Stage, HostDurationDto? Duration);
     private sealed record HostChargeDto(string Kind, decimal Multiplier, HostDurationDto? Duration);
     private sealed record HostShieldDto(string Kind, HostDurationDto? Duration);
+    private sealed record HostAffinityBreakDto(string Element, HostDurationDto Duration);
     private sealed record HostAffinityOverrideDto(string Element, string Affinity, HostDurationDto Duration);
     private sealed record HostDurationDto(
         string Kind,

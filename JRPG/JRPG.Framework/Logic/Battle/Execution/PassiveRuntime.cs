@@ -330,12 +330,10 @@ public sealed class RuleModifierResolver
     public ElementalAffinity ResolveElementalAffinity(
         RuntimeActorState owner,
         DamageElement element,
-        RuleModifierContext context,
-        bool isBroken = false) =>
+        RuleModifierContext context) =>
         owner.GetElementalAffinity(
             element,
-            ResolveElementalAffinityReplacements(owner, element, context),
-            isBroken);
+            ResolveElementalAffinityReplacements(owner, element, context));
 
     public ResistanceLevel ResolveAilmentResistance(
         RuntimeActorState owner,

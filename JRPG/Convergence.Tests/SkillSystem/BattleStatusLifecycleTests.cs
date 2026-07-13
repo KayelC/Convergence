@@ -360,6 +360,7 @@ public sealed class BattleStatusLifecycleTests
         actor.GrantShield(ShieldKind.Physical, Turns(1));
         actor.GrantCharge(ChargeKind.Physical, 2, Turns(1));
         actor.ChangeStatStage(ContentId.Parse("attack"), 1, Turns(1));
+        actor.BreakAffinity(DamageElement.Fire, Turns(1));
         actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
         actor.AddOtherStatus(ContentId.Parse("marked"), Turns(1));
         actor.ApplyAilment(PoisonAilment(), Turns(3));
@@ -370,6 +371,7 @@ public sealed class BattleStatusLifecycleTests
         Assert.Empty(actor.Shields);
         Assert.Empty(actor.Charges);
         Assert.NotEmpty(actor.StatStages);
+        Assert.NotEmpty(actor.AffinityBreaks);
         Assert.NotEmpty(actor.AffinityOverrides);
         Assert.NotEmpty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
@@ -377,9 +379,26 @@ public sealed class BattleStatusLifecycleTests
         service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd));
 
         Assert.Empty(actor.StatStages);
+        Assert.Empty(actor.AffinityBreaks);
         Assert.Empty(actor.AffinityOverrides);
         Assert.Empty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
+    }
+
+    [Fact]
+    public void AffinityBreakDuration_SuspendsInReserveAndExpiresOnItsAuthoredTick()
+    {
+        RuntimeActorState actor = Actor("actor", isActive: false);
+        actor.BreakAffinity(DamageElement.Ice, Turns(1));
+
+        Assert.Empty(actor.TickTimedStatuses(OwnerTurnEnd));
+        Assert.True(actor.AffinityBreaks.ContainsKey(DamageElement.Ice));
+
+        actor.IsActive = true;
+        BattleDurationTickResult tick = Assert.Single(actor.TickTimedStatuses(OwnerTurnEnd));
+
+        Assert.True(tick.Expired);
+        Assert.Empty(actor.AffinityBreaks);
     }
 
     [Fact]

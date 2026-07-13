@@ -204,6 +204,7 @@ public enum StatusEffectKind
     Debuff,
     Charge,
     Shield,
+    AffinityBreak,
     AffinityOverride,
     Other
 }

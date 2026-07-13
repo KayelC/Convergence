@@ -1230,6 +1230,12 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     new TrainingAnnexTypedEffectEvidence(actionId, index, "grant_charge"),
                 GrantShieldEffectDefinition =>
                     new TrainingAnnexTypedEffectEvidence(actionId, index, "grant_shield"),
+                BreakAffinityEffectDefinition affinityBreak =>
+                    new TrainingAnnexTypedEffectEvidence(
+                        actionId,
+                        index,
+                        "break_affinity",
+                        affinityBreak.Elements.FirstOrDefault()),
                 OverrideAffinityEffectDefinition affinity =>
                     new TrainingAnnexTypedEffectEvidence(
                         actionId,

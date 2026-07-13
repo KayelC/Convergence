@@ -527,6 +527,7 @@ Phase 2-12 result:
 - Practice Blade, Frost Tip, Echo Strike, Ash Spark, Annex Tonic, and Analyze are proven through this evidence. Guard and Pass remain effectless framework commands.
 - Tests mutate Training Annex display names/descriptions through a test-only content source and prove battle outcome, resources, inventory, action IDs, and typed-effect evidence remain unchanged.
 - The shell-facing Training Annex content is checked as concrete typed definitions, including damage, restore, cure, buff/debuff, ailment, and passive trigger effects.
+- The L6 framework correction adds `break_affinity` as a distinct typed effect. It creates element-specific timed actor state, executes through the shared ordered-effect pipeline, participates in atomic rollback, and reaches real affinity/damage resolution without display-name inference or a host Boolean toggle.
 - This remains `parallel_partial`: the demo still needs lifecycle/passive integration, battle knowledge persistence, AI/tactics policy, escape/swaps, and reward application before full battle parity.
 
 ### 13. `combat_math`
@@ -1148,6 +1149,7 @@ The first post-Phase-3 stabilization pass establishes one clean actor state auth
 - Growth, resources, field actions, battles, snapshots, and restore use the same object.
 - Runtime actor/target references use `RuntimeInstanceId`, while content references remain `ContentId`.
 - Save contract version `4` preserves the vital resource, exact duration modes, affinity overrides, analysis, capability IDs, passive enabled/disabled state, and passive activations.
+- Save contract version `6` additionally preserves element-specific affinity Break state and rejects duplicate or Almighty Break entries before restore.
 - Current-only copy loops and the duplicate `RuntimeActorStateSet`/`BattleActorState` types are removed.
 - Resource recalculation applies its policy result to that canonical actor before reporting success.
 

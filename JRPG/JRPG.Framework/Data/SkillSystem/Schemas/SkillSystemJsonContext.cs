@@ -50,6 +50,7 @@ namespace JRPGPrototype.Data.SkillSystem.Schemas;
 [JsonSerializable(typeof(ModifyStatStageEffectDto))]
 [JsonSerializable(typeof(GrantChargeEffectDto))]
 [JsonSerializable(typeof(GrantShieldEffectDto))]
+[JsonSerializable(typeof(BreakAffinityEffectDto))]
 [JsonSerializable(typeof(OverrideAffinityEffectDto))]
 [JsonSerializable(typeof(RemoveStatusEffectDto))]
 [JsonSerializable(typeof(AnalyzeEffectDto))]

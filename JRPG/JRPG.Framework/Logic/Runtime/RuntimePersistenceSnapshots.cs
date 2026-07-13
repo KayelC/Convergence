@@ -54,6 +54,8 @@ public enum RuntimeSaveValidationCode
     DuplicateActorStatStage,
     DuplicateActorCharge,
     DuplicateActorShield,
+    DuplicateActorAffinityBreak,
+    InvalidActorAffinityBreakElement,
     DuplicateActorAffinityOverride,
     DuplicateActorAnalysisTarget,
     DuplicateActorAnalysisLayer,
@@ -224,7 +226,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 5;
+    public const int CurrentContractVersion = 6;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -495,6 +497,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateStatStage => RuntimeSaveValidationCode.DuplicateActorStatStage,
             RuntimeActorSnapshotIntegrityCode.DuplicateCharge => RuntimeSaveValidationCode.DuplicateActorCharge,
             RuntimeActorSnapshotIntegrityCode.DuplicateShield => RuntimeSaveValidationCode.DuplicateActorShield,
+            RuntimeActorSnapshotIntegrityCode.DuplicateAffinityBreak => RuntimeSaveValidationCode.DuplicateActorAffinityBreak,
+            RuntimeActorSnapshotIntegrityCode.InvalidAffinityBreakElement => RuntimeSaveValidationCode.InvalidActorAffinityBreakElement,
             RuntimeActorSnapshotIntegrityCode.DuplicateAffinityOverride => RuntimeSaveValidationCode.DuplicateActorAffinityOverride,
             RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisTarget => RuntimeSaveValidationCode.DuplicateActorAnalysisTarget,
             RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisLayer => RuntimeSaveValidationCode.DuplicateActorAnalysisLayer,

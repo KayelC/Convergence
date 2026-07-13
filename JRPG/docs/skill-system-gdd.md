@@ -63,7 +63,8 @@ Elemental affinity is resolved in this order:
 1. Almighty returns `normal`.
 2. A matching physical or magical reflection shield returns `repel`.
 3. An active Break normalizes the affected element.
-4. The strongest response from the base affinity and applicable passive replacements wins: `absorb > repel > null > resist > normal > weak`.
+4. A temporary affinity override supplies its authored affinity.
+5. The strongest response from the base affinity and applicable passive replacements wins: `absorb > repel > null > resist > normal > weak`.
 
 This resolver returns the six typed affinity outcomes only. Numeric damage multipliers are not part of the Track 7 contract. The legacy console rules that normalize weaknesses while guarding or normalize physical defenses during rigid-body ailments also remain outside the clean resolver until they are reviewed as explicit gameplay rules.
 
@@ -118,7 +119,8 @@ Active skills contain an ordered list of one or more effects.
 | `modify_stat_stage` | Raises or lowers one or more stat stages. |
 | `grant_charge` | Enhances a future physical or magical attack. |
 | `grant_shield` | Grants a temporary reflection or protection shield. |
-| `override_affinity` | Temporarily changes an elemental affinity, including Break effects. |
+| `break_affinity` | Temporarily normalizes one or more affected elemental affinities. |
+| `override_affinity` | Temporarily replaces one or more elemental affinities with an authored affinity. |
 | `remove_status_effect` | Removes buffs, debuffs, charges, shields, or similar runtime effects. |
 | `reduce_resource` | Directly reduces HP/SP without using normal damage calculation. |
 | `set_resource` | Sets a resource to an exact or bounded value. |
@@ -550,7 +552,7 @@ Ordinary failures obey the effect's authored policy:
 
 Battle interruptions override every authored failure policy. Repel reflects resolved damage to the actor and interrupts the action. Absorb restores the target and interrupts the action. Both produce phase-termination input for Press Turn. Miss and Null are failures, Weakness and Critical are successful advantage results, and every per-target outcome remains available to presentation and turn-system adapters.
 
-Temporary affinity overrides are runtime statuses, not changes to authored defense data. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Track 9 now consumes passive affinity replacements, Ice damage modifiers, physical-skill cost modifiers, typed ailment replacements, and registered passive events. Duration ticking and expiration remain deferred until their lifecycle consumers are migrated.
+Temporary affinity Breaks and overrides are runtime statuses, not changes to authored defense data. `break_affinity` names the affected elements and a typed duration; it never infers behavior from a skill name. Affinity resolution keeps the approved precedence: Almighty normality, matching shield, Break normalization, temporary override, then base/passive resolution. Break state ticks through the shared status lifecycle, may suspend while its owner is in reserve when its authored turn duration requests that behavior, clears at battle-end cleanup, and is removable through the `affinity_break` status kind. Track 9 consumes passive affinity replacements, Ice damage modifiers, physical-skill cost modifiers, typed ailment replacements, and registered passive events.
 
 ### Host Policy Boundary
 

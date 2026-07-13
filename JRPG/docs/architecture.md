@@ -258,6 +258,8 @@ The L4 correction separates mutable encounter execution from immutable encounter
 
 The L5 correction makes encounter threading explicit. `IBattleEncounterRunner` exposes only `RunAsync`, and framework orchestration never captures a caller synchronization context. The concrete synchronous `Run` helper exists only for compatibility callers that require no thread affinity: it detaches and restores the caller context around the blocking operation. Engine and UI hosts await `RunAsync`; event sinks and command adapters marshal presentation or Node work onto their host-owned scheduler when necessary.
 
+The L6 correction turns elemental Break into a complete optional framework mechanic. `BreakAffinityEffectDefinition` and the `break_affinity` wire discriminator identify affected elements and duration explicitly. `RuntimeActorState` owns per-element timed Break state, and the normal rule-modifier/damage path reads it without host-supplied flags. Lifecycle cleanup, transactional actor cloning, immutable snapshots, save validation, and host-owned JSON round trips preserve the same state. Save contract version `6` records this addition; no production save migration is required for the pre-release framework.
+
 ## Caveats
 
 - Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.

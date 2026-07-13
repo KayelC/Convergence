@@ -102,8 +102,10 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(2, Assert.Single(roundTrip.BattleStatus.StatStages).Stage);
         Assert.Equal(2.5m, Assert.Single(roundTrip.BattleStatus.Charges).Multiplier);
         Assert.Equal(ShieldKind.Magical, Assert.Single(roundTrip.BattleStatus.Shields).Kind);
+        Assert.Equal(DamageElement.Ice, Assert.Single(roundTrip.BattleStatus.AffinityBreaks).Element);
         Assert.Equal(DamageElement.Fire, Assert.Single(roundTrip.BattleStatus.AffinityOverrides).Element);
         Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.Ailments).Duration);
+        Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.AffinityBreaks).Duration);
         Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.AffinityOverrides).Duration);
         Assert.Equal(Id("hp"), roundTrip.VitalResourceId);
         Assert.True(roundTrip.BattleStatus.IsGuarding);
@@ -337,6 +339,7 @@ public sealed class RuntimeStateSnapshotTests
                 charges: [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))],
                 shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, Turns(1))],
                 affinityOverrides: [new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Normal, Turns(2))],
+                affinityBreaks: [new RuntimeAffinityBreakSnapshot(DamageElement.Ice, Turns(2))],
                 isGuarding: true,
                 analysis:
                 [

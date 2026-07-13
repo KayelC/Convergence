@@ -460,6 +460,7 @@ internal static class SkillSystemDtoMapper
             "modify_stat_stage" => MapStatStage((ModifyStatStageEffectDto)dto, when),
             "grant_charge" => MapCharge((GrantChargeEffectDto)dto, when),
             "grant_shield" => MapShield((GrantShieldEffectDto)dto, when),
+            "break_affinity" => MapBreakAffinity((BreakAffinityEffectDto)dto, when),
             "override_affinity" => MapAffinity((OverrideAffinityEffectDto)dto, when),
             "remove_status_effect" => MapRemoveStatus((RemoveStatusEffectDto)dto, when),
             "reduce_resource" => MapReduce((ResourceAmountEffectDto)dto, when),
@@ -500,6 +501,10 @@ internal static class SkillSystemDtoMapper
 
     private static GrantShieldEffectDefinition MapShield(GrantShieldEffectDto dto, ConditionDefinition? when) =>
         new(dto.Shield, dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+
+    private static BreakAffinityEffectDefinition MapBreakAffinity(
+        BreakAffinityEffectDto dto, ConditionDefinition? when) =>
+        new(dto.ElementIds, MapDuration(dto.Duration), when, dto.OnFailure);
 
     private static OverrideAffinityEffectDefinition MapAffinity(
         OverrideAffinityEffectDto dto, ConditionDefinition? when) =>

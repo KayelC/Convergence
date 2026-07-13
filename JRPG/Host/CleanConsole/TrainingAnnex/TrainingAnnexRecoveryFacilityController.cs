@@ -137,6 +137,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         actor.StatStages.Count > 0 ||
         actor.Charges.Count > 0 ||
         actor.Shields.Count > 0 ||
+        actor.AffinityBreaks.Count > 0 ||
         actor.AffinityOverrides.Count > 0 ||
         actor.OtherStatuses.Count > 0;
 

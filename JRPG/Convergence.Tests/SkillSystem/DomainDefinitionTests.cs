@@ -33,6 +33,7 @@ public sealed class DomainDefinitionTests
             {
                 nameof(AnalyzeEffectDefinition),
                 nameof(ApplyAilmentEffectDefinition),
+                nameof(BreakAffinityEffectDefinition),
                 nameof(CustomEffectDefinition),
                 nameof(DamageEffectDefinition),
                 nameof(EscapeEffectDefinition),
@@ -331,6 +332,21 @@ public sealed class DomainDefinitionTests
         Assert.Throws<ArgumentException>(() => new CustomEffectDefinition(
             ContentId.Parse("sample_handler"),
             [new KeyValuePair<string, object?>("deep", deeplyNested)]));
+    }
+
+    [Fact]
+    public void AffinityBreak_DefensivelyCopiesAffectedElements()
+    {
+        var elements = new List<DamageElement> { DamageElement.Fire };
+        var definition = new BreakAffinityEffectDefinition(
+            elements,
+            new BattleDurationDefinition());
+
+        elements.Clear();
+
+        Assert.Equal([DamageElement.Fire], definition.Elements);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<DamageElement>)definition.Elements).Add(DamageElement.Ice));
     }
 
     [Fact]

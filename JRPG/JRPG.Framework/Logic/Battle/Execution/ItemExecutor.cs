@@ -413,6 +413,7 @@ public sealed class ItemExecutor : IItemExecutor
                kinds.Contains(StatusEffectKind.Debuff) && target.StatStages.Values.Any(stage => stage.Stage < 0) ||
                kinds.Contains(StatusEffectKind.Charge) && target.Charges.Count > 0 ||
                kinds.Contains(StatusEffectKind.Shield) && target.Shields.Count > 0 ||
+               kinds.Contains(StatusEffectKind.AffinityBreak) && target.AffinityBreaks.Count > 0 ||
                kinds.Contains(StatusEffectKind.AffinityOverride) && target.AffinityOverrides.Count > 0 ||
                kinds.Contains(StatusEffectKind.Other) && effect.StatusIds.Any(target.OtherStatuses.Contains);
     }

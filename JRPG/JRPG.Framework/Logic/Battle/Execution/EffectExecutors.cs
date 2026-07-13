@@ -343,6 +343,20 @@ internal sealed class GrantShieldEffectExecutor : TargetedEffectExecutor, IEffec
     }
 }
 
+internal sealed class BreakAffinityEffectExecutor : TargetedEffectExecutor, IEffectExecutor<BreakAffinityEffectDefinition>
+{
+    public EffectExecutionResult Execute(BreakAffinityEffectDefinition definition, EffectExecutionContext context)
+    {
+        RuntimeActorState target = Target(context);
+        foreach (DamageElement element in definition.Elements)
+        {
+            target.BreakAffinity(element, definition.Duration);
+        }
+
+        return Success(context, detail: string.Join(",", definition.Elements));
+    }
+}
+
 internal sealed class OverrideAffinityEffectExecutor : TargetedEffectExecutor, IEffectExecutor<OverrideAffinityEffectDefinition>
 {
     public EffectExecutionResult Execute(OverrideAffinityEffectDefinition definition, EffectExecutionContext context)

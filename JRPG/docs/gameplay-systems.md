@@ -259,6 +259,8 @@ The production damage order is:
 8. damage modifiers, charge, variance, Weak/Resist, and drain use named policy values;
 9. defeat interception, knowledge recording, and Press Turn aggregation remain owned by the existing action/effect paths.
 
+The L6 correction makes Break executable content rather than a resolver-only test input. An authored `break_affinity` effect creates timed state for explicitly listed non-Almighty elements. Normal damage and affinity conditions read that actor state automatically; matching shields still return Repel first, while Break normalizes temporary overrides and passive/base responses only for the affected element. The shared lifecycle ticks, suspends, removes, clears, snapshots, validates, and restores that state without host or presentation inference.
+
 Legacy skill-name checks for Boost/Amp/Driver, Dodge/Evade, Vidyaraja's Blessing, Apt Pupil, Rebellion, Arms Master, and Spell Master remain adapter or console-effect concerns until Track H/I content migration gives them fully typed definitions. Track T2 can bind a catalog `standard_damage` ruleset to `ProductionCombatRuleset`; only `weakMultiplier` and `resistMultiplier` are currently supported authored parameters, and production consumers have not switched to catalog-selected combat rulesets.
 
 Phase 2-13 switches the original Training Annex clean consumer to this binding. Only `weakMultiplier` and `resistMultiplier` are authored parameters today; the remaining formula defaults remain code-owned policy configuration. Protected legacy battle consumers remain adapter-backed and no removal is authorized.
