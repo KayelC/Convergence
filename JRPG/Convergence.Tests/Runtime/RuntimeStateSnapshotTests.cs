@@ -34,6 +34,44 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     [Fact]
+    public void RuntimeActorNumericDomain_IsPublicAndDirectActorConstructionEnforcesIt()
+    {
+        Assert.True(RuntimeActorNumericDomain.IsValidStatValue(0m));
+        Assert.True(RuntimeActorNumericDomain.IsValidStatValue(RuntimeActorNumericDomain.MaximumStatValue));
+        Assert.False(RuntimeActorNumericDomain.IsValidStatValue(-0.1m));
+        Assert.False(RuntimeActorNumericDomain.IsValidStatValue(
+            RuntimeActorNumericDomain.MaximumStatValue + 0.1m));
+        Assert.True(RuntimeActorNumericDomain.IsValidBaseResourceValue(decimal.MaxValue));
+        Assert.False(RuntimeActorNumericDomain.IsValidBaseResourceValue(-0.1m));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateActor(
+            stats:
+            [
+                new KeyValuePair<ContentId, decimal>(
+                    Id("strength"),
+                    RuntimeActorNumericDomain.MaximumStatValue + 1m)
+            ]));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateActor(
+            baseResourceValues:
+            [
+                new KeyValuePair<ContentId, decimal>(Id("hp"), -1m)
+            ]));
+
+        static RuntimeActorState CreateActor(
+            IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
+            IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null) =>
+            new(
+                RuntimeInstanceId.Parse("numeric_actor"),
+                ContentId.Parse("numeric_entity"),
+                ContentId.Parse("player_team"),
+                ContentId.Parse("hp"),
+                CombatDefenseProfile.Empty,
+                [new BattleResourceState(ContentId.Parse("hp"), 1m, 1m)],
+                stats,
+                baseResourceValues: baseResourceValues);
+    }
+
+    [Fact]
     public void RuntimeActorSnapshot_RoundTripsEveryProtectedActorStateGroup()
     {
         List<RuntimeResourceSnapshot> resources =

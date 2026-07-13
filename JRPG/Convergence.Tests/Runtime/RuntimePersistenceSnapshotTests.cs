@@ -208,6 +208,152 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_AggregatesActorNumericDomainErrorsBeforeRestore()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        RuntimeActorSnapshot malformed = CopyActor(
+            actor,
+            stats: new RuntimeStatBlockSnapshot(
+            [
+                new KeyValuePair<ContentId, decimal>(Id("strength"), -1m),
+                new KeyValuePair<ContentId, decimal>(
+                    Id("magic"),
+                    RuntimeActorNumericDomain.MaximumStatValue + 1m)
+            ],
+            [
+                new KeyValuePair<ContentId, decimal>(Id("vitality"), -0.5m),
+                new KeyValuePair<ContentId, decimal>(
+                    Id("luck"),
+                    RuntimeActorNumericDomain.MaximumStatValue + 0.5m)
+            ]),
+            baseResourceValues:
+            [
+                new KeyValuePair<ContentId, decimal>(Id("hp"), -1m),
+                new KeyValuePair<ContentId, decimal>(Id("sp"), -2m)
+            ]);
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        RuntimeSaveValidationDiagnostic[] numericDiagnostics = validation.Diagnostics
+            .Where(diagnostic => diagnostic.Code is
+                RuntimeSaveValidationCode.ActorBaseStatOutOfRange or
+                RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange or
+                RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange)
+            .ToArray();
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
+            "$.actors[0].stats.baseStats.strength");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
+            "$.actors[0].stats.baseStats.magic");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
+            "$.actors[0].stats.effectiveStats.vitality");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
+            "$.actors[0].stats.effectiveStats.luck");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,
+            "$.actors[0].baseResourceValues.hp");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,
+            "$.actors[0].baseResourceValues.sp");
+        Assert.Collection(
+            numericDiagnostics,
+            diagnostic => Assert.Equal("$.actors[0].stats.baseStats.strength", diagnostic.Path),
+            diagnostic => Assert.Equal("$.actors[0].stats.baseStats.magic", diagnostic.Path),
+            diagnostic => Assert.Equal("$.actors[0].stats.effectiveStats.vitality", diagnostic.Path),
+            diagnostic => Assert.Equal("$.actors[0].stats.effectiveStats.luck", diagnostic.Path),
+            diagnostic => Assert.Equal("$.actors[0].baseResourceValues.hp", diagnostic.Path),
+            diagnostic => Assert.Equal("$.actors[0].baseResourceValues.sp", diagnostic.Path));
+        Assert.Contains(numericDiagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorBaseStatOutOfRange &&
+            diagnostic.ContentId == Id("strength"));
+        Assert.Contains(numericDiagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange &&
+            diagnostic.ContentId == Id("luck"));
+        Assert.Contains(numericDiagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange &&
+            diagnostic.ContentId == Id("hp"));
+        Assert.Throws<RuntimeSaveValidationException>(() => validation.RequireValidSnapshot());
+
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() =>
+            RuntimeActorState.Restore(malformed, CombatDefenseProfile.Empty));
+        Assert.Contains("$.stats.baseStats.strength", directRestore.Message, StringComparison.Ordinal);
+
+        CatalogBattleActorCreationResult catalogRestore = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog).Restore(malformed);
+        Assert.False(catalogRestore.IsSuccess);
+        Assert.Contains(
+            catalogRestore.Diagnostics,
+            diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.SnapshotInvalid);
+    }
+
+    [Fact]
+    public void ValidatedNumericBoundaries_RestoreAndRemainSafeForStandardPolicies()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        KeyValuePair<ContentId, decimal>[] boundaryStats =
+        [
+            new(StandardProgressionIds.Strength, RuntimeActorNumericDomain.MaximumStatValue),
+            new(StandardProgressionIds.Magic, RuntimeActorNumericDomain.MaximumStatValue),
+            new(StandardProgressionIds.Vitality, RuntimeActorNumericDomain.MaximumStatValue),
+            new(StandardProgressionIds.Luck, RuntimeActorNumericDomain.MaximumStatValue)
+        ];
+        RuntimeActorSnapshot boundaryActor = CopyActor(
+            actor,
+            stats: new RuntimeStatBlockSnapshot(boundaryStats, boundaryStats),
+            baseResourceValues:
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, decimal.MaxValue),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, decimal.MaxValue)
+            ]);
+        RuntimeSaveGameSnapshot candidate = Copy(
+            baseline,
+            actors: [boundaryActor, baseline.Actors[1]]);
+
+        RuntimeSaveGameSnapshot validated = new RuntimeSaveValidator()
+            .Validate(candidate, catalog)
+            .RequireValidSnapshot();
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            validated.Actors[0],
+            CombatDefenseProfile.Empty);
+
+        StatResolutionResult resolved = new StandardStatResolutionPolicy().Resolve(
+            new StatResolutionRequest(
+                StandardProgressionIds.WildCard,
+                StandardProgressionIds.Strength,
+                restored.BaseStats,
+                restored.Stats,
+                restored.Stats));
+        ResourceRecalculationResult resources = new StandardResourceGrowthPolicy().Recalculate(
+            new ResourceRecalculationRequest(
+                restored.ToSnapshot().Resources,
+                restored.BaseResourceValues,
+                restored.Stats));
+
+        Assert.Equal(40, resolved.CappedValue);
+        Assert.Equal(40, resolved.FinalValue);
+        Assert.Equal(666m, resources.GetRequired(StandardProgressionIds.Hp).Maximum);
+        Assert.Equal(333m, resources.GetRequired(StandardProgressionIds.Sp).Maximum);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsUnloadedPassivesSkillShapeAndActorKindMismatch()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -1196,11 +1342,13 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot snapshot,
         RuntimeActorIdentitySnapshot? identity = null,
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
+        RuntimeStatBlockSnapshot? stats = null,
         RuntimeSkillStateSnapshot? skills = null,
         RuntimeFormStockSnapshot? forms = null,
         RuntimeEquipmentSnapshot? equipment = null,
         RuntimeBattleStatusSnapshot? battleStatus = null,
         RuntimeBattleActivationSnapshot? battleActivations = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
         IEnumerable<ContentId>? capabilityIds = null) =>
         new(
             identity ?? snapshot.Identity,
@@ -1208,13 +1356,13 @@ public sealed class RuntimePersistenceSnapshotTests
             snapshot.Deployment,
             snapshot.Progression,
             resources ?? snapshot.Resources,
-            snapshot.Stats,
+            stats ?? snapshot.Stats,
             skills ?? snapshot.Skills,
             forms ?? snapshot.Forms,
             equipment ?? snapshot.Equipment,
             battleStatus ?? snapshot.BattleStatus,
             battleActivations ?? snapshot.BattleActivations,
-            snapshot.BaseResourceValues,
+            baseResourceValues ?? snapshot.BaseResourceValues,
             snapshot.VitalResourceId,
             capabilityIds ?? snapshot.CapabilityIds);
 

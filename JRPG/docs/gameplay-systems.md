@@ -198,6 +198,8 @@ This is not full legacy removal. The interactive console still mutates `Combatan
 
 Track R adds the first complete framework save/checkpoint contract over those runtime snapshots. CodeReview-1 advances the prerelease `RuntimeSaveGameSnapshot` to version `4`; CodeReview-3 advances it to version `5` by adding exact content-pack provenance. It stores actors, their explicit vital-resource IDs, exact typed status durations, capability IDs, passive enabled/disabled state and activation counts, party/stock, inventory, equipped items, wallet, optional generic navigation/dungeon traversal, Compendium state, battle knowledge, session progress, loaded content-pack IDs/versions, optional host context, and checkpoint breadcrumbs by value while referencing catalog content by qualified IDs. `IRuntimeSaveValidator` checks the save against a `GameDataCatalog` and reports stable diagnostics for duplicate runtime IDs, missing actor links, missing catalog content, malformed or duplicate knowledge keys, invalid checkpoint ordering, and missing or mismatched content-pack provenance.
 
+The M2 correction also makes actor numeric validity part of that restore contract. Base and effective stats must be between zero and `Int32.MaxValue`, inclusive; base-resource values must be nonnegative. These are representation-safety limits, not balance limits. Validation aggregates every invalid entry with its actor/stat/resource path, direct restore applies the same check, and accepted extreme values cannot later overflow standard stat resolution, HP/SP growth, or natural ailment recovery.
+
 The save-file format remains host-owned. `--clean-save-demo` proves a console host can serialize the framework snapshot through `System.Text.Json`, deserialize it, validate it, and exit without input. The Training Annex manual/suspend load path proves complete catalog-backed actor reconstruction.
 
 Phase 3-20 adds the first interactive clean save/load layer to `--clean-training-annex-play`. The framework provides manual and suspend save policy checks, stable diagnostics, save-record metadata, and a flag telling the host whether a suspend save should be consumed after successful restore. The console host owns the menu, JSON, and in-memory slots. Manual load keeps its slot; suspend load consumes its slot only after JSON deserialize, framework validation, and Training Annex session restore succeed. Saves and loads are rejected while an Ashling encounter is prepared but unresolved so the host does not persist a half-handoff battle state.
@@ -220,6 +222,8 @@ The preserved default formulas are:
 - EXP required is `(int)(1.5 * level^3)`.
 - Maximum HP is `min(666, baseHP + vitality * 5)` and maximum SP is `min(333, baseSP + magic * 3)`.
 - Level-up applies the max-resource delta to current HP/SP; ordinary recalculation caps current values without healing.
+
+Runtime numeric safety is separate from those default balance formulas. Fractional nonnegative stats are valid, negative stats and values above the integer execution domain are rejected before actor restoration, and base HP/SP inputs may be arbitrarily large nonnegative decimals. Existing configured maxima still determine the resulting HP/SP, with cap-first arithmetic preventing overflow while preserving the same ordinary results.
 
 Ruleset JSON does not own these parameters as production authority yet. Track T2 can bind a catalog `standard_stat` or `standard_growth` ruleset to these existing framework policies, but no production consumer has switched from named defaults to authored ruleset selection.
 

@@ -213,6 +213,33 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_NaturalRecoverySaturatesAtTheRuntimeStatBoundary()
+    {
+        RuntimeActorState actor = Actor(
+            "boundary_recovery",
+            luck: RuntimeActorNumericDomain.MaximumStatValue);
+        ContentId ailmentId = ContentId.Parse("boundary_ailment");
+        actor.ApplyAilment(
+            Ailment(
+                ailmentId.ToString(),
+                new NormalAilmentTurnBehaviorDefinition(),
+                recovery: new AilmentRecoveryDefinition(
+                    new NaturalAilmentRecoveryDefinition(20, Luck, decimal.MaxValue))),
+            Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(
+            new SequenceRandomSource(99)).ProcessTurnEnd(
+                new(actor, [actor], Battle, OwnerTurnEnd),
+                Services());
+
+        Assert.False(actor.HasAilment(ailmentId));
+        BattleStatusLifecycleEvent recovered = Assert.Single(
+            result.Events,
+            item => item.Kind == BattleStatusLifecycleEventKind.AilmentRecovered);
+        Assert.Equal(100m, recovered.Value);
+    }
+
+    [Fact]
     public void TurnEnd_SuspendsReserveActorTicksDamageAndRecovery()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(0));

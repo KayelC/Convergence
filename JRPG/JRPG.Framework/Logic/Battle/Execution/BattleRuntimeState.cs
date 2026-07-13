@@ -161,6 +161,13 @@ public sealed class RuntimeActorState
         _effectiveStats = Snapshot(stats);
         _baseStats = Snapshot(baseStats ?? stats);
         _baseResourceValues = Snapshot(baseResourceValues);
+        RuntimeActorNumericDomain.RequireValidStatValues(
+            _baseStats,
+            baseStats is null ? nameof(stats) : nameof(baseStats));
+        RuntimeActorNumericDomain.RequireValidStatValues(_effectiveStats, nameof(stats));
+        RuntimeActorNumericDomain.RequireValidBaseResourceValues(
+            _baseResourceValues,
+            nameof(baseResourceValues));
         _skillIds = new HashSet<ContentId>(skillIds ?? []);
         _capabilityIds = new HashSet<ContentId>(capabilityIds ?? []);
         Skills = skillState ?? new RuntimeSkillStateSnapshot(_skillIds, _skillIds);
@@ -848,11 +855,19 @@ public sealed class RuntimeActorState
     {
         ArgumentNullException.ThrowIfNull(progression);
         ArgumentNullException.ThrowIfNull(stats);
+        IReadOnlyDictionary<ContentId, decimal> nextBaseStats = Snapshot(stats.BaseStats);
+        IReadOnlyDictionary<ContentId, decimal> nextEffectiveStats = Snapshot(stats.EffectiveStats);
+        IReadOnlyDictionary<ContentId, decimal> nextBaseResourceValues = Snapshot(baseResourceValues);
+        RuntimeActorNumericDomain.RequireValidStatValues(nextBaseStats, nameof(stats));
+        RuntimeActorNumericDomain.RequireValidStatValues(nextEffectiveStats, nameof(stats));
+        RuntimeActorNumericDomain.RequireValidBaseResourceValues(
+            nextBaseResourceValues,
+            nameof(baseResourceValues));
         ReplaceResources(resources);
         Progression = progression;
-        _baseStats = Snapshot(stats.BaseStats);
-        _effectiveStats = Snapshot(stats.EffectiveStats);
-        _baseResourceValues = Snapshot(baseResourceValues);
+        _baseStats = nextBaseStats;
+        _effectiveStats = nextEffectiveStats;
+        _baseResourceValues = nextBaseResourceValues;
     }
 
     internal void ReplaceResources(IEnumerable<RuntimeResourceSnapshot> resources)

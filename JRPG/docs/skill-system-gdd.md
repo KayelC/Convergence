@@ -512,6 +512,8 @@ Active skills execute through the serializer-neutral `ISkillExecutor` boundary. 
 
 `BattleActorState` is the clean runtime state used by this pipeline. It owns typed resources, immutable base stats and identity sets, the Track 7 defense profile, and separate active stores for ailments, stat stages, charges, shields, affinity overrides, other statuses, and analysis discoveries. It is intentionally independent from the legacy console actor. A host adapter may eventually construct this state from its own scene or entity model, but the framework does not require that host model to inherit from or expose `BattleActorState`.
 
+Runtime actor snapshots use one contract-only numeric domain. Base and effective stats are nonnegative decimal values no greater than `Int32.MaxValue`; this permits fractional composition while guaranteeing every integer-consuming runtime policy has a safe representation. Base-resource values are nonnegative decimals and have no framework-authored balance maximum. Untrusted snapshots are diagnosed rather than normalized: invalid stat or base-resource entries prevent restore, while accepted extreme values are handled with cap-first or saturating arithmetic by standard stat, resource-growth, and natural-recovery policies.
+
 ### Execution Sequence
 
 An active skill follows one deterministic transaction:
@@ -673,3 +675,4 @@ Effect results may contain immutable host-action request IDs. These IDs report a
 33. Item consumption is a returned decision based on meaningful success; framework execution never mutates host inventory.
 34. Field execution omits battle metadata, and battle-only conditions evaluate false when that metadata is absent.
 35. Host-action request IDs report transitions such as dungeon exit without introducing dungeon or engine APIs into the framework.
+36. Runtime actor restore rejects negative or integer-conversion-unsafe stats and negative base resources; balance ceilings remain policy-owned.

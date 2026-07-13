@@ -67,7 +67,10 @@ public enum RuntimeSaveValidationCode
     EquippedEquipmentNotOwned,
     EquipmentSlotMismatch,
     EquipmentAssignedToMultipleActors,
-    ActorStatStageOutOfRange
+    ActorStatStageOutOfRange,
+    ActorBaseStatOutOfRange,
+    ActorEffectiveStatOutOfRange,
+    ActorBaseResourceValueOutOfRange
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -507,6 +510,9 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveActivation => RuntimeSaveValidationCode.DuplicatePassiveActivation,
             RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded => RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded,
             RuntimeActorSnapshotIntegrityCode.StatStageOutOfRange => RuntimeSaveValidationCode.ActorStatStageOutOfRange,
+            RuntimeActorSnapshotIntegrityCode.BaseStatOutOfRange => RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
+            RuntimeActorSnapshotIntegrityCode.EffectiveStatOutOfRange => RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
+            RuntimeActorSnapshotIntegrityCode.BaseResourceValueOutOfRange => RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,
             _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown actor snapshot integrity code.")
         };
 

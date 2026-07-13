@@ -119,6 +119,73 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(70, hp.Current);
     }
 
+    [Fact]
+    public void StandardPolicies_SaturateBoundaryArithmeticInsteadOfThrowing()
+    {
+        decimal maximumStat = RuntimeActorNumericDomain.MaximumStatValue;
+        var extremeConfig = new StandardStatPolicyConfig(
+            statCap: int.MaxValue,
+            buffMultiplier: decimal.MaxValue,
+            activeFormWeights:
+            [
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Strength,
+                    decimal.MaxValue)
+            ]);
+        var stats = new StandardStatResolutionPolicy(extremeConfig);
+
+        StatResolutionResult stat = stats.Resolve(new StatResolutionRequest(
+            StandardProgressionIds.WildCard,
+            StandardProgressionIds.Strength,
+            BaseStats(maximumStat),
+            ActiveFormStats(maximumStat),
+            equipmentStatModifiers: BaseStats(maximumStat),
+            statStages: [new RuntimeStatStageSnapshot(StandardProgressionIds.Attack, 1)]));
+        ResourceRecalculationResult resources = _resources.Recalculate(new ResourceRecalculationRequest(
+            [
+                new RuntimeResourceSnapshot(StandardProgressionIds.Hp, decimal.MaxValue, decimal.MaxValue),
+                new RuntimeResourceSnapshot(StandardProgressionIds.Sp, decimal.MaxValue, decimal.MaxValue)
+            ],
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, decimal.MaxValue),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, decimal.MaxValue)
+            ],
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, maximumStat),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, maximumStat)
+            ]));
+
+        Assert.Equal(decimal.MaxValue, stat.RawValue);
+        Assert.Equal(int.MaxValue, stat.CappedValue);
+        Assert.Equal(int.MaxValue, stat.FinalValue);
+        Assert.Equal(666m, resources.GetRequired(StandardProgressionIds.Hp).Maximum);
+        Assert.Equal(333m, resources.GetRequired(StandardProgressionIds.Sp).Maximum);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(2147483648d)]
+    public void ResourcePolicy_RejectsStatsOutsideTheRuntimeNumericDomain(double value)
+    {
+        decimal stat = Convert.ToDecimal(value);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => _resources.Recalculate(
+            new ResourceRecalculationRequest(
+                [],
+                [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 1m)],
+                [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, stat)])));
+    }
+
+    [Fact]
+    public void ResourcePolicy_RejectsNegativeBaseResourcesExplicitly()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => _resources.Recalculate(
+            new ResourceRecalculationRequest(
+                [],
+                [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, -1m)],
+                [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 1m)])));
+    }
+
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 12)]

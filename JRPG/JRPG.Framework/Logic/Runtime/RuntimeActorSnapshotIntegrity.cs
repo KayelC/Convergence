@@ -25,7 +25,10 @@ internal enum RuntimeActorSnapshotIntegrityCode
     PassiveSkillStateNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
-    StatStageOutOfRange
+    StatStageOutOfRange,
+    BaseStatOutOfRange,
+    EffectiveStatOutOfRange,
+    BaseResourceValueOutOfRange
 }
 
 internal sealed record RuntimeActorSnapshotIntegrityDiagnostic(
@@ -52,6 +55,19 @@ internal static class RuntimeActorSnapshotIntegrity
             "resource",
             key => key,
             diagnostics);
+        ValidateStatValues(
+            snapshot.Stats.BaseStats,
+            RuntimeActorSnapshotIntegrityCode.BaseStatOutOfRange,
+            "$.stats.baseStats",
+            "Base stat",
+            diagnostics);
+        ValidateStatValues(
+            snapshot.Stats.EffectiveStats,
+            RuntimeActorSnapshotIntegrityCode.EffectiveStatOutOfRange,
+            "$.stats.effectiveStats",
+            "Effective stat",
+            diagnostics);
+        ValidateBaseResourceValues(snapshot.BaseResourceValues, diagnostics);
 
         ValidateUnique(
             snapshot.Skills.LearnedSkillIds,
@@ -194,6 +210,48 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidatePassives(snapshot.BattleActivations, loadedPassiveSkillIds, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
+    }
+
+    private static void ValidateStatValues(
+        IReadOnlyDictionary<ContentId, decimal> values,
+        RuntimeActorSnapshotIntegrityCode code,
+        string path,
+        string label,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        foreach ((ContentId statId, decimal value) in values)
+        {
+            if (RuntimeActorNumericDomain.IsValidStatValue(value))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                code,
+                $"{label} '{statId}' must be between {RuntimeActorNumericDomain.MinimumStatValue} and " +
+                $"{RuntimeActorNumericDomain.MaximumStatValue} inclusive.",
+                $"{path}.{statId}",
+                statId));
+        }
+    }
+
+    private static void ValidateBaseResourceValues(
+        IReadOnlyDictionary<ContentId, decimal> values,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        foreach ((ContentId resourceId, decimal value) in values)
+        {
+            if (RuntimeActorNumericDomain.IsValidBaseResourceValue(value))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                RuntimeActorSnapshotIntegrityCode.BaseResourceValueOutOfRange,
+                $"Base resource '{resourceId}' cannot be negative.",
+                $"$.baseResourceValues.{resourceId}",
+                resourceId));
+        }
     }
 
     private static void ValidateAnalysis(

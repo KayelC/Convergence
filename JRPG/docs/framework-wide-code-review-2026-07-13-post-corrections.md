@@ -6,6 +6,8 @@ Branch: `track-12-recovery`
 
 Reviewed commit: `2830a3acf42c5f16ef070f9cd369471da757ccae` (`Review-Whole-12`)
 
+Latest committed correction baseline: `d947b78` (`Review-Whole-14`); the M2 correction described below is in the current working tree.
+
 ## Review Rule
 
 This is a fresh review of the current source and tests. Earlier review reports and their summaries were deliberately excluded while findings were formed. They were not used as a checklist or as evidence that a correction worked.
@@ -16,11 +18,11 @@ The review covered the framework project structure and public boundaries, defini
 
 **Phase 8 should not begin yet.**
 
-The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect and M1 target-authority defect identified by this review were corrected in the working tree on 2026-07-13. Two medium-severity authority/boundary defects remain. They sit in public framework paths rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect, M1 target-authority defect, and M2 runtime numeric-boundary defect identified by this review were corrected on 2026-07-13. One medium-severity authority defect remains. It sits in a public framework path rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
 
 Recommended gate:
 
-1. Correct M2 before Phase 8. H1 and M1 are complete.
+1. H1, M1, and M2 are complete.
 2. Resolve M3 either by making the convenience runner use the canonical lifecycle or by explicitly reducing/removing its public authority.
 3. Correct the low findings before publishing the framework package; they do not need to block design discussion.
 
@@ -58,7 +60,7 @@ An authored instant or phase-limited status can remain active beyond its promise
 - The Training Annex lifecycle port and `AutomatedBattleRunner` now consume encounter phase-end and battle-end duration boundaries.
 - Focused regressions cover all five duration kinds across every state family, nested ordered actions, and a complete automated encounter boundary.
 
-H1 is resolved in the current working tree. M1, M2, and M3 remain open, so this correction alone does not open the Phase 8 gate.
+H1 is resolved. M1 and M2 were subsequently corrected; M3 remains open, so the Phase 8 gate is still closed.
 
 **H1 verification**
 
@@ -98,7 +100,7 @@ Resolve targets once into an immutable, request-bound assessment token and execu
 - Execution rebinds the prepared IDs into the staged actor transaction. Skill, item, basic-attack, analyze, escape/direct-effect, and automated-selector paths no longer invoke random selection during execution.
 - The Training Annex battle and field adapters now execute the same assessment they present, and cancellation before execution leaves the token and item inventory untouched.
 
-M1 is resolved in the current working tree. M2 and M3 remain open, so the Phase 8 gate remains closed.
+M1 is resolved. M2 was subsequently corrected; M3 remains open, so the Phase 8 gate remains closed.
 
 **M1 verification**
 
@@ -112,7 +114,7 @@ M1 is resolved in the current working tree. M2 and M3 remain open, so the Phase 
 - Target-resolution search: resolver calls remain only in assessment methods; prepared execution consumes recorded IDs.
 - `git diff --check`: passed. `Data/Jsons`: unchanged.
 
-### M2. Runtime stat and base-resource numeric domains are not protected at the restore boundary
+### M2. Runtime stat and base-resource numeric domains are not protected at the restore boundary (corrected 2026-07-13)
 
 **Evidence**
 
@@ -131,6 +133,29 @@ A host-created or restored snapshot can pass `IRuntimeSaveValidator`, restore su
 **Required correction**
 
 Define contract-only numeric invariants at the shared runtime snapshot boundary. At minimum, reject conversion-unsafe stat values and negative base resources using stable diagnostics before restore. Add hostile snapshot tests proving validation aggregates the errors and that standard policies cannot throw after `RequireValidSnapshot()` succeeds.
+
+**Resolution**
+
+- `RuntimeActorNumericDomain` defines one public representation-safety contract: base/effective stats are `0..Int32.MaxValue`, while base-resource values are nonnegative and retain the full positive decimal range.
+- `RuntimeActorSnapshotIntegrity` applies that contract to every stat and base-resource entry. `RuntimeSaveValidator` maps failures to separate stable base-stat, effective-stat, and base-resource codes with precise actor paths and preserves deterministic aggregation order.
+- `RuntimeActorState.Restore` rejects invalid snapshots through the same integrity service. Direct actor construction and progression replacement enforce the identical domain before publishing state.
+- `StandardStatResolutionPolicy` uses saturating decimal composition and integer conversion. `StandardResourceGrowthPolicy` validates direct requests and calculates against its configured cap before potentially overflowing addition or multiplication. Natural ailment recovery clamps/saturates its probability arithmetic before integer conversion.
+- Invalid persisted values are rejected rather than silently normalized. Fractional nonnegative stats remain valid, and no balance-specific upper limit was added to base resources.
+
+M2 is resolved in the current working tree. M3 remains open, so the Phase 8 gate remains closed.
+
+**M2 verification**
+
+- Focused persistence, actor-state, progression, and status-lifecycle tests: **87 passed, 0 failed, 0 skipped**.
+- Full solution tests: **1,050 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**; the warning count is unchanged and remains isolated to compatibility-host nullable debt.
+- Framework package: created successfully.
+- Clean battle, field, save, and Training Annex demos: all exited `0`; battle outcomes remained victories and save validation remained at zero diagnostics.
+- Hostile snapshot regression: six independent base-stat, effective-stat, and base-resource faults are returned in one ordered diagnostic result; both `RequireValidSnapshot()` and direct restore reject the snapshot.
+- Accepted-boundary regression: `Int32.MaxValue` stats and `Decimal.MaxValue` base resources validate and restore, then complete standard stat/resource and natural-recovery processing without arithmetic exceptions.
+- Framework host/legacy public-boundary tests remain green; refined runtime-source searches found no prohibited host/legacy references.
+- `git diff --check`: passed. `Data/Jsons`: unchanged.
 
 ### M3. `AutomatedBattleRunner` bypasses the canonical status lifecycle and bound turn-economy policy
 
@@ -174,14 +199,14 @@ The following conclusions come from direct source inspection rather than prior r
 - The synchronous encounter wrapper avoids capturing a host synchronization context, and asynchronous framework paths consistently avoid context capture.
 - Break is represented in executable actor state, participates in affinity resolution, ticks with turn durations, persists through snapshots, and is included in cleanup.
 - Party/stock transitions enforce role, capacity, ownership, and global identity invariants while retaining intentional active-and-owned demon overlap.
-- Persistence validates content-pack versions, actor/content references, party/stock roles and capacities, equipment ownership, knowledge uniqueness, and restored catalog provenance.
+- Persistence validates content-pack versions, actor/content references, party/stock roles and capacities, equipment ownership, knowledge uniqueness, restored catalog provenance, and actor stat/base-resource numeric domains.
 - Fusion planning, preview, and transaction authority use typed validated selections and immutable snapshots. Rank-offset results are parent-order independent.
 - Compendium registration, familiar knowledge import, recall pricing policy, and duplicate knowledge handling are framework-owned and typed.
 - No production framework `TODO`, `FIXME`, or `NotImplementedException` markers were found.
 
 ## Quality Gate Results
 
-- Full test suite: **1,027 passed, 0 failed, 0 skipped**.
+- Full test suite after the M2 correction: **1,050 passed, 0 failed, 0 skipped**.
 - `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
 - Full solution nonincremental build: **98 warnings, 0 errors**. The warnings are compatibility-host/test nullable debt, not framework compilation warnings.
 - Framework package: produced `JRPG.Framework.1.0.0.nupkg` successfully. NuGet warns that the package has no readme; it should not be treated as publication-ready metadata yet.
@@ -190,17 +215,17 @@ The following conclusions come from direct source inspection rather than prior r
 - `--clean-save-demo`: exit `0`, save contract version 6 restored with zero diagnostics.
 - `--clean-training-annex-demo`: exit `0`, original-content battle victory, rewards applied, save validated.
 - Framework forbidden-reference search: no prohibited production references found.
-- `git diff --check`: passed before this report was added.
+- `git diff --check`: passed with the M2 implementation and report update present.
 - `Data/Jsons`: unchanged.
-- Branch was clean and synchronized with `origin/track-12-recovery` at review start.
+- The committed baseline was synchronized with `origin/track-12-recovery`; the current working tree contains the reviewed M2 correction and has not been committed by this task.
 
 ## Phase 8 Readiness Gate
 
 The corrected framework is a credible foundation, but **it is not ready to enter Phase 8 as a closed runtime baseline today**. The immediate correction order should be:
 
 1. ~~Complete duration lifecycle authority (H1).~~ Corrected on 2026-07-13; final gate verification is recorded with the implementation.
-2. Make action assessment and execution share one resolved target set (M1).
-3. Enforce runtime numeric domains before restore/policy execution (M2).
+2. ~~Make action assessment and execution share one resolved target set (M1).~~ Corrected on 2026-07-13.
+3. ~~Enforce runtime numeric domains before restore/policy execution (M2).~~ Corrected on 2026-07-13.
 4. Unify or demote the automated battle convenience path (M3).
 5. Address L1-L3, rerun this gate, and only then begin Phase 8-36 host interchangeability.
 

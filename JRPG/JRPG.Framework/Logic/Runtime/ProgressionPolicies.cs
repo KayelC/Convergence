@@ -178,7 +178,7 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
         ArgumentNullException.ThrowIfNull(request);
 
         decimal raw = ResolveRawValue(request);
-        int capped = Math.Min(_config.StatCap, (int)Math.Floor(raw));
+        int capped = SaturatingFloorToInt(Math.Min(_config.StatCap, Math.Floor(raw)));
         decimal final = capped;
 
         foreach (RuntimeStatStageSnapshot stage in request.StatStages)
@@ -188,10 +188,12 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
                 continue;
             }
 
-            final *= stage.Stage > 0 ? _config.BuffMultiplier : _config.DebuffMultiplier;
+            final = SaturatingMultiply(
+                final,
+                stage.Stage > 0 ? _config.BuffMultiplier : _config.DebuffMultiplier);
         }
 
-        return new StatResolutionResult(request.StatId, raw, capped, (int)Math.Floor(final));
+        return new StatResolutionResult(request.StatId, raw, capped, SaturatingFloorToInt(final));
     }
 
     private decimal ResolveRawValue(StatResolutionRequest request)
@@ -201,8 +203,9 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
             return ValueOrZero(request.ActiveFormStats, request.StatId);
         }
 
-        decimal baseValue = ValueOrZero(request.BaseStats, request.StatId)
-            + ValueOrZero(request.EquipmentStatModifiers, request.StatId);
+        decimal baseValue = SaturatingAdd(
+            ValueOrZero(request.BaseStats, request.StatId),
+            ValueOrZero(request.EquipmentStatModifiers, request.StatId));
 
         if (request.ActorKindId == StandardProgressionIds.Human ||
             request.ActorKindId == StandardProgressionIds.Operator ||
@@ -214,7 +217,9 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
         decimal weight = _config.ActiveFormWeights.TryGetValue(request.StatId, out decimal configured)
             ? configured
             : 0m;
-        return baseValue + (ValueOrZero(request.ActiveFormStats, request.StatId) * weight);
+        return SaturatingAdd(
+            baseValue,
+            SaturatingMultiply(ValueOrZero(request.ActiveFormStats, request.StatId), weight));
     }
 
     private bool AffectsStat(ContentId trackId, ContentId statId) =>
@@ -222,6 +227,45 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
 
     private static decimal ValueOrZero(IReadOnlyDictionary<ContentId, decimal> values, ContentId id) =>
         values.TryGetValue(id, out decimal value) ? value : 0m;
+
+    private static decimal SaturatingAdd(decimal left, decimal right)
+    {
+        try
+        {
+            return checked(left + right);
+        }
+        catch (OverflowException)
+        {
+            return left >= 0m && right >= 0m ? decimal.MaxValue : decimal.MinValue;
+        }
+    }
+
+    private static decimal SaturatingMultiply(decimal left, decimal right)
+    {
+        try
+        {
+            return checked(left * right);
+        }
+        catch (OverflowException)
+        {
+            return Math.Sign(left) == Math.Sign(right) ? decimal.MaxValue : decimal.MinValue;
+        }
+    }
+
+    private static int SaturatingFloorToInt(decimal value)
+    {
+        decimal floored = Math.Floor(value);
+        if (floored >= int.MaxValue)
+        {
+            return int.MaxValue;
+        }
+        if (floored <= int.MinValue)
+        {
+            return int.MinValue;
+        }
+
+        return decimal.ToInt32(floored);
+    }
 }
 
 public sealed record ResourceRecalculationRequest
@@ -327,7 +371,27 @@ public sealed class StandardResourceGrowthPolicy : IResourceGrowthPolicy
         decimal statValue = request.EffectiveStats.TryGetValue(statId, out decimal configuredStat)
             ? configuredStat
             : 0m;
-        decimal newMaximum = Math.Min(maximumCap, baseValue + (statValue * statMultiplier));
+        if (!RuntimeActorNumericDomain.IsValidBaseResourceValue(baseValue))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                baseValue,
+                $"Base resource '{resourceId}' cannot be negative.");
+        }
+        if (!RuntimeActorNumericDomain.IsValidStatValue(statValue))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                statValue,
+                $"Stat '{statId}' must be between {RuntimeActorNumericDomain.MinimumStatValue} and " +
+                $"{RuntimeActorNumericDomain.MaximumStatValue} inclusive.");
+        }
+
+        decimal newMaximum = CalculateCappedMaximum(
+            baseValue,
+            statValue,
+            statMultiplier,
+            maximumCap);
         decimal newCurrent = request.AdjustmentMode switch
         {
             ResourceCurrentAdjustmentMode.LevelUpDelta => oldCurrent + (newMaximum - oldMaximum),
@@ -336,6 +400,31 @@ public sealed class StandardResourceGrowthPolicy : IResourceGrowthPolicy
 
         newCurrent = Math.Clamp(newCurrent, 0m, newMaximum);
         return new RuntimeResourceSnapshot(resourceId, newCurrent, newMaximum);
+    }
+
+    private static decimal CalculateCappedMaximum(
+        decimal baseValue,
+        decimal statValue,
+        int statMultiplier,
+        int maximumCap)
+    {
+        decimal cap = maximumCap;
+        if (baseValue >= cap)
+        {
+            return cap;
+        }
+        if (statValue == 0m)
+        {
+            return baseValue;
+        }
+
+        decimal remaining = cap - baseValue;
+        if (statValue >= remaining / statMultiplier)
+        {
+            return cap;
+        }
+
+        return Math.Min(cap, baseValue + (statValue * statMultiplier));
     }
 }
 

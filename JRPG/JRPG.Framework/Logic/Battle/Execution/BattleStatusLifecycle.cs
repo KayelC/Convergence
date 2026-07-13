@@ -824,7 +824,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             }
 
             decimal stat = actor.Stats.GetValueOrDefault(natural.StatId);
-            int chance = Math.Clamp((int)(natural.BaseChance + stat * natural.StatMultiplier), 0, 100);
+            int chance = ResolveNaturalRecoveryChance(natural, stat);
             if (!Roll(chance))
             {
                 continue;
@@ -841,6 +841,27 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     chance,
                     "natural"));
             }
+        }
+    }
+
+    private static int ResolveNaturalRecoveryChance(
+        NaturalAilmentRecoveryDefinition recovery,
+        decimal stat)
+    {
+        decimal baseChance = Math.Clamp(recovery.BaseChance, 0m, 100m);
+        if (baseChance >= 100m || stat <= 0m || recovery.StatMultiplier <= 0m)
+        {
+            return decimal.ToInt32(Math.Floor(baseChance));
+        }
+
+        try
+        {
+            decimal chance = checked(baseChance + checked(stat * recovery.StatMultiplier));
+            return decimal.ToInt32(Math.Clamp(Math.Floor(chance), 0m, 100m));
+        }
+        catch (OverflowException)
+        {
+            return 100;
         }
     }
 
