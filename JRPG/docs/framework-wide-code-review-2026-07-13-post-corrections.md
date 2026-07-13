@@ -6,7 +6,7 @@ Branch: `track-12-recovery`
 
 Reviewed commit: `2830a3acf42c5f16ef070f9cd369471da757ccae` (`Review-Whole-12`)
 
-Latest committed correction baseline: `2181b7c` (`Review-Whole-15`); the M3 correction described below is in the current working tree.
+Latest committed correction baseline: `be8172f` (`Review-Whole-16`); the L1 correction described below is in the current working tree.
 
 ## Review Rule
 
@@ -18,12 +18,12 @@ The review covered the framework project structure and public boundaries, defini
 
 **Phase 8 should not begin yet.**
 
-The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect and M1-M3 authority/boundary defects identified by this review were corrected on 2026-07-13. No high- or medium-severity finding from this review remains open. The three low-severity public-boundary findings remain part of the gate established by this report and should be resolved before the runtime baseline is closed for Phase 8.
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect, M1-M3 authority/boundary defects, and L1 encounter-identity defect identified by this review were corrected on 2026-07-13. No high- or medium-severity finding remains open. The two remaining low-severity public-boundary findings remain part of the gate established by this report and should be resolved before the runtime baseline is closed for Phase 8.
 
 Recommended gate:
 
-1. H1 and M1-M3 are complete.
-2. Correct L1-L3 before closing the runtime baseline for Phase 8 or publishing the framework package.
+1. H1, M1-M3, and L1 are complete.
+2. Correct L2-L3 before closing the runtime baseline for Phase 8 or publishing the framework package.
 3. The remaining findings do not block design discussion, but no new host layer should treat the current package as final until the gate is rerun.
 
 ## Findings
@@ -60,7 +60,7 @@ An authored instant or phase-limited status can remain active beyond its promise
 - The Training Annex lifecycle port and `AutomatedBattleRunner` now consume encounter phase-end and battle-end duration boundaries.
 - Focused regressions cover all five duration kinds across every state family, nested ordered actions, and a complete automated encounter boundary.
 
-H1 is resolved. M1-M3 were subsequently corrected; L1-L3 keep the Phase 8 gate open.
+H1 is resolved. M1-M3 and L1 were subsequently corrected; L2-L3 keep the Phase 8 gate open.
 
 **H1 verification**
 
@@ -100,7 +100,7 @@ Resolve targets once into an immutable, request-bound assessment token and execu
 - Execution rebinds the prepared IDs into the staged actor transaction. Skill, item, basic-attack, analyze, escape/direct-effect, and automated-selector paths no longer invoke random selection during execution.
 - The Training Annex battle and field adapters now execute the same assessment they present, and cancellation before execution leaves the token and item inventory untouched.
 
-M1 is resolved. M2 and M3 were subsequently corrected; L1-L3 keep the Phase 8 gate open.
+M1 is resolved. M2, M3, and L1 were subsequently corrected; L2-L3 keep the Phase 8 gate open.
 
 **M1 verification**
 
@@ -142,7 +142,7 @@ Define contract-only numeric invariants at the shared runtime snapshot boundary.
 - `StandardStatResolutionPolicy` uses saturating decimal composition and integer conversion. `StandardResourceGrowthPolicy` validates direct requests and calculates against its configured cap before potentially overflowing addition or multiplication. Natural ailment recovery clamps/saturates its probability arithmetic before integer conversion.
 - Invalid persisted values are rejected rather than silently normalized. Fractional nonnegative stats remain valid, and no balance-specific upper limit was added to base resources.
 
-M2 is resolved. M3 was subsequently corrected; L1-L3 keep the Phase 8 gate open.
+M2 is resolved. M3 and L1 were subsequently corrected; L2-L3 keep the Phase 8 gate open.
 
 **M2 verification**
 
@@ -182,7 +182,7 @@ Either inject the canonical lifecycle and turn-economy factory into `AutomatedBa
 - Clean battle, Training Annex, and Godot-shaped composition roots now provide lifecycle and turn-economy authority explicitly. Training Annex reuses the `standard_press_turn` binding it already validated instead of discarding it.
 - A parity regression runs equivalent guarded, ailment-bearing encounters through `AutomatedBattleRunner` and direct `BattleEncounterRunner` composition. Both paths clear guard, apply the same restriction and turn-end damage, tick the same authored duration, perform the same battle cleanup, create the same number of economies, and expose the same Press Turn state sequence.
 
-M3 is resolved. No high- or medium-severity finding remains; L1-L3 keep the Phase 8 gate open.
+M3 is resolved. L1 was subsequently corrected; L2-L3 keep the Phase 8 gate open.
 
 **M3 verification**
 
@@ -195,9 +195,42 @@ M3 is resolved. No high- or medium-severity finding remains; L1-L3 keep the Phas
 - Framework host/legacy forbidden-reference search: no prohibited production references found. The automated runner contains no direct Press Turn, no-op lifecycle, private lifecycle, or hardcoded phase-progress construction.
 - `git diff --check`: passed. `Data/Jsons`: unchanged.
 
-### L1. Encounter requests do not reject duplicate runtime instance IDs
+### L1. Encounter requests do not reject duplicate runtime instance IDs (corrected 2026-07-13)
 
-`BattleEncounterRequest` snapshots participants but does not enforce unique `RuntimeInstanceId` values in `JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs:95`; `RunAsync` checks only round limit and nonempty participants at line 440. Events and target identity become ambiguous, and `AutomatedBattleTurnHandler` later uses `Single` by instance ID at `AutomatedBattleRunner.cs:513`. Reject duplicate participant identities at the encounter boundary with a typed fault/diagnostic and add a regression test.
+**Evidence**
+
+- `BattleEncounterRequest` snapshots participants but does not itself enforce unique `RuntimeInstanceId` values in `JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs:101`.
+- The authoritative `RunAsync` boundary previously checked only round limit and nonempty participants before invoking initiative.
+- Events and target identity become ambiguous when two participants share one runtime ID, and `AutomatedBattleTurnHandler` resolves its catalog actor with `Single` by instance ID at `AutomatedBattleRunner.cs:467`.
+
+**Impact**
+
+A malformed host request could enter encounter startup with ambiguous actor identity. Direct events could identify more than one participant, and the automated path could escape its typed result boundary with an `InvalidOperationException` when actor lookup found multiple matches.
+
+**Required correction**
+
+Reject every duplicate participant identity at the authoritative encounter boundary before initiative or mutation, return a stable typed fault, preserve deterministic diagnostics, and prove direct and automated callers cannot reach ambiguous lookup behavior.
+
+**Resolution**
+
+- `BattleEncounterRunner.RunAsync` now groups the immutable participant snapshot by `RuntimeInstanceId` before invoking any encounter service. Every duplicate group is reported once in first-occurrence order.
+- Invalid requests publish only `BattleFaulted` and `BattleEnded`, then return `BattleEncounterOutcome.Faulted`. Initiative, turn-economy construction, synchronization, passive reset, lifecycle, completion, and command execution do not run.
+- `BattleEncounterFaultCode.DuplicateParticipantInstanceId` is carried by both the fault event and `BattleEncounterResult`; hosts no longer need to parse the diagnostic message.
+- `AutomatedBattleRunner` preserves the same fault code on `AutomatedBattleResult` and its projected `BattleRuntimeEvent`, so malformed automated requests fail before `AutomatedBattleTurnHandler` performs actor lookup.
+- Existing valid encounter behavior and the request's defensive participant snapshot remain unchanged.
+
+L1 is resolved. L2-L3 keep the Phase 8 gate open.
+
+**L1 verification**
+
+- Focused direct and catalog battle runtime suites: **59 passed, 0 failed, 0 skipped**.
+- Full solution tests: **1,056 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**; warnings remain isolated to compatibility-host nullable debt.
+- Framework package: `JRPG.Framework.1.0.0.nupkg` created successfully from the corrected framework.
+- Clean battle, field, save, and Training Annex demos: all exited `0`; both battle demos ended in player-team victories and both save validations returned zero diagnostics.
+- Framework host/legacy forbidden-reference search: no prohibited production references found; public API boundary tests remain green.
+- `git diff --check`: passed. `Data/Jsons`: unchanged.
 
 ### L2. `EffectExecutionResult` collection immutability can be bypassed with record cloning
 
@@ -227,7 +260,7 @@ The following conclusions come from direct source inspection rather than prior r
 
 ## Quality Gate Results
 
-- Full test suite after the M3 correction: **1,054 passed, 0 failed, 0 skipped**.
+- Full test suite after the L1 correction: **1,056 passed, 0 failed, 0 skipped**.
 - `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
 - Full solution nonincremental build: **98 warnings, 0 errors**. The warnings are compatibility-host/test nullable debt, not framework compilation warnings.
 - Framework package: produced `JRPG.Framework.1.0.0.nupkg` successfully. NuGet warns that the package has no readme; it should not be treated as publication-ready metadata yet.
@@ -236,9 +269,9 @@ The following conclusions come from direct source inspection rather than prior r
 - `--clean-save-demo`: exit `0`, save contract version 6 restored with zero diagnostics.
 - `--clean-training-annex-demo`: exit `0`, original-content battle victory, rewards applied, save validated.
 - Framework forbidden-reference search: no prohibited production references found.
-- `git diff --check`: passed with the M3 implementation and report update present.
+- `git diff --check`: passed with the L1 implementation and report update present.
 - `Data/Jsons`: unchanged.
-- The committed baseline was synchronized with `origin/track-12-recovery`; the current working tree contains the reviewed M3 correction and has not been committed by this task.
+- The committed baseline was synchronized with `origin/track-12-recovery`; the current working tree contains the reviewed L1 correction and has not been committed by this task.
 
 ## Phase 8 Readiness Gate
 
@@ -248,6 +281,7 @@ The corrected framework is a credible foundation, but **it is not ready to enter
 2. ~~Make action assessment and execution share one resolved target set (M1).~~ Corrected on 2026-07-13.
 3. ~~Enforce runtime numeric domains before restore/policy execution (M2).~~ Corrected on 2026-07-13.
 4. ~~Unify the automated battle convenience path with canonical lifecycle and turn economy (M3).~~ Corrected on 2026-07-13.
-5. Address L1-L3, rerun this gate, and only then begin Phase 8-36 host interchangeability.
+5. ~~Reject duplicate encounter participant identities before encounter startup (L1).~~ Corrected on 2026-07-13.
+6. Address L2-L3, rerun this gate, and only then begin Phase 8-36 host interchangeability.
 
 This conclusion does not invalidate the previous correction work. That work fixed substantial defects and is present in the current source. The remaining findings are narrower, but they cross public contracts and should be resolved before presentation interchangeability becomes the next layer built on top.

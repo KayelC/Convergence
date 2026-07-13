@@ -254,7 +254,10 @@ public sealed record BattleRuntimeEvent(
     RuntimeInstanceId? TargetId = null,
     ContentId? SkillId = null,
     decimal? Value = null,
-    BattleTurnEconomySnapshot? TurnEconomyState = null);
+    BattleTurnEconomySnapshot? TurnEconomyState = null)
+{
+    public BattleEncounterFaultCode? FaultCode { get; internal init; }
+}
 
 public sealed record BattleActorFinalSnapshot
 {
@@ -305,13 +308,15 @@ public sealed record AutomatedBattleResult
         ContentId? winningTeamId,
         IEnumerable<BattleEncounterParticipantSnapshot> participants,
         IEnumerable<BattleRuntimeEvent> events,
-        string? faultMessage = null)
+        string? faultMessage = null,
+        BattleEncounterFaultCode? faultCode = null)
     {
         Outcome = outcome;
         WinningTeamId = winningTeamId;
         FinalActors = Array.AsReadOnly(participants.Select(actor => new BattleActorFinalSnapshot(actor)).ToArray());
         Events = Array.AsReadOnly(events.ToArray());
         FaultMessage = faultMessage;
+        FaultCode = faultCode;
     }
 
     public AutomatedBattleOutcome Outcome { get; }
@@ -319,6 +324,7 @@ public sealed record AutomatedBattleResult
     public IReadOnlyList<BattleActorFinalSnapshot> FinalActors { get; }
     public IReadOnlyList<BattleRuntimeEvent> Events { get; }
     public string? FaultMessage { get; }
+    public BattleEncounterFaultCode? FaultCode { get; }
 }
 
 public interface IAutomatedBattleRunner
@@ -383,7 +389,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             result.WinningTeamId,
             result.Participants,
             ToRuntimeEvents(result.Events),
-            result.FaultMessage);
+            result.FaultMessage,
+            result.FaultCode);
     }
 
     private static IReadOnlyList<BattleRuntimeEvent> ToRuntimeEvents(IEnumerable<BattleEncounterEvent> events)
@@ -418,7 +425,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 continue;
             }
 
-            mapped.Add(new BattleRuntimeEvent(
+            var runtimeEvent = new BattleRuntimeEvent(
                 mapped.Count + 1,
                 kind.Value,
                 battleEvent.Message,
@@ -426,7 +433,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 battleEvent.TargetId,
                 battleEvent.SourceId,
                 battleEvent.Value,
-                battleEvent.TurnEconomyState));
+                battleEvent.TurnEconomyState)
+            {
+                FaultCode = battleEvent.FaultCode
+            };
+            mapped.Add(runtimeEvent);
         }
 
         return Array.AsReadOnly(mapped.ToArray());

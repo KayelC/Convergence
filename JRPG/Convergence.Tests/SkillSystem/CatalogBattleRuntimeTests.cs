@@ -397,6 +397,45 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_PropagatesDuplicateParticipantFaultBeforeAutomatedActorLookup()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "duplicate_player",
+            "shared_automated_instance",
+            PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "duplicate_enemy",
+            "shared_automated_instance",
+            EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, result.FaultCode);
+        Assert.Contains("shared_automated_instance", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(
+            [BattleRuntimeEventKind.BattleFaulted, BattleRuntimeEventKind.BattleEnded],
+            result.Events.Select(battleEvent => battleEvent.Kind));
+        Assert.Equal(
+            BattleEncounterFaultCode.DuplicateParticipantInstanceId,
+            result.Events[0].FaultCode);
+        Assert.Null(result.Events[1].FaultCode);
+        Assert.Equal(100, player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(100, enemy.State.GetRequiredResource(Id("hp")).Current);
+    }
+
+    [Fact]
     public void Runner_ExecutesTheSelectorsPreparedRandomAssessmentWithoutRerolling()
     {
         GameDataCatalog catalog = LoadDemoCatalog();

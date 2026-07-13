@@ -73,6 +73,73 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public async Task Runner_RejectsDuplicateParticipantInstanceIdsBeforeEncounterPortsOrMutation()
+    {
+        BattleEncounterParticipant firstAlpha = Participant("duplicate_alpha", PlayerTeam);
+        BattleEncounterParticipant firstBeta = Participant("duplicate_beta", EnemyTeam);
+        BattleEncounterParticipant secondAlpha = Participant("duplicate_alpha", EnemyTeam);
+        BattleEncounterParticipant secondBeta = Participant("duplicate_beta", PlayerTeam);
+        BattleEncounterParticipant[] participants =
+        [
+            firstAlpha,
+            firstBeta,
+            secondAlpha,
+            secondBeta
+        ];
+        var initiative = new CountingInitiative(PlayerTeam, EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        var synchronizer = new RecordingSynchronizer();
+        var eventSink = new RecordingEventSink();
+        int economyCreations = 0;
+
+        BattleEncounterResult result = await new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest(participants, Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                initiative,
+                lifecycle,
+                handler,
+                new CompleteAfterTurnsPolicy(1),
+                () =>
+                {
+                    economyCreations++;
+                    return new StandardActionTurnEconomy();
+                },
+                new BattlePhaseProgressPolicy(8, 1),
+                synchronizer,
+                eventSink));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, result.FaultCode);
+        Assert.Equal(
+            "Encounter participant runtime instance IDs must be unique. " +
+            "Duplicates: [duplicate_alpha, duplicate_beta].",
+            result.FaultMessage);
+        Assert.Equal(
+            participants.Select(participant => participant.InstanceId),
+            result.Participants.Select(participant => participant.InstanceId));
+        Assert.Equal(
+            [BattleEncounterEventKind.BattleFaulted, BattleEncounterEventKind.BattleEnded],
+            result.Events.Select(battleEvent => battleEvent.Kind));
+        BattleEncounterEvent fault = result.Events[0];
+        Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, fault.FaultCode);
+        Assert.Null(result.Events[1].FaultCode);
+        Assert.Equal(result.Events, eventSink.Events);
+
+        Assert.Equal(0, initiative.Calls);
+        Assert.Equal(0, economyCreations);
+        Assert.Equal(0, synchronizer.Calls);
+        Assert.Equal(0, lifecycle.BattleStartCalls);
+        Assert.Equal(0, lifecycle.TurnStartCalls);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(0, lifecycle.BattleEndCalls);
+        Assert.Empty(handler.Requests);
+        Assert.All(participants, participant =>
+            Assert.Equal(10, participant.State.GetRequiredResource(Hp).Current));
+    }
+
+    [Fact]
     public void Runner_SynchronousCompatibilityWrapperDoesNotDeadlockSingleThreadedContext()
     {
         BattleEncounterParticipant player = Participant("sync_context_player", PlayerTeam);
@@ -840,6 +907,7 @@ public sealed class BattleEncounterRunnerTests
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
+        public int BattleEndCalls { get; private set; }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
             BattleEncounterLifecycleRequest request,
@@ -880,6 +948,7 @@ public sealed class BattleEncounterRunnerTests
             BattleEncounterOutcome outcome,
             CancellationToken cancellationToken = default)
         {
+            BattleEndCalls++;
             BattleEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
         }

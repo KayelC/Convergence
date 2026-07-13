@@ -60,6 +60,8 @@ Core flow:
 
 `AutomatedBattleRunner` is a convenience composition over this same encounter authority, not a separate battle ruleset. Its caller must supply an `IBattleEncounterLifecyclePort` and `BattleTurnEconomyRuleset`; the framework-provided `BattleStatusEncounterLifecyclePort` connects the full guard, ailment, passive, recovery, duration, and cleanup lifecycle. The convenience runner therefore cannot silently replace authored lifecycle rules or a catalog-bound turn economy with internal defaults.
 
+Every encounter participant must have a unique `RuntimeInstanceId`. A malformed direct or automated request is rejected before initiative or runtime mutation with `BattleEncounterFaultCode.DuplicateParticipantInstanceId`; both the result and fault event carry the same typed reason so hosts do not need to parse diagnostic text.
+
 Important battle concepts:
 
 - Weakness and critical hits convert full icons to blinking icons when available.

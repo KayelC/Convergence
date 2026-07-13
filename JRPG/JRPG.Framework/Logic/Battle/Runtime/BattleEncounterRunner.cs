@@ -22,6 +22,11 @@ public enum BattleEncounterCommandStatus
     Cancelled
 }
 
+public enum BattleEncounterFaultCode
+{
+    DuplicateParticipantInstanceId
+}
+
 public enum BattleEncounterEventKind
 {
     ActorCreated,
@@ -56,7 +61,10 @@ public sealed record BattleEncounterEvent(
     RuntimeInstanceId? TargetId = null,
     ContentId? SourceId = null,
     decimal? Value = null,
-    BattleTurnEconomySnapshot? TurnEconomyState = null);
+    BattleTurnEconomySnapshot? TurnEconomyState = null)
+{
+    public BattleEncounterFaultCode? FaultCode { get; internal init; }
+}
 
 public sealed record BattleEncounterParticipant
 {
@@ -123,7 +131,8 @@ public sealed record BattleEncounterResult
         ContentId? winningTeamId,
         IEnumerable<BattleEncounterParticipant> participants,
         IEnumerable<BattleEncounterEvent> events,
-        string? faultMessage = null)
+        string? faultMessage = null,
+        BattleEncounterFaultCode? faultCode = null)
     {
         Outcome = outcome;
         WinningTeamId = winningTeamId;
@@ -133,6 +142,7 @@ public sealed record BattleEncounterResult
             .ToArray());
         Events = Array.AsReadOnly(events.ToArray());
         FaultMessage = faultMessage;
+        FaultCode = faultCode;
     }
 
     public BattleEncounterOutcome Outcome { get; }
@@ -140,6 +150,7 @@ public sealed record BattleEncounterResult
     public IReadOnlyList<BattleEncounterParticipantSnapshot> Participants { get; }
     public IReadOnlyList<BattleEncounterEvent> Events { get; }
     public string? FaultMessage { get; }
+    public BattleEncounterFaultCode? FaultCode { get; }
 }
 
 public sealed record BattleEncounterInitiativeRequest(IReadOnlyList<BattleEncounterParticipant> Participants);
@@ -465,6 +476,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await services.Events.PublishAsync(battleEvent, cancellationToken).ConfigureAwait(false);
         }
 
+        async ValueTask AddFaultAsync(string message, BattleEncounterFaultCode? faultCode)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var battleEvent = new BattleEncounterEvent(
+                ++sequence,
+                BattleEncounterEventKind.BattleFaulted,
+                message)
+            {
+                FaultCode = faultCode
+            };
+            events.Add(battleEvent);
+            await services.Events.PublishAsync(battleEvent, cancellationToken).ConfigureAwait(false);
+        }
+
         async ValueTask AddTurnEconomyAsync(
             RuntimeInstanceId actor,
             BattleTurnEconomySnapshot state)
@@ -490,6 +515,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 events.Add(sequenced);
                 await services.Events.PublishAsync(sequenced, cancellationToken).ConfigureAwait(false);
             }
+        }
+
+        RuntimeInstanceId[] duplicateParticipantIds = request.Participants
+            .GroupBy(participant => participant.InstanceId)
+            .Where(group => group.Skip(1).Any())
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateParticipantIds.Length > 0)
+        {
+            string duplicates = string.Join(", ", duplicateParticipantIds.Select(id => id.ToString()));
+            return await FailBeforeStartAsync(
+                    $"Encounter participant runtime instance IDs must be unique. Duplicates: [{duplicates}].",
+                    BattleEncounterFaultCode.DuplicateParticipantInstanceId)
+                .ConfigureAwait(false);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -751,16 +790,19 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             services.Synchronizer.Synchronize(request.Participants);
         }
 
-        async ValueTask<BattleEncounterResult> FailBeforeStartAsync(string message)
+        async ValueTask<BattleEncounterResult> FailBeforeStartAsync(
+            string message,
+            BattleEncounterFaultCode? faultCode = null)
         {
-            await AddAsync(BattleEncounterEventKind.BattleFaulted, message).ConfigureAwait(false);
+            await AddFaultAsync(message, faultCode).ConfigureAwait(false);
             await AddAsync(BattleEncounterEventKind.BattleEnded, "Battle faulted.").ConfigureAwait(false);
             return new BattleEncounterResult(
                 BattleEncounterOutcome.Faulted,
                 null,
                 request.Participants,
                 events,
-                message);
+                message,
+                faultCode);
         }
 
         async ValueTask<BattleEncounterResult> FaultDuringBattleAsync(
