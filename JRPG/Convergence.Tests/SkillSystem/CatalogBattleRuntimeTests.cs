@@ -4,6 +4,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
@@ -331,7 +332,10 @@ public sealed class CatalogBattleRuntimeTests
         CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
-        var runner = new AutomatedBattleRunner(executor, new DeterministicBattleActionSelector(executor), services);
+        var runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
 
         AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
             [frost, ember], Battle, NormalBattle, NewMoon, 10));
@@ -363,7 +367,10 @@ public sealed class CatalogBattleRuntimeTests
         CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
-        var runner = new AutomatedBattleRunner(executor, new DeterministicBattleActionSelector(executor), services);
+        var runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
 
         AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
             [frost, ember], Battle, NormalBattle, null, 10));
@@ -381,7 +388,7 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
-        AutomatedBattleResult result = new AutomatedBattleRunner(
+        AutomatedBattleResult result = CreateAutomatedRunner(
             executor, new DeterministicBattleActionSelector(executor), services).Run(
             new AutomatedBattleRequest([frost, ember], Battle, NormalBattle, NewMoon, 1));
 
@@ -416,7 +423,7 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog, randomTargets);
         var executor = new SkillExecutor(services);
 
-        AutomatedBattleResult result = new AutomatedBattleRunner(
+        AutomatedBattleResult result = CreateAutomatedRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
             services).Run(new AutomatedBattleRequest(
@@ -447,7 +454,7 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
-        new AutomatedBattleRunner(
+        CreateAutomatedRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
             services).Run(new AutomatedBattleRequest(
@@ -460,6 +467,177 @@ public sealed class CatalogBattleRuntimeTests
         Assert.DoesNotContain(phaseStatus, frost.State.OtherStatuses);
         Assert.DoesNotContain(battleStatus, frost.State.OtherStatuses);
         Assert.Contains(permanentStatus, frost.State.OtherStatuses);
+    }
+
+    [Fact]
+    public void Runner_RequiresExplicitLifecycleAndTurnEconomyDependencies()
+    {
+        ConstructorInfo constructor = Assert.Single(typeof(AutomatedBattleRunner).GetConstructors());
+
+        Assert.Equal(
+        [
+            typeof(ISkillExecutor),
+            typeof(IBattleActionSelector),
+            typeof(BattleExecutionServices),
+            typeof(IBattleEncounterLifecyclePort),
+            typeof(BattleTurnEconomyRuleset)
+        ], constructor.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public void Runner_UsesCanonicalLifecycleAndInjectedTurnEconomyFactory()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        LifecycleScenario scenario = CreateLifecycleScenario(catalog, "automated");
+        var economyCreations = 0;
+        var turnEconomy = new BattleTurnEconomyRuleset(
+            () =>
+            {
+                economyCreations++;
+                return new PressTurnEngine();
+            },
+            new BattlePhaseProgressPolicy(256, 32));
+        var executor = new SkillExecutor(scenario.Services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            scenario.Services,
+            scenario.Lifecycle,
+            turnEconomy).Run(new AutomatedBattleRequest(
+                [scenario.Player, scenario.Enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(2, economyCreations);
+        Assert.False(scenario.Player.State.IsGuarding);
+        Assert.Equal(90m, scenario.Player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(
+            1,
+            Assert.IsType<TurnDurationDefinition>(
+                scenario.Player.State.Ailments[scenario.AilmentId].Duration).Value);
+        Assert.DoesNotContain(scenario.BattleStatusId, scenario.Player.State.OtherStatuses);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.TurnRestricted &&
+            battleEvent.ActorId == scenario.Player.State.InstanceId);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged &&
+            battleEvent.ActorId == scenario.Player.State.InstanceId);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+            battleEvent.ActorId == scenario.Player.State.InstanceId);
+        Assert.All(
+            result.Events.Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged),
+            battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState));
+    }
+
+    [Fact]
+    public void Runner_PreservesTypedEventsForANonPressTurnEconomy()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("standard_player", "standard_player", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor("standard_enemy", "standard_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        var turnEconomy = new BattleTurnEconomyRuleset(
+            () => new StandardActionTurnEconomy(),
+            new BattlePhaseProgressPolicy(256, 32));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services,
+            turnEconomy: turnEconomy).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        BattleRuntimeEvent[] economyEvents = result.Events
+            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged)
+            .ToArray();
+        Assert.NotEmpty(economyEvents);
+        Assert.All(economyEvents, battleEvent =>
+        {
+            Assert.NotNull(battleEvent.TurnEconomyState);
+            Assert.Equal(StandardActionTurnEconomy.EconomyId, battleEvent.TurnEconomyState!.EconomyId);
+        });
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged);
+    }
+
+    [Fact]
+    public void Runner_AndDirectEncounterProduceEquivalentLifecycleAndTurnEconomyState()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        LifecycleScenario automated = CreateLifecycleScenario(catalog, "automated_parity");
+        LifecycleScenario direct = CreateLifecycleScenario(catalog, "direct_parity");
+        var automatedEconomyCreations = 0;
+        var directEconomyCreations = 0;
+        BattleTurnEconomyRuleset automatedEconomy = CountingTurnEconomy(
+            () => automatedEconomyCreations++);
+        BattleTurnEconomyRuleset directEconomy = CountingTurnEconomy(
+            () => directEconomyCreations++);
+        var automatedExecutor = new SkillExecutor(automated.Services);
+
+        AutomatedBattleResult automatedResult = CreateAutomatedRunner(
+            automatedExecutor,
+            new DeterministicBattleActionSelector(automatedExecutor),
+            automated.Services,
+            automated.Lifecycle,
+            automatedEconomy).Run(new AutomatedBattleRequest(
+                [automated.Player, automated.Enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+        BattleEncounterResult directResult = new BattleEncounterRunner().Run(
+            new BattleEncounterRequest(
+                [
+                    new BattleEncounterParticipant(direct.Player.State, direct.Player.Entity.DisplayName),
+                    new BattleEncounterParticipant(direct.Enemy.State, direct.Enemy.Entity.DisplayName)
+                ],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1),
+            new BattleEncounterServices(
+                new ParticipantOrderInitiativePolicy(),
+                direct.Lifecycle,
+                new RestrictedPassTurnHandler(),
+                new LastTeamStandingCompletionPolicy(),
+                directEconomy.CreateEconomy,
+                directEconomy.PhaseProgress));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, automatedResult.Outcome);
+        Assert.Equal(BattleEncounterOutcome.Draw, directResult.Outcome);
+        Assert.Equal(directEconomyCreations, automatedEconomyCreations);
+        Assert.Equal(
+            direct.Player.State.GetRequiredResource(Id("hp")).Current,
+            automated.Player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(direct.Player.State.IsGuarding, automated.Player.State.IsGuarding);
+        Assert.Equal(
+            Assert.IsType<TurnDurationDefinition>(direct.Player.State.Ailments[direct.AilmentId].Duration).Value,
+            Assert.IsType<TurnDurationDefinition>(automated.Player.State.Ailments[automated.AilmentId].Duration).Value);
+        Assert.Equal(
+            direct.Player.State.OtherStatuses.Contains(direct.BattleStatusId),
+            automated.Player.State.OtherStatuses.Contains(automated.BattleStatusId));
+
+        PressTurnEconomySnapshot[] automatedEconomyEvents = automatedResult.Events
+            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged)
+            .Select(battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState))
+            .ToArray();
+        PressTurnEconomySnapshot[] directEconomyEvents = directResult.Events
+            .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged)
+            .Select(battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState))
+            .ToArray();
+        Assert.Equal(
+            directEconomyEvents.Select(TurnEconomyValues),
+            automatedEconomyEvents.Select(TurnEconomyValues));
     }
 
     [Fact]
@@ -489,7 +667,7 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
-        AutomatedBattleResult result = new AutomatedBattleRunner(
+        AutomatedBattleResult result = CreateAutomatedRunner(
             executor, new DeterministicBattleActionSelector(executor), services).Run(
             new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
 
@@ -509,7 +687,7 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
-        AutomatedBattleResult result = new AutomatedBattleRunner(
+        AutomatedBattleResult result = CreateAutomatedRunner(
             executor, new InvalidTargetSelector(), services).Run(
             new AutomatedBattleRequest([frost, ember], Battle, NormalBattle, NewMoon, 1));
 
@@ -624,6 +802,91 @@ public sealed class CatalogBattleRuntimeTests
         new AlwaysChancePolicy(),
         new TestPowerPolicy(),
         randomTargetPolicy ?? new FirstRandomTargetPolicy());
+
+    private static AutomatedBattleRunner CreateAutomatedRunner(
+        ISkillExecutor executor,
+        IBattleActionSelector selector,
+        BattleExecutionServices services,
+        IBattleEncounterLifecyclePort? lifecycle = null,
+        BattleTurnEconomyRuleset? turnEconomy = null) =>
+        new(
+            executor,
+            selector,
+            services,
+            lifecycle ?? new BattleStatusEncounterLifecyclePort(
+                new BattleStatusLifecycleService(new MinimumRandomSource()),
+                services,
+                Id("battle_start"),
+                Id("owner_turn_end")),
+            turnEconomy ?? StandardTurnEconomy());
+
+    private static BattleTurnEconomyRuleset StandardTurnEconomy() =>
+        new(
+            () => new PressTurnEngine(),
+            new BattlePhaseProgressPolicy(
+                maximumCommands: 256,
+                maximumConsecutiveFreeActions: 32));
+
+    private static BattleTurnEconomyRuleset CountingTurnEconomy(Action onCreated) =>
+        new(
+            () =>
+            {
+                onCreated();
+                return new PressTurnEngine();
+            },
+            new BattlePhaseProgressPolicy(
+                maximumCommands: 256,
+                maximumConsecutiveFreeActions: 32));
+
+    private static LifecycleScenario CreateLifecycleScenario(GameDataCatalog catalog, string prefix)
+    {
+        CatalogBattleActor player = RuntimeCatalogActor(
+            $"{prefix}_player",
+            $"{prefix}_player",
+            PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            $"{prefix}_enemy",
+            $"{prefix}_enemy",
+            EnemyTeam);
+        ContentId ailmentId = Id($"test.pack:{prefix}_fatigue");
+        ContentId battleStatusId = Id($"test.pack:{prefix}_battle_status");
+        var duration = new TurnDurationDefinition(2, Id("owner_turn_end"), false);
+        var ailment = new AilmentDefinition(
+            ailmentId,
+            "Fatigue",
+            "Lifecycle parity fixture.",
+            duration,
+            new SkipAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
+            new AilmentRecoveryDefinition(),
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    Id("owner_turn_end"),
+                    [new ReduceResourceEffectDefinition(Id("hp"), new FlatAmountDefinition(10), true)])
+            ]);
+        player.State.SetGuarding(true);
+        player.State.ApplyAilment(ailment, duration);
+        player.State.AddOtherStatus(battleStatusId, new BattleDurationDefinition());
+
+        BattleExecutionServices services = Services(catalog);
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            Id("battle_start"),
+            Id("owner_turn_end"));
+        return new LifecycleScenario(
+            player,
+            enemy,
+            services,
+            lifecycle,
+            ailmentId,
+            battleStatusId);
+    }
+
+    private static (int FullIcons, int BlinkingIcons) TurnEconomyValues(
+        PressTurnEconomySnapshot snapshot) =>
+        (snapshot.FullIcons, snapshot.BlinkingIcons);
 
     private static SkillDefinition Active(
         string id,
@@ -835,6 +1098,13 @@ public sealed class CatalogBattleRuntimeTests
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
     }
 
+    private sealed class MinimumRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => 0m;
+    }
+
     private sealed class CountingRandomTargetPolicy : IRandomTargetSelectionPolicy
     {
         public int CallCount { get; private set; }
@@ -857,4 +1127,27 @@ public sealed class CatalogBattleRuntimeTests
                 request.Actor.ActiveSkills[0],
                 [RuntimeInstanceId.Parse("missing_target")]);
     }
+
+    private sealed class RestrictedPassTurnHandler : IBattleEncounterTurnHandler
+    {
+        public ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ActionTurnConsumption consumption = request.TurnStartOutcome == BattleTurnStartOutcome.CanAct
+                ? ActionTurnConsumption.Pass
+                : ActionTurnConsumption.Normal;
+            return new ValueTask<BattleEncounterCommandResult>(
+                BattleEncounterCommandResult.Executed(consumption));
+        }
+    }
+
+    private sealed record LifecycleScenario(
+        CatalogBattleActor Player,
+        CatalogBattleActor Enemy,
+        BattleExecutionServices Services,
+        IBattleEncounterLifecyclePort Lifecycle,
+        ContentId AilmentId,
+        ContentId BattleStatusId);
 }

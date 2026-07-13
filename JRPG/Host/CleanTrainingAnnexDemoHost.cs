@@ -117,7 +117,9 @@ internal sealed class CleanTrainingAnnexDemoHost
             catalog,
             Qualified("standard_growth")).RequireService();
         resolver.BindStatResolutionPolicy(catalog, Qualified("standard_stat")).RequireService();
-        resolver.BindTurnEconomy(catalog, Qualified("standard_press_turn")).RequireService();
+        BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
+            catalog,
+            Qualified("standard_press_turn")).RequireService();
         resolver.BindStockCapacityPolicy(catalog, Qualified("standard_stock_capacity")).RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
@@ -212,10 +214,17 @@ internal sealed class CleanTrainingAnnexDemoHost
             cancellationToken).ConfigureAwait(false);
 
         var skillExecutor = new SkillExecutor(executionServices);
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(random),
+            executionServices,
+            ContentId.Parse("battle_start"),
+            ContentId.Parse("owner_turn_end"));
         AutomatedBattleResult battle = new AutomatedBattleRunner(
             skillExecutor,
             new DeterministicBattleActionSelector(skillExecutor),
-            executionServices)
+            executionServices,
+            lifecycle,
+            turnEconomy)
             .Run(new AutomatedBattleRequest(
                 [echo, ashling],
                 Battle,

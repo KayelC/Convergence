@@ -122,10 +122,20 @@ public sealed class GodotIntegrationContractTests
 
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            Id("battle_start"),
+            Id("owner_turn_end"));
+        var turnEconomy = new BattleTurnEconomyRuleset(
+            () => new PressTurnEngine(),
+            new BattlePhaseProgressPolicy(256, 32));
         AutomatedBattleResult battle = new AutomatedBattleRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
-            services).Run(new AutomatedBattleRequest(
+            services,
+            lifecycle,
+            turnEconomy).Run(new AutomatedBattleRequest(
             [frost, ember],
             Battle,
             NormalBattle,
@@ -536,5 +546,12 @@ public sealed class GodotIntegrationContractTests
             IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
+    }
+
+    private sealed class MinimumRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => 0m;
     }
 }

@@ -232,10 +232,13 @@ public enum BattleRuntimeEventKind
     BattleStarted,
     RoundStarted,
     PhaseStarted,
+    TurnRestricted,
     SkillSelected,
     SkillPassed,
     EffectResolved,
     PassiveActivated,
+    StatusChanged,
+    TurnEconomyChanged,
     PressTurnChanged,
     ResourceChanged,
     ActorDefeated,
@@ -250,7 +253,8 @@ public sealed record BattleRuntimeEvent(
     RuntimeInstanceId? ActorId = null,
     RuntimeInstanceId? TargetId = null,
     ContentId? SkillId = null,
-    decimal? Value = null);
+    decimal? Value = null,
+    BattleTurnEconomySnapshot? TurnEconomyState = null);
 
 public sealed record BattleActorFinalSnapshot
 {
@@ -327,15 +331,21 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
     private readonly ISkillExecutor _executor;
     private readonly IBattleActionSelector _selector;
     private readonly BattleExecutionServices _services;
+    private readonly IBattleEncounterLifecyclePort _lifecycle;
+    private readonly BattleTurnEconomyRuleset _turnEconomy;
 
     public AutomatedBattleRunner(
         ISkillExecutor executor,
         IBattleActionSelector selector,
-        BattleExecutionServices services)
+        BattleExecutionServices services,
+        IBattleEncounterLifecyclePort lifecycle,
+        BattleTurnEconomyRuleset turnEconomy)
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _selector = selector ?? throw new ArgumentNullException(nameof(selector));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
+        _turnEconomy = turnEconomy ?? throw new ArgumentNullException(nameof(turnEconomy));
     }
 
     public AutomatedBattleResult Run(AutomatedBattleRequest request)
@@ -349,13 +359,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             .ToArray();
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
-            new AutomatedBattleLifecyclePort(_services),
+            _lifecycle,
             new AutomatedBattleTurnHandler(_executor, _selector, _services, request.Participants),
             new LastTeamStandingCompletionPolicy(),
-            () => new PressTurnEngine(),
-            new BattlePhaseProgressPolicy(
-                maximumCommands: 256,
-                maximumConsecutiveFreeActions: 32));
+            _turnEconomy.CreateEconomy,
+            _turnEconomy.PhaseProgress);
         BattleEncounterResult result = new BattleEncounterRunner().Run(
             new BattleEncounterRequest(
                 participants,
@@ -389,13 +397,16 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterEventKind.BattleStarted => BattleRuntimeEventKind.BattleStarted,
                 BattleEncounterEventKind.RoundStarted => BattleRuntimeEventKind.RoundStarted,
                 BattleEncounterEventKind.PhaseStarted => BattleRuntimeEventKind.PhaseStarted,
+                BattleEncounterEventKind.TurnRestricted => BattleRuntimeEventKind.TurnRestricted,
                 BattleEncounterEventKind.CommandSelected => BattleRuntimeEventKind.SkillSelected,
                 BattleEncounterEventKind.CommandPassed => BattleRuntimeEventKind.SkillPassed,
                 BattleEncounterEventKind.EffectResolved => BattleRuntimeEventKind.EffectResolved,
                 BattleEncounterEventKind.PassiveActivated => BattleRuntimeEventKind.PassiveActivated,
+                BattleEncounterEventKind.StatusChanged => BattleRuntimeEventKind.StatusChanged,
                 BattleEncounterEventKind.TurnEconomyChanged
                     when battleEvent.TurnEconomyState is PressTurnEconomySnapshot =>
                     BattleRuntimeEventKind.PressTurnChanged,
+                BattleEncounterEventKind.TurnEconomyChanged => BattleRuntimeEventKind.TurnEconomyChanged,
                 BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
                 BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
                 BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,
@@ -414,104 +425,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 battleEvent.ActorId,
                 battleEvent.TargetId,
                 battleEvent.SourceId,
-                battleEvent.Value));
+                battleEvent.Value,
+                battleEvent.TurnEconomyState));
         }
 
         return Array.AsReadOnly(mapped.ToArray());
-    }
-
-    private sealed class AutomatedBattleLifecyclePort : IBattleEncounterLifecyclePort
-    {
-        private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
-        private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
-        private readonly BattleExecutionServices _services;
-        private readonly IBattleDurationLifecycleService _durationLifecycle =
-            new BattleDurationLifecycleService();
-
-        public AutomatedBattleLifecyclePort(BattleExecutionServices services)
-        {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
-        }
-
-        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
-            BattleEncounterLifecycleRequest request,
-            CancellationToken cancellationToken = default) =>
-            new(Dispatch(BattleStart, request.Participants, request.Encounter));
-
-        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
-            BattleEncounterTurnLifecycleRequest request,
-            CancellationToken cancellationToken = default) =>
-            new(new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []));
-
-        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
-            BattleEncounterTurnLifecycleRequest request,
-            CancellationToken cancellationToken = default) =>
-            new(Dispatch(OwnerTurnEnd, [request.Actor], request.Encounter));
-
-        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
-            BattleEncounterLifecycleRequest request,
-            ContentId teamId,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            BattleStatusLifecycleResult result = _durationLifecycle.ProcessPhaseEnd(
-                new BattlePhaseEndLifecycleRequest(
-                    request.Participants.Select(participant => participant.State),
-                    teamId));
-            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapDurationEvents(result.Events));
-        }
-
-        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
-            BattleEncounterLifecycleRequest request,
-            BattleEncounterOutcome outcome,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var events = new List<BattleStatusLifecycleEvent>();
-            foreach (BattleEncounterParticipant participant in request.Participants)
-            {
-                events.AddRange(_durationLifecycle.Cleanup(new BattleStatusCleanupRequest(
-                    participant.State,
-                    BattleStatusCleanupScope.BattleEnd)).Events);
-            }
-
-            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapDurationEvents(events));
-        }
-
-        private IReadOnlyList<BattleEncounterEvent> Dispatch(
-            ContentId eventId,
-            IEnumerable<BattleEncounterParticipant> actors,
-            BattleEncounterRequest request)
-        {
-            var events = new List<BattleEncounterEvent>();
-            RuntimeActorState[] states = request.Participants.Select(participant => participant.State).ToArray();
-            foreach (BattleEncounterParticipant actor in actors)
-            {
-                PassiveTriggerDispatchResult dispatch = _services.PassiveTriggers.Dispatch(
-                    new PassiveTriggerDispatchRequest(
-                        eventId,
-                        actor.State,
-                        states,
-                        [actor.State],
-                        request.ContextId,
-                        request.BattleKindId,
-                        request.MoonPhaseId),
-                    _services);
-                RecordPassives(events, actor.State.InstanceId, dispatch);
-            }
-
-            return Array.AsReadOnly(events.ToArray());
-        }
-
-        private static IReadOnlyList<BattleEncounterEvent> MapDurationEvents(
-            IEnumerable<BattleStatusLifecycleEvent> events) =>
-            Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
-                0,
-                BattleEncounterEventKind.StatusChanged,
-                $"Duration lifecycle: {statusEvent.Kind} {statusEvent.RelatedId}.",
-                statusEvent.ActorId,
-                SourceId: statusEvent.RelatedId,
-                Value: statusEvent.Value)).ToArray());
     }
 
     private sealed class AutomatedBattleTurnHandler : IBattleEncounterTurnHandler
@@ -665,42 +583,4 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         }
     }
 
-    private static void RecordPassives(
-        List<BattleEncounterEvent> events,
-        RuntimeInstanceId actorId,
-        PassiveTriggerDispatchResult dispatch)
-    {
-        foreach (PassiveTriggerExecutionResult activation in dispatch.Activations)
-        {
-            events.Add(new BattleEncounterEvent(
-                0,
-                BattleEncounterEventKind.PassiveActivated,
-                $"Passive {activation.SkillId} resolved as {activation.Outcome}.",
-                actorId,
-                activation.TargetId,
-                activation.SkillId));
-            foreach (EffectExecutionResult effect in activation.Effects)
-            {
-                events.Add(new BattleEncounterEvent(
-                    0,
-                    BattleEncounterEventKind.EffectResolved,
-                    $"Passive effect {effect.EffectIndex} resolved as {effect.Outcome}.",
-                    actorId,
-                    effect.TargetId,
-                    activation.SkillId,
-                    effect.Value));
-                if (effect.Value is decimal value)
-                {
-                    events.Add(new BattleEncounterEvent(
-                        0,
-                        BattleEncounterEventKind.ResourceChanged,
-                        $"Resource changed by {value}.",
-                        actorId,
-                        effect.TargetId,
-                        activation.SkillId,
-                        value));
-                }
-            }
-        }
-    }
 }

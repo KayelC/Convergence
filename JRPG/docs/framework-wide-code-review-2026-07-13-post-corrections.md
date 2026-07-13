@@ -6,7 +6,7 @@ Branch: `track-12-recovery`
 
 Reviewed commit: `2830a3acf42c5f16ef070f9cd369471da757ccae` (`Review-Whole-12`)
 
-Latest committed correction baseline: `d947b78` (`Review-Whole-14`); the M2 correction described below is in the current working tree.
+Latest committed correction baseline: `2181b7c` (`Review-Whole-15`); the M3 correction described below is in the current working tree.
 
 ## Review Rule
 
@@ -18,13 +18,13 @@ The review covered the framework project structure and public boundaries, defini
 
 **Phase 8 should not begin yet.**
 
-The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect, M1 target-authority defect, and M2 runtime numeric-boundary defect identified by this review were corrected on 2026-07-13. One medium-severity authority defect remains. It sits in a public framework path rather than only in the legacy console host, so presentation work would otherwise be built over inconsistent runtime semantics.
+The framework is substantially healthier than the earlier baseline. The reviewed corrections are present in the current source and the complete quality gate is green. The H1 lifecycle defect and M1-M3 authority/boundary defects identified by this review were corrected on 2026-07-13. No high- or medium-severity finding from this review remains open. The three low-severity public-boundary findings remain part of the gate established by this report and should be resolved before the runtime baseline is closed for Phase 8.
 
 Recommended gate:
 
-1. H1, M1, and M2 are complete.
-2. Resolve M3 either by making the convenience runner use the canonical lifecycle or by explicitly reducing/removing its public authority.
-3. Correct the low findings before publishing the framework package; they do not need to block design discussion.
+1. H1 and M1-M3 are complete.
+2. Correct L1-L3 before closing the runtime baseline for Phase 8 or publishing the framework package.
+3. The remaining findings do not block design discussion, but no new host layer should treat the current package as final until the gate is rerun.
 
 ## Findings
 
@@ -60,7 +60,7 @@ An authored instant or phase-limited status can remain active beyond its promise
 - The Training Annex lifecycle port and `AutomatedBattleRunner` now consume encounter phase-end and battle-end duration boundaries.
 - Focused regressions cover all five duration kinds across every state family, nested ordered actions, and a complete automated encounter boundary.
 
-H1 is resolved. M1 and M2 were subsequently corrected; M3 remains open, so the Phase 8 gate is still closed.
+H1 is resolved. M1-M3 were subsequently corrected; L1-L3 keep the Phase 8 gate open.
 
 **H1 verification**
 
@@ -100,7 +100,7 @@ Resolve targets once into an immutable, request-bound assessment token and execu
 - Execution rebinds the prepared IDs into the staged actor transaction. Skill, item, basic-attack, analyze, escape/direct-effect, and automated-selector paths no longer invoke random selection during execution.
 - The Training Annex battle and field adapters now execute the same assessment they present, and cancellation before execution leaves the token and item inventory untouched.
 
-M1 is resolved. M2 was subsequently corrected; M3 remains open, so the Phase 8 gate remains closed.
+M1 is resolved. M2 and M3 were subsequently corrected; L1-L3 keep the Phase 8 gate open.
 
 **M1 verification**
 
@@ -142,7 +142,7 @@ Define contract-only numeric invariants at the shared runtime snapshot boundary.
 - `StandardStatResolutionPolicy` uses saturating decimal composition and integer conversion. `StandardResourceGrowthPolicy` validates direct requests and calculates against its configured cap before potentially overflowing addition or multiplication. Natural ailment recovery clamps/saturates its probability arithmetic before integer conversion.
 - Invalid persisted values are rejected rather than silently normalized. Fractional nonnegative stats remain valid, and no balance-specific upper limit was added to base resources.
 
-M2 is resolved in the current working tree. M3 remains open, so the Phase 8 gate remains closed.
+M2 is resolved. M3 was subsequently corrected; L1-L3 keep the Phase 8 gate open.
 
 **M2 verification**
 
@@ -157,7 +157,7 @@ M2 is resolved in the current working tree. M3 remains open, so the Phase 8 gate
 - Framework host/legacy public-boundary tests remain green; refined runtime-source searches found no prohibited host/legacy references.
 - `git diff --check`: passed. `Data/Jsons`: unchanged.
 
-### M3. `AutomatedBattleRunner` bypasses the canonical status lifecycle and bound turn-economy policy
+### M3. `AutomatedBattleRunner` bypasses the canonical status lifecycle and bound turn-economy policy (corrected 2026-07-13)
 
 **Evidence**
 
@@ -173,6 +173,27 @@ Two public clean battle entry points can produce different rules for the same ac
 **Required correction**
 
 Either inject the canonical lifecycle and turn-economy factory into `AutomatedBattleRunner`, or explicitly demote the type to a narrowly named demo/test helper outside the authoritative framework surface. Add parity tests that run the same encounter through both supported entry points.
+
+**Resolution**
+
+- `BattleStatusEncounterLifecyclePort` is now the reusable framework adapter from `BattleStatusLifecycleService` and `BattleExecutionServices` into the encounter lifecycle contract. Hosts explicitly supply the registered battle-start and owner-turn-end event IDs.
+- `AutomatedBattleRunner` now requires an `IBattleEncounterLifecyclePort` and a bound `BattleTurnEconomyRuleset`. Its old three-argument constructor, private reduced lifecycle, private duration-only fallback, direct `new PressTurnEngine()`, and hardcoded phase-progress limits were removed.
+- The runner delegates lifecycle callbacks and turn-economy construction to those dependencies exactly as `BattleEncounterRunner` does. Typed status/restriction events and immutable turn-economy snapshots remain visible in `AutomatedBattleResult`.
+- Clean battle, Training Annex, and Godot-shaped composition roots now provide lifecycle and turn-economy authority explicitly. Training Annex reuses the `standard_press_turn` binding it already validated instead of discarding it.
+- A parity regression runs equivalent guarded, ailment-bearing encounters through `AutomatedBattleRunner` and direct `BattleEncounterRunner` composition. Both paths clear guard, apply the same restriction and turn-end damage, tick the same authored duration, perform the same battle cleanup, create the same number of economies, and expose the same Press Turn state sequence.
+
+M3 is resolved. No high- or medium-severity finding remains; L1-L3 keep the Phase 8 gate open.
+
+**M3 verification**
+
+- Focused catalog battle runtime tests: **30 passed, 0 failed, 0 skipped**, including constructor-boundary, lifecycle/factory, non-Press-Turn, and direct-runner parity regressions.
+- Full solution tests: **1,054 passed, 0 failed, 0 skipped**.
+- `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
+- Full solution nonincremental build: **98 warnings, 0 errors**; warnings remain isolated to compatibility-host nullable debt.
+- Framework package: `JRPG.Framework.1.0.0.nupkg` created successfully.
+- Clean battle, field, save, and Training Annex demos: all exited `0`; both battle demos ended in player-team victories and both save validations returned zero diagnostics.
+- Framework host/legacy forbidden-reference search: no prohibited production references found. The automated runner contains no direct Press Turn, no-op lifecycle, private lifecycle, or hardcoded phase-progress construction.
+- `git diff --check`: passed. `Data/Jsons`: unchanged.
 
 ### L1. Encounter requests do not reject duplicate runtime instance IDs
 
@@ -206,7 +227,7 @@ The following conclusions come from direct source inspection rather than prior r
 
 ## Quality Gate Results
 
-- Full test suite after the M2 correction: **1,050 passed, 0 failed, 0 skipped**.
+- Full test suite after the M3 correction: **1,054 passed, 0 failed, 0 skipped**.
 - `JRPG.Framework` nonincremental build: **0 warnings, 0 errors**.
 - Full solution nonincremental build: **98 warnings, 0 errors**. The warnings are compatibility-host/test nullable debt, not framework compilation warnings.
 - Framework package: produced `JRPG.Framework.1.0.0.nupkg` successfully. NuGet warns that the package has no readme; it should not be treated as publication-ready metadata yet.
@@ -215,9 +236,9 @@ The following conclusions come from direct source inspection rather than prior r
 - `--clean-save-demo`: exit `0`, save contract version 6 restored with zero diagnostics.
 - `--clean-training-annex-demo`: exit `0`, original-content battle victory, rewards applied, save validated.
 - Framework forbidden-reference search: no prohibited production references found.
-- `git diff --check`: passed with the M2 implementation and report update present.
+- `git diff --check`: passed with the M3 implementation and report update present.
 - `Data/Jsons`: unchanged.
-- The committed baseline was synchronized with `origin/track-12-recovery`; the current working tree contains the reviewed M2 correction and has not been committed by this task.
+- The committed baseline was synchronized with `origin/track-12-recovery`; the current working tree contains the reviewed M3 correction and has not been committed by this task.
 
 ## Phase 8 Readiness Gate
 
@@ -226,7 +247,7 @@ The corrected framework is a credible foundation, but **it is not ready to enter
 1. ~~Complete duration lifecycle authority (H1).~~ Corrected on 2026-07-13; final gate verification is recorded with the implementation.
 2. ~~Make action assessment and execution share one resolved target set (M1).~~ Corrected on 2026-07-13.
 3. ~~Enforce runtime numeric domains before restore/policy execution (M2).~~ Corrected on 2026-07-13.
-4. Unify or demote the automated battle convenience path (M3).
+4. ~~Unify the automated battle convenience path with canonical lifecycle and turn economy (M3).~~ Corrected on 2026-07-13.
 5. Address L1-L3, rerun this gate, and only then begin Phase 8-36 host interchangeability.
 
 This conclusion does not invalidate the previous correction work. That work fixed substantial defects and is present in the current source. The remaining findings are narrower, but they cross public contracts and should be resolved before presentation interchangeability becomes the next layer built on top.

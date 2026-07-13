@@ -612,6 +612,8 @@ The serializer-neutral automated runner operates on ordered `CatalogBattleActor`
 
 The deterministic selector considers only active skills available in the current context and asks the same `ISkillExecutor.Assess` path used by final execution to resolve targeting and costs. It selects the first eligible living opponent in participant order, prefers known Weak affinities, penalizes known Resist affinities, avoids known Null, Repel, and Absorb, and preserves loadout order for ties. It reads typed effects and `ElementalAffinityKnowledge`; display names and descriptions have no behavioral role.
 
+The automated runner is only a deterministic turn-handler facade over `BattleEncounterRunner`. Construction requires an explicit encounter lifecycle and `BattleTurnEconomyRuleset`; no lifecycle, Press Turn implementation, or phase-liveness limit is hidden inside the runner. `BattleStatusEncounterLifecyclePort` is the standard framework adapter when a host opts into status/passive lifecycle, and it uses host-registered battle-start and owner-turn-end event IDs. Direct and automated encounter entry points therefore apply the same guard clearing, ailments, passive triggers, recovery, duration boundaries, cleanup, and selected turn economy.
+
 Damage results expose their resolved elemental affinity so successful and defensive outcomes can update knowledge directly. The clean Press Turn overload consumes typed `PressTurnResolution` while the legacy `HitType` overload remains intact. Ordered runtime events expose actor creation, phases, skills, effects, passive activation, turn icons, resource changes, defeat, faults, and the final outcome to presentation adapters.
 
 ### Demo Host Boundary

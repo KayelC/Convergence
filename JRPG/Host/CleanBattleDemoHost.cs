@@ -2,6 +2,7 @@ using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Hosting;
+using JRPGPrototype.Logic.Battle.Engines;
 using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
@@ -88,6 +89,8 @@ internal sealed class CleanBattleDemoHost
     private static readonly ContentId NewMoon = ContentId.Parse("new_moon");
     private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
+    private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
+    private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
 
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
@@ -178,10 +181,22 @@ internal sealed class CleanBattleDemoHost
 
         BattleExecutionServices services = CreateExecutionServices(catalog);
         var executor = new SkillExecutor(services);
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SystemRandomSource(0)),
+            services,
+            BattleStart,
+            OwnerTurnEnd);
+        var turnEconomy = new BattleTurnEconomyRuleset(
+            () => new PressTurnEngine(),
+            new BattlePhaseProgressPolicy(
+                maximumCommands: 256,
+                maximumConsecutiveFreeActions: 32));
         var runner = new AutomatedBattleRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
-            services);
+            services,
+            lifecycle,
+            turnEconomy);
         AutomatedBattleResult battle = runner.Run(new AutomatedBattleRequest(
             [frostResult.RequireActor(), emberResult.RequireActor()],
             Battle,

@@ -58,6 +58,8 @@ Core flow:
 10. Battle completion returns victory, defeat, escape, draw, cancellation, or fault to the console host.
 11. Battle rewards, recruitment side effects, cleanup, and compendium registration remain console-owned after the runner reports the outcome.
 
+`AutomatedBattleRunner` is a convenience composition over this same encounter authority, not a separate battle ruleset. Its caller must supply an `IBattleEncounterLifecyclePort` and `BattleTurnEconomyRuleset`; the framework-provided `BattleStatusEncounterLifecyclePort` connects the full guard, ailment, passive, recovery, duration, and cleanup lifecycle. The convenience runner therefore cannot silently replace authored lifecycle rules or a catalog-bound turn economy with internal defaults.
+
 Important battle concepts:
 
 - Weakness and critical hits convert full icons to blinking icons when available.
