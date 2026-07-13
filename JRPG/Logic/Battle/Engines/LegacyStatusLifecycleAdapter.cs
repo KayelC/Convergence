@@ -12,6 +12,26 @@ using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Engines;
 
+internal static class LegacyTurnStartRestrictionAdapter
+{
+    private static readonly ContentId BasicAttack = ContentId.Parse("basic_attack");
+    private static readonly ContentId Guard = ContentId.Parse("guard");
+    private static readonly ContentId Pass = ContentId.Parse("pass");
+
+    public static BattleTurnStartRestriction ToFramework(TurnStartResult result) => result switch
+    {
+        TurnStartResult.LimitedAction => new BattleTurnStartRestriction(
+            BattleTurnStartOutcome.LimitedAction,
+            [BasicAttack, Guard, Pass]),
+        TurnStartResult.Skip => new BattleTurnStartRestriction(BattleTurnStartOutcome.Skip),
+        TurnStartResult.ForcedPhysical => new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedPhysical),
+        TurnStartResult.ForcedConfusion => new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedConfusion),
+        TurnStartResult.FleeBattle => new BattleTurnStartRestriction(BattleTurnStartOutcome.FleeBattle),
+        TurnStartResult.ReturnToCOMP => new BattleTurnStartRestriction(BattleTurnStartOutcome.ReturnToStock),
+        _ => BattleTurnStartRestriction.CanAct
+    };
+}
+
 internal sealed class LegacyStatusLifecycleAdapter
 {
     private static readonly ContentId HpId = ContentId.Parse("hp");
@@ -27,14 +47,28 @@ internal sealed class LegacyStatusLifecycleAdapter
     private readonly BattleExecutionServices _services;
 
     public LegacyStatusLifecycleAdapter()
-        : this(new BattleStatusLifecycleService(new LegacyRandomSource()))
+        : this(new LegacyRandomSource())
+    {
+    }
+
+    private LegacyStatusLifecycleAdapter(IRandomSource random)
+        : this(
+            new BattleStatusLifecycleService(random),
+            new LegacyAilmentApplicationPolicy(random))
     {
     }
 
     internal LegacyStatusLifecycleAdapter(IBattleStatusLifecycleService lifecycle)
+        : this(lifecycle, new LegacyAilmentApplicationPolicy(new LegacyRandomSource()))
+    {
+    }
+
+    private LegacyStatusLifecycleAdapter(
+        IBattleStatusLifecycleService lifecycle,
+        IAilmentApplicationPolicy ailmentPolicy)
     {
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
-        _services = CreateServices();
+        _services = CreateServices(ailmentPolicy);
     }
 
     public bool TryInflict(
@@ -81,7 +115,8 @@ internal sealed class LegacyStatusLifecycleAdapter
                 targetState,
                 definition,
                 finalChance,
-                new TurnDurationDefinition(3, OwnerTurnEndEventId, true)));
+                new TurnDurationDefinition(3, OwnerTurnEndEventId, true)),
+            _services);
 
         if (!result.Applied)
         {
@@ -369,12 +404,12 @@ internal sealed class LegacyStatusLifecycleAdapter
         return string.IsNullOrEmpty(sanitized) ? "legacy_actor" : sanitized;
     }
 
-    private static BattleExecutionServices CreateServices() =>
+    private static BattleExecutionServices CreateServices(IAilmentApplicationPolicy ailmentPolicy) =>
         new(
             new LegacyAilmentRepository(),
             new NoDamagePolicy(),
             new NoInstantDeathPolicy(),
-            new AlwaysAilmentPolicy(),
+            ailmentPolicy,
             new AlwaysChancePolicy(),
             new ZeroPowerPolicy(),
             new OrderedRandomTargetPolicy(),
@@ -426,9 +461,10 @@ internal sealed class LegacyStatusLifecycleAdapter
         public bool ShouldDefeat(InstantDeathPolicyRequest request) => false;
     }
 
-    private sealed class AlwaysAilmentPolicy : IAilmentApplicationPolicy
+    private sealed class LegacyAilmentApplicationPolicy(IRandomSource random) : IAilmentApplicationPolicy
     {
-        public bool ShouldApply(AilmentApplicationPolicyRequest request) => true;
+        public bool ShouldApply(AilmentApplicationPolicyRequest request) =>
+            random.NextInt32(0, 100) < request.Chance;
     }
 
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy

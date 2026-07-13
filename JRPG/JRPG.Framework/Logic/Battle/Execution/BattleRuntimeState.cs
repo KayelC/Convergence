@@ -51,6 +51,26 @@ public sealed record ActiveAilmentState(
     bool IsRemovable = true);
 
 public sealed record BattleStatStageState(int Stage, DurationDefinition? Duration);
+
+public static class BattleStatStageRange
+{
+    public const int Minimum = -4;
+    public const int Maximum = 4;
+
+    public static bool Contains(int stage) => stage is >= Minimum and <= Maximum;
+    public static int Clamp(int stage) => Math.Clamp(stage, Minimum, Maximum);
+
+    public static int ApplyDelta(int current, int delta)
+    {
+        long requested = (long)current + delta;
+        return requested switch
+        {
+            < Minimum => Minimum,
+            > Maximum => Maximum,
+            _ => (int)requested
+        };
+    }
+}
 public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? Duration);
 public sealed record BattleShieldState(DurationDefinition? Duration);
 public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
@@ -313,10 +333,12 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(removed);
     }
 
-    public void ChangeStatStage(ContentId id, int delta, DurationDefinition? duration)
+    public int ChangeStatStage(ContentId id, int delta, DurationDefinition? duration)
     {
         int current = _statStages.TryGetValue(id, out BattleStatStageState? state) ? state.Stage : 0;
-        _statStages[id] = new BattleStatStageState(current + delta, duration ?? state?.Duration);
+        int next = BattleStatStageRange.ApplyDelta(current, delta);
+        _statStages[id] = new BattleStatStageState(next, duration ?? state?.Duration);
+        return next - current;
     }
 
     public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration) =>

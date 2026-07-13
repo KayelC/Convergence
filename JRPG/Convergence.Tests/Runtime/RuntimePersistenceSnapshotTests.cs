@@ -168,6 +168,38 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_AndActorRestoreRejectOutOfRangeStatStages()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        ContentId attack = Id("attack");
+        RuntimeActorSnapshot malformed = CopyActor(
+            actor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statStages: [new RuntimeStatStageSnapshot(attack, 5)]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorStatStageOutOfRange,
+            "$.actors[0].battleStatus.statStages[0].stage");
+
+        SkillDefinition[] passives = malformed.Skills.EquippedSkillIds
+            .Select(skillId => catalog.Skills[skillId])
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .ToArray();
+        ArgumentException restore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
+            malformed,
+            CombatDefenseProfile.Empty,
+            passives));
+        Assert.Contains("$.battleStatus.statStages[0].stage", restore.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsUnloadedPassivesSkillShapeAndActorKindMismatch()
     {
         GameDataCatalog catalog = LoadCatalog();

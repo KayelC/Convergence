@@ -3,9 +3,21 @@ using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
+internal enum OrderedEffectStopReason
+{
+    None,
+    Target,
+    Action,
+    Interrupted
+}
+
 internal sealed record OrderedEffectExecution(
     IReadOnlyList<EffectExecutionResult> Effects,
-    bool Interrupted);
+    OrderedEffectStopReason StopReason)
+{
+    public bool Interrupted => StopReason == OrderedEffectStopReason.Interrupted;
+    public bool StopsAction => StopReason is OrderedEffectStopReason.Action or OrderedEffectStopReason.Interrupted;
+}
 
 internal sealed class OrderedEffectExecutor
 {
@@ -27,6 +39,7 @@ internal sealed class OrderedEffectExecutor
     {
         var results = new List<EffectExecutionResult>();
         var stoppedTargets = new HashSet<RuntimeInstanceId>();
+        bool targetStopped = false;
         IReadOnlyList<RuntimeActorState?> executionTargets = targets.IsUntargeted
             ? Array.AsReadOnly<RuntimeActorState?>([null])
             : Array.AsReadOnly(targets.Targets.Cast<RuntimeActorState?>().ToArray());
@@ -66,7 +79,9 @@ internal sealed class OrderedEffectExecutor
 
                 if (result.Outcome == EffectExecutionOutcome.Interrupted)
                 {
-                    return new OrderedEffectExecution(Array.AsReadOnly(results.ToArray()), true);
+                    return new OrderedEffectExecution(
+                        Array.AsReadOnly(results.ToArray()),
+                        OrderedEffectStopReason.Interrupted);
                 }
 
                 if (result.Outcome != EffectExecutionOutcome.Failure)
@@ -76,21 +91,28 @@ internal sealed class OrderedEffectExecutor
 
                 if (effect.OnFailure == EffectFailurePolicy.StopAction)
                 {
-                    return new OrderedEffectExecution(Array.AsReadOnly(results.ToArray()), false);
+                    return new OrderedEffectExecution(
+                        Array.AsReadOnly(results.ToArray()),
+                        OrderedEffectStopReason.Action);
                 }
 
                 if (effect.OnFailure == EffectFailurePolicy.StopTarget)
                 {
                     if (target is null)
                     {
-                        return new OrderedEffectExecution(Array.AsReadOnly(results.ToArray()), false);
+                        return new OrderedEffectExecution(
+                            Array.AsReadOnly(results.ToArray()),
+                            OrderedEffectStopReason.Target);
                     }
 
                     stoppedTargets.Add(target.InstanceId);
+                    targetStopped = true;
                 }
             }
         }
 
-        return new OrderedEffectExecution(Array.AsReadOnly(results.ToArray()), false);
+        return new OrderedEffectExecution(
+            Array.AsReadOnly(results.ToArray()),
+            targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
     }
 }

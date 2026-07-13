@@ -67,6 +67,8 @@ Important battle concepts:
 - Rigid-body ailments such as Freeze, Shock, Bind, and Stun make physical hits critical.
 - `BattleKnowledge` records discovered affinities and powers analysis/AI decisions.
 
+Clean ailment execution has one rule boundary. Application checks defeated state, guard, typed ailment resistance, passive resistance replacements, immunity, and authored chance before mutating state. At turn start, every active ailment contributes a typed restriction. The default precedence is return/flee, skip, forced confusion, forced physical, limited action, then can-act; limited-action allow-lists are intersected. Hosts can replace this policy, and custom ailment behavior must have an explicitly registered runtime handler. Stat stages saturate at `-4..+4`.
+
 ## Negotiation And Recruitment
 
 Negotiation is part of the battle subsystem through `NegotiationEngine`, using negotiation questions loaded from `questions.json`.

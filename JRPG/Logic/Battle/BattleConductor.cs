@@ -890,7 +890,9 @@ namespace JRPGPrototype.Logic.Battle
                 Combatant actor = Actor(request.Actor);
                 TurnStartResult result = _owner._statusRegistry.ProcessTurnStart(actor);
                 return new ValueTask<EncounterBattleTurnStartLifecycleResult>(
-                    new EncounterBattleTurnStartLifecycleResult(ToFrameworkTurnStart(result), []));
+                    new EncounterBattleTurnStartLifecycleResult(
+                        LegacyTurnStartRestrictionAdapter.ToFramework(result),
+                        []));
             }
 
             public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
@@ -1063,17 +1065,6 @@ namespace JRPGPrototype.Logic.Battle
                     }
                 }
             }
-
-            private static EncounterBattleTurnStartOutcome ToFrameworkTurnStart(TurnStartResult result) => result switch
-            {
-                TurnStartResult.Skip => EncounterBattleTurnStartOutcome.Skip,
-                TurnStartResult.LimitedAction => EncounterBattleTurnStartOutcome.LimitedAction,
-                TurnStartResult.ForcedPhysical => EncounterBattleTurnStartOutcome.ForcedPhysical,
-                TurnStartResult.ForcedConfusion => EncounterBattleTurnStartOutcome.ForcedConfusion,
-                TurnStartResult.FleeBattle => EncounterBattleTurnStartOutcome.FleeBattle,
-                TurnStartResult.ReturnToCOMP => EncounterBattleTurnStartOutcome.ReturnToStock,
-                _ => EncounterBattleTurnStartOutcome.CanAct
-            };
 
             private static TurnStartResult ToLegacyTurnStart(EncounterBattleTurnStartOutcome result) => result switch
             {

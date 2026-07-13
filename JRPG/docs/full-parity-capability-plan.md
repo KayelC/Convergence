@@ -595,6 +595,15 @@ Phase 2-15 implementation note:
 - Passive trigger dispatch is intentionally suppressed inside this 2-15 lifecycle port so Phase 2-16 remains the owner of passive lifecycle proof.
 - Verification: focused Training Annex tests passed `32/32`; lifecycle-focused tests passed `39/39`; full suite passed `789/789`; framework build stayed at `0` warnings and solution build stayed at `98` existing legacy warnings. Clean battle, field, save, and Training Annex demos all completed successfully.
 
+Review-Whole-3 lifecycle correction:
+
+- All clean ailment application paths now share `BattleAilmentApplicationService`; typed skills/items cannot bypass guard, immunity, passive resistance replacements, or authored chance.
+- Turn-start results preserve allowed action IDs and source ailments. Every active ailment participates through an injectable precedence policy; the default uses the documented most-restrictive order and intersects competing limited-action allow-lists.
+- Custom turn behavior requires an injected handler. A missing handler rejects execution instead of silently allowing the actor to act.
+- Ailment-owned trigger conditions and failure policies use the same ordered-effect executor as skills, items, and passives.
+- Runtime stat stages saturate at `-4..+4`; save validation and actor restore reject out-of-range snapshots.
+- Status remains `parallel_partial` because production status content and protected legacy consumers have not been retired. Review-Whole-3 passed `100/100` focused tests and `975/975` full-suite tests with no skips.
+
 ### 16. `passive_lifecycle`
 
 Current status: `parallel_partial`.

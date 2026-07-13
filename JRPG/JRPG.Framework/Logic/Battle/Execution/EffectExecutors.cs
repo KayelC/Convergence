@@ -200,26 +200,26 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
             return Failure(context, detail: "The ailment target or definition is unavailable.", relatedId: definition.AilmentId);
         }
 
-        ResistanceLevel resistance = AilmentResistanceResolver.Resolve(target.DefenseProfile, definition.AilmentId);
-        var conditionContext = new BattleConditionContext(
-            target,
-            context.Actor,
-            context.Request.Participants,
-            context.Request.BattleKindId,
-            context.Request.MoonPhaseId,
+        BattleAilmentApplicationResult application = context.Services.AilmentApplications.Apply(
+            new BattleAilmentApplicationRequest(
+                context.Actor,
+                target,
+                ailment,
+                definition.Chance,
+                definition.Duration,
+                participants: context.Request.Participants,
+                battleKindId: context.Request.BattleKindId,
+                moonPhaseId: context.Request.MoonPhaseId,
+                skill: context.Request.Skill),
             context.Services);
-        resistance = context.Services.RuleModifiers.ResolveAilmentResistance(
-            target,
-            definition.AilmentId,
-            resistance,
-            new RuleModifierContext(conditionContext, context.Request.Skill));
-        if (!context.Services.AilmentPolicy.ShouldApply(
-                new AilmentApplicationPolicyRequest(context.Actor, target, definition, ailment, resistance)))
+        if (!application.Applied)
         {
-            return Failure(context, detail: "The ailment application failed.", relatedId: definition.AilmentId);
+            return Failure(
+                context,
+                detail: $"The ailment application was {application.Status}.",
+                relatedId: definition.AilmentId);
         }
 
-        target.ApplyAilment(ailment, definition.Duration ?? ailment.DefaultDuration);
         return Success(context, relatedId: definition.AilmentId);
     }
 }

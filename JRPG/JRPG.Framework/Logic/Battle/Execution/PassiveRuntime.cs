@@ -539,7 +539,6 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         RuntimeActorState target,
         BattleExecutionServices services)
     {
-        var results = new List<EffectExecutionResult>();
         var request = new EffectActionExecutionRequest(
             skill.Id,
             dispatchRequest.Owner,
@@ -552,44 +551,13 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
             [target.InstanceId],
             skill: skill);
 
-        for (int effectIndex = 0; effectIndex < trigger.Effects.Count; effectIndex++)
-        {
-            EffectDefinition effect = trigger.Effects[effectIndex];
-            DamageElement? effectElement = effect is DamageEffectDefinition damage ? damage.Element : null;
-            var context = new EffectExecutionContext(
+        OrderedEffectExecution execution = new OrderedEffectExecutor(
+            services,
+            services.EffectExecutors).Execute(
                 request,
-                services,
-                effectIndex,
-                effect,
-                target,
-                effectElement);
-
-            if (!BattleConditionEvaluator.Evaluate(effect.When, context))
-            {
-                results.Add(new EffectExecutionResult(
-                    effectIndex,
-                    target.InstanceId,
-                    EffectExecutionOutcome.Skipped,
-                    Detail: "The passive effect condition was false."));
-                continue;
-            }
-
-            EffectExecutionResult result = services.EffectExecutors.Execute(effect, context);
-            results.Add(result);
-            if (result.Outcome == EffectExecutionOutcome.Interrupted ||
-                result.Outcome == EffectExecutionOutcome.Failure && effect.OnFailure == EffectFailurePolicy.StopAction)
-            {
-                return new TriggerEffectExecution(Array.AsReadOnly(results.ToArray()), true);
-            }
-
-            if (result.Outcome == EffectExecutionOutcome.Failure &&
-                effect.OnFailure == EffectFailurePolicy.StopTarget)
-            {
-                break;
-            }
-        }
-
-        return new TriggerEffectExecution(Array.AsReadOnly(results.ToArray()), false);
+                trigger.Effects,
+                new ResolvedRuntimeTargetSet([target]));
+        return new TriggerEffectExecution(execution.Effects, execution.StopsAction);
     }
 
     private static PassiveTriggerExecutionResult NonExecuting(

@@ -206,12 +206,46 @@ public sealed class NoopBattleEncounterLifecyclePort : IBattleEncounterLifecycle
         new(Array.Empty<BattleEncounterEvent>());
 }
 
-public sealed record BattleEncounterTurnRequest(
-    BattleEncounterRequest Encounter,
-    BattleEncounterParticipant Actor,
-    IReadOnlyList<BattleEncounterParticipant> Participants,
-    BattleTurnStartOutcome TurnStartOutcome,
-    BattleTurnEconomySnapshot TurnEconomyState);
+public sealed record BattleEncounterTurnRequest
+{
+    public BattleEncounterTurnRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IReadOnlyList<BattleEncounterParticipant> participants,
+        BattleTurnStartOutcome turnStartOutcome,
+        BattleTurnEconomySnapshot turnEconomyState)
+        : this(
+            encounter,
+            actor,
+            participants,
+            new BattleTurnStartRestriction(turnStartOutcome),
+            turnEconomyState)
+    {
+    }
+
+    public BattleEncounterTurnRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IReadOnlyList<BattleEncounterParticipant> participants,
+        BattleTurnStartRestriction turnStartRestriction,
+        BattleTurnEconomySnapshot turnEconomyState)
+    {
+        Encounter = encounter ?? throw new ArgumentNullException(nameof(encounter));
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        Participants = Array.AsReadOnly(
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
+        TurnStartRestriction = turnStartRestriction ?? throw new ArgumentNullException(nameof(turnStartRestriction));
+        TurnEconomyState = turnEconomyState ?? throw new ArgumentNullException(nameof(turnEconomyState));
+    }
+
+    public BattleEncounterRequest Encounter { get; }
+    public BattleEncounterParticipant Actor { get; }
+    public IReadOnlyList<BattleEncounterParticipant> Participants { get; }
+    public BattleTurnStartRestriction TurnStartRestriction { get; }
+    public BattleTurnStartOutcome TurnStartOutcome => TurnStartRestriction.Outcome;
+    public IReadOnlyList<ContentId> AllowedActionIds => TurnStartRestriction.AllowedActionIds;
+    public BattleTurnEconomySnapshot TurnEconomyState { get; }
+}
 
 public sealed record BattleEncounterCommandResult
 {
@@ -537,7 +571,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             request,
                             actor,
                             request.Participants,
-                            turnStart.Outcome,
+                            turnStart.Restriction,
                             beforeEconomy),
                         cancellationToken);
 

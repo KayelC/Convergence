@@ -1,13 +1,27 @@
 using JRPGPrototype.Core;
 using JRPGPrototype.Data;
+using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities;
 using JRPGPrototype.Logic.Battle.Engines;
+using JRPGPrototype.Logic.Battle.Execution;
 using Xunit;
 
 namespace Convergence.Tests;
 
 public sealed class StatusRegistryTests
 {
+    [Fact]
+    public void LegacyTurnStartRestrictionAdapter_PreservesLimitedActionIds()
+    {
+        BattleTurnStartRestriction restriction =
+            LegacyTurnStartRestrictionAdapter.ToFramework(TurnStartResult.LimitedAction);
+
+        Assert.Equal(BattleTurnStartOutcome.LimitedAction, restriction.Outcome);
+        Assert.Equal(
+            [ContentId.Parse("basic_attack"), ContentId.Parse("guard"), ContentId.Parse("pass")],
+            restriction.AllowedActionIds);
+    }
+
     [Fact]
     public void IsActionRedundant_ReturnsFalseForDamagingSkillEvenWhenSecondaryAilmentAlreadyExists()
     {

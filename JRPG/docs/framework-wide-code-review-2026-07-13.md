@@ -103,6 +103,8 @@ Initiative output is only checked for being nonempty. Duplicate, missing, or unk
 
 ### M3. Typed ailment effects bypass the lifecycle guard rule
 
+**Correction status:** Corrected by **Review-Whole-3** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
+
 `BattleStatusLifecycleService.TryApplyAilment` correctly blocks ailments while the target is guarding. The standard typed effect path does not call that rule: `ApplyAilmentEffectExecutor` resolves resistance and chance, then directly applies the ailment.
 
 Relevant code:
@@ -116,7 +118,13 @@ Existing tests cover direct lifecycle application and ordinary typed ailment exe
 
 **Required correction:** Make one ailment-application service authoritative and route typed effects through it, including passive resistance replacements and authored chance.
 
+**Implemented correction:** `BattleAilmentApplicationService` is now the single clean application authority. Direct lifecycle requests and `ApplyAilmentEffectExecutor` both delegate to the instance owned by `BattleExecutionServices`. The authority checks defeated state, guard, base ailment resistance, conditional passive resistance replacement, immunity, and the authored chance policy before applying exclusivity and duration state. `AilmentApplicationPolicyRequest` carries the effective authored chance directly instead of depending on a skill-effect DTO. The legacy adapter preserves its existing random behavior by supplying a host-owned chance policy rather than retaining a second application algorithm.
+
+Adversarial tests execute a real typed ailment skill against a guarding actor, replace the application authority with a recording implementation, and retain the existing passive-resistance test. These tests would fail if the effect executor recreated application logic locally.
+
 ### M4. Authored ailment lifecycle variants are accepted but not fully executable
+
+**Correction status:** Corrected by **Review-Whole-3** on 2026-07-13 and verified against the current `track-12-recovery` working tree.
 
 The schema and validator accept more behavior than the lifecycle runtime preserves:
 
@@ -130,6 +138,16 @@ The schema and validator accept more behavior than the lifecycle runtime preserv
 **Impact:** Structurally valid, registered content can load successfully and then behave differently from what it authored.
 
 **Required correction:** Return typed action restrictions, add a custom behavior execution port or reject custom behavior as unsupported, evaluate trigger conditions, share ordered-effect failure handling, define multiple-ailment precedence, and enforce the approved stage range.
+
+**Implemented correction:**
+
+- `BattleTurnStartRestriction` preserves the outcome, allowed action IDs, and source ailment IDs. `BattleEncounterTurnRequest` carries that complete restriction to the host turn handler rather than reducing it to an enum.
+- `MostRestrictiveBattleTurnPolicy` evaluates every active ailment. The default precedence is return/flee, skip, forced confusion, forced physical, limited action, then can-act. Equally strong limited-action restrictions intersect their allow-lists; an empty intersection becomes skip. Hosts may inject another explicit policy.
+- `ICustomAilmentTurnBehaviorHandler` is an explicit runtime port. Missing handlers produce an actionable exception and can no longer silently turn custom behavior into `CanAct`.
+- Ailment trigger-level conditions are evaluated. Skill, item, passive, and ailment effects now share `OrderedEffectExecutor`, including distinct `StopTarget`, `StopAction`, and interruption semantics.
+- Runtime stat stages saturate safely at the approved `-4..+4` range, including extreme integer deltas. Actor restore and complete-save validation reject out-of-range persisted stages at the precise authored snapshot path.
+
+**Review-Whole-3 verification:** 100 focused ailment/effect/passive/encounter/persistence tests passed. The full suite passed with **975 passed, 0 failed, 0 skipped**. The framework built with **0 warnings and 0 errors**; the solution retained **98 legacy console-host warnings and 0 errors**. All four noninteractive clean demos exited `0`, framework boundary searches were clean, and `Data/Jsons` was unchanged.
 
 ### M5. Demon-stock commands can mutate non-demon party members
 
@@ -322,7 +340,7 @@ Do not begin another feature phase before the first five correction groups are c
    - Cancellation precedes encounter mutation/publication, and initiative must be an exact team permutation.
    - Mandatory finite phase-progress limits prevent nonprogressing and self-replenishing loops.
    - `IBattleTurnEconomy` is the runner boundary; Press Turn and neutral standard actions are explicit implementations.
-3. **Review-Whole-3: Ailment authority and lifecycle completeness**
+3. **Review-Whole-3: Ailment authority and lifecycle completeness** - completed and verified 2026-07-13.
    - Unify typed ailment application.
    - Preserve limited-action IDs and custom behavior execution.
    - Fix trigger conditions/failure policies and stat-stage bounds.
@@ -348,4 +366,4 @@ After these corrections, rerun this review against source and adversarial tests 
 
 The codebase is not in a failed state. Its clean architecture has real substance: typed content, strict loading, catalog qualification, immutable snapshots, host-neutral contracts, original content, clean runtime demos, and a warning-free framework build all exist and work.
 
-However, the framework is not yet internally complete. Review-Whole-1 and Review-Whole-2 have corrected save/restore contract mismatch, battle-loop liveness, and mandatory Press Turn coupling. The most important remaining risks are contradictory ailment paths, stock-role authorization, fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.
+However, the framework is not yet internally complete. Review-Whole-1 through Review-Whole-3 have corrected save/restore contract mismatch, battle-loop liveness, mandatory Press Turn coupling, contradictory ailment paths, and incomplete authored ailment execution. The most important remaining risks are stock-role authorization, fusion authority, atomic execution, unchecked boundary arithmetic, definition immutability, and project-specific mechanics inside supposedly generic runtime services. Those should be corrected before adding more breadth.

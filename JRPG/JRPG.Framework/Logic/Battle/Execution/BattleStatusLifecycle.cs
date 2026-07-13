@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle;
@@ -60,9 +61,158 @@ public sealed record BattleTurnStartLifecycleRequest(
     RuntimeActorState Actor,
     bool CanReturnToStock = false);
 
-public sealed record BattleTurnStartLifecycleResult(
-    BattleTurnStartOutcome Outcome,
-    IReadOnlyList<BattleStatusLifecycleEvent> Events);
+public sealed record BattleTurnStartRestriction
+{
+    public BattleTurnStartRestriction(
+        BattleTurnStartOutcome outcome,
+        IEnumerable<ContentId>? allowedActionIds = null,
+        IEnumerable<ContentId>? sourceAilmentIds = null)
+    {
+        Outcome = outcome;
+        AllowedActionIds = Array.AsReadOnly((allowedActionIds ?? []).Distinct().ToArray());
+        SourceAilmentIds = Array.AsReadOnly((sourceAilmentIds ?? []).Distinct().ToArray());
+
+        if (outcome == BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count == 0)
+        {
+            throw new ArgumentException(
+                "A limited-action restriction must contain at least one allowed action.",
+                nameof(allowedActionIds));
+        }
+
+        if (outcome != BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count > 0)
+        {
+            throw new ArgumentException(
+                "Allowed action IDs are valid only for a limited-action restriction.",
+                nameof(allowedActionIds));
+        }
+    }
+
+    public BattleTurnStartOutcome Outcome { get; }
+    public IReadOnlyList<ContentId> AllowedActionIds { get; }
+    public IReadOnlyList<ContentId> SourceAilmentIds { get; }
+
+    public static BattleTurnStartRestriction CanAct { get; } =
+        new(BattleTurnStartOutcome.CanAct);
+}
+
+public sealed record BattleTurnStartLifecycleResult
+{
+    public BattleTurnStartLifecycleResult(
+        BattleTurnStartOutcome outcome,
+        IEnumerable<BattleStatusLifecycleEvent> events)
+        : this(new BattleTurnStartRestriction(outcome), events)
+    {
+    }
+
+    public BattleTurnStartLifecycleResult(
+        BattleTurnStartRestriction restriction,
+        IEnumerable<BattleStatusLifecycleEvent> events)
+    {
+        Restriction = restriction ?? throw new ArgumentNullException(nameof(restriction));
+        Events = Array.AsReadOnly(events?.ToArray() ?? throw new ArgumentNullException(nameof(events)));
+    }
+
+    public BattleTurnStartRestriction Restriction { get; }
+    public BattleTurnStartOutcome Outcome => Restriction.Outcome;
+    public IReadOnlyList<ContentId> AllowedActionIds => Restriction.AllowedActionIds;
+    public IReadOnlyList<BattleStatusLifecycleEvent> Events { get; }
+}
+
+public sealed record CustomAilmentTurnBehaviorRequest(
+    RuntimeActorState Actor,
+    AilmentDefinition Ailment,
+    bool CanReturnToStock);
+
+public sealed record CustomAilmentTurnBehaviorResult
+{
+    public CustomAilmentTurnBehaviorResult(
+        BattleTurnStartOutcome outcome,
+        IEnumerable<ContentId>? allowedActionIds = null)
+    {
+        Outcome = outcome;
+        AllowedActionIds = Array.AsReadOnly((allowedActionIds ?? []).Distinct().ToArray());
+
+        if (outcome == BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count == 0)
+        {
+            throw new ArgumentException(
+                "A custom limited-action result must contain at least one allowed action.",
+                nameof(allowedActionIds));
+        }
+
+        if (outcome != BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count > 0)
+        {
+            throw new ArgumentException(
+                "Custom allowed action IDs are valid only for a limited-action result.",
+                nameof(allowedActionIds));
+        }
+    }
+
+    public BattleTurnStartOutcome Outcome { get; }
+    public IReadOnlyList<ContentId> AllowedActionIds { get; }
+}
+
+public interface ICustomAilmentTurnBehaviorHandler
+{
+    CustomAilmentTurnBehaviorResult Resolve(
+        CustomAilmentTurnBehaviorDefinition behavior,
+        CustomAilmentTurnBehaviorRequest request);
+}
+
+public interface IBattleTurnRestrictionPolicy
+{
+    BattleTurnStartRestriction Resolve(IReadOnlyList<BattleTurnStartRestriction> restrictions);
+}
+
+public sealed class MostRestrictiveBattleTurnPolicy : IBattleTurnRestrictionPolicy
+{
+    public BattleTurnStartRestriction Resolve(IReadOnlyList<BattleTurnStartRestriction> restrictions)
+    {
+        ArgumentNullException.ThrowIfNull(restrictions);
+        BattleTurnStartRestriction[] effective = restrictions
+            .Where(restriction => restriction.Outcome != BattleTurnStartOutcome.CanAct)
+            .ToArray();
+        if (effective.Length == 0)
+        {
+            return BattleTurnStartRestriction.CanAct;
+        }
+
+        int highestPrecedence = effective.Max(restriction => Precedence(restriction.Outcome));
+        BattleTurnStartRestriction[] strongest = effective
+            .Where(restriction => Precedence(restriction.Outcome) == highestPrecedence)
+            .OrderBy(SourceKey, StringComparer.Ordinal)
+            .ToArray();
+
+        if (strongest[0].Outcome != BattleTurnStartOutcome.LimitedAction)
+        {
+            return strongest[0];
+        }
+
+        ContentId[] allowed = strongest[0].AllowedActionIds
+            .Where(actionId => strongest.Skip(1).All(restriction => restriction.AllowedActionIds.Contains(actionId)))
+            .ToArray();
+        ContentId[] sources = strongest.SelectMany(restriction => restriction.SourceAilmentIds).Distinct().ToArray();
+        return allowed.Length == 0
+            ? new BattleTurnStartRestriction(BattleTurnStartOutcome.Skip, sourceAilmentIds: sources)
+            : new BattleTurnStartRestriction(BattleTurnStartOutcome.LimitedAction, allowed, sources);
+    }
+
+    private static string SourceKey(BattleTurnStartRestriction restriction) =>
+        restriction.SourceAilmentIds.Count == 0
+            ? string.Empty
+            : restriction.SourceAilmentIds[0].ToString();
+
+    private static int Precedence(BattleTurnStartOutcome outcome) => outcome switch
+    {
+        BattleTurnStartOutcome.ReturnToStock => 6,
+        BattleTurnStartOutcome.FleeBattle => 6,
+        BattleTurnStartOutcome.Skip => 5,
+        BattleTurnStartOutcome.ForcedConfusion => 4,
+        BattleTurnStartOutcome.ForcedPhysical => 3,
+        BattleTurnStartOutcome.LimitedAction => 2,
+        BattleTurnStartOutcome.CanAct => 1,
+        _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
+    };
+}
 
 public sealed record BattleTurnEndLifecycleRequest(
     RuntimeActorState Actor,
@@ -76,19 +226,146 @@ public sealed record BattleTurnEndLifecycleResult(
     IReadOnlyList<BattleStatusLifecycleEvent> Events,
     IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations);
 
-public sealed record BattleAilmentApplicationRequest(
-    RuntimeActorState Actor,
-    RuntimeActorState Target,
-    AilmentDefinition Ailment,
-    int Chance,
-    DurationDefinition? Duration = null,
-    bool IsRemovable = true);
+public sealed record BattleAilmentApplicationRequest
+{
+    public BattleAilmentApplicationRequest(
+        RuntimeActorState actor,
+        RuntimeActorState target,
+        AilmentDefinition ailment,
+        int chance,
+        DurationDefinition? duration = null,
+        bool isRemovable = true,
+        IEnumerable<RuntimeActorState>? participants = null,
+        ContentId? battleKindId = null,
+        ContentId? moonPhaseId = null,
+        SkillDefinition? skill = null)
+    {
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        Target = target ?? throw new ArgumentNullException(nameof(target));
+        Ailment = ailment ?? throw new ArgumentNullException(nameof(ailment));
+        Chance = chance;
+        Duration = duration;
+        IsRemovable = isRemovable;
+        Participants = Array.AsReadOnly((participants ?? [actor, target])
+            .DistinctBy(participant => participant.InstanceId)
+            .ToArray());
+        BattleKindId = battleKindId;
+        MoonPhaseId = moonPhaseId;
+        Skill = skill;
+    }
+
+    public RuntimeActorState Actor { get; }
+    public RuntimeActorState Target { get; }
+    public AilmentDefinition Ailment { get; }
+    public int Chance { get; }
+    public DurationDefinition? Duration { get; }
+    public bool IsRemovable { get; }
+    public IReadOnlyList<RuntimeActorState> Participants { get; }
+    public ContentId? BattleKindId { get; }
+    public ContentId? MoonPhaseId { get; }
+    public SkillDefinition? Skill { get; }
+}
 
 public sealed record BattleAilmentApplicationResult(
     BattleAilmentApplicationStatus Status,
     IReadOnlyList<BattleStatusLifecycleEvent> Events)
 {
     public bool Applied => Status == BattleAilmentApplicationStatus.Applied;
+}
+
+public interface IBattleAilmentApplicationService
+{
+    BattleAilmentApplicationResult Apply(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services);
+}
+
+public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationService
+{
+    public BattleAilmentApplicationResult Apply(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(services);
+
+        RuntimeActorState target = request.Target;
+        AilmentDefinition ailment = request.Ailment;
+        if (target.IsDefeated)
+        {
+            return Blocked(request, BattleAilmentApplicationStatus.TargetDefeated, "target_defeated");
+        }
+
+        if (target.IsGuarding)
+        {
+            return Blocked(request, BattleAilmentApplicationStatus.GuardBlocked, "guard");
+        }
+
+        ResistanceLevel resistance = AilmentResistanceResolver.Resolve(target.DefenseProfile, ailment.Id);
+        var conditionContext = new BattleConditionContext(
+            target,
+            request.Actor,
+            request.Participants,
+            request.BattleKindId,
+            request.MoonPhaseId,
+            services);
+        resistance = services.RuleModifiers.ResolveAilmentResistance(
+            target,
+            ailment.Id,
+            resistance,
+            new RuleModifierContext(conditionContext, request.Skill));
+        if (resistance == ResistanceLevel.Immune)
+        {
+            return Blocked(request, BattleAilmentApplicationStatus.Immune, "immune");
+        }
+
+        int chance = Math.Clamp(request.Chance, 0, 100);
+        if (!services.AilmentPolicy.ShouldApply(
+                new AilmentApplicationPolicyRequest(
+                    request.Actor,
+                    target,
+                    chance,
+                    ailment,
+                    resistance)))
+        {
+            return new BattleAilmentApplicationResult(
+                BattleAilmentApplicationStatus.Missed,
+                [
+                    new BattleStatusLifecycleEvent(
+                        BattleStatusLifecycleEventKind.AilmentMissed,
+                        target.InstanceId,
+                        ailment.Id,
+                        Detail: chance.ToString())
+                ]);
+        }
+
+        target.ApplyAilment(
+            ailment,
+            request.Duration ?? ailment.DefaultDuration,
+            request.IsRemovable);
+        return new BattleAilmentApplicationResult(
+            BattleAilmentApplicationStatus.Applied,
+            [
+                new BattleStatusLifecycleEvent(
+                    BattleStatusLifecycleEventKind.AilmentApplied,
+                    target.InstanceId,
+                    ailment.Id)
+            ]);
+    }
+
+    private static BattleAilmentApplicationResult Blocked(
+        BattleAilmentApplicationRequest request,
+        BattleAilmentApplicationStatus status,
+        string detail) =>
+        new(
+            status,
+            [
+                new BattleStatusLifecycleEvent(
+                    BattleStatusLifecycleEventKind.AilmentBlocked,
+                    request.Target.InstanceId,
+                    request.Ailment.Id,
+                    Detail: detail)
+            ]);
 }
 
 public sealed record BattleStatusCleanupRequest(
@@ -105,7 +382,9 @@ public interface IBattleStatusLifecycleService
         BattleTurnEndLifecycleRequest request,
         BattleExecutionServices services);
 
-    BattleAilmentApplicationResult TryApplyAilment(BattleAilmentApplicationRequest request);
+    BattleAilmentApplicationResult TryApplyAilment(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services);
 
     BattleStatusLifecycleResult ApplyStatStage(
         RuntimeActorState target,
@@ -119,10 +398,22 @@ public interface IBattleStatusLifecycleService
 public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 {
     private readonly IRandomSource _random;
+    private readonly IReadOnlyDictionary<ContentId, ICustomAilmentTurnBehaviorHandler> _customTurnBehaviorHandlers;
+    private readonly IBattleTurnRestrictionPolicy _turnRestrictionPolicy;
 
-    public BattleStatusLifecycleService(IRandomSource random)
+    public BattleStatusLifecycleService(
+        IRandomSource random,
+        IEnumerable<KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>>? customTurnBehaviorHandlers = null,
+        IBattleTurnRestrictionPolicy? turnRestrictionPolicy = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        _customTurnBehaviorHandlers = new ReadOnlyDictionary<ContentId, ICustomAilmentTurnBehaviorHandler>(
+            (customTurnBehaviorHandlers ?? []).ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value ?? throw new ArgumentException(
+                    $"Custom ailment turn-behavior handler '{pair.Key}' cannot be null.",
+                    nameof(customTurnBehaviorHandlers))));
+        _turnRestrictionPolicy = turnRestrictionPolicy ?? new MostRestrictiveBattleTurnPolicy();
     }
 
     public BattleTurnStartLifecycleResult ProcessTurnStart(BattleTurnStartLifecycleRequest request)
@@ -139,25 +430,27 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                 actor.InstanceId));
         }
 
-        ActiveAilmentState? active = actor.Ailments.Values.FirstOrDefault();
-        if (active is null)
+        BattleTurnStartRestriction restriction = _turnRestrictionPolicy.Resolve(
+                actor.Ailments.Values
+                    .Select(active => ResolveTurnStartRestriction(
+                        actor,
+                        active.Definition,
+                        request.CanReturnToStock))
+                    .ToArray())
+            ?? throw new InvalidOperationException("The battle turn-restriction policy returned null.");
+        if (restriction.Outcome != BattleTurnStartOutcome.CanAct)
         {
-            return new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, events);
-        }
-
-        BattleTurnStartOutcome outcome = ResolveTurnStartOutcome(
-            active.Definition.TurnBehavior,
-            request.CanReturnToStock);
-        if (outcome != BattleTurnStartOutcome.CanAct)
-        {
+            ContentId? sourceAilmentId = restriction.SourceAilmentIds.Count > 0
+                ? restriction.SourceAilmentIds[0]
+                : null;
             events.Add(new BattleStatusLifecycleEvent(
                 BattleStatusLifecycleEventKind.TurnRestricted,
                 actor.InstanceId,
-                active.Definition.Id,
-                Detail: outcome.ToString()));
+                sourceAilmentId,
+                Detail: RestrictionDetail(restriction)));
         }
 
-        return new BattleTurnStartLifecycleResult(outcome, events);
+        return new BattleTurnStartLifecycleResult(restriction, events);
     }
 
     public BattleTurnEndLifecycleResult ProcessTurnEnd(
@@ -207,61 +500,11 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         return new BattleTurnEndLifecycleResult(events, passiveActivations);
     }
 
-    public BattleAilmentApplicationResult TryApplyAilment(BattleAilmentApplicationRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        RuntimeActorState target = request.Target ?? throw new ArgumentNullException(nameof(request.Target));
-        AilmentDefinition ailment = request.Ailment ?? throw new ArgumentNullException(nameof(request.Ailment));
-        var events = new List<BattleStatusLifecycleEvent>();
-
-        if (target.IsDefeated)
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.AilmentBlocked,
-                target.InstanceId,
-                ailment.Id,
-                Detail: "target_defeated"));
-            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.TargetDefeated, events);
-        }
-
-        if (target.IsGuarding)
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.AilmentBlocked,
-                target.InstanceId,
-                ailment.Id,
-                Detail: "guard"));
-            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.GuardBlocked, events);
-        }
-
-        if (AilmentResistanceResolver.Resolve(target.DefenseProfile, ailment.Id) == ResistanceLevel.Immune)
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.AilmentBlocked,
-                target.InstanceId,
-                ailment.Id,
-                Detail: "immune"));
-            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.Immune, events);
-        }
-
-        int chance = Math.Clamp(request.Chance, 0, 100);
-        if (_random.NextInt32(0, 100) >= chance)
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.AilmentMissed,
-                target.InstanceId,
-                ailment.Id,
-                Detail: chance.ToString()));
-            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.Missed, events);
-        }
-
-        target.ApplyAilment(ailment, request.Duration ?? ailment.DefaultDuration, request.IsRemovable);
-        events.Add(new BattleStatusLifecycleEvent(
-            BattleStatusLifecycleEventKind.AilmentApplied,
-            target.InstanceId,
-            ailment.Id));
-        return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.Applied, events);
-    }
+    public BattleAilmentApplicationResult TryApplyAilment(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services) =>
+        (services ?? throw new ArgumentNullException(nameof(services)))
+            .AilmentApplications.Apply(request, services);
 
     public BattleStatusLifecycleResult ApplyStatStage(
         RuntimeActorState target,
@@ -270,14 +513,14 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         DurationDefinition? duration = null)
     {
         ArgumentNullException.ThrowIfNull(target);
-        target.ChangeStatStage(modifierTrackId, delta, duration);
+        int appliedDelta = target.ChangeStatStage(modifierTrackId, delta, duration);
         return new BattleStatusLifecycleResult(
         [
             new BattleStatusLifecycleEvent(
                 BattleStatusLifecycleEventKind.StatStageChanged,
                 target.InstanceId,
                 modifierTrackId,
-                delta)
+                appliedDelta)
         ]);
     }
 
@@ -300,10 +543,16 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         ]);
     }
 
-    private BattleTurnStartOutcome ResolveTurnStartOutcome(
-        AilmentTurnBehaviorDefinition behavior,
-        bool canReturnToStock) =>
-        behavior switch
+    private BattleTurnStartRestriction ResolveTurnStartRestriction(
+        RuntimeActorState actor,
+        AilmentDefinition ailment,
+        bool canReturnToStock)
+    {
+        AilmentTurnBehaviorDefinition behavior = ailment.TurnBehavior;
+        CustomAilmentTurnBehaviorResult? customResult = behavior is CustomAilmentTurnBehaviorDefinition custom
+            ? ResolveCustomBehavior(custom, actor, ailment, canReturnToStock)
+            : null;
+        BattleTurnStartOutcome outcome = behavior switch
         {
             NormalAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.CanAct,
             SkipAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.Skip,
@@ -313,9 +562,52 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             ChanceSkipAilmentTurnBehaviorDefinition chanceSkip =>
                 Roll(chanceSkip.SkipChance) ? BattleTurnStartOutcome.Skip : BattleTurnStartOutcome.CanAct,
             ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear => ResolveFearOutcome(fear, canReturnToStock),
-            CustomAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.CanAct,
-            _ => BattleTurnStartOutcome.CanAct
+            CustomAilmentTurnBehaviorDefinition => customResult!.Outcome,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(behavior),
+                behavior,
+                $"Unsupported ailment turn behavior '{behavior.GetType().Name}'.")
         };
+
+        IReadOnlyList<ContentId> allowedActionIds = behavior switch
+        {
+            LimitedActionsAilmentTurnBehaviorDefinition limited => limited.AllowedActionIds,
+            CustomAilmentTurnBehaviorDefinition => customResult!.AllowedActionIds,
+            _ => []
+        };
+
+        return new BattleTurnStartRestriction(outcome, allowedActionIds, [ailment.Id]);
+    }
+
+    private CustomAilmentTurnBehaviorResult ResolveCustomBehavior(
+        CustomAilmentTurnBehaviorDefinition behavior,
+        RuntimeActorState actor,
+        AilmentDefinition ailment,
+        bool canReturnToStock)
+    {
+        if (!_customTurnBehaviorHandlers.TryGetValue(
+                behavior.HandlerId,
+                out ICustomAilmentTurnBehaviorHandler? handler))
+        {
+            throw new InvalidOperationException(
+                $"No custom ailment turn-behavior handler is registered for '{behavior.HandlerId}' " +
+                $"while resolving ailment '{ailment.Id}'.");
+        }
+
+        return handler.Resolve(
+            behavior,
+            new CustomAilmentTurnBehaviorRequest(actor, ailment, canReturnToStock))
+            ?? throw new InvalidOperationException(
+                $"Custom ailment turn-behavior handler '{behavior.HandlerId}' returned null.");
+    }
+
+    private static string RestrictionDetail(BattleTurnStartRestriction restriction)
+    {
+        string allowed = restriction.AllowedActionIds.Count == 0
+            ? string.Empty
+            : ":" + string.Join(",", restriction.AllowedActionIds);
+        return restriction.Outcome + allowed;
+    }
 
     private BattleTurnStartOutcome ResolveFearOutcome(
         ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear,
@@ -347,6 +639,18 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         {
             foreach (PassiveTriggerDefinition trigger in active.Definition.Triggers.Where(trigger => trigger.EventId == request.EventId))
             {
+                var conditionContext = new BattleConditionContext(
+                    actor,
+                    actor,
+                    participants,
+                    request.BattleKindId,
+                    request.MoonPhaseId,
+                    services);
+                if (!BattleConditionEvaluator.Evaluate(trigger.When, conditionContext))
+                {
+                    continue;
+                }
+
                 var actionRequest = new EffectActionExecutionRequest(
                     active.Definition.Id,
                     actor,
@@ -355,29 +659,27 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     new TargetingDefinition(TargetRelation.Self, TargetSelection.Single, TargetLifeState.Any, true),
                     [actor.InstanceId]);
 
-                for (int effectIndex = 0; effectIndex < trigger.Effects.Count; effectIndex++)
-                {
-                    EffectDefinition effect = trigger.Effects[effectIndex];
-                    var context = new EffectExecutionContext(
+                OrderedEffectExecution execution = new OrderedEffectExecutor(
+                    services,
+                    services.EffectExecutors).Execute(
                         actionRequest,
-                        services,
-                        effectIndex,
-                        effect,
-                        actor,
-                        effect is DamageEffectDefinition damage ? damage.Element : null);
-                    if (!BattleConditionEvaluator.Evaluate(effect.When, context))
+                        trigger.Effects,
+                        new ResolvedRuntimeTargetSet([actor]));
+                foreach (EffectExecutionResult result in execution.Effects)
+                {
+                    if (result.EffectIndex >= 0 && result.EffectIndex < trigger.Effects.Count)
                     {
-                        continue;
+                        AddEffectEvent(
+                            events,
+                            actor.InstanceId,
+                            result,
+                            trigger.Effects[result.EffectIndex]);
                     }
+                }
 
-                    EffectExecutionResult result = services.EffectExecutors.Execute(effect, context);
-                    AddEffectEvent(events, actor.InstanceId, result, effect);
-                    if (result.Outcome == EffectExecutionOutcome.Interrupted ||
-                        result.Outcome == EffectExecutionOutcome.Failure &&
-                        effect.OnFailure == EffectFailurePolicy.StopAction)
-                    {
-                        return;
-                    }
+                if (execution.StopsAction)
+                {
+                    return;
                 }
             }
         }

@@ -31,7 +31,7 @@ public interface IInstantDeathExecutionPolicy
 public sealed record AilmentApplicationPolicyRequest(
     RuntimeActorState Actor,
     RuntimeActorState Target,
-    ApplyAilmentEffectDefinition Effect,
+    int Chance,
     AilmentDefinition Ailment,
     ResistanceLevel Resistance);
 
@@ -128,7 +128,8 @@ public sealed class BattleExecutionServices
         PassiveEventPolicyRegistry? passiveEventPolicies = null,
         IPassiveTriggerDispatcher? passiveTriggers = null,
         ContentId? ownerWouldBeDefeatedEventId = null,
-        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
+        IBattleAilmentApplicationService? ailmentApplications = null)
     {
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
         DamagePolicy = damagePolicy ?? throw new ArgumentNullException(nameof(damagePolicy));
@@ -146,6 +147,7 @@ public sealed class BattleExecutionServices
         SpResourceId = spResourceId ?? ContentId.Parse("sp");
         EffectExecutors = effectExecutors ?? EffectExecutorRegistry.CreateDefault();
         RuleModifiers = ruleModifiers ?? new RuleModifierResolver();
+        AilmentApplications = ailmentApplications ?? new BattleAilmentApplicationService();
         OwnerWouldBeDefeatedEventId = ownerWouldBeDefeatedEventId ?? ContentId.Parse("owner_would_be_defeated");
         PassiveEventPolicies = passiveEventPolicies ?? new PassiveEventPolicyRegistry();
         PassiveEventPolicies.Register(
@@ -170,6 +172,7 @@ public sealed class BattleExecutionServices
     public ContentId SpResourceId { get; }
     public EffectExecutorRegistry EffectExecutors { get; }
     public RuleModifierResolver RuleModifiers { get; }
+    public IBattleAilmentApplicationService AilmentApplications { get; }
     public PassiveEventPolicyRegistry PassiveEventPolicies { get; }
     public IPassiveTriggerDispatcher PassiveTriggers { get; }
     public ContentId OwnerWouldBeDefeatedEventId { get; }

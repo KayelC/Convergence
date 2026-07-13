@@ -84,6 +84,42 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_TypedAilmentUsesAuthoritativeGuardRule()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        target.SetGuarding(true);
+        SkillDefinition skill = ActiveSkill([new ApplyAilmentEffectDefinition(Poison, 100)]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(EffectExecutionOutcome.Failure, effect.Outcome);
+        Assert.Contains(nameof(BattleAilmentApplicationStatus.GuardBlocked), effect.Detail, StringComparison.Ordinal);
+        Assert.False(target.HasAilment(Poison));
+        Assert.True(target.IsGuarding);
+    }
+
+    [Fact]
+    public void Execute_TypedAilmentDelegatesToInjectedApplicationAuthority()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var authority = new RecordingAilmentApplicationService();
+        SkillDefinition skill = ActiveSkill([new ApplyAilmentEffectDefinition(Poison, 73)]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(ailmentApplications: authority)).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(1, authority.CallCount);
+        Assert.Equal(73, authority.LastRequest!.Chance);
+        Assert.Equal(Poison, authority.LastRequest.Ailment.Id);
+        Assert.Equal(EffectExecutionOutcome.Failure, Assert.Single(result.Effects).Outcome);
+        Assert.False(target.HasAilment(Poison));
+    }
+
+    [Fact]
     public void Execute_FalseConditionSkipsWithoutActivatingStopAction()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);
@@ -706,7 +742,8 @@ public sealed class ActiveSkillExecutionTests
         IEnumerable<KeyValuePair<ContentId, IFormulaAmountHandler>>? formulas = null,
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditions = null,
-        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null) =>
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
+        IBattleAilmentApplicationService? ailmentApplications = null) =>
         new(
             ailments ?? new TestAilmentRepository([Ailment(Poison)]),
             new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
@@ -719,7 +756,8 @@ public sealed class ActiveSkillExecutionTests
             formulaHandlers: formulas,
             escapeRuleHandlers: escapeRules,
             customConditionHandlers: customConditions,
-            customEffectHandlers: customEffects);
+            customEffectHandlers: customEffects,
+            ailmentApplications: ailmentApplications);
 
     private static IEnumerable<Type> PublicSignatureTypes(Type type)
     {
@@ -780,6 +818,23 @@ public sealed class ActiveSkillExecutionTests
     private sealed class AlwaysApplyAilmentPolicy : IAilmentApplicationPolicy
     {
         public bool ShouldApply(AilmentApplicationPolicyRequest request) => true;
+    }
+
+    private sealed class RecordingAilmentApplicationService : IBattleAilmentApplicationService
+    {
+        public int CallCount { get; private set; }
+        public BattleAilmentApplicationRequest? LastRequest { get; private set; }
+
+        public BattleAilmentApplicationResult Apply(
+            BattleAilmentApplicationRequest request,
+            BattleExecutionServices services)
+        {
+            CallCount++;
+            LastRequest = request;
+            return new BattleAilmentApplicationResult(
+                BattleAilmentApplicationStatus.Missed,
+                []);
+        }
     }
 
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy

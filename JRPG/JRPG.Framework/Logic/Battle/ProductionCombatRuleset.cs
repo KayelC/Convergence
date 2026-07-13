@@ -233,7 +233,7 @@ public sealed class ProductionCombatRuleset :
             new ProductionAilmentApplicationRequest(
                 FromRuntimeActor(request.Actor),
                 FromRuntimeActor(request.Target),
-                request.Effect.Chance,
+                request.Chance,
                 request.Resistance));
         return result.Applied;
     }

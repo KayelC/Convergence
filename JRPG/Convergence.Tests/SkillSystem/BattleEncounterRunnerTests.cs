@@ -104,6 +104,35 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_PreservesTypedLimitedActionRestrictionForTurnHandler()
+    {
+        ContentId skillAction = Id("skill");
+        var lifecycle = new RecordingLifecycle
+        {
+            Restriction = new BattleTurnStartRestriction(
+                BattleTurnStartOutcome.LimitedAction,
+                [skillAction],
+                [Id("bind")])
+        };
+        var handler = new QueueTurnHandler(request =>
+        {
+            Assert.Equal(BattleTurnStartOutcome.LimitedAction, request.TurnStartOutcome);
+            Assert.Equal([skillAction], request.AllowedActionIds);
+            Assert.Equal([Id("bind")], request.TurnStartRestriction.SourceAilmentIds);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        Run(
+            [Participant("player", PlayerTeam), Participant("enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
     public void Runner_RefreshesStateAndCompletesWhenAStandingTeamRemains()
     {
         BattleEncounterParticipant player = Participant("player", PlayerTeam);
@@ -559,6 +588,7 @@ public sealed class BattleEncounterRunnerTests
     {
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
+        public BattleTurnStartRestriction? Restriction { get; init; }
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
@@ -578,7 +608,9 @@ public sealed class BattleEncounterRunnerTests
         {
             TurnStartCalls++;
             return new ValueTask<BattleTurnStartLifecycleResult>(
-                new BattleTurnStartLifecycleResult(TurnStartOutcome, []));
+                Restriction is null
+                    ? new BattleTurnStartLifecycleResult(TurnStartOutcome, [])
+                    : new BattleTurnStartLifecycleResult(Restriction, []));
         }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(

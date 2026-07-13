@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Battle.Execution;
 
 namespace JRPGPrototype.Logic.Runtime;
 
@@ -21,7 +22,8 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicatePassiveSkillState,
     PassiveSkillStateNotLoaded,
     DuplicatePassiveActivation,
-    PassiveActivationSkillNotLoaded
+    PassiveActivationSkillNotLoaded,
+    StatStageOutOfRange
 }
 
 internal sealed record RuntimeActorSnapshotIntegrityDiagnostic(
@@ -131,6 +133,19 @@ internal static class RuntimeActorSnapshotIntegrity
             "stat-stage track",
             key => key,
             diagnostics);
+        for (int index = 0; index < snapshot.BattleStatus.StatStages.Count; index++)
+        {
+            RuntimeStatStageSnapshot stage = snapshot.BattleStatus.StatStages[index];
+            if (!BattleStatStageRange.Contains(stage.Stage))
+            {
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.StatStageOutOfRange,
+                    $"Stat stage '{stage.Stage}' for track '{stage.ModifierTrackId}' must be between " +
+                    $"{BattleStatStageRange.Minimum} and {BattleStatStageRange.Maximum}.",
+                    $"$.battleStatus.statStages[{index}].stage",
+                    stage.ModifierTrackId));
+            }
+        }
         ValidateUnique(
             snapshot.BattleStatus.Charges,
             charge => charge.Kind,
