@@ -32,7 +32,7 @@ public sealed record ChanceSkipAilmentTurnBehaviorDefinition(int SkipChance)
 public sealed record ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
     int SkipChance,
     int FleeChance,
-    DemonFleeOutcome DemonFleeOutcome)
+    CompanionFleeOutcome CompanionFleeOutcome)
     : AilmentTurnBehaviorDefinition(AilmentTurnBehaviorKind.ChanceSkipOrFlee);
 
 public sealed record ForcedBasicAttackAilmentTurnBehaviorDefinition()

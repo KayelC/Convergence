@@ -242,7 +242,7 @@ internal sealed class CleanFieldDemoHost
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
             .RegisterEscapeRule("standard_escape")

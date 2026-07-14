@@ -746,7 +746,7 @@ public enum RecruitmentTransactionErrorCode
     None,
     AlreadyRecruitedThisBattle,
     AlreadyOwned,
-    StockFull,
+    RosterFull,
     InvalidTarget
 }
 
@@ -788,7 +788,7 @@ public sealed class RecruitmentTransactionService : IRecruitmentTransactionServi
         }
         if (!request.HasOpenStockSlot)
         {
-            return Rejected(request.TargetId, RecruitmentTransactionErrorCode.StockFull);
+            return Rejected(request.TargetId, RecruitmentTransactionErrorCode.RosterFull);
         }
 
         return new RecruitmentTransactionResult(
@@ -811,12 +811,12 @@ public sealed record BattleRewardEnemySnapshot(
     decimal Luck,
     decimal Defense = 0m);
 
-public sealed record BattleRewardRecipientSnapshot(ContentId ActorId, bool IsAlive, bool HasActiveForm);
+public sealed record BattleRewardRecipientSnapshot(ContentId ActorId, bool IsAlive, bool HasActiveHostedEntity);
 
 public enum BattleRewardRecipientKind
 {
     Actor,
-    ActiveForm
+    ActiveHostedEntity
 }
 
 public sealed record BattleRewardApplication(
@@ -889,11 +889,11 @@ public sealed class BattleRewardService : IBattleRewardService
                 recipient.ActorId,
                 BattleRewardRecipientKind.Actor,
                 totalExperience));
-            if (recipient.HasActiveForm)
+            if (recipient.HasActiveHostedEntity)
             {
                 applications.Add(new BattleRewardApplication(
                     recipient.ActorId,
-                    BattleRewardRecipientKind.ActiveForm,
+                    BattleRewardRecipientKind.ActiveHostedEntity,
                     totalExperience));
             }
         }

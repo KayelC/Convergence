@@ -26,7 +26,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             snapshot.Actors[0].BattleActivations.PassiveSkillStates,
             restored.Actors[0].BattleActivations.PassiveSkillStates);
-        Assert.Equal(snapshot.PartyStock.ActiveParty.Select(actor => actor.InstanceId), restored.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+        Assert.Equal(snapshot.PartyRoster.ActiveParty.Select(actor => actor.InstanceId), restored.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             snapshot.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
             restored.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
@@ -62,7 +62,7 @@ public sealed class CleanSaveDemoHostTests
             original.Resources,
             original.Stats,
             original.Skills,
-            original.Forms,
+            original.Rosters,
             original.Equipment,
             new RuntimeBattleStatusSnapshot(
                 statuses:
@@ -138,7 +138,7 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v6", text, StringComparison.Ordinal);
+        Assert.Contains("[save] Created runtime save snapshot v7", text, StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);

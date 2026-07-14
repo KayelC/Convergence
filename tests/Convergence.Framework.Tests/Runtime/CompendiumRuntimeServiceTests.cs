@@ -62,7 +62,7 @@ public sealed class CompendiumRuntimeServiceTests
             firstActor.Resources,
             firstActor.Stats,
             firstActor.Skills,
-            firstActor.Forms,
+            firstActor.Rosters,
             firstActor.Equipment,
             firstActor.BattleStatus,
             firstActor.BattleActivations,
@@ -134,7 +134,7 @@ public sealed class CompendiumRuntimeServiceTests
             new RuntimeSkillStateSnapshot(
                 [missingSkillId, missingSkillId],
                 [missingSkillId, missingSkillId]),
-            source.Forms,
+            source.Rosters,
             source.Equipment,
             source.BattleStatus,
             source.BattleActivations,
@@ -175,7 +175,7 @@ public sealed class CompendiumRuntimeServiceTests
             source.Resources,
             source.Stats,
             source.Skills,
-            source.Forms,
+            source.Rosters,
             source.Equipment,
             source.BattleStatus,
             source.BattleActivations,
@@ -203,7 +203,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumStateSnapshot compendium = service.RegisterActor(
             new CompendiumStateSnapshot(),
             sourceSnapshot).After;
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot wallet = new(10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
@@ -214,12 +214,12 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
 
         Assert.True(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.Applied, result.Code);
         Assert.Equal(wallet.Balance - result.Cost, result.AfterWallet.Balance);
-        RuntimeActorReferenceSnapshot stockEntry = Assert.Single(result.AfterPartyStock.DemonStock);
+        RuntimeActorReferenceSnapshot stockEntry = Assert.Single(result.AfterPartyRoster.CompanionRoster);
         Assert.Equal(RuntimeInstanceId.Parse("recalled_ashling"), stockEntry.InstanceId);
         CatalogBattleActor recalled = Assert.IsType<CatalogBattleActor>(result.Actor);
         RuntimeActorSnapshot recalledSnapshot = recalled.State.ToSnapshot();
@@ -230,7 +230,7 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.All(recalledSnapshot.Resources, resource => Assert.Equal(resource.Maximum, resource.Current));
         Assert.Empty(recalledSnapshot.BattleStatus.Ailments);
         Assert.Empty(recalledSnapshot.Equipment.EquippedItemIds);
-        Assert.Empty(party.DemonStock);
+        Assert.Empty(party.CompanionRoster);
         Assert.Equal(10_000, wallet.Balance);
     }
 
@@ -248,8 +248,8 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumStateSnapshot compendium = service.RegisterActor(
             new CompendiumStateSnapshot(),
             source.State.ToSnapshot()).After;
-        RuntimePartyStockSnapshot party = EmptyParty(
-            demonStock: alreadyOwned
+        RuntimePartyRosterSnapshot party = EmptyParty(
+            companionRoster: alreadyOwned
                 ? [Reference(source)]
                 : []);
         RuntimeWalletSnapshot wallet = new(macca);
@@ -262,11 +262,11 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
 
         Assert.False(result.Applied);
         Assert.Equal(expected, result.Code);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Null(result.Actor);
     }
@@ -276,7 +276,7 @@ public sealed class CompendiumRuntimeServiceTests
     {
         TestContext context = CreateContext();
         var service = context.CreateService();
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot wallet = new(10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
@@ -287,12 +287,12 @@ public sealed class CompendiumRuntimeServiceTests
             default,
             default,
             default,
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
 
         Assert.False(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidIdentifier, Assert.Single(result.Diagnostics).Code);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Same(wallet, result.AfterWallet);
     }
 
@@ -304,7 +304,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumStateSnapshot compendium = context.CreateService().RegisterActor(
             new CompendiumStateSnapshot(),
             source.State.ToSnapshot()).After;
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot emptyWallet = new(0);
         var registrationOnly = new CompendiumRuntimeService(
             context.Catalog,
@@ -326,7 +326,7 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("unavailable_recall"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon);
+            CompendiumRecallRosterKind.Companion);
         CompendiumRecallTransactionRequest freeRequest = new(
             compendium,
             party,
@@ -335,36 +335,36 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("free_recall"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon);
+            CompendiumRecallRosterKind.Companion);
 
         CompendiumRecallTransactionResult unavailable = registrationOnly.Recall(unavailableRequest);
         CompendiumRecallTransactionResult free = freeRecall.Recall(freeRequest);
 
         Assert.Equal(CompendiumRecallTransactionCode.RecallUnavailable, unavailable.Code);
-        Assert.Same(party, unavailable.AfterPartyStock);
+        Assert.Same(party, unavailable.AfterPartyRoster);
         Assert.Same(emptyWallet, unavailable.AfterWallet);
         Assert.Null(unavailable.Actor);
         Assert.True(free.Applied);
         Assert.Equal(0, free.Cost);
         Assert.Same(emptyWallet, free.AfterWallet);
-        Assert.Single(free.AfterPartyStock.DemonStock);
+        Assert.Single(free.AfterPartyRoster.CompanionRoster);
     }
 
     [Theory]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.Owner)]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ActiveParty)]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ReserveParty)]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.ActiveForm)]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.PersonaStock)]
-    [InlineData(CompendiumRecallStockKind.Demon, PartyReferenceLocation.DemonStock)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.Owner)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ActiveParty)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ReserveParty)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.ActiveForm)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.PersonaStock)]
-    [InlineData(CompendiumRecallStockKind.Persona, PartyReferenceLocation.DemonStock)]
-    public void Recall_RejectsRuntimeIdsUsedAnywhereInPartyStockBeforeMutation(
-        CompendiumRecallStockKind destination,
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.Owner)]
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.ActiveParty)]
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.ReserveParty)]
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.ActiveHostedEntity)]
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.HostedEntityRoster)]
+    [InlineData(CompendiumRecallRosterKind.Companion, PartyReferenceLocation.CompanionRoster)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.Owner)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.ActiveParty)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.ReserveParty)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.ActiveHostedEntity)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.HostedEntityRoster)]
+    [InlineData(CompendiumRecallRosterKind.HostedEntity, PartyReferenceLocation.CompanionRoster)]
+    public void Recall_RejectsRuntimeIdsUsedAnywhereInPartyRosterBeforeMutation(
+        CompendiumRecallRosterKind destination,
         PartyReferenceLocation collisionLocation)
     {
         TestContext context = CreateContext();
@@ -373,7 +373,7 @@ public sealed class CompendiumRuntimeServiceTests
             new CompendiumStateSnapshot(),
             context.CreateActor("registered_ashling").State.ToSnapshot()).After;
         RuntimeInstanceId recalledId = RuntimeInstanceId.Parse("recalled_collision");
-        RuntimePartyStockSnapshot party = PartyWithCollision(collisionLocation, recalledId);
+        RuntimePartyRosterSnapshot party = PartyWithCollision(collisionLocation, recalledId);
         RuntimeWalletSnapshot wallet = new(10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
@@ -388,8 +388,8 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.False(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId, result.Code);
-        Assert.Same(party, result.BeforePartyStock);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.BeforePartyRoster);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Same(wallet, result.BeforeWallet);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Null(result.Actor);
@@ -402,13 +402,13 @@ public sealed class CompendiumRuntimeServiceTests
     public void Recall_UsesTheSelectedStockPolicyAndReportsCapacityBeforeMutation()
     {
         TestContext context = CreateContext();
-        var partyTransitions = new PartyStockTransitionService(new FixedStockCapacityPolicy(0));
+        var partyTransitions = new PartyRosterTransitionService(new FixedRosterCapacityPolicy(0));
         CompendiumRuntimeService service = context.CreateService(partyTransitions);
         CatalogBattleActor source = context.CreateActor("owned_ashling");
         CompendiumStateSnapshot compendium = service.RegisterActor(
             new CompendiumStateSnapshot(),
             source.State.ToSnapshot()).After;
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot wallet = new(10_000);
 
         CompendiumRecallTransactionResult full = service.Recall(new CompendiumRecallTransactionRequest(
@@ -419,10 +419,10 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Persona));
+            CompendiumRecallRosterKind.HostedEntity));
 
-        Assert.Equal(CompendiumRecallTransactionCode.StockFull, full.Code);
-        Assert.Same(party, full.AfterPartyStock);
+        Assert.Equal(CompendiumRecallTransactionCode.RosterFull, full.Code);
+        Assert.Same(party, full.AfterPartyRoster);
         Assert.Same(wallet, full.AfterWallet);
     }
 
@@ -446,7 +446,7 @@ public sealed class CompendiumRuntimeServiceTests
                     new KeyValuePair<ContentId, int>(Id("luck"), 3)
                 ])
         ]);
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot wallet = new(int.MaxValue);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
@@ -457,10 +457,10 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
 
         Assert.Equal(CompendiumRecallTransactionCode.InvalidRecallCost, result.Code);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidRecallCost, Assert.Single(result.Diagnostics).Code);
     }
@@ -496,7 +496,7 @@ public sealed class CompendiumRuntimeServiceTests
                 skillIds: [learnedSkillId, learnedSkillId],
                 equippedSkillIds: [equippedSkillId, equippedSkillId])
         ]);
-        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimePartyRosterSnapshot party = EmptyParty();
         RuntimeWalletSnapshot wallet = new(10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
@@ -507,12 +507,12 @@ public sealed class CompendiumRuntimeServiceTests
             RuntimeInstanceId.Parse("invalid_recall"),
             Id("player_controller"),
             Id("player_team"),
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
 
         Assert.False(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
-        Assert.Same(party, result.BeforePartyStock);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.BeforePartyRoster);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Same(wallet, result.BeforeWallet);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Equal(0, result.Cost);
@@ -715,7 +715,7 @@ public sealed class CompendiumRuntimeServiceTests
             entityId,
             "Ashling",
             "Framework Compendium test entity.",
-            Id("demon"),
+            Id("companion"),
             Id("test.pack:spirit"),
             rank: 1,
             baseLevel: 3,
@@ -762,8 +762,8 @@ public sealed class CompendiumRuntimeServiceTests
         return new TestContext(entity, ailment, catalog, actorFactory);
     }
 
-    private static RuntimePartyStockSnapshot EmptyParty(
-        IEnumerable<RuntimeActorReferenceSnapshot>? demonStock = null) =>
+    private static RuntimePartyRosterSnapshot EmptyParty(
+        IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null) =>
         new(
             new RuntimeActorReferenceSnapshot(
                 RuntimeInstanceId.Parse("owner"),
@@ -777,12 +777,12 @@ public sealed class CompendiumRuntimeServiceTests
                     Id("test.pack:owner"),
                     "Owner")
             ],
-            demonStock: demonStock);
+            companionRoster: companionRoster);
 
     private static RuntimeActorReferenceSnapshot Reference(CatalogBattleActor actor) =>
         new(actor.State.InstanceId, actor.Entity.Id, actor.Entity.DisplayName);
 
-    private static RuntimePartyStockSnapshot PartyWithCollision(
+    private static RuntimePartyRosterSnapshot PartyWithCollision(
         PartyReferenceLocation location,
         RuntimeInstanceId collisionId)
     {
@@ -794,7 +794,7 @@ public sealed class CompendiumRuntimeServiceTests
             collisionId,
             Id("test.pack:other_entity"),
             "Other Actor");
-        return new RuntimePartyStockSnapshot(
+        return new RuntimePartyRosterSnapshot(
             location == PartyReferenceLocation.Owner ? collision : owner,
             ownerLevel: 10,
             activeParty: location == PartyReferenceLocation.ActiveParty
@@ -803,9 +803,9 @@ public sealed class CompendiumRuntimeServiceTests
                     ? []
                     : [owner],
             reserveMembers: location == PartyReferenceLocation.ReserveParty ? [collision] : [],
-            activeForm: location == PartyReferenceLocation.ActiveForm ? collision : null,
-            personaStock: location == PartyReferenceLocation.PersonaStock ? [collision] : [],
-            demonStock: location == PartyReferenceLocation.DemonStock ? [collision] : []);
+            activeHostedEntity: location == PartyReferenceLocation.ActiveHostedEntity ? collision : null,
+            hostedEntityRoster: location == PartyReferenceLocation.HostedEntityRoster ? [collision] : [],
+            companionRoster: location == PartyReferenceLocation.CompanionRoster ? [collision] : []);
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
@@ -827,7 +827,7 @@ public sealed class CompendiumRuntimeServiceTests
                 RuntimeActorDeployment.Reserve,
                 IsActive: false)).RequireActor();
 
-        public CompendiumRuntimeService CreateService(IPartyStockTransitionService? partyStock = null) =>
+        public CompendiumRuntimeService CreateService(IPartyRosterTransitionService? partyRoster = null) =>
             new(
                 Catalog,
                 Catalog,
@@ -838,7 +838,7 @@ public sealed class CompendiumRuntimeServiceTests
                     levelFactor: 100,
                     statPointFactor: 50,
                     skillFactor: 200)),
-                partyStock: partyStock);
+                partyRoster: partyRoster);
     }
 
     public enum PartyReferenceLocation
@@ -846,9 +846,9 @@ public sealed class CompendiumRuntimeServiceTests
         Owner,
         ActiveParty,
         ReserveParty,
-        ActiveForm,
-        PersonaStock,
-        DemonStock
+        ActiveHostedEntity,
+        HostedEntityRoster,
+        CompanionRoster
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy
@@ -912,8 +912,8 @@ public sealed class CompendiumRuntimeServiceTests
         public EntityDefinition GetRequiredEntity(ContentId id) => throw new KeyNotFoundException();
     }
 
-    private sealed class FixedStockCapacityPolicy(int capacity) : IStockCapacityPolicy
+    private sealed class FixedRosterCapacityPolicy(int capacity) : IRosterCapacityPolicy
     {
-        public int GetCapacity(int ownerLevel) => capacity;
+        public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => capacity;
     }
 }

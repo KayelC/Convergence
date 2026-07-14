@@ -56,16 +56,16 @@ internal sealed record TrainingAnnexFusionTransactionEvidence(
     IReadOnlyList<ContentId> SelectedSkillIds,
     IReadOnlyList<ContentId> ResultSkillIds,
     FusionTransactionAssessment? Assessment,
-    IReadOnlyList<PartyStockTransitionResult> StockTransitions,
+    IReadOnlyList<PartyRosterTransitionResult> RosterTransitions,
     bool Confirmed,
     bool Committed,
     bool MutatedRuntimeState,
-    int DemonStockCountBefore,
-    int DemonStockCountAfter,
+    int CompanionRosterCountBefore,
+    int CompanionRosterCountAfter,
     FusionTransactionCommitResult? CommitResult);
 
 internal sealed record TrainingAnnexFusionTransactionResult(
-    RuntimePartyStockSnapshot PartyStock,
+    RuntimePartyRosterSnapshot PartyRoster,
     TrainingAnnexRuntimeActor? ResultActor,
     TrainingAnnexFusionTransactionEvidence Evidence);
 
@@ -263,7 +263,7 @@ internal sealed class TrainingAnnexFusionController
     public async ValueTask<TrainingAnnexFusionTransactionResult> CommitAsync(
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         IFusionTransactionService transactionService,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
@@ -271,7 +271,7 @@ internal sealed class TrainingAnnexFusionController
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(roster);
-        ArgumentNullException.ThrowIfNull(partyStock);
+        ArgumentNullException.ThrowIfNull(partyRoster);
         ArgumentNullException.ThrowIfNull(transactionService);
         ArgumentNullException.ThrowIfNull(commandSource);
         ArgumentNullException.ThrowIfNull(commands);
@@ -301,7 +301,7 @@ internal sealed class TrainingAnnexFusionController
                 "Fusion transaction rejected: no successful plan was available.",
                 cancellationToken).ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 null,
@@ -313,7 +313,7 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         ValidatedFusionInheritanceSelection emptySelection = planner
@@ -321,14 +321,14 @@ internal sealed class TrainingAnnexFusionController
             .RequireValidSelection();
         RuntimeInstanceId proposedResultInstanceId = GenerateFusionInstanceId(
             roster,
-            partyStock,
+            partyRoster,
             plan.ResultEntity.Id);
         FusionTransactionAssessment availabilityAssessment = transactionService.Prepare(
             new FusionTransactionPreparationRequest(
-                FusionParticipantStockKind.Demon,
+                FusionParticipantRosterKind.Companion,
                 plan,
                 emptySelection,
-                partyStock,
+                partyRoster,
                 proposedResultInstanceId,
                 TrainingAnnexHostSupport.PlayerTeam,
                 ContentId.Parse("clean_training_annex")));
@@ -337,7 +337,7 @@ internal sealed class TrainingAnnexFusionController
             await PublishTransactionDiagnosticsAsync(availabilityAssessment, cancellationToken)
                 .ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -349,7 +349,7 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         IReadOnlyList<ContentId>? selectedSkillIds = await SelectInheritedSkillsAsync(
@@ -364,7 +364,7 @@ internal sealed class TrainingAnnexFusionController
                 "Fusion transaction canceled before validation. No runtime state was mutated.",
                 cancellationToken).ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -376,7 +376,7 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         FusionInheritanceSelectionResult selection =
@@ -391,7 +391,7 @@ internal sealed class TrainingAnnexFusionController
             }
 
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -403,16 +403,16 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         ValidatedFusionInheritanceSelection validSelection = selection.RequireValidSelection();
         FusionTransactionAssessment finalAssessment = transactionService.Prepare(
             new FusionTransactionPreparationRequest(
-                FusionParticipantStockKind.Demon,
+                FusionParticipantRosterKind.Companion,
                 plan,
                 validSelection,
-                partyStock,
+                partyRoster,
                 proposedResultInstanceId,
                 TrainingAnnexHostSupport.PlayerTeam,
                 ContentId.Parse("clean_training_annex")));
@@ -421,7 +421,7 @@ internal sealed class TrainingAnnexFusionController
             await PublishTransactionDiagnosticsAsync(finalAssessment, cancellationToken)
                 .ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -433,7 +433,7 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         PreparedFusionTransaction prepared = finalAssessment.RequirePreparedTransaction();
@@ -454,7 +454,7 @@ internal sealed class TrainingAnnexFusionController
                 "Fusion transaction canceled at confirmation. No runtime state was mutated.",
                 cancellationToken).ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -466,19 +466,19 @@ internal sealed class TrainingAnnexFusionController
                 confirmed: false,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count);
+                partyRoster.CompanionRoster.Count);
         }
 
         commands.Add(confirmation.Command);
         FusionTransactionCommitResult committed = transactionService.Commit(
             new FusionTransactionCommitRequest(
                 prepared,
-                partyStock));
+                partyRoster));
         if (!committed.Applied)
         {
             await PublishTransactionDiagnosticsAsync(committed.Diagnostics, cancellationToken).ConfigureAwait(false);
             return TransactionResult(
-                partyStock,
+                partyRoster,
                 null,
                 scenarioId,
                 plan.ResultEntity.Id,
@@ -486,20 +486,20 @@ internal sealed class TrainingAnnexFusionController
                 validSelection.SelectedSkillIds,
                 prepared.ResultLearnedSkillIds,
                 finalAssessment,
-                committed.StockTransitions,
+                committed.RosterTransitions,
                 confirmed: true,
                 committed: false,
                 mutated: false,
-                partyStock.DemonStock.Count,
+                partyRoster.CompanionRoster.Count,
                 committed);
         }
 
         CatalogBattleActor catalogActor = committed.ResultActor
             ?? throw new InvalidOperationException("Applied fusion transaction did not return a result actor.");
         var resultActor = new TrainingAnnexRuntimeActor("Fused Result", catalogActor);
-        RuntimePartyStockSnapshot current = committed.AfterPartyStock;
+        RuntimePartyRosterSnapshot current = committed.AfterPartyRoster;
         await _eventSink.PublishAsync(
-            $"Fusion transaction committed: {FormatParent(firstParent)} + {FormatParent(secondParent)} -> {preview.DisplayName}; consumed {FormatInstances(committed.ConsumedParticipantIds)}; added {catalogActor.State.InstanceId}; Demon stock {partyStock.DemonStock.Count}->{current.DemonStock.Count}.",
+            $"Fusion transaction committed: {FormatParent(firstParent)} + {FormatParent(secondParent)} -> {preview.DisplayName}; consumed {FormatInstances(committed.ConsumedParticipantIds)}; added {catalogActor.State.InstanceId}; Companion roster {partyRoster.CompanionRoster.Count}->{current.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return TransactionResult(
             current,
@@ -510,11 +510,11 @@ internal sealed class TrainingAnnexFusionController
             validSelection.SelectedSkillIds,
             prepared.ResultLearnedSkillIds,
             finalAssessment,
-            committed.StockTransitions,
+            committed.RosterTransitions,
             confirmed: true,
             committed: true,
             mutated: true,
-            partyStock.DemonStock.Count,
+            partyRoster.CompanionRoster.Count,
             committed);
     }
 
@@ -782,7 +782,7 @@ internal sealed class TrainingAnnexFusionController
 
     private static RuntimeInstanceId GenerateFusionInstanceId(
         TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         ContentId entityId)
     {
         string local = entityId.ToString();
@@ -794,10 +794,10 @@ internal sealed class TrainingAnnexFusionController
 
         var used = new HashSet<RuntimeInstanceId>(
             roster.AllActors.Select(actor => actor.Actor.State.InstanceId)
-                .Concat(partyStock.ActiveParty.Select(actor => actor.InstanceId))
-                .Concat(partyStock.ReserveMembers.Select(actor => actor.InstanceId))
-                .Concat(partyStock.PersonaStock.Select(actor => actor.InstanceId))
-                .Concat(partyStock.DemonStock.Select(actor => actor.InstanceId)));
+                .Concat(partyRoster.ActiveParty.Select(actor => actor.InstanceId))
+                .Concat(partyRoster.ReserveMembers.Select(actor => actor.InstanceId))
+                .Concat(partyRoster.HostedEntityRoster.Select(actor => actor.InstanceId))
+                .Concat(partyRoster.CompanionRoster.Select(actor => actor.InstanceId)));
         int index = 1;
         while (true)
         {
@@ -829,7 +829,7 @@ internal sealed class TrainingAnnexFusionController
     }
 
     private static TrainingAnnexFusionTransactionResult TransactionResult(
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         TrainingAnnexRuntimeActor? resultActor,
         string scenarioId,
         ContentId? resultEntityId,
@@ -837,14 +837,14 @@ internal sealed class TrainingAnnexFusionController
         IReadOnlyList<ContentId> selectedSkillIds,
         IReadOnlyList<ContentId> resultSkillIds,
         FusionTransactionAssessment? assessment,
-        IReadOnlyList<PartyStockTransitionResult> stockTransitions,
+        IReadOnlyList<PartyRosterTransitionResult> rosterTransitions,
         bool confirmed,
         bool committed,
         bool mutated,
-        int demonStockCountBefore,
+        int companionRosterCountBefore,
         FusionTransactionCommitResult? commitResult = null) =>
         new(
-            partyStock,
+            partyRoster,
             resultActor,
             new TrainingAnnexFusionTransactionEvidence(
                 scenarioId,
@@ -853,12 +853,12 @@ internal sealed class TrainingAnnexFusionController
                 selectedSkillIds.ToArray(),
                 resultSkillIds.ToArray(),
                 assessment,
-                stockTransitions.ToArray(),
+                rosterTransitions.ToArray(),
                 confirmed,
                 committed,
                 mutated,
-                demonStockCountBefore,
-                partyStock.DemonStock.Count,
+                companionRosterCountBefore,
+                partyRoster.CompanionRoster.Count,
                 commitResult));
 
     private static string FormatSkillNames(GameDataCatalog catalog, IReadOnlyList<ContentId> skillIds) =>

@@ -384,7 +384,7 @@ public sealed class BattleActionExecutorTests
         BattleActionExecutor executor = Executor(escapeRules: [new(escapeRule, new AlwaysEscapeRule())]);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
-        RuntimePartyStockSnapshot stock = PartyStock();
+        RuntimePartyRosterSnapshot stock = PartyRoster();
 
         BattleActionExecutionResult analyze = await Execute(
             executor,
@@ -403,7 +403,7 @@ public sealed class BattleActionExecutorTests
             [actor]);
         BattleActionExecutionResult summon = await Execute(
             executor,
-            new DemonSummonBattleActionCommand(stock, RuntimeInstanceId.Parse("demon:pixie")),
+            new CompanionDeployBattleActionCommand(stock, RuntimeInstanceId.Parse("companion:pixie")),
             actor,
             [actor]);
 
@@ -411,8 +411,8 @@ public sealed class BattleActionExecutorTests
         Assert.True(escape.EscapeRequested);
         Assert.Equal(ActionTurnConsumptionKind.None, escape.TurnConsumption.Kind);
         Assert.Equal([Id("change_strategy")], host.HostActionRequestIds);
-        Assert.NotNull(summon.PartyStockTransition);
-        Assert.True(summon.PartyStockTransition.Applied);
+        Assert.NotNull(summon.PartyRosterTransition);
+        Assert.True(summon.PartyRosterTransition.Applied);
     }
 
     private static BattleActionExecutionRequest Request(
@@ -529,14 +529,14 @@ public sealed class BattleActionExecutorTests
             false,
             new TargetCountDefinition(1, 1));
 
-    private static RuntimePartyStockSnapshot PartyStock() =>
+    private static RuntimePartyRosterSnapshot PartyRoster() =>
         new(
             new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero"),
             10,
             [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero")],
-            demonStock:
+            companionRoster:
             [
-                new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("demon:pixie"), Id("pixie"), "Pixie")
+                new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("companion:pixie"), Id("pixie"), "Pixie")
             ]);
 
     private static ContentId Id(string value) => ContentId.Parse(value);

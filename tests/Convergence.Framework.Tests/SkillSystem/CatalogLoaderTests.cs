@@ -93,7 +93,7 @@ public sealed class CatalogLoaderTests
         Assert.Equal(skillId, skill.Id);
         Assert.Equal(Id("convergence.skill_system_redesign_sample:sample_spirit"), entity.RaceId);
         Assert.Equal([skillId], entity.BaseSkillIds);
-        Assert.Equal(Id("demon"), entity.EntityKindId);
+        Assert.Equal(Id("companion"), entity.EntityKindId);
         Assert.Contains(Id("strength"), entity.Stats.Keys);
         Assert.Throws<ArgumentException>(() => catalog.TryGetSkill(Id("ice_boost_sample"), out _));
         Assert.Throws<NotSupportedException>(() =>
@@ -138,7 +138,7 @@ public sealed class CatalogLoaderTests
         Assert.Equal(Id("core.pack:spirit"), entity.RaceId);
         Assert.Equal([Id("core.pack:inherit_me")], entity.BaseSkillIds);
         Assert.Equal([Id("core.pack:inherit_me")], entity.InheritanceRules.AllowedSkillIds);
-        Assert.Equal(Id("demon"), entity.EntityKindId);
+        Assert.Equal(Id("companion"), entity.EntityKindId);
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public sealed class CatalogLoaderTests
         Assert.Equal([packSkill], entity.BaseSkillIds);
         Assert.Equal([packSkill], entity.InheritanceRules.AllowedSkillIds);
         Assert.Equal(Id("owner_turn_end"), trigger.EventId);
-        Assert.Equal(Id("demon"), entity.EntityKindId);
+        Assert.Equal(Id("companion"), entity.EntityKindId);
         Assert.Contains(Id("strength"), entity.Stats.Keys);
     }
 
@@ -506,7 +506,7 @@ public sealed class CatalogLoaderTests
         return $$"""
         {
           "id": "{{id}}", "displayName": "{{id}}", "description": "Reference entity.",
-          "entityKind": "demon", "raceId": "{{raceId}}", "rank": 1, "baseLevel": 1,
+          "entityKind": "companion", "raceId": "{{raceId}}", "rank": 1, "baseLevel": 1,
           "capabilities": { "recruitable": true, "fusionEligible": true, "compendiumEligible": true },
           "inheritanceRules": {
             "groupPolicy": { "mode": "deny_list", "groupIds": [] },
@@ -558,7 +558,7 @@ public sealed class CatalogLoaderTests
     private static SkillSystemRegistrationSnapshot ReferenceRegistrations() =>
         new SkillSystemRegistrationBuilder()
             .RegisterContext("battle")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("owner_turn_end")
             .SupportModifier<NumericRuleModifierDefinition>()

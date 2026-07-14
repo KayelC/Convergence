@@ -387,7 +387,7 @@ public sealed class FusionInheritanceTests
             ContentId.Parse(id),
             id,
             "Reference fusion result.",
-            ContentId.Parse("demon"),
+            ContentId.Parse("companion"),
             ContentId.Parse("test_race"),
             1,
             1,

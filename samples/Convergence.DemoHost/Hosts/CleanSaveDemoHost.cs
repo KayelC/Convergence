@@ -169,12 +169,12 @@ internal sealed class CleanSaveDemoHost
                 new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.2.0"))
             ],
             [frost, ember],
-            new RuntimePartyStockSnapshot(
+            new RuntimePartyRosterSnapshot(
                 frostRef,
                 5,
                 activeParty: [frostRef],
-                activeForm: emberRef,
-                demonStock: [frostRef]),
+                activeHostedEntity: emberRef,
+                companionRoster: [frostRef]),
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(ContentId.Parse("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
@@ -250,7 +250,7 @@ internal sealed class CleanSaveDemoHost
 
     private static RuntimeActorSnapshot CreateActor(RuntimeInstanceId instanceId, ContentId entityId, IEnumerable<ContentId> skillIds) =>
         new(
-            new RuntimeActorIdentitySnapshot(instanceId, entityId, ContentId.Parse("demon"), entityId.ToString()),
+            new RuntimeActorIdentitySnapshot(instanceId, entityId, ContentId.Parse("companion"), entityId.ToString()),
             new RuntimeActorOwnershipSnapshot(ContentId.Parse("host"), ContentId.Parse("player_team")),
             new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Deployed, IsActive: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
@@ -262,7 +262,7 @@ internal sealed class CleanSaveDemoHost
                 [new KeyValuePair<ContentId, decimal>(ContentId.Parse("magic"), 8)],
                 [new KeyValuePair<ContentId, decimal>(ContentId.Parse("magic"), 8)]),
             new RuntimeSkillStateSnapshot(skillIds, skillIds),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
@@ -289,7 +289,7 @@ internal sealed class CleanSaveDemoHost
             .RegisterContext("battle", "field")
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
@@ -305,7 +305,7 @@ internal sealed class CleanSaveDemoHost
                 "standard_growth",
                 "standard_stat",
                 "standard_action_token",
-                "standard_stock_capacity",
+                "standard_roster_capacity",
                 "standard_economy",
                 "return_to_lobby",
                 "standard_accident",
@@ -369,7 +369,7 @@ internal static class CleanSaveJsonCodec
                 .Select(pack => new HostContentPackDto(pack.Id, pack.Version.ToString()))
                 .ToArray(),
             snapshot.Actors.Select(ToDto).ToArray(),
-            ToDto(snapshot.PartyStock),
+            ToDto(snapshot.PartyRoster),
             ToDto(snapshot.Inventory),
             ToDto(snapshot.Equipment),
             snapshot.Wallet.Balance,
@@ -386,7 +386,7 @@ internal static class CleanSaveJsonCodec
             (dto.ContentPacks ?? [])
                 .Select(pack => new ContentPackIdentity(pack.Id, SemanticVersion.Parse(pack.Version))),
             dto.Actors.Select(FromDto),
-            FromDto(dto.PartyStock),
+            FromDto(dto.PartyRoster),
             FromDto(dto.Inventory),
             FromDto(dto.Equipment),
             new RuntimeWalletSnapshot(dto.Macca),
@@ -423,9 +423,9 @@ internal static class CleanSaveJsonCodec
             actor.Skills.LearnedSkillIds.Select(id => id.ToString()).ToArray(),
             actor.Skills.EquippedSkillIds.Select(id => id.ToString()).ToArray(),
             actor.CapabilityIds.Select(id => id.ToString()).ToArray(),
-            actor.Forms.ActiveForm is null ? null : ToDto(actor.Forms.ActiveForm),
-            actor.Forms.PersonaStock.Select(ToDto).ToArray(),
-            actor.Forms.DemonStock.Select(ToDto).ToArray(),
+            actor.Rosters.ActiveHostedEntity is null ? null : ToDto(actor.Rosters.ActiveHostedEntity),
+            actor.Rosters.HostedEntityRoster.Select(ToDto).ToArray(),
+            actor.Rosters.CompanionRoster.Select(ToDto).ToArray(),
             actor.Equipment.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
@@ -456,10 +456,10 @@ internal static class CleanSaveJsonCodec
             dto.Resources.Select(resource => new RuntimeResourceSnapshot(Id(resource.ResourceId), resource.Current, resource.Maximum)),
             new RuntimeStatBlockSnapshot(ToDecimalDictionary(dto.BaseStats), ToDecimalDictionary(dto.EffectiveStats)),
             new RuntimeSkillStateSnapshot(dto.LearnedSkillIds.Select(Id), dto.EquippedSkillIds.Select(Id)),
-            new RuntimeFormStockSnapshot(
-                dto.ActiveForm is null ? null : FromDto(dto.ActiveForm),
-                dto.PersonaStock.Select(FromDto),
-                dto.DemonStock.Select(FromDto)),
+            new RuntimeActorRosterSnapshot(
+                dto.ActiveHostedEntity is null ? null : FromDto(dto.ActiveHostedEntity),
+                dto.HostedEntityRoster.Select(FromDto),
+                dto.CompanionRoster.Select(FromDto)),
             new RuntimeEquipmentSnapshot(dto.EquippedItemIds.Select(pair => new KeyValuePair<EquipmentSlot, ContentId>(Enum.Parse<EquipmentSlot>(pair.Key), Id(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
@@ -537,26 +537,26 @@ internal static class CleanSaveJsonCodec
             _ => throw new InvalidOperationException($"Unsupported duration kind '{duration.Kind}'.")
         };
 
-    private static HostPartyStockDto ToDto(RuntimePartyStockSnapshot snapshot) =>
+    private static HostPartyRosterDto ToDto(RuntimePartyRosterSnapshot snapshot) =>
         new(
             ToDto(snapshot.Owner),
             snapshot.OwnerLevel,
             snapshot.ActiveParty.Select(ToDto).ToArray(),
             snapshot.ReserveMembers.Select(ToDto).ToArray(),
-            snapshot.ActiveForm is null ? null : ToDto(snapshot.ActiveForm),
-            snapshot.PersonaStock.Select(ToDto).ToArray(),
-            snapshot.DemonStock.Select(ToDto).ToArray(),
+            snapshot.ActiveHostedEntity is null ? null : ToDto(snapshot.ActiveHostedEntity),
+            snapshot.HostedEntityRoster.Select(ToDto).ToArray(),
+            snapshot.CompanionRoster.Select(ToDto).ToArray(),
             snapshot.MaxActivePartySize);
 
-    private static RuntimePartyStockSnapshot FromDto(HostPartyStockDto dto) =>
+    private static RuntimePartyRosterSnapshot FromDto(HostPartyRosterDto dto) =>
         new(
             FromDto(dto.Owner),
             dto.OwnerLevel,
             dto.ActiveParty.Select(FromDto),
             dto.ReserveMembers.Select(FromDto),
-            dto.ActiveForm is null ? null : FromDto(dto.ActiveForm),
-            dto.PersonaStock.Select(FromDto),
-            dto.DemonStock.Select(FromDto),
+            dto.ActiveHostedEntity is null ? null : FromDto(dto.ActiveHostedEntity),
+            dto.HostedEntityRoster.Select(FromDto),
+            dto.CompanionRoster.Select(FromDto),
             dto.MaxActivePartySize);
 
     private static HostInventoryDto ToDto(RuntimeInventorySnapshot snapshot) =>
@@ -689,7 +689,7 @@ internal static class CleanSaveJsonCodec
         string FrameworkVersion,
         HostContentPackDto[]? ContentPacks,
         HostActorDto[] Actors,
-        HostPartyStockDto PartyStock,
+        HostPartyRosterDto PartyRoster,
         HostInventoryDto Inventory,
         HostEquipmentDto Equipment,
         int Macca,
@@ -726,9 +726,9 @@ internal static class CleanSaveJsonCodec
         string[] LearnedSkillIds,
         string[] EquippedSkillIds,
         string[]? CapabilityIds,
-        HostReferenceDto? ActiveForm,
-        HostReferenceDto[] PersonaStock,
-        HostReferenceDto[] DemonStock,
+        HostReferenceDto? ActiveHostedEntity,
+        HostReferenceDto[] HostedEntityRoster,
+        HostReferenceDto[] CompanionRoster,
         Dictionary<string, string> EquippedItemIds,
         HostTimedStateDto[] Ailments,
         HostTimedStateDto[] Statuses,
@@ -759,7 +759,7 @@ internal static class CleanSaveJsonCodec
     private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
     private sealed record HostPassiveSkillStateDto(string SkillId, bool IsEnabled);
     private sealed record HostPassiveActivationDto(string SkillId, string EventId, int TriggerIndex, int ActivationCount);
-    private sealed record HostPartyStockDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveForm, HostReferenceDto[] PersonaStock, HostReferenceDto[] DemonStock, int MaxActivePartySize);
+    private sealed record HostPartyRosterDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveHostedEntity, HostReferenceDto[] HostedEntityRoster, HostReferenceDto[] CompanionRoster, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
     private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);
     private sealed record HostFieldDto(string LocationId, HostDungeonTraversalDto? DungeonTraversal);

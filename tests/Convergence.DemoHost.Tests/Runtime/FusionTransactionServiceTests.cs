@@ -20,31 +20,31 @@ public sealed class FusionTransactionServiceTests
     public void Prepare_IsPureAndCommitAppliesOneAtomicDemonTransaction()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var actorFactory = new CountingActorFactory(context.ActorFactory);
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment assessment = service.Prepare(Request(
             context,
             party,
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             "fused_result"));
 
         Assert.True(assessment.CanCommit);
-        Assert.Same(party, assessment.BeforePartyStock);
-        Assert.Equal(2, party.DemonStock.Count);
+        Assert.Same(party, assessment.BeforePartyRoster);
+        Assert.Equal(2, party.CompanionRoster.Count);
         Assert.Equal(
             [RuntimeInstanceId.Parse("fused_result")],
-            assessment.AfterPartyStock.DemonStock.Select(actor => actor.InstanceId));
-        Assert.Equal(3, assessment.StockTransitions.Count);
-        Assert.All(assessment.StockTransitions, transition => Assert.True(transition.Applied));
+            assessment.AfterPartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
+        Assert.Equal(3, assessment.RosterTransitions.Count);
+        Assert.All(assessment.RosterTransitions, transition => Assert.True(transition.Applied));
         Assert.Equal(0, actorFactory.CreateCount);
         Assert.Equal(0, actorFactory.RestoreCount);
 
         PreparedFusionTransaction prepared = assessment.RequirePreparedTransaction();
-        RuntimePartyStockSnapshot changedParty = party.With(reserveMembers:
+        RuntimePartyRosterSnapshot changedParty = party.With(reserveMembers:
         [
             new RuntimeActorReferenceSnapshot(
                 RuntimeInstanceId.Parse("late_reserve"),
@@ -56,15 +56,15 @@ public sealed class FusionTransactionServiceTests
             changedParty));
         Assert.False(stale.Applied);
         Assert.Equal(FusionTransactionCommitCode.PreparationStale, stale.Code);
-        Assert.Same(changedParty, stale.BeforePartyStock);
-        Assert.Same(changedParty, stale.AfterPartyStock);
+        Assert.Same(changedParty, stale.BeforePartyRoster);
+        Assert.Same(changedParty, stale.AfterPartyRoster);
         Assert.Equal(
             FusionRuntimeDiagnosticCode.TransactionStateChanged,
             Assert.Single(stale.Diagnostics).Code);
         Assert.Empty(stale.ConsumedParticipantIds);
-        Assert.Empty(stale.StockTransitions);
+        Assert.Empty(stale.RosterTransitions);
         Assert.Equal(prepared.ConsumedParticipantIds, stale.PlannedConsumedParticipantIds);
-        Assert.Equal(prepared.StockTransitions, stale.PlannedStockTransitions);
+        Assert.Equal(prepared.RosterTransitions, stale.PlannedRosterTransitions);
         Assert.Equal(0, actorFactory.CreateCount);
 
         FusionTransactionCommitResult result = service.Commit(new FusionTransactionCommitRequest(
@@ -73,8 +73,8 @@ public sealed class FusionTransactionServiceTests
 
         Assert.True(result.Applied);
         Assert.Equal(FusionTransactionCommitCode.Applied, result.Code);
-        Assert.Same(party, result.BeforePartyStock);
-        Assert.Same(prepared.AfterPartyStock, result.AfterPartyStock);
+        Assert.Same(party, result.BeforePartyRoster);
+        Assert.Same(prepared.AfterPartyRoster, result.AfterPartyRoster);
         Assert.Equal(1, actorFactory.CreateCount);
         Assert.Equal(1, actorFactory.RestoreCount);
         Assert.Equal(Qualified("ward_shell"), result.ResultActor?.Entity.Id);
@@ -89,26 +89,26 @@ public sealed class FusionTransactionServiceTests
     public void Prepare_HonorsPersonaOwnershipForConsumptionAndPlacement()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Persona);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.HostedEntity);
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment assessment = service.Prepare(Request(
             context,
             party,
-            FusionParticipantStockKind.Persona,
+            FusionParticipantRosterKind.HostedEntity,
             "persona_result"));
 
         Assert.True(assessment.CanCommit);
-        Assert.Empty(assessment.AfterPartyStock.DemonStock);
-        RuntimeActorReferenceSnapshot persona = Assert.Single(assessment.AfterPartyStock.PersonaStock);
-        Assert.Equal(RuntimeInstanceId.Parse("persona_result"), persona.InstanceId);
-        Assert.Equal(Qualified("ward_shell"), persona.EntityDefinitionId);
-        Assert.Equal(3, assessment.StockTransitions.Count);
+        Assert.Empty(assessment.AfterPartyRoster.CompanionRoster);
+        RuntimeActorReferenceSnapshot hostedEntity = Assert.Single(assessment.AfterPartyRoster.HostedEntityRoster);
+        Assert.Equal(RuntimeInstanceId.Parse("persona_result"), hostedEntity.InstanceId);
+        Assert.Equal(Qualified("ward_shell"), hostedEntity.EntityDefinitionId);
+        Assert.Equal(3, assessment.RosterTransitions.Count);
         Assert.Equal(
             [context.FirstParent.InstanceId, context.SecondParent.InstanceId, RuntimeInstanceId.Parse("persona_result")],
-            assessment.StockTransitions.SelectMany(transition => transition.AffectedInstanceIds));
+            assessment.RosterTransitions.SelectMany(transition => transition.AffectedInstanceIds));
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class FusionTransactionServiceTests
             "Owner");
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
         EntityDefinition expectedEntity = context.Catalog.GetRequiredEntity(Qualified("ward_shell"));
 
         (FusionPlanningResult forwardPlan, PreparedFusionTransaction forwardPrepared, FusionTransactionCommitResult forward) =
@@ -157,8 +157,8 @@ public sealed class FusionTransactionServiceTests
         AssertCatalogDecimalStats(reversed.ResultActorSnapshot!.Stats.BaseStats);
         Assert.Equal([echo.InstanceId, bramble.InstanceId], forward.ConsumedParticipantIds);
         Assert.Equal([bramble.InstanceId, echo.InstanceId], reversed.ConsumedParticipantIds);
-        Assert.Equal(Qualified("ward_shell"), Assert.Single(forward.AfterPartyStock.DemonStock).EntityDefinitionId);
-        Assert.Equal(Qualified("ward_shell"), Assert.Single(reversed.AfterPartyStock.DemonStock).EntityDefinitionId);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(forward.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
+        Assert.Equal(Qualified("ward_shell"), Assert.Single(reversed.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
 
         (FusionPlanningResult Plan, PreparedFusionTransaction Prepared, FusionTransactionCommitResult Result) Execute(
             FusionParticipantSnapshot first,
@@ -174,12 +174,12 @@ public sealed class FusionTransactionServiceTests
                 context.Planner,
                 plan,
                 selectedSkillIds: null);
-            RuntimePartyStockSnapshot party = new(
+            RuntimePartyRosterSnapshot party = new(
                 owner,
                 ownerLevel: 20,
-                demonStock: [Reference(first), Reference(second)]);
+                companionRoster: [Reference(first), Reference(second)]);
             FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
-                FusionParticipantStockKind.Demon,
+                FusionParticipantRosterKind.Companion,
                 plan,
                 selection,
                 party,
@@ -224,13 +224,13 @@ public sealed class FusionTransactionServiceTests
             context.Plan.MaximumInheritanceSlots,
             context.Plan.SacrificeDecision,
             context.Plan.PolicyContext);
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             malformedPlan,
             context.Selection,
             party,
@@ -242,24 +242,24 @@ public sealed class FusionTransactionServiceTests
         FusionRuntimeDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
         Assert.Equal(FusionRuntimeDiagnosticCode.DuplicateParticipant, diagnostic.Code);
         Assert.Equal(context.FirstParent.InstanceId, diagnostic.InstanceId);
-        Assert.Same(party, assessment.BeforePartyStock);
-        Assert.Same(party, assessment.AfterPartyStock);
-        Assert.Empty(assessment.StockTransitions);
+        Assert.Same(party, assessment.BeforePartyRoster);
+        Assert.Same(party, assessment.AfterPartyRoster);
+        Assert.Empty(assessment.RosterTransitions);
     }
 
     [Fact]
     public void Prepare_ValidatesEveryIntentionalDemonOverlapReference()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         RuntimeActorReferenceSnapshot firstReference = Reference(context.FirstParent);
-        RuntimePartyStockSnapshot validOverlap = party.With(activeParty: [firstReference]);
+        RuntimePartyRosterSnapshot validOverlap = party.With(activeParty: [firstReference]);
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment valid = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             context.Plan,
             context.Selection,
             validOverlap,
@@ -269,12 +269,12 @@ public sealed class FusionTransactionServiceTests
 
         Assert.True(valid.CanCommit);
         Assert.DoesNotContain(
-            valid.AfterPartyStock.ActiveParty,
+            valid.AfterPartyRoster.ActiveParty,
             actor => actor.InstanceId == context.FirstParent.InstanceId);
 
-        RuntimePartyStockSnapshot mismatchedOverlap = party.With(
+        RuntimePartyRosterSnapshot mismatchedOverlap = party.With(
             activeParty: [firstReference],
-            demonStock:
+            companionRoster:
             [
                 new RuntimeActorReferenceSnapshot(
                     context.FirstParent.InstanceId,
@@ -283,7 +283,7 @@ public sealed class FusionTransactionServiceTests
                 Reference(context.SecondParent)
             ]);
         FusionTransactionAssessment rejected = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             context.Plan,
             context.Selection,
             mismatchedOverlap,
@@ -293,10 +293,10 @@ public sealed class FusionTransactionServiceTests
 
         Assert.False(rejected.CanCommit);
         FusionRuntimeDiagnostic diagnostic = Assert.Single(rejected.Diagnostics);
-        Assert.Equal(FusionRuntimeDiagnosticCode.StockTransitionRejected, diagnostic.Code);
+        Assert.Equal(FusionRuntimeDiagnosticCode.RosterTransitionRejected, diagnostic.Code);
         Assert.Equal(context.FirstParent.InstanceId, diagnostic.InstanceId);
-        Assert.Same(mismatchedOverlap, rejected.AfterPartyStock);
-        Assert.Empty(rejected.StockTransitions);
+        Assert.Same(mismatchedOverlap, rejected.AfterPartyRoster);
+        Assert.Empty(rejected.RosterTransitions);
     }
 
     [Fact]
@@ -322,16 +322,16 @@ public sealed class FusionTransactionServiceTests
             RuntimeInstanceId.Parse("owner"),
             Qualified("echo_adept"),
             "Owner");
-        RuntimePartyStockSnapshot party = new(
+        RuntimePartyRosterSnapshot party = new(
             owner,
             ownerLevel: 20,
-            demonStock: [Reference(echo), Reference(context.SecondParent), Reference(sacrifice)]);
+            companionRoster: [Reference(echo), Reference(context.SecondParent), Reference(sacrifice)]);
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             plan,
             selection,
             party,
@@ -355,7 +355,7 @@ public sealed class FusionTransactionServiceTests
                 Qualified("steady_breath")
             ],
             result.ResultActorSnapshot?.Skills.LearnedSkillIds);
-        Assert.Equal(4, result.StockTransitions.Count);
+        Assert.Equal(4, result.RosterTransitions.Count);
     }
 
     [Fact]
@@ -408,10 +408,10 @@ public sealed class FusionTransactionServiceTests
             RuntimeInstanceId.Parse("owner"),
             Qualified("echo_adept"),
             "Owner");
-        RuntimePartyStockSnapshot party = new(
+        RuntimePartyRosterSnapshot party = new(
             owner,
             ownerLevel: 20,
-            demonStock: [Reference(target), Reference(catalyst)]);
+            companionRoster: [Reference(target), Reference(catalyst)]);
         RuntimeActorSnapshot initializedTarget = context.ActorFactory.Create(new CatalogBattleActorCreationRequest(
                 target.EntityId,
                 target.InstanceId,
@@ -430,10 +430,10 @@ public sealed class FusionTransactionServiceTests
         var actorFactory = new CountingActorFactory(context.ActorFactory);
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment missingActor = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             plan,
             selection,
             party,
@@ -444,10 +444,10 @@ public sealed class FusionTransactionServiceTests
         Assert.Equal(
             FusionRuntimeDiagnosticCode.ResultActorSnapshotInvalid,
             Assert.Single(missingActor.Diagnostics).Code);
-        Assert.Empty(missingActor.StockTransitions);
+        Assert.Empty(missingActor.RosterTransitions);
 
         FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             plan,
             selection,
             party,
@@ -471,10 +471,10 @@ public sealed class FusionTransactionServiceTests
 
         Assert.True(result.Applied);
         Assert.Equal([catalyst.InstanceId], result.ConsumedParticipantIds);
-        RuntimeActorReferenceSnapshot remaining = Assert.Single(result.AfterPartyStock.DemonStock);
+        RuntimeActorReferenceSnapshot remaining = Assert.Single(result.AfterPartyRoster.CompanionRoster);
         Assert.Equal(target.InstanceId, remaining.InstanceId);
         Assert.Equal(target.EntityId, remaining.EntityDefinitionId);
-        Assert.Single(result.StockTransitions);
+        Assert.Single(result.RosterTransitions);
         Assert.Equal(boostedStats[Id("strength")], result.ResultActorSnapshot?.Stats.BaseStats[Id("strength")]);
         Assert.Equal(existingTarget.Resources, result.ResultActorSnapshot?.Resources);
         Assert.Equal(existingTarget.Skills.LearnedSkillIds, result.ResultActorSnapshot?.Skills.LearnedSkillIds);
@@ -487,27 +487,27 @@ public sealed class FusionTransactionServiceTests
     public void Prepare_UsesInjectedCapacityAndReturnsAtomicRollbackOnRejection()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var actorFactory = new CountingActorFactory(context.ActorFactory);
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(0)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(0)));
 
         FusionTransactionAssessment assessment = service.Prepare(Request(
             context,
             party,
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             "capacity_result"));
 
         Assert.False(assessment.CanCommit);
-        Assert.Same(party, assessment.BeforePartyStock);
-        Assert.Same(party, assessment.AfterPartyStock);
-        Assert.Equal(FusionRuntimeDiagnosticCode.StockFull, Assert.Single(assessment.Diagnostics).Code);
-        Assert.Equal(3, assessment.StockTransitions.Count);
-        Assert.True(assessment.StockTransitions[0].Applied);
-        Assert.True(assessment.StockTransitions[1].Applied);
-        Assert.False(assessment.StockTransitions[2].Applied);
-        Assert.Equal(2, party.DemonStock.Count);
+        Assert.Same(party, assessment.BeforePartyRoster);
+        Assert.Same(party, assessment.AfterPartyRoster);
+        Assert.Equal(FusionRuntimeDiagnosticCode.RosterFull, Assert.Single(assessment.Diagnostics).Code);
+        Assert.Equal(3, assessment.RosterTransitions.Count);
+        Assert.True(assessment.RosterTransitions[0].Applied);
+        Assert.True(assessment.RosterTransitions[1].Applied);
+        Assert.False(assessment.RosterTransitions[2].Applied);
+        Assert.Equal(2, party.CompanionRoster.Count);
         Assert.Equal(0, actorFactory.CreateCount);
         Assert.Equal(0, actorFactory.RestoreCount);
     }
@@ -516,13 +516,13 @@ public sealed class FusionTransactionServiceTests
     public void Prepare_RejectsReusedIdentityAndSelectionTokenFromAnotherPlan()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var service = new FusionTransactionService(
             context.ActorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
 
         FusionTransactionAssessment reusedIdentity = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             context.Plan,
             context.Selection,
             party,
@@ -534,7 +534,7 @@ public sealed class FusionTransactionServiceTests
         Assert.Equal(
             FusionRuntimeDiagnosticCode.ResultIdentityInUse,
             Assert.Single(reusedIdentity.Diagnostics).Code);
-        Assert.Empty(reusedIdentity.StockTransitions);
+        Assert.Empty(reusedIdentity.RosterTransitions);
 
         FusionParticipantSnapshot echo = Participant(
             context.Catalog.GetRequiredEntity(Qualified("echo_adept")),
@@ -551,7 +551,7 @@ public sealed class FusionTransactionServiceTests
         Assert.NotEqual(context.Plan.MaximumInheritanceSlots, otherSelection.MaximumSelections);
 
         FusionTransactionAssessment wrongSelection = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             context.Plan,
             otherSelection,
             party,
@@ -563,9 +563,9 @@ public sealed class FusionTransactionServiceTests
         Assert.Equal(
             FusionRuntimeDiagnosticCode.InvalidSelection,
             Assert.Single(wrongSelection.Diagnostics).Code);
-        Assert.Same(party, wrongSelection.AfterPartyStock);
+        Assert.Same(party, wrongSelection.AfterPartyRoster);
 
-        RuntimePartyStockSnapshot mismatchedParent = party.With(demonStock:
+        RuntimePartyRosterSnapshot mismatchedParent = party.With(companionRoster:
         [
             new RuntimeActorReferenceSnapshot(
                 context.FirstParent.InstanceId,
@@ -574,7 +574,7 @@ public sealed class FusionTransactionServiceTests
             Reference(context.SecondParent)
         ]);
         FusionTransactionAssessment wrongParent = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             context.Plan,
             context.Selection,
             mismatchedParent,
@@ -583,25 +583,25 @@ public sealed class FusionTransactionServiceTests
             Id("test_controller")));
         Assert.False(wrongParent.CanCommit);
         FusionRuntimeDiagnostic wrongParentDiagnostic = Assert.Single(wrongParent.Diagnostics);
-        Assert.Equal(FusionRuntimeDiagnosticCode.StockTransitionRejected, wrongParentDiagnostic.Code);
+        Assert.Equal(FusionRuntimeDiagnosticCode.RosterTransitionRejected, wrongParentDiagnostic.Code);
         Assert.Equal(context.FirstParent.InstanceId, wrongParentDiagnostic.InstanceId);
-        Assert.Empty(wrongParent.StockTransitions);
-        Assert.Same(mismatchedParent, wrongParent.AfterPartyStock);
+        Assert.Empty(wrongParent.RosterTransitions);
+        Assert.Same(mismatchedParent, wrongParent.AfterPartyRoster);
     }
 
     [Fact]
     public void Commit_ActorCreationFailureDoesNotPublishPreparedStockState()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var rejectingFactory = new RejectingActorFactory();
         var service = new FusionTransactionService(
             rejectingFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
         PreparedFusionTransaction prepared = service.Prepare(Request(
                 context,
                 party,
-                FusionParticipantStockKind.Demon,
+                FusionParticipantRosterKind.Companion,
                 "rejected_result"))
             .RequirePreparedTransaction();
 
@@ -611,14 +611,14 @@ public sealed class FusionTransactionServiceTests
 
         Assert.False(result.Applied);
         Assert.Equal(FusionTransactionCommitCode.ActorCreationRejected, result.Code);
-        Assert.Same(party, result.BeforePartyStock);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.BeforePartyRoster);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Null(result.ResultActor);
         Assert.Null(result.ResultActorSnapshot);
         Assert.Empty(result.ConsumedParticipantIds);
-        Assert.Empty(result.StockTransitions);
+        Assert.Empty(result.RosterTransitions);
         Assert.Equal(prepared.ConsumedParticipantIds, result.PlannedConsumedParticipantIds);
-        Assert.Equal(prepared.StockTransitions, result.PlannedStockTransitions);
+        Assert.Equal(prepared.RosterTransitions, result.PlannedRosterTransitions);
         Assert.Equal(
             FusionRuntimeDiagnosticCode.ActorCreationFailed,
             Assert.Single(result.Diagnostics).Code);
@@ -630,23 +630,23 @@ public sealed class FusionTransactionServiceTests
     public void Prepare_RejectsPreviewThatDoesNotMatchValidatedPlan()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var actorFactory = new CountingActorFactory(context.ActorFactory);
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)),
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)),
             new MismatchedPreviewService());
 
         FusionTransactionAssessment assessment = service.Prepare(Request(
             context,
             party,
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             "mismatched_preview_result"));
 
         Assert.False(assessment.CanCommit);
         Assert.Equal(FusionRuntimeDiagnosticCode.InvalidPreview, Assert.Single(assessment.Diagnostics).Code);
-        Assert.Empty(assessment.StockTransitions);
-        Assert.Same(party, assessment.AfterPartyStock);
+        Assert.Empty(assessment.RosterTransitions);
+        Assert.Same(party, assessment.AfterPartyRoster);
         Assert.Equal(0, actorFactory.CreateCount);
         Assert.Equal(0, actorFactory.RestoreCount);
     }
@@ -655,15 +655,15 @@ public sealed class FusionTransactionServiceTests
     public void Commit_RejectsActorFactoryOutputThatDoesNotMatchPreparedOwnership()
     {
         TransactionContext context = CreateContext();
-        RuntimePartyStockSnapshot party = Party(context, FusionParticipantStockKind.Demon);
+        RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
         var actorFactory = new WrongOwnershipActorFactory(context.ActorFactory);
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new FixedCapacityPolicy(12)));
+            new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
         PreparedFusionTransaction prepared = service.Prepare(Request(
                 context,
                 party,
-                FusionParticipantStockKind.Demon,
+                FusionParticipantRosterKind.Companion,
                 "wrong_ownership_result"))
             .RequirePreparedTransaction();
 
@@ -673,13 +673,13 @@ public sealed class FusionTransactionServiceTests
 
         Assert.Equal(FusionTransactionCommitCode.ActorCreationRejected, result.Code);
         Assert.False(result.Applied);
-        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(party, result.AfterPartyRoster);
         Assert.Null(result.ResultActor);
         Assert.Null(result.ResultActorSnapshot);
         Assert.Empty(result.ConsumedParticipantIds);
-        Assert.Empty(result.StockTransitions);
+        Assert.Empty(result.RosterTransitions);
         Assert.Equal(prepared.ConsumedParticipantIds, result.PlannedConsumedParticipantIds);
-        Assert.Equal(prepared.StockTransitions, result.PlannedStockTransitions);
+        Assert.Equal(prepared.RosterTransitions, result.PlannedRosterTransitions);
         Assert.Equal(FusionRuntimeDiagnosticCode.ActorCreationFailed, Assert.Single(result.Diagnostics).Code);
     }
 
@@ -722,8 +722,8 @@ public sealed class FusionTransactionServiceTests
 
     private static FusionTransactionPreparationRequest Request(
         TransactionContext context,
-        RuntimePartyStockSnapshot party,
-        FusionParticipantStockKind ownerKind,
+        RuntimePartyRosterSnapshot party,
+        FusionParticipantRosterKind ownerKind,
         string resultInstanceId) =>
         new(
             ownerKind,
@@ -734,9 +734,9 @@ public sealed class FusionTransactionServiceTests
             Id("player_team"),
             Id("test_controller"));
 
-    private static RuntimePartyStockSnapshot Party(
+    private static RuntimePartyRosterSnapshot Party(
         TransactionContext context,
-        FusionParticipantStockKind ownerKind)
+        FusionParticipantRosterKind ownerKind)
     {
         var owner = new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("owner"),
@@ -747,9 +747,9 @@ public sealed class FusionTransactionServiceTests
             Reference(context.FirstParent),
             Reference(context.SecondParent)
         ];
-        return ownerKind == FusionParticipantStockKind.Demon
-            ? new RuntimePartyStockSnapshot(owner, 20, demonStock: parents)
-            : new RuntimePartyStockSnapshot(owner, 20, personaStock: parents);
+        return ownerKind == FusionParticipantRosterKind.Companion
+            ? new RuntimePartyRosterSnapshot(owner, 20, companionRoster: parents)
+            : new RuntimePartyRosterSnapshot(owner, 20, hostedEntityRoster: parents);
     }
 
     private static ValidatedFusionInheritanceSelection Selection(
@@ -788,7 +788,7 @@ public sealed class FusionTransactionServiceTests
             snapshot.Resources,
             snapshot.Stats,
             new RuntimeSkillStateSnapshot(learnedSkillIds, equippedSkillIds),
-            snapshot.Forms,
+            snapshot.Rosters,
             snapshot.Equipment,
             snapshot.BattleStatus,
             snapshot.BattleActivations,
@@ -845,9 +845,9 @@ public sealed class FusionTransactionServiceTests
         FusionParticipantSnapshot SecondParent,
         ICatalogBattleActorFactory ActorFactory);
 
-    private sealed class FixedCapacityPolicy(int capacity) : IStockCapacityPolicy
+    private sealed class FixedCapacityPolicy(int capacity) : IRosterCapacityPolicy
     {
-        public int GetCapacity(int ownerLevel) => capacity;
+        public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => capacity;
     }
 
     private sealed class CountingActorFactory(ICatalogBattleActorFactory inner) : ICatalogBattleActorFactory

@@ -17,7 +17,7 @@ public sealed class ContentValidationTests
         string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         ContentPackManifest manifest = ReadManifest(jsonRoot, "skill_system_redesign.manifest.sample.json");
         var registrations = new SkillSystemRegistrationBuilder()
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .SupportModifier<NumericRuleModifierDefinition>()
             .SupportCondition<EffectElementConditionDefinition>()
@@ -476,7 +476,7 @@ public sealed class ContentValidationTests
         AilmentDefinition ailment = new(
             Id("fear"), "Fear", "Invalid fear.",
             new TurnDurationDefinition(0, Id("owner_turn_end"), false),
-            new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(70, 50, DemonFleeOutcome.ReturnToStock),
+            new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(70, 50, CompanionFleeOutcome.RecallToRoster),
             new AilmentModifiersDefinition(0, 0, 0, 0, false),
             new AilmentRecoveryDefinition(
                 new NaturalAilmentRecoveryDefinition(101, Id("luck"), 0),
@@ -703,7 +703,7 @@ public sealed class ContentValidationTests
         IEnumerable<ContentId>? baseSkillIds = null,
         IEnumerable<SkillUnlockDefinition>? unlocks = null) =>
         new(
-            Id(id), id, id, Id("demon"), raceId, 1, 1,
+            Id(id), id, id, Id("companion"), raceId, 1, 1,
             new EntityCapabilitiesDefinition(true, true, true),
             inheritanceRules ?? new EntityInheritanceRulesDefinition(
                 new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList)),
@@ -786,7 +786,7 @@ public sealed class ContentValidationTests
             .RegisterModifierTrack("attack", "defense", "agility")
             .RegisterEvent("owner_turn_end", "battle_end")
             .RegisterPhase("next_attack")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterAlignment("light", "neutral", "dark")
             .RegisterNegotiationPersonality("upbeat")
             .RegisterAilmentGroup("mental", "physical")

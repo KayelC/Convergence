@@ -21,8 +21,8 @@ internal sealed record TrainingAnnexCompendiumEvidence(
     int Cost,
     int WalletBefore,
     int WalletAfter,
-    int DemonStockBefore,
-    int DemonStockAfter,
+    int CompanionRosterBefore,
+    int CompanionRosterAfter,
     int ImportedElementalAffinities,
     int ImportedAilmentResistances,
     int ImportedInstantDeathResistances,
@@ -31,7 +31,7 @@ internal sealed record TrainingAnnexCompendiumEvidence(
 
 internal sealed record TrainingAnnexCompendiumInteractionResult(
     CompendiumStateSnapshot Compendium,
-    RuntimePartyStockSnapshot PartyStock,
+    RuntimePartyRosterSnapshot PartyRoster,
     RuntimeWalletSnapshot Wallet,
     TrainingAnnexActorRoster Roster,
     TrainingAnnexBattleKnowledgeState PlayerKnowledge,
@@ -58,7 +58,7 @@ internal sealed class TrainingAnnexCompendiumController
 
     public async ValueTask<TrainingAnnexCompendiumInteractionResult> OpenAsync(
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
@@ -70,7 +70,7 @@ internal sealed class TrainingAnnexCompendiumController
         if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back)
         {
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
-            return Unchanged(compendium, partyStock, wallet, roster, playerKnowledge);
+            return Unchanged(compendium, partyRoster, wallet, roster, playerKnowledge);
         }
 
         commands.Add(selection.Command);
@@ -78,7 +78,7 @@ internal sealed class TrainingAnnexCompendiumController
         {
             CleanTrainingAnnexPlayCommand.CompendiumRegister => await RegisterAsync(
                 compendium,
-                partyStock,
+                partyRoster,
                 wallet,
                 roster,
                 playerKnowledge,
@@ -86,7 +86,7 @@ internal sealed class TrainingAnnexCompendiumController
                 cancellationToken).ConfigureAwait(false),
             CleanTrainingAnnexPlayCommand.CompendiumRecall => await RecallAsync(
                 compendium,
-                partyStock,
+                partyRoster,
                 wallet,
                 roster,
                 playerKnowledge,
@@ -98,20 +98,20 @@ internal sealed class TrainingAnnexCompendiumController
 
     private async ValueTask<TrainingAnnexCompendiumInteractionResult> RegisterAsync(
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<TrainingAnnexRuntimeActor> candidates = RegistrationCandidates(partyStock, roster);
+        IReadOnlyList<TrainingAnnexRuntimeActor> candidates = RegistrationCandidates(partyRoster, roster);
         if (candidates.Count == 0)
         {
             await _eventSink.PublishAsync(
                 "Compendium registration unavailable: no owned eligible actors were found.",
                 cancellationToken).ConfigureAwait(false);
-            return Unchanged(compendium, partyStock, wallet, roster, playerKnowledge);
+            return Unchanged(compendium, partyRoster, wallet, roster, playerKnowledge);
         }
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection = await _commandSource.ReadAsync(
@@ -123,7 +123,7 @@ internal sealed class TrainingAnnexCompendiumController
         if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back || selected is null)
         {
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
-            return Unchanged(compendium, partyStock, wallet, roster, playerKnowledge);
+            return Unchanged(compendium, partyRoster, wallet, roster, playerKnowledge);
         }
 
         commands.Add(selection.Command);
@@ -135,11 +135,11 @@ internal sealed class TrainingAnnexCompendiumController
             await PublishDiagnosticsAsync(registration.Diagnostics, cancellationToken).ConfigureAwait(false);
             return new TrainingAnnexCompendiumInteractionResult(
                 compendium,
-                partyStock,
+                partyRoster,
                 wallet,
                 roster,
                 playerKnowledge,
-                [Evidence(selected.Actor.Entity.Id, registration, partyStock, wallet)]);
+                [Evidence(selected.Actor.Entity.Id, registration, partyRoster, wallet)]);
         }
 
         FamiliarKnowledgeImportResult imported = _familiarKnowledge.Import(
@@ -152,16 +152,16 @@ internal sealed class TrainingAnnexCompendiumController
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexCompendiumInteractionResult(
             registration.After,
-            partyStock,
+            partyRoster,
             wallet,
             roster,
             nextKnowledge,
-            [Evidence(selected.Actor.Entity.Id, registration, partyStock, wallet, imported)]);
+            [Evidence(selected.Actor.Entity.Id, registration, partyRoster, wallet, imported)]);
     }
 
     private async ValueTask<TrainingAnnexCompendiumInteractionResult> RecallAsync(
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
@@ -173,7 +173,7 @@ internal sealed class TrainingAnnexCompendiumController
             await _eventSink.PublishAsync(
                 "Compendium recall unavailable: no entries are registered.",
                 cancellationToken).ConfigureAwait(false);
-            return Unchanged(compendium, partyStock, wallet, roster, playerKnowledge);
+            return Unchanged(compendium, partyRoster, wallet, roster, playerKnowledge);
         }
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection = await _commandSource.ReadAsync(
@@ -183,7 +183,7 @@ internal sealed class TrainingAnnexCompendiumController
         if (!selection.IsSelected || selection.Command == CleanTrainingAnnexPlayCommand.Back || selectedId is null)
         {
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
-            return Unchanged(compendium, partyStock, wallet, roster, playerKnowledge);
+            return Unchanged(compendium, partyRoster, wallet, roster, playerKnowledge);
         }
 
         commands.Add(selection.Command);
@@ -191,19 +191,19 @@ internal sealed class TrainingAnnexCompendiumController
         RuntimeInstanceId instanceId = NextRecallInstanceId(selectedId.Value, roster);
         CompendiumRecallTransactionResult recall = _compendium.Recall(new CompendiumRecallTransactionRequest(
             compendium,
-            partyStock,
+            partyRoster,
             wallet,
             selectedId.Value,
             instanceId,
             owner.Ownership.ControllerId,
             owner.Ownership.TeamId,
-            CompendiumRecallStockKind.Demon));
+            CompendiumRecallRosterKind.Companion));
         if (!recall.Applied || recall.Actor is null)
         {
             await PublishDiagnosticsAsync(recall.Diagnostics, cancellationToken).ConfigureAwait(false);
             return new TrainingAnnexCompendiumInteractionResult(
                 compendium,
-                partyStock,
+                partyRoster,
                 wallet,
                 roster,
                 playerKnowledge,
@@ -218,11 +218,11 @@ internal sealed class TrainingAnnexCompendiumController
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
         await _eventSink.PublishAsync(
-            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} M; Demon stock {recall.BeforePartyStock.DemonStock.Count}->{recall.AfterPartyStock.DemonStock.Count}.",
+            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} M; Companion roster {recall.BeforePartyRoster.CompanionRoster.Count}->{recall.AfterPartyRoster.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexCompendiumInteractionResult(
             compendium,
-            recall.AfterPartyStock,
+            recall.AfterPartyRoster,
             recall.AfterWallet,
             nextRoster,
             nextKnowledge,
@@ -242,10 +242,10 @@ internal sealed class TrainingAnnexCompendiumController
     }
 
     private static IReadOnlyList<TrainingAnnexRuntimeActor> RegistrationCandidates(
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         TrainingAnnexActorRoster roster)
     {
-        HashSet<RuntimeInstanceId> ownedIds = OwnedReferences(partyStock)
+        HashSet<RuntimeInstanceId> ownedIds = OwnedReferences(partyRoster)
             .Select(reference => reference.InstanceId)
             .ToHashSet();
         return roster.AllActors
@@ -258,14 +258,14 @@ internal sealed class TrainingAnnexCompendiumController
     }
 
     private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedReferences(
-        RuntimePartyStockSnapshot partyStock)
+        RuntimePartyRosterSnapshot partyRoster)
     {
-        yield return partyStock.Owner;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.ActiveParty) yield return actor;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.ReserveMembers) yield return actor;
-        if (partyStock.ActiveForm is not null) yield return partyStock.ActiveForm;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.PersonaStock) yield return actor;
-        foreach (RuntimeActorReferenceSnapshot actor in partyStock.DemonStock) yield return actor;
+        yield return partyRoster.Owner;
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.ActiveParty) yield return actor;
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.ReserveMembers) yield return actor;
+        if (partyRoster.ActiveHostedEntity is not null) yield return partyRoster.ActiveHostedEntity;
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.HostedEntityRoster) yield return actor;
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.CompanionRoster) yield return actor;
     }
 
     private static RuntimeInstanceId NextRecallInstanceId(ContentId entityId, TrainingAnnexActorRoster roster)
@@ -345,16 +345,16 @@ internal sealed class TrainingAnnexCompendiumController
 
     private static TrainingAnnexCompendiumInteractionResult Unchanged(
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge) =>
-        new(compendium, partyStock, wallet, roster, playerKnowledge, []);
+        new(compendium, partyRoster, wallet, roster, playerKnowledge, []);
 
     private static TrainingAnnexCompendiumEvidence Evidence(
         ContentId entityId,
         CompendiumActorRegistrationResult registration,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         FamiliarKnowledgeImportResult? imported = null) =>
         new(
@@ -366,8 +366,8 @@ internal sealed class TrainingAnnexCompendiumController
             0,
             wallet.Balance,
             wallet.Balance,
-            partyStock.DemonStock.Count,
-            partyStock.DemonStock.Count,
+            partyRoster.CompanionRoster.Count,
+            partyRoster.CompanionRoster.Count,
             ImportedElementCount(imported, entityId),
             ImportedAilmentCount(imported, entityId),
             ImportedInstantDeathCount(imported, entityId),
@@ -387,8 +387,8 @@ internal sealed class TrainingAnnexCompendiumController
             recall.Cost,
             recall.BeforeWallet.Balance,
             recall.AfterWallet.Balance,
-            recall.BeforePartyStock.DemonStock.Count,
-            recall.AfterPartyStock.DemonStock.Count,
+            recall.BeforePartyRoster.CompanionRoster.Count,
+            recall.AfterPartyRoster.CompanionRoster.Count,
             ImportedElementCount(imported, entityId),
             ImportedAilmentCount(imported, entityId),
             ImportedInstantDeathCount(imported, entityId),

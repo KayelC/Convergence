@@ -534,7 +534,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             [new BattleRewardRecipientSnapshot(
                 player.Actor.Entity.Id,
                 IsAlive: !player.Actor.State.IsDefeated,
-                HasActiveForm: false)]));
+                HasActiveHostedEntity: false)]));
     }
 
     private sealed class TrainingAnnexManualBattleTurnHandler : IBattleEncounterTurnHandler
@@ -1455,7 +1455,7 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         cancellationToken.ThrowIfCancellationRequested();
         BattleTurnStartLifecycleResult result = _lifecycle.ProcessTurnStart(new(
             request.Actor.State,
-            request.CanReturnToStock));
+            request.CanRecallToRoster));
         _tracker.RecordStatusEvents(result.Events, result.Outcome);
         return new ValueTask<BattleTurnStartLifecycleResult>(result);
     }

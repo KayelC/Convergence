@@ -35,7 +35,7 @@ public sealed class FrameworkNeutralityTests
             "Convergence.Framework",
             "Encounters",
             "BattleNegotiationAndRewards.cs"));
-        Assert.DoesNotContain("Demon Stock", negotiation, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Companion roster", negotiation, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -182,7 +182,7 @@ public sealed record BattleEncounterTurnLifecycleRequest(
     BattleEncounterRequest Encounter,
     BattleEncounterParticipant Actor,
     IReadOnlyList<BattleEncounterParticipant> Participants,
-    bool CanReturnToStock);
+    bool CanRecallToRoster);
 
 public interface IBattleEncounterLifecyclePort
 {
@@ -674,7 +674,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     lifecycleTransaction.CreateEncounter(request),
                                     stagedActor,
                                     lifecycleTransaction.Participants,
-                                    CanReturnToStock(stagedActor)),
+                                    CanRecallToRoster(stagedActor)),
                                 cancellationToken)
                             .ConfigureAwait(false)
                             ?? throw new InvalidOperationException(
@@ -790,7 +790,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                         lifecycleTransaction.CreateEncounter(request),
                                         stagedActor,
                                         lifecycleTransaction.Participants,
-                                        CanReturnToStock(stagedActor)),
+                                        CanRecallToRoster(stagedActor)),
                                     cancellationToken)
                                 .ConfigureAwait(false);
                             turnEndEvents = SnapshotLifecycleEvents(returnedEvents, "turn-end");
@@ -990,8 +990,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                   !participant.State.IsDefeated)
             .ToArray();
 
-    private static bool CanReturnToStock(BattleEncounterParticipant participant) =>
-        participant.State.HasCapability(ContentId.Parse("return_to_stock"));
+    private static bool CanRecallToRoster(BattleEncounterParticipant participant) =>
+        participant.State.HasCapability(ContentId.Parse("recall_to_roster"));
 
     private static bool IsExactTeamPermutation(
         IReadOnlyList<ContentId>? proposed,

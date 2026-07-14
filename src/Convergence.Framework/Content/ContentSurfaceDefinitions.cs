@@ -59,7 +59,7 @@ public enum RulesetCategory
     Growth,
     Stat,
     TurnEconomy,
-    StockCapacity,
+    RosterCapacity,
     Reward,
     Economy,
     MoonPhase

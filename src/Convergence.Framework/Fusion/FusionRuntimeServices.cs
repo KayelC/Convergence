@@ -16,10 +16,10 @@ public enum FusionRuntimeOperation
     NoFusionPossible
 }
 
-public enum FusionParticipantStockKind
+public enum FusionParticipantRosterKind
 {
-    Demon,
-    Persona
+    Companion,
+    HostedEntity
 }
 
 public enum FusionRuntimeDiagnosticCode
@@ -38,7 +38,7 @@ public enum FusionRuntimeDiagnosticCode
     InvalidSacrifice,
     UnsupportedRecipeFormat,
     DuplicateResult,
-    StockFull,
+    RosterFull,
     InsufficientCurrency,
     RecallUnavailable,
     InvalidSelection,
@@ -47,7 +47,7 @@ public enum FusionRuntimeDiagnosticCode
     InvalidPreview,
     ResultIdentityInUse,
     ResultActorSnapshotInvalid,
-    StockTransitionRejected,
+    RosterTransitionRejected,
     ActorCreationFailed,
     TransactionStateChanged,
     AmbiguousRecipe
@@ -1289,7 +1289,7 @@ public enum CompendiumRecallCode
     Available,
     MissingEntry,
     DuplicateOwned,
-    StockFull,
+    RosterFull,
     RecallUnavailable,
     InsufficientCurrency
 }
@@ -1473,7 +1473,7 @@ public sealed class CompendiumService : ICompendiumService
         }
         if (!hasOpenStockSlot)
         {
-            return RecallRejected(CompendiumRecallCode.StockFull, "There is no open stock slot for the recalled entry.", speciesId, entry, cost);
+            return RecallRejected(CompendiumRecallCode.RosterFull, "There is no open stock slot for the recalled entry.", speciesId, entry, cost);
         }
         if (availableCurrency < cost)
         {
@@ -1502,7 +1502,7 @@ public sealed class CompendiumService : ICompendiumService
             {
                 CompendiumRecallCode.MissingEntry => FusionRuntimeDiagnosticCode.MissingEntity,
                 CompendiumRecallCode.DuplicateOwned => FusionRuntimeDiagnosticCode.DuplicateResult,
-                CompendiumRecallCode.StockFull => FusionRuntimeDiagnosticCode.StockFull,
+                CompendiumRecallCode.RosterFull => FusionRuntimeDiagnosticCode.RosterFull,
                 CompendiumRecallCode.RecallUnavailable => FusionRuntimeDiagnosticCode.RecallUnavailable,
                 CompendiumRecallCode.InsufficientCurrency => FusionRuntimeDiagnosticCode.InsufficientCurrency,
                 _ => FusionRuntimeDiagnosticCode.NoFusionPossible

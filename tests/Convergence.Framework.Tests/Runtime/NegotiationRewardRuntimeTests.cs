@@ -208,7 +208,7 @@ public sealed class NegotiationRewardRuntimeTests
             new RecruitmentTransactionRequest(pixie, true, false, true)).ErrorCode);
         Assert.Equal(RecruitmentTransactionErrorCode.AlreadyOwned, service.Validate(
             new RecruitmentTransactionRequest(pixie, false, true, true)).ErrorCode);
-        Assert.Equal(RecruitmentTransactionErrorCode.StockFull, service.Validate(
+        Assert.Equal(RecruitmentTransactionErrorCode.RosterFull, service.Validate(
             new RecruitmentTransactionRequest(pixie, false, false, false)).ErrorCode);
         Assert.Equal(RecruitmentTransactionErrorCode.InvalidTarget, service.Validate(
             new RecruitmentTransactionRequest(pixie, false, false, true, IsValidTarget: false)).ErrorCode);
@@ -234,8 +234,8 @@ public sealed class NegotiationRewardRuntimeTests
             ],
             recipients:
             [
-                new BattleRewardRecipientSnapshot(ContentId.Parse("hero"), IsAlive: true, HasActiveForm: true),
-                new BattleRewardRecipientSnapshot(ContentId.Parse("fallen"), IsAlive: false, HasActiveForm: true)
+                new BattleRewardRecipientSnapshot(ContentId.Parse("hero"), IsAlive: true, HasActiveHostedEntity: true),
+                new BattleRewardRecipientSnapshot(ContentId.Parse("fallen"), IsAlive: false, HasActiveHostedEntity: true)
             ]));
 
         Assert.Equal(46, result.TotalExperience);
@@ -243,7 +243,7 @@ public sealed class NegotiationRewardRuntimeTests
         Assert.Equal(
             [
                 new BattleRewardApplication(ContentId.Parse("hero"), BattleRewardRecipientKind.Actor, 46),
-                new BattleRewardApplication(ContentId.Parse("hero"), BattleRewardRecipientKind.ActiveForm, 46)
+                new BattleRewardApplication(ContentId.Parse("hero"), BattleRewardRecipientKind.ActiveHostedEntity, 46)
             ],
             result.Applications);
         Assert.Throws<NotSupportedException>(() => ((IList<BattleRewardApplication>)result.Applications).Add(
@@ -376,7 +376,7 @@ public sealed class NegotiationRewardRuntimeTests
                 new BattleRewardRecipientSnapshot(
                     ContentId.Parse("hero"),
                     IsAlive: true,
-                    HasActiveForm: false)
+                    HasActiveHostedEntity: false)
             ]));
 
         Assert.Equal(int.MaxValue, result.TotalExperience);

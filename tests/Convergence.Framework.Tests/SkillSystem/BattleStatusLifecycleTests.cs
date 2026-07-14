@@ -55,7 +55,7 @@ public sealed class BattleStatusLifecycleTests
         panicSkip.ApplyAilment(Ailment("panic", new ChanceSkipAilmentTurnBehaviorDefinition(50)), Turns(3));
         RuntimeActorState panicAct = Actor("panic_act");
         panicAct.ApplyAilment(Ailment("panic", new ChanceSkipAilmentTurnBehaviorDefinition(50)), Turns(3));
-        var fear = new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(40, 15, DemonFleeOutcome.ReturnToStock);
+        var fear = new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(40, 15, CompanionFleeOutcome.RecallToRoster);
         RuntimeActorState demonFear = Actor("demon_fear");
         demonFear.ApplyAilment(Ailment("fear", fear), Turns(3));
         RuntimeActorState humanFear = Actor("human_fear");
@@ -67,7 +67,7 @@ public sealed class BattleStatusLifecycleTests
 
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(panicSkip)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(panicAct)).Outcome);
-        Assert.Equal(BattleTurnStartOutcome.ReturnToStock, service.ProcessTurnStart(new(demonFear, true)).Outcome);
+        Assert.Equal(BattleTurnStartOutcome.RecallToRoster, service.ProcessTurnStart(new(demonFear, true)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.FleeBattle, service.ProcessTurnStart(new(humanFear)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(skipFear, true)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(actFear, true)).Outcome);

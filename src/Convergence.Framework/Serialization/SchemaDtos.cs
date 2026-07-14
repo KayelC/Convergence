@@ -814,7 +814,7 @@ internal sealed class ChanceSkipOrFleeAilmentTurnBehaviorDto : AilmentTurnBehavi
 {
     public required int SkipChance { get; init; }
     public required int FleeChance { get; init; }
-    public required DemonFleeOutcome DemonFleeOutcome { get; init; }
+    public required CompanionFleeOutcome CompanionFleeOutcome { get; init; }
 }
 
 internal sealed class CustomAilmentTurnBehaviorDto : AilmentTurnBehaviorDto

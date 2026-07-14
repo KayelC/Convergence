@@ -245,7 +245,7 @@ public sealed class SchemaDeserializationTests
     [InlineData("{ \"type\": \"skip\" }", typeof(SkipAilmentTurnBehaviorDefinition))]
     [InlineData("{ \"type\": \"limited_actions\", \"allowedActionIds\": [\"attack\"] }", typeof(LimitedActionsAilmentTurnBehaviorDefinition))]
     [InlineData("{ \"type\": \"chance_skip\", \"skipChance\": 25 }", typeof(ChanceSkipAilmentTurnBehaviorDefinition))]
-    [InlineData("{ \"type\": \"chance_skip_or_flee\", \"skipChance\": 25, \"fleeChance\": 10, \"demonFleeOutcome\": \"return_to_stock\" }", typeof(ChanceSkipOrFleeAilmentTurnBehaviorDefinition))]
+    [InlineData("{ \"type\": \"chance_skip_or_flee\", \"skipChance\": 25, \"fleeChance\": 10, \"companionFleeOutcome\": \"recall_to_roster\" }", typeof(ChanceSkipOrFleeAilmentTurnBehaviorDefinition))]
     [InlineData("{ \"type\": \"forced_basic_attack\" }", typeof(ForcedBasicAttackAilmentTurnBehaviorDefinition))]
     [InlineData("{ \"type\": \"confused_action\" }", typeof(ConfusedActionAilmentTurnBehaviorDefinition))]
     [InlineData("{ \"type\": \"custom\", \"handlerId\": \"custom_turn\", \"parameters\": { \"weight\": 2 } }", typeof(CustomAilmentTurnBehaviorDefinition))]

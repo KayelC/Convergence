@@ -18,7 +18,7 @@ public static class StandardProgressionIds
     public static ContentId PersonaUser { get; } = ContentId.Parse("persona_user");
     public static ContentId WildCard { get; } = ContentId.Parse("wild_card");
     public static ContentId Operator { get; } = ContentId.Parse("operator");
-    public static ContentId Demon { get; } = ContentId.Parse("demon");
+    public static ContentId Companion { get; } = ContentId.Parse("companion");
     public static ContentId PhysicalAttack { get; } = ContentId.Parse("physical_attack");
     public static ContentId MagicalAttack { get; } = ContentId.Parse("magical_attack");
     public static ContentId Attack { get; } = ContentId.Parse("attack");
@@ -72,7 +72,7 @@ public sealed record StandardStatPolicyConfig
         int statCap = 40,
         decimal buffMultiplier = 1.4m,
         decimal debuffMultiplier = 0.6m,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? activeFormWeights = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? activeHostedEntityWeights = null,
         IEnumerable<StatModifierTrackAlias>? modifierTrackAliases = null)
     {
         if (statCap <= 0)
@@ -87,14 +87,14 @@ public sealed record StandardStatPolicyConfig
         StatCap = statCap;
         BuffMultiplier = buffMultiplier;
         DebuffMultiplier = debuffMultiplier;
-        ActiveFormWeights = SnapshotDictionary(activeFormWeights ?? DefaultWeights());
+        ActiveHostedEntityWeights = SnapshotDictionary(activeHostedEntityWeights ?? DefaultWeights());
         ModifierTrackAliases = SnapshotList(modifierTrackAliases ?? DefaultAliases());
     }
 
     public int StatCap { get; }
     public decimal BuffMultiplier { get; }
     public decimal DebuffMultiplier { get; }
-    public IReadOnlyDictionary<ContentId, decimal> ActiveFormWeights { get; }
+    public IReadOnlyDictionary<ContentId, decimal> ActiveHostedEntityWeights { get; }
     public IReadOnlyList<StatModifierTrackAlias> ModifierTrackAliases { get; }
 
     public static StandardStatPolicyConfig Default { get; } = new();
@@ -133,14 +133,14 @@ public sealed record StatResolutionRequest
         ContentId actorKindId,
         ContentId statId,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? activeFormStats = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? activeHostedEntityStats = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
         IEnumerable<RuntimeStatStageSnapshot>? statStages = null)
     {
         ActorKindId = actorKindId;
         StatId = statId;
         BaseStats = SnapshotDictionary(baseStats);
-        ActiveFormStats = SnapshotDictionary(activeFormStats);
+        ActiveHostedEntityStats = SnapshotDictionary(activeHostedEntityStats);
         EquipmentStatModifiers = SnapshotDictionary(equipmentStatModifiers);
         StatStages = SnapshotList(statStages);
     }
@@ -148,7 +148,7 @@ public sealed record StatResolutionRequest
     public ContentId ActorKindId { get; }
     public ContentId StatId { get; }
     public IReadOnlyDictionary<ContentId, decimal> BaseStats { get; }
-    public IReadOnlyDictionary<ContentId, decimal> ActiveFormStats { get; }
+    public IReadOnlyDictionary<ContentId, decimal> ActiveHostedEntityStats { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
     public IReadOnlyList<RuntimeStatStageSnapshot> StatStages { get; }
 }
@@ -198,9 +198,9 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
 
     private decimal ResolveRawValue(StatResolutionRequest request)
     {
-        if (request.ActorKindId == StandardProgressionIds.Demon)
+        if (request.ActorKindId == StandardProgressionIds.Companion)
         {
-            return ValueOrZero(request.ActiveFormStats, request.StatId);
+            return ValueOrZero(request.ActiveHostedEntityStats, request.StatId);
         }
 
         decimal baseValue = SaturatingAdd(
@@ -209,17 +209,17 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
 
         if (request.ActorKindId == StandardProgressionIds.Human ||
             request.ActorKindId == StandardProgressionIds.Operator ||
-            !request.ActiveFormStats.ContainsKey(request.StatId))
+            !request.ActiveHostedEntityStats.ContainsKey(request.StatId))
         {
             return baseValue;
         }
 
-        decimal weight = _config.ActiveFormWeights.TryGetValue(request.StatId, out decimal configured)
+        decimal weight = _config.ActiveHostedEntityWeights.TryGetValue(request.StatId, out decimal configured)
             ? configured
             : 0m;
         return SaturatingAdd(
             baseValue,
-            SaturatingMultiply(ValueOrZero(request.ActiveFormStats, request.StatId), weight));
+            SaturatingMultiply(ValueOrZero(request.ActiveHostedEntityStats, request.StatId), weight));
     }
 
     private bool AffectsStat(ContentId trackId, ContentId statId) =>
@@ -639,7 +639,7 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
 
                 statPoints = checked(statPoints + 1);
                 Dictionary<ContentId, decimal> baseResourceIncreases = [];
-                if (request.SubjectKindId != StandardProgressionIds.Demon)
+                if (request.SubjectKindId != StandardProgressionIds.Companion)
                 {
                     decimal hpIncrease = request.RandomSource.NextInt32(6, 11);
                     decimal spIncrease = request.RandomSource.NextInt32(3, 8);

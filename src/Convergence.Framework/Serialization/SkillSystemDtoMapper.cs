@@ -614,7 +614,7 @@ internal static class SkillSystemDtoMapper
         "chance_skip_or_flee" => new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
             ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).SkipChance,
             ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).FleeChance,
-            ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).DemonFleeOutcome),
+            ((ChanceSkipOrFleeAilmentTurnBehaviorDto)dto).CompanionFleeOutcome),
         "forced_basic_attack" => new ForcedBasicAttackAilmentTurnBehaviorDefinition(),
         "confused_action" => new ConfusedActionAilmentTurnBehaviorDefinition(),
         "custom" => new CustomAilmentTurnBehaviorDefinition(

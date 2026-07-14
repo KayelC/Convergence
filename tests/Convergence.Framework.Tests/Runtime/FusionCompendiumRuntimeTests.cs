@@ -304,7 +304,7 @@ public sealed class FusionCompendiumRuntimeTests
             Id(id),
             id,
             string.Empty,
-            Id("demon"),
+            Id("companion"),
             Id(race),
             rank,
             level,

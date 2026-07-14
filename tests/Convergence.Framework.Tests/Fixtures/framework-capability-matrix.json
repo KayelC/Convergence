@@ -115,7 +115,7 @@
     {
       "id": "party_and_stock",
       "implementationState": "complete",
-      "frameworkTests": ["PartyStockTransitionTests"],
+      "frameworkTests": ["PartyRosterTransitionTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,

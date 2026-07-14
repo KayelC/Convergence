@@ -73,7 +73,7 @@ public sealed class BattleStatusEncounterLifecyclePort : IBattleEncounterLifecyc
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         return new ValueTask<BattleTurnStartLifecycleResult>(_lifecycle.ProcessTurnStart(
-            new BattleTurnStartLifecycleRequest(request.Actor.State, request.CanReturnToStock)));
+            new BattleTurnStartLifecycleRequest(request.Actor.State, request.CanRecallToRoster)));
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(

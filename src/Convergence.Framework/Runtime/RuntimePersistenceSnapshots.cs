@@ -15,7 +15,7 @@ public enum RuntimeSaveValidationCode
     ContentPackVersionMismatch,
     DuplicateActorInstanceId,
     MissingActorReference,
-    MissingActiveFormReference,
+    MissingActiveHostedEntityReference,
     MissingCatalogEntity,
     MissingCatalogSkill,
     MissingCatalogItem,
@@ -33,13 +33,13 @@ public enum RuntimeSaveValidationCode
     CompendiumEquippedSkillNotLearned,
     KnowledgeTargetMissing,
     InvalidCheckpoint,
-    DuplicatePartyStockReference,
+    DuplicatePartyRosterReference,
     ActivePartyCapacityExceeded,
-    DemonStockCapacityExceeded,
-    ActiveFormDuplicatedInPersonaStock,
-    PartyStockIdentityCollision,
+    CompanionRosterCapacityExceeded,
+    ActiveHostedEntityDuplicatedInRoster,
+    PartyRosterIdentityCollision,
     ActorReferenceEntityMismatch,
-    PersonaStockCapacityExceeded,
+    HostedEntityRosterCapacityExceeded,
     DuplicateElementalAffinityKnowledge,
     DuplicateAilmentResistanceKnowledge,
     DuplicateInstantDeathResistanceKnowledge,
@@ -235,13 +235,13 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 6;
+    public const int CurrentContractVersion = 7;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
         IEnumerable<ContentPackIdentity> contentPacks,
         IEnumerable<RuntimeActorSnapshot> actors,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
         RuntimeWalletSnapshot wallet,
@@ -262,7 +262,7 @@ public sealed record RuntimeSaveGameSnapshot
         FrameworkVersion = frameworkVersion;
         ContentPacks = RuntimePersistenceCollections.List(contentPacks);
         Actors = RuntimePersistenceCollections.List(actors);
-        PartyStock = partyStock ?? throw new ArgumentNullException(nameof(partyStock));
+        PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
@@ -278,7 +278,7 @@ public sealed record RuntimeSaveGameSnapshot
     public SemanticVersion FrameworkVersion { get; }
     public IReadOnlyList<ContentPackIdentity> ContentPacks { get; }
     public IReadOnlyList<RuntimeActorSnapshot> Actors { get; }
-    public RuntimePartyStockSnapshot PartyStock { get; }
+    public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeInventorySnapshot Inventory { get; }
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeWalletSnapshot Wallet { get; }
@@ -292,11 +292,11 @@ public sealed record RuntimeSaveGameSnapshot
 
 public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 {
-    private readonly IStockCapacityPolicy _stockCapacityPolicy;
+    private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
 
-    public RuntimeSaveValidator(IStockCapacityPolicy? stockCapacityPolicy = null)
+    public RuntimeSaveValidator(IRosterCapacityPolicy? rosterCapacityPolicy = null)
     {
-        _stockCapacityPolicy = stockCapacityPolicy ?? NoLimitStockCapacityPolicy.Instance;
+        _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -360,7 +360,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             ValidateActorFormReferences(snapshot.Actors[index], actors, diagnostics, index);
         }
 
-        ValidatePartyReferences(snapshot.PartyStock, actors, _stockCapacityPolicy, diagnostics);
+        ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
         ValidateEquipment(
             snapshot.Equipment,
@@ -385,15 +385,15 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         RuntimeSaveGameSnapshot snapshot,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        ValidateActorReferenceIdentifiers(snapshot.PartyStock.Owner, "$.partyStock.owner", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyStock.ActiveParty, "$.partyStock.activeParty", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyStock.ReserveMembers, "$.partyStock.reserveMembers", diagnostics);
-        if (snapshot.PartyStock.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.Owner, "$.partyRoster.owner", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.ActiveParty, "$.partyRoster.activeParty", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.ReserveMembers, "$.partyRoster.reserveMembers", diagnostics);
+        if (snapshot.PartyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
-            ValidateActorReferenceIdentifiers(activeForm, "$.partyStock.activeForm", diagnostics);
+            ValidateActorReferenceIdentifiers(activeHostedEntity, "$.partyRoster.activeHostedEntity", diagnostics);
         }
-        ValidateActorReferenceIdentifiers(snapshot.PartyStock.PersonaStock, "$.partyStock.personaStock", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyStock.DemonStock, "$.partyStock.demonStock", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.HostedEntityRoster, "$.partyRoster.hostedEntityRoster", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.CompanionRoster, "$.partyRoster.companionRoster", diagnostics);
 
         ValidateContentIdKeys(snapshot.Inventory.ItemQuantities.Keys, "$.inventory.itemQuantities", diagnostics);
         foreach ((EquipmentSlot slot, IReadOnlyList<ContentId> equipmentIds) in
@@ -723,30 +723,30 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         int actorIndex)
     {
-        string formsPath = $"$.actors[{actorIndex}].forms";
-        if (actor.Forms.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        string formsPath = $"$.actors[{actorIndex}].rosters";
+        if (actor.Rosters.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
             ValidateActorReference(
-                activeForm,
+                activeHostedEntity,
                 actors,
                 diagnostics,
-                formsPath + ".activeForm",
-                RuntimeSaveValidationCode.MissingActiveFormReference,
+                formsPath + ".activeHostedEntity",
+                RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
                 $"Actor '{actor.Identity.InstanceId}' active form");
         }
 
         HashSet<RuntimeInstanceId> personaIds = ValidateActorFormReferenceList(
             actor,
-            actor.Forms.PersonaStock,
+            actor.Rosters.HostedEntityRoster,
             actors,
             diagnostics,
-            formsPath + ".personaStock");
+            formsPath + ".hostedEntityRoster");
         ValidateActorFormReferenceList(
             actor,
-            actor.Forms.DemonStock,
+            actor.Rosters.CompanionRoster,
             actors,
             diagnostics,
-            formsPath + ".demonStock",
+            formsPath + ".companionRoster",
             personaIds);
     }
 
@@ -786,82 +786,83 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     }
 
     private static void ValidatePartyReferences(
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
-        IStockCapacityPolicy stockCapacityPolicy,
+        IRosterCapacityPolicy rosterCapacityPolicy,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
         ValidateActorReference(
-            partyStock.Owner,
+            partyRoster.Owner,
             actors,
             diagnostics,
-            "$.partyStock.owner",
+            "$.partyRoster.owner",
             RuntimeSaveValidationCode.MissingActorReference,
             "Party-stock owner");
 
-        if (partyStock.ActiveParty.Count > partyStock.MaxActivePartySize)
+        if (partyRoster.ActiveParty.Count > partyRoster.MaxActivePartySize)
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                 RuntimeSaveValidationCode.ActivePartyCapacityExceeded,
-                $"Active party has {partyStock.ActiveParty.Count} members, exceeding the maximum of {partyStock.MaxActivePartySize}.",
-                Path: "$.partyStock.activeParty"));
+                $"Active party has {partyRoster.ActiveParty.Count} members, exceeding the maximum of {partyRoster.MaxActivePartySize}.",
+                Path: "$.partyRoster.activeParty"));
         }
 
-        int stockCapacity = stockCapacityPolicy.GetCapacity(partyStock.OwnerLevel);
-        if (partyStock.DemonStock.Count > stockCapacity)
+        int companionCapacity = rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.Companion, partyRoster.OwnerLevel);
+        if (partyRoster.CompanionRoster.Count > companionCapacity)
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.DemonStockCapacityExceeded,
-                $"Demon stock has {partyStock.DemonStock.Count} entries, exceeding the capacity of {stockCapacity}.",
-                Path: "$.partyStock.demonStock"));
+                RuntimeSaveValidationCode.CompanionRosterCapacityExceeded,
+                $"Companion roster has {partyRoster.CompanionRoster.Count} entries, exceeding the capacity of {companionCapacity}.",
+                Path: "$.partyRoster.companionRoster"));
         }
 
-        if (partyStock.PersonaStock.Count > stockCapacity)
+        int hostedEntityCapacity = rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, partyRoster.OwnerLevel);
+        if (partyRoster.HostedEntityRoster.Count > hostedEntityCapacity)
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.PersonaStockCapacityExceeded,
-                $"Persona stock has {partyStock.PersonaStock.Count} entries, exceeding the capacity of {stockCapacity}.",
-                Path: "$.partyStock.personaStock"));
+                RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded,
+                $"Hosted entity roster has {partyRoster.HostedEntityRoster.Count} entries, exceeding the capacity of {hostedEntityCapacity}.",
+                Path: "$.partyRoster.hostedEntityRoster"));
         }
 
-        ValidateActorReferenceList(partyStock.ActiveParty, actors, diagnostics, "$.partyStock.activeParty");
-        ValidateActorReferenceList(partyStock.ReserveMembers, actors, diagnostics, "$.partyStock.reserveMembers");
-        ValidateActorReferenceList(partyStock.PersonaStock, actors, diagnostics, "$.partyStock.personaStock");
-        ValidateActorReferenceList(partyStock.DemonStock, actors, diagnostics, "$.partyStock.demonStock");
+        ValidateActorReferenceList(partyRoster.ActiveParty, actors, diagnostics, "$.partyRoster.activeParty");
+        ValidateActorReferenceList(partyRoster.ReserveMembers, actors, diagnostics, "$.partyRoster.reserveMembers");
+        ValidateActorReferenceList(partyRoster.HostedEntityRoster, actors, diagnostics, "$.partyRoster.hostedEntityRoster");
+        ValidateActorReferenceList(partyRoster.CompanionRoster, actors, diagnostics, "$.partyRoster.companionRoster");
         ValidateNoOverlap(
-            partyStock.ActiveParty,
-            partyStock.ReserveMembers,
+            partyRoster.ActiveParty,
+            partyRoster.ReserveMembers,
             diagnostics,
-            "$.partyStock.reserveMembers",
+            "$.partyRoster.reserveMembers",
             "Active party and reserve party cannot contain the same actor.");
 
-        if (partyStock.ActiveForm is not null)
+        if (partyRoster.ActiveHostedEntity is not null)
         {
             ValidateActorReference(
-                partyStock.ActiveForm,
+                partyRoster.ActiveHostedEntity,
                 actors,
                 diagnostics,
-                "$.partyStock.activeForm",
-                RuntimeSaveValidationCode.MissingActiveFormReference,
+                "$.partyRoster.activeHostedEntity",
+                RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
                 "Active form");
 
-            for (int index = 0; index < partyStock.PersonaStock.Count; index++)
+            for (int index = 0; index < partyRoster.HostedEntityRoster.Count; index++)
             {
-                RuntimeActorReferenceSnapshot persona = partyStock.PersonaStock[index];
-                if (persona.InstanceId != partyStock.ActiveForm.InstanceId)
+                RuntimeActorReferenceSnapshot hostedEntity = partyRoster.HostedEntityRoster[index];
+                if (hostedEntity.InstanceId != partyRoster.ActiveHostedEntity.InstanceId)
                 {
                     continue;
                 }
 
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.ActiveFormDuplicatedInPersonaStock,
-                    $"Active form '{persona.InstanceId}' also appears in Persona stock.",
-                    persona.InstanceId,
-                    Path: $"$.partyStock.personaStock[{index}]"));
+                    RuntimeSaveValidationCode.ActiveHostedEntityDuplicatedInRoster,
+                    $"Active hosted entity '{hostedEntity.InstanceId}' also appears in the hosted-entity roster.",
+                    hostedEntity.InstanceId,
+                    Path: $"$.partyRoster.hostedEntityRoster[{index}]"));
             }
         }
 
-        ValidatePartyStockIdentityOverlaps(partyStock, diagnostics);
+        ValidatePartyRosterIdentityOverlaps(partyRoster, diagnostics);
     }
 
     private static void ValidateActorReferenceList(
@@ -885,7 +886,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             if (!seen.Add(reference.InstanceId))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.DuplicatePartyStockReference,
+                    RuntimeSaveValidationCode.DuplicatePartyRosterReference,
                     $"Actor reference '{reference.InstanceId}' appears more than once in '{path}'.",
                     reference.InstanceId,
                     Path: $"{path}[{index}]"));
@@ -944,39 +945,39 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             }
 
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.DuplicatePartyStockReference,
+                RuntimeSaveValidationCode.DuplicatePartyRosterReference,
                 message,
                 reference.InstanceId,
                 Path: $"{secondPath}[{index}]"));
         }
     }
 
-    private static void ValidatePartyStockIdentityOverlaps(
-        RuntimePartyStockSnapshot partyStock,
+    private static void ValidatePartyRosterIdentityOverlaps(
+        RuntimePartyRosterSnapshot partyRoster,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        foreach (IGrouping<RuntimeInstanceId, RuntimePartyStockReferenceOccurrence> group in
-                 RuntimePartyStockIdentityRules.Enumerate(partyStock)
+        foreach (IGrouping<RuntimeInstanceId, RuntimePartyRosterReferenceOccurrence> group in
+                 RuntimePartyRosterIdentityRules.Enumerate(partyRoster)
                      .GroupBy(occurrence => occurrence.Reference.InstanceId))
         {
-            RuntimePartyStockReferenceOccurrence[] occurrences = group.ToArray();
+            RuntimePartyRosterReferenceOccurrence[] occurrences = group.ToArray();
             if (occurrences.Length < 2)
             {
                 continue;
             }
 
-            HashSet<RuntimePartyStockReferenceRole> roles = occurrences
+            HashSet<RuntimePartyRosterReferenceRole> roles = occurrences
                 .Select(occurrence => occurrence.Role)
                 .ToHashSet();
             for (int currentIndex = 1; currentIndex < occurrences.Length; currentIndex++)
             {
-                RuntimePartyStockReferenceOccurrence current = occurrences[currentIndex];
-                RuntimePartyStockReferenceOccurrence? conflict = null;
+                RuntimePartyRosterReferenceOccurrence current = occurrences[currentIndex];
+                RuntimePartyRosterReferenceOccurrence? conflict = null;
                 for (int previousIndex = 0; previousIndex < currentIndex; previousIndex++)
                 {
-                    RuntimePartyStockReferenceOccurrence previous = occurrences[previousIndex];
+                    RuntimePartyRosterReferenceOccurrence previous = occurrences[previousIndex];
                     if (HasDedicatedOverlapDiagnostic(previous.Role, current.Role) ||
-                        RuntimePartyStockIdentityRules.IsIntentionalOverlap(previous.Role, current.Role, roles))
+                        RuntimePartyRosterIdentityRules.IsIntentionalOverlap(previous.Role, current.Role, roles))
                     {
                         continue;
                     }
@@ -985,13 +986,13 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     break;
                 }
 
-                if (conflict is not RuntimePartyStockReferenceOccurrence conflicting)
+                if (conflict is not RuntimePartyRosterReferenceOccurrence conflicting)
                 {
                     continue;
                 }
 
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.PartyStockIdentityCollision,
+                    RuntimeSaveValidationCode.PartyRosterIdentityCollision,
                     $"Runtime instance '{group.Key}' is referenced as both '{conflicting.Role}' and " +
                     $"'{current.Role}', which is not an allowed party/stock overlap.",
                     group.Key,
@@ -1001,17 +1002,17 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     }
 
     private static bool HasDedicatedOverlapDiagnostic(
-        RuntimePartyStockReferenceRole first,
-        RuntimePartyStockReferenceRole second) =>
+        RuntimePartyRosterReferenceRole first,
+        RuntimePartyRosterReferenceRole second) =>
         first == second ||
-        IsRolePair(first, second, RuntimePartyStockReferenceRole.ActiveParty, RuntimePartyStockReferenceRole.ReserveMember) ||
-        IsRolePair(first, second, RuntimePartyStockReferenceRole.ActiveForm, RuntimePartyStockReferenceRole.PersonaStock);
+        IsRolePair(first, second, RuntimePartyRosterReferenceRole.ActiveParty, RuntimePartyRosterReferenceRole.ReserveMember) ||
+        IsRolePair(first, second, RuntimePartyRosterReferenceRole.ActiveHostedEntity, RuntimePartyRosterReferenceRole.HostedEntityRoster);
 
     private static bool IsRolePair(
-        RuntimePartyStockReferenceRole first,
-        RuntimePartyStockReferenceRole second,
-        RuntimePartyStockReferenceRole expectedFirst,
-        RuntimePartyStockReferenceRole expectedSecond) =>
+        RuntimePartyRosterReferenceRole first,
+        RuntimePartyRosterReferenceRole second,
+        RuntimePartyRosterReferenceRole expectedFirst,
+        RuntimePartyRosterReferenceRole expectedSecond) =>
         (first == expectedFirst && second == expectedSecond) ||
         (first == expectedSecond && second == expectedFirst);
 

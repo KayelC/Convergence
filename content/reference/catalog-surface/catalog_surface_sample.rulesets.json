@@ -41,18 +41,23 @@
       "policyId": "standard_action_token"
     },
     {
-      "id": "standard_stock_capacity_sample",
-      "displayName": "Standard Stock Capacity Policy",
-      "description": "Defines an authored tiered stock-capacity policy.",
-      "category": "stock_capacity",
-      "policyId": "standard_stock_capacity",
+      "id": "standard_roster_capacity_sample",
+      "displayName": "Standard Roster Capacity Policy",
+      "description": "Defines an authored tiered roster-capacity policy.",
+      "category": "roster_capacity",
+      "policyId": "standard_roster_capacity",
       "parameters": {
         "tiers": [
-          { "minimumLevel": 1, "capacity": 3 },
-          { "minimumLevel": 10, "capacity": 5 },
-          { "minimumLevel": 20, "capacity": 7 },
-          { "minimumLevel": 30, "capacity": 10 },
-          { "minimumLevel": 40, "capacity": 12 }
+          { "rosterKind": "hosted_entity", "minimumLevel": 1, "capacity": 3 },
+          { "rosterKind": "hosted_entity", "minimumLevel": 10, "capacity": 5 },
+          { "rosterKind": "hosted_entity", "minimumLevel": 20, "capacity": 7 },
+          { "rosterKind": "hosted_entity", "minimumLevel": 30, "capacity": 10 },
+          { "rosterKind": "hosted_entity", "minimumLevel": 40, "capacity": 12 },
+          { "rosterKind": "companion", "minimumLevel": 1, "capacity": 3 },
+          { "rosterKind": "companion", "minimumLevel": 10, "capacity": 5 },
+          { "rosterKind": "companion", "minimumLevel": 20, "capacity": 7 },
+          { "rosterKind": "companion", "minimumLevel": 30, "capacity": 10 },
+          { "rosterKind": "companion", "minimumLevel": 40, "capacity": 12 }
         ]
       }
     },

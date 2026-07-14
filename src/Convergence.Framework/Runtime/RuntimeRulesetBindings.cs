@@ -16,7 +16,7 @@ public static class StandardRulesetPolicyIds
     public static ContentId StandardGrowth { get; } = ContentId.Parse("standard_growth");
     public static ContentId StandardStat { get; } = ContentId.Parse("standard_stat");
     public static ContentId StandardActionToken { get; } = ContentId.Parse("standard_action_token");
-    public static ContentId StandardStockCapacity { get; } = ContentId.Parse("standard_stock_capacity");
+    public static ContentId StandardRosterCapacity { get; } = ContentId.Parse("standard_roster_capacity");
     public static ContentId StandardEconomy { get; } = ContentId.Parse("standard_economy");
     public static ContentId StandardMoonPhase { get; } = ContentId.Parse("standard_moon_phase");
 }
@@ -111,7 +111,7 @@ public interface IRuntimeRulesetBindingResolver
         GameDataCatalog catalog,
         ContentId rulesetId);
 
-    RulesetBindingResult<IStockCapacityPolicy> BindStockCapacityPolicy(
+    RulesetBindingResult<IRosterCapacityPolicy> BindRosterCapacityPolicy(
         GameDataCatalog catalog,
         ContentId rulesetId);
 
@@ -197,15 +197,15 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                     new StatAllocationService(resourceGrowth));
             });
 
-    public RulesetBindingResult<IStockCapacityPolicy> BindStockCapacityPolicy(
+    public RulesetBindingResult<IRosterCapacityPolicy> BindRosterCapacityPolicy(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<IStockCapacityPolicy>(
+        Bind<IRosterCapacityPolicy>(
             catalog,
             rulesetId,
-            RulesetCategory.StockCapacity,
-            StandardRulesetPolicyIds.StandardStockCapacity,
-            CreateStockCapacityPolicy);
+            RulesetCategory.RosterCapacity,
+            StandardRulesetPolicyIds.StandardRosterCapacity,
+            CreateRosterCapacityPolicy);
 
     public RulesetBindingResult<ResourceManagementRulesetServices> BindResourceManagementServices(
         GameDataCatalog catalog,
@@ -360,7 +360,7 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         return config;
     }
 
-    private static IStockCapacityPolicy CreateStockCapacityPolicy(
+    private static IRosterCapacityPolicy CreateRosterCapacityPolicy(
         RulesetDefinition definition,
         List<RulesetBindingDiagnostic> diagnostics)
     {
@@ -384,7 +384,7 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                 ParameterName: "tiers",
                 ActualCategory: definition.Category,
                 PolicyId: definition.PolicyId));
-            return NoLimitStockCapacityPolicy.Instance;
+            return NoLimitRosterCapacityPolicy.Instance;
         }
 
         if (value is not IReadOnlyList<object?> authoredTiers || authoredTiers.Count == 0)
@@ -396,40 +396,41 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                 ParameterName: "tiers",
                 ActualCategory: definition.Category,
                 PolicyId: definition.PolicyId));
-            return NoLimitStockCapacityPolicy.Instance;
+            return NoLimitRosterCapacityPolicy.Instance;
         }
 
-        var tiers = new List<StockCapacityTier>();
+        var tiers = new List<RosterCapacityTier>();
         for (int index = 0; index < authoredTiers.Count; index++)
         {
             if (authoredTiers[index] is not IReadOnlyDictionary<string, object?> tier ||
+                !TryReadRosterKind(tier, "rosterKind", out RuntimeRosterKind rosterKind) ||
                 !TryReadInt(tier, "minimumLevel", out int minimumLevel) ||
                 !TryReadInt(tier, "capacity", out int capacity) ||
-                tier.Keys.Any(key => key is not ("minimumLevel" or "capacity")) ||
+                tier.Keys.Any(key => key is not ("rosterKind" or "minimumLevel" or "capacity")) ||
                 minimumLevel <= 0 ||
                 capacity < 0)
             {
                 diagnostics.Add(new RulesetBindingDiagnostic(
                     RulesetBindingDiagnosticCode.InvalidParameterValue,
                     definition.Id,
-                    $"Ruleset '{definition.Id}' stock-capacity tier {index} must contain only a positive 'minimumLevel' and a nonnegative 'capacity'.",
+                    $"Ruleset '{definition.Id}' roster-capacity tier {index} must contain a supported 'rosterKind', a positive 'minimumLevel', and a nonnegative 'capacity'.",
                     ParameterName: $"tiers[{index}]",
                     ActualCategory: definition.Category,
                     PolicyId: definition.PolicyId));
                 continue;
             }
 
-            tiers.Add(new StockCapacityTier(minimumLevel, capacity));
+            tiers.Add(new RosterCapacityTier(rosterKind, minimumLevel, capacity));
         }
 
         if (diagnostics.Count > 0)
         {
-            return NoLimitStockCapacityPolicy.Instance;
+            return NoLimitRosterCapacityPolicy.Instance;
         }
 
         try
         {
-            return new TieredStockCapacityPolicy(tiers);
+            return new TieredRosterCapacityPolicy(tiers);
         }
         catch (ArgumentException exception)
         {
@@ -440,8 +441,24 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                 ParameterName: "tiers",
                 ActualCategory: definition.Category,
                 PolicyId: definition.PolicyId));
-            return NoLimitStockCapacityPolicy.Instance;
+            return NoLimitRosterCapacityPolicy.Instance;
         }
+    }
+
+    private static bool TryReadRosterKind(
+        IReadOnlyDictionary<string, object?> values,
+        string key,
+        out RuntimeRosterKind rosterKind)
+    {
+        rosterKind = default;
+        return values.TryGetValue(key, out object? value) &&
+               value is string text &&
+               text switch
+               {
+                   "hosted_entity" => Assign(RuntimeRosterKind.HostedEntity, out rosterKind),
+                   "companion" => Assign(RuntimeRosterKind.Companion, out rosterKind),
+                   _ => false
+               };
     }
 
     private static bool TryReadInt(
@@ -466,6 +483,12 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
     }
 
     private static bool Assign(int value, out int destination)
+    {
+        destination = value;
+        return true;
+    }
+
+    private static bool Assign(RuntimeRosterKind value, out RuntimeRosterKind destination)
     {
         destination = value;
         return true;

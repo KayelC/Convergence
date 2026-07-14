@@ -177,7 +177,7 @@ internal static class TrainingAnnexHostSupport
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterModifierTrack("attack", "defense")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterAlignment("neutral")
             .RegisterNegotiationPersonality("steady_sample")
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
@@ -192,7 +192,7 @@ internal static class TrainingAnnexHostSupport
                 "standard_growth",
                 "standard_stat",
                 "standard_action_token",
-                "standard_stock_capacity",
+                "standard_roster_capacity",
                 "standard_economy",
                 "return_to_lobby",
                 "training_barrier",
@@ -266,7 +266,7 @@ internal static class TrainingAnnexHostSupport
             AddActorDiagnostics("support", mentorResult.Diagnostics, diagnostics);
         }
 
-        CatalogBattleActorCreationResult activeFormResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+        CatalogBattleActorCreationResult activeHostedEntityResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("annex_mentor"),
             FormAnnexMentorInstance,
             PlayerTeam,
@@ -275,12 +275,12 @@ internal static class TrainingAnnexHostSupport
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
-        if (!activeFormResult.IsSuccess)
+        if (!activeHostedEntityResult.IsSuccess)
         {
-            AddActorDiagnostics("active_form", activeFormResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("active_form", activeHostedEntityResult.Diagnostics, diagnostics);
         }
 
-        CatalogBattleActorCreationResult personaStockResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+        CatalogBattleActorCreationResult hostedEntityRosterResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("bramble_runner"),
             PersonaBrambleRunnerInstance,
             PlayerTeam,
@@ -289,9 +289,9 @@ internal static class TrainingAnnexHostSupport
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
-        if (!personaStockResult.IsSuccess)
+        if (!hostedEntityRosterResult.IsSuccess)
         {
-            AddActorDiagnostics("persona_stock", personaStockResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("persona_stock", hostedEntityRosterResult.Diagnostics, diagnostics);
         }
 
         CatalogBattleActorCreationResult demonAshlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
@@ -353,8 +353,8 @@ internal static class TrainingAnnexHostSupport
         if (diagnostics.Count > 0 ||
             playerResult.Actor is null ||
             mentorResult.Actor is null ||
-            activeFormResult.Actor is null ||
-            personaStockResult.Actor is null ||
+            activeHostedEntityResult.Actor is null ||
+            hostedEntityRosterResult.Actor is null ||
             demonAshlingResult.Actor is null ||
             demonWardShellResult.Actor is null ||
             replacementBrambleResult.Actor is null)
@@ -367,11 +367,11 @@ internal static class TrainingAnnexHostSupport
                 new TrainingAnnexRuntimeActor("Player", playerResult.RequireActor()),
                 [new TrainingAnnexRuntimeActor("Reserve", mentorResult.RequireActor())],
                 [
-                    new TrainingAnnexRuntimeActor("Active Form", activeFormResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Persona Stock", personaStockResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Demon Stock", demonAshlingResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Demon Stock", demonWardShellResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Demon Replacement Candidate", replacementBrambleResult.RequireActor())
+                    new TrainingAnnexRuntimeActor("Active Form", activeHostedEntityResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("HostedEntity Stock", hostedEntityRosterResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Companion roster", demonAshlingResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Companion roster", demonWardShellResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Companion Replacement Candidate", replacementBrambleResult.RequireActor())
                 ],
                 enemies));
     }
@@ -400,7 +400,7 @@ internal static class TrainingAnnexHostSupport
             new RuntimeSkillStateSnapshot(
                 actor.SkillLoadout.Select(skill => skill.Id),
                 actor.ActiveSkills.Select(skill => skill.Id)),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
@@ -430,7 +430,7 @@ internal static class TrainingAnnexHostSupport
 
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot? partyStock,
+        RuntimePartyRosterSnapshot? partyRoster,
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
@@ -449,7 +449,7 @@ internal static class TrainingAnnexHostSupport
         return BuildStartupSaveSnapshot(
             actorSnapshots,
             playerReference,
-            partyStock,
+            partyRoster,
             field,
             knowledge,
             inventory,
@@ -490,7 +490,7 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeSaveGameSnapshot BuildStartupSaveSnapshot(
         IReadOnlyList<RuntimeActorSnapshot> actors,
         RuntimeActorReferenceSnapshot playerReference,
-        RuntimePartyStockSnapshot? partyStock = null,
+        RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
@@ -514,7 +514,7 @@ internal static class TrainingAnnexHostSupport
             SemanticVersion.Parse("0.2.0"),
             [PackIdentity],
             actors,
-            partyStock ?? new RuntimePartyStockSnapshot(
+            partyRoster ?? new RuntimePartyRosterSnapshot(
                 playerReference,
                 playerSnapshot.Progression.Level,
                 activeParty: [playerReference]),
@@ -540,7 +540,7 @@ internal static class TrainingAnnexHostSupport
     public static ContentId Qualified(string localId) => ContentId.Parse($"{PackId}:{localId}");
 
     public static RuntimeProgressionSnapshot InitialProgression(EntityDefinition entity, int level) =>
-        new(level, 0, 0, entity.EntityKindId == StandardProgressionIds.Demon ? 0 : level - 1);
+        new(level, 0, 0, entity.EntityKindId == StandardProgressionIds.Companion ? 0 : level - 1);
 
     public static RuntimeStatBlockSnapshot ActorStats(EntityDefinition entity) =>
         new(

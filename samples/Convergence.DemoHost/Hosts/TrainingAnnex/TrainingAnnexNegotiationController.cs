@@ -17,16 +17,16 @@ internal sealed record TrainingAnnexNegotiationEvidence(
     string? ItemSpentId,
     RecruitmentTransactionStatus? RecruitmentStatus,
     RecruitmentTransactionErrorCode? RecruitmentErrorCode,
-    PartyStockTransitionCode? StockTransitionCode,
+    PartyRosterTransitionCode? RosterTransitionCode,
     int WalletBefore,
     int WalletAfter,
-    int DemonStockCountBefore,
-    int DemonStockCountAfter,
+    int CompanionRosterCountBefore,
+    int CompanionRosterCountAfter,
     bool Recruited,
     int EventCount);
 
 internal sealed record TrainingAnnexNegotiationInteractionResult(
-    RuntimePartyStockSnapshot PartyStock,
+    RuntimePartyRosterSnapshot PartyRoster,
     RuntimeWalletSnapshot Wallet,
     IReadOnlyList<TrainingAnnexNegotiationEvidence> Evidence);
 
@@ -36,31 +36,31 @@ internal sealed class TrainingAnnexNegotiationController
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
     private readonly INegotiationSessionService _negotiations;
     private readonly IRecruitmentTransactionService _recruitment;
-    private readonly IPartyStockTransitionService _partyStock;
-    private readonly IStockCapacityPolicy _stockCapacity;
+    private readonly IPartyRosterTransitionService _partyRoster;
+    private readonly IRosterCapacityPolicy _rosterCapacity;
 
     public TrainingAnnexNegotiationController(
         IHostEventSink<string> eventSink,
         IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
         IRandomSource randomSource,
         IRecruitmentTransactionService? recruitment = null,
-        IPartyStockTransitionService? partyStock = null,
-        IStockCapacityPolicy? stockCapacity = null)
+        IPartyRosterTransitionService? partyRoster = null,
+        IRosterCapacityPolicy? rosterCapacity = null)
     {
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
         ArgumentNullException.ThrowIfNull(randomSource);
 
-        _stockCapacity = stockCapacity ?? NoLimitStockCapacityPolicy.Instance;
+        _rosterCapacity = rosterCapacity ?? NoLimitRosterCapacityPolicy.Instance;
         _negotiations = new NegotiationSessionService(randomSource, new TrainingAnnexNegotiationPolicy());
         _recruitment = recruitment ?? new RecruitmentTransactionService();
-        _partyStock = partyStock ?? new PartyStockTransitionService(_stockCapacity);
+        _partyRoster = partyRoster ?? new PartyRosterTransitionService(_rosterCapacity);
     }
 
     public async ValueTask<TrainingAnnexNegotiationInteractionResult> OpenAsync(
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot party,
+        RuntimePartyRosterSnapshot party,
         RuntimeWalletSnapshot wallet,
         IEconomyTransactionService economy,
         ISet<ContentId> recruitedThisSession,
@@ -100,7 +100,7 @@ internal sealed class TrainingAnnexNegotiationController
         {
             commands.Add(CleanTrainingAnnexPlayCommand.Back);
             await _eventSink.PublishAsync(
-                "Negotiation canceled before contact; wallet and Demon stock are unchanged.",
+                "Negotiation canceled before contact; wallet and Companion roster are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return new TrainingAnnexNegotiationInteractionResult(party, wallet, []);
         }
@@ -122,7 +122,7 @@ internal sealed class TrainingAnnexNegotiationController
         if (session.Outcome != NegotiationOutcomeKind.Success)
         {
             await _eventSink.PublishAsync(
-                $"Negotiation ended: {session.Outcome} ({PresentationReasonLabel(session.Reason)}); wallet and Demon stock are unchanged.",
+                $"Negotiation ended: {session.Outcome} ({PresentationReasonLabel(session.Reason)}); wallet and Companion roster are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
@@ -134,12 +134,12 @@ internal sealed class TrainingAnnexNegotiationController
             target.Actor.Entity.Id,
             recruitedThisSession.Contains(target.Actor.Entity.Id),
             AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
-            HasOpenDemonStockSlot(party),
+            HasOpenCompanionRosterSlot(party),
             target.Actor.Entity.Capabilities.Recruitable));
         if (!recruitment.Applied)
         {
             await _eventSink.PublishAsync(
-                $"Recruitment rejected: {recruitment.ErrorCode}; wallet and Demon stock are unchanged.",
+                $"Recruitment rejected: {recruitment.ErrorCode}; wallet and Companion roster are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
@@ -147,13 +147,13 @@ internal sealed class TrainingAnnexNegotiationController
                 Evidence(target, session, party, party, wallet, wallet, recruitment, null, false));
         }
 
-        PartyStockTransitionResult stock = _partyStock.AddDemonToStock(new AddDemonToStockRequest(
+        PartyRosterTransitionResult stock = _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(
             party,
             TrainingAnnexHostSupport.Reference(target)));
         if (!stock.Applied)
         {
             await _eventSink.PublishAsync(
-                $"Recruitment stock update rejected: {stock.Code}; wallet and Demon stock are unchanged.",
+                $"Recruitment stock update rejected: {stock.Code}; wallet and Companion roster are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
@@ -168,7 +168,7 @@ internal sealed class TrainingAnnexNegotiationController
             if (!spend.Applied)
             {
                 await _eventSink.PublishAsync(
-                    $"Recruitment donation rejected: {spend.Code}; wallet and Demon stock are unchanged.",
+                    $"Recruitment donation rejected: {spend.Code}; wallet and Companion roster are unchanged.",
                     cancellationToken).ConfigureAwait(false);
                 return Result(
                     party,
@@ -181,7 +181,7 @@ internal sealed class TrainingAnnexNegotiationController
 
         recruitedThisSession.Add(target.Actor.Entity.Id);
         await _eventSink.PublishAsync(
-            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Demon stock; wallet {wallet.Balance}->{nextWallet.Balance} M; Demon stock {party.DemonStock.Count}->{stock.After.DemonStock.Count}.",
+            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Companion roster; wallet {wallet.Balance}->{nextWallet.Balance} M; Companion roster {party.CompanionRoster.Count}->{stock.After.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return Result(
             stock.After,
@@ -190,7 +190,7 @@ internal sealed class TrainingAnnexNegotiationController
     }
 
     private static TrainingAnnexNegotiationInteractionResult Result(
-        RuntimePartyStockSnapshot party,
+        RuntimePartyRosterSnapshot party,
         RuntimeWalletSnapshot wallet,
         TrainingAnnexNegotiationEvidence evidence) =>
         new(party, wallet, [evidence]);
@@ -199,7 +199,7 @@ internal sealed class TrainingAnnexNegotiationController
         NegotiationDefinition negotiation,
         TrainingAnnexRuntimeActor target,
         TrainingAnnexRuntimeActor player,
-        RuntimePartyStockSnapshot party,
+        RuntimePartyRosterSnapshot party,
         RuntimeWalletSnapshot wallet)
     {
         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
@@ -211,7 +211,7 @@ internal sealed class TrainingAnnexNegotiationController
             activeOpponentCount: 1,
             contextIds: [],
             isTargetFamiliar: AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
-            hasRecruitmentCapacity: HasOpenDemonStockSlot(party),
+            hasRecruitmentCapacity: HasOpenCompanionRosterSlot(party),
             currentCurrency: wallet.Balance,
             questions: negotiation.Questions.Select(question => new NegotiationQuestionPrompt(
                 question.Text,
@@ -220,11 +220,11 @@ internal sealed class TrainingAnnexNegotiationController
             demands: negotiation.Demands.Select(MapDemand));
     }
 
-    private bool HasOpenDemonStockSlot(RuntimePartyStockSnapshot party) =>
-        party.DemonStock.Count < _stockCapacity.GetCapacity(party.OwnerLevel);
+    private bool HasOpenCompanionRosterSlot(RuntimePartyRosterSnapshot party) =>
+        party.CompanionRoster.Count < _rosterCapacity.GetCapacity(RuntimeRosterKind.Companion, party.OwnerLevel);
 
-    private static bool AlreadyOwnedByEntity(RuntimePartyStockSnapshot party, ContentId entityId) =>
-        party.DemonStock.Any(demon => demon.EntityDefinitionId == entityId);
+    private static bool AlreadyOwnedByEntity(RuntimePartyRosterSnapshot party, ContentId entityId) =>
+        party.CompanionRoster.Any(companion => companion.EntityDefinitionId == entityId);
 
     private static IReadOnlyList<TrainingAnnexRuntimeActor> FindRecruitmentCandidates(
         NegotiationDefinition negotiation,
@@ -313,7 +313,7 @@ internal sealed class TrainingAnnexNegotiationController
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateTargetMenu(
         IReadOnlyList<TrainingAnnexRuntimeActor> targets,
-        RuntimePartyStockSnapshot party)
+        RuntimePartyRosterSnapshot party)
     {
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             "Clean Negotiation",
@@ -326,7 +326,7 @@ internal sealed class TrainingAnnexNegotiationController
                             ? $"{target.Actor.Entity.DisplayName} [Familiar]"
                             : target.Actor.Entity.DisplayName,
                         Description: alreadyOwned
-                            ? "Runs the familiar-demon negotiation path without adding stock."
+                            ? "Runs the familiar-companion negotiation path without adding stock."
                             : "Starts a clean negotiation session for this recruitable sample.",
                         SelectionIdentity: HostCommandSelectionIdentity.ForRuntimeInstance(
                             target.Actor.State.InstanceId));
@@ -340,12 +340,12 @@ internal sealed class TrainingAnnexNegotiationController
     private static TrainingAnnexNegotiationEvidence Evidence(
         TrainingAnnexRuntimeActor target,
         NegotiationSessionResult session,
-        RuntimePartyStockSnapshot beforeParty,
-        RuntimePartyStockSnapshot afterParty,
+        RuntimePartyRosterSnapshot beforeParty,
+        RuntimePartyRosterSnapshot afterParty,
         RuntimeWalletSnapshot beforeWallet,
         RuntimeWalletSnapshot afterWallet,
         RecruitmentTransactionResult? recruitment,
-        PartyStockTransitionResult? stock,
+        PartyRosterTransitionResult? stock,
         bool recruited) =>
         new(
             target.Actor.Entity.Id,
@@ -360,8 +360,8 @@ internal sealed class TrainingAnnexNegotiationController
             stock?.Code,
             beforeWallet.Balance,
             afterWallet.Balance,
-            beforeParty.DemonStock.Count,
-            afterParty.DemonStock.Count,
+            beforeParty.CompanionRoster.Count,
+            afterParty.CompanionRoster.Count,
             recruited,
             session.Events.Count);
 
@@ -372,7 +372,7 @@ internal sealed class TrainingAnnexNegotiationController
     {
         NegotiationOutcomeReason.PolicyBlocked => "MoonBlocked",
         NegotiationOutcomeReason.FamiliarTarget => "FamiliarDemon",
-        NegotiationOutcomeReason.CapacityUnavailable => "StockFull",
+        NegotiationOutcomeReason.CapacityUnavailable => "RosterFull",
         NegotiationOutcomeReason.InsufficientCurrency => "InsufficientMacca",
         NegotiationOutcomeReason.CurrencyRefused => "MaccaRefused",
         _ => reason.ToString()
@@ -481,7 +481,7 @@ internal sealed class TrainingAnnexNegotiationController
         {
             NegotiationEventCode.PolicyBlocked =>
                 $"The {targetName} is agitated due to the Full Moon and cannot be reasoned with!",
-            NegotiationEventCode.CapacityUnavailable => "Your Demon Stock is full!",
+            NegotiationEventCode.CapacityUnavailable => "Your Companion roster is full!",
             NegotiationEventCode.OpeningRefused => $"{targetName} is on guard and refuses to talk!",
             NegotiationEventCode.MissingQuestions => $"{targetName} seems unresponsive...",
             NegotiationEventCode.Cancelled => $"{targetName} seems disappointed...",

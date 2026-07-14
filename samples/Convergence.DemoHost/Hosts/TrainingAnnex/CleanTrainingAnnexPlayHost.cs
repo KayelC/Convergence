@@ -17,10 +17,10 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectActor,
     InspectParty,
     InspectStock,
-    OpenPartyStockOperations,
-    PartySwapActiveForm,
+    OpenPartyRosterOperations,
+    PartySwapActiveHostedEntity,
     PartySummonAshling,
-    PartySwapActiveDemon,
+    PartySwapDeployedCompanion,
     PartyReturnActiveDemon,
     PartyReplaceWardShell,
     PartyDismissAshling,
@@ -95,7 +95,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     int EnemyActorCount,
     IReadOnlyList<ContentId> ActorEntityIds,
     IReadOnlyList<RuntimeInstanceId> ActorInstanceIds,
-    RuntimePartyStockSnapshot PartyStock,
+    RuntimePartyRosterSnapshot PartyRoster,
     IReadOnlyList<TrainingAnnexPartyTransitionEvidence> PartyTransitions,
     IReadOnlyList<TrainingAnnexNegotiationEvidence> Negotiations,
     IReadOnlyList<TrainingAnnexFusionResultEvidence> FusionResults,
@@ -276,18 +276,18 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         BattleTurnEconomyRuleset turnEconomy = turnEconomyBinding.RequireService();
-        RulesetBindingResult<IStockCapacityPolicy> stockCapacityBinding =
-            rulesetResolver.BindStockCapacityPolicy(
+        RulesetBindingResult<IRosterCapacityPolicy> rosterCapacityBinding =
+            rulesetResolver.BindRosterCapacityPolicy(
                 catalog,
-                TrainingAnnexHostSupport.Qualified("standard_stock_capacity"));
-        if (!stockCapacityBinding.IsSuccess)
+                TrainingAnnexHostSupport.Qualified("standard_roster_capacity"));
+        if (!rosterCapacityBinding.IsSuccess)
         {
-            await PublishRulesetDiagnosticsAsync("stock_capacity", stockCapacityBinding.Diagnostics, cancellationToken)
+            await PublishRulesetDiagnosticsAsync("roster_capacity", rosterCapacityBinding.Diagnostics, cancellationToken)
                 .ConfigureAwait(false);
             return 4;
         }
 
-        IStockCapacityPolicy stockCapacityPolicy = stockCapacityBinding.RequireService();
+        IRosterCapacityPolicy rosterCapacityPolicy = rosterCapacityBinding.RequireService();
 
         RulesetBindingResult<ResourceManagementRulesetServices> resourceManagementBinding =
             rulesetResolver.BindResourceManagementServices(
@@ -339,12 +339,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
-        IPartyStockTransitionService partyStockTransitions = new PartyStockTransitionService(
-            stockCapacityPolicy);
+        IPartyRosterTransitionService partyRosterTransitions = new PartyRosterTransitionService(
+            rosterCapacityPolicy);
         IFusionTransactionService fusionTransactionService = new FusionTransactionService(
             actorFactory,
-            partyStockTransitions);
-        var partyController = new TrainingAnnexPartyController(partyStockTransitions);
+            partyRosterTransitions);
+        var partyController = new TrainingAnnexPartyController(partyRosterTransitions);
         var compendiumRuntime = new CompendiumRuntimeService(
             catalog,
             catalog,
@@ -355,7 +355,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 levelFactor: 100,
                 statPointFactor: 50,
                 skillFactor: 200)),
-            partyStock: partyStockTransitions,
+            partyRoster: partyRosterTransitions,
             economy: economy);
         var familiarKnowledge = new FamiliarEntityKnowledgeService(catalog);
         var acquisitionRegistrar = new TrainingAnnexAcquisitionRegistrar(
@@ -363,7 +363,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             familiarKnowledge,
             _eventSink);
         TrainingAnnexPartySetupResult partySetup = partyController.CreateInitialParty(roster);
-        RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
+        RuntimePartyRosterSnapshot partyRoster = partySetup.Snapshot;
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
         var negotiations = new List<TrainingAnnexNegotiationEvidence>();
         var fusionResults = new List<TrainingAnnexFusionResultEvidence>();
@@ -395,7 +395,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var persistence = new TrainingAnnexPersistenceController(
             _saveSlots,
             _eventSink,
-            stockCapacityPolicy);
+            rosterCapacityPolicy);
         RuntimeWalletSnapshot wallet = _initialWallet ?? new RuntimeWalletSnapshot(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
@@ -459,10 +459,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Hydrated clean actor roster with {roster.AllActors.Count} actor(s): {roster.Enemies.Count} enemy model(s).",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Party setup: {partyStock.ActiveParty.Count} active, {partyStock.ReserveMembers.Count} reserve.",
+            $"Party setup: {partyRoster.ActiveParty.Count} active, {partyRoster.ReserveMembers.Count} reserve.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Stock setup: active form {(partyStock.ActiveForm is null ? 0 : 1)}, Persona stock {partyStock.PersonaStock.Count}, Demon stock {partyStock.DemonStock.Count}.",
+            $"Stock setup: active form {(partyRoster.ActiveHostedEntity is null ? 0 : 1)}, HostedEntity roster {partyRoster.HostedEntityRoster.Count}, Companion roster {partyRoster.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync("Field location: Staging Area.", cancellationToken)
             .ConfigureAwait(false);
@@ -479,7 +479,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 LastSummary = CreateSummary(
                     request,
                     roster,
-                    partyStock,
+                    partyRoster,
                     partyTransitions,
                     negotiations,
                     fusionResults,
@@ -556,22 +556,22 @@ internal sealed class CleanTrainingAnnexPlayHost
                     await PrintActorsAsync(roster, cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectParty:
-                    await partyController.PrintPartyAsync(partyStock, _eventSink, cancellationToken)
+                    await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectStock:
-                    await partyController.PrintStockAsync(partyStock, _eventSink, cancellationToken)
+                    await partyController.PrintStockAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
-                case CleanTrainingAnnexPlayCommand.OpenPartyStockOperations:
+                case CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations:
                 {
-                    await partyController.PrintPartyAsync(partyStock, _eventSink, cancellationToken)
+                    await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
-                    await partyController.PrintStockAsync(partyStock, _eventSink, cancellationToken)
+                    await partyController.PrintStockAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     HostCommandReadResult<CleanTrainingAnnexPlayCommand> operationSelection =
                         await _commandSource.ReadAsync(
-                            CreatePartyStockOperationMenu(partyStock),
+                            CreatePartyRosterOperationMenu(partyRoster),
                             cancellationToken).ConfigureAwait(false);
                     if (!operationSelection.IsSelected ||
                         operationSelection.Command == CleanTrainingAnnexPlayCommand.Back)
@@ -583,9 +583,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                     commands.Add(operationSelection.Command);
                     TrainingAnnexPartyOperation operation = ToPartyOperation(operationSelection.Command);
                     string operationName = PartyOperationName(operation);
-                    PartyStockTransitionResult operationResult = partyController.ExecuteOperation(
+                    PartyRosterTransitionResult operationResult = partyController.ExecuteOperation(
                         operation,
-                        partyStock,
+                        partyRoster,
                         roster);
                     partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(operationName, operationResult));
                     await partyController.PrintOperationAsync(
@@ -595,7 +595,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     if (operationResult.Applied)
                     {
-                        partyStock = operationResult.After;
+                        partyRoster = operationResult.After;
                     }
 
                     break;
@@ -610,13 +610,13 @@ internal sealed class CleanTrainingAnnexPlayHost
                             .OpenAsync(
                                 catalog,
                                 roster,
-                                partyStock,
+                                partyRoster,
                                 wallet,
                                 economy,
                                 recruitedThisSession,
                                 commands,
                                 cancellationToken).ConfigureAwait(false);
-                    partyStock = negotiation.PartyStock;
+                    partyRoster = negotiation.PartyRoster;
                     wallet = negotiation.Wallet;
                     negotiations.AddRange(negotiation.Evidence);
                     foreach (TrainingAnnexNegotiationEvidence recruited in
@@ -631,7 +631,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 compendium,
                                 playerBattleKnowledge,
                                 acquiredActor,
-                                partyStock,
+                                partyRoster,
                                 wallet,
                                 TrainingAnnexHostSupport.NegotiationAcquisitionSource,
                                 cancellationToken).ConfigureAwait(false);
@@ -674,12 +674,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                             .CommitAsync(
                                  catalog,
                                  roster,
-                                 partyStock,
+                                 partyRoster,
                                  fusionTransactionService,
                                  _commandSource,
                                 commands,
                                 cancellationToken).ConfigureAwait(false);
-                    partyStock = transaction.PartyStock;
+                    partyRoster = transaction.PartyRoster;
                     fusionTransactions.Add(transaction.Evidence);
                     if (transaction.ResultActor is not null)
                     {
@@ -689,7 +689,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 compendium,
                                 playerBattleKnowledge,
                                 transaction.ResultActor,
-                                partyStock,
+                                partyRoster,
                                 wallet,
                                 TrainingAnnexHostSupport.FusionAcquisitionSource,
                                 cancellationToken).ConfigureAwait(false);
@@ -710,14 +710,14 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 familiarKnowledge)
                             .OpenAsync(
                                 compendium,
-                                partyStock,
+                                partyRoster,
                                 wallet,
                                 roster,
                                 playerBattleKnowledge,
                                 commands,
                                 cancellationToken).ConfigureAwait(false);
                     compendium = interaction.Compendium;
-                    partyStock = interaction.PartyStock;
+                    partyRoster = interaction.PartyRoster;
                     wallet = interaction.Wallet;
                     roster = interaction.Roster;
                     playerBattleKnowledge = interaction.PlayerKnowledge;
@@ -750,10 +750,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                     levelUpCount = growth.LevelUps.Count;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
-                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(stockCapacityPolicy).Validate(
+                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(rosterCapacityPolicy).Validate(
                         TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
-                            partyStock,
+                            partyRoster,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
@@ -782,7 +782,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         LastSummary = CreateSummary(
                             request,
                             roster,
-                            partyStock,
+                            partyRoster,
                             partyTransitions,
                             negotiations,
                             fusionResults,
@@ -1151,7 +1151,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             savePolicy,
                             catalog,
                             roster,
-                            partyStock,
+                            partyRoster,
                             field,
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
@@ -1191,7 +1191,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             catalog,
                             actorFactory,
                             roster,
-                            partyStock,
+                            partyRoster,
                             field,
                             preparedEncounter is not null && !preparedBattleStarted,
                             cancellationToken).ConfigureAwait(false);
@@ -1199,7 +1199,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         if (loadResult.Restored is TrainingAnnexRestoredSession restored)
                         {
                             roster = restored.Roster;
-                            partyStock = restored.PartyStock;
+                            partyRoster = restored.PartyRoster;
                             field = restored.Field;
                             inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
                             wallet = restored.Wallet;
@@ -1387,7 +1387,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             CleanTrainingAnnexPlayCommand.InspectStock,
             "Inspect Stock"));
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-            CleanTrainingAnnexPlayCommand.OpenPartyStockOperations,
+            CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations,
             "Party / Stock Operations"));
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenNegotiation,
@@ -1413,47 +1413,47 @@ internal sealed class CleanTrainingAnnexPlayHost
             options);
     }
 
-    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreatePartyStockOperationMenu(
-        RuntimePartyStockSnapshot party)
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreatePartyRosterOperationMenu(
+        RuntimePartyRosterSnapshot party)
     {
-        bool hasPersonaStock = party.PersonaStock.Any(persona =>
-            persona.InstanceId == TrainingAnnexHostSupport.PersonaBrambleRunnerInstance);
-        bool ashlingOwned = party.DemonStock.Any(demon =>
-            demon.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
+        bool hasHostedEntityRoster = party.HostedEntityRoster.Any(hostedEntity =>
+            hostedEntity.InstanceId == TrainingAnnexHostSupport.PersonaBrambleRunnerInstance);
+        bool ashlingOwned = party.CompanionRoster.Any(companion =>
+            companion.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
         bool ashlingActive = party.ActiveParty.Any(actor =>
             actor.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
-        bool wardOwned = party.DemonStock.Any(demon =>
-            demon.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
+        bool wardOwned = party.CompanionRoster.Any(companion =>
+            companion.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
         bool wardActive = party.ActiveParty.Any(actor =>
             actor.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
-        bool brambleOwned = party.DemonStock.Any(demon =>
-            demon.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
+        bool brambleOwned = party.CompanionRoster.Any(companion =>
+            companion.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
         bool activeDemon = party.ActiveParty.Any(actor =>
-            party.DemonStock.Any(demon => demon.InstanceId == actor.InstanceId));
+            party.CompanionRoster.Any(companion => companion.InstanceId == actor.InstanceId));
 
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             "Clean Party / Stock Operations",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.PartySwapActiveForm,
+                    CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity,
                     "Swap Active Form",
-                    hasPersonaStock,
-                    "Exchanges the active form with the Persona stock entry."),
+                    hasHostedEntityRoster,
+                    "Exchanges the active form with the HostedEntity roster entry."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartySummonAshling,
                     "Summon Ashling",
                     ashlingOwned && !ashlingActive && party.ActiveParty.Count < party.MaxActivePartySize,
-                    "Adds the owned Ashling to the active party while keeping it in Demon stock."),
+                    "Adds the owned Ashling to the active party while keeping it in Companion roster."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.PartySwapActiveDemon,
-                    "Swap Active Demon to Ward Shell",
+                    CleanTrainingAnnexPlayCommand.PartySwapDeployedCompanion,
+                    "Swap Active Companion to Ward Shell",
                     ashlingActive && wardOwned && !wardActive,
                     "Replaces the active Ashling with owned Ward Shell."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon,
-                    "Return Active Demon",
+                    "Return Active Companion",
                     activeDemon,
-                    "Removes the active demon from the party while keeping it owned."),
+                    "Removes the active companion from the party while keeping it owned."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartyReplaceWardShell,
                     "Replace Ward Shell with Bramble Runner",
@@ -1463,12 +1463,12 @@ internal sealed class CleanTrainingAnnexPlayHost
                     CleanTrainingAnnexPlayCommand.PartyDismissAshling,
                     "Dismiss Ashling",
                     ashlingOwned,
-                    "Removes Ashling from the active party and Demon stock."),
+                    "Removes Ashling from the active party and Companion roster."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartyConsumeBrambleRunner,
                     "Consume Bramble Runner",
                     brambleOwned,
-                    "Consumes Bramble Runner from active party and Demon stock."),
+                    "Consumes Bramble Runner from active party and Companion roster."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.Back,
                     "Back")
@@ -1478,9 +1478,9 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static TrainingAnnexPartyOperation ToPartyOperation(CleanTrainingAnnexPlayCommand command) =>
         command switch
         {
-            CleanTrainingAnnexPlayCommand.PartySwapActiveForm => TrainingAnnexPartyOperation.SwapActiveForm,
+            CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity => TrainingAnnexPartyOperation.SwapActiveHostedEntity,
             CleanTrainingAnnexPlayCommand.PartySummonAshling => TrainingAnnexPartyOperation.SummonAshling,
-            CleanTrainingAnnexPlayCommand.PartySwapActiveDemon => TrainingAnnexPartyOperation.SwapActiveDemonToWardShell,
+            CleanTrainingAnnexPlayCommand.PartySwapDeployedCompanion => TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell,
             CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon => TrainingAnnexPartyOperation.ReturnActiveDemon,
             CleanTrainingAnnexPlayCommand.PartyReplaceWardShell => TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner,
             CleanTrainingAnnexPlayCommand.PartyDismissAshling => TrainingAnnexPartyOperation.DismissAshling,
@@ -1491,9 +1491,9 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static string PartyOperationName(TrainingAnnexPartyOperation operation) =>
         operation switch
         {
-            TrainingAnnexPartyOperation.SwapActiveForm => "swap_active_form",
+            TrainingAnnexPartyOperation.SwapActiveHostedEntity => "swap_active_form",
             TrainingAnnexPartyOperation.SummonAshling => "summon_demon",
-            TrainingAnnexPartyOperation.SwapActiveDemonToWardShell => "swap_active_demon",
+            TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => "swap_active_demon",
             TrainingAnnexPartyOperation.ReturnActiveDemon => "return_active_demon",
             TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => "replace_demon",
             TrainingAnnexPartyOperation.DismissAshling => "dismiss_demon",
@@ -1856,7 +1856,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static CleanTrainingAnnexPlaySummary CreateSummary(
         ContentPackTextRequest request,
         TrainingAnnexActorRoster roster,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         IReadOnlyList<TrainingAnnexPartyTransitionEvidence> partyTransitions,
         IReadOnlyList<TrainingAnnexNegotiationEvidence> negotiations,
         IReadOnlyList<TrainingAnnexFusionResultEvidence> fusionResults,
@@ -1930,7 +1930,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             roster.Enemies.Count,
             roster.AllActors.Select(actor => actor.Actor.Entity.Id).ToArray(),
             roster.AllActors.Select(actor => actor.Actor.State.InstanceId).ToArray(),
-            partyStock,
+            partyRoster,
             partyTransitions.ToArray(),
             negotiations.ToArray(),
             fusionResults.ToArray(),
@@ -2021,8 +2021,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     {
         RuntimeActorSnapshot snapshot = player.Actor.State.ToSnapshot();
         RuntimeStatStageSnapshot attackStage = new(StandardProgressionIds.Attack, 1);
-        IEnumerable<KeyValuePair<ContentId, decimal>> activeFormStats =
-            snapshot.Identity.ActorKindId == StandardProgressionIds.Demon
+        IEnumerable<KeyValuePair<ContentId, decimal>> activeHostedEntityStats =
+            snapshot.Identity.ActorKindId == StandardProgressionIds.Companion
                 ? snapshot.Stats.BaseStats
                 : [];
         var results = new List<StatResolutionResult>();
@@ -2034,13 +2034,13 @@ internal sealed class CleanTrainingAnnexPlayHost
                 snapshot.Identity.ActorKindId,
                 statId,
                 snapshot.Stats.BaseStats,
-                activeFormStats,
+                activeHostedEntityStats,
                 equipmentStatModifiers: equipmentProfile.StatModifiers));
             StatResolutionResult boosted = statPolicy.Resolve(new StatResolutionRequest(
                 snapshot.Identity.ActorKindId,
                 statId,
                 snapshot.Stats.BaseStats,
-                activeFormStats,
+                activeHostedEntityStats,
                 equipmentStatModifiers: equipmentProfile.StatModifiers,
                 statStages: [attackStage]));
             results.Add(boosted);

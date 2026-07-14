@@ -30,7 +30,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
         CompendiumStateSnapshot compendium,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         TrainingAnnexRuntimeActor acquiredActor,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         ContentId acquisitionSourceId,
         CancellationToken cancellationToken)
@@ -38,7 +38,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
         ArgumentNullException.ThrowIfNull(compendium);
         ArgumentNullException.ThrowIfNull(playerKnowledge);
         ArgumentNullException.ThrowIfNull(acquiredActor);
-        ArgumentNullException.ThrowIfNull(partyStock);
+        ArgumentNullException.ThrowIfNull(partyRoster);
         ArgumentNullException.ThrowIfNull(wallet);
         if (!acquisitionSourceId.IsValid)
         {
@@ -64,7 +64,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
                     acquiredActor.Actor.Entity.Id,
                     acquisitionSourceId,
                     registration,
-                    partyStock,
+                    partyRoster,
                     wallet));
         }
 
@@ -92,7 +92,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
                 registration.Entry.EntityId,
                 acquisitionSourceId,
                 registration,
-                partyStock,
+                partyRoster,
                 wallet,
                 imported));
     }
@@ -101,7 +101,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
         ContentId entityId,
         ContentId acquisitionSourceId,
         CompendiumActorRegistrationResult registration,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         FamiliarKnowledgeImportResult? imported = null) =>
         new(
@@ -113,8 +113,8 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
             0,
             wallet.Balance,
             wallet.Balance,
-            partyStock.DemonStock.Count,
-            partyStock.DemonStock.Count,
+            partyRoster.CompanionRoster.Count,
+            partyRoster.CompanionRoster.Count,
             imported?.After.ElementalAffinities.Count(entry => entry.EntityId == entityId) ?? 0,
             imported?.After.AilmentResistances.Count(entry => entry.EntityId == entityId) ?? 0,
             imported?.After.InstantDeathResistances.Count(entry => entry.EntityId == entityId) ?? 0,

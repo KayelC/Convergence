@@ -14,7 +14,7 @@ public enum BattleTurnStartOutcome
     ForcedPhysical,
     ForcedConfusion,
     FleeBattle,
-    ReturnToStock
+    RecallToRoster
 }
 
 public enum BattleAilmentApplicationStatus
@@ -59,7 +59,7 @@ public sealed record BattleStatusLifecycleEvent(
 
 public sealed record BattleTurnStartLifecycleRequest(
     RuntimeActorState Actor,
-    bool CanReturnToStock = false);
+    bool CanRecallToRoster = false);
 
 public sealed record BattleTurnStartRestriction
 {
@@ -121,7 +121,7 @@ public sealed record BattleTurnStartLifecycleResult
 public sealed record CustomAilmentTurnBehaviorRequest(
     RuntimeActorState Actor,
     AilmentDefinition Ailment,
-    bool CanReturnToStock);
+    bool CanRecallToRoster);
 
 public sealed record CustomAilmentTurnBehaviorResult
 {
@@ -203,7 +203,7 @@ public sealed class MostRestrictiveBattleTurnPolicy : IBattleTurnRestrictionPoli
 
     private static int Precedence(BattleTurnStartOutcome outcome) => outcome switch
     {
-        BattleTurnStartOutcome.ReturnToStock => 6,
+        BattleTurnStartOutcome.RecallToRoster => 6,
         BattleTurnStartOutcome.FleeBattle => 6,
         BattleTurnStartOutcome.Skip => 5,
         BattleTurnStartOutcome.ForcedConfusion => 4,
@@ -597,7 +597,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
         var transaction = new RuntimeActorExecutionTransaction(actor, [actor]);
         BattleTurnStartLifecycleResult result = ProcessTurnStartCore(
-            new BattleTurnStartLifecycleRequest(transaction.Actor, request.CanReturnToStock));
+            new BattleTurnStartLifecycleRequest(transaction.Actor, request.CanRecallToRoster));
         transaction.Commit();
         return result;
     }
@@ -620,7 +620,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     .Select(active => ResolveTurnStartRestriction(
                         actor,
                         active.Definition,
-                        request.CanReturnToStock))
+                        request.CanRecallToRoster))
                     .ToArray())
             ?? throw new InvalidOperationException("The battle turn-restriction policy returned null.");
         if (restriction.Outcome != BattleTurnStartOutcome.CanAct)
@@ -744,11 +744,11 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     private BattleTurnStartRestriction ResolveTurnStartRestriction(
         RuntimeActorState actor,
         AilmentDefinition ailment,
-        bool canReturnToStock)
+        bool canRecallToRoster)
     {
         AilmentTurnBehaviorDefinition behavior = ailment.TurnBehavior;
         CustomAilmentTurnBehaviorResult? customResult = behavior is CustomAilmentTurnBehaviorDefinition custom
-            ? ResolveCustomBehavior(custom, actor, ailment, canReturnToStock)
+            ? ResolveCustomBehavior(custom, actor, ailment, canRecallToRoster)
             : null;
         BattleTurnStartOutcome outcome = behavior switch
         {
@@ -759,7 +759,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             ConfusedActionAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.ForcedConfusion,
             ChanceSkipAilmentTurnBehaviorDefinition chanceSkip =>
                 Roll(chanceSkip.SkipChance) ? BattleTurnStartOutcome.Skip : BattleTurnStartOutcome.CanAct,
-            ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear => ResolveFearOutcome(fear, canReturnToStock),
+            ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear => ResolveFearOutcome(fear, canRecallToRoster),
             CustomAilmentTurnBehaviorDefinition => customResult!.Outcome,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(behavior),
@@ -781,7 +781,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         CustomAilmentTurnBehaviorDefinition behavior,
         RuntimeActorState actor,
         AilmentDefinition ailment,
-        bool canReturnToStock)
+        bool canRecallToRoster)
     {
         if (!_customTurnBehaviorHandlers.TryGetValue(
                 behavior.HandlerId,
@@ -794,7 +794,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 
         return handler.Resolve(
             behavior,
-            new CustomAilmentTurnBehaviorRequest(actor, ailment, canReturnToStock))
+            new CustomAilmentTurnBehaviorRequest(actor, ailment, canRecallToRoster))
             ?? throw new InvalidOperationException(
                 $"Custom ailment turn-behavior handler '{behavior.HandlerId}' returned null.");
     }
@@ -809,13 +809,13 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 
     private BattleTurnStartOutcome ResolveFearOutcome(
         ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear,
-        bool canReturnToStock)
+        bool canRecallToRoster)
     {
         int roll = _random.NextInt32(0, 100);
         if (roll < fear.FleeChance)
         {
-            return canReturnToStock && fear.DemonFleeOutcome == DemonFleeOutcome.ReturnToStock
-                ? BattleTurnStartOutcome.ReturnToStock
+            return canRecallToRoster && fear.CompanionFleeOutcome == CompanionFleeOutcome.RecallToRoster
+                ? BattleTurnStartOutcome.RecallToRoster
                 : BattleTurnStartOutcome.FleeBattle;
         }
 

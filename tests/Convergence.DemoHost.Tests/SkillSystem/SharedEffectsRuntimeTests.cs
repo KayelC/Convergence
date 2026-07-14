@@ -391,7 +391,7 @@ public sealed class SharedEffectsRuntimeTests
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
             .RegisterMoonPhase("new_moon")

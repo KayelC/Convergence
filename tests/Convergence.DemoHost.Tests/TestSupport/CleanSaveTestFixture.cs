@@ -14,7 +14,7 @@ internal static class CleanSaveTestFixture
         IEnumerable<RuntimeActorSnapshot>? actors = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         IEnumerable<RuntimeCheckpointEntrySnapshot>? checkpoints = null,
-        RuntimePartyStockSnapshot? partyStock = null,
+        RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeEquipmentSnapshot? equipment = null,
         RuntimeFieldSnapshot? field = null,
@@ -47,13 +47,13 @@ internal static class CleanSaveTestFixture
                 new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.2.0"))
             ],
             actors ?? [frost, ember],
-            partyStock ?? new RuntimePartyStockSnapshot(
+            partyRoster ?? new RuntimePartyRosterSnapshot(
                 frostRef,
                 5,
                 activeParty: [frostRef],
-                activeForm: emberRef,
-                personaStock: [],
-                demonStock: [frostRef]),
+                activeHostedEntity: emberRef,
+                hostedEntityRoster: [],
+                companionRoster: [frostRef]),
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
@@ -136,7 +136,7 @@ internal static class CleanSaveTestFixture
         IEnumerable<ContentId>? learnedSkills = null,
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null) =>
         new(
-            new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("demon"), entityId.ToString()),
+            new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
             new RuntimeActorOwnershipSnapshot(Id("host"), Id("player_team")),
             new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Deployed, IsActive: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
@@ -150,7 +150,7 @@ internal static class CleanSaveTestFixture
             new RuntimeSkillStateSnapshot(
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")],
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
             new RuntimeBattleActivationSnapshot(),
@@ -219,7 +219,7 @@ internal static class CleanSaveTestFixture
             .RegisterContext("battle", "field")
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterPhase("player_phase")
             .RegisterAilmentGroup("poison")
@@ -236,7 +236,7 @@ internal static class CleanSaveTestFixture
                 "standard_growth",
                 "standard_stat",
                 "standard_action_token",
-                "standard_stock_capacity",
+                "standard_roster_capacity",
                 "standard_economy",
                 "return_to_lobby",
                 "standard_accident",

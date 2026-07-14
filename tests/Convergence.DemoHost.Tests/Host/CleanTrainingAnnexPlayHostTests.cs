@@ -88,19 +88,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.ActorInstanceIds);
         Assert.Equal(
             [RuntimeInstanceId.Parse("echo_adept")],
-            summary.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+            summary.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("support_annex_mentor")],
-            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
-        Assert.NotNull(summary.PartyStock.ActiveForm);
-        RuntimeActorReferenceSnapshot activeForm = summary.PartyStock.ActiveForm!;
-        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeForm.InstanceId);
+            summary.PartyRoster.ReserveMembers.Select(actor => actor.InstanceId));
+        Assert.NotNull(summary.PartyRoster.ActiveHostedEntity);
+        RuntimeActorReferenceSnapshot activeHostedEntity = summary.PartyRoster.ActiveHostedEntity!;
+        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
             [RuntimeInstanceId.Parse("persona_bramble_runner")],
-            summary.PartyStock.PersonaStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
-            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
         Assert.Empty(summary.PartyTransitions);
         Assert.Empty(summary.FusionResults);
         Assert.Empty(summary.FusionPlanning);
@@ -253,7 +253,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated clean actor roster with 10 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
         Assert.Contains("Party setup: 1 active, 1 reserve.", text, StringComparison.Ordinal);
-        Assert.Contains("Stock setup: active form 1, Persona stock 1, Demon stock 2.", text, StringComparison.Ordinal);
+        Assert.Contains("Stock setup: active form 1, HostedEntity roster 1, Companion roster 2.", text, StringComparison.Ordinal);
         Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
@@ -263,10 +263,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 28/28.", text, StringComparison.Ordinal);
         Assert.Contains("Reserve: Annex Mentor; instance support_annex_mentor; level 5;", text, StringComparison.Ordinal);
         Assert.Contains("Active Form: Annex Mentor; instance form_annex_mentor; level 5;", text, StringComparison.Ordinal);
-        Assert.Contains("Persona Stock: Bramble Runner; instance persona_bramble_runner; level 3;", text, StringComparison.Ordinal);
-        Assert.Contains("Demon Stock: Ashling; instance demon_ashling; level 2;", text, StringComparison.Ordinal);
-        Assert.Contains("Demon Stock: Ward Shell; instance demon_ward_shell; level 4;", text, StringComparison.Ordinal);
-        Assert.Contains("Demon Replacement Candidate: Bramble Runner; instance replacement_bramble_runner; level 3;", text, StringComparison.Ordinal);
+        Assert.Contains("HostedEntity Stock: Bramble Runner; instance persona_bramble_runner; level 3;", text, StringComparison.Ordinal);
+        Assert.Contains("Companion roster: Ashling; instance demon_ashling; level 2;", text, StringComparison.Ordinal);
+        Assert.Contains("Companion roster: Ward Shell; instance demon_ward_shell; level 4;", text, StringComparison.Ordinal);
+        Assert.Contains("Companion Replacement Candidate: Bramble Runner; instance replacement_bramble_runner; level 3;", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ashling; instance enemy_ashling; level 2; resources: hp 65/65, sp 29/29.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Bramble Runner; instance enemy_bramble_runner; level 3; resources: hp 75/75, sp 22/22.", text, StringComparison.Ordinal);
         Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources: hp 100/100, sp 27/27.", text, StringComparison.Ordinal);
@@ -298,10 +298,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(
             [RuntimeInstanceId.Parse("echo_adept")],
-            summary.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+            summary.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("support_annex_mentor")],
-            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
+            summary.PartyRoster.ReserveMembers.Select(actor => actor.InstanceId));
         Assert.Empty(summary.PartyTransitions);
 
         string text = output.ToString();
@@ -313,7 +313,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_InspectStockUsesFrameworkPartyStockSnapshot()
+    public async Task CleanTrainingAnnexPlay_InspectStockUsesFrameworkPartyRosterSnapshot()
     {
         var io = new ScriptedGameIO().QueueMenu(14, 9);
         using var output = new StringWriter();
@@ -323,26 +323,26 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
-        Assert.NotNull(summary.PartyStock.ActiveForm);
-        RuntimeActorReferenceSnapshot activeForm = summary.PartyStock.ActiveForm!;
-        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeForm.InstanceId);
+        Assert.NotNull(summary.PartyRoster.ActiveHostedEntity);
+        RuntimeActorReferenceSnapshot activeHostedEntity = summary.PartyRoster.ActiveHostedEntity!;
+        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
             [RuntimeInstanceId.Parse("persona_bramble_runner")],
-            summary.PartyStock.PersonaStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
-            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
 
         string text = output.ToString();
         Assert.Contains(
-            "Stock: active form [Annex Mentor (form_annex_mentor)]; Persona stock [Bramble Runner (persona_bramble_runner)]; Demon stock [Ashling (demon_ashling), Ward Shell (demon_ward_shell)].",
+            "Stock: active form [Annex Mentor (form_annex_mentor)]; HostedEntity roster [Bramble Runner (persona_bramble_runner)]; Companion roster [Ashling (demon_ashling), Ward Shell (demon_ward_shell)].",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_PartyStockOperationsUseFrameworkTransitions()
+    public async Task CleanTrainingAnnexPlay_PartyRosterOperationsUseFrameworkTransitions()
     {
         var io = new ScriptedGameIO().QueueMenu(
             15, 0,
@@ -372,31 +372,31 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ],
             summary.PartyTransitions.Select(transition => transition.Operation));
         Assert.All(summary.PartyTransitions, transition =>
-            Assert.Equal(PartyStockTransitionCode.Applied, transition.Code));
+            Assert.Equal(PartyRosterTransitionCode.Applied, transition.Code));
         Assert.Equal(
             [RuntimeInstanceId.Parse("echo_adept")],
-            summary.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+            summary.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("support_annex_mentor")],
-            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
-        Assert.NotNull(summary.PartyStock.ActiveForm);
-        Assert.Equal(RuntimeInstanceId.Parse("persona_bramble_runner"), summary.PartyStock.ActiveForm!.InstanceId);
+            summary.PartyRoster.ReserveMembers.Select(actor => actor.InstanceId));
+        Assert.NotNull(summary.PartyRoster.ActiveHostedEntity);
+        Assert.Equal(RuntimeInstanceId.Parse("persona_bramble_runner"), summary.PartyRoster.ActiveHostedEntity!.InstanceId);
         Assert.Equal(
             [RuntimeInstanceId.Parse("form_annex_mentor")],
-            summary.PartyStock.PersonaStock.Select(actor => actor.InstanceId));
-        Assert.Empty(summary.PartyStock.DemonStock);
+            summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
+        Assert.Empty(summary.PartyRoster.CompanionRoster);
 
         TrainingAnnexPartyTransitionEvidence summon = summary.PartyTransitions[1];
         Assert.Equal(1, summon.ActiveCountBefore);
         Assert.Equal(2, summon.ActiveCountAfter);
-        Assert.Equal(2, summon.DemonStockCountBefore);
-        Assert.Equal(2, summon.DemonStockCountAfter);
+        Assert.Equal(2, summon.CompanionRosterCountBefore);
+        Assert.Equal(2, summon.CompanionRosterCountAfter);
         TrainingAnnexPartyTransitionEvidence returned = summary.PartyTransitions[3];
         Assert.Equal(2, returned.ActiveCountBefore);
         Assert.Equal(1, returned.ActiveCountAfter);
         TrainingAnnexPartyTransitionEvidence consumed = summary.PartyTransitions[6];
-        Assert.Equal(1, consumed.DemonStockCountBefore);
-        Assert.Equal(0, consumed.DemonStockCountAfter);
+        Assert.Equal(1, consumed.CompanionRosterCountBefore);
+        Assert.Equal(0, consumed.CompanionRosterCountAfter);
 
         string text = output.ToString();
         Assert.Contains("Party stock operation applied: swap_active_form", text, StringComparison.Ordinal);
@@ -416,35 +416,35 @@ public sealed class CleanTrainingAnnexPlayHostTests
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
         var controller = new TrainingAnnexPartyController();
-        RuntimePartyStockSnapshot initial = controller.CreateInitialParty(roster).Snapshot;
+        RuntimePartyRosterSnapshot initial = controller.CreateInitialParty(roster).Snapshot;
 
-        PartyStockTransitionResult returned = controller.ExecuteOperation(
+        PartyRosterTransitionResult returned = controller.ExecuteOperation(
             TrainingAnnexPartyOperation.ReturnActiveDemon,
             initial,
             roster);
 
         Assert.False(returned.Applied);
-        Assert.Equal(PartyStockTransitionCode.NotActive, returned.Code);
+        Assert.Equal(PartyRosterTransitionCode.NotActive, returned.Code);
         Assert.Same(initial, returned.After);
         Assert.Empty(returned.AffectedInstanceIds);
-        PartyStockTransitionDiagnostic diagnostic = Assert.Single(returned.Diagnostics);
-        Assert.Equal(PartyStockTransitionCode.NotActive, diagnostic.Code);
-        Assert.Equal("No active demon is in the party.", diagnostic.Message);
+        PartyRosterTransitionDiagnostic diagnostic = Assert.Single(returned.Diagnostics);
+        Assert.Equal(PartyRosterTransitionCode.NotActive, diagnostic.Code);
+        Assert.Equal("No active companion is in the party.", diagnostic.Message);
         Assert.Null(diagnostic.SubjectInstanceId);
 
-        PartyStockTransitionResult summoned = controller.ExecuteOperation(
+        PartyRosterTransitionResult summoned = controller.ExecuteOperation(
             TrainingAnnexPartyOperation.SummonAshling,
             initial,
             roster);
         Assert.True(summoned.Applied);
 
-        PartyStockTransitionResult duplicate = controller.ExecuteOperation(
+        PartyRosterTransitionResult duplicate = controller.ExecuteOperation(
             TrainingAnnexPartyOperation.SummonAshling,
             summoned.After,
             roster);
 
         Assert.False(duplicate.Applied);
-        Assert.Equal(PartyStockTransitionCode.AlreadyActive, duplicate.Code);
+        Assert.Equal(PartyRosterTransitionCode.AlreadyActive, duplicate.Code);
         Assert.Same(summoned.After, duplicate.After);
     }
 
@@ -471,15 +471,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(50, negotiation.MaccaSpent);
         Assert.Equal(RecruitmentTransactionStatus.Applied, negotiation.RecruitmentStatus);
         Assert.Equal(RecruitmentTransactionErrorCode.None, negotiation.RecruitmentErrorCode);
-        Assert.Equal(PartyStockTransitionCode.Applied, negotiation.StockTransitionCode);
+        Assert.Equal(PartyRosterTransitionCode.Applied, negotiation.RosterTransitionCode);
         Assert.True(negotiation.Recruited);
         Assert.Equal(100, negotiation.WalletBefore);
         Assert.Equal(50, negotiation.WalletAfter);
-        Assert.Equal(2, negotiation.DemonStockCountBefore);
-        Assert.Equal(3, negotiation.DemonStockCountAfter);
+        Assert.Equal(2, negotiation.CompanionRosterCountBefore);
+        Assert.Equal(3, negotiation.CompanionRosterCountAfter);
         Assert.Equal(50, summary.Wallet.Balance);
         Assert.Contains(
-            summary.PartyStock.DemonStock,
+            summary.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
         Assert.Contains(summary.BattleKnowledge.ElementalAffinities, knowledge =>
             knowledge.EntityId == Qualified("bramble_runner") &&
@@ -507,7 +507,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string text = output.ToString();
         Assert.Contains("Negotiation opened: Steady Sample; target Bramble Runner; wallet 100 M.", text, StringComparison.Ordinal);
         Assert.Contains("Negotiation event: MoodPositive; Bramble Runner seems pleased with your answers.", text, StringComparison.Ordinal);
-        Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->50 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        Assert.Contains("Recruitment applied: Bramble Runner joined Companion roster; wallet 100->50 M; Companion roster 2->3.", text, StringComparison.Ordinal);
         Assert.Contains(
             "Compendium first-acquisition record added: Bramble Runner (negotiation).",
             text,
@@ -615,7 +615,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
         Assert.Equal(Qualified("ashling"), entry.EntityId);
-        Assert.Equal(RuntimeInstanceId.Parse("demon_ashling"), summary.PartyStock.DemonStock[0].InstanceId);
+        Assert.Equal(RuntimeInstanceId.Parse("demon_ashling"), summary.PartyRoster.CompanionRoster[0].InstanceId);
 
         TrainingAnnexCompendiumEvidence evidence = Assert.Single(summary.CompendiumEvidence);
         Assert.Equal(TrainingAnnexCompendiumAction.Register, evidence.Action);
@@ -666,15 +666,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(3_850, recall.Cost);
         Assert.Equal(5_000, recall.WalletBefore);
         Assert.Equal(1_150, recall.WalletAfter);
-        Assert.Equal(2, recall.DemonStockBefore);
-        Assert.Equal(3, recall.DemonStockAfter);
+        Assert.Equal(2, recall.CompanionRosterBefore);
+        Assert.Equal(3, recall.CompanionRosterAfter);
         Assert.Equal(1_150, summary.Wallet.Balance);
-        Assert.Contains(summary.PartyStock.DemonStock, actor =>
+        Assert.Contains(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
         Assert.Contains(summary.ActorInstanceIds, id => id == RuntimeInstanceId.Parse("recall_ward_shell_1"));
         Assert.Contains(
-            "Compendium recall applied: Ward Shell; wallet 5000->1150 M; Demon stock 2->3.",
+            "Compendium recall applied: Ward Shell; wallet 5000->1150 M; Companion roster 2->3.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -695,8 +695,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(recall.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.InsufficientCurrency, recall.RecallCode);
         Assert.Equal(0, summary.Wallet.Balance);
-        Assert.Equal(2, summary.PartyStock.DemonStock.Count);
-        Assert.DoesNotContain(summary.PartyStock.DemonStock, actor =>
+        Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
+        Assert.DoesNotContain(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1"));
         Assert.Contains(
             "Compendium rejected [InsufficientCurrency]",
@@ -744,7 +744,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.ManualSaveCount);
         Assert.Equal(1, summary.ManualLoadCount);
         Assert.Equal(1_150, summary.Wallet.Balance);
-        Assert.Contains(summary.PartyStock.DemonStock, actor =>
+        Assert.Contains(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
         Assert.Contains(summary.ActorInstanceIds, id => id == RuntimeInstanceId.Parse("recall_ward_shell_1"));
@@ -843,13 +843,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(transaction.Committed);
         Assert.False(transaction.MutatedRuntimeState);
         Assert.Null(transaction.CommitResult);
-        Assert.Equal(2, transaction.DemonStockCountBefore);
-        Assert.Equal(2, transaction.DemonStockCountAfter);
-        Assert.Empty(transaction.StockTransitions);
+        Assert.Equal(2, transaction.CompanionRosterCountBefore);
+        Assert.Equal(2, transaction.CompanionRosterCountAfter);
+        Assert.Empty(transaction.RosterTransitions);
         Assert.Equal(10, summary.ActorCount);
         Assert.Equal(
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
-            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
 
         string text = output.ToString();
         Assert.Contains(
@@ -873,7 +873,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(
             [
-                CleanTrainingAnnexPlayCommand.OpenPartyStockOperations,
+                CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations,
                 CleanTrainingAnnexPlayCommand.PartyReplaceWardShell,
                 CleanTrainingAnnexPlayCommand.CommitFusionTransaction,
                 CleanTrainingAnnexPlayCommand.BuildFusionPreview,
@@ -885,9 +885,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         TrainingAnnexPartyTransitionEvidence replacement = Assert.Single(summary.PartyTransitions);
         Assert.Equal("replace_demon", replacement.Operation);
-        Assert.Equal(PartyStockTransitionCode.Applied, replacement.Code);
-        Assert.Equal(2, replacement.DemonStockCountBefore);
-        Assert.Equal(2, replacement.DemonStockCountAfter);
+        Assert.Equal(PartyRosterTransitionCode.Applied, replacement.Code);
+        Assert.Equal(2, replacement.CompanionRosterCountBefore);
+        Assert.Equal(2, replacement.CompanionRosterCountAfter);
         Assert.Equal(
             [TrainingAnnexHostSupport.DemonWardShellInstance, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance],
             replacement.AffectedInstanceIds);
@@ -910,14 +910,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         FusionTransactionCommitResult commit = Assert.IsType<FusionTransactionCommitResult>(transaction.CommitResult);
         Assert.True(commit.Applied);
         Assert.Equal(FusionTransactionCommitCode.Applied, commit.Code);
-        Assert.Same(commit.PreparedTransaction.AfterPartyStock, commit.AfterPartyStock);
+        Assert.Same(commit.PreparedTransaction.AfterPartyRoster, commit.AfterPartyRoster);
         Assert.Equal(RuntimeInstanceId.Parse("fusion_ward_shell_1"), commit.ResultActorSnapshot?.Identity.InstanceId);
-        Assert.Equal(2, transaction.DemonStockCountBefore);
-        Assert.Equal(1, transaction.DemonStockCountAfter);
-        Assert.Equal(3, transaction.StockTransitions.Count);
-        Assert.All(transaction.StockTransitions, transition => Assert.Equal(PartyStockTransitionCode.Applied, transition.Code));
+        Assert.Equal(2, transaction.CompanionRosterCountBefore);
+        Assert.Equal(1, transaction.CompanionRosterCountAfter);
+        Assert.Equal(3, transaction.RosterTransitions.Count);
+        Assert.All(transaction.RosterTransitions, transition => Assert.Equal(PartyRosterTransitionCode.Applied, transition.Code));
 
-        RuntimeActorReferenceSnapshot fusedDemon = Assert.Single(summary.PartyStock.DemonStock);
+        RuntimeActorReferenceSnapshot fusedDemon = Assert.Single(summary.PartyRoster.CompanionRoster);
         Assert.Equal(RuntimeInstanceId.Parse("fusion_ward_shell_1"), fusedDemon.InstanceId);
         Assert.Equal(Qualified("ward_shell"), fusedDemon.EntityDefinitionId);
         Assert.Equal(11, summary.ActorCount);
@@ -949,7 +949,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         string text = output.ToString();
         Assert.Contains(
-            "Fusion transaction committed: Ashling (demon_ashling) + Bramble Runner (replacement_bramble_runner) -> Ward Shell; consumed demon_ashling, replacement_bramble_runner; added fusion_ward_shell_1; Demon stock 2->1.",
+            "Fusion transaction committed: Ashling (demon_ashling) + Bramble Runner (replacement_bramble_runner) -> Ward Shell; consumed demon_ashling, replacement_bramble_runner; added fusion_ward_shell_1; Companion roster 2->1.",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -1061,10 +1061,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(transaction.Committed);
         Assert.False(transaction.MutatedRuntimeState);
         Assert.Null(transaction.CommitResult);
-        Assert.Empty(transaction.StockTransitions);
+        Assert.Empty(transaction.RosterTransitions);
         Assert.Equal(
             [TrainingAnnexHostSupport.DemonAshlingInstance, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance],
-            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
         Assert.DoesNotContain(RuntimeInstanceId.Parse("fusion_ward_shell_1"), summary.ActorInstanceIds);
         Assert.Contains(
             "Fusion transaction canceled at confirmation. No runtime state was mutated.",
@@ -1078,14 +1078,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster originalRoster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
-        RuntimePartyStockSnapshot party = new TrainingAnnexPartyController()
+        RuntimePartyRosterSnapshot party = new TrainingAnnexPartyController()
             .CreateInitialParty(originalRoster)
             .Snapshot;
         TrainingAnnexRuntimeActor selectedCandidate = originalRoster.Enemies
             .Single(actor => actor.Actor.State.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"))
             with
             {
-                Role = "Demon Replacement Candidate"
+                Role = "Companion Replacement Candidate"
             };
         var roster = new TrainingAnnexActorRoster(
             originalRoster.Player,
@@ -1116,7 +1116,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(evidence.Recruited);
         Assert.Equal(50, evidence.WalletAfter);
         Assert.Contains(
-            result.PartyStock.DemonStock,
+            result.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"));
         Assert.Equal(
             [
@@ -1155,7 +1155,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(70, negotiation.WalletAfter);
         Assert.Equal(70, summary.Wallet.Balance);
         Assert.Contains(
-            "Recruitment applied: Bramble Runner joined Demon stock; wallet 100->70 M; Demon stock 2->3.",
+            "Recruitment applied: Bramble Runner joined Companion roster; wallet 100->70 M; Companion roster 2->3.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -1180,16 +1180,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(NegotiationOutcomeReason.CurrencyRefused, negotiation.Reason);
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
-        Assert.Null(negotiation.StockTransitionCode);
+        Assert.Null(negotiation.RosterTransitionCode);
         Assert.Equal(100, negotiation.WalletBefore);
         Assert.Equal(100, negotiation.WalletAfter);
-        Assert.Equal(2, negotiation.DemonStockCountBefore);
-        Assert.Equal(2, negotiation.DemonStockCountAfter);
+        Assert.Equal(2, negotiation.CompanionRosterCountBefore);
+        Assert.Equal(2, negotiation.CompanionRosterCountAfter);
         Assert.Equal(100, summary.Wallet.Balance);
         Assert.DoesNotContain(
-            summary.PartyStock.DemonStock,
+            summary.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
-        Assert.Contains("Negotiation ended: Failure (MaccaRefused); wallet and Demon stock are unchanged.", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Negotiation ended: Failure (MaccaRefused); wallet and Companion roster are unchanged.", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -1213,20 +1213,20 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, negotiation.MaccaSpent);
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
-        Assert.Null(negotiation.StockTransitionCode);
+        Assert.Null(negotiation.RosterTransitionCode);
         Assert.Equal(40, negotiation.WalletBefore);
         Assert.Equal(40, negotiation.WalletAfter);
-        Assert.Equal(2, negotiation.DemonStockCountBefore);
-        Assert.Equal(2, negotiation.DemonStockCountAfter);
+        Assert.Equal(2, negotiation.CompanionRosterCountBefore);
+        Assert.Equal(2, negotiation.CompanionRosterCountAfter);
         Assert.Equal(40, summary.Wallet.Balance);
         Assert.DoesNotContain(
             summary.Commands,
             command => command == CleanTrainingAnnexPlayCommand.SelectNegotiationDemand);
         Assert.DoesNotContain(
-            summary.PartyStock.DemonStock,
+            summary.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
         Assert.Contains(
-            "Negotiation ended: Failure (InsufficientMacca); wallet and Demon stock are unchanged.",
+            "Negotiation ended: Failure (InsufficientMacca); wallet and Companion roster are unchanged.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -1253,12 +1253,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(NegotiationOutcomeKind.FamiliarFlee, second.Outcome);
         Assert.Equal(NegotiationOutcomeReason.FamiliarTarget, second.Reason);
         Assert.False(second.Recruited);
-        Assert.Equal(3, second.DemonStockCountBefore);
-        Assert.Equal(3, second.DemonStockCountAfter);
+        Assert.Equal(3, second.CompanionRosterCountBefore);
+        Assert.Equal(3, second.CompanionRosterCountAfter);
         Assert.Equal(50, second.WalletBefore);
         Assert.Equal(50, second.WalletAfter);
         Assert.Single(
-            summary.PartyStock.DemonStock,
+            summary.PartyRoster.CompanionRoster,
             actor => actor.EntityDefinitionId == Qualified("bramble_runner"));
         Assert.Contains(
             io.Menus.SelectMany(menu => menu.Options),
@@ -2578,15 +2578,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Theory]
     [InlineData(true, RulesetBindingDiagnosticCode.MissingRuleset)]
     [InlineData(false, RulesetBindingDiagnosticCode.CategoryMismatch)]
-    public async Task CleanTrainingAnnexPlay_InvalidStockCapacityBindingFailsBeforeSession(
+    public async Task CleanTrainingAnnexPlay_InvalidRosterCapacityBindingFailsBeforeSession(
         bool removeRuleset,
         RulesetBindingDiagnosticCode expectedCode)
     {
         var io = new ScriptedGameIO();
         using var output = new StringWriter();
         IContentPackTextSource source = removeRuleset
-            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_stock_capacity")
-            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_stock_capacity", "damage");
+            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_roster_capacity")
+            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_roster_capacity", "damage");
         var host = CreateHost(io, output, source);
 
         int exitCode = await host.RunAsync();
@@ -2594,7 +2594,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(4, exitCode);
         Assert.Null(host.LastSummary);
         Assert.Empty(io.Menus);
-        Assert.Contains($"[stock_capacity:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains($"[roster_capacity:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3309,17 +3309,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 .ToArray();
             RuntimeActorReferenceSnapshot playerReference = Reference(
                 Assert.Single(actors, actor => actor.Identity.InstanceId == playerId));
-            RuntimePartyStockSnapshot party = new(
+            RuntimePartyRosterSnapshot party = new(
                 playerReference,
-                snapshot.PartyStock.OwnerLevel,
-                activeParty: snapshot.PartyStock.ActiveParty.Select(reference =>
+                snapshot.PartyRoster.OwnerLevel,
+                activeParty: snapshot.PartyRoster.ActiveParty.Select(reference =>
                     reference.InstanceId == playerId ? playerReference : reference),
-                reserveMembers: snapshot.PartyStock.ReserveMembers,
-                activeForm: snapshot.PartyStock.ActiveForm,
-                personaStock: snapshot.PartyStock.PersonaStock,
-                demonStock: snapshot.PartyStock.DemonStock,
-                maxActivePartySize: snapshot.PartyStock.MaxActivePartySize);
-            return CopySave(snapshot, actors: actors, partyStock: party);
+                reserveMembers: snapshot.PartyRoster.ReserveMembers,
+                activeHostedEntity: snapshot.PartyRoster.ActiveHostedEntity,
+                hostedEntityRoster: snapshot.PartyRoster.HostedEntityRoster,
+                companionRoster: snapshot.PartyRoster.CompanionRoster,
+                maxActivePartySize: snapshot.PartyRoster.MaxActivePartySize);
+            return CopySave(snapshot, actors: actors, partyRoster: party);
         });
         var slots = new TrainingAnnexSaveSlotStore();
         slots.Save(record);
@@ -3344,21 +3344,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsEnemyInSavedPartyStockBeforeMutation()
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsEnemyInSavedPartyRosterBeforeMutation()
     {
         RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
         {
             RuntimeActorReferenceSnapshot enemyReference = Reference(
                 Assert.Single(snapshot.Actors, actor =>
                     actor.Identity.InstanceId == RuntimeInstanceId.Parse("enemy_ashling")));
-            RuntimePartyStockSnapshot corruptedParty = new(
-                snapshot.PartyStock.Owner,
-                snapshot.PartyStock.OwnerLevel,
-                activeParty: snapshot.PartyStock.ActiveParty,
+            RuntimePartyRosterSnapshot corruptedParty = new(
+                snapshot.PartyRoster.Owner,
+                snapshot.PartyRoster.OwnerLevel,
+                activeParty: snapshot.PartyRoster.ActiveParty,
                 reserveMembers: [enemyReference],
-                maxActivePartySize: snapshot.PartyStock.MaxActivePartySize);
+                maxActivePartySize: snapshot.PartyRoster.MaxActivePartySize);
 
-            return CopySave(snapshot, partyStock: corruptedParty);
+            return CopySave(snapshot, partyRoster: corruptedParty);
         });
         var slots = new TrainingAnnexSaveSlotStore();
         slots.Save(record);
@@ -3375,7 +3375,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.SaveDiagnosticCount);
         Assert.Equal(
             [RuntimeInstanceId.Parse("support_annex_mentor")],
-            summary.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
+            summary.PartyRoster.ReserveMembers.Select(actor => actor.InstanceId));
         Assert.Contains(
             "Manual load rejected: Saved reserve party actor 'enemy_ashling' belongs to team 'enemy_team', expected 'player_team'.",
             output.ToString(),
@@ -3384,17 +3384,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsEnemyInSavedDemonStockBeforeMutation()
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsEnemyInSavedCompanionRosterBeforeMutation()
     {
         RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
         {
             RuntimeActorReferenceSnapshot enemyReference = Reference(
                 Assert.Single(snapshot.Actors, actor =>
                     actor.Identity.InstanceId == RuntimeInstanceId.Parse("enemy_ashling")));
-            RuntimePartyStockSnapshot corruptedParty = snapshot.PartyStock.With(
-                demonStock: [enemyReference]);
+            RuntimePartyRosterSnapshot corruptedParty = snapshot.PartyRoster.With(
+                companionRoster: [enemyReference]);
 
-            return CopySave(snapshot, partyStock: corruptedParty);
+            return CopySave(snapshot, partyRoster: corruptedParty);
         });
         var slots = new TrainingAnnexSaveSlotStore();
         slots.Save(record);
@@ -3411,9 +3411,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.SaveDiagnosticCount);
         Assert.Equal(
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
-            summary.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            summary.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
         Assert.Contains(
-            "Manual load rejected: Saved Demon stock actor 'enemy_ashling' belongs to team 'enemy_team', expected 'player_team'.",
+            "Manual load rejected: Saved Companion roster actor 'enemy_ashling' belongs to team 'enemy_team', expected 'player_team'.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -3515,12 +3515,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
-        RuntimePartyStockSnapshot partyStock = new TrainingAnnexPartyController()
+        RuntimePartyRosterSnapshot partyRoster = new TrainingAnnexPartyController()
             .CreateInitialParty(roster)
             .Snapshot;
         RuntimeSaveGameSnapshot snapshot = TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
             roster,
-            partyStock,
+            partyRoster,
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance)),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot([new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
@@ -3537,19 +3537,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(RuntimeSaveGameSnapshot.CurrentContractVersion, snapshot.ContractVersion);
         Assert.Equal(
             [RuntimeInstanceId.Parse("echo_adept")],
-            snapshot.PartyStock.ActiveParty.Select(actor => actor.InstanceId));
+            snapshot.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("support_annex_mentor")],
-            snapshot.PartyStock.ReserveMembers.Select(actor => actor.InstanceId));
-        Assert.NotNull(snapshot.PartyStock.ActiveForm);
-        RuntimeActorReferenceSnapshot activeForm = snapshot.PartyStock.ActiveForm!;
-        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeForm.InstanceId);
+            snapshot.PartyRoster.ReserveMembers.Select(actor => actor.InstanceId));
+        Assert.NotNull(snapshot.PartyRoster.ActiveHostedEntity);
+        RuntimeActorReferenceSnapshot activeHostedEntity = snapshot.PartyRoster.ActiveHostedEntity!;
+        Assert.Equal(RuntimeInstanceId.Parse("form_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
             [RuntimeInstanceId.Parse("persona_bramble_runner")],
-            snapshot.PartyStock.PersonaStock.Select(actor => actor.InstanceId));
+            snapshot.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("demon_ashling"), RuntimeInstanceId.Parse("demon_ward_shell")],
-            snapshot.PartyStock.DemonStock.Select(actor => actor.InstanceId));
+            snapshot.PartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
         Assert.Equal("True", snapshot.HostContext[ContentId.Parse("ashling_trigger_consumed")]);
         Assert.Equal("True", snapshot.HostContext[ContentId.Parse("prepared_battle_started")]);
         Assert.Equal("Victory", snapshot.HostContext[ContentId.Parse("prepared_battle_outcome")]);
@@ -3827,12 +3827,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
-        RuntimePartyStockSnapshot partyStock = new TrainingAnnexPartyController()
+        RuntimePartyRosterSnapshot partyRoster = new TrainingAnnexPartyController()
             .CreateInitialParty(roster)
             .Snapshot;
         RuntimeSaveGameSnapshot snapshot = TrainingAnnexHostSupport.BuildStartupSaveSnapshot(
             roster,
-            partyStock,
+            partyRoster,
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea)),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot(
@@ -3850,12 +3850,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         IEnumerable<RuntimeActorSnapshot>? actors = null,
         RuntimeFieldSnapshot? field = null,
         IEnumerable<ContentPackIdentity>? contentPacks = null,
-        RuntimePartyStockSnapshot? partyStock = null) =>
+        RuntimePartyRosterSnapshot? partyRoster = null) =>
         new(
             snapshot.FrameworkVersion,
             contentPacks ?? snapshot.ContentPacks,
             actors ?? snapshot.Actors,
-            partyStock ?? snapshot.PartyStock,
+            partyRoster ?? snapshot.PartyRoster,
             snapshot.Inventory,
             snapshot.Equipment,
             snapshot.Wallet,
@@ -3885,7 +3885,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             actor.Resources,
             actor.Stats,
             actor.Skills,
-            actor.Forms,
+            actor.Rosters,
             actor.Equipment,
             actor.BattleStatus,
             actor.BattleActivations,

@@ -8,10 +8,10 @@ namespace Convergence.Fusion;
 public sealed record FusionTransactionPreparationRequest
 {
     public FusionTransactionPreparationRequest(
-        FusionParticipantStockKind ownerKind,
+        FusionParticipantRosterKind ownerKind,
         FusionPlanningResult plan,
         ValidatedFusionInheritanceSelection inheritanceSelection,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeInstanceId proposedResultInstanceId,
         ContentId resultTeamId,
         ContentId? resultControllerId = null,
@@ -25,17 +25,17 @@ public sealed record FusionTransactionPreparationRequest
         OwnerKind = ownerKind;
         Plan = plan ?? throw new ArgumentNullException(nameof(plan));
         InheritanceSelection = inheritanceSelection ?? throw new ArgumentNullException(nameof(inheritanceSelection));
-        PartyStock = partyStock ?? throw new ArgumentNullException(nameof(partyStock));
+        PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         ProposedResultInstanceId = proposedResultInstanceId;
         ResultTeamId = resultTeamId;
         ResultControllerId = resultControllerId;
         ExistingResultActor = existingResultActor;
     }
 
-    public FusionParticipantStockKind OwnerKind { get; }
+    public FusionParticipantRosterKind OwnerKind { get; }
     public FusionPlanningResult Plan { get; }
     public ValidatedFusionInheritanceSelection InheritanceSelection { get; }
-    public RuntimePartyStockSnapshot PartyStock { get; }
+    public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeInstanceId ProposedResultInstanceId { get; }
     public ContentId ResultTeamId { get; }
     public ContentId? ResultControllerId { get; }
@@ -45,7 +45,7 @@ public sealed record FusionTransactionPreparationRequest
 public sealed record PreparedFusionTransaction
 {
     internal PreparedFusionTransaction(
-        FusionParticipantStockKind ownerKind,
+        FusionParticipantRosterKind ownerKind,
         FusionPlanningResult plan,
         ValidatedFusionInheritanceSelection inheritanceSelection,
         FusionPreviewSnapshot preview,
@@ -53,12 +53,12 @@ public sealed record PreparedFusionTransaction
         ContentId resultTeamId,
         ContentId? resultControllerId,
         RuntimeActorSnapshot? existingResultActor,
-        RuntimePartyStockSnapshot beforePartyStock,
-        RuntimePartyStockSnapshot afterPartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
+        RuntimePartyRosterSnapshot afterPartyRoster,
         IEnumerable<RuntimeInstanceId> consumedParticipantIds,
         IEnumerable<ContentId> resultLearnedSkillIds,
         IEnumerable<ContentId> resultEquippedSkillIds,
-        IEnumerable<PartyStockTransitionResult> stockTransitions)
+        IEnumerable<PartyRosterTransitionResult> rosterTransitions)
     {
         OwnerKind = ownerKind;
         Plan = plan;
@@ -68,15 +68,15 @@ public sealed record PreparedFusionTransaction
         ResultTeamId = resultTeamId;
         ResultControllerId = resultControllerId;
         ExistingResultActor = existingResultActor;
-        BeforePartyStock = beforePartyStock;
-        AfterPartyStock = afterPartyStock;
+        BeforePartyRoster = beforePartyRoster;
+        AfterPartyRoster = afterPartyRoster;
         ConsumedParticipantIds = Array.AsReadOnly(consumedParticipantIds.ToArray());
         ResultLearnedSkillIds = Array.AsReadOnly(resultLearnedSkillIds.ToArray());
         ResultEquippedSkillIds = Array.AsReadOnly(resultEquippedSkillIds.ToArray());
-        StockTransitions = Array.AsReadOnly(stockTransitions.ToArray());
+        RosterTransitions = Array.AsReadOnly(rosterTransitions.ToArray());
     }
 
-    public FusionParticipantStockKind OwnerKind { get; }
+    public FusionParticipantRosterKind OwnerKind { get; }
     public FusionPlanningResult Plan { get; }
     public ValidatedFusionInheritanceSelection InheritanceSelection { get; }
     public FusionPreviewSnapshot Preview { get; }
@@ -84,41 +84,41 @@ public sealed record PreparedFusionTransaction
     public ContentId ResultTeamId { get; }
     public ContentId? ResultControllerId { get; }
     public RuntimeActorSnapshot? ExistingResultActor { get; }
-    public RuntimePartyStockSnapshot BeforePartyStock { get; }
-    public RuntimePartyStockSnapshot AfterPartyStock { get; }
+    public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
+    public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
     public IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds { get; }
     public IReadOnlyList<ContentId> ResultLearnedSkillIds { get; }
     public IReadOnlyList<ContentId> ResultEquippedSkillIds { get; }
-    public IReadOnlyList<PartyStockTransitionResult> StockTransitions { get; }
+    public IReadOnlyList<PartyRosterTransitionResult> RosterTransitions { get; }
 }
 
 public sealed record FusionTransactionAssessment
 {
     internal FusionTransactionAssessment(
         PreparedFusionTransaction? preparedTransaction,
-        RuntimePartyStockSnapshot beforePartyStock,
-        RuntimePartyStockSnapshot afterPartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
+        RuntimePartyRosterSnapshot afterPartyRoster,
         ContentId? resultEntityId,
         IEnumerable<RuntimeInstanceId>? consumedParticipantIds = null,
-        IEnumerable<PartyStockTransitionResult>? stockTransitions = null,
+        IEnumerable<PartyRosterTransitionResult>? rosterTransitions = null,
         IEnumerable<FusionRuntimeDiagnostic>? diagnostics = null)
     {
         PreparedTransaction = preparedTransaction;
-        BeforePartyStock = beforePartyStock;
-        AfterPartyStock = afterPartyStock;
+        BeforePartyRoster = beforePartyRoster;
+        AfterPartyRoster = afterPartyRoster;
         ResultEntityId = resultEntityId;
         ConsumedParticipantIds = Array.AsReadOnly((consumedParticipantIds ?? []).ToArray());
-        StockTransitions = Array.AsReadOnly((stockTransitions ?? []).ToArray());
+        RosterTransitions = Array.AsReadOnly((rosterTransitions ?? []).ToArray());
         Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
     }
 
     public bool CanCommit => PreparedTransaction is not null && Diagnostics.Count == 0;
     public PreparedFusionTransaction? PreparedTransaction { get; }
-    public RuntimePartyStockSnapshot BeforePartyStock { get; }
-    public RuntimePartyStockSnapshot AfterPartyStock { get; }
+    public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
+    public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
     public ContentId? ResultEntityId { get; }
     public IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds { get; }
-    public IReadOnlyList<PartyStockTransitionResult> StockTransitions { get; }
+    public IReadOnlyList<PartyRosterTransitionResult> RosterTransitions { get; }
     public IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics { get; }
 
     public PreparedFusionTransaction RequirePreparedTransaction() =>
@@ -130,16 +130,16 @@ public sealed record FusionTransactionCommitRequest
 {
     public FusionTransactionCommitRequest(
         PreparedFusionTransaction preparedTransaction,
-        RuntimePartyStockSnapshot currentPartyStock,
+        RuntimePartyRosterSnapshot currentPartyRoster,
         RuntimeActorSnapshot? currentResultActor = null)
     {
         PreparedTransaction = preparedTransaction ?? throw new ArgumentNullException(nameof(preparedTransaction));
-        CurrentPartyStock = currentPartyStock ?? throw new ArgumentNullException(nameof(currentPartyStock));
+        CurrentPartyRoster = currentPartyRoster ?? throw new ArgumentNullException(nameof(currentPartyRoster));
         CurrentResultActor = currentResultActor;
     }
 
     public PreparedFusionTransaction PreparedTransaction { get; }
-    public RuntimePartyStockSnapshot CurrentPartyStock { get; }
+    public RuntimePartyRosterSnapshot CurrentPartyRoster { get; }
     public RuntimeActorSnapshot? CurrentResultActor { get; }
 }
 
@@ -155,40 +155,40 @@ public sealed record FusionTransactionCommitResult
     internal FusionTransactionCommitResult(
         FusionTransactionCommitCode code,
         PreparedFusionTransaction preparedTransaction,
-        RuntimePartyStockSnapshot beforePartyStock,
-        RuntimePartyStockSnapshot afterPartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
+        RuntimePartyRosterSnapshot afterPartyRoster,
         CatalogBattleActor? resultActor,
         RuntimeActorSnapshot? resultActorSnapshot,
         IEnumerable<FusionRuntimeDiagnostic>? diagnostics = null)
     {
         Code = code;
         PreparedTransaction = preparedTransaction;
-        BeforePartyStock = beforePartyStock;
-        AfterPartyStock = afterPartyStock;
+        BeforePartyRoster = beforePartyRoster;
+        AfterPartyRoster = afterPartyRoster;
         ResultActor = resultActor;
         ResultActorSnapshot = resultActorSnapshot;
         ConsumedParticipantIds = code == FusionTransactionCommitCode.Applied
             ? preparedTransaction.ConsumedParticipantIds
             : Array.AsReadOnly(Array.Empty<RuntimeInstanceId>());
-        StockTransitions = code == FusionTransactionCommitCode.Applied
-            ? preparedTransaction.StockTransitions
-            : Array.AsReadOnly(Array.Empty<PartyStockTransitionResult>());
+        RosterTransitions = code == FusionTransactionCommitCode.Applied
+            ? preparedTransaction.RosterTransitions
+            : Array.AsReadOnly(Array.Empty<PartyRosterTransitionResult>());
         Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
     }
 
     public FusionTransactionCommitCode Code { get; }
     public bool Applied => Code == FusionTransactionCommitCode.Applied;
     public PreparedFusionTransaction PreparedTransaction { get; }
-    public RuntimePartyStockSnapshot BeforePartyStock { get; }
-    public RuntimePartyStockSnapshot AfterPartyStock { get; }
+    public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
+    public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
     public CatalogBattleActor? ResultActor { get; }
     public RuntimeActorSnapshot? ResultActorSnapshot { get; }
     public IReadOnlyList<RuntimeInstanceId> ConsumedParticipantIds { get; }
-    public IReadOnlyList<PartyStockTransitionResult> StockTransitions { get; }
+    public IReadOnlyList<PartyRosterTransitionResult> RosterTransitions { get; }
     public IReadOnlyList<RuntimeInstanceId> PlannedConsumedParticipantIds =>
         PreparedTransaction.ConsumedParticipantIds;
-    public IReadOnlyList<PartyStockTransitionResult> PlannedStockTransitions =>
-        PreparedTransaction.StockTransitions;
+    public IReadOnlyList<PartyRosterTransitionResult> PlannedRosterTransitions =>
+        PreparedTransaction.RosterTransitions;
     public IReadOnlyList<FusionRuntimeDiagnostic> Diagnostics { get; }
 }
 
@@ -201,16 +201,16 @@ public interface IFusionTransactionService
 public sealed class FusionTransactionService : IFusionTransactionService
 {
     private readonly ICatalogBattleActorFactory _actorFactory;
-    private readonly IPartyStockTransitionService _partyStock;
+    private readonly IPartyRosterTransitionService _partyRoster;
     private readonly IFusionPreviewService _previews;
 
     public FusionTransactionService(
         ICatalogBattleActorFactory actorFactory,
-        IPartyStockTransitionService partyStock,
+        IPartyRosterTransitionService partyRoster,
         IFusionPreviewService? previews = null)
     {
         _actorFactory = actorFactory ?? throw new ArgumentNullException(nameof(actorFactory));
-        _partyStock = partyStock ?? throw new ArgumentNullException(nameof(partyStock));
+        _partyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         _previews = previews ?? new FusionPreviewService();
     }
 
@@ -221,12 +221,12 @@ public sealed class FusionTransactionService : IFusionTransactionService
         if (!plan.IsSuccessful || plan.ResultEntity is null)
         {
             return Rejected(
-                request.PartyStock,
+                request.PartyRoster,
                 FusionRuntimeDiagnosticCode.NoFusionPossible,
                 "The fusion plan has no result.");
         }
 
-        FusionTransactionAssessment? participantFailure = ValidateParticipants(plan, request.PartyStock);
+        FusionTransactionAssessment? participantFailure = ValidateParticipants(plan, request.PartyRoster);
         if (participantFailure is not null)
         {
             return participantFailure;
@@ -235,7 +235,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         FusionTransactionAssessment? selectionFailure = ValidateSelection(
             plan,
             request.InheritanceSelection,
-            request.PartyStock);
+            request.PartyRoster);
         if (selectionFailure is not null)
         {
             return selectionFailure;
@@ -247,7 +247,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         if (preview is null)
         {
             return Rejected(
-                request.PartyStock,
+                request.PartyRoster,
                 FusionRuntimeDiagnosticCode.NoFusionPossible,
                 "The fusion preview could not be constructed.");
         }
@@ -255,17 +255,17 @@ public sealed class FusionTransactionService : IFusionTransactionService
             !preview.InheritedSkillIds.SequenceEqual(request.InheritanceSelection.SelectedSkillIds))
         {
             return Rejected(
-                request.PartyStock,
+                request.PartyRoster,
                 FusionRuntimeDiagnosticCode.InvalidPreview,
                 "The fusion preview does not match the planned result and validated inheritance selection.",
                 plan.ResultEntity.Id);
         }
 
         if (plan.Result.Operation == FusionRuntimeOperation.CreateNewEntity &&
-            OwnsEntity(request.PartyStock, request.OwnerKind, preview.EntityId))
+            OwnsEntity(request.PartyRoster, request.OwnerKind, preview.EntityId))
         {
             return Rejected(
-                request.PartyStock,
+                request.PartyRoster,
                 FusionRuntimeDiagnosticCode.DuplicateResult,
                 "The fusion result is already owned.",
                 preview.EntityId);
@@ -278,7 +278,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 transformedParent.InstanceId != resultInstanceId)
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     FusionRuntimeDiagnosticCode.ResultIdentityInUse,
                     "A stat-boost fusion must retain the owned transformed parent's runtime identity.",
                     preview.EntityId,
@@ -293,7 +293,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                  existingResultActor.Ownership.ControllerId != resultControllerId))
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     FusionRuntimeDiagnosticCode.ResultActorSnapshotInvalid,
                     "A stat-boost fusion requires the matching existing actor snapshot during preparation.",
                     preview.EntityId,
@@ -305,17 +305,17 @@ public sealed class FusionTransactionService : IFusionTransactionService
             if (request.ExistingResultActor is not null)
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     FusionRuntimeDiagnosticCode.ResultActorSnapshotInvalid,
                     "Only a stat-boost fusion may supply an existing result actor snapshot.",
                     preview.EntityId,
                     resultInstanceId);
             }
 
-            if (RuntimePartyStockIdentityRules.ContainsInstanceId(request.PartyStock, resultInstanceId))
+            if (RuntimePartyRosterIdentityRules.ContainsInstanceId(request.PartyRoster, resultInstanceId))
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     FusionRuntimeDiagnosticCode.ResultIdentityInUse,
                     $"Fusion result runtime instance ID '{resultInstanceId}' is already in use.",
                     preview.EntityId,
@@ -326,25 +326,25 @@ public sealed class FusionTransactionService : IFusionTransactionService
         IReadOnlyList<FusionParticipantSnapshot> consumedParticipants = ConsumedParticipants(plan);
         IReadOnlyList<RuntimeInstanceId> consumedParticipantIds = Array.AsReadOnly(
             consumedParticipants.Select(participant => participant.InstanceId).ToArray());
-        if (consumedParticipantIds.Contains(request.PartyStock.Owner.InstanceId))
+        if (consumedParticipantIds.Contains(request.PartyRoster.Owner.InstanceId))
         {
             return Rejected(
-                request.PartyStock,
-                FusionRuntimeDiagnosticCode.StockTransitionRejected,
+                request.PartyRoster,
+                FusionRuntimeDiagnosticCode.RosterTransitionRejected,
                 "The party/stock owner cannot be consumed by a fusion transaction.",
-                instanceId: request.PartyStock.Owner.InstanceId);
+                instanceId: request.PartyRoster.Owner.InstanceId);
         }
 
         foreach (FusionParticipantSnapshot participant in PlanParticipants(plan))
         {
-            RuntimeActorReferenceSnapshot[] owned = OwnedReferences(request.PartyStock, request.OwnerKind)
+            RuntimeActorReferenceSnapshot[] owned = OwnedReferences(request.PartyRoster, request.OwnerKind)
                 .Where(reference => reference.InstanceId == participant.InstanceId)
                 .ToArray();
             if (owned.Length == 0)
             {
                 return Rejected(
-                    request.PartyStock,
-                    FusionRuntimeDiagnosticCode.StockTransitionRejected,
+                    request.PartyRoster,
+                    FusionRuntimeDiagnosticCode.RosterTransitionRejected,
                     $"Fusion participant '{participant.InstanceId}' is not owned in the selected stock.",
                     participant.EntityId,
                     participant.InstanceId);
@@ -355,8 +355,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
             if (mismatch is not null)
             {
                 return Rejected(
-                    request.PartyStock,
-                    FusionRuntimeDiagnosticCode.StockTransitionRejected,
+                    request.PartyRoster,
+                    FusionRuntimeDiagnosticCode.RosterTransitionRejected,
                     $"Fusion participant '{participant.InstanceId}' identifies entity '{participant.EntityId}', " +
                     $"but an owned reference identifies '{mismatch.EntityDefinitionId}'.",
                     participant.EntityId,
@@ -364,16 +364,16 @@ public sealed class FusionTransactionService : IFusionTransactionService
             }
         }
 
-        RuntimePartyStockSnapshot current = request.PartyStock;
-        var transitions = new List<PartyStockTransitionResult>();
+        RuntimePartyRosterSnapshot current = request.PartyRoster;
+        var transitions = new List<PartyRosterTransitionResult>();
         foreach (RuntimeInstanceId participantId in consumedParticipantIds)
         {
-            PartyStockTransitionResult consumed = Consume(request.OwnerKind, current, participantId);
+            PartyRosterTransitionResult consumed = Consume(request.OwnerKind, current, participantId);
             transitions.Add(consumed);
             if (!consumed.Applied)
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     plan.Result.ResultEntityId,
                     consumedParticipantIds,
                     transitions,
@@ -389,12 +389,12 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 resultInstanceId,
                 preview.EntityId,
                 preview.DisplayName);
-            PartyStockTransitionResult added = Add(request.OwnerKind, current, resultReference);
+            PartyRosterTransitionResult added = Add(request.OwnerKind, current, resultReference);
             transitions.Add(added);
             if (!added.Applied)
             {
                 return Rejected(
-                    request.PartyStock,
+                    request.PartyRoster,
                     plan.Result.ResultEntityId,
                     consumedParticipantIds,
                     transitions,
@@ -415,7 +415,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
             request.ResultTeamId,
             request.ResultControllerId,
             request.ExistingResultActor,
-            request.PartyStock,
+            request.PartyRoster,
             current,
             consumedParticipantIds,
             learnedSkills,
@@ -423,25 +423,25 @@ public sealed class FusionTransactionService : IFusionTransactionService
             transitions);
         return new FusionTransactionAssessment(
             prepared,
-            prepared.BeforePartyStock,
-            prepared.AfterPartyStock,
+            prepared.BeforePartyRoster,
+            prepared.AfterPartyRoster,
             prepared.Preview.EntityId,
             prepared.ConsumedParticipantIds,
-            prepared.StockTransitions);
+            prepared.RosterTransitions);
     }
 
     public FusionTransactionCommitResult Commit(FusionTransactionCommitRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         PreparedFusionTransaction prepared = request.PreparedTransaction;
-        if (!ReferenceEquals(request.CurrentPartyStock, prepared.BeforePartyStock) ||
+        if (!ReferenceEquals(request.CurrentPartyRoster, prepared.BeforePartyRoster) ||
             !ReferenceEquals(request.CurrentResultActor, prepared.ExistingResultActor))
         {
             return new FusionTransactionCommitResult(
                 FusionTransactionCommitCode.PreparationStale,
                 prepared,
-                request.CurrentPartyStock,
-                request.CurrentPartyStock,
+                request.CurrentPartyRoster,
+                request.CurrentPartyRoster,
                 null,
                 null,
                 [
@@ -478,8 +478,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
             return new FusionTransactionCommitResult(
                 FusionTransactionCommitCode.ActorCreationRejected,
                 prepared,
-                request.CurrentPartyStock,
-                prepared.BeforePartyStock,
+                request.CurrentPartyRoster,
+                prepared.BeforePartyRoster,
                 null,
                 null,
                 diagnostics);
@@ -492,8 +492,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
             return new FusionTransactionCommitResult(
                 FusionTransactionCommitCode.ActorCreationRejected,
                 prepared,
-                request.CurrentPartyStock,
-                request.CurrentPartyStock,
+                request.CurrentPartyRoster,
+                request.CurrentPartyRoster,
                 null,
                 null,
                 [
@@ -508,8 +508,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
         return new FusionTransactionCommitResult(
             FusionTransactionCommitCode.Applied,
             prepared,
-            request.CurrentPartyStock,
-            prepared.AfterPartyStock,
+            request.CurrentPartyRoster,
+            prepared.AfterPartyRoster,
             actor,
             snapshot);
     }
@@ -577,7 +577,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
             new RuntimeSkillStateSnapshot(
                 prepared.ResultLearnedSkillIds,
                 prepared.ResultEquippedSkillIds),
-            baseline.Forms,
+            baseline.Rosters,
             baseline.Equipment,
             baseline.BattleStatus,
             baseline.BattleActivations,
@@ -624,12 +624,12 @@ public sealed class FusionTransactionService : IFusionTransactionService
     private static FusionTransactionAssessment? ValidateSelection(
         FusionPlanningResult plan,
         ValidatedFusionInheritanceSelection selection,
-        RuntimePartyStockSnapshot partyStock)
+        RuntimePartyRosterSnapshot partyRoster)
     {
         if (!FusionValidatedSelectionRules.BelongsToPlan(plan, selection))
         {
             return Rejected(
-                partyStock,
+                partyRoster,
                 FusionRuntimeDiagnosticCode.InvalidSelection,
                 "The validated inheritance selection does not belong to this fusion plan.");
         }
@@ -639,13 +639,13 @@ public sealed class FusionTransactionService : IFusionTransactionService
 
     private static FusionTransactionAssessment? ValidateParticipants(
         FusionPlanningResult plan,
-        RuntimePartyStockSnapshot partyStock)
+        RuntimePartyRosterSnapshot partyRoster)
     {
         IReadOnlyList<FusionParticipantSnapshot> participants = PlanParticipants(plan);
         if (plan.FirstParent is null || plan.SecondParent is null || participants.Count < 2)
         {
             return Rejected(
-                partyStock,
+                partyRoster,
                 FusionRuntimeDiagnosticCode.InvalidParticipant,
                 "A successful fusion transaction requires two parent participants.");
         }
@@ -656,7 +656,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         if (duplicate is not null)
         {
             return Rejected(
-                partyStock,
+                partyRoster,
                 FusionRuntimeDiagnosticCode.DuplicateParticipant,
                 $"Runtime actor '{duplicate.Key}' cannot occupy more than one fusion participant slot.",
                 instanceId: duplicate.Key);
@@ -675,7 +675,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 transformed.EntityId != plan.ResultEntity!.Id)
             {
                 return Rejected(
-                    partyStock,
+                    partyRoster,
                     FusionRuntimeDiagnosticCode.InvalidParticipant,
                     "A stat-boost result must identify distinct transformed and catalyst actors from the fusion parents.");
             }
@@ -684,44 +684,44 @@ public sealed class FusionTransactionService : IFusionTransactionService
         return null;
     }
 
-    private PartyStockTransitionResult Consume(
-        FusionParticipantStockKind ownerKind,
-        RuntimePartyStockSnapshot snapshot,
+    private PartyRosterTransitionResult Consume(
+        FusionParticipantRosterKind ownerKind,
+        RuntimePartyRosterSnapshot snapshot,
         RuntimeInstanceId participantId) =>
         ownerKind switch
         {
-            FusionParticipantStockKind.Demon => _partyStock.ConsumeDemon(new ConsumeDemonRequest(snapshot, participantId)),
-            FusionParticipantStockKind.Persona => _partyStock.ConsumePersona(new ConsumePersonaRequest(snapshot, participantId)),
+            FusionParticipantRosterKind.Companion => _partyRoster.ConsumeCompanion(new ConsumeCompanionRequest(snapshot, participantId)),
+            FusionParticipantRosterKind.HostedEntity => _partyRoster.ConsumeHostedEntity(new ConsumeHostedEntityRequest(snapshot, participantId)),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 
-    private PartyStockTransitionResult Add(
-        FusionParticipantStockKind ownerKind,
-        RuntimePartyStockSnapshot snapshot,
+    private PartyRosterTransitionResult Add(
+        FusionParticipantRosterKind ownerKind,
+        RuntimePartyRosterSnapshot snapshot,
         RuntimeActorReferenceSnapshot result) =>
         ownerKind switch
         {
-            FusionParticipantStockKind.Demon => _partyStock.AddDemonToStock(new AddDemonToStockRequest(snapshot, result)),
-            FusionParticipantStockKind.Persona => _partyStock.AddPersonaToStock(new AddPersonaToStockRequest(snapshot, result)),
+            FusionParticipantRosterKind.Companion => _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(snapshot, result)),
+            FusionParticipantRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(new AddHostedEntityToRosterRequest(snapshot, result)),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 
     private static bool OwnsEntity(
-        RuntimePartyStockSnapshot partyStock,
-        FusionParticipantStockKind ownerKind,
+        RuntimePartyRosterSnapshot partyRoster,
+        FusionParticipantRosterKind ownerKind,
         ContentId entityId) =>
-        OwnedReferences(partyStock, ownerKind)
+        OwnedReferences(partyRoster, ownerKind)
             .Any(actor => actor.EntityDefinitionId == entityId);
 
     private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedReferences(
-        RuntimePartyStockSnapshot partyStock,
-        FusionParticipantStockKind ownerKind) =>
+        RuntimePartyRosterSnapshot partyRoster,
+        FusionParticipantRosterKind ownerKind) =>
         ownerKind switch
         {
-            FusionParticipantStockKind.Demon => partyStock.ActiveParty.Concat(partyStock.DemonStock),
-            FusionParticipantStockKind.Persona => partyStock.ActiveForm is RuntimeActorReferenceSnapshot activeForm
-                ? partyStock.PersonaStock.Append(activeForm)
-                : partyStock.PersonaStock,
+            FusionParticipantRosterKind.Companion => partyRoster.ActiveParty.Concat(partyRoster.CompanionRoster),
+            FusionParticipantRosterKind.HostedEntity => partyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity
+                ? partyRoster.HostedEntityRoster.Append(activeHostedEntity)
+                : partyRoster.HostedEntityRoster,
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 
@@ -767,15 +767,15 @@ public sealed class FusionTransactionService : IFusionTransactionService
     }
 
     private static FusionRuntimeDiagnostic TransitionDiagnostic(
-        PartyStockTransitionResult result,
+        PartyRosterTransitionResult result,
         RuntimeInstanceId instanceId)
     {
-        PartyStockTransitionDiagnostic? source = result.Diagnostics.FirstOrDefault();
+        PartyRosterTransitionDiagnostic? source = result.Diagnostics.FirstOrDefault();
         FusionRuntimeDiagnosticCode code = result.Code switch
         {
-            PartyStockTransitionCode.StockFull => FusionRuntimeDiagnosticCode.StockFull,
-            PartyStockTransitionCode.RuntimeInstanceIdInUse => FusionRuntimeDiagnosticCode.ResultIdentityInUse,
-            _ => FusionRuntimeDiagnosticCode.StockTransitionRejected
+            PartyRosterTransitionCode.RosterFull => FusionRuntimeDiagnosticCode.RosterFull,
+            PartyRosterTransitionCode.RuntimeInstanceIdInUse => FusionRuntimeDiagnosticCode.ResultIdentityInUse,
+            _ => FusionRuntimeDiagnosticCode.RosterTransitionRejected
         };
         return new FusionRuntimeDiagnostic(
             code,
@@ -789,28 +789,28 @@ public sealed class FusionTransactionService : IFusionTransactionService
             [new CatalogBattleActorDiagnostic(CatalogBattleActorDiagnosticCode.SnapshotInvalid, message, entityId)]);
 
     private static FusionTransactionAssessment Rejected(
-        RuntimePartyStockSnapshot beforePartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
         ContentId? resultEntityId,
         IEnumerable<RuntimeInstanceId> consumedParticipantIds,
-        IEnumerable<PartyStockTransitionResult> stockTransitions,
+        IEnumerable<PartyRosterTransitionResult> rosterTransitions,
         params FusionRuntimeDiagnostic[] diagnostics) =>
         new(
             null,
-            beforePartyStock,
-            beforePartyStock,
+            beforePartyRoster,
+            beforePartyRoster,
             resultEntityId,
             consumedParticipantIds,
-            stockTransitions,
+            rosterTransitions,
             diagnostics);
 
     private static FusionTransactionAssessment Rejected(
-        RuntimePartyStockSnapshot beforePartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
         FusionRuntimeDiagnosticCode code,
         string message,
         ContentId? contentId = null,
         RuntimeInstanceId? instanceId = null) =>
         Rejected(
-            beforePartyStock,
+            beforePartyRoster,
             contentId,
             [],
             [],

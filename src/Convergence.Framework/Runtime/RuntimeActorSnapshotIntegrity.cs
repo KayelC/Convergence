@@ -253,12 +253,12 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidateContentIds(snapshot.Skills.EquippedSkillIds, "$.skills.equippedSkillIds", diagnostics);
         ValidateContentIds(snapshot.CapabilityIds, "$.capabilityIds", diagnostics);
 
-        if (snapshot.Forms.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        if (snapshot.Rosters.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
-            ValidateActorReference(activeForm, "$.forms.activeForm", diagnostics);
+            ValidateActorReference(activeHostedEntity, "$.rosters.activeHostedEntity", diagnostics);
         }
-        ValidateActorReferences(snapshot.Forms.PersonaStock, "$.forms.personaStock", diagnostics);
-        ValidateActorReferences(snapshot.Forms.DemonStock, "$.forms.demonStock", diagnostics);
+        ValidateActorReferences(snapshot.Rosters.HostedEntityRoster, "$.rosters.hostedEntityRoster", diagnostics);
+        ValidateActorReferences(snapshot.Rosters.CompanionRoster, "$.rosters.companionRoster", diagnostics);
 
         foreach ((EquipmentSlot slot, ContentId equipmentId) in snapshot.Equipment.EquippedItemIds)
         {

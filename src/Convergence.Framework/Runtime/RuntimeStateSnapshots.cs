@@ -234,21 +234,21 @@ public sealed record RuntimeActorReferenceSnapshot
     public string DisplayName { get; }
 }
 
-public sealed record RuntimeFormStockSnapshot
+public sealed record RuntimeActorRosterSnapshot
 {
-    public RuntimeFormStockSnapshot(
-        RuntimeActorReferenceSnapshot? activeForm = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? personaStock = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? demonStock = null)
+    public RuntimeActorRosterSnapshot(
+        RuntimeActorReferenceSnapshot? activeHostedEntity = null,
+        IEnumerable<RuntimeActorReferenceSnapshot>? hostedEntityRoster = null,
+        IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null)
     {
-        ActiveForm = activeForm;
-        PersonaStock = RuntimeSnapshotCollections.List(personaStock);
-        DemonStock = RuntimeSnapshotCollections.List(demonStock);
+        ActiveHostedEntity = activeHostedEntity;
+        HostedEntityRoster = RuntimeSnapshotCollections.List(hostedEntityRoster);
+        CompanionRoster = RuntimeSnapshotCollections.List(companionRoster);
     }
 
-    public RuntimeActorReferenceSnapshot? ActiveForm { get; }
-    public IReadOnlyList<RuntimeActorReferenceSnapshot> PersonaStock { get; }
-    public IReadOnlyList<RuntimeActorReferenceSnapshot> DemonStock { get; }
+    public RuntimeActorReferenceSnapshot? ActiveHostedEntity { get; }
+    public IReadOnlyList<RuntimeActorReferenceSnapshot> HostedEntityRoster { get; }
+    public IReadOnlyList<RuntimeActorReferenceSnapshot> CompanionRoster { get; }
 }
 
 public sealed record RuntimeEquipmentSnapshot
@@ -456,7 +456,7 @@ public sealed record RuntimeActorSnapshot
         IEnumerable<RuntimeResourceSnapshot> resources,
         RuntimeStatBlockSnapshot stats,
         RuntimeSkillStateSnapshot skills,
-        RuntimeFormStockSnapshot forms,
+        RuntimeActorRosterSnapshot rosters,
         RuntimeEquipmentSnapshot equipment,
         RuntimeBattleStatusSnapshot battleStatus,
         RuntimeBattleActivationSnapshot battleActivations,
@@ -472,7 +472,7 @@ public sealed record RuntimeActorSnapshot
         BaseResourceValues = RuntimeSnapshotCollections.Dictionary(baseResourceValues);
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
         Skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        Forms = forms ?? throw new ArgumentNullException(nameof(forms));
+        Rosters = rosters ?? throw new ArgumentNullException(nameof(rosters));
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         BattleStatus = battleStatus ?? throw new ArgumentNullException(nameof(battleStatus));
         BattleActivations = battleActivations ?? throw new ArgumentNullException(nameof(battleActivations));
@@ -492,7 +492,7 @@ public sealed record RuntimeActorSnapshot
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
     public RuntimeStatBlockSnapshot Stats { get; }
     public RuntimeSkillStateSnapshot Skills { get; }
-    public RuntimeFormStockSnapshot Forms { get; }
+    public RuntimeActorRosterSnapshot Rosters { get; }
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeBattleStatusSnapshot BattleStatus { get; }
     public RuntimeBattleActivationSnapshot BattleActivations { get; }
@@ -508,7 +508,7 @@ public sealed record RuntimeActorSnapshot
             resources,
             Stats,
             Skills,
-            Forms,
+            Rosters,
             Equipment,
             BattleStatus,
             BattleActivations,
@@ -529,7 +529,7 @@ public sealed record RuntimeActorSnapshot
             resources ?? Resources,
             stats,
             Skills,
-            Forms,
+            Rosters,
             Equipment,
             BattleStatus,
             BattleActivations,

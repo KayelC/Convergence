@@ -21,7 +21,7 @@ public enum CompendiumRuntimeDiagnosticCode
     MissingEntry,
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
-    StockFull,
+    RosterFull,
     RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
@@ -62,10 +62,10 @@ public sealed record CompendiumActorRegistrationResult
     public IReadOnlyList<CompendiumRuntimeDiagnostic> Diagnostics { get; }
 }
 
-public enum CompendiumRecallStockKind
+public enum CompendiumRecallRosterKind
 {
-    Demon,
-    Persona
+    Companion,
+    HostedEntity
 }
 
 public enum CompendiumRecallTransactionCode
@@ -76,7 +76,7 @@ public enum CompendiumRecallTransactionCode
     InvalidEntry,
     DuplicateOwned,
     DuplicateRuntimeInstanceId,
-    StockFull,
+    RosterFull,
     RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
@@ -89,13 +89,13 @@ public sealed record CompendiumRecallTransactionRequest
 {
     public CompendiumRecallTransactionRequest(
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot partyStock,
+        RuntimePartyRosterSnapshot partyRoster,
         RuntimeWalletSnapshot wallet,
         ContentId entityId,
         RuntimeInstanceId recalledInstanceId,
         ContentId controllerId,
         ContentId teamId,
-        CompendiumRecallStockKind stockKind,
+        CompendiumRecallRosterKind rosterKind,
         int? basePrice = null)
     {
         if (basePrice < 0)
@@ -104,24 +104,24 @@ public sealed record CompendiumRecallTransactionRequest
         }
 
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
-        PartyStock = partyStock ?? throw new ArgumentNullException(nameof(partyStock));
+        PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
         EntityId = entityId;
         RecalledInstanceId = recalledInstanceId;
         ControllerId = controllerId;
         TeamId = teamId;
-        StockKind = stockKind;
+        RosterKind = rosterKind;
         BasePrice = basePrice;
     }
 
     public CompendiumStateSnapshot Compendium { get; }
-    public RuntimePartyStockSnapshot PartyStock { get; }
+    public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeWalletSnapshot Wallet { get; }
     public ContentId EntityId { get; }
     public RuntimeInstanceId RecalledInstanceId { get; }
     public ContentId ControllerId { get; }
     public ContentId TeamId { get; }
-    public CompendiumRecallStockKind StockKind { get; }
+    public CompendiumRecallRosterKind RosterKind { get; }
     public int? BasePrice { get; }
 }
 
@@ -130,8 +130,8 @@ public sealed record CompendiumRecallTransactionResult
     public CompendiumRecallTransactionResult(
         CompendiumRecallTransactionCode code,
         CompendiumStateSnapshot compendium,
-        RuntimePartyStockSnapshot beforePartyStock,
-        RuntimePartyStockSnapshot afterPartyStock,
+        RuntimePartyRosterSnapshot beforePartyRoster,
+        RuntimePartyRosterSnapshot afterPartyRoster,
         RuntimeWalletSnapshot beforeWallet,
         RuntimeWalletSnapshot afterWallet,
         int cost = 0,
@@ -141,8 +141,8 @@ public sealed record CompendiumRecallTransactionResult
     {
         Code = code;
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
-        BeforePartyStock = beforePartyStock ?? throw new ArgumentNullException(nameof(beforePartyStock));
-        AfterPartyStock = afterPartyStock ?? throw new ArgumentNullException(nameof(afterPartyStock));
+        BeforePartyRoster = beforePartyRoster ?? throw new ArgumentNullException(nameof(beforePartyRoster));
+        AfterPartyRoster = afterPartyRoster ?? throw new ArgumentNullException(nameof(afterPartyRoster));
         BeforeWallet = beforeWallet ?? throw new ArgumentNullException(nameof(beforeWallet));
         AfterWallet = afterWallet ?? throw new ArgumentNullException(nameof(afterWallet));
         Cost = cost;
@@ -154,8 +154,8 @@ public sealed record CompendiumRecallTransactionResult
     public CompendiumRecallTransactionCode Code { get; }
     public bool Applied => Code == CompendiumRecallTransactionCode.Applied;
     public CompendiumStateSnapshot Compendium { get; }
-    public RuntimePartyStockSnapshot BeforePartyStock { get; }
-    public RuntimePartyStockSnapshot AfterPartyStock { get; }
+    public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
+    public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
     public RuntimeWalletSnapshot BeforeWallet { get; }
     public RuntimeWalletSnapshot AfterWallet { get; }
     public int Cost { get; }
@@ -188,7 +188,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     private readonly ICatalogBattleActorFactory _actors;
     private readonly IResourceGrowthPolicy _resourceGrowth;
     private readonly ICompendiumService _compendium;
-    private readonly IPartyStockTransitionService _partyStock;
+    private readonly IPartyRosterTransitionService _partyRoster;
     private readonly IEconomyTransactionService _economy;
 
     public CompendiumRuntimeService(
@@ -197,7 +197,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         ICatalogBattleActorFactory actors,
         IResourceGrowthPolicy resourceGrowth,
         ICompendiumService? compendium = null,
-        IPartyStockTransitionService? partyStock = null,
+        IPartyRosterTransitionService? partyRoster = null,
         IEconomyTransactionService? economy = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
@@ -205,7 +205,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _resourceGrowth = resourceGrowth ?? throw new ArgumentNullException(nameof(resourceGrowth));
         _compendium = compendium ?? new CompendiumService();
-        _partyStock = partyStock ?? new PartyStockTransitionService();
+        _partyRoster = partyRoster ?? new PartyRosterTransitionService();
         _economy = economy ?? new EconomyTransactionService();
     }
 
@@ -364,8 +364,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             return RecallInvalidEntry(request, entry, entryDiagnostics);
         }
 
-        if (RuntimePartyStockIdentityRules.ContainsInstanceId(
-                request.PartyStock,
+        if (RuntimePartyRosterIdentityRules.ContainsInstanceId(
+                request.PartyRoster,
                 request.RecalledInstanceId))
         {
             return RecallRejected(
@@ -376,18 +376,18 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 entry);
         }
 
-        bool alreadyOwned = OwnedActorReferences(request.PartyStock)
+        bool alreadyOwned = OwnedActorReferences(request.PartyRoster)
             .Any(reference => reference.EntityDefinitionId == entry.EntityId);
         var recalledReference = new RuntimeActorReferenceSnapshot(
             request.RecalledInstanceId,
             entry.EntityId,
             entry.DisplayName);
-        PartyStockTransitionResult placement = request.StockKind switch
+        PartyRosterTransitionResult placement = request.RosterKind switch
         {
-            CompendiumRecallStockKind.Demon => _partyStock.AddDemonToStock(
-                new AddDemonToStockRequest(request.PartyStock, recalledReference)),
-            CompendiumRecallStockKind.Persona => _partyStock.AddPersonaToStock(
-                new AddPersonaToStockRequest(request.PartyStock, recalledReference)),
+            CompendiumRecallRosterKind.Companion => _partyRoster.AddCompanionToRoster(
+                new AddCompanionToRosterRequest(request.PartyRoster, recalledReference)),
+            CompendiumRecallRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(
+                new AddHostedEntityToRosterRequest(request.PartyRoster, recalledReference)),
             _ => throw new ArgumentOutOfRangeException(nameof(request), "Unknown Compendium recall stock kind.")
         };
 
@@ -399,7 +399,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 entry.EntityId,
                 request.Wallet.Balance,
                 alreadyOwned,
-                placement.Applied || placement.Code != PartyStockTransitionCode.StockFull,
+                placement.Applied || placement.Code != PartyRosterTransitionCode.RosterFull,
                 request.BasePrice);
         }
         catch (OverflowException exception)
@@ -422,10 +422,10 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                     assessment.Diagnostics.FirstOrDefault()?.Message ?? "The Compendium entity is already owned.",
                     entry,
                     assessment.Cost),
-                CompendiumRecallCode.StockFull => RecallRejected(
+                CompendiumRecallCode.RosterFull => RecallRejected(
                     request,
-                    CompendiumRecallTransactionCode.StockFull,
-                    CompendiumRuntimeDiagnosticCode.StockFull,
+                    CompendiumRecallTransactionCode.RosterFull,
+                    CompendiumRuntimeDiagnosticCode.RosterFull,
                     assessment.Diagnostics.FirstOrDefault()?.Message ?? "The destination stock is full.",
                     entry,
                     assessment.Cost),
@@ -498,7 +498,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         return new CompendiumRecallTransactionResult(
             CompendiumRecallTransactionCode.Applied,
             request.Compendium,
-            request.PartyStock,
+            request.PartyRoster,
             placement.After,
             request.Wallet,
             afterWallet,
@@ -564,7 +564,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             fullResources,
             statBlock,
             new RuntimeSkillStateSnapshot(learnedSkills, equippedSkills),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
@@ -575,8 +575,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     }
 
     private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedActorReferences(
-        RuntimePartyStockSnapshot partyStock) =>
-        RuntimePartyStockIdentityRules.Enumerate(partyStock)
+        RuntimePartyRosterSnapshot partyRoster) =>
+        RuntimePartyRosterIdentityRules.Enumerate(partyRoster)
             .Select(occurrence => occurrence.Reference);
 
     private static bool TrySnapshotStats(
@@ -629,8 +629,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         new(
             CompendiumRecallTransactionCode.InvalidEntry,
             request.Compendium,
-            request.PartyStock,
-            request.PartyStock,
+            request.PartyRoster,
+            request.PartyRoster,
             request.Wallet,
             request.Wallet,
             entry: entry,
@@ -678,8 +678,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         new(
             code,
             request.Compendium,
-            request.PartyStock,
-            request.PartyStock,
+            request.PartyRoster,
+            request.PartyRoster,
             request.Wallet,
             request.Wallet,
             cost,

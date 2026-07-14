@@ -173,7 +173,7 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                     request,
                     returnToStock: false,
                     cancellationToken),
-                BattleTurnStartOutcome.ReturnToStock => LeaveBattle(
+                BattleTurnStartOutcome.RecallToRoster => LeaveBattle(
                     request,
                     returnToStock: true,
                     cancellationToken),

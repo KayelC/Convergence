@@ -239,7 +239,7 @@ public sealed class CatalogBattleRuntimeTests
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 5)],
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 8)]),
             new RuntimeSkillStateSnapshot(),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
                 statStages: [new RuntimeStatStageSnapshot(Id("attack"), 2, new PhaseDurationDefinition(Id("phase_end")))],
@@ -289,7 +289,7 @@ public sealed class CatalogBattleRuntimeTests
             [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
             new RuntimeStatBlockSnapshot(),
             new RuntimeSkillStateSnapshot([default], [default]),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
                 ailments: [new RuntimeTimedStateSnapshot(default, new BattleDurationDefinition())]),
@@ -767,7 +767,7 @@ public sealed class CatalogBattleRuntimeTests
 
     [Theory]
     [InlineData(BattleTurnStartOutcome.FleeBattle, RuntimeActorDeployment.Active, "fled the battle")]
-    [InlineData(BattleTurnStartOutcome.ReturnToStock, RuntimeActorDeployment.Reserve, "returned to stock")]
+    [InlineData(BattleTurnStartOutcome.RecallToRoster, RuntimeActorDeployment.Reserve, "returned to stock")]
     public void Runner_ExitRestrictionsRemoveTheActorAndPreserveDistinctDeploymentMeaning(
         BattleTurnStartOutcome outcome,
         RuntimeActorDeployment expectedDeployment,
@@ -1130,7 +1130,7 @@ public sealed class CatalogBattleRuntimeTests
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterBattleKind("normal_battle")
             .RegisterMoonPhase("new_moon")
             .SupportEffect<DamageEffectDefinition>()
@@ -1305,7 +1305,7 @@ public sealed class CatalogBattleRuntimeTests
         string id,
         IEnumerable<ContentId> baseSkills,
         IEnumerable<SkillUnlockDefinition>? unlocks = null) => new(
-        Id(id), id, id, Id("demon"), Id("test.pack:race"), 1, 1,
+        Id(id), id, id, Id("companion"), Id("test.pack:race"), 1, 1,
         new EntityCapabilitiesDefinition(false, false, false),
         new EntityInheritanceRulesDefinition(new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList)),
         new Dictionary<ContentId, int>

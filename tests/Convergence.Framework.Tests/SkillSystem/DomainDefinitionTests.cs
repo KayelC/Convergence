@@ -188,7 +188,7 @@ public sealed class DomainDefinitionTests
             ContentId.Parse("ash_wisp"),
             "Ash Wisp",
             "A minor spirit.",
-            ContentId.Parse("demon"),
+            ContentId.Parse("companion"),
             ContentId.Parse("spirit"),
             1,
             4,

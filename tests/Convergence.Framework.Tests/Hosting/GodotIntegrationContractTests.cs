@@ -230,7 +230,7 @@ public sealed class GodotIntegrationContractTests
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterBattleKind("normal_battle")
             .RegisterMoonPhase("new_moon")
             .SupportEffect<DamageEffectDefinition>()
@@ -279,7 +279,7 @@ public sealed class GodotIntegrationContractTests
             resources,
             new RuntimeStatBlockSnapshot(state.Stats, state.Stats),
             new RuntimeSkillStateSnapshot(state.SkillIds, state.SkillIds),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),

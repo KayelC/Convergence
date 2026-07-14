@@ -34,7 +34,7 @@ public sealed class RuntimeRulesetBindingTests
             .RequireService();
         BattleRewardResult reward = rewards.Calculate(new BattleRewardRequest(
             [new BattleRewardEnemySnapshot(Id("enemy"), 2, 10, 10, 10, 10, 10)],
-            [new BattleRewardRecipientSnapshot(Id("hero"), IsAlive: true, HasActiveForm: true)]));
+            [new BattleRewardRecipientSnapshot(Id("hero"), IsAlive: true, HasActiveHostedEntity: true)]));
         Assert.True(reward.TotalExperience > 0);
         Assert.True(reward.TotalCurrency > 0);
         Assert.Equal(2, reward.Applications.Count);
@@ -58,12 +58,14 @@ public sealed class RuntimeRulesetBindingTests
         Assert.IsType<StandardLevelGrowthPolicy>(growth.LevelGrowthPolicy);
         Assert.IsType<StatAllocationService>(growth.StatAllocationService);
 
-        IStockCapacityPolicy stock = resolver.BindStockCapacityPolicy(
+        IRosterCapacityPolicy stock = resolver.BindRosterCapacityPolicy(
             catalog,
-            Qualified("standard_stock_capacity_sample"))
+            Qualified("standard_roster_capacity_sample"))
             .RequireService();
-        Assert.Equal(3, stock.GetCapacity(1));
-        Assert.Equal(12, stock.GetCapacity(40));
+        Assert.Equal(3, stock.GetCapacity(RuntimeRosterKind.HostedEntity, 1));
+        Assert.Equal(12, stock.GetCapacity(RuntimeRosterKind.HostedEntity, 40));
+        Assert.Equal(3, stock.GetCapacity(RuntimeRosterKind.Companion, 1));
+        Assert.Equal(12, stock.GetCapacity(RuntimeRosterKind.Companion, 40));
 
         ResourceManagementRulesetServices resources = resolver.BindResourceManagementServices(
             catalog,
@@ -170,27 +172,27 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
-    public void StockCapacityBinding_RequiresAuthoredTiersInsteadOfSupplyingAHiddenCurve()
+    public void RosterCapacityBinding_RequiresAuthoredTiersInsteadOfSupplyingAHiddenCurve()
     {
         ContentId missingTiersId = Id("test.pack:missing_tiers");
         ContentId malformedTiersId = Id("test.pack:malformed_tiers");
         var resolver = new RuntimeRulesetBindingResolver();
 
-        RulesetBindingResult<IStockCapacityPolicy> missing = resolver.BindStockCapacityPolicy(
+        RulesetBindingResult<IRosterCapacityPolicy> missing = resolver.BindRosterCapacityPolicy(
             Catalog(new RulesetDefinition(
                 missingTiersId,
                 "Missing tiers",
                 "No implicit capacity curve is allowed.",
-                RulesetCategory.StockCapacity,
-                StandardRulesetPolicyIds.StandardStockCapacity)),
+                RulesetCategory.RosterCapacity,
+                StandardRulesetPolicyIds.StandardRosterCapacity)),
             missingTiersId);
-        RulesetBindingResult<IStockCapacityPolicy> malformed = resolver.BindStockCapacityPolicy(
+        RulesetBindingResult<IRosterCapacityPolicy> malformed = resolver.BindRosterCapacityPolicy(
             Catalog(new RulesetDefinition(
                 malformedTiersId,
                 "Malformed tiers",
                 "Invalid authored policy.",
-                RulesetCategory.StockCapacity,
-                StandardRulesetPolicyIds.StandardStockCapacity,
+                RulesetCategory.RosterCapacity,
+                StandardRulesetPolicyIds.StandardRosterCapacity,
                 [new KeyValuePair<string, object?>("tiers", "legacy defaults")])),
             malformedTiersId);
 

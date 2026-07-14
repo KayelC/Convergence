@@ -236,8 +236,8 @@ public enum AilmentTurnBehaviorKind
     Custom
 }
 
-public enum DemonFleeOutcome
+public enum CompanionFleeOutcome
 {
-    ReturnToStock,
+    RecallToRoster,
     EscapeBattle
 }

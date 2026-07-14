@@ -116,7 +116,7 @@
         "type": "chance_skip_or_flee",
         "skipChance": 40,
         "fleeChance": 15,
-        "demonFleeOutcome": "return_to_stock"
+        "companionFleeOutcome": "recall_to_roster"
       },
       "modifiers": {
         "evasionMultiplier": 1,

@@ -11,10 +11,10 @@ public enum BattleActionKind
     Guard,
     Pass,
     Analyze,
-    PersonaSwap,
-    DemonSummon,
-    DemonReturn,
-    DemonSwap,
+    HostedEntitySwap,
+    CompanionDeploy,
+    CompanionRecall,
+    CompanionSwap,
     EscapeAttempt,
     TacticsChange,
     Negotiation,
@@ -44,7 +44,7 @@ public enum BattleActionDiagnosticCode
     ItemUnavailable,
     TargetSelectionInvalid,
     EffectExecutorMissing,
-    PartyStockRejected,
+    PartyRosterRejected,
     UnsupportedAction,
     HostActionRequired,
     AssessmentInvalid,
@@ -63,7 +63,7 @@ public enum BattleActionEventKind
     ItemReserved,
     ItemCommitted,
     ItemRolledBack,
-    PartyStockTransitioned,
+    PartyRosterTransitioned,
     HostActionRequested
 }
 
@@ -188,64 +188,64 @@ public sealed record EscapeAttemptBattleActionCommand : BattleActionCommand
     public int? Chance { get; }
 }
 
-public abstract record PartyStockBattleActionCommand : BattleActionCommand
+public abstract record PartyRosterBattleActionCommand : BattleActionCommand
 {
-    private protected PartyStockBattleActionCommand(BattleActionKind kind, RuntimePartyStockSnapshot snapshot)
+    private protected PartyRosterBattleActionCommand(BattleActionKind kind, RuntimePartyRosterSnapshot snapshot)
         : base(kind)
     {
         Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
     }
 
-    public RuntimePartyStockSnapshot Snapshot { get; }
+    public RuntimePartyRosterSnapshot Snapshot { get; }
 }
 
-public sealed record PersonaSwapBattleActionCommand : PartyStockBattleActionCommand
+public sealed record HostedEntitySwapBattleActionCommand : PartyRosterBattleActionCommand
 {
-    public PersonaSwapBattleActionCommand(RuntimePartyStockSnapshot snapshot, RuntimeInstanceId personaInstanceId)
-        : base(BattleActionKind.PersonaSwap, snapshot)
+    public HostedEntitySwapBattleActionCommand(RuntimePartyRosterSnapshot snapshot, RuntimeInstanceId hostedEntityInstanceId)
+        : base(BattleActionKind.HostedEntitySwap, snapshot)
     {
-        PersonaInstanceId = personaInstanceId;
+        HostedEntityInstanceId = hostedEntityInstanceId;
     }
 
-    public RuntimeInstanceId PersonaInstanceId { get; }
+    public RuntimeInstanceId HostedEntityInstanceId { get; }
 }
 
-public sealed record DemonSummonBattleActionCommand : PartyStockBattleActionCommand
+public sealed record CompanionDeployBattleActionCommand : PartyRosterBattleActionCommand
 {
-    public DemonSummonBattleActionCommand(RuntimePartyStockSnapshot snapshot, RuntimeInstanceId demonInstanceId)
-        : base(BattleActionKind.DemonSummon, snapshot)
+    public CompanionDeployBattleActionCommand(RuntimePartyRosterSnapshot snapshot, RuntimeInstanceId companionInstanceId)
+        : base(BattleActionKind.CompanionDeploy, snapshot)
     {
-        DemonInstanceId = demonInstanceId;
+        CompanionInstanceId = companionInstanceId;
     }
 
-    public RuntimeInstanceId DemonInstanceId { get; }
+    public RuntimeInstanceId CompanionInstanceId { get; }
 }
 
-public sealed record DemonReturnBattleActionCommand : PartyStockBattleActionCommand
+public sealed record CompanionRecallBattleActionCommand : PartyRosterBattleActionCommand
 {
-    public DemonReturnBattleActionCommand(RuntimePartyStockSnapshot snapshot, RuntimeInstanceId demonInstanceId)
-        : base(BattleActionKind.DemonReturn, snapshot)
+    public CompanionRecallBattleActionCommand(RuntimePartyRosterSnapshot snapshot, RuntimeInstanceId companionInstanceId)
+        : base(BattleActionKind.CompanionRecall, snapshot)
     {
-        DemonInstanceId = demonInstanceId;
+        CompanionInstanceId = companionInstanceId;
     }
 
-    public RuntimeInstanceId DemonInstanceId { get; }
+    public RuntimeInstanceId CompanionInstanceId { get; }
 }
 
-public sealed record DemonSwapBattleActionCommand : PartyStockBattleActionCommand
+public sealed record CompanionSwapBattleActionCommand : PartyRosterBattleActionCommand
 {
-    public DemonSwapBattleActionCommand(
-        RuntimePartyStockSnapshot snapshot,
-        RuntimeInstanceId activeDemonInstanceId,
-        RuntimeInstanceId standbyDemonInstanceId)
-        : base(BattleActionKind.DemonSwap, snapshot)
+    public CompanionSwapBattleActionCommand(
+        RuntimePartyRosterSnapshot snapshot,
+        RuntimeInstanceId activeCompanionInstanceId,
+        RuntimeInstanceId standbyCompanionInstanceId)
+        : base(BattleActionKind.CompanionSwap, snapshot)
     {
-        ActiveDemonInstanceId = activeDemonInstanceId;
-        StandbyDemonInstanceId = standbyDemonInstanceId;
+        ActiveCompanionInstanceId = activeCompanionInstanceId;
+        StandbyCompanionInstanceId = standbyCompanionInstanceId;
     }
 
-    public RuntimeInstanceId ActiveDemonInstanceId { get; }
-    public RuntimeInstanceId StandbyDemonInstanceId { get; }
+    public RuntimeInstanceId ActiveCompanionInstanceId { get; }
+    public RuntimeInstanceId StandbyCompanionInstanceId { get; }
 }
 
 public sealed record HostMediatedBattleActionCommand : BattleActionCommand
@@ -309,7 +309,7 @@ public sealed record BattleActionAssessment
         ActionTurnConsumption? turnConsumption = null,
         SkillExecutionAssessment? skillAssessment = null,
         ItemExecutionAssessment? itemAssessment = null,
-        PartyStockTransitionResult? partyStockTransition = null)
+        PartyRosterTransitionResult? partyRosterTransition = null)
     {
         Kind = kind;
         Diagnostics = Array.AsReadOnly(diagnostics?.ToArray() ?? []);
@@ -319,7 +319,7 @@ public sealed record BattleActionAssessment
         TurnConsumption = turnConsumption ?? ActionTurnConsumption.Normal;
         SkillAssessment = skillAssessment;
         ItemAssessment = itemAssessment;
-        PartyStockTransition = partyStockTransition;
+        PartyRosterTransition = partyRosterTransition;
         Preparation = new ExecutionAssessmentToken<BattleActionExecutionRequest>(authority, request);
     }
 
@@ -330,7 +330,7 @@ public sealed record BattleActionAssessment
     public ActionTurnConsumption TurnConsumption { get; init; }
     public SkillExecutionAssessment? SkillAssessment { get; }
     public ItemExecutionAssessment? ItemAssessment { get; }
-    public PartyStockTransitionResult? PartyStockTransition { get; }
+    public PartyRosterTransitionResult? PartyRosterTransition { get; }
     internal bool HasResolvedTargets { get; }
     internal bool IsUntargeted { get; }
     internal ExecutionAssessmentToken<BattleActionExecutionRequest> Preparation { get; }
@@ -348,7 +348,7 @@ public sealed record BattleActionExecutionResult
         ItemConsumptionDecision itemConsumption = ItemConsumptionDecision.None,
         bool itemConsumptionCommitted = false,
         bool escapeRequested = false,
-        PartyStockTransitionResult? partyStockTransition = null,
+        PartyRosterTransitionResult? partyRosterTransition = null,
         IEnumerable<ContentId>? hostActionRequestIds = null)
     {
         Status = status;
@@ -360,7 +360,7 @@ public sealed record BattleActionExecutionResult
         ItemConsumption = itemConsumption;
         ItemConsumptionCommitted = itemConsumptionCommitted;
         EscapeRequested = escapeRequested || Effects.Any(effect => effect.EscapeRequested);
-        PartyStockTransition = partyStockTransition;
+        PartyRosterTransition = partyRosterTransition;
         HostActionRequestIds = Array.AsReadOnly(
             (hostActionRequestIds ?? Effects.SelectMany(effect => effect.HostActionRequestIds)).ToArray());
     }
@@ -374,7 +374,7 @@ public sealed record BattleActionExecutionResult
     public ItemConsumptionDecision ItemConsumption { get; }
     public bool ItemConsumptionCommitted { get; }
     public bool EscapeRequested { get; }
-    public PartyStockTransitionResult? PartyStockTransition { get; }
+    public PartyRosterTransitionResult? PartyRosterTransition { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
 }
 
@@ -430,7 +430,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     private readonly ISkillExecutor _skills;
     private readonly IItemExecutor _items;
     private readonly BattleExecutionServices _services;
-    private readonly IPartyStockTransitionService _partyStock;
+    private readonly IPartyRosterTransitionService _partyRoster;
     private readonly OrderedEffectExecutor _orderedEffects;
     private readonly object _assessmentAuthority = new();
 
@@ -438,12 +438,12 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         ISkillExecutor skills,
         IItemExecutor items,
         BattleExecutionServices services,
-        IPartyStockTransitionService? partyStock = null)
+        IPartyRosterTransitionService? partyRoster = null)
     {
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _services = services ?? throw new ArgumentNullException(nameof(services));
-        _partyStock = partyStock ?? new PartyStockTransitionService();
+        _partyRoster = partyRoster ?? new PartyRosterTransitionService();
         _orderedEffects = new OrderedEffectExecutor(_services, _services.EffectExecutors);
     }
 
@@ -485,14 +485,14 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     request,
                     BattleActionKind.Pass,
                     turnConsumption: ActionTurnConsumption.Pass),
-                PersonaSwapBattleActionCommand persona => AssessPartyStock(request, persona.Kind, _partyStock.SwapActivePersona(
-                    new SwapActivePersonaRequest(persona.Snapshot, persona.PersonaInstanceId))),
-                DemonSummonBattleActionCommand summon => AssessPartyStock(request, summon.Kind, _partyStock.SummonDemon(
-                    new SummonDemonRequest(summon.Snapshot, summon.DemonInstanceId))),
-                DemonReturnBattleActionCommand returned => AssessPartyStock(request, returned.Kind, _partyStock.ReturnDemon(
-                    new ReturnDemonRequest(returned.Snapshot, returned.DemonInstanceId))),
-                DemonSwapBattleActionCommand swap => AssessPartyStock(request, swap.Kind, _partyStock.SwapActiveDemon(
-                    new SwapActiveDemonRequest(swap.Snapshot, swap.ActiveDemonInstanceId, swap.StandbyDemonInstanceId))),
+                HostedEntitySwapBattleActionCommand hostedEntity => AssessPartyRoster(request, hostedEntity.Kind, _partyRoster.SwapActiveHostedEntity(
+                    new SwapActiveHostedEntityRequest(hostedEntity.Snapshot, hostedEntity.HostedEntityInstanceId))),
+                CompanionDeployBattleActionCommand summon => AssessPartyRoster(request, summon.Kind, _partyRoster.DeployCompanion(
+                    new DeployCompanionRequest(summon.Snapshot, summon.CompanionInstanceId))),
+                CompanionRecallBattleActionCommand returned => AssessPartyRoster(request, returned.Kind, _partyRoster.RecallCompanion(
+                    new RecallCompanionRequest(returned.Snapshot, returned.CompanionInstanceId))),
+                CompanionSwapBattleActionCommand swap => AssessPartyRoster(request, swap.Kind, _partyRoster.SwapDeployedCompanion(
+                    new SwapDeployedCompanionRequest(swap.Snapshot, swap.ActiveCompanionInstanceId, swap.StandbyCompanionInstanceId))),
                 HostMediatedBattleActionCommand mediated => CreateAssessment(
                     request,
                     mediated.Kind,
@@ -586,10 +586,10 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 BattleActionKind.Pass,
                 ActionTurnConsumption.Pass,
                 events: [new BattleActionEvent(BattleActionEventKind.Executed, "Action passed.", request.Actor.InstanceId)]),
-            PersonaSwapBattleActionCommand persona => ExecutePartyStock(persona.Kind, assessment.PartyStockTransition),
-            DemonSummonBattleActionCommand summon => ExecutePartyStock(summon.Kind, assessment.PartyStockTransition),
-            DemonReturnBattleActionCommand returned => ExecutePartyStock(returned.Kind, assessment.PartyStockTransition),
-            DemonSwapBattleActionCommand swap => ExecutePartyStock(swap.Kind, assessment.PartyStockTransition),
+            HostedEntitySwapBattleActionCommand hostedEntity => ExecutePartyRoster(hostedEntity.Kind, assessment.PartyRosterTransition),
+            CompanionDeployBattleActionCommand summon => ExecutePartyRoster(summon.Kind, assessment.PartyRosterTransition),
+            CompanionRecallBattleActionCommand returned => ExecutePartyRoster(returned.Kind, assessment.PartyRosterTransition),
+            CompanionSwapBattleActionCommand swap => ExecutePartyRoster(swap.Kind, assessment.PartyRosterTransition),
             HostMediatedBattleActionCommand mediated => ExecuteHostMediated(request, mediated),
             _ => Rejected(request.Command.Kind, [new BattleActionDiagnostic(BattleActionDiagnosticCode.UnsupportedAction, "The action command is not supported.")])
         });
@@ -692,23 +692,23 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             : CreateAssessment(request, kind, diagnostics);
     }
 
-    private BattleActionAssessment AssessPartyStock(
+    private BattleActionAssessment AssessPartyRoster(
         BattleActionExecutionRequest request,
         BattleActionKind kind,
-        PartyStockTransitionResult transition) =>
+        PartyRosterTransitionResult transition) =>
         transition.Applied
             ? CreateAssessment(
                 request,
                 kind,
                 targetIds: transition.AffectedInstanceIds,
-                partyStockTransition: transition)
+                partyRosterTransition: transition)
             : CreateAssessment(
                 request,
                 kind,
                 transition.Diagnostics.Select(diagnostic => new BattleActionDiagnostic(
-                    BattleActionDiagnosticCode.PartyStockRejected,
+                    BattleActionDiagnosticCode.PartyRosterRejected,
                     diagnostic.Message)),
-                partyStockTransition: transition);
+                partyRosterTransition: transition);
 
     private BattleActionExecutionResult ExecuteSkill(
         BattleActionExecutionRequest request,
@@ -1001,9 +1001,9 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             events: [new BattleActionEvent(BattleActionEventKind.Executed, "Actor is guarding.", request.Actor.InstanceId)]);
     }
 
-    private static BattleActionExecutionResult ExecutePartyStock(
+    private static BattleActionExecutionResult ExecutePartyRoster(
         BattleActionKind kind,
-        PartyStockTransitionResult? transition)
+        PartyRosterTransitionResult? transition)
     {
         if (transition is null)
         {
@@ -1013,7 +1013,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         if (!transition.Applied)
         {
             return Rejected(kind, transition.Diagnostics.Select(diagnostic => new BattleActionDiagnostic(
-                BattleActionDiagnosticCode.PartyStockRejected,
+                BattleActionDiagnosticCode.PartyRosterRejected,
                 diagnostic.Message)));
         }
 
@@ -1021,9 +1021,9 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             BattleActionExecutionStatus.Executed,
             kind,
             ActionTurnConsumption.Normal,
-            partyStockTransition: transition,
+            partyRosterTransition: transition,
             events: [new BattleActionEvent(
-                BattleActionEventKind.PartyStockTransitioned,
+                BattleActionEventKind.PartyRosterTransitioned,
                 $"Party stock transition applied: {kind}.")]);
     }
 
@@ -1070,7 +1070,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         ActionTurnConsumption? turnConsumption = null,
         SkillExecutionAssessment? skillAssessment = null,
         ItemExecutionAssessment? itemAssessment = null,
-        PartyStockTransitionResult? partyStockTransition = null) =>
+        PartyRosterTransitionResult? partyRosterTransition = null) =>
         new(
             _assessmentAuthority,
             request,
@@ -1082,7 +1082,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             turnConsumption,
             skillAssessment,
             itemAssessment,
-            partyStockTransition);
+            partyRosterTransition);
 
     private static BattleActionDiagnostic ToActionDiagnostic(SkillExecutionDiagnostic diagnostic) =>
         new(

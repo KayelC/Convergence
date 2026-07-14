@@ -115,22 +115,22 @@ public sealed class RuntimeStateSnapshotTests
         ];
         List<ContentId> learnedSkills = [Id("agi"), Id("ice_boost")];
         List<ContentId> capabilityIds = [Id("analyze"), Id("switch_form")];
-        List<RuntimeActorReferenceSnapshot> personaStock =
+        List<RuntimeActorReferenceSnapshot> hostedEntityRoster =
         [
-            new(RuntimeInstanceId.Parse("persona:orpheus_1"), Id("convergence.demo:orpheus"), "Orpheus")
+            new(RuntimeInstanceId.Parse("hostedEntity:orpheus_1"), Id("convergence.demo:orpheus"), "Orpheus")
         ];
 
         RuntimeActorSnapshot snapshot = CreateCompleteSnapshot(
             resources,
             learnedSkills,
-            personaStock,
+            hostedEntityRoster,
             capabilityIds);
 
         resources.Add(new RuntimeResourceSnapshot(Id("extra"), 1, 1));
         learnedSkills.Add(Id("late_mutation"));
         capabilityIds.Add(Id("late_capability"));
-        personaStock.Add(new RuntimeActorReferenceSnapshot(
-            RuntimeInstanceId.Parse("persona:late_1"),
+        hostedEntityRoster.Add(new RuntimeActorReferenceSnapshot(
+            RuntimeInstanceId.Parse("hostedEntity:late_1"),
             Id("convergence.demo:late"),
             "Late"));
 
@@ -163,9 +163,9 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal([Id("analyze"), Id("switch_form")], roundTrip.CapabilityIds);
         Assert.True(restoredState.HasCapability(Id("analyze")));
         Assert.False(restoredState.HasCapability(Id("late_capability")));
-        Assert.Equal(RuntimeInstanceId.Parse("persona:orpheus_1"), roundTrip.Forms.ActiveForm!.InstanceId);
-        Assert.Single(roundTrip.Forms.PersonaStock);
-        Assert.Single(roundTrip.Forms.DemonStock);
+        Assert.Equal(RuntimeInstanceId.Parse("hostedEntity:orpheus_1"), roundTrip.Rosters.ActiveHostedEntity!.InstanceId);
+        Assert.Single(roundTrip.Rosters.HostedEntityRoster);
+        Assert.Single(roundTrip.Rosters.CompanionRoster);
         Assert.Equal(Id("convergence.demo:practice_sword"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
         Assert.Equal(Id("convergence.demo:kevlar_vest"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
 
@@ -353,11 +353,11 @@ public sealed class RuntimeStateSnapshotTests
     private static RuntimeActorSnapshot CreateCompleteSnapshot(
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         IEnumerable<ContentId>? learnedSkillIds = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? personaStock = null,
+        IEnumerable<RuntimeActorReferenceSnapshot>? hostedEntityRoster = null,
         IEnumerable<ContentId>? capabilityIds = null)
     {
-        RuntimeActorReferenceSnapshot activeForm = new(
-            RuntimeInstanceId.Parse("persona:orpheus_1"),
+        RuntimeActorReferenceSnapshot activeHostedEntity = new(
+            RuntimeInstanceId.Parse("hostedEntity:orpheus_1"),
             Id("convergence.demo:orpheus"),
             "Orpheus");
 
@@ -383,12 +383,12 @@ public sealed class RuntimeStateSnapshotTests
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 10)],
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 13)]),
             new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("agi"), Id("ice_boost")], [Id("agi")]),
-            new RuntimeFormStockSnapshot(
-                activeForm,
-                personaStock ?? [activeForm],
+            new RuntimeActorRosterSnapshot(
+                activeHostedEntity,
+                hostedEntityRoster ?? [activeHostedEntity],
                 [
                     new RuntimeActorReferenceSnapshot(
-                        RuntimeInstanceId.Parse("demon:pixie_1"),
+                        RuntimeInstanceId.Parse("companion:pixie_1"),
                         Id("convergence.demo:pixie"),
                         "Pixie")
                 ]),

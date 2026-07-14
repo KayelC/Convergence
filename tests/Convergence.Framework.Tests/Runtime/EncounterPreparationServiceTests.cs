@@ -164,7 +164,7 @@ public sealed class EncounterPreparationServiceTests
             Qualified(localId),
             localId,
             "Test encounter entity.",
-            Id("demon"),
+            Id("companion"),
             Qualified("test_race"),
             rank: 1,
             baseLevel: 1,

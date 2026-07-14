@@ -225,7 +225,7 @@ internal sealed class CleanBattleDemoHost
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEvent("battle_start", "owner_turn_end")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterBattleKind("normal_battle")
             .SupportEffect<DamageEffectDefinition>()
             .SupportEffect<RestoreResourceEffectDefinition>()

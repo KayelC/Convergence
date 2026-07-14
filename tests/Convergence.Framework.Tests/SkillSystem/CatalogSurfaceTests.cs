@@ -365,7 +365,7 @@ public sealed class CatalogSurfaceTests
             new SkillSystemValidationRequest(
                 manifest,
                 "manifest.json",
-                new SkillSystemRegistrationBuilder().RegisterEntityKind("demon").Build(),
+                new SkillSystemRegistrationBuilder().RegisterEntityKind("companion").Build(),
                 entityDocuments:
                 [
                     Source(
@@ -539,7 +539,7 @@ public sealed class CatalogSurfaceTests
             .RegisterContext("battle", "field")
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterEvent("owner_turn_end")
             .RegisterAilmentGroup("poison")
             .RegisterEscapeRule("standard_escape")
@@ -554,7 +554,7 @@ public sealed class CatalogSurfaceTests
                 "standard_growth",
                 "standard_stat",
                 "standard_action_token",
-                "standard_stock_capacity",
+                "standard_roster_capacity",
                 "standard_economy",
                 "return_to_lobby",
                 "standard_accident",
@@ -589,7 +589,7 @@ public sealed class CatalogSurfaceTests
             Id(id),
             id,
             "Fusion ambiguity test entity.",
-            Id("demon"),
+            Id("companion"),
             Id(raceId),
             rank: 1,
             baseLevel: 1,

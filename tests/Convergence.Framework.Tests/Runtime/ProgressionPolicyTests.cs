@@ -17,14 +17,14 @@ public sealed class ProgressionPolicyTests
     [InlineData("operator", 10)]
     [InlineData("persona_user", 18)]
     [InlineData("wild_card", 18)]
-    [InlineData("demon", 20)]
+    [InlineData("companion", 20)]
     public void StatPolicy_ResolvesClassSpecificStrengthComposition(string actorKind, int expected)
     {
         StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
             Id(actorKind),
             StandardProgressionIds.Strength,
             BaseStats(10),
-            ActiveFormStats(20)));
+            ActiveHostedEntityStats(20)));
 
         Assert.Equal(expected, result.FinalValue);
     }
@@ -39,7 +39,7 @@ public sealed class ProgressionPolicyTests
             StandardProgressionIds.WildCard,
             Id(stat),
             BaseStats(10),
-            ActiveFormStats(20)));
+            ActiveHostedEntityStats(20)));
 
         Assert.Equal(expected, result.FinalValue);
     }
@@ -126,7 +126,7 @@ public sealed class ProgressionPolicyTests
         var extremeConfig = new StandardStatPolicyConfig(
             statCap: int.MaxValue,
             buffMultiplier: decimal.MaxValue,
-            activeFormWeights:
+            activeHostedEntityWeights:
             [
                 new KeyValuePair<ContentId, decimal>(
                     StandardProgressionIds.Strength,
@@ -138,7 +138,7 @@ public sealed class ProgressionPolicyTests
             StandardProgressionIds.WildCard,
             StandardProgressionIds.Strength,
             BaseStats(maximumStat),
-            ActiveFormStats(maximumStat),
+            ActiveHostedEntityStats(maximumStat),
             equipmentStatModifiers: BaseStats(maximumStat),
             statStages: [new RuntimeStatStageSnapshot(StandardProgressionIds.Attack, 1)]));
         ResourceRecalculationResult resources = _resources.Recalculate(new ResourceRecalculationRequest(
@@ -422,7 +422,7 @@ public sealed class ProgressionPolicyTests
         new(StandardProgressionIds.Luck, value)
     ];
 
-    private static KeyValuePair<ContentId, decimal>[] ActiveFormStats(decimal value) => BaseStats(value);
+    private static KeyValuePair<ContentId, decimal>[] ActiveHostedEntityStats(decimal value) => BaseStats(value);
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)
     {

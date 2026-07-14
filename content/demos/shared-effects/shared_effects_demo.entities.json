@@ -5,7 +5,7 @@
       "id": "field_medic_demo",
       "displayName": "Field Medic",
       "description": "An actor template used by the shared-effects demo.",
-      "entityKind": "demon",
+      "entityKind": "companion",
       "raceId": "convergence.clean_battle_demo:demo_spirit",
       "rank": 1,
       "baseLevel": 5,

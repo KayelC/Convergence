@@ -179,7 +179,7 @@ public sealed class OriginalCleanContentSliceTests
                     4,
                     3)
             ],
-            [new BattleRewardRecipientSnapshot(Qualified("echo_adept"), IsAlive: true, HasActiveForm: true)]));
+            [new BattleRewardRecipientSnapshot(Qualified("echo_adept"), IsAlive: true, HasActiveHostedEntity: true)]));
         Assert.True(reward.TotalExperience > 0);
         Assert.True(reward.TotalCurrency > 0);
 
@@ -189,12 +189,14 @@ public sealed class OriginalCleanContentSliceTests
         Assert.IsType<StandardResourceGrowthPolicy>(resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService().ResourceGrowthPolicy);
-        TieredStockCapacityPolicy stockPolicy = Assert.IsType<TieredStockCapacityPolicy>(
-            resolver.BindStockCapacityPolicy(
+        TieredRosterCapacityPolicy stockPolicy = Assert.IsType<TieredRosterCapacityPolicy>(
+            resolver.BindRosterCapacityPolicy(
                 catalog,
-                Qualified("standard_stock_capacity")).RequireService());
-        Assert.Equal(3, stockPolicy.GetCapacity(1));
-        Assert.Equal(12, stockPolicy.GetCapacity(40));
+                Qualified("standard_roster_capacity")).RequireService());
+        Assert.Equal(3, stockPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, 1));
+        Assert.Equal(12, stockPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, 40));
+        Assert.Equal(3, stockPolicy.GetCapacity(RuntimeRosterKind.Companion, 1));
+        Assert.Equal(12, stockPolicy.GetCapacity(RuntimeRosterKind.Companion, 40));
         Assert.NotNull(resolver.BindResourceManagementServices(
             catalog,
             Qualified("standard_economy")).RequireService().Inventory);
@@ -621,10 +623,10 @@ public sealed class OriginalCleanContentSliceTests
             RuntimeInstanceId.Parse("owner"),
             Qualified("echo_adept"),
             "Owner");
-        RuntimePartyStockSnapshot party = new(
+        RuntimePartyRosterSnapshot party = new(
             owner,
             ownerLevel: 10,
-            demonStock:
+            companionRoster:
             [
                 new RuntimeActorReferenceSnapshot(ashling.InstanceId, ashling.EntityId, ashling.DisplayName),
                 new RuntimeActorReferenceSnapshot(bramble.InstanceId, bramble.EntityId, bramble.DisplayName)
@@ -632,9 +634,9 @@ public sealed class OriginalCleanContentSliceTests
         var actorFactory = new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy());
         var service = new FusionTransactionService(
             actorFactory,
-            new PartyStockTransitionService(new TestStockCapacityPolicy()));
+            new PartyRosterTransitionService(new TestRosterCapacityPolicy()));
         var request = new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             plan,
             selection,
             party,
@@ -653,10 +655,10 @@ public sealed class OriginalCleanContentSliceTests
             ],
             valid.ConsumedParticipantIds);
         PreparedFusionTransaction prepared = valid.RequirePreparedTransaction();
-        Assert.Same(party, prepared.BeforePartyStock);
+        Assert.Same(party, prepared.BeforePartyRoster);
         Assert.Equal(
             [RuntimeInstanceId.Parse("fused_ward_shell")],
-            prepared.AfterPartyStock.DemonStock.Select(actor => actor.InstanceId));
+            prepared.AfterPartyRoster.CompanionRoster.Select(actor => actor.InstanceId));
 
         FusionTransactionCommitResult committed = service.Commit(new FusionTransactionCommitRequest(
             prepared,
@@ -668,13 +670,13 @@ public sealed class OriginalCleanContentSliceTests
             [Qualified("shell_bash"), Qualified("soften_guard")],
             committed.ResultActorSnapshot?.Skills.LearnedSkillIds);
 
-        RuntimePartyStockSnapshot duplicateParty = party.With(demonStock: party.DemonStock.Append(
+        RuntimePartyRosterSnapshot duplicateParty = party.With(companionRoster: party.CompanionRoster.Append(
             new RuntimeActorReferenceSnapshot(
                 RuntimeInstanceId.Parse("owned_ward_shell"),
                 Qualified("ward_shell"),
                 "Ward Shell")));
         FusionTransactionAssessment duplicateOwned = service.Prepare(new FusionTransactionPreparationRequest(
-            FusionParticipantStockKind.Demon,
+            FusionParticipantRosterKind.Companion,
             plan,
             selection,
             duplicateParty,
@@ -755,7 +757,7 @@ public sealed class OriginalCleanContentSliceTests
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterModifierTrack("attack", "defense")
-            .RegisterEntityKind("demon")
+            .RegisterEntityKind("companion")
             .RegisterAlignment("neutral")
             .RegisterNegotiationPersonality("steady_sample")
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
@@ -769,7 +771,7 @@ public sealed class OriginalCleanContentSliceTests
                 "standard_growth",
                 "standard_stat",
                 "standard_action_token",
-                "standard_stock_capacity",
+                "standard_roster_capacity",
                 "standard_economy",
                 "return_to_lobby",
                 "training_barrier",
@@ -938,8 +940,8 @@ public sealed class OriginalCleanContentSliceTests
         }
     }
 
-    private sealed class TestStockCapacityPolicy : IStockCapacityPolicy
+    private sealed class TestRosterCapacityPolicy : IRosterCapacityPolicy
     {
-        public int GetCapacity(int ownerLevel) => 12;
+        public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => 12;
     }
 }

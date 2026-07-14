@@ -119,7 +119,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();
-        resolver.BindStockCapacityPolicy(catalog, Qualified("standard_stock_capacity")).RequireService();
+        resolver.BindRosterCapacityPolicy(catalog, Qualified("standard_roster_capacity")).RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
             .ConfigureAwait(false);
@@ -257,7 +257,7 @@ internal sealed class CleanTrainingAnnexDemoHost
 
         BattleRewardResult reward = rewardService.Calculate(new BattleRewardRequest(
             [EnemyRewardSnapshot(ashling.Entity, ashlingRequest.Level)],
-            [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveForm: false)]));
+            [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveHostedEntity: false)]));
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             InitialProgression(echo.Entity, 3),
             ActorStats(echo.Entity),
@@ -333,7 +333,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             SemanticVersion.Parse("0.2.0"),
             [TrainingAnnexHostSupport.PackIdentity],
             [echoSnapshot, ashlingSnapshot],
-            new RuntimePartyStockSnapshot(
+            new RuntimePartyRosterSnapshot(
                 echoReference,
                 echoSnapshot.Progression.Level,
                 activeParty: [echoReference]),
@@ -376,7 +376,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             resources,
             stats,
             new RuntimeSkillStateSnapshot(actor.SkillLoadout.Select(skill => skill.Id), actor.ActiveSkills.Select(skill => skill.Id)),
-            new RuntimeFormStockSnapshot(),
+            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
