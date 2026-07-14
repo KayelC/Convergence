@@ -378,6 +378,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.PartyTransitions.Select(transition => transition.Operation));
         Assert.All(summary.PartyTransitions, transition =>
             Assert.Equal(PartyRosterTransitionCode.Applied, transition.Code));
+        Assert.All(summary.PartyTransitions, transition => Assert.True(transition.Committed));
         Assert.Equal(
             [RuntimeInstanceId.Parse("echo_adept")],
             summary.PartyRoster.ActiveParty.Select(actor => actor.InstanceId));
@@ -972,6 +973,43 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(
             "Startup snapshot validation: 0 diagnostic(s).",
             text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RosterAndComposedPlayerStateCommitAtomically()
+    {
+        var io = new ScriptedGameIO().QueueMenu(15, 0, 9);
+        using var output = new StringWriter();
+        var composition = new RejectNthCompositionService(rejectCall: 2);
+        var host = CreateHost(
+            io,
+            output,
+            statCompositionFactory: (stats, resources) =>
+                composition.Initialize(stats, resources));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexPartyTransitionEvidence transition = Assert.Single(summary.PartyTransitions);
+        Assert.Equal(PartyRosterTransitionCode.Applied, transition.Code);
+        Assert.False(transition.Committed);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("form_annex_mentor"),
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("form_annex_mentor"),
+            summary.PlayerRosters.ActiveHostedEntity?.InstanceId);
+        Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
+        Assert.Contains(
+            "Party stock operation not committed: swap_active_form; player stat composition was rejected.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Party stock operation applied: swap_active_form",
+            output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -3917,7 +3955,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
-        RuntimeWalletSnapshot? initialWallet = null) =>
+        RuntimeWalletSnapshot? initialWallet = null,
+        Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>?
+            statCompositionFactory = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
@@ -3926,7 +3966,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
             saveSlots,
             initialInventory,
             initialEquipment,
-            initialWallet);
+            initialWallet,
+            statCompositionFactory);
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
@@ -3940,6 +3981,43 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         return directory?.FullName
                ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
+    }
+
+    private sealed class RejectNthCompositionService(int rejectCall) : IRuntimeActorStatCompositionService
+    {
+        private IRuntimeActorStatCompositionService? _inner;
+        private int _callCount;
+
+        public IRuntimeActorStatCompositionService Initialize(
+            IStatResolutionPolicy stats,
+            IResourceGrowthPolicy resources)
+        {
+            _inner = new RuntimeActorStatCompositionService(stats, resources);
+            return this;
+        }
+
+        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        {
+            _callCount++;
+            if (_callCount != rejectCall)
+            {
+                return (_inner ?? throw new InvalidOperationException("Composition service was not initialized."))
+                    .Compose(request);
+            }
+
+            RuntimeActorSnapshot before = request.Actor.ToSnapshot();
+            return new RuntimeActorStatCompositionResult(
+                RuntimeActorStatCompositionStatus.Rejected,
+                before,
+                before,
+                request.SourceKind,
+                diagnostics:
+                [
+                    new RuntimeActorStatCompositionDiagnostic(
+                        RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+                        "Rejected by the atomic roster test.")
+                ]);
+        }
     }
 
     private sealed class RejectingEconomyTransactionService : IEconomyTransactionService

@@ -17,6 +17,7 @@ internal enum TrainingAnnexPartyOperation
 internal sealed record TrainingAnnexPartyTransitionEvidence(
     string Operation,
     PartyRosterTransitionCode Code,
+    bool Committed,
     IReadOnlyList<RuntimeInstanceId> AffectedInstanceIds,
     int ActiveCountBefore,
     int ReserveCountBefore,
@@ -31,10 +32,12 @@ internal sealed record TrainingAnnexPartyTransitionEvidence(
 {
     public static TrainingAnnexPartyTransitionEvidence From(
         string operation,
-        PartyRosterTransitionResult result) =>
+        PartyRosterTransitionResult result,
+        bool committed) =>
         new(
             operation,
             result.Code,
+            committed,
             result.AffectedInstanceIds,
             result.Before.ActiveParty.Count,
             result.Before.ReserveMembers.Count,

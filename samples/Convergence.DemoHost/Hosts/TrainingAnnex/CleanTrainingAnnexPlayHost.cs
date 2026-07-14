@@ -179,6 +179,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly RuntimeInventorySnapshot? _initialInventory;
     private readonly RuntimeEquipmentSnapshot? _initialEquipment;
     private readonly RuntimeWalletSnapshot? _initialWallet;
+    private readonly Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>
+        _statCompositionFactory;
 
     internal CleanTrainingAnnexPlayHost(
         IContentPackTextSource contentSource,
@@ -188,7 +190,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
-        RuntimeWalletSnapshot? initialWallet = null)
+        RuntimeWalletSnapshot? initialWallet = null,
+        Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>?
+            statCompositionFactory = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
@@ -198,6 +202,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         _initialInventory = initialInventory;
         _initialEquipment = initialEquipment;
         _initialWallet = initialWallet;
+        _statCompositionFactory = statCompositionFactory ??
+            ((stats, resources) => new RuntimeActorStatCompositionService(stats, resources));
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -325,9 +331,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         IStatResolutionPolicy statPolicy = rulesetResolver
             .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
             .RequireService();
-        var statCompositionService = new RuntimeActorStatCompositionService(
-            statPolicy,
-            growthServices.ResourceGrowthPolicy);
+        IRuntimeActorStatCompositionService statCompositionService =
+            _statCompositionFactory(statPolicy, growthServices.ResourceGrowthPolicy) ??
+            throw new InvalidOperationException("The stat-composition factory returned no service.");
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
         var actorFactory = new CatalogBattleActorFactory(
@@ -566,6 +572,7 @@ internal sealed class CleanTrainingAnnexPlayHost
 
             CleanTrainingAnnexPlayCommand command = result.Command;
             commands.Add(command);
+            bool composeAfterCommand = true;
             switch (command)
             {
                 case CleanTrainingAnnexPlayCommand.InspectSession:
@@ -606,16 +613,43 @@ internal sealed class CleanTrainingAnnexPlayHost
                         operation,
                         partyRoster,
                         roster);
-                    partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(operationName, operationResult));
-                    await partyController.PrintOperationAsync(
-                        operationName,
-                        operationResult,
-                        _eventSink,
-                        cancellationToken).ConfigureAwait(false);
+                    bool committed = false;
                     if (operationResult.Applied)
                     {
-                        partyRoster = operationResult.After;
+                        committed = await ComposePlayerStateAsync(
+                                roster,
+                                operationResult.After,
+                                statCompositionService,
+                                equipmentProfileResolver,
+                                catalog,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                        if (committed)
+                        {
+                            partyRoster = operationResult.After;
+                        }
+                        else
+                        {
+                            await _eventSink.PublishAsync(
+                                $"Party stock operation not committed: {operationName}; player stat composition was rejected.",
+                                cancellationToken).ConfigureAwait(false);
+                        }
                     }
+
+                    partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(
+                        operationName,
+                        operationResult,
+                        committed));
+                    if (!operationResult.Applied || committed)
+                    {
+                        await partyController.PrintOperationAsync(
+                            operationName,
+                            operationResult,
+                            _eventSink,
+                            cancellationToken).ConfigureAwait(false);
+                    }
+
+                    composeAfterCommand = false;
 
                     break;
                 }
@@ -1289,7 +1323,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }
 
-            if (!await ComposePlayerStateAsync(
+            if (composeAfterCommand && !await ComposePlayerStateAsync(
                     roster,
                     partyRoster,
                     statCompositionService,
