@@ -59,4 +59,4 @@ dotnet run --project samples/Convergence.DemoHost -- --help
 
 The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, DemoHost, and their independent test projects.
 
-Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), and [capability matrix](docs/framework-capability-matrix.md).
+Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), [mechanics and player rules](docs/mechanics/README.md), and [capability matrix](docs/framework-capability-matrix.md).

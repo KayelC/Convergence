@@ -1,0 +1,67 @@
+# Combat, Defenses, And Turn Economy
+
+## Combat Rule Ownership
+
+**Configured rule:** combat arithmetic is supplied through policies. The included `ProductionCombatRuleset` handles damage, accuracy, criticals, chance rolls, ailment application, instant death, initiative support, and reward calculations. A game may bind authored ruleset records or inject another implementation.
+
+The exact formula and multipliers are therefore not universal Convergence rules. They are part of the selected ruleset. Training Annex binds the supplied standard ruleset for repeatable examples.
+
+## Damage Flow
+
+Typed damage identifies power, accuracy, damage element, critical mode, and hit count. Physical damage uses the physical offense path; magical elements use the magical offense path under the supplied policy.
+
+A damage attempt resolves in this order at a high level:
+
+1. Resolve legal targets and effect conditions.
+2. Resolve hit count and accuracy for each hit.
+3. Resolve critical eligibility and chance.
+4. Calculate raw damage through the active policy.
+5. Apply guard, modifiers, shields, Break, and elemental affinity rules.
+6. Mutate the target resource atomically.
+7. Return typed effect and turn-economy outcomes.
+
+Arithmetic is checked or saturating at public boundaries so extreme authored/runtime values do not wrap into negative damage or rewards.
+
+## Elemental Defense
+
+The elemental outcomes are Weak, Normal, Resist, Null, Repel, and Absorb. Missing entries resolve to Normal. Almighty always resolves normally and does not consult authored affinity maps.
+
+Shield precedence comes before affinity. If no matching shield applies, Break may normalize the affinity. Passive affinity replacements use strongest-response precedence:
+
+`Absorb > Repel > Null > Resist > Normal > Weak`
+
+The Framework returns the resolved outcome. A host decides how to animate weakness, reflection, absorption, or immunity.
+
+## Ailment And Instant-Death Defense
+
+Ailment resistance is keyed by ailment `ContentId`. Instant-death resistance uses separate Light and Dark channels. Neither shares the elemental map.
+
+Missing ailment or instant-death entries resolve to Normal. An explicit instant-death bypass mode ignores channel resistance but still delegates success probability to the active policy.
+
+## Guard, Charge, Shields, Overrides, And Break
+
+Guard is executable runtime state and may reduce damage or normalize weakness according to the selected combat policy. Charges, shields, affinity overrides, and Break have typed duration state. Duration ticking and cleanup are handled by the lifecycle service rather than display code.
+
+## Turn Economy
+
+`IBattleTurnEconomy` is the reusable turn interface. Press Turn is one optional implementation, not a mandatory battle model.
+
+The supplied Press Turn behavior is:
+
+- A phase starts with one full icon per active living actor.
+- A normal action consumes one blinking icon first, otherwise one full icon.
+- Passing converts one full icon to blinking; if only blinking remains, it consumes one.
+- Weakness or Critical converts a full icon to blinking; if only blinking remains, it consumes one.
+- Miss or Null consumes up to two icons.
+- Repel or Absorb ends the phase.
+- A free action consumes no icon.
+- A terminate-phase result clears all remaining icons.
+
+**Host responsibility:** presentation may use icons, pips, text, or no visible turn meter. The state change comes from Framework snapshots and events.
+
+## Encounter Loop
+
+The encounter runner owns initiative, battle start, team phases, actor turns, lifecycle calls, command execution, turn-economy application, participant refresh, defeat checks, cancellation, round limits, faults, and ordered events.
+
+The runner ends with victory, defeat, escape, draw/round limit, host cancellation, or fault. Rewards and recruitment are separate services; an encounter does not silently grant either.
+

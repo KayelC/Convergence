@@ -36,7 +36,7 @@ Generic navigation uses arbitrary `ContentId` locations and injected access poli
 
 ## Fusion, Inheritance, And Compendium
 
-Fusion services resolve typed recipes and strategy policies, build deterministic candidate plans, validate inherited skill selections, construct previews, and assess transactions. Inheritance precedence is typed and shared between preview and commit. Compendium services own immutable registration snapshots, recall assessment, configurable pricing, and familiar-knowledge import.
+Fusion services resolve typed recipes and strategy policies, build deterministic candidate plans, validate inherited skill selections, construct previews, and assess transactions. Inheritance precedence is typed and shared between preview and commit. Compendium services distinguish first acquisition from explicit updates: `RecordAcquisition` adds a missing entry but preserves an existing snapshot, while `RegisterActor` is the deliberate add-or-update operation. Recall pricing and familiar-knowledge import remain separately configurable.
 
 ## Persistence
 

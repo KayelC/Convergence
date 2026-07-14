@@ -55,6 +55,7 @@ public sealed record CompendiumActorRegistrationResult
 
     public CompendiumRegistrationCode Code { get; }
     public bool Applied => Code is CompendiumRegistrationCode.Added or CompendiumRegistrationCode.Updated;
+    public bool Accepted => Code != CompendiumRegistrationCode.InvalidEntry;
     public CompendiumStateSnapshot Before { get; }
     public CompendiumStateSnapshot After { get; }
     public CompendiumEntrySnapshot? Entry { get; }
@@ -173,6 +174,10 @@ public interface ICompendiumRuntimeService
         CompendiumStateSnapshot state,
         RuntimeActorSnapshot actor);
 
+    CompendiumActorRegistrationResult RecordAcquisition(
+        CompendiumStateSnapshot state,
+        RuntimeActorSnapshot actor);
+
     CompendiumRecallTransactionResult Recall(CompendiumRecallTransactionRequest request);
 }
 
@@ -211,7 +216,18 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
 
     public CompendiumActorRegistrationResult RegisterActor(
         CompendiumStateSnapshot state,
-        RuntimeActorSnapshot actor)
+        RuntimeActorSnapshot actor) =>
+        RegisterActor(state, actor, preserveExistingEntry: false);
+
+    public CompendiumActorRegistrationResult RecordAcquisition(
+        CompendiumStateSnapshot state,
+        RuntimeActorSnapshot actor) =>
+        RegisterActor(state, actor, preserveExistingEntry: true);
+
+    private CompendiumActorRegistrationResult RegisterActor(
+        CompendiumStateSnapshot state,
+        RuntimeActorSnapshot actor,
+        bool preserveExistingEntry)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(actor);
@@ -288,7 +304,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 entryDiagnostics);
         }
 
-        CompendiumRegistrationResult registration = _compendium.Register(state, entry);
+        CompendiumRegistrationResult registration = preserveExistingEntry
+            ? _compendium.RecordAcquisition(state, entry)
+            : _compendium.Register(state, entry);
         return new CompendiumActorRegistrationResult(
             registration.Code,
             registration.Before,

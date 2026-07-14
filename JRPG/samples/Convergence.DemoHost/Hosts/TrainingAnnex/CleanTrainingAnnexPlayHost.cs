@@ -358,6 +358,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             partyStock: partyStockTransitions,
             economy: economy);
         var familiarKnowledge = new FamiliarEntityKnowledgeService(catalog);
+        var acquisitionRegistrar = new TrainingAnnexAcquisitionRegistrar(
+            compendiumRuntime,
+            familiarKnowledge,
+            _eventSink);
         TrainingAnnexPartySetupResult partySetup = partyController.CreateInitialParty(roster);
         RuntimePartyStockSnapshot partyStock = partySetup.Snapshot;
         var partyTransitions = new List<TrainingAnnexPartyTransitionEvidence>(partySetup.Transitions);
@@ -615,17 +619,25 @@ internal sealed class CleanTrainingAnnexPlayHost
                     partyStock = negotiation.PartyStock;
                     wallet = negotiation.Wallet;
                     negotiations.AddRange(negotiation.Evidence);
-                    ContentId[] recruitedEntityIds = negotiation.Evidence
-                        .Where(evidence => evidence.Recruited)
-                        .Select(evidence => evidence.TargetEntityId)
-                        .Distinct()
-                        .ToArray();
-                    if (recruitedEntityIds.Length > 0)
+                    foreach (TrainingAnnexNegotiationEvidence recruited in
+                             negotiation.Evidence.Where(evidence => evidence.Recruited))
                     {
-                        FamiliarKnowledgeImportResult imported = familiarKnowledge.Import(
-                            playerBattleKnowledge.ToSnapshot(),
-                            recruitedEntityIds);
-                        playerBattleKnowledge = TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
+                        TrainingAnnexRuntimeActor acquiredActor = roster.AllActors.FirstOrDefault(actor =>
+                                actor.Actor.State.InstanceId == recruited.TargetInstanceId)
+                            ?? throw new InvalidOperationException(
+                                $"Recruited runtime actor '{recruited.TargetInstanceId}' is not in the host roster.");
+                        TrainingAnnexAcquisitionRegistrationResult acquisition =
+                            await acquisitionRegistrar.RecordAsync(
+                                compendium,
+                                playerBattleKnowledge,
+                                acquiredActor,
+                                partyStock,
+                                wallet,
+                                TrainingAnnexHostSupport.NegotiationAcquisitionSource,
+                                cancellationToken).ConfigureAwait(false);
+                        compendium = acquisition.Compendium;
+                        playerBattleKnowledge = acquisition.PlayerKnowledge;
+                        compendiumEvidence.Add(acquisition.Evidence);
                     }
                     break;
                 }
@@ -672,10 +684,18 @@ internal sealed class CleanTrainingAnnexPlayHost
                     if (transaction.ResultActor is not null)
                     {
                         roster = roster.WithDynamicMember(transaction.ResultActor);
-                        FamiliarKnowledgeImportResult imported = familiarKnowledge.Import(
-                            playerBattleKnowledge.ToSnapshot(),
-                            [transaction.ResultActor.Actor.Entity.Id]);
-                        playerBattleKnowledge = TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
+                        TrainingAnnexAcquisitionRegistrationResult acquisition =
+                            await acquisitionRegistrar.RecordAsync(
+                                compendium,
+                                playerBattleKnowledge,
+                                transaction.ResultActor,
+                                partyStock,
+                                wallet,
+                                TrainingAnnexHostSupport.FusionAcquisitionSource,
+                                cancellationToken).ConfigureAwait(false);
+                        compendium = acquisition.Compendium;
+                        playerBattleKnowledge = acquisition.PlayerKnowledge;
+                        compendiumEvidence.Add(acquisition.Evidence);
                     }
 
                     break;

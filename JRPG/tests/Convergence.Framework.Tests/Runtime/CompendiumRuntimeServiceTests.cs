@@ -41,6 +41,57 @@ public sealed class CompendiumRuntimeServiceTests
     }
 
     [Fact]
+    public void RecordAcquisition_AddsOncePreservesTheSavedEntryAndLeavesExplicitUpdatesAvailable()
+    {
+        TestContext context = CreateContext();
+        var service = context.CreateService();
+        RuntimeActorSnapshot firstActor = context.CreateActor("first_acquisition").State.ToSnapshot();
+        CompendiumActorRegistrationResult first = service.RecordAcquisition(
+            new CompendiumStateSnapshot(),
+            firstActor);
+        var laterActor = new RuntimeActorSnapshot(
+            new RuntimeActorIdentitySnapshot(
+                firstActor.Identity.InstanceId,
+                firstActor.Identity.EntityDefinitionId,
+                firstActor.Identity.ActorKindId,
+                "Later Acquired Snapshot",
+                firstActor.Identity.DisplaySubtitle),
+            firstActor.Ownership,
+            firstActor.Deployment,
+            firstActor.Progression,
+            firstActor.Resources,
+            firstActor.Stats,
+            firstActor.Skills,
+            firstActor.Forms,
+            firstActor.Equipment,
+            firstActor.BattleStatus,
+            firstActor.BattleActivations,
+            firstActor.BaseResourceValues,
+            firstActor.VitalResourceId,
+            firstActor.CapabilityIds);
+
+        CompendiumActorRegistrationResult repeated = service.RecordAcquisition(first.After, laterActor);
+
+        Assert.Equal(CompendiumRegistrationCode.Added, first.Code);
+        Assert.True(first.Applied);
+        Assert.True(first.Accepted);
+        Assert.Equal(CompendiumRegistrationCode.AlreadyRegistered, repeated.Code);
+        Assert.False(repeated.Applied);
+        Assert.True(repeated.Accepted);
+        Assert.Same(first.After, repeated.Before);
+        Assert.Same(first.After, repeated.After);
+        Assert.Same(first.Entry, repeated.Entry);
+        Assert.NotEqual("Later Acquired Snapshot", repeated.Entry!.DisplayName);
+
+        CompendiumActorRegistrationResult explicitUpdate = service.RegisterActor(repeated.After, laterActor);
+
+        Assert.Equal(CompendiumRegistrationCode.Updated, explicitUpdate.Code);
+        Assert.True(explicitUpdate.Applied);
+        Assert.Equal("Later Acquired Snapshot", explicitUpdate.Entry!.DisplayName);
+        Assert.Equal("Later Acquired Snapshot", Assert.Single(explicitUpdate.After.Entries).DisplayName);
+    }
+
+    [Fact]
     public void RegisterActor_RejectsMissingOrIneligibleCatalogEntitiesWithoutMutation()
     {
         TestContext eligible = CreateContext();

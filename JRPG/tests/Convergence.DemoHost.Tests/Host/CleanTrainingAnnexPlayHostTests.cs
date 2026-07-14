@@ -486,6 +486,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.Element == DamageElement.Fire &&
             knowledge.Affinity == ElementalAffinity.Weak);
         Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
+        CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("bramble_runner"), entry.EntityId);
+        TrainingAnnexCompendiumEvidence acquisition = Assert.Single(summary.CompendiumEvidence);
+        Assert.Equal(TrainingAnnexCompendiumAction.Acquisition, acquisition.Action);
+        Assert.True(acquisition.Applied);
+        Assert.Equal(CompendiumRegistrationCode.Added, acquisition.RegistrationCode);
+        Assert.Equal(TrainingAnnexHostSupport.NegotiationAcquisitionSource, acquisition.AcquisitionSourceId);
 
         Assert.Equal(
             [
@@ -501,6 +508,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Negotiation opened: Steady Sample; target Bramble Runner; wallet 100 M.", text, StringComparison.Ordinal);
         Assert.Contains("Negotiation event: MoodPositive; Bramble Runner seems pleased with your answers.", text, StringComparison.Ordinal);
         Assert.Contains("Recruitment applied: Bramble Runner joined Demon stock; wallet 100->50 M; Demon stock 2->3.", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Compendium first-acquisition record added: Bramble Runner (negotiation).",
+            text,
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -916,6 +927,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.Element == DamageElement.Electric &&
             knowledge.Affinity == ElementalAffinity.Weak);
         Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
+        CompendiumEntrySnapshot compendiumEntry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("ward_shell"), compendiumEntry.EntityId);
+        TrainingAnnexCompendiumEvidence acquisition = Assert.Single(summary.CompendiumEvidence);
+        Assert.Equal(TrainingAnnexCompendiumAction.Acquisition, acquisition.Action);
+        Assert.True(acquisition.Applied);
+        Assert.Equal(CompendiumRegistrationCode.Added, acquisition.RegistrationCode);
+        Assert.Equal(TrainingAnnexHostSupport.FusionAcquisitionSource, acquisition.AcquisitionSourceId);
         Assert.True(summary.StartupSnapshotValidated);
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
 
@@ -935,8 +953,92 @@ public sealed class CleanTrainingAnnexPlayHostTests
             text,
             StringComparison.Ordinal);
         Assert.Contains(
+            "Compendium first-acquisition record added: Ward Shell (fusion).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "Startup snapshot validation: 0 diagnostic(s).",
             text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationAcquisitionPreservesAnExistingCompendiumRecord()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 1, 16, 0, 0, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("bramble_runner"), entry.EntityId);
+        Assert.Equal(2, summary.CompendiumEvidence.Count);
+        Assert.Equal(CompendiumRegistrationCode.Added, summary.CompendiumEvidence[0].RegistrationCode);
+        TrainingAnnexCompendiumEvidence acquisition = summary.CompendiumEvidence[1];
+        Assert.Equal(TrainingAnnexCompendiumAction.Acquisition, acquisition.Action);
+        Assert.False(acquisition.Applied);
+        Assert.Equal(CompendiumRegistrationCode.AlreadyRegistered, acquisition.RegistrationCode);
+        Assert.Equal(TrainingAnnexHostSupport.NegotiationAcquisitionSource, acquisition.AcquisitionSourceId);
+        Assert.Contains(
+            "Compendium record preserved: Bramble Runner was already registered; negotiation did not overwrite it.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ExplicitRegistrationCanStillUpdateAnExistingRecord()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 0, 20, 0, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(2, summary.CompendiumEvidence.Count);
+        Assert.Equal(CompendiumRegistrationCode.Added, summary.CompendiumEvidence[0].RegistrationCode);
+        Assert.Equal(CompendiumRegistrationCode.Updated, summary.CompendiumEvidence[1].RegistrationCode);
+        Assert.All(summary.CompendiumEvidence, evidence =>
+            Assert.Equal(TrainingAnnexCompendiumAction.Register, evidence.Action));
+        Assert.Contains("Compendium updated: Ashling", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FusionAcquisitionPreservesAnExistingCompendiumRecord()
+    {
+        var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 19, 3, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
+        Assert.Equal(Qualified("ward_shell"), entry.EntityId);
+        Assert.Equal(2, summary.CompendiumEvidence.Count);
+        TrainingAnnexCompendiumEvidence explicitRegistration = summary.CompendiumEvidence[0];
+        TrainingAnnexCompendiumEvidence acquisition = summary.CompendiumEvidence[1];
+        Assert.Equal(TrainingAnnexCompendiumAction.Register, explicitRegistration.Action);
+        Assert.Equal(CompendiumRegistrationCode.Added, explicitRegistration.RegistrationCode);
+        Assert.Equal(TrainingAnnexCompendiumAction.Acquisition, acquisition.Action);
+        Assert.False(acquisition.Applied);
+        Assert.Equal(CompendiumRegistrationCode.AlreadyRegistered, acquisition.RegistrationCode);
+        Assert.Equal(TrainingAnnexHostSupport.FusionAcquisitionSource, acquisition.AcquisitionSourceId);
+        Assert.Contains(
+            "Compendium record preserved: Ward Shell was already registered; fusion did not overwrite it.",
+            output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
     }

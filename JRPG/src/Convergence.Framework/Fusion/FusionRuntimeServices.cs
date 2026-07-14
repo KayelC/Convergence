@@ -1280,6 +1280,7 @@ public enum CompendiumRegistrationCode
 {
     Added,
     Updated,
+    AlreadyRegistered,
     InvalidEntry
 }
 
@@ -1369,6 +1370,9 @@ public sealed record CompendiumRecallAssessment(
 public interface ICompendiumService
 {
     CompendiumRegistrationResult Register(CompendiumStateSnapshot state, CompendiumEntrySnapshot entry);
+    CompendiumRegistrationResult RecordAcquisition(
+        CompendiumStateSnapshot state,
+        CompendiumEntrySnapshot entry);
     CompendiumRecallPricingDecision GetRecallPricing(CompendiumEntrySnapshot entry, int? basePrice = null);
     CompendiumRecallAssessment AssessRecall(
         CompendiumStateSnapshot state,
@@ -1404,6 +1408,25 @@ public sealed class CompendiumService : ICompendiumService
             state,
             after,
             entry);
+    }
+
+    public CompendiumRegistrationResult RecordAcquisition(
+        CompendiumStateSnapshot state,
+        CompendiumEntrySnapshot entry)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (state.TryGet(entry.SpeciesId, out CompendiumEntrySnapshot? existing) && existing is not null)
+        {
+            return new CompendiumRegistrationResult(
+                CompendiumRegistrationCode.AlreadyRegistered,
+                state,
+                state,
+                existing);
+        }
+
+        return Register(state, entry);
     }
 
     public CompendiumRecallPricingDecision GetRecallPricing(

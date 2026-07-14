@@ -8,7 +8,8 @@ namespace Convergence.DemoHost.TrainingAnnex;
 internal enum TrainingAnnexCompendiumAction
 {
     Register,
-    Recall
+    Recall,
+    Acquisition
 }
 
 internal sealed record TrainingAnnexCompendiumEvidence(
@@ -25,7 +26,8 @@ internal sealed record TrainingAnnexCompendiumEvidence(
     int ImportedElementalAffinities,
     int ImportedAilmentResistances,
     int ImportedInstantDeathResistances,
-    IReadOnlyList<CompendiumRuntimeDiagnosticCode> DiagnosticCodes);
+    IReadOnlyList<CompendiumRuntimeDiagnosticCode> DiagnosticCodes,
+    ContentId? AcquisitionSourceId);
 
 internal sealed record TrainingAnnexCompendiumInteractionResult(
     CompendiumStateSnapshot Compendium,
@@ -369,7 +371,8 @@ internal sealed class TrainingAnnexCompendiumController
             ImportedElementCount(imported, entityId),
             ImportedAilmentCount(imported, entityId),
             ImportedInstantDeathCount(imported, entityId),
-            registration.Diagnostics.Select(diagnostic => diagnostic.Code).ToArray());
+            registration.Diagnostics.Select(diagnostic => diagnostic.Code).ToArray(),
+            null);
 
     private static TrainingAnnexCompendiumEvidence Evidence(
         ContentId entityId,
@@ -389,7 +392,8 @@ internal sealed class TrainingAnnexCompendiumController
             ImportedElementCount(imported, entityId),
             ImportedAilmentCount(imported, entityId),
             ImportedInstantDeathCount(imported, entityId),
-            recall.Diagnostics.Select(diagnostic => diagnostic.Code).ToArray());
+            recall.Diagnostics.Select(diagnostic => diagnostic.Code).ToArray(),
+            null);
 
     private static int ImportedElementCount(FamiliarKnowledgeImportResult? result, ContentId entityId) =>
         result?.After.ElementalAffinities.Count(entry => entry.EntityId == entityId) ?? 0;

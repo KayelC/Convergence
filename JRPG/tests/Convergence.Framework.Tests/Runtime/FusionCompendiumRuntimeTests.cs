@@ -256,6 +256,27 @@ public sealed class FusionCompendiumRuntimeTests
         Assert.Equal("Recall has not been unlocked.", Assert.Single(gated.Diagnostics).Message);
     }
 
+    [Fact]
+    public void CompendiumService_AcquisitionIsIdempotentAndDoesNotReplaceAnExistingRecord()
+    {
+        var service = new CompendiumService();
+        var original = new CompendiumEntrySnapshot(Id("sample"), "Original Record", level: 3);
+        var laterAcquisition = new CompendiumEntrySnapshot(Id("sample"), "Later Acquisition", level: 9);
+
+        CompendiumRegistrationResult first = service.RecordAcquisition(
+            new CompendiumStateSnapshot(),
+            original);
+        CompendiumRegistrationResult repeated = service.RecordAcquisition(first.After, laterAcquisition);
+
+        Assert.Equal(CompendiumRegistrationCode.Added, first.Code);
+        Assert.Equal(CompendiumRegistrationCode.AlreadyRegistered, repeated.Code);
+        Assert.Same(first.After, repeated.Before);
+        Assert.Same(first.After, repeated.After);
+        Assert.Same(first.Entry, repeated.Entry);
+        Assert.Equal("Original Record", Assert.Single(repeated.After.Entries).DisplayName);
+        Assert.Equal(3, repeated.Entry!.Level);
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
 
     private sealed class UnavailableRecallPricingPolicy : ICompendiumRecallPricingPolicy
