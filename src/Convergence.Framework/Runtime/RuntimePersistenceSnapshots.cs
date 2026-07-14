@@ -63,7 +63,7 @@ public enum RuntimeSaveValidationCode
     PassiveStateSkillNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
-    DuplicateActorFormReference,
+    DuplicateActorRosterReference,
     EquippedEquipmentNotOwned,
     EquipmentSlotMismatch,
     EquipmentAssignedToMultipleActors,
@@ -357,7 +357,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
         for (int index = 0; index < snapshot.Actors.Count; index++)
         {
-            ValidateActorFormReferences(snapshot.Actors[index], actors, diagnostics, index);
+            ValidateActorRosterReferences(snapshot.Actors[index], actors, diagnostics, index);
         }
 
         ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
@@ -717,21 +717,21 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private static string ActorPath(int actorIndex, string relativePath) =>
         $"$.actors[{actorIndex}]" + relativePath[1..];
 
-    private static void ValidateActorFormReferences(
+    private static void ValidateActorRosterReferences(
         RuntimeActorSnapshot actor,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         int actorIndex)
     {
-        string formsPath = $"$.actors[{actorIndex}].rosters";
+        string rostersPath = $"$.actors[{actorIndex}].rosters";
         foreach (RuntimeActorRosterInvariantDiagnostic rosterDiagnostic in
                  RuntimeActorRosterInvariantRules.Validate(actor.Rosters))
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.DuplicateActorFormReference,
+                RuntimeSaveValidationCode.DuplicateActorRosterReference,
                 rosterDiagnostic.Message,
                 rosterDiagnostic.InstanceId,
-                Path: formsPath + rosterDiagnostic.Path[1..]));
+                Path: rostersPath + rosterDiagnostic.Path[1..]));
         }
 
         if (actor.Rosters.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
@@ -740,26 +740,26 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 activeHostedEntity,
                 actors,
                 diagnostics,
-                formsPath + ".activeHostedEntity",
+                rostersPath + ".activeHostedEntity",
                 RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
-                $"Actor '{actor.Identity.InstanceId}' active form");
+                $"Actor '{actor.Identity.InstanceId}' active hosted entity");
         }
 
-        ValidateActorFormReferenceList(
+        ValidateActorRosterReferenceList(
             actor,
             actor.Rosters.HostedEntityRoster,
             actors,
             diagnostics,
-            formsPath + ".hostedEntityRoster");
-        ValidateActorFormReferenceList(
+            rostersPath + ".hostedEntityRoster");
+        ValidateActorRosterReferenceList(
             actor,
             actor.Rosters.CompanionRoster,
             actors,
             diagnostics,
-            formsPath + ".companionRoster");
+            rostersPath + ".companionRoster");
     }
 
-    private static void ValidateActorFormReferenceList(
+    private static void ValidateActorRosterReferenceList(
         RuntimeActorSnapshot owner,
         IReadOnlyList<RuntimeActorReferenceSnapshot> references,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
@@ -776,7 +776,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 diagnostics,
                 referencePath,
                 RuntimeSaveValidationCode.MissingActorReference,
-                $"Actor '{owner.Identity.InstanceId}' form-stock reference");
+                $"Actor '{owner.Identity.InstanceId}' owned-actor roster reference");
         }
     }
 
@@ -792,7 +792,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             diagnostics,
             "$.partyRoster.owner",
             RuntimeSaveValidationCode.MissingActorReference,
-            "Party-stock owner");
+            "Party roster owner");
 
         if (partyRoster.ActiveParty.Count > partyRoster.MaxActivePartySize)
         {

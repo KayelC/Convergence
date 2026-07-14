@@ -25,7 +25,7 @@ public enum FusionParticipantRosterKind
 public enum FusionRuntimeDiagnosticCode
 {
     None,
-    MissingParentForm,
+    MissingParentActorState,
     NoRecipe,
     NoFusionPossible,
     MissingEntity,

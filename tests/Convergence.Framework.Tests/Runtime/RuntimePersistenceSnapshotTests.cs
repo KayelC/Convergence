@@ -606,7 +606,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Contains(validation.Diagnostics, item =>
             item.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch &&
             item.Path == "$.actors[0].rosters.hostedEntityRoster[0].entityDefinitionId");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorFormReference, "$.actors[0].rosters.hostedEntityRoster[1]");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorRosterReference, "$.actors[0].rosters.hostedEntityRoster[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentSlotMismatch, "$.actors[0].equipment.equippedItemIds.armor");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquippedEquipmentNotOwned, "$.actors[0].equipment.equippedItemIds.armor");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors, "$.actors[1].equipment.equippedItemIds.weapon");
