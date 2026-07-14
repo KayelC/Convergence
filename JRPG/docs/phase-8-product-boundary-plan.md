@@ -1,6 +1,6 @@
 # Phase 8: Convergence Product Boundary And Legacy Archive
 
-**Status:** Approved implementation plan
+**Status:** Complete
 
 **Starting branch:** `track-12-recovery`
 
@@ -14,7 +14,7 @@
 | 2. Clean projects | Complete | Commit `543b717`; Framework and DemoHost build independently on .NET 8 with 0 compiler warnings. |
 | 3. Content and tests | Complete | Clean content is separated into 36 reference/demo/original documents; 548 Framework tests and 145 DemoHost tests pass with 0 failures and 0 skips. |
 | 4. Namespace migration | Complete | Active Framework, DemoHost, and test sources use the `Convergence.*` namespaces and the product-area folder layout; 693 tests pass. |
-| 5. Archive gate | Pending | The old solution and prototype remain available for comparison until the clean gate passes. |
+| 5. Archive gate | Complete | The former executable, adapters, DTOs, prototype data, legacy tests, old solution, plans, reviews, and ledgers are preserved under `ArchiveDocs/LegacyFramework` and excluded from every active project. |
 
 ## Purpose
 
@@ -122,3 +122,18 @@ The old Moon Phase console implementation is archived. Nullable moon-phase metad
 3. `test: separate clean framework and demo coverage`
 4. `refactor: adopt convergence public namespaces`
 5. `cleanup: archive legacy console prototype`
+
+## Completion Record
+
+Phase 8 completed on `track-12-recovery` on 2026-07-14.
+
+- Active product: one dependency-free `net8.0` Framework library, one optional DemoHost, and two clean test projects in `Convergence.sln`.
+- Clean verification: 553 Framework tests and 145 DemoHost tests passed, for 698 total with 0 failures and 0 skips.
+- Build verification: Framework, DemoHost, and the complete solution each built nonincrementally with 0 warnings and 0 errors.
+- Content verification: 36 active JSON files across 6 manifests have unique filenames and exactly one manifest owner.
+- Archive inventory: 132 former source/project files, 36 legacy test/project files, and 14 prototype JSON files are retained outside the active build.
+- Runtime verification: battle, field, save, and Training Annex automated demos exited successfully; the interactive Training Annex host accepted scripted input and exited normally; `--help` reported the complete command surface.
+- Host-boundary verification: the Godot-shaped contract proof passed, active Framework source contains no console/filesystem/Godot/Newtonsoft/legacy dependency, and DemoHost neither registers nor binds Moon Phase.
+- Repository verification: active documentation links passed, forbidden-reference searches returned no production matches, and `git diff --check` reported no whitespace errors.
+
+The 1,113-test figure above remains the frozen pre-archive recovery baseline. It is not the clean product test count: legacy characterization and adapter tests are intentionally retained as non-built historical evidence.

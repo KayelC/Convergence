@@ -2,31 +2,21 @@
 
 ## Status
 
-This folder is the approved holding area for legacy framework or console-host source material after it is proven obsolete.
+Phase 8 archived the former console prototype after the clean Framework, DemoHost, content, and test solution passed independently. This directory is retained for history and code archaeology only.
 
-No active production source has been moved here yet. As of Track T5, `Convergence.Tests/Fixtures/Parity/archive-candidate-review.t5.json` records 0 archive candidates and 0 removal authorizations. Every protected legacy capability in `Convergence.Tests/Fixtures/Parity/recovery-baseline.json` still has `removalAuthorized: false`, so moving live compatibility code would break the recovery branch instead of completing the framework.
+Nothing here is built, tested, copied, loaded, supported, or shipped as part of Convergence Framework.
 
-## Archive Rule
+## Contents
 
-Track S uses archive-first retirement:
+- `ConsolePrototype/Source`: old executable, DTOs, actors, services, conductors, adapters, and presentation code.
+- `ConsolePrototype/Content`: 14 prototype or generated JSON files.
+- `ConsolePrototype/Tests`: legacy characterization and adapter tests.
+- `ConsolePrototype/Project`: the former solution.
+- `Evidence`: frozen parity, production-content, and archive-review ledgers.
+- `Documentation`: migration plans, reviews, generated technical notes, and superseded subsystem material.
 
-1. Promote a capability to `clean_parity` only after the framework replacement, migrated consumer, tests, and docs all prove parity.
-2. Set `consumerMigrated: true` and `removalAuthorized: true` in the parity ledger for the specific retired capability.
-3. Move the obsolete source or data into this folder, preserving the original relative path under a track-specific subfolder.
-4. Remove it from active project files, build inputs, data-loading paths, and runtime references.
-5. Run the full quality gate before committing.
+## Authority
 
-Example future layout:
+Archived files do not define current behavior. Do not reference this directory from active projects, tests, content, or implementation documentation. Recover a useful idea by reviewing it against current code and publishing a new active decision under `docs`.
 
-```text
-ArchiveDocs/LegacyFramework/
-  TrackS/
-    Logic/Battle/Effects/DamageEffect.cs
-    Data/SkillData.cs
-```
-
-## Important Boundary
-
-The framework architecture is ready to build on, but the framework itself is not finished. Several gameplay systems still rely on legacy console adapters, prototype datasets, or named default policies. Those files are protected until their replacement is complete and verified.
-
-Archiving is therefore a final gate for a specific retired file, not a broad cleanup pass.
+The archive preserves history; it is not a second maintained product.

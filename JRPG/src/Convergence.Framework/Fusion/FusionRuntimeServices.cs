@@ -342,7 +342,7 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return Failed(
                 FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
                 token is null
-                    ? "Fusion recipe has neither a structured result nor a legacy compatibility result token."
+                    ? "Fusion recipe has neither a structured result nor a compatibility result token."
                     : $"Fusion recipe result token '{token}' requires an explicitly registered compatibility policy.");
         }
 
@@ -392,7 +392,7 @@ public sealed class FusionResultResolver : IFusionResultResolver
             return Failed(
                 FusionRuntimeDiagnosticCode.UnsupportedRecipeFormat,
                 compatibilityToken is null
-                    ? "Fusion recipe has neither a structured result nor a legacy compatibility result token."
+                    ? "Fusion recipe has neither a structured result nor a compatibility result token."
                     : $"Fusion recipe result token '{compatibilityToken}' requires an explicitly registered compatibility policy.");
         }
 

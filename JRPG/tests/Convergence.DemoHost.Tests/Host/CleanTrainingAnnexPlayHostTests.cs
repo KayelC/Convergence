@@ -249,7 +249,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         string text = output.ToString();
         Assert.Contains("Clean Training Annex session booted.", text, StringComparison.Ordinal);
-        Assert.Contains("without legacy Database startup", text, StringComparison.Ordinal);
+        Assert.Contains("through the clean catalog pipeline", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated clean actor roster with 10 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
         Assert.Contains("Party setup: 1 active, 1 reserve.", text, StringComparison.Ordinal);

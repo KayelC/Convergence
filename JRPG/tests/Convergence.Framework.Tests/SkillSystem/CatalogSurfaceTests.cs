@@ -22,7 +22,7 @@ public sealed class CatalogSurfaceTests
         Assert.Single(catalog.Encounters);
         Assert.Single(catalog.Dungeons);
         Assert.Single(catalog.FusionRecipes);
-        Assert.Equal(8, catalog.Rulesets.Count);
+        Assert.Equal(7, catalog.Rulesets.Count);
 
         EquipmentDefinition weapon = catalog.GetRequiredEquipment(
             Id("convergence.catalog_surface_sample:shortsword_sample"));
@@ -556,7 +556,6 @@ public sealed class CatalogSurfaceTests
                 "standard_press_turn",
                 "standard_stock_capacity",
                 "standard_economy",
-                "standard_moon_phase",
                 "return_to_lobby",
                 "standard_accident",
                 "standard_mutation")

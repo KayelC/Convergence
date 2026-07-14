@@ -38,7 +38,6 @@ internal sealed class CleanFieldDemoHost
     private static readonly ContentId Battle = ContentId.Parse("battle");
     private static readonly ContentId Field = ContentId.Parse("field");
     private static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
-    private static readonly ContentId NewMoon = ContentId.Parse("new_moon");
     private static readonly ContentId Party = ContentId.Parse("party");
 
     private readonly IContentPackTextSource _contentSource;
@@ -187,8 +186,8 @@ internal sealed class CleanFieldDemoHost
             inventory,
             sequence,
             NormalBattle,
-            NewMoon,
-            cancellationToken);
+            moonPhaseId: null,
+            cancellationToken: cancellationToken);
         sequence = await ExecuteItemAsync(
             "goho_m_demo", Field, null, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
@@ -246,7 +245,6 @@ internal sealed class CleanFieldDemoHost
             .RegisterEntityKind("demon")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
-            .RegisterMoonPhase("new_moon")
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", new AcceptAnyParametersValidator())
             .SupportEffect<DamageEffectDefinition>()

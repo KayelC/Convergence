@@ -117,7 +117,7 @@ internal static class CleanSaveTestFixture
                         ResistanceLevel.Normal)
                 ]),
             new RuntimeSessionProgressSnapshot(
-                Id("new_moon"),
+                moonPhaseId: null,
                 elapsedTicks: 42,
                 counters: [new KeyValuePair<ContentId, long>(Id("battles_won"), 1)],
                 flags: [Id("tutorial_complete")]),
@@ -224,7 +224,6 @@ internal static class CleanSaveTestFixture
             .RegisterPhase("player_phase")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
-            .RegisterMoonPhase("new_moon")
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", EmptyParameterValidator.Instance)
             .RegisterShopCategory("weapon_shop")
@@ -239,7 +238,6 @@ internal static class CleanSaveTestFixture
                 "standard_press_turn",
                 "standard_stock_capacity",
                 "standard_economy",
-                "standard_moon_phase",
                 "return_to_lobby",
                 "standard_accident",
                 "standard_mutation")

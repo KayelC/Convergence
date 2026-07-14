@@ -1,160 +1,59 @@
-# Current Repository Map
+# Repository Map
 
-**Status:** Phase 8 starting-state inventory
-**Purpose:** Explain what the repository currently builds, what each top-level area owns, and which files are historical.
-
-This document records the transitional repository at the start of Phase 8. The approved product layout and ordered migration are defined by [Phase 8: Convergence Product Boundary And Legacy Archive](phase-8-product-boundary-plan.md). This map will be rewritten around the clean product after the archive gate passes.
-
-## The Short Version
-
-The repository currently builds three projects:
-
-| Project | Location | Purpose |
-|---|---|---|
-| `JRPG.Framework` | `JRPG.Framework/` | The reusable, engine-neutral .NET 8 framework. This is the code a Godot project is intended to reference. |
-| `JRPG.ConsoleHost` | repository root | The compatibility console application, clean demonstrations, legacy runtime adapters, and legacy prototype. |
-| `Convergence.Tests` | `Convergence.Tests/` | Framework, host, content-contract, regression, and legacy-characterization tests. |
-
-The confusing part is that `JRPG.ConsoleHost.csproj` lives at the repository root. SDK-style C# projects compile source files recursively by default, so the root-level `Core/`, `Data/`, `Entities/`, `Host/`, `Logic/`, `Services/`, `Program.cs`, and `Properties/` folders are all part of the console-host project. They are not loose or abandoned files.
-
-`JRPG.ConsoleHost.csproj` explicitly excludes `JRPG.Framework/**/*.cs` and `Convergence.Tests/**/*.cs`, then references the Framework project. The dependency direction is therefore:
+## Active Product
 
 ```text
-Convergence.Tests -> JRPG.ConsoleHost -> JRPG.Framework
-                 \-------------------> JRPG.Framework
-```
-
-`JRPG.Framework` does not reference the console host or tests.
-
-## Current Top-Level Ownership
-
-| Path | Current owner and use | Keep? |
-|---|---|---|
-| `JRPG.Framework/` | Reusable framework definitions, content loading, runtime rules, battle, progression, fusion, persistence, and host-neutral contracts. | Yes. This is the primary product. |
-| `Program.cs` | Selects clean demo/play commands or starts the ordinary compatibility console host. | Yes, while the console host remains supported. |
-| `Core/` | Console-host startup and legacy data loading. | Yes, compatibility-only. |
-| `Data/` excluding `Data/Jsons/` | Legacy console DTOs and host-side data types. | Yes, compatibility-only. |
-| `Entities/` | Legacy live console actors, components, and equipment models. | Yes, compatibility-only. |
-| `Host/` | Clean console demonstrations, Training Annex host, and console adapters over framework APIs. | Yes. Host-specific, not framework code. |
-| `Logic/` | Legacy gameplay/UI code plus console compatibility adapters that route selected behavior into the framework. | Yes, while protected consumers remain active. |
-| `Services/` | Console-host service composition and legacy service wrappers. | Yes, compatibility-only. |
-| `Properties/` | Assembly metadata for the console host. | Yes. |
-| `Convergence.Tests/` | All automated tests and test fixtures. | Yes. Not shipped as framework runtime code. |
-| `Data/Jsons/` | Protected prototype data, historical generated evidence, and clean sample/original packs. | Yes for now; see the content map below. |
-| `docs/` | Current, authoritative documentation and active plans. | Yes. |
-| `ArchiveDocs/` | Historical plans, generated documents, completed reviews, and archive policy. | Keep as history; do not treat it as current design authority. |
-| `JRPG.sln` | Builds the Framework, ConsoleHost, and tests together. | Yes. |
-| `JRPG.ConsoleHost.csproj` | Root console-host project definition. Its root location is the main source of visual ambiguity. | Yes until an approved physical-move pass. |
-| `bin/`, `obj/` | Generated build output. | Ignore. They are not tracked source. |
-| `.git/`, `.codex/`, `.agents/` | Git and local development-tool state. | Ignore for product architecture. |
-
-## What Is Actually The Framework?
-
-For a framework consumer, the boundary is straightforward:
-
-```text
-JRPG.Framework/JRPG.Framework.csproj
-```
-
-Everything compiled by that project is intended to remain engine-neutral. It owns rules and state transitions, but not console rendering, Godot Nodes, filesystem discovery, or legacy DTOs.
-
-The root console-host project is useful for compatibility and verification, but it is not part of the reusable framework assembly. A Godot project should not reference `JRPG.ConsoleHost.csproj`.
-
-## Content Map
-
-`Data/Jsons/` has not yet been physically split because current loaders, fixtures, project copy rules, and preservation tests refer to that location. Its files fall into three conceptual groups.
-
-### Protected Prototype Content
-
-These files feed or characterize the retained legacy console prototype:
-
-```text
-accessories.json
-armor.json
-boots.json
-entity_database.json
-fusion_table.json
-items.json
-questions.json
-shop_inventory.json
-skills_database.json
-status_ailments.json
-tartarus.json
-weapons.json
-```
-
-They are not framework defaults and must not be presented as required game data. They remain protected evidence until their consumers are retired deliberately.
-
-### Historical Generated Evidence
-
-```text
-entity_database_v2.json
-skills_database_v2.json
-```
-
-These are not authoritative clean production content. Existing baseline and audit tests still record them, so moving them belongs to a dedicated content-layout pass.
-
-### Clean Packs
-
-Files whose names begin with the following pack prefixes are consumed through the clean content pipeline:
-
-```text
-catalog_surface_sample
-clean_battle_demo
-shared_effects_demo
-skill_system_redesign
-status_lifecycle_demo
-training_annex_slice
-```
-
-`training_annex_slice` is the original framework-first content slice. The other packs are focused reference or demonstration content. None is a mandatory built-in game world.
-
-## Documentation Map
-
-There is one active documentation root: `docs/`.
-
-| Path | Meaning |
-|---|---|
-| `docs/README.md` | Documentation index and authority rules. |
-| `docs/repository-map.md` | This current-layout guide. |
-| `docs/framework-state-and-roadmap.md` | Current framework state and forward priorities. |
-| `docs/full-parity-capability-plan.md` | Detailed protected-capability roadmap and evidence. |
-| `docs/framework-completion/` | Active problem-area backlog. It is a subfolder of active docs, not a separate documentation authority. |
-| `docs/subsystems/` | Current subsystem reference material. |
-| `ArchiveDocs/Planning/` | Superseded planning history. |
-| `ArchiveDocs/TechnicalDocs/` | Historical/generated technical documentation. |
-| `ArchiveDocs/Reviews/` | Completed code-review snapshots. Their findings are historical evidence, not the current task queue. |
-| `ArchiveDocs/LegacyFramework/` | Archive policy and future approved legacy snapshots. It is intentionally policy-only today. |
-
-## What Can Be Removed Today?
-
-Only generated local output such as `bin/` and `obj/` is unambiguously disposable. No active source family or protected dataset currently qualifies for removal or archival merely because a clean framework equivalent exists.
-
-The ordinary console path and its characterization tests still compile and call the compatibility code. Moving those files into `ArchiveDocs/` now would either break the build or silently reduce protected behavior coverage.
-
-Completed review documents can safely leave the active `docs/` index because they do not compile and are retained under `ArchiveDocs/Reviews/`.
-
-## Approved Phase 8 Destination
-
-The clean end-state remains:
-
-```text
-src/Convergence.Framework/
-samples/Convergence.DemoHost/
-tests/Convergence.Framework.Tests/
-tests/Convergence.DemoHost.Tests/
-content/reference/
-content/demos/
-content/original/training-annex/
+Convergence.sln
+src/
+  Convergence.Framework/
+samples/
+  Convergence.DemoHost/
+tests/
+  Convergence.Framework.Tests/
+  Convergence.DemoHost.Tests/
+content/
+  reference/
+  demos/
+  original/training-annex/
 docs/
 ArchiveDocs/LegacyFramework/
-Convergence.sln
 ```
 
-The move is being performed through the independently verified checkpoints in the Phase 8 boundary plan. Until a checkpoint changes the active tree, use this starting-state rule of thumb:
+| Path | Ownership |
+|---|---|
+| `src/Convergence.Framework` | The only reusable product assembly. It owns definitions, catalogs, rules, runtime state, transitions, diagnostics, and host-neutral ports. |
+| `samples/Convergence.DemoHost` | Optional console example. It owns filesystem reads, terminal input/output, host JSON, and Training Annex orchestration. |
+| `tests/Convergence.Framework.Tests` | Framework-only tests. This project references only Framework. |
+| `tests/Convergence.DemoHost.Tests` | Example-host tests. This project references Framework and DemoHost only. |
+| `content/reference` | Small schema and catalog reference packs. |
+| `content/demos` | Focused battle and shared-effect demonstrations. |
+| `content/original/training-annex` | Original end-to-end example content. |
+| `docs` | Current product documentation. |
+| `ArchiveDocs/LegacyFramework` | Non-built, unsupported prototype history and migration evidence. |
 
-- Work in `JRPG.Framework/` for reusable rules and contracts.
-- Work in `Host/` or other root host folders only for console integration and compatibility.
-- Work in `Convergence.Tests/` for verification.
-- Treat `docs/` as current and `ArchiveDocs/` as historical.
-- Do not infer that a root source file is unused just because a clean counterpart exists.
+Generated `bin` and `obj` directories are not source and are ignored by Git.
+
+## Dependency Direction
+
+```text
+Convergence.Framework.Tests ---> Convergence.Framework
+
+Convergence.DemoHost.Tests ----> Convergence.DemoHost ----> Convergence.Framework
+             `--------------------------------------------> Convergence.Framework
+```
+
+Framework has no project reference and no external package dependency. No active project references the archive.
+
+## Framework Source Areas
+
+- `Content`, `Catalog`, `Serialization`, `Validation`
+- `Hosting`
+- `Battle`, `Execution`, `Encounters`, `Knowledge`, `TurnEconomy`
+- `Runtime`
+- `Fusion`, `Inheritance`
+
+See [Public API Namespaces](public-api-namespaces.md) for detailed responsibility.
+
+## Historical Material
+
+The archived console executable, adapters, DTOs, prototype content, characterization tests, old solution, ledgers, reviews, and migration plans are preserved under `ArchiveDocs/LegacyFramework`. They are excluded from `Convergence.sln`, are not copied by active projects, and are not release inputs.

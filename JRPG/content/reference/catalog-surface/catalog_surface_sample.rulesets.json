@@ -62,13 +62,6 @@
       "description": "Names the host-owned economy policy.",
       "category": "economy",
       "policyId": "standard_economy"
-    },
-    {
-      "id": "standard_moon_phase_sample",
-      "displayName": "Standard Moon Phase Policy",
-      "description": "Names the host-owned moon-phase policy.",
-      "category": "moon_phase",
-      "policyId": "standard_moon_phase"
     }
   ]
 }

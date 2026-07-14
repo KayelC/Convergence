@@ -446,7 +446,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         await _eventSink.PublishAsync("Clean Training Annex session booted.", cancellationToken)
             .ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Loaded {TrainingAnnexHostSupport.PackId} without legacy Database startup.",
+            $"Loaded {TrainingAnnexHostSupport.PackId} through the clean catalog pipeline.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
             $"Hydrated {player.Entity.DisplayName} at level {player.Entity.BaseLevel}.",

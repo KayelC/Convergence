@@ -92,11 +92,24 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(1, pressTurn.BlinkingIcons);
         Assert.True(turnEconomy.PhaseProgress.MaximumCommands > 0);
 
-        RulesetDefinition moonPhase = resolver.BindMoonPhaseRuleset(
-            catalog,
-            Qualified("standard_moon_phase_sample"))
+    }
+
+    [Fact]
+    public void MoonPhaseBinding_RemainsAvailableAsAnOptionalExtension()
+    {
+        ContentId rulesetId = Id("test.pack:optional_moon_phase");
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Optional Moon Phase",
+            "An opt-in host policy.",
+            RulesetCategory.MoonPhase,
+            StandardRulesetPolicyIds.StandardMoonPhase));
+
+        RulesetDefinition ruleset = new RuntimeRulesetBindingResolver()
+            .BindMoonPhaseRuleset(catalog, rulesetId)
             .RequireService();
-        Assert.Equal(StandardRulesetPolicyIds.StandardMoonPhase, moonPhase.PolicyId);
+
+        Assert.Equal(StandardRulesetPolicyIds.StandardMoonPhase, ruleset.PolicyId);
     }
 
     [Fact]

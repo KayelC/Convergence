@@ -87,7 +87,6 @@ internal sealed class CleanBattleDemoHost
 {
     private static readonly ContentId Battle = ContentId.Parse("battle");
     private static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
-    private static readonly ContentId NewMoon = ContentId.Parse("new_moon");
     private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
     private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
@@ -203,8 +202,8 @@ internal sealed class CleanBattleDemoHost
             [frostResult.RequireActor(), emberResult.RequireActor()],
             Battle,
             NormalBattle,
-            NewMoon,
-            10));
+            moonPhaseId: null,
+            roundLimit: 10));
 
         foreach (BattleRuntimeEvent battleEvent in battle.Events)
         {
@@ -228,7 +227,6 @@ internal sealed class CleanBattleDemoHost
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterEntityKind("demon")
             .RegisterBattleKind("normal_battle")
-            .RegisterMoonPhase("new_moon")
             .SupportEffect<DamageEffectDefinition>()
             .SupportEffect<RestoreResourceEffectDefinition>()
             .SupportCondition<EffectElementConditionDefinition>()
