@@ -14,6 +14,7 @@ This directory is the active documentation authority for Convergence Framework.
 8. [Public API Namespaces](public-api-namespaces.md): namespace ownership.
 9. [Content Contract](content-contract.md): clean content organization and loading authority.
 10. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
+11. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
 
 ## Authority Rules
 

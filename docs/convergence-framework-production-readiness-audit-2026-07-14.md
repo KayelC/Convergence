@@ -68,13 +68,32 @@ are excluded from the active build.
 boundary regression test verifies that the active product root equals the Git
 root when Git metadata is present and that all solution projects resolve there.
 
-### Blocker 2: The Current License Conflicts With The Intended Developer Audience
+### Blocker 2: The Current License Conflicts With The Intended Developer Audience - Resolved For The Source-Available Model
 
-The repository does have a license: [`LICENSE.md`](../LICENSE.md). It is Creative Commons BY-NC-SA 4.0. Its `NonCommercial` restriction prevents commercial use, and its `ShareAlike` terms impose downstream conditions. That conflicts with the stated goal of a reusable framework that independent Godot developers can integrate into their games.
+The original audit found one repository-wide Creative Commons BY-NC-SA 4.0
+license. Although its noncommercial restriction reflected part of the owner's
+intent, Creative Commons recommends a software-specific license for software,
+and the single scope did not distinguish active code, documentation, original
+content, and archived historical material.
 
-This is not a missing-file problem; it is a product decision problem. The framework cannot honestly be presented as generally usable open-source game middleware until the intended software license is chosen and applied clearly to code, sample content, and documentation.
+The intended product is now stated accurately as **source-available**, not
+OSI-approved open source. The active software uses
+[PolyForm Noncommercial 1.0.0](../LICENSES/PolyForm-Noncommercial-1.0.0.md),
+while active documentation and original example content retain
+[CC BY-NC-SA 4.0](../LICENSES/CC-BY-NC-SA-4.0.md). The root
+[licensing overview](../LICENSE.md) excludes `ArchiveDocs/`, third-party
+material, and trademarks from the public grant.
 
-**Required action:** choose a software license compatible with the actual distribution goal, record copyright ownership, distinguish code and sample-content licensing if necessary, and put that decision at the repository root before release.
+Commercial use requires a separate written agreement. The
+[contribution policy](../CONTRIBUTING.md) prevents external repository changes
+from being merged until an approved copyright-assignment agreement is signed,
+preserving unified commercial-licensing authority. Earlier copies already
+received under CC BY-NC-SA remain available under those earlier terms.
+
+**Resolution:** repository scope, copyright notice, commercial-use boundary,
+and contributor-ownership gate are now explicit. The contributor agreement is
+deliberately marked as a review template; external contributions remain closed
+until its governing law, signing process, and legal review are complete.
 
 ### Blocker 3: The Public Contract Is Too Large And Uncontrolled For A Stable Release
 
@@ -212,7 +231,8 @@ A finished framework needs a stable, documented, composable supported scope. It 
 
 - Promote Convergence solution, README, global configuration, docs, content, source, samples, and tests to the Git root.
 - Archive the stale root solution, old README, old documentation, and old archive under one clearly non-built historical tree.
-- Decide and apply the intended software/content licenses.
+- Maintain the applied software/content license scopes and complete legal review
+  before accepting commercial agreements or external contributions.
 
 **Exit:** cloning the repository presents one product and one successful root build command.
 
@@ -275,8 +295,8 @@ A finished framework needs a stable, documented, composable supported scope. It 
 
 ## Verification Results
 
-- Release tests: **704 passed, 0 failed, 0 skipped**.
-  - Framework: 556.
+- Release tests: **706 passed, 0 failed, 0 skipped**.
+  - Framework: 558.
   - DemoHost: 148.
 - Framework coverage from Framework tests: **91.37% line, 74.56% branch**.
 - DemoHost coverage from DemoHost tests: **88.28% line, 66.95% branch**.
@@ -307,6 +327,23 @@ A finished framework needs a stable, documented, composable supported scope. It 
 - Active source and project archive-reference search: no matches.
 - Active content remains 36 manifest-owned JSON documents; only repository paths
   changed.
+
+### Blocker 2 Resolution Verification
+
+- Official PolyForm Noncommercial 1.0.0 software terms are checked in without
+  modification and paired with a required copyright notice.
+- The former repository-wide CC BY-NC-SA 4.0 legal text is preserved
+  byte-for-byte and scoped to active documentation and original example
+  content.
+- The root licensing overview explicitly excludes archived and third-party
+  material and reserves trademarks.
+- Commercial use requires a separate written agreement; the commercial notice
+  grants no permission by itself.
+- External repository contributions remain closed until the copyright-assignment
+  template receives legal review and a signing process.
+- Licensing-boundary regression tests: **6 passed**.
+- Current clean gate: **706 tests passed, 0 failed, 0 skipped**; the
+  nonincremental solution build completed with **0 warnings and 0 errors**.
 
 ## Final Recommendation
 

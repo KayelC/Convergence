@@ -25,6 +25,21 @@ Historical prototype material is retained under `ArchiveDocs/LegacyFramework` an
 
 `Convergence.Framework` has no external package dependency, is intentionally non-packable, and is distributed as source. A game references the framework project directly.
 
+## Licensing
+
+Convergence is publicly source-available for educational, research, personal,
+nonprofit, and other noncommercial purposes. Commercial use requires a separate
+written agreement from the copyright owner.
+
+- Software is licensed under PolyForm Noncommercial 1.0.0.
+- Documentation and original example content are licensed under CC BY-NC-SA
+  4.0.
+- Historical material under `ArchiveDocs/` is excluded from the active license.
+
+See the [licensing overview](LICENSE.md), [plain-English guidance](docs/licensing.md),
+and [contribution policy](CONTRIBUTING.md). Convergence is source-available, not
+OSI-approved open-source software, because commercial use is reserved.
+
 ## Godot Source Integration
 
 Keep the framework outside the Godot project directory so Godot's source glob does not compile the same files a second time:

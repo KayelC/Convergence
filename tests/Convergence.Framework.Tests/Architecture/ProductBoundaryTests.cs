@@ -77,6 +77,33 @@ public sealed class ProductBoundaryTests
     }
 
     [Fact]
+    public void PublicLicensing_DefinesNoncommercialScopesAndProtectsArchiveOwnership()
+    {
+        string overview = File.ReadAllText(RepositoryPath("LICENSE.md"));
+        string notice = File.ReadAllText(RepositoryPath("NOTICE.md"));
+        string softwareLicense = File.ReadAllText(RepositoryPath(
+            "LICENSES",
+            "PolyForm-Noncommercial-1.0.0.md"));
+        string contentLicense = File.ReadAllText(RepositoryPath(
+            "LICENSES",
+            "CC-BY-NC-SA-4.0.md"));
+        string contributing = File.ReadAllText(RepositoryPath("CONTRIBUTING.md"));
+        string contributorAgreement = File.ReadAllText(RepositoryPath("CONTRIBUTOR-AGREEMENT.md"));
+        string vision = File.ReadAllText(RepositoryPath("docs", "project-vision.md"));
+
+        Assert.Contains("Copyright (c) 2026 Kayel Calleja", overview, StringComparison.Ordinal);
+        Assert.Contains("PolyForm Noncommercial License 1.0.0", softwareLicense, StringComparison.Ordinal);
+        Assert.Contains("Attribution-NonCommercial-ShareAlike 4.0 International", contentLicense, StringComparison.Ordinal);
+        Assert.StartsWith("Required Notice:", notice, StringComparison.Ordinal);
+        Assert.Contains("`ArchiveDocs/` is historical evidence and is not licensed", overview, StringComparison.Ordinal);
+        Assert.Contains("Commercial use", overview, StringComparison.Ordinal);
+        Assert.Contains("External pull requests are not accepted by default", contributing, StringComparison.Ordinal);
+        Assert.Contains("Copyright Assignment Agreement", contributorAgreement, StringComparison.Ordinal);
+        Assert.Contains("source-available", vision, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("open-source framework", vision, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ActiveContent_IsManifestOwnedAndSafeForFlatHostCopying()
     {
         string contentRoot = RepositoryPath("content");

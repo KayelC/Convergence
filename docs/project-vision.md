@@ -2,7 +2,11 @@
 
 ## Purpose
 
-Convergence is an open-source framework for composing expressive, data-driven JRPG systems. Its name reflects the goal: reusable ideas can converge in one toolkit without forcing a developer to reproduce any particular game or setting.
+Convergence is a publicly source-available framework for composing expressive,
+data-driven JRPG systems. Its name reflects the goal: reusable ideas can
+converge in one toolkit without forcing a developer to reproduce any particular
+game or setting. Public use is available for noncommercial purposes; commercial
+use is reserved for separate licensing by the copyright owner.
 
 ## Product Direction
 
