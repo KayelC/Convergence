@@ -23,7 +23,7 @@ The active branch must not consider the migration complete until every finding b
 
 ## Remaining Planned Checkpoints
 
-- **Checkpoint 4 audit:** verify creation, growth, battle, equipment, roster changes, and restore all use one explicit Vessel stat-composition model. Add missing tests or code before declaring the checkpoint complete.
+- **Checkpoint 4 audit (complete):** creation, growth, battle, equipment, roster changes, and restore now use one explicit Vessel stat-composition model. The recovery fixes closed raw restore, invalid live roster, and split DemoHost commit paths; an end-to-end host regression proves a Hosted Entity swap survives intervening growth and save restoration with the canonical derived stats and resources.
 - **Checkpoint 5:** neutralize active example content, fixture IDs, messages, and documentation while preserving approved generic terms `Almighty` and `Ice Boost`.
 - **Checkpoint 6:** add a token-aware terminology boundary over active source, tests, content, and documentation. Exclude `ArchiveDocs`, `bin`, and `obj`.
 

@@ -3271,6 +3271,35 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_HostedEntitySwapGrowthAndRestoreShareCanonicalPlayerState()
+    {
+        var io = new ScriptedGameIO().QueueMenu(15, 0, 10, 0, 4, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(3, summary.PlayerProgression.Level);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("persona_bramble_runner"),
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("persona_bramble_runner"),
+            summary.PlayerRosters.ActiveHostedEntity?.InstanceId);
+        Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
+        Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Magic]);
+        Assert.Equal(4m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Vitality]);
+        Assert.Equal(75m, Resource(summary, "hp").Maximum);
+        Assert.Equal(25m, Resource(summary, "sp").Maximum);
+        Assert.Contains("Manual save restored", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_SuspendLoadConsumesSlotOnlyAfterSuccessfulRestore()
     {
         var io = new ScriptedGameIO().QueueMenu(10, 2, 10, 3, 10, 4, 9);
