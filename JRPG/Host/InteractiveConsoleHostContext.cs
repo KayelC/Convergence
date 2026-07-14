@@ -151,7 +151,7 @@ internal sealed class InteractiveConsoleHostContextFactory
 
     private static SkillSystemRegistrationSnapshot BuildRegistrations()
     {
-        var validator = new AcceptAnyParametersValidator();
+        var validator = new LegacyAcceptAnyParametersValidator();
         return new SkillSystemRegistrationBuilder()
             .RegisterContext("battle", "field")
             .RegisterResource("hp", "sp")
@@ -199,4 +199,10 @@ internal sealed class InteractiveConsoleHostContextFactory
             .SupportAilmentBehavior<ConfusedActionAilmentTurnBehaviorDefinition>()
             .Build();
     }
+}
+
+internal sealed class LegacyAcceptAnyParametersValidator : IContentParameterValidator
+{
+    public IReadOnlyList<ContentParameterValidationIssue> Validate(
+        IReadOnlyDictionary<string, object?> parameters) => [];
 }

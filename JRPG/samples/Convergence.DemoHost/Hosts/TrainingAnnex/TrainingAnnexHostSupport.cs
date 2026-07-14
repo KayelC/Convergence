@@ -375,18 +375,6 @@ internal static class TrainingAnnexHostSupport
                 enemies));
     }
 
-    public static RuntimeDungeonContentSnapshot ToRuntimeDungeonContent(DungeonDefinition dungeon) =>
-        new(
-            dungeon.Id,
-            dungeon.DisplayName,
-            dungeon.Blocks.Select(block => new RuntimeDungeonBlockSnapshot(
-                block.Id,
-                block.DisplayName,
-                block.StartFloor,
-                block.EndFloor,
-                block.EncounterPoolIds,
-                block.FixedFloors.Select(ToRuntimeFixedFloor))));
-
     public static RuntimeActorSnapshot CreateActorSnapshot(
         CatalogBattleActor actor,
         RuntimeInstanceId instanceId,
@@ -578,21 +566,6 @@ internal static class TrainingAnnexHostSupport
             [Hp] = 40 + level * 5,
             [Sp] = 10 + level * 2
         };
-
-    private static RuntimeDungeonFixedFloorSnapshot ToRuntimeFixedFloor(DungeonFixedFloorDefinition fixedFloor) =>
-        new(
-            fixedFloor.Floor,
-            fixedFloor.Kind switch
-            {
-                DungeonFixedFloorKind.Battle => RuntimeDungeonFloorKind.Battle,
-                DungeonFixedFloorKind.Boss => RuntimeDungeonFloorKind.Boss,
-                DungeonFixedFloorKind.BlockEnd or DungeonFixedFloorKind.Barrier => RuntimeDungeonFloorKind.BlockEnd,
-                DungeonFixedFloorKind.SafeRoom or DungeonFixedFloorKind.Terminal => RuntimeDungeonFloorKind.SafeRoom,
-                _ => RuntimeDungeonFloorKind.Empty
-            },
-            fixedFloor.EncounterId ?? fixedFloor.TransitionRuleId ?? fixedFloor.BarrierRuleId,
-            fixedFloor.HasTerminal,
-            fixedFloor.Description);
 
     private static GrowthRulesetServices? BindGrowthServices(GameDataCatalog catalog, List<string> diagnostics)
     {

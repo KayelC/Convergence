@@ -8,7 +8,6 @@ using JRPGPrototype.Logic.Battle.Execution;
 using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Fusion;
 using JRPGPrototype.Logic.Runtime;
-using JRPGPrototype.Services;
 
 namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
 
@@ -177,15 +176,6 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly RuntimeInventorySnapshot? _initialInventory;
     private readonly RuntimeEquipmentSnapshot? _initialEquipment;
     private readonly RuntimeWalletSnapshot? _initialWallet;
-
-    public CleanTrainingAnnexPlayHost(IGameIO io, string? contentRoot = null)
-        : this(
-            new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
-            new GameIoEventSink(io),
-            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
-            new TrainingAnnexMinimumRandomSource())
-    {
-    }
 
     internal CleanTrainingAnnexPlayHost(
         IContentPackTextSource contentSource,

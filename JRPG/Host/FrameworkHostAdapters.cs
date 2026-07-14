@@ -4,11 +4,11 @@ using JRPGPrototype.Services;
 
 namespace JRPGPrototype.Host;
 
-internal sealed class FileContentPackSource : IContentPackTextSource
+internal sealed class LegacyFileContentPackSource : IContentPackTextSource
 {
     private readonly string _root;
 
-    public FileContentPackSource(string root)
+    public LegacyFileContentPackSource(string root)
     {
         _root = root ?? throw new ArgumentNullException(nameof(root));
     }
@@ -32,22 +32,6 @@ internal sealed class FileContentPackSource : IContentPackTextSource
         }
 
         return new ContentPackTextBundle(manifestFile, manifestText, documents);
-    }
-}
-
-internal sealed class TextWriterEventSink : IHostEventSink<string>
-{
-    private readonly TextWriter _writer;
-
-    public TextWriterEventSink(TextWriter writer)
-    {
-        _writer = writer ?? throw new ArgumentNullException(nameof(writer));
-    }
-
-    public async ValueTask PublishAsync(string hostEvent, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        await _writer.WriteLineAsync(hostEvent.AsMemory(), cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -110,28 +94,3 @@ internal static class ConsoleHostCommandReader
 }
 
 internal readonly record struct ConsoleMenuSelection<TCommand>(TCommand Command, int Index);
-
-internal sealed class SystemRandomSource : IRandomSource
-{
-    private readonly Random _random;
-
-    public SystemRandomSource()
-        : this(new Random())
-    {
-    }
-
-    public SystemRandomSource(int seed)
-        : this(new Random(seed))
-    {
-    }
-
-    internal SystemRandomSource(Random random)
-    {
-        _random = random ?? throw new ArgumentNullException(nameof(random));
-    }
-
-    public int NextInt32(int minimumInclusive, int maximumExclusive) =>
-        _random.Next(minimumInclusive, maximumExclusive);
-
-    public decimal NextUnitDecimal() => (decimal)_random.NextDouble();
-}

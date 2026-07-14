@@ -9,7 +9,7 @@ public sealed class FrameworkNeutralityTests
     [Fact]
     public void FrameworkSources_DoNotOwnPrototypeCurrencyNegotiationOrDungeonCompatibility()
     {
-        string frameworkRoot = RepositoryPath("JRPG.Framework");
+        string frameworkRoot = RepositoryPath("src", "Convergence.Framework");
         string[] forbiddenTokens =
         [
             "Macca",
@@ -31,7 +31,8 @@ public sealed class FrameworkNeutralityTests
         }
 
         string negotiation = File.ReadAllText(RepositoryPath(
-            "JRPG.Framework",
+            "src",
+            "Convergence.Framework",
             "Logic",
             "Battle",
             "Runtime",
@@ -43,9 +44,10 @@ public sealed class FrameworkNeutralityTests
     public void LegacyFloorDungeonService_IsHostOwnedWhileGenericTraversalRemainsFrameworkOwned()
     {
         Assert.Equal("JRPG.ConsoleHost", typeof(RuntimeFieldDungeonService).Assembly.GetName().Name);
-        Assert.Equal("JRPG.Framework", typeof(RuntimeDungeonTraversalService).Assembly.GetName().Name);
+        Assert.Equal("Convergence.Framework", typeof(RuntimeDungeonTraversalService).Assembly.GetName().Name);
         Assert.False(File.Exists(RepositoryPath(
-            "JRPG.Framework",
+            "src",
+            "Convergence.Framework",
             "Logic",
             "Runtime",
             "FieldDungeonStateMachines.cs")));
@@ -80,7 +82,7 @@ public sealed class FrameworkNeutralityTests
     private static string RepositoryPath(params string[] segments)
     {
         string? current = AppContext.BaseDirectory;
-        while (current is not null && !File.Exists(Path.Combine(current, "JRPG.sln")))
+        while (current is not null && !File.Exists(Path.Combine(current, "Convergence.sln")))
         {
             current = Directory.GetParent(current)?.FullName;
         }

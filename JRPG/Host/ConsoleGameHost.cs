@@ -27,7 +27,7 @@ namespace JRPGPrototype.Host
         {
             _io = io;
             _contextFactory = new InteractiveConsoleHostContextFactory(
-                contentSource ?? new FileContentPackSource(Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
+                contentSource ?? new LegacyFileContentPackSource(Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
                 eventSink ?? new GameIoEventSink(io));
         }
 

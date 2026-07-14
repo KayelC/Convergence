@@ -22,7 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JRPG.Framework\JRPG.Framework.csproj" />
+    <ProjectReference Include="..\src\Convergence.Framework\Convergence.Framework.csproj" />
+    <ProjectReference Include="..\samples\Convergence.DemoHost\Convergence.DemoHost.csproj" />
     <ProjectReference Include="..\JRPG.ConsoleHost.csproj" />
   </ItemGroup>
 

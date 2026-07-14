@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="JRPG.Framework\JRPG.Framework.csproj" />
+    <ProjectReference Include="src\Convergence.Framework\Convergence.Framework.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,9 +25,13 @@
 
   <ItemGroup>
     <Compile Remove="Convergence.Tests\**\*.cs" />
-    <Compile Remove="JRPG.Framework\**\*.cs" />
+    <Compile Remove="samples\**\*.cs" />
+    <Compile Remove="src\**\*.cs" />
+    <Compile Remove="tests\**\*.cs" />
     <None Remove="Convergence.Tests\**" />
-    <None Remove="JRPG.Framework\**" />
+    <None Remove="samples\**" />
+    <None Remove="src\**" />
+    <None Remove="tests\**" />
   </ItemGroup>
 
 </Project>

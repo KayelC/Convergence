@@ -31,12 +31,12 @@ public sealed class FrameworkBoundaryTests
     {
         Assembly framework = typeof(ContentId).Assembly;
 
-        Assert.Equal("JRPG.Framework", framework.GetName().Name);
+        Assert.Equal("Convergence.Framework", framework.GetName().Name);
         Assert.DoesNotContain(
             framework.GetReferencedAssemblies(),
             reference => reference.Name == "JRPG.ConsoleHost");
 
-        string project = File.ReadAllText(RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"));
+        string project = File.ReadAllText(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
         Assert.DoesNotContain("PackageReference", project, StringComparison.Ordinal);
         Assert.DoesNotContain("JRPG.ConsoleHost", project, StringComparison.Ordinal);
     }
@@ -46,7 +46,8 @@ public sealed class FrameworkBoundaryTests
     {
         string[] projects =
         [
-            RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"),
+            RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"),
+            RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"),
             RepositoryPath("JRPG.ConsoleHost.csproj"),
             RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj")
         ];
@@ -77,17 +78,17 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkDistribution_IsSourceProjectReferenceRatherThanPackagePublication()
     {
-        XDocument framework = XDocument.Load(RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"));
-        XDocument consoleHost = XDocument.Load(RepositoryPath("JRPG.ConsoleHost.csproj"));
+        XDocument framework = XDocument.Load(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
+        XDocument demoHost = XDocument.Load(RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"));
         XDocument tests = XDocument.Load(RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj"));
 
         Assert.Equal("false", RequiredProperty(framework, "IsPackable"));
         Assert.Contains(
-            consoleHost.Descendants("ProjectReference"),
-            reference => NormalizePath(reference.Attribute("Include")?.Value) == "jrpg.framework/jrpg.framework.csproj");
+            demoHost.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
         Assert.Contains(
             tests.Descendants("ProjectReference"),
-            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../jrpg.framework/jrpg.framework.csproj");
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../src/convergence.framework/convergence.framework.csproj");
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkSources_DoNotUseConsoleFilesystemSleepingOrNewtonsoft()
     {
-        string frameworkRoot = RepositoryPath("JRPG.Framework");
+        string frameworkRoot = RepositoryPath("src", "Convergence.Framework");
         string[] forbidden = ["Console.", "File.", "Directory.", "Thread.Sleep", "Newtonsoft", "Godot"];
 
         foreach (string file in Directory.EnumerateFiles(frameworkRoot, "*.cs", SearchOption.AllDirectories))
@@ -144,7 +145,7 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies()
     {
-        string fusionRoot = RepositoryPath("JRPG.Framework", "Logic", "Fusion");
+        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Logic", "Fusion");
         string[] legacyStrategyTokens =
         [
             "mitama",
@@ -169,7 +170,7 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkCompendiumSources_DoNotOwnHostCurrencyTerminology()
     {
-        string fusionRoot = RepositoryPath("JRPG.Framework", "Logic", "Fusion");
+        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Logic", "Fusion");
         string[] files =
         [
             Path.Combine(fusionRoot, "FusionRuntimeServices.cs"),
@@ -211,7 +212,7 @@ public sealed class FrameworkBoundaryTests
     private static string RepositoryPath(params string[] segments)
     {
         string? current = AppContext.BaseDirectory;
-        while (current is not null && !File.Exists(Path.Combine(current, "JRPG.sln")))
+        while (current is not null && !File.Exists(Path.Combine(current, "Convergence.sln")))
         {
             current = Directory.GetParent(current)?.FullName;
         }

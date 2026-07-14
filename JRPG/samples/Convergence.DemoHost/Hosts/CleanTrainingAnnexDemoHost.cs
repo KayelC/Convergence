@@ -16,7 +16,7 @@ namespace JRPGPrototype.Host;
 internal sealed record CleanTrainingAnnexDemoSummary(
     IReadOnlyList<string> RequestedManifestPaths,
     IReadOnlyList<string> RequestedDocumentPaths,
-    IReadOnlyList<RuntimeDungeonEventKind> DungeonEventKinds,
+    IReadOnlyList<RuntimeDungeonTraversalEventKind> DungeonEventKinds,
     ContentId EncounterId,
     ContentId EnemyEntityId,
     int InventoryRemaining,
@@ -144,17 +144,22 @@ internal sealed class CleanTrainingAnnexDemoHost
         await PrintAsync(sequence++, "actor", $"Hydrated {echo.Entity.DisplayName}.", cancellationToken)
             .ConfigureAwait(false);
 
-        var dungeonService = new RuntimeFieldDungeonService(random);
         DungeonDefinition dungeon = catalog.GetRequiredDungeon(Qualified("training_annex"));
-        RuntimeDungeonContentSnapshot runtimeDungeon = TrainingAnnexHostSupport.ToRuntimeDungeonContent(dungeon);
-        RuntimeDungeonProgressSnapshot progress = new(dungeon.Id);
-        RuntimeDungeonTransitionResult entered = dungeonService.EnterDungeon(runtimeDungeon, progress);
-        RuntimeDungeonTransitionResult ascended = dungeonService.Ascend(runtimeDungeon, entered.After);
-        IReadOnlyList<RuntimeDungeonEvent> dungeonEvents = entered.Events.Concat(ascended.Events).ToArray();
-        foreach (RuntimeDungeonEvent dungeonEvent in dungeonEvents)
+        var dungeonService = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var dungeonStart = new RuntimeDungeonTraversalSnapshot(
+            dungeon.Id,
+            TrainingAnnexEntrance);
+        RuntimeDungeonTraversalResult traversed = dungeonService.Traverse(
+            dungeonStart,
+            EnterReviewHallTransition);
+        IReadOnlyList<RuntimeDungeonTraversalEvent> dungeonEvents = traversed.Events;
+        foreach (RuntimeDungeonTraversalEvent dungeonEvent in dungeonEvents)
         {
-            string floor = dungeonEvent.Floor is int value ? $" floor {value}" : string.Empty;
-            await PrintAsync(sequence++, "dungeon", $"{dungeonEvent.Kind}{floor}.", cancellationToken)
+            await PrintAsync(
+                sequence++,
+                "dungeon",
+                $"{dungeonEvent.Kind}: {dungeonEvent.SourceNodeId} -> {dungeonEvent.DestinationNodeId}.",
+                cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -382,7 +387,7 @@ internal sealed class CleanTrainingAnnexDemoHost
 
     private static CleanTrainingAnnexDemoSummary CreateSummary(
         ContentPackTextRequest request,
-        IReadOnlyList<RuntimeDungeonEvent> dungeonEvents,
+        IReadOnlyList<RuntimeDungeonTraversalEvent> dungeonEvents,
         ContentId encounterId,
         ContentId enemyEntityId,
         IReadOnlyDictionary<ContentId, int> inventory,
