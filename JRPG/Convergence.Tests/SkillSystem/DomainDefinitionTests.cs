@@ -76,6 +76,20 @@ public sealed class DomainDefinitionTests
         Assert.Equal("sample.pack:valid_id", parsed.Value);
     }
 
+    [Fact]
+    public void ContentId_DefaultValueIsExplicitlyEmptyAndInvalid()
+    {
+        ContentId id = default;
+
+        Assert.True(id.IsEmpty);
+        Assert.False(id.IsValid);
+        Assert.False(id.IsQualified);
+        Assert.Equal(string.Empty, id.Value);
+        Assert.Equal(string.Empty, id.ToString());
+        Assert.True(ContentId.Parse("valid_id").IsValid);
+        Assert.False(ContentId.Parse("valid_id").IsEmpty);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

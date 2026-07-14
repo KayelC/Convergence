@@ -126,6 +126,23 @@ public sealed class EncounterPreparationServiceTests
             result.Events.Select(entry => entry.Kind));
     }
 
+    [Fact]
+    public void EncounterPlanner_RejectsDefaultIdsBeforeCatalogLookupOrInstanceGeneration()
+    {
+        GameDataCatalog catalog = Catalog([Entity("ashling")], Encounter("drill"));
+        var planner = new CatalogEncounterStartPlanner(catalog);
+
+        EncounterStartPlanResult result = planner.Plan(new EncounterStartRequest(
+            default,
+            default,
+            default));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(3, result.Diagnostics.Count);
+        Assert.All(result.Diagnostics, diagnostic =>
+            Assert.Equal(EncounterStartDiagnosticCode.IdentifierInvalid, diagnostic.Code));
+    }
+
     private static CatalogEncounterPreparationService Service(GameDataCatalog catalog) =>
         new(
             new CatalogEncounterStartPlanner(catalog),

@@ -34,6 +34,40 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     [Fact]
+    public void RuntimeInstanceId_DefaultValueIsExplicitlyEmptyAndInvalid()
+    {
+        RuntimeInstanceId id = default;
+
+        Assert.True(id.IsEmpty);
+        Assert.False(id.IsValid);
+        Assert.Equal(string.Empty, id.Value);
+        Assert.Equal(string.Empty, id.ToString());
+        Assert.True(RuntimeInstanceId.Parse("actor_1").IsValid);
+        Assert.False(RuntimeInstanceId.Parse("actor_1").IsEmpty);
+    }
+
+    [Fact]
+    public void LiveRuntimeActorBoundariesRejectDefaultIdentifiers()
+    {
+        Assert.Throws<ArgumentException>(() => new BattleResourceState(default, 1m, 1m));
+        Assert.Throws<ArgumentException>(() => new RuntimeActorState(
+            default,
+            Id("entity"),
+            Id("team"),
+            Id("hp"),
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Id("hp"), 1m, 1m)]));
+        Assert.Throws<ArgumentException>(() => new RuntimeActorState(
+            RuntimeInstanceId.Parse("actor_1"),
+            Id("entity"),
+            Id("team"),
+            Id("hp"),
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Id("hp"), 1m, 1m)],
+            skillIds: [default]));
+    }
+
+    [Fact]
     public void RuntimeActorNumericDomain_IsPublicAndDirectActorConstructionEnforcesIt()
     {
         Assert.True(RuntimeActorNumericDomain.IsValidStatValue(0m));

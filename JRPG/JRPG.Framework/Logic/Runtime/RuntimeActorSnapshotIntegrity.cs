@@ -5,6 +5,8 @@ namespace JRPGPrototype.Logic.Runtime;
 
 internal enum RuntimeActorSnapshotIntegrityCode
 {
+    InvalidRuntimeInstanceId,
+    InvalidContentId,
     DuplicateResource,
     DuplicateLearnedSkill,
     DuplicateEquippedSkill,
@@ -53,6 +55,7 @@ internal static class RuntimeActorSnapshotIntegrity
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var diagnostics = new List<RuntimeActorSnapshotIntegrityDiagnostic>();
+        ValidateIdentifiers(snapshot, diagnostics);
         ValidateUnique(
             snapshot.Resources,
             resource => resource.ResourceId,
@@ -221,6 +224,158 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidatePassives(snapshot.BattleActivations, loadedPassiveSkillIds, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
+    }
+
+    private static void ValidateIdentifiers(
+        RuntimeActorSnapshot snapshot,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        ValidateRuntimeInstanceId(snapshot.Identity.InstanceId, "$.identity.instanceId", diagnostics);
+        ValidateContentId(snapshot.Identity.EntityDefinitionId, "$.identity.entityDefinitionId", diagnostics);
+        ValidateContentId(snapshot.Identity.ActorKindId, "$.identity.actorKindId", diagnostics);
+        ValidateContentId(snapshot.Ownership.ControllerId, "$.ownership.controllerId", diagnostics);
+        ValidateContentId(snapshot.Ownership.TeamId, "$.ownership.teamId", diagnostics);
+        if (snapshot.Ownership.OwnerInstanceId is RuntimeInstanceId ownerId)
+        {
+            ValidateRuntimeInstanceId(ownerId, "$.ownership.ownerInstanceId", diagnostics);
+        }
+
+        ValidateContentId(snapshot.VitalResourceId, "$.vitalResourceId", diagnostics);
+        for (int index = 0; index < snapshot.Resources.Count; index++)
+        {
+            ValidateContentId(snapshot.Resources[index].ResourceId, $"$.resources[{index}].resourceId", diagnostics);
+        }
+
+        ValidateContentIdKeys(snapshot.BaseResourceValues.Keys, "$.baseResourceValues", diagnostics);
+        ValidateContentIdKeys(snapshot.Stats.BaseStats.Keys, "$.stats.baseStats", diagnostics);
+        ValidateContentIdKeys(snapshot.Stats.EffectiveStats.Keys, "$.stats.effectiveStats", diagnostics);
+        ValidateContentIds(snapshot.Skills.LearnedSkillIds, "$.skills.learnedSkillIds", diagnostics);
+        ValidateContentIds(snapshot.Skills.EquippedSkillIds, "$.skills.equippedSkillIds", diagnostics);
+        ValidateContentIds(snapshot.CapabilityIds, "$.capabilityIds", diagnostics);
+
+        if (snapshot.Forms.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        {
+            ValidateActorReference(activeForm, "$.forms.activeForm", diagnostics);
+        }
+        ValidateActorReferences(snapshot.Forms.PersonaStock, "$.forms.personaStock", diagnostics);
+        ValidateActorReferences(snapshot.Forms.DemonStock, "$.forms.demonStock", diagnostics);
+
+        foreach ((EquipmentSlot slot, ContentId equipmentId) in snapshot.Equipment.EquippedItemIds)
+        {
+            ValidateContentId(equipmentId, $"$.equipment.equippedItemIds.{slot.ToString().ToLowerInvariant()}", diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleStatus.Ailments.Count; index++)
+        {
+            ValidateContentId(snapshot.BattleStatus.Ailments[index].Id,
+                $"$.battleStatus.ailments[{index}].id", diagnostics);
+        }
+        for (int index = 0; index < snapshot.BattleStatus.Statuses.Count; index++)
+        {
+            ValidateContentId(snapshot.BattleStatus.Statuses[index].Id,
+                $"$.battleStatus.statuses[{index}].id", diagnostics);
+        }
+        for (int index = 0; index < snapshot.BattleStatus.StatStages.Count; index++)
+        {
+            ValidateContentId(snapshot.BattleStatus.StatStages[index].ModifierTrackId,
+                $"$.battleStatus.statStages[{index}].modifierTrackId", diagnostics);
+        }
+        for (int index = 0; index < snapshot.BattleStatus.Analysis.Count; index++)
+        {
+            ValidateRuntimeInstanceId(snapshot.BattleStatus.Analysis[index].TargetInstanceId,
+                $"$.battleStatus.analysis[{index}].targetInstanceId", diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleActivations.PassiveSkillStates.Count; index++)
+        {
+            ValidateContentId(snapshot.BattleActivations.PassiveSkillStates[index].SkillId,
+                $"$.battleActivations.passiveSkillStates[{index}].skillId", diagnostics);
+        }
+        for (int index = 0; index < snapshot.BattleActivations.PassiveActivations.Count; index++)
+        {
+            RuntimePassiveActivationSnapshot activation = snapshot.BattleActivations.PassiveActivations[index];
+            ValidateContentId(activation.SkillId,
+                $"$.battleActivations.passiveActivations[{index}].skillId", diagnostics);
+            ValidateContentId(activation.EventId,
+                $"$.battleActivations.passiveActivations[{index}].eventId", diagnostics);
+        }
+    }
+
+    private static void ValidateActorReferences(
+        IReadOnlyList<RuntimeActorReferenceSnapshot> references,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < references.Count; index++)
+        {
+            ValidateActorReference(references[index], $"{path}[{index}]", diagnostics);
+        }
+    }
+
+    private static void ValidateActorReference(
+        RuntimeActorReferenceSnapshot reference,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        ValidateRuntimeInstanceId(reference.InstanceId, path + ".instanceId", diagnostics);
+        ValidateContentId(reference.EntityDefinitionId, path + ".entityDefinitionId", diagnostics);
+    }
+
+    private static void ValidateContentIdKeys(
+        IEnumerable<ContentId> ids,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        int index = 0;
+        foreach (ContentId id in ids)
+        {
+            ValidateContentId(id, $"{path}[{index}]", diagnostics);
+            index++;
+        }
+    }
+
+    private static void ValidateContentIds(
+        IReadOnlyList<ContentId> ids,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < ids.Count; index++)
+        {
+            ValidateContentId(ids[index], $"{path}[{index}]", diagnostics);
+        }
+    }
+
+    private static void ValidateContentId(
+        ContentId id,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        if (id.IsValid)
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+            RuntimeActorSnapshotIntegrityCode.InvalidContentId,
+            "Content ID cannot be empty.",
+            path,
+            id));
+    }
+
+    private static void ValidateRuntimeInstanceId(
+        RuntimeInstanceId id,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        if (id.IsValid)
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+            RuntimeActorSnapshotIntegrityCode.InvalidRuntimeInstanceId,
+            "Runtime instance ID cannot be empty.",
+            path));
     }
 
     private static void ValidateBattleStatusDurations(
@@ -400,8 +555,7 @@ internal static class RuntimeActorSnapshotIntegrity
         }
     }
 
-    private static bool IsValidContentId(ContentId id) =>
-        ContentId.TryParse(id.Value, out _);
+    private static bool IsValidContentId(ContentId id) => id.IsValid;
 
     private static void ValidateStatValues(
         IReadOnlyDictionary<ContentId, decimal> values,

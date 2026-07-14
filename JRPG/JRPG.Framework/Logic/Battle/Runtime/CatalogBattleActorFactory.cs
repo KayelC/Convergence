@@ -56,7 +56,8 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotActorKindMismatch,
     SnapshotSkillMissing,
     SnapshotAilmentMissing,
-    SnapshotInvalid
+    SnapshotInvalid,
+    IdentifierInvalid
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -147,6 +148,39 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
     {
         ArgumentNullException.ThrowIfNull(request);
         var diagnostics = new List<CatalogBattleActorDiagnostic>();
+        if (!request.EntityId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Catalog actor entity ID cannot be empty.",
+                request.EntityId));
+        }
+        if (!request.InstanceId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Runtime actor instance ID cannot be empty.",
+                request.EntityId));
+        }
+        if (!request.TeamId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Runtime actor team ID cannot be empty.",
+                request.EntityId));
+        }
+        if (request.ControllerId is ContentId controllerId && !controllerId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Runtime actor controller ID cannot be empty.",
+                request.EntityId));
+        }
+        if (diagnostics.Count > 0)
+        {
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
         bool levelIsConsistent = true;
         if (request.Level <= 0)
         {
@@ -243,6 +277,35 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
+        if (!initialization.VitalResourceId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Initialization vital resource ID cannot be empty.",
+                entity.Id,
+                ResourceId: initialization.VitalResourceId));
+        }
+        for (int index = 0; index < initialization.Resources.Count; index++)
+        {
+            BattleResourceState resource = initialization.Resources[index];
+            if (!resource.Id.IsValid)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                    $"Initialization resource at index {index} has an empty ID.",
+                    entity.Id,
+                    ResourceId: resource.Id));
+            }
+        }
+        foreach (ContentId resourceId in initialization.BaseResourceValues.Keys.Where(id => !id.IsValid))
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.IdentifierInvalid,
+                "Initialization base resource ID cannot be empty.",
+                entity.Id,
+                ResourceId: resourceId));
+        }
+
         foreach (ContentId duplicateResourceId in initialization.Resources
                      .GroupBy(resource => resource.Id)
                      .Where(group => group.Skip(1).Any())
@@ -319,6 +382,17 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         ArgumentNullException.ThrowIfNull(snapshot);
         var diagnostics = new List<CatalogBattleActorDiagnostic>();
         ContentId entityId = snapshot.Identity.EntityDefinitionId;
+        if (!entityId.IsValid || !snapshot.Identity.InstanceId.IsValid ||
+            !snapshot.Identity.ActorKindId.IsValid || !snapshot.Ownership.ControllerId.IsValid ||
+            !snapshot.Ownership.TeamId.IsValid || !snapshot.VitalResourceId.IsValid)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.SnapshotInvalid,
+                "Saved actor identity and ownership IDs must be non-empty.",
+                entityId));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
         if (!_entities.TryGetEntity(entityId, out EntityDefinition? entity) || entity is null)
         {
             diagnostics.Add(new CatalogBattleActorDiagnostic(
@@ -343,6 +417,16 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
         foreach (ContentId skillId in skillIds)
         {
+            if (!skillId.IsValid)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotInvalid,
+                    "Saved actor skill ID cannot be empty.",
+                    entityId,
+                    skillId));
+                continue;
+            }
+
             if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
             {
                 resolvedSkills.Add(skillId, skill);
@@ -360,6 +444,15 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         var ailments = new Dictionary<ContentId, AilmentDefinition>();
         foreach (RuntimeTimedStateSnapshot ailment in snapshot.BattleStatus.Ailments)
         {
+            if (!ailment.Id.IsValid)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotInvalid,
+                    "Saved actor ailment ID cannot be empty.",
+                    entityId));
+                continue;
+            }
+
             if (_ailments?.TryGetAilment(ailment.Id, out AilmentDefinition? definition) == true && definition is not null)
             {
                 ailments.TryAdd(ailment.Id, definition);

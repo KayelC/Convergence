@@ -74,7 +74,9 @@ public enum RuntimeSaveValidationCode
     ActorRetainedDurationKindInvalid,
     ActorTurnDurationValueOutOfRange,
     ActorTurnDurationTickEventIdInvalid,
-    ActorPhaseDurationPhaseIdInvalid
+    ActorPhaseDurationPhaseIdInvalid,
+    InvalidRuntimeInstanceId,
+    InvalidContentId
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -312,13 +314,14 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
 
         ValidateContentPacks(snapshot.ContentPacks, catalog, diagnostics);
+        ValidateAggregateIdentifiers(snapshot, diagnostics);
 
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = [];
         for (int index = 0; index < snapshot.Actors.Count; index++)
         {
             RuntimeActorSnapshot actor = snapshot.Actors[index];
             RuntimeInstanceId instanceId = actor.Identity.InstanceId;
-            if (!actors.TryAdd(instanceId, actor))
+            if (instanceId.IsValid && !actors.TryAdd(instanceId, actor))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.DuplicateActorInstanceId,
@@ -327,7 +330,9 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     Path: $"$.actors[{index}].identity.instanceId"));
             }
 
-            if (!catalog.Entities.TryGetValue(actor.Identity.EntityDefinitionId, out EntityDefinition? entity))
+            EntityDefinition? entity = null;
+            if (actor.Identity.EntityDefinitionId.IsValid &&
+                !catalog.Entities.TryGetValue(actor.Identity.EntityDefinitionId, out entity))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.MissingCatalogEntity,
@@ -336,7 +341,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     actor.Identity.EntityDefinitionId,
                     $"$.actors[{index}].identity.entityDefinitionId"));
             }
-            else if (actor.Identity.ActorKindId != entity.EntityKindId)
+            else if (entity is not null && actor.Identity.ActorKindId.IsValid &&
+                     actor.Identity.ActorKindId != entity.EntityKindId)
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.ActorKindMismatch,
@@ -373,6 +379,181 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidateCheckpoints(snapshot.Checkpoints, actors, diagnostics);
 
         return new RuntimeSaveValidationResult(snapshot, diagnostics);
+    }
+
+    private static void ValidateAggregateIdentifiers(
+        RuntimeSaveGameSnapshot snapshot,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        ValidateActorReferenceIdentifiers(snapshot.PartyStock.Owner, "$.partyStock.owner", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyStock.ActiveParty, "$.partyStock.activeParty", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyStock.ReserveMembers, "$.partyStock.reserveMembers", diagnostics);
+        if (snapshot.PartyStock.ActiveForm is RuntimeActorReferenceSnapshot activeForm)
+        {
+            ValidateActorReferenceIdentifiers(activeForm, "$.partyStock.activeForm", diagnostics);
+        }
+        ValidateActorReferenceIdentifiers(snapshot.PartyStock.PersonaStock, "$.partyStock.personaStock", diagnostics);
+        ValidateActorReferenceIdentifiers(snapshot.PartyStock.DemonStock, "$.partyStock.demonStock", diagnostics);
+
+        ValidateContentIdKeys(snapshot.Inventory.ItemQuantities.Keys, "$.inventory.itemQuantities", diagnostics);
+        foreach ((EquipmentSlot slot, IReadOnlyList<ContentId> equipmentIds) in
+                 snapshot.Inventory.OwnedEquipmentIds.OrderBy(pair => pair.Key))
+        {
+            ValidateContentIds(equipmentIds,
+                $"$.inventory.ownedEquipmentIds.{SlotPath(slot)}", diagnostics);
+        }
+        foreach ((EquipmentSlot slot, ContentId equipmentId) in snapshot.Equipment.EquippedItemIds)
+        {
+            ValidateContentId(equipmentId,
+                $"$.equipment.equippedItemIds.{SlotPath(slot)}", diagnostics);
+        }
+
+        if (snapshot.Field is not null)
+        {
+            ValidateContentId(snapshot.Field.Navigation.CurrentLocationId,
+                "$.field.navigation.currentLocationId", diagnostics);
+            if (snapshot.Field.DungeonTraversal is RuntimeDungeonTraversalSnapshot dungeon)
+            {
+                ValidateContentId(dungeon.DungeonId, "$.field.dungeonTraversal.dungeonId", diagnostics);
+                ValidateContentId(dungeon.CurrentNodeId, "$.field.dungeonTraversal.currentNodeId", diagnostics);
+                ValidateContentIds(dungeon.VisitedNodeIds,
+                    "$.field.dungeonTraversal.visitedNodeIds", diagnostics);
+                ValidateContentIds(dungeon.UnlockedCheckpointIds,
+                    "$.field.dungeonTraversal.unlockedCheckpointIds", diagnostics);
+                ValidateContentIds(dungeon.DefeatedBossIds,
+                    "$.field.dungeonTraversal.defeatedBossIds", diagnostics);
+            }
+        }
+
+        for (int index = 0; index < snapshot.Compendium.Entries.Count; index++)
+        {
+            CompendiumEntrySnapshot entry = snapshot.Compendium.Entries[index];
+            string path = $"$.compendium.entries[{index}]";
+            ValidateContentId(entry.EntityId, path + ".entityId", diagnostics);
+            ValidateContentIdKeys(entry.Stats.Keys, path + ".stats", diagnostics);
+            ValidateContentIds(entry.SkillIds, path + ".skillIds", diagnostics);
+            ValidateContentIds(entry.EquippedSkillIds, path + ".equippedSkillIds", diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.Knowledge.ElementalAffinities.Count; index++)
+        {
+            ValidateContentId(snapshot.Knowledge.ElementalAffinities[index].EntityId,
+                $"$.knowledge.elementalAffinities[{index}].entityId", diagnostics);
+        }
+        for (int index = 0; index < snapshot.Knowledge.AilmentResistances.Count; index++)
+        {
+            RuntimeAilmentResistanceKnowledgeSnapshot entry = snapshot.Knowledge.AilmentResistances[index];
+            ValidateContentId(entry.EntityId,
+                $"$.knowledge.ailmentResistances[{index}].entityId", diagnostics);
+            ValidateContentId(entry.AilmentId,
+                $"$.knowledge.ailmentResistances[{index}].ailmentId", diagnostics);
+        }
+        for (int index = 0; index < snapshot.Knowledge.InstantDeathResistances.Count; index++)
+        {
+            ValidateContentId(snapshot.Knowledge.InstantDeathResistances[index].EntityId,
+                $"$.knowledge.instantDeathResistances[{index}].entityId", diagnostics);
+        }
+
+        if (snapshot.Session.MoonPhaseId is ContentId moonPhaseId)
+        {
+            ValidateContentId(moonPhaseId, "$.session.moonPhaseId", diagnostics);
+        }
+        ValidateContentIdKeys(snapshot.Session.Counters.Keys, "$.session.counters", diagnostics);
+        ValidateContentIds(snapshot.Session.Flags, "$.session.flags", diagnostics);
+        ValidateContentIdKeys(snapshot.HostContext.Keys, "$.hostContext", diagnostics);
+
+        for (int index = 0; index < snapshot.Checkpoints.Entries.Count; index++)
+        {
+            RuntimeCheckpointEntrySnapshot entry = snapshot.Checkpoints.Entries[index];
+            if (entry.ActorId is RuntimeInstanceId actorId)
+            {
+                ValidateRuntimeInstanceId(actorId,
+                    $"$.checkpoints.entries[{index}].actorId", diagnostics);
+            }
+            if (entry.ContentId is ContentId contentId)
+            {
+                ValidateContentId(contentId,
+                    $"$.checkpoints.entries[{index}].contentId", diagnostics);
+            }
+        }
+    }
+
+    private static void ValidateActorReferenceIdentifiers(
+        IReadOnlyList<RuntimeActorReferenceSnapshot> references,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < references.Count; index++)
+        {
+            ValidateActorReferenceIdentifiers(references[index], $"{path}[{index}]", diagnostics);
+        }
+    }
+
+    private static void ValidateActorReferenceIdentifiers(
+        RuntimeActorReferenceSnapshot reference,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        ValidateRuntimeInstanceId(reference.InstanceId, path + ".instanceId", diagnostics);
+        ValidateContentId(reference.EntityDefinitionId, path + ".entityDefinitionId", diagnostics);
+    }
+
+    private static void ValidateContentIdKeys(
+        IEnumerable<ContentId> ids,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        int index = 0;
+        foreach (ContentId id in ids)
+        {
+            ValidateContentId(id, $"{path}.keys[{index}]", diagnostics);
+            index++;
+        }
+    }
+
+    private static void ValidateContentIds(
+        IReadOnlyList<ContentId> ids,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < ids.Count; index++)
+        {
+            ValidateContentId(ids[index], $"{path}[{index}]", diagnostics);
+        }
+    }
+
+    private static void ValidateContentId(
+        ContentId id,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        if (id.IsValid)
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+            RuntimeSaveValidationCode.InvalidContentId,
+            "Content ID cannot be empty.",
+            ContentId: id,
+            Path: path));
+    }
+
+    private static void ValidateRuntimeInstanceId(
+        RuntimeInstanceId id,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        if (id.IsValid)
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+            RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+            "Runtime instance ID cannot be empty.",
+            id,
+            Path: path));
     }
 
     private static void ValidateContentPacks(
@@ -480,6 +661,11 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         for (int index = 0; index < skillIds.Count; index++)
         {
             ContentId skillId = skillIds[index];
+            if (!skillId.IsValid)
+            {
+                continue;
+            }
+
             if (!catalog.Skills.ContainsKey(skillId))
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -495,6 +681,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private static RuntimeSaveValidationCode SaveCode(RuntimeActorSnapshotIntegrityCode code) =>
         code switch
         {
+            RuntimeActorSnapshotIntegrityCode.InvalidRuntimeInstanceId => RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+            RuntimeActorSnapshotIntegrityCode.InvalidContentId => RuntimeSaveValidationCode.InvalidContentId,
             RuntimeActorSnapshotIntegrityCode.DuplicateResource => RuntimeSaveValidationCode.DuplicateActorResource,
             RuntimeActorSnapshotIntegrityCode.DuplicateLearnedSkill => RuntimeSaveValidationCode.DuplicateActorLearnedSkill,
             RuntimeActorSnapshotIntegrityCode.DuplicateEquippedSkill => RuntimeSaveValidationCode.DuplicateActorEquippedSkill,
@@ -1020,6 +1208,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private static RuntimeSaveValidationCode SaveCode(CompendiumEntryIntegrityCode code) =>
         code switch
         {
+            CompendiumEntryIntegrityCode.InvalidContentId =>
+                RuntimeSaveValidationCode.InvalidContentId,
             CompendiumEntryIntegrityCode.DuplicateLearnedSkill =>
                 RuntimeSaveValidationCode.DuplicateCompendiumLearnedSkill,
             CompendiumEntryIntegrityCode.DuplicateEquippedSkill =>

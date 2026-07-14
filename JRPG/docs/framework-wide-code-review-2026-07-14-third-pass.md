@@ -205,6 +205,17 @@ The strict JSON path cannot create this state, but programmatic definitions or a
 
 Recommended correction: add `IsValid`/`IsEmpty` semantics and reject default IDs at every public validation boundary, especially content identity, runtime actor identity, and persistence.
 
+**Correction status (2026-07-14): implemented.**
+
+- `ContentId` and `RuntimeInstanceId` now expose explicit `IsEmpty` and `IsValid` state. Their default values remain representable as empty, untrusted input, but no longer masquerade as ordinary unqualified IDs.
+- Content validation now reports stable `RecordIdInvalid`, `ReferenceIdInvalid`, and `RegistrationIdInvalid` diagnostics. Invalid prerequisites are excluded from duplicate, inheritance-conflict, and fusion-ambiguity comparisons, preventing misleading cascades.
+- A custom public document deserializer returning a programmatic default record ID is contained by validation. Catalog construction does not reach qualification, and `DefinitionQualifier` retains a defensive invalid-ID invariant for internal misuse.
+- Live actor construction rejects empty runtime, entity, ownership, resource, stat, skill, capability, equipment, and form-reference IDs. Catalog actor creation/restoration, encounter planning, ruleset binding, and equipment-profile resolution return their existing typed result shapes with explicit invalid-identifier diagnostics before repository access.
+- Actor snapshot integrity and aggregate save validation inspect identity, ownership, resources, stats, skills, capabilities, forms, equipment, timed state, passive activations, party/stock references, inventory, navigation/dungeon state, Compendium entries, knowledge, session data, checkpoints, and host context. Invalid IDs are path-addressed and prevent `RequireValidSnapshot()` or actor restoration from succeeding.
+- Compendium registration, recall, entry validation, and familiar-knowledge import now contain default IDs inside typed diagnostics. This also closes the catalog lookup and `ToDictionary` escape routes found by adversarial tests during the correction.
+- Raw definition and snapshot contracts intentionally remain able to represent a default value. They are import/save evidence containers; validity is established only by the validator or restore boundary. Successfully validated content and live runtime state cannot contain an empty ID.
+- The focused affected gate passed 186 tests. The complete solution passed 1,109 tests with no failures or skips; the framework build remains at 0 warnings, the solution retains its established 100 compatibility-host warnings, all four clean demos exited 0, framework neutrality searches found no prohibited references, and `Data/Jsons` remained unchanged.
+
 ### L3. The library package is buildable but not publication-ready
 
 `JRPG.Framework.csproj` currently declares only target framework, implicit usings, and nullable analysis. `dotnet pack` therefore produced an implicit `1.0.0` package containing only the DLL and emitted a missing-readme notice. The repository also has no `global.json`, so this review used installed SDK `10.0.301` to build the `net9.0` target even though SDK `9.0.315` is installed.
@@ -232,7 +243,8 @@ Recommended correction: complete package metadata and deterministic package sett
 ## Quality Gate
 
 - Latest affected execution/lifecycle tests: 81 passed, 0 failed, 0 skipped.
-- Complete solution tests after M1-M5 and L1 corrections: 1,095 passed, 0 failed, 0 skipped.
+- L2 affected identifier-boundary tests: 186 passed, 0 failed, 0 skipped.
+- Complete solution tests after M1-M5 and L1-L2 corrections: 1,109 passed, 0 failed, 0 skipped.
 - Framework nonincremental build: 0 warnings, 0 errors.
 - Solution nonincremental build: 100 warnings, 0 errors. These warnings are in the retained console-host compatibility surface; framework build remains warning-free.
 - Package: `JRPG.Framework.1.0.0.nupkg` produced successfully; publication metadata remains incomplete as noted in L3.
@@ -248,12 +260,11 @@ NuGet vulnerability metadata could not be refreshed because network access to `a
 
 I am comfortable moving forward with production development and Phase 8. The framework has coherent ownership boundaries, strong deterministic tests, clean engine neutrality, and no critical architectural defect requiring another rewrite. All five medium findings from this review are now corrected and verified.
 
-I am not comfortable labeling the framework a stable public production release yet. L2 should be corrected before declaring the public contracts stable. L3 must be completed before publishing a package.
+I am not comfortable labeling the framework a stable public production release yet. L2 is corrected, so default struct state no longer compromises validated content or restored runtime state. L3 must still be completed before publishing a package.
 
 Recommended order:
 
-1. Reject default/empty value-type IDs at every public validation boundary.
-2. Complete package/release metadata and SDK reproducibility policy.
-3. Repeat the focused adversarial and full release gates.
+1. Complete package/release metadata and SDK reproducibility policy.
+2. Repeat the focused adversarial and full release gates against the intended publication configuration.
 
 No broad redesign or renewed legacy migration is warranted by this review.

@@ -4,14 +4,20 @@ namespace JRPGPrototype.Data.Definitions;
 
 public readonly record struct ContentId
 {
+    private readonly string? _value;
+
     public ContentId(string value)
     {
-        Value = Normalize(value);
+        _value = Normalize(value);
     }
 
-    public string Value { get; }
+    public string Value => _value ?? string.Empty;
 
-    public bool IsQualified => Value?.Contains(':', StringComparison.Ordinal) == true;
+    public bool IsEmpty => _value is null;
+
+    public bool IsValid => !IsEmpty;
+
+    public bool IsQualified => IsValid && Value.Contains(':', StringComparison.Ordinal);
 
     public static ContentId Parse(string value) => new(value);
 
@@ -35,7 +41,7 @@ public readonly record struct ContentId
         }
     }
 
-    public override string ToString() => Value ?? string.Empty;
+    public override string ToString() => Value;
 
     private static string Normalize([NotNull] string? value)
     {

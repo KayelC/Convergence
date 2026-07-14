@@ -707,6 +707,95 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_AggregatesDefaultIdentifiersBeforeRestoreOrLookup()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot invalidActor = CopyActor(
+            baseline.Actors[0],
+            identity: new RuntimeActorIdentitySnapshot(default, default, default, "Invalid Actor"));
+        var invalidReference = new RuntimeActorReferenceSnapshot(default, default, "Invalid Reference");
+        var snapshot = new RuntimeSaveGameSnapshot(
+            baseline.FrameworkVersion,
+            baseline.ContentPacks,
+            [invalidActor],
+            new RuntimePartyStockSnapshot(invalidReference, 1, activeParty: [invalidReference]),
+            new RuntimeInventorySnapshot(
+                [new KeyValuePair<ContentId, int>(default, 1)],
+                [
+                    new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+                        EquipmentSlot.Weapon,
+                        [default])
+                ]),
+            new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, default)
+            ]),
+            baseline.Wallet,
+            new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(default),
+                new RuntimeDungeonTraversalSnapshot(default, default)),
+            new CompendiumStateSnapshot(
+            [
+                new CompendiumEntrySnapshot(
+                    default,
+                    "Invalid Entry",
+                    1,
+                    [new KeyValuePair<ContentId, int>(default, 1)],
+                    [default])
+            ]),
+            new RuntimeKnowledgeSnapshot(
+                ailmentResistances:
+                [
+                    new RuntimeAilmentResistanceKnowledgeSnapshot(default, default, ResistanceLevel.Normal)
+                ]),
+            new RuntimeSessionProgressSnapshot(
+                (ContentId?)default(ContentId),
+                counters: [new KeyValuePair<ContentId, long>(default, 1)],
+                flags: [default]),
+            new RuntimeCheckpointLogSnapshot(
+            [
+                new RuntimeCheckpointEntrySnapshot(
+                    0,
+                    RuntimeCheckpointKind.HostAction,
+                    "Invalid identifiers.",
+                    (RuntimeInstanceId?)default(RuntimeInstanceId),
+                    (ContentId?)default(ContentId))
+            ]),
+            [new KeyValuePair<ContentId, string>(default, "invalid")]);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
+
+        Assert.False(result.IsValid);
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+            "$.actors[0].identity.instanceId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.actors[0].identity.entityDefinitionId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.actors[0].identity.actorKindId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+            "$.partyStock.owner.instanceId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.inventory.itemQuantities.keys[0]");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.field.navigation.currentLocationId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.compendium.entries[0].entityId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.knowledge.ailmentResistances[0].ailmentId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.session.moonPhaseId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+            "$.checkpoints.entries[0].actorId");
+        AssertDiagnostic(result, RuntimeSaveValidationCode.InvalidContentId,
+            "$.hostContext.keys[0]");
+        Assert.Throws<RuntimeSaveValidationException>(() => result.RequireValidSnapshot());
+        Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
+            invalidActor,
+            CombatDefenseProfile.Empty));
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsDuplicateKnowledgeKeysWithIndexedPaths()
     {
         ContentId entityId = Id("convergence.clean_battle_demo:ember_duelist_demo");

@@ -351,6 +351,11 @@ public sealed class GameDataCatalog :
 
     private static void RequireQualified(ContentId id)
     {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Catalog lookup content ID cannot be empty.", nameof(id));
+        }
+
         if (!id.IsQualified)
         {
             throw new ArgumentException("Catalog lookups require a pack-qualified content ID.", nameof(id));

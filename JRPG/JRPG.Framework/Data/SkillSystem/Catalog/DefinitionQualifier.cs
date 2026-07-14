@@ -4,8 +4,15 @@ namespace JRPGPrototype.Data.SkillSystem.Catalog;
 
 internal static class DefinitionQualifier
 {
-    public static ContentId ContentReference(string packId, ContentId id) =>
-        id.IsQualified ? id : ContentId.Parse($"{packId}:{id}");
+    public static ContentId ContentReference(string packId, ContentId id)
+    {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Content reference ID cannot be empty.", nameof(id));
+        }
+
+        return id.IsQualified ? id : ContentId.Parse($"{packId}:{id}");
+    }
 
     public static SkillDefinition Skill(string packId, SkillDefinition definition) =>
         new(

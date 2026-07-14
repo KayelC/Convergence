@@ -95,6 +95,30 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_RejectsDefaultIdentifiersBeforeRepositoryOrInitializationAccess()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var initialization = new RecordingInitializationPolicy();
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            initialization);
+
+        CatalogBattleActorCreationResult result = factory.Create(new CatalogBattleActorCreationRequest(
+            default,
+            default,
+            default,
+            1,
+            ControllerId: default(ContentId)));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(4, result.Diagnostics.Count);
+        Assert.All(result.Diagnostics, diagnostic =>
+            Assert.Equal(CatalogBattleActorDiagnosticCode.IdentifierInvalid, diagnostic.Code));
+        Assert.Equal(0, initialization.CallCount);
+    }
+
+    [Fact]
     public void ActorFactory_RejectsMismatchedRequestAndProgressionLevelsBeforeInitialization()
     {
         EntityDefinition entity = Entity("test.pack:entity", []);
@@ -242,6 +266,42 @@ public sealed class CatalogBattleRuntimeTests
         Assert.True(state.IsGuarding);
         Assert.IsType<PhaseDurationDefinition>(state.StatStages[Id("attack")].Duration);
         Assert.IsType<BattleDurationDefinition>(state.AffinityOverrides[DamageElement.Ice].Duration);
+    }
+
+    [Fact]
+    public void ActorFactory_RestoreContainsDefaultSkillAndAilmentIdsInsideTypedDiagnostics()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            new ThrowingInitializationPolicy());
+        var snapshot = new RuntimeActorSnapshot(
+            new RuntimeActorIdentitySnapshot(
+                RuntimeInstanceId.Parse("saved_actor"),
+                entity.Id,
+                entity.EntityKindId,
+                "Saved Actor"),
+            new RuntimeActorOwnershipSnapshot(Id("host"), PlayerTeam),
+            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Reserve, false),
+            new RuntimeProgressionSnapshot(1, 0, 0, 0),
+            [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
+            new RuntimeStatBlockSnapshot(),
+            new RuntimeSkillStateSnapshot([default], [default]),
+            new RuntimeFormStockSnapshot(),
+            new RuntimeEquipmentSnapshot(),
+            new RuntimeBattleStatusSnapshot(
+                ailments: [new RuntimeTimedStateSnapshot(default, new BattleDurationDefinition())]),
+            new RuntimeBattleActivationSnapshot(),
+            baseResourceValues: null,
+            Id("hp"));
+
+        CatalogBattleActorCreationResult result = factory.Restore(snapshot);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(2, result.Diagnostics.Count);
+        Assert.All(result.Diagnostics, diagnostic =>
+            Assert.Equal(CatalogBattleActorDiagnosticCode.SnapshotInvalid, diagnostic.Code));
     }
 
     [Fact]

@@ -17,7 +17,8 @@ public enum EncounterStartDiagnosticCode
     InvalidFormationIndex,
     FormationHasNoMembers,
     InvalidMemberLevel,
-    InvalidMemberCount
+    InvalidMemberCount,
+    IdentifierInvalid
 }
 
 public sealed record EncounterStartDiagnostic(
@@ -93,7 +94,33 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
 
     public EncounterStartPlanResult Plan(EncounterStartRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var diagnostics = new List<EncounterStartDiagnostic>();
+
+        if (!request.EncounterId.IsValid)
+        {
+            diagnostics.Add(new EncounterStartDiagnostic(
+                EncounterStartDiagnosticCode.IdentifierInvalid,
+                "Encounter ID cannot be empty.",
+                request.EncounterId));
+        }
+        if (!request.OpponentTeamId.IsValid)
+        {
+            diagnostics.Add(new EncounterStartDiagnostic(
+                EncounterStartDiagnosticCode.IdentifierInvalid,
+                "Opponent team ID cannot be empty.",
+                request.OpponentTeamId));
+        }
+        if (!request.InstanceIdPrefix.IsValid)
+        {
+            diagnostics.Add(new EncounterStartDiagnostic(
+                EncounterStartDiagnosticCode.IdentifierInvalid,
+                "Runtime instance ID prefix cannot be empty."));
+        }
+        if (diagnostics.Count > 0)
+        {
+            return new EncounterStartPlanResult(null, diagnostics);
+        }
 
         if (!request.EncounterId.IsQualified)
         {

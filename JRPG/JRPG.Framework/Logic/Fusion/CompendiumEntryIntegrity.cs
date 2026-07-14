@@ -5,6 +5,7 @@ namespace JRPGPrototype.Logic.Fusion;
 
 internal enum CompendiumEntryIntegrityCode
 {
+    InvalidContentId,
     DuplicateLearnedSkill,
     DuplicateEquippedSkill,
     InvalidStatValue,
@@ -52,6 +53,16 @@ internal static class CompendiumEntryIntegrity
     {
         foreach ((ContentId statId, int value) in entry.Stats)
         {
+            if (!statId.IsValid)
+            {
+                diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(
+                    CompendiumEntryIntegrityCode.InvalidContentId,
+                    CompendiumEntryIntegrityField.Stats,
+                    "Compendium stat ID cannot be empty.",
+                    statId));
+                continue;
+            }
+
             if (value < 0)
             {
                 diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(
@@ -99,6 +110,17 @@ internal static class CompendiumEntryIntegrity
         for (int index = 0; index < entry.SkillIds.Count; index++)
         {
             ContentId skillId = entry.SkillIds[index];
+            if (!skillId.IsValid)
+            {
+                diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(
+                    CompendiumEntryIntegrityCode.InvalidContentId,
+                    CompendiumEntryIntegrityField.LearnedSkills,
+                    "Compendium learned skill ID cannot be empty.",
+                    skillId,
+                    index));
+                continue;
+            }
+
             if (!seen.Add(skillId))
             {
                 diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(
@@ -130,6 +152,17 @@ internal static class CompendiumEntryIntegrity
         for (int index = 0; index < entry.EquippedSkillIds.Count; index++)
         {
             ContentId skillId = entry.EquippedSkillIds[index];
+            if (!skillId.IsValid)
+            {
+                diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(
+                    CompendiumEntryIntegrityCode.InvalidContentId,
+                    CompendiumEntryIntegrityField.EquippedSkills,
+                    "Compendium equipped skill ID cannot be empty.",
+                    skillId,
+                    index));
+                continue;
+            }
+
             if (!seen.Add(skillId))
             {
                 diagnostics.Add(new CompendiumEntryIntegrityDiagnostic(

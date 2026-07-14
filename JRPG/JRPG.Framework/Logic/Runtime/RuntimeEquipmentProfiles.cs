@@ -6,7 +6,8 @@ namespace JRPGPrototype.Logic.Runtime;
 public enum RuntimeEquipmentProfileDiagnosticCode
 {
     MissingEquipmentDefinition,
-    SlotProfileMismatch
+    SlotProfileMismatch,
+    InvalidIdentifier
 }
 
 public sealed record RuntimeEquipmentProfileDiagnostic(
@@ -62,6 +63,16 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
 
         foreach ((EquipmentSlot slot, ContentId equipmentId) in equipment.EquippedItemIds.OrderBy(pair => pair.Key))
         {
+            if (!equipmentId.IsValid)
+            {
+                diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
+                    RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier,
+                    slot,
+                    equipmentId,
+                    "Equipped item ID cannot be empty."));
+                continue;
+            }
+
             if (!equipmentRepository.TryGetEquipment(equipmentId, out EquipmentDefinition? definition) ||
                 definition is null)
             {

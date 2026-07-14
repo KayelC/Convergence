@@ -40,7 +40,10 @@ public enum ContentValidationErrorCode
     MutationTierInvalid,
     MutationTierDuplicate,
     MutationTierGap,
-    FusionRecipeAmbiguous
+    FusionRecipeAmbiguous,
+    RecordIdInvalid,
+    ReferenceIdInvalid,
+    RegistrationIdInvalid
 }
 
 public sealed record ContentValidationError(

@@ -27,7 +27,8 @@ public enum CompendiumRuntimeDiagnosticCode
     ActorCreationFailed,
     StockPlacementRejected,
     WalletRejected,
-    InvalidRecallCost
+    InvalidRecallCost,
+    InvalidIdentifier
 }
 
 public sealed record CompendiumRuntimeDiagnostic(
@@ -216,6 +217,16 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         ArgumentNullException.ThrowIfNull(actor);
 
         ContentId entityId = actor.Identity.EntityDefinitionId;
+        if (!entityId.IsValid || !actor.Identity.InstanceId.IsValid)
+        {
+            return RegistrationRejected(
+                state,
+                CompendiumRuntimeDiagnosticCode.InvalidIdentifier,
+                "Compendium registration requires non-empty entity and runtime instance IDs.",
+                entityId,
+                actor.Identity.InstanceId);
+        }
+
         if (!_entities.TryGetEntity(entityId, out EntityDefinition? entity) || entity is null)
         {
             return RegistrationRejected(
@@ -288,6 +299,16 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     public CompendiumRecallTransactionResult Recall(CompendiumRecallTransactionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        if (!request.EntityId.IsValid || !request.RecalledInstanceId.IsValid ||
+            !request.ControllerId.IsValid || !request.TeamId.IsValid)
+        {
+            return RecallRejected(
+                request,
+                CompendiumRecallTransactionCode.InvalidEntry,
+                CompendiumRuntimeDiagnosticCode.InvalidIdentifier,
+                "Compendium recall requires non-empty entity, runtime instance, controller, and team IDs.");
+        }
 
         if (!request.Compendium.TryGet(request.EntityId, out CompendiumEntrySnapshot? entry) || entry is null)
         {
@@ -610,6 +631,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     private static CompendiumRuntimeDiagnosticCode RuntimeCode(CompendiumEntryIntegrityCode code) =>
         code switch
         {
+            CompendiumEntryIntegrityCode.InvalidContentId =>
+                CompendiumRuntimeDiagnosticCode.InvalidIdentifier,
             CompendiumEntryIntegrityCode.DuplicateLearnedSkill =>
                 CompendiumRuntimeDiagnosticCode.DuplicateLearnedSkill,
             CompendiumEntryIntegrityCode.DuplicateEquippedSkill =>
@@ -658,7 +681,8 @@ public enum FamiliarKnowledgeImportDiagnosticCode
     EntityMissing,
     DuplicateElementalAffinityKnowledge,
     DuplicateAilmentResistanceKnowledge,
-    DuplicateInstantDeathResistanceKnowledge
+    DuplicateInstantDeathResistanceKnowledge,
+    InvalidIdentifier
 }
 
 public sealed record FamiliarKnowledgeImportDiagnostic(
@@ -723,31 +747,30 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(familiarEntityIds);
 
-        IReadOnlyList<RuntimeKnowledgeDuplicate> duplicates =
-            RuntimeKnowledgeIntegrity.FindDuplicates(current);
-        if (duplicates.Count > 0)
+        var currentDiagnostics = new List<FamiliarKnowledgeImportDiagnostic>();
+        ValidateKnowledgeIdentifiers(current, currentDiagnostics);
+        currentDiagnostics.AddRange(RuntimeKnowledgeIntegrity.FindDuplicates(current)
+            .Select(duplicate => new FamiliarKnowledgeImportDiagnostic(
+                duplicate.Collection switch
+                {
+                    RuntimeKnowledgeCollection.ElementalAffinities =>
+                        FamiliarKnowledgeImportDiagnosticCode.DuplicateElementalAffinityKnowledge,
+                    RuntimeKnowledgeCollection.AilmentResistances =>
+                        FamiliarKnowledgeImportDiagnosticCode.DuplicateAilmentResistanceKnowledge,
+                    RuntimeKnowledgeCollection.InstantDeathResistances =>
+                        FamiliarKnowledgeImportDiagnosticCode.DuplicateInstantDeathResistanceKnowledge,
+                    _ => throw new InvalidOperationException(
+                        $"Unsupported knowledge collection '{duplicate.Collection}'.")
+                },
+                $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
+                duplicate.EntityId,
+                duplicate.Index)));
+        if (currentDiagnostics.Count > 0)
         {
-            FamiliarKnowledgeImportDiagnostic[] duplicateDiagnostics = duplicates
-                .Select(duplicate => new FamiliarKnowledgeImportDiagnostic(
-                    duplicate.Collection switch
-                    {
-                        RuntimeKnowledgeCollection.ElementalAffinities =>
-                            FamiliarKnowledgeImportDiagnosticCode.DuplicateElementalAffinityKnowledge,
-                        RuntimeKnowledgeCollection.AilmentResistances =>
-                            FamiliarKnowledgeImportDiagnosticCode.DuplicateAilmentResistanceKnowledge,
-                        RuntimeKnowledgeCollection.InstantDeathResistances =>
-                            FamiliarKnowledgeImportDiagnosticCode.DuplicateInstantDeathResistanceKnowledge,
-                        _ => throw new InvalidOperationException(
-                            $"Unsupported knowledge collection '{duplicate.Collection}'.")
-                    },
-                    $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
-                    duplicate.EntityId,
-                    duplicate.Index))
-                .ToArray();
             return new FamiliarKnowledgeImportResult(
                 current,
                 current,
-                diagnostics: duplicateDiagnostics);
+                diagnostics: currentDiagnostics);
         }
 
         var elemental = current.ElementalAffinities.ToDictionary(
@@ -761,9 +784,26 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
             entry => entry.Resistance);
         var imported = new List<ContentId>();
         var diagnostics = new List<FamiliarKnowledgeImportDiagnostic>();
+        var seenEntityIds = new HashSet<ContentId>();
+        ContentId[] requestedEntityIds = familiarEntityIds.ToArray();
 
-        foreach (ContentId entityId in familiarEntityIds.Distinct())
+        for (int index = 0; index < requestedEntityIds.Length; index++)
         {
+            ContentId entityId = requestedEntityIds[index];
+            if (!seenEntityIds.Add(entityId))
+            {
+                continue;
+            }
+            if (!entityId.IsValid)
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+                    "Familiar entity ID cannot be empty.",
+                    entityId,
+                    index));
+                continue;
+            }
+
             if (!_catalog.TryGetEntity(entityId, out EntityDefinition? entity) || entity is null)
             {
                 diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
@@ -815,5 +855,49 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                     entry.Key.Channel,
                     entry.Value)));
         return new FamiliarKnowledgeImportResult(current, after, imported, diagnostics);
+    }
+
+    private static void ValidateKnowledgeIdentifiers(
+        RuntimeKnowledgeSnapshot knowledge,
+        ICollection<FamiliarKnowledgeImportDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < knowledge.ElementalAffinities.Count; index++)
+        {
+            ContentId entityId = knowledge.ElementalAffinities[index].EntityId;
+            if (!entityId.IsValid)
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+                    "Elemental-affinity knowledge entity ID cannot be empty.",
+                    entityId,
+                    index));
+            }
+        }
+
+        for (int index = 0; index < knowledge.AilmentResistances.Count; index++)
+        {
+            RuntimeAilmentResistanceKnowledgeSnapshot entry = knowledge.AilmentResistances[index];
+            if (!entry.EntityId.IsValid || !entry.AilmentId.IsValid)
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+                    "Ailment-resistance knowledge entity and ailment IDs cannot be empty.",
+                    entry.EntityId,
+                    index));
+            }
+        }
+
+        for (int index = 0; index < knowledge.InstantDeathResistances.Count; index++)
+        {
+            ContentId entityId = knowledge.InstantDeathResistances[index].EntityId;
+            if (!entityId.IsValid)
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+                    "Instant-death knowledge entity ID cannot be empty.",
+                    entityId,
+                    index));
+            }
+        }
     }
 }

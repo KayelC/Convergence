@@ -7,12 +7,18 @@ namespace JRPGPrototype.Logic.Runtime;
 
 public readonly record struct RuntimeInstanceId
 {
+    private readonly string? _value;
+
     public RuntimeInstanceId(string value)
     {
-        Value = Normalize(value);
+        _value = Normalize(value);
     }
 
-    public string Value { get; }
+    public string Value => _value ?? string.Empty;
+
+    public bool IsEmpty => _value is null;
+
+    public bool IsValid => !IsEmpty;
 
     public static RuntimeInstanceId Parse(string value) => new(value);
 
@@ -36,7 +42,7 @@ public readonly record struct RuntimeInstanceId
         }
     }
 
-    public override string ToString() => Value ?? string.Empty;
+    public override string ToString() => Value;
 
     private static string Normalize([NotNull] string? value)
     {

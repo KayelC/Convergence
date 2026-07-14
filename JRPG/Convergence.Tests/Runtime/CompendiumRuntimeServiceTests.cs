@@ -108,6 +108,41 @@ public sealed class CompendiumRuntimeServiceTests
     }
 
     [Fact]
+    public void RegisterActor_DefaultIdentityReturnsTypedRejectionBeforeCatalogLookup()
+    {
+        TestContext context = CreateContext();
+        RuntimeActorSnapshot source = context.CreateActor("malformed_identity").State.ToSnapshot();
+        var malformed = new RuntimeActorSnapshot(
+            new RuntimeActorIdentitySnapshot(
+                default,
+                default,
+                source.Identity.ActorKindId,
+                source.Identity.DisplayName),
+            source.Ownership,
+            source.Deployment,
+            source.Progression,
+            source.Resources,
+            source.Stats,
+            source.Skills,
+            source.Forms,
+            source.Equipment,
+            source.BattleStatus,
+            source.BattleActivations,
+            source.BaseResourceValues,
+            source.VitalResourceId,
+            source.CapabilityIds);
+        CompendiumStateSnapshot state = new();
+
+        CompendiumActorRegistrationResult result = context.CreateService().RegisterActor(state, malformed);
+
+        Assert.False(result.Applied);
+        Assert.Same(state, result.Before);
+        Assert.Same(state, result.After);
+        CompendiumRuntimeDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidIdentifier, diagnostic.Code);
+    }
+
+    [Fact]
     public void Recall_IsAtomicAndRestoresRegisteredProgressionStatsSkillsAndFullResources()
     {
         TestContext context = CreateContext();
@@ -183,6 +218,31 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Same(party, result.AfterPartyStock);
         Assert.Same(wallet, result.AfterWallet);
         Assert.Null(result.Actor);
+    }
+
+    [Fact]
+    public void Recall_DefaultIdentifiersReturnTypedRejectionWithoutRepositoryAccess()
+    {
+        TestContext context = CreateContext();
+        var service = context.CreateService();
+        RuntimePartyStockSnapshot party = EmptyParty();
+        RuntimeWalletSnapshot wallet = new(10_000);
+
+        CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
+            new CompendiumStateSnapshot(),
+            party,
+            wallet,
+            default,
+            default,
+            default,
+            default,
+            CompendiumRecallStockKind.Demon));
+
+        Assert.False(result.Applied);
+        Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
+        Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidIdentifier, Assert.Single(result.Diagnostics).Code);
+        Assert.Same(party, result.AfterPartyStock);
+        Assert.Same(wallet, result.AfterWallet);
     }
 
     [Fact]
@@ -557,6 +617,43 @@ public sealed class CompendiumRuntimeServiceTests
         FamiliarKnowledgeImportDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(FamiliarKnowledgeImportDiagnosticCode.EntityMissing, diagnostic.Code);
         Assert.Equal(Id("missing.pack:entity"), diagnostic.EntityId);
+    }
+
+    [Fact]
+    public void FamiliarKnowledgeImport_DefaultIdentifiersRemainInsideTypedDiagnostics()
+    {
+        TestContext context = CreateContext();
+        var service = new FamiliarEntityKnowledgeService(context.Catalog);
+        var malformedCurrent = new RuntimeKnowledgeSnapshot(
+            elementalAffinities:
+            [
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    default,
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)
+            ]);
+
+        FamiliarKnowledgeImportResult malformedState = service.Import(
+            malformedCurrent,
+            [context.Entity.Id]);
+
+        Assert.False(malformedState.IsSuccess);
+        Assert.Same(malformedCurrent, malformedState.Before);
+        Assert.Same(malformedCurrent, malformedState.After);
+        Assert.Empty(malformedState.ImportedEntityIds);
+        Assert.Equal(
+            FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+            Assert.Single(malformedState.Diagnostics).Code);
+
+        FamiliarKnowledgeImportResult malformedRequest = service.Import(
+            new RuntimeKnowledgeSnapshot(),
+            [default, context.Entity.Id]);
+
+        Assert.False(malformedRequest.IsSuccess);
+        Assert.Equal([context.Entity.Id], malformedRequest.ImportedEntityIds);
+        FamiliarKnowledgeImportDiagnostic diagnostic = Assert.Single(malformedRequest.Diagnostics);
+        Assert.Equal(FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier, diagnostic.Code);
+        Assert.Equal(0, diagnostic.Index);
     }
 
     private static TestContext CreateContext(bool compendiumEligible = true)

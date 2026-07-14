@@ -321,6 +321,16 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             RecordSource<TDefinition> source,
             IReadOnlyDictionary<ContentId, List<RecordSource<TDefinition>>> index)
         {
+            if (!source.Id.IsValid)
+            {
+                Add(
+                    source,
+                    source.Path + ".id",
+                    ContentValidationErrorCode.RecordIdInvalid,
+                    $"{Capitalize(source.RecordType)} ID cannot be empty.");
+                return;
+            }
+
             if (source.Id.IsQualified)
             {
                 Add(
@@ -439,6 +449,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             ValidateEffects(source, skill.Effects, source.Path + ".effects");
             ValidateTriggers(source, skill.Triggers, source.Path + ".triggers");
             ValidateModifiers(source, skill.Modifiers, source.Path + ".modifiers");
+
+            if (skill.Mutation is not null && !skill.Mutation.FamilyId.IsValid)
+            {
+                Add(source, source.Path + ".mutation.familyId", ContentValidationErrorCode.ReferenceIdInvalid,
+                    "Mutation family ID cannot be empty.");
+            }
         }
 
         private void ValidateEntity(RecordSource<EntityDefinition> source)
@@ -479,13 +495,14 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 source.Path + ".inheritanceRules.allowedSkillIds");
 
             var blocked = entity.InheritanceRules.BlockedSkillIds
+                .Where(id => id.IsValid)
                 .Select(NormalizeContentReference)
                 .ToHashSet();
             for (int index = 0; index < entity.InheritanceRules.AllowedSkillIds.Count; index++)
             {
                 ContentId skillId = entity.InheritanceRules.AllowedSkillIds[index];
                 string path = source.Path + $".inheritanceRules.allowedSkillIds[{index}]";
-                if (blocked.Contains(NormalizeContentReference(skillId)))
+                if (skillId.IsValid && blocked.Contains(NormalizeContentReference(skillId)))
                 {
                     Add(source, path, ContentValidationErrorCode.InheritanceListConflict,
                         $"Skill '{skillId}' appears in both allowed and blocked inheritance lists.");
@@ -516,7 +533,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 ContentId skillId = entity.BaseSkillIds[index];
                 string path = source.Path + $".baseSkillIds[{index}]";
-                if (!assignedSkills.Add(NormalizeContentReference(skillId)))
+                if (skillId.IsValid && !assignedSkills.Add(NormalizeContentReference(skillId)))
                 {
                     Add(source, path, ContentValidationErrorCode.EntitySkillAssignmentDuplicate,
                         $"Skill '{skillId}' is assigned to the entity more than once.");
@@ -535,7 +552,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         $"Skill unlock level {unlock.Level} must be greater than base level {entity.BaseLevel}.");
                 }
 
-                if (!assignedSkills.Add(NormalizeContentReference(unlock.SkillId)))
+                if (unlock.SkillId.IsValid && !assignedSkills.Add(NormalizeContentReference(unlock.SkillId)))
                 {
                     Add(source, path + ".skillId", ContentValidationErrorCode.EntitySkillAssignmentDuplicate,
                         $"Skill '{unlock.SkillId}' is assigned to the entity more than once.");
@@ -899,7 +916,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 DungeonBlockDefinition block = dungeon.Blocks[blockIndex];
                 string blockPath = source.Path + $".blocks[{blockIndex}]";
-                if (block.Id.IsQualified)
+                if (!block.Id.IsValid)
+                {
+                    Add(source, blockPath + ".id", ContentValidationErrorCode.RecordIdInvalid,
+                        "Dungeon block ID cannot be empty.");
+                }
+                else if (block.Id.IsQualified)
                 {
                     Add(source, blockPath + ".id", ContentValidationErrorCode.RecordIdMustBeLocal,
                         $"Dungeon block ID '{block.Id}' must be local and unqualified.");
@@ -941,8 +963,8 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 FusionParentSelectorDefinition parent = recipe.Parents[index];
                 string path = source.Path + $".parents[{index}]";
-                ContentId normalized = NormalizeContentReference(parent.Id);
-                if (!seenParents.Add((parent.Kind, normalized)))
+                if (parent.Id.IsValid &&
+                    !seenParents.Add((parent.Kind, NormalizeContentReference(parent.Id))))
                 {
                     Add(source, path + ".id", ContentValidationErrorCode.ListDuplicateValue,
                         $"Fusion parent '{parent.Id}' is listed more than once.");
@@ -1014,6 +1036,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             FusionParentSelectorDefinition first,
             FusionParentSelectorDefinition second)
         {
+            if (!first.Id.IsValid || !second.Id.IsValid)
+            {
+                return false;
+            }
+
             if (first.Kind == second.Kind)
             {
                 return NormalizeContentReference(first.Id) == NormalizeContentReference(second.Id);
@@ -1734,6 +1761,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             IReadOnlyDictionary<ContentId, List<RecordSource<TTarget>>> index,
             string targetType)
         {
+            if (!id.IsValid)
+            {
+                Add(source, path, ContentValidationErrorCode.ReferenceIdInvalid,
+                    $"{Capitalize(targetType)} reference ID cannot be empty.");
+                return null;
+            }
+
             if (!TryLocalReference(id, out ContentId localId))
             {
                 return null;
@@ -1758,6 +1792,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 
         private bool TryLocalReference(ContentId id, out ContentId localId)
         {
+            if (!id.IsValid)
+            {
+                localId = default;
+                return false;
+            }
+
             if (!id.IsQualified)
             {
                 localId = id;
@@ -1805,6 +1845,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             IReadOnlySet<ContentId> registrations,
             string registrationKind)
         {
+            if (!id.IsValid)
+            {
+                Add(source, path, ContentValidationErrorCode.RegistrationIdInvalid,
+                    $"{Capitalize(registrationKind)} ID cannot be empty.");
+                return;
+            }
+
             if (!registrations.Contains(id))
             {
                 Add(source, path, ContentValidationErrorCode.RegistrationMissing,
@@ -1834,6 +1881,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             IReadOnlyDictionary<ContentId, IContentParameterValidator> validators,
             string registrationKind)
         {
+            if (!id.IsValid)
+            {
+                Add(source, path, ContentValidationErrorCode.RegistrationIdInvalid,
+                    $"{Capitalize(registrationKind)} ID cannot be empty.");
+                return;
+            }
+
             if (!validators.TryGetValue(id, out IContentParameterValidator? validator))
             {
                 Add(source, path, ContentValidationErrorCode.RegistrationMissing,
@@ -1877,6 +1931,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             var seen = new HashSet<ContentId>();
             for (int index = 0; index < values.Count; index++)
             {
+                if (!values[index].IsValid)
+                {
+                    continue;
+                }
+
                 if (!seen.Add(NormalizeContentReference(values[index])))
                 {
                     Add(source, $"{path}[{index}]", ContentValidationErrorCode.ListDuplicateValue,

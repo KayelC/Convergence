@@ -1,6 +1,7 @@
 using System.Reflection;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem;
+using JRPGPrototype.Data.SkillSystem.Catalog;
 using JRPGPrototype.Data.SkillSystem.Validation;
 using Xunit;
 
@@ -108,6 +109,104 @@ public sealed class ContentValidationTests
             races: [race]));
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void ProgrammaticDefaultIdentifiersProduceTypedDiagnosticsWithoutCascadingAsMissing()
+    {
+        SkillDefinition invalidRecord = InvalidIdentifierSkill();
+        SkillDefinition invalidMutation = new(
+            Id("invalid_mutation"), "Invalid Mutation", "Invalid mutation family.",
+            SkillActivation.Passive, null, InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            mutation: new SkillMutationDefinition(default, 1),
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.Accuracy,
+                    ModifierOperation.Add,
+                    1)
+            ]);
+        EntityDefinition invalidReference = Entity(
+            "invalid_reference",
+            default,
+            new EntityInheritanceRulesDefinition(
+                new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList),
+                blockedSkillIds: [default],
+                allowedSkillIds: [default]),
+            baseSkillIds: [default, default]);
+        RaceDefinition invalidRegistration = new(
+            Id("invalid_registration"),
+            "Invalid Registration",
+            alignmentIds: [default]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [invalidRecord, invalidMutation],
+            entities: [invalidReference],
+            races: [invalidRegistration]));
+
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.RecordIdInvalid &&
+            error.JsonPath == "$.skills[0].id" &&
+            error.RecordId is ContentId recordId && recordId.IsEmpty);
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.ReferenceIdInvalid &&
+            error.JsonPath == "$.skills[1].mutation.familyId");
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.ReferenceIdInvalid &&
+            error.JsonPath == "$.entities[0].raceId");
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.ReferenceIdInvalid &&
+            error.JsonPath == "$.entities[0].baseSkillIds[0]");
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.RegistrationIdInvalid &&
+            error.JsonPath == "$.races[0].alignmentIds[0]");
+        Assert.DoesNotContain(result.Errors, error =>
+            error.JsonPath is "$.entities[0].raceId" or "$.entities[0].baseSkillIds[0]" &&
+            error.Code == ContentValidationErrorCode.ReferenceMissing);
+        Assert.DoesNotContain(result.Errors, error =>
+            error.Code is ContentValidationErrorCode.InheritanceListConflict or
+                ContentValidationErrorCode.EntitySkillAssignmentDuplicate or
+                ContentValidationErrorCode.ListDuplicateValue);
+    }
+
+    [Fact]
+    public void CatalogLoader_ContainsProgrammaticDefaultRecordIdInsideValidationDiagnostics()
+    {
+        const string manifestJson = """
+            {
+              "schemaVersion": 1,
+              "id": "test.pack",
+              "version": "1.0.0",
+              "displayName": "Test Pack",
+              "documents": [
+                { "type": "skills", "path": "skills.json" }
+              ]
+            }
+            """;
+        var loader = new SkillSystemCatalogLoader(
+            new ProgrammaticDefaultIdDeserializer(InvalidIdentifierSkill()),
+            new SkillSystemContentValidator());
+        var registrations = new SkillSystemRegistrationBuilder()
+            .SupportModifier<NumericRuleModifierDefinition>()
+            .Build();
+
+        CatalogLoadResult result = loader.Load(new SkillSystemCatalogLoadRequest(
+            registrations,
+            [
+                new ContentPackTextBundle(
+                    "manifest.json",
+                    manifestJson,
+                    [new ContentDocumentText("skills.json", "skills.json", "{}")])
+            ]));
+
+        Assert.False(result.IsSuccess);
+        CatalogLoadDiagnostic diagnostic = Assert.Single(result.Diagnostics, item =>
+            item.Code == CatalogLoadDiagnosticCode.ContentValidationFailed);
+        Assert.Equal(ContentValidationErrorCode.RecordIdInvalid, diagnostic.ValidationCode);
+        Assert.Equal("$.skills[0].id", diagnostic.JsonPath);
+        Assert.Null(result.Catalog);
     }
 
     [Fact]
@@ -581,6 +680,23 @@ public sealed class ContentValidationTests
             new SkillInheritanceDefinition(true),
             modifiers: [new NumericRuleModifierDefinition(NumericRuleModifierType.Accuracy, ModifierOperation.Add, 1)]);
 
+    private static SkillDefinition InvalidIdentifierSkill() =>
+        new(
+            default,
+            "Invalid ID",
+            "Programmatic invalid identifier fixture.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.Accuracy,
+                    ModifierOperation.Add,
+                    1)
+            ]);
+
     private static EntityDefinition Entity(
         string id,
         ContentId raceId,
@@ -611,6 +727,51 @@ public sealed class ContentValidationTests
         new(TargetRelation.Enemy, TargetSelection.Single, TargetLifeState.Alive, false);
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private sealed class ProgrammaticDefaultIdDeserializer(SkillDefinition skill)
+        : ISkillSystemDocumentDeserializer
+    {
+        private readonly SkillSystemJsonDeserializer _inner = new();
+
+        public ContentPackManifest DeserializeManifest(string json, string sourceName) =>
+            _inner.DeserializeManifest(json, sourceName);
+
+        public DeserializedContentDocument<SkillDefinition> DeserializeSkills(string json, string sourceName) =>
+            new(1, [skill]);
+
+        public DeserializedContentDocument<EntityDefinition> DeserializeEntities(string json, string sourceName) =>
+            _inner.DeserializeEntities(json, sourceName);
+
+        public DeserializedContentDocument<RaceDefinition> DeserializeRaces(string json, string sourceName) =>
+            _inner.DeserializeRaces(json, sourceName);
+
+        public DeserializedContentDocument<AilmentDefinition> DeserializeAilments(string json, string sourceName) =>
+            _inner.DeserializeAilments(json, sourceName);
+
+        public DeserializedContentDocument<ItemDefinition> DeserializeItems(string json, string sourceName) =>
+            _inner.DeserializeItems(json, sourceName);
+
+        public DeserializedContentDocument<EquipmentDefinition> DeserializeEquipment(string json, string sourceName) =>
+            _inner.DeserializeEquipment(json, sourceName);
+
+        public DeserializedContentDocument<ShopCatalogDefinition> DeserializeShops(string json, string sourceName) =>
+            _inner.DeserializeShops(json, sourceName);
+
+        public DeserializedContentDocument<NegotiationDefinition> DeserializeNegotiations(string json, string sourceName) =>
+            _inner.DeserializeNegotiations(json, sourceName);
+
+        public DeserializedContentDocument<EncounterDefinition> DeserializeEncounters(string json, string sourceName) =>
+            _inner.DeserializeEncounters(json, sourceName);
+
+        public DeserializedContentDocument<DungeonDefinition> DeserializeDungeons(string json, string sourceName) =>
+            _inner.DeserializeDungeons(json, sourceName);
+
+        public DeserializedContentDocument<FusionRecipeDefinition> DeserializeFusionRecipes(string json, string sourceName) =>
+            _inner.DeserializeFusionRecipes(json, sourceName);
+
+        public DeserializedContentDocument<RulesetDefinition> DeserializeRulesets(string json, string sourceName) =>
+            _inner.DeserializeRulesets(json, sourceName);
+    }
 
     private static SkillSystemRegistrationSnapshot InvalidFixtureRegistrations() =>
         ComprehensiveRegistrationBuilder().Build();

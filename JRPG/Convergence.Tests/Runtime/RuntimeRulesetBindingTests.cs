@@ -255,6 +255,22 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Throws<InvalidOperationException>(() => badParameters.RequireService());
     }
 
+    [Fact]
+    public void Binding_DefaultRulesetIdReturnsTypedDiagnosticBeforeCatalogLookup()
+    {
+        RulesetBindingResult<ProductionCombatRuleset> result =
+            new RuntimeRulesetBindingResolver().BindProductionCombatRuleset(
+                Catalog(),
+                default,
+                new SequenceRandomSource());
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Service);
+        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidIdentifier, diagnostic.Code);
+        Assert.True(diagnostic.RulesetId.IsEmpty);
+    }
+
     private static GameDataCatalog Catalog(params RulesetDefinition[] rulesets) =>
         new(
             [],

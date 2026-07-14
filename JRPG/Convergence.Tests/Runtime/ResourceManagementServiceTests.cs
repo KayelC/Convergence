@@ -187,6 +187,26 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void EquipmentProfileResolver_DefaultEquipmentIdReturnsTypedDiagnostic()
+    {
+        var equipment = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, default)
+        ]);
+
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
+            equipment,
+            new TestEquipmentRepository());
+
+        RuntimeEquipmentProfileDiagnostic diagnostic = Assert.Single(profile.Diagnostics);
+        Assert.Equal(RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier, diagnostic.Code);
+        Assert.Equal(EquipmentSlot.Weapon, diagnostic.Slot);
+        Assert.True(diagnostic.EquipmentId.IsEmpty);
+        Assert.Empty(profile.EquippedDefinitions);
+        Assert.Null(profile.BasicAttack);
+    }
+
+    [Fact]
     public void EconomyService_AppliesAtomicMaccaTransactions()
     {
         var service = new EconomyTransactionService();

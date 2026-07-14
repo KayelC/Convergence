@@ -10,6 +10,11 @@ public sealed class BattleResourceState
 {
     public BattleResourceState(ContentId id, decimal current, decimal maximum)
     {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Resource ID cannot be empty.", nameof(id));
+        }
+
         if (maximum < 0 || current < 0 || current > maximum)
         {
             throw new ArgumentOutOfRangeException(nameof(current), "Resource values must satisfy 0 <= current <= maximum.");
@@ -139,6 +144,11 @@ public sealed class RuntimeActorState
         ArgumentNullException.ThrowIfNull(defenseProfile);
         ArgumentNullException.ThrowIfNull(resources);
 
+        RequireValid(instanceId, nameof(instanceId));
+        RequireValid(entityId, nameof(entityId));
+        RequireValid(teamId, nameof(teamId));
+        RequireValid(vitalResourceId, nameof(vitalResourceId));
+
         Identity = identity ?? new RuntimeActorIdentitySnapshot(
             instanceId,
             entityId,
@@ -151,6 +161,16 @@ public sealed class RuntimeActorState
             isActive ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Reserve,
             isActive);
         Progression = progression ?? new RuntimeProgressionSnapshot(1, 0, 0, 0);
+        RequireValid(Identity.InstanceId, nameof(identity));
+        RequireValid(Identity.EntityDefinitionId, nameof(identity));
+        RequireValid(Identity.ActorKindId, nameof(identity));
+        RequireValid(Ownership.ControllerId, nameof(ownership));
+        RequireValid(Ownership.TeamId, nameof(ownership));
+        if (Ownership.OwnerInstanceId is RuntimeInstanceId ownerInstanceId)
+        {
+            RequireValid(ownerInstanceId, nameof(ownership));
+        }
+
         VitalResourceId = vitalResourceId;
         DefenseProfile = defenseProfile;
         _resources = resources.ToDictionary(resource => resource.Id, resource => resource.Copy());
@@ -162,6 +182,9 @@ public sealed class RuntimeActorState
         _effectiveStats = Snapshot(stats);
         _baseStats = Snapshot(baseStats ?? stats);
         _baseResourceValues = Snapshot(baseResourceValues);
+        RequireValid(_effectiveStats.Keys, nameof(stats));
+        RequireValid(_baseStats.Keys, baseStats is null ? nameof(stats) : nameof(baseStats));
+        RequireValid(_baseResourceValues.Keys, nameof(baseResourceValues));
         RuntimeActorNumericDomain.RequireValidStatValues(
             _baseStats,
             baseStats is null ? nameof(stats) : nameof(baseStats));
@@ -171,9 +194,17 @@ public sealed class RuntimeActorState
             nameof(baseResourceValues));
         _skillIds = new HashSet<ContentId>(skillIds ?? []);
         _capabilityIds = new HashSet<ContentId>(capabilityIds ?? []);
+        RequireValid(_skillIds, nameof(skillIds));
+        RequireValid(_capabilityIds, nameof(capabilityIds));
         Skills = skillState ?? new RuntimeSkillStateSnapshot(_skillIds, _skillIds);
         Forms = forms ?? new RuntimeFormStockSnapshot();
         Equipment = equipment ?? new RuntimeEquipmentSnapshot();
+        RequireValid(Skills.LearnedSkillIds, nameof(skillState));
+        RequireValid(Skills.EquippedSkillIds, nameof(skillState));
+        RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
+        RequireValid(Forms.ActiveForm, nameof(forms));
+        RequireValid(Forms.PersonaStock, nameof(forms));
+        RequireValid(Forms.DemonStock, nameof(forms));
         Passives = new BattlePassiveCollection(passiveSkills);
         _isActive = Deployment.IsActive;
     }
@@ -1163,6 +1194,51 @@ public sealed class RuntimeActorState
     private static IReadOnlyDictionary<ContentId, decimal> Snapshot(
         IEnumerable<KeyValuePair<ContentId, decimal>>? values) =>
         new ReadOnlyDictionary<ContentId, decimal>((values ?? []).ToDictionary(pair => pair.Key, pair => pair.Value));
+
+    private static void RequireValid(RuntimeInstanceId id, string parameterName)
+    {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Runtime instance ID cannot be empty.", parameterName);
+        }
+    }
+
+    private static void RequireValid(ContentId id, string parameterName)
+    {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Content ID cannot be empty.", parameterName);
+        }
+    }
+
+    private static void RequireValid(IEnumerable<ContentId> ids, string parameterName)
+    {
+        if (ids.Any(id => !id.IsValid))
+        {
+            throw new ArgumentException("Content ID collections cannot contain an empty ID.", parameterName);
+        }
+    }
+
+    private static void RequireValid(RuntimeActorReferenceSnapshot? reference, string parameterName)
+    {
+        if (reference is null)
+        {
+            return;
+        }
+
+        RequireValid(reference.InstanceId, parameterName);
+        RequireValid(reference.EntityDefinitionId, parameterName);
+    }
+
+    private static void RequireValid(
+        IEnumerable<RuntimeActorReferenceSnapshot> references,
+        string parameterName)
+    {
+        foreach (RuntimeActorReferenceSnapshot reference in references)
+        {
+            RequireValid(reference, parameterName);
+        }
+    }
 
     private sealed class ReadOnlySet<T>(IEnumerable<T> values) : IReadOnlySet<T>
     {

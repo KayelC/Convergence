@@ -28,7 +28,8 @@ public enum RulesetBindingDiagnosticCode
     MissingParameter,
     UnknownParameter,
     InvalidParameterType,
-    InvalidParameterValue
+    InvalidParameterValue,
+    InvalidIdentifier
 }
 
 public sealed record RulesetBindingDiagnostic(
@@ -271,6 +272,15 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         ArgumentNullException.ThrowIfNull(factory);
 
         var diagnostics = new List<RulesetBindingDiagnostic>();
+        if (!rulesetId.IsValid)
+        {
+            diagnostics.Add(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.InvalidIdentifier,
+                rulesetId,
+                "Ruleset ID cannot be empty."));
+            return new RulesetBindingResult<TService>(null, diagnostics);
+        }
+
         if (!catalog.TryGetRuleset(rulesetId, out RulesetDefinition? definition) || definition is null)
         {
             diagnostics.Add(new RulesetBindingDiagnostic(
