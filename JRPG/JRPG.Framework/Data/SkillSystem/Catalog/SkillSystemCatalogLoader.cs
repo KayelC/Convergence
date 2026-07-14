@@ -56,7 +56,10 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
         IReadOnlyList<LoadedPack> diagnosticOrder = loadOrder
             .Concat(uniquePacks.Where(pack => !ordered.Contains(pack)))
             .ToArray();
-        GameDataCatalog candidate = BuildCatalog(diagnosticOrder, diagnostics);
+        GameDataCatalog candidate = BuildCatalog(
+            diagnosticOrder,
+            request.Registrations,
+            diagnostics);
         ValidateCrossPackReferences(uniquePacks, candidate, diagnostics);
 
         return diagnostics.Count == 0
@@ -443,6 +446,7 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
 
     private static GameDataCatalog BuildCatalog(
         IReadOnlyList<LoadedPack> loadOrder,
+        SkillSystemRegistrationSnapshot registrations,
         List<CatalogLoadDiagnostic> diagnostics)
     {
         var skills = new List<KeyValuePair<ContentId, SkillDefinition>>();
@@ -490,7 +494,8 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
             encounters,
             dungeons,
             fusion,
-            rulesets);
+            rulesets,
+            registrations);
     }
 
     private static void AddQualified<TDefinition>(

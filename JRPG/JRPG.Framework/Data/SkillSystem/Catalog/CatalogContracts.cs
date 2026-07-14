@@ -162,6 +162,12 @@ public interface IRulesetDefinitionRepository
     RulesetDefinition GetRequiredRuleset(ContentId id);
 }
 
+public interface IDurationVocabularyRepository
+{
+    IReadOnlySet<ContentId> RegisteredEventIds { get; }
+    IReadOnlySet<ContentId> RegisteredPhaseIds { get; }
+}
+
 public sealed class GameDataCatalog :
     ISkillDefinitionRepository,
     IEntityDefinitionRepository,
@@ -174,7 +180,8 @@ public sealed class GameDataCatalog :
     IEncounterDefinitionRepository,
     IDungeonDefinitionRepository,
     IFusionRecipeDefinitionRepository,
-    IRulesetDefinitionRepository
+    IRulesetDefinitionRepository,
+    IDurationVocabularyRepository
 {
     internal GameDataCatalog(
         IEnumerable<KeyValuePair<ContentId, SkillDefinition>> skills,
@@ -219,9 +226,14 @@ public sealed class GameDataCatalog :
         IEnumerable<KeyValuePair<ContentId, EncounterDefinition>>? encounters = null,
         IEnumerable<KeyValuePair<ContentId, DungeonDefinition>>? dungeons = null,
         IEnumerable<KeyValuePair<ContentId, FusionRecipeDefinition>>? fusionRecipes = null,
-        IEnumerable<KeyValuePair<ContentId, RulesetDefinition>>? rulesets = null)
+        IEnumerable<KeyValuePair<ContentId, RulesetDefinition>>? rulesets = null,
+        SkillSystemRegistrationSnapshot? registrations = null)
     {
+        SkillSystemRegistrationSnapshot vocabulary =
+            registrations ?? new SkillSystemRegistrationBuilder().Build();
         ContentPacks = Array.AsReadOnly((contentPacks ?? throw new ArgumentNullException(nameof(contentPacks))).ToArray());
+        RegisteredEventIds = vocabulary.EventIds;
+        RegisteredPhaseIds = vocabulary.PhaseIds;
         Skills = Snapshot(skills);
         Entities = Snapshot(entities);
         Races = Snapshot(races);
@@ -237,6 +249,8 @@ public sealed class GameDataCatalog :
     }
 
     public IReadOnlyList<ContentPackIdentity> ContentPacks { get; }
+    public IReadOnlySet<ContentId> RegisteredEventIds { get; }
+    public IReadOnlySet<ContentId> RegisteredPhaseIds { get; }
     public IReadOnlyDictionary<ContentId, SkillDefinition> Skills { get; }
     public IReadOnlyDictionary<ContentId, EntityDefinition> Entities { get; }
     public IReadOnlyDictionary<ContentId, RaceDefinition> Races { get; }

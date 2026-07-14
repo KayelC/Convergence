@@ -28,7 +28,11 @@ internal enum RuntimeActorSnapshotIntegrityCode
     StatStageOutOfRange,
     BaseStatOutOfRange,
     EffectiveStatOutOfRange,
-    BaseResourceValueOutOfRange
+    BaseResourceValueOutOfRange,
+    RetainedDurationKindInvalid,
+    TurnDurationValueOutOfRange,
+    TurnDurationTickEventIdInvalid,
+    PhaseDurationPhaseIdInvalid
 }
 
 internal sealed record RuntimeActorSnapshotIntegrityDiagnostic(
@@ -42,7 +46,9 @@ internal static class RuntimeActorSnapshotIntegrity
     public static IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> ValidateForRestore(
         RuntimeActorSnapshot snapshot,
         IEnumerable<ContentId>? loadedPassiveSkillIds,
-        IEnumerable<ContentId>? availableAilmentIds)
+        IEnumerable<ContentId>? availableAilmentIds,
+        IReadOnlySet<ContentId>? registeredEventIds = null,
+        IReadOnlySet<ContentId>? registeredPhaseIds = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -206,11 +212,196 @@ internal static class RuntimeActorSnapshotIntegrity
             "affinity-override element",
             _ => null,
             diagnostics);
+        ValidateBattleStatusDurations(
+            snapshot.BattleStatus,
+            registeredEventIds,
+            registeredPhaseIds,
+            diagnostics);
         ValidateAnalysis(snapshot.BattleStatus.Analysis, diagnostics);
         ValidatePassives(snapshot.BattleActivations, loadedPassiveSkillIds, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
     }
+
+    private static void ValidateBattleStatusDurations(
+        RuntimeBattleStatusSnapshot status,
+        IReadOnlySet<ContentId>? registeredEventIds,
+        IReadOnlySet<ContentId>? registeredPhaseIds,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < status.Ailments.Count; index++)
+        {
+            RuntimeTimedStateSnapshot ailment = status.Ailments[index];
+            ValidateRetainedDuration(
+                ailment.Duration,
+                $"$.battleStatus.ailments[{index}].duration",
+                ailment.Id,
+                registeredEventIds,
+                registeredPhaseIds,
+                diagnostics);
+        }
+
+        for (int index = 0; index < status.Statuses.Count; index++)
+        {
+            RuntimeTimedStateSnapshot other = status.Statuses[index];
+            ValidateRetainedDuration(
+                other.Duration,
+                $"$.battleStatus.statuses[{index}].duration",
+                other.Id,
+                registeredEventIds,
+                registeredPhaseIds,
+                diagnostics);
+        }
+
+        for (int index = 0; index < status.StatStages.Count; index++)
+        {
+            RuntimeStatStageSnapshot stage = status.StatStages[index];
+            if (stage.Duration is not null)
+            {
+                ValidateRetainedDuration(
+                    stage.Duration,
+                    $"$.battleStatus.statStages[{index}].duration",
+                    stage.ModifierTrackId,
+                    registeredEventIds,
+                    registeredPhaseIds,
+                    diagnostics);
+            }
+        }
+
+        for (int index = 0; index < status.Charges.Count; index++)
+        {
+            DurationDefinition? duration = status.Charges[index].Duration;
+            if (duration is not null)
+            {
+                ValidateRetainedDuration(
+                    duration,
+                    $"$.battleStatus.charges[{index}].duration",
+                    contentId: null,
+                    registeredEventIds,
+                    registeredPhaseIds,
+                    diagnostics);
+            }
+        }
+
+        for (int index = 0; index < status.Shields.Count; index++)
+        {
+            DurationDefinition? duration = status.Shields[index].Duration;
+            if (duration is not null)
+            {
+                ValidateRetainedDuration(
+                    duration,
+                    $"$.battleStatus.shields[{index}].duration",
+                    contentId: null,
+                    registeredEventIds,
+                    registeredPhaseIds,
+                    diagnostics);
+            }
+        }
+
+        for (int index = 0; index < status.AffinityBreaks.Count; index++)
+        {
+            ValidateRetainedDuration(
+                status.AffinityBreaks[index].Duration,
+                $"$.battleStatus.affinityBreaks[{index}].duration",
+                contentId: null,
+                registeredEventIds,
+                registeredPhaseIds,
+                diagnostics);
+        }
+
+        for (int index = 0; index < status.AffinityOverrides.Count; index++)
+        {
+            ValidateRetainedDuration(
+                status.AffinityOverrides[index].Duration,
+                $"$.battleStatus.affinityOverrides[{index}].duration",
+                contentId: null,
+                registeredEventIds,
+                registeredPhaseIds,
+                diagnostics);
+        }
+    }
+
+    private static void ValidateRetainedDuration(
+        DurationDefinition duration,
+        string path,
+        ContentId? contentId,
+        IReadOnlySet<ContentId>? registeredEventIds,
+        IReadOnlySet<ContentId>? registeredPhaseIds,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        switch (duration)
+        {
+            case TurnDurationDefinition turns:
+                if (turns.Value <= 0)
+                {
+                    diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                        RuntimeActorSnapshotIntegrityCode.TurnDurationValueOutOfRange,
+                        "A retained turn duration must have at least one remaining turn.",
+                        path + ".value",
+                        contentId));
+                }
+
+                if (!IsValidContentId(turns.TickEventId))
+                {
+                    diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                        RuntimeActorSnapshotIntegrityCode.TurnDurationTickEventIdInvalid,
+                        "A retained turn duration must identify a valid tick event.",
+                        path + ".tickEventId",
+                        contentId));
+                }
+                else if (registeredEventIds is not null && !registeredEventIds.Contains(turns.TickEventId))
+                {
+                    diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                        RuntimeActorSnapshotIntegrityCode.TurnDurationTickEventIdInvalid,
+                        $"Tick event '{turns.TickEventId}' is not registered by the current content catalog.",
+                        path + ".tickEventId",
+                        contentId));
+                }
+                break;
+
+            case PhaseDurationDefinition phase:
+                if (!IsValidContentId(phase.PhaseId))
+                {
+                    diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                        RuntimeActorSnapshotIntegrityCode.PhaseDurationPhaseIdInvalid,
+                        "A retained phase duration must identify a valid phase.",
+                        path + ".phaseId",
+                        contentId));
+                }
+                else if (registeredPhaseIds is not null && !registeredPhaseIds.Contains(phase.PhaseId))
+                {
+                    diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                        RuntimeActorSnapshotIntegrityCode.PhaseDurationPhaseIdInvalid,
+                        $"Phase '{phase.PhaseId}' is not registered by the current content catalog.",
+                        path + ".phaseId",
+                        contentId));
+                }
+                break;
+
+            case BattleDurationDefinition:
+            case PermanentDurationDefinition:
+                break;
+
+            case InstantDurationDefinition:
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.RetainedDurationKindInvalid,
+                    "Instant duration state cannot be restored because it must expire at the action boundary.",
+                    path + ".kind",
+                    contentId));
+                break;
+
+            default:
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.RetainedDurationKindInvalid,
+                    $"Duration type '{duration.GetType().Name}' cannot represent retained runtime state.",
+                    path + ".kind",
+                    contentId));
+                break;
+        }
+    }
+
+    private static bool IsValidContentId(ContentId id) =>
+        ContentId.TryParse(id.Value, out _);
 
     private static void ValidateStatValues(
         IReadOnlyDictionary<ContentId, decimal> values,

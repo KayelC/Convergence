@@ -68,6 +68,15 @@ A host-owned save can pass malformed turn counts, default tick/phase IDs, or a d
 
 Recommended correction: add shared runtime-duration integrity validation and map its diagnostics into `RuntimeSaveValidationResult`. Validate every timed-state collection, including ailments, statuses, stat stages, charges, shields, Breaks, and affinity overrides.
 
+**Correction status (2026-07-14): implemented.**
+
+- `RuntimeActorSnapshotIntegrity` now validates durations before any actor state is restored. The same integrity boundary is already consumed by direct actor restoration, catalog actor restoration, and aggregate save validation, so the three entry points cannot drift.
+- The catalog now retains the immutable event and phase vocabularies supplied during content loading. Retained turn durations require a positive remaining count and a registered tick-event `ContentId`; retained phase durations require a registered phase `ContentId`. Battle and permanent durations remain valid retained state. Instant durations are rejected because the canonical lifecycle expires them at the action boundary.
+- Validation covers ailments, other statuses, stat stages, charges, shields, affinity Breaks, and affinity overrides. Nullable duration fields remain valid where the runtime explicitly supports untimed state.
+- Public save diagnostics now distinguish invalid retained kinds, invalid turn counts, invalid tick-event IDs, and invalid phase IDs, preserving the actor and authored collection path for host presentation.
+- Regression coverage constructs malformed state in every timed collection, including empty and well-formed-but-unregistered IDs, verifies deterministic aggregate diagnostics, and proves malformed state is rejected by save validation, direct restore, and catalog restore. Separate coverage proves registered turn and phase state plus battle and permanent state still restore successfully.
+- Verification passed 136 focused snapshot/lifecycle/catalog tests and all 1,069 solution tests. The framework build remains at 0 warnings; the complete solution retains its existing 100 legacy-host warnings. Battle, field, save, and Training Annex demos all completed successfully, and production content remained unchanged.
+
 ### M3. Combat arithmetic accepts values that can overflow during execution
 
 Combat profiles and ruleset parameters reject negative values but do not establish upper numeric bounds. Several combat paths then use direct decimal multiplication.

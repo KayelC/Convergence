@@ -126,6 +126,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
     private readonly ISkillDefinitionRepository _skills;
     private readonly IAilmentDefinitionRepository? _ailments;
     private readonly IBattleActorInitializationPolicy _initialization;
+    private readonly IDurationVocabularyRepository? _durationVocabulary;
 
     public CatalogBattleActorFactory(
         IEntityDefinitionRepository entities,
@@ -137,6 +138,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _initialization = initialization ?? throw new ArgumentNullException(nameof(initialization));
         _ailments = ailments ?? entities as IAilmentDefinitionRepository;
+        _durationVocabulary = entities as IDurationVocabularyRepository ??
+            skills as IDurationVocabularyRepository ??
+            _ailments as IDurationVocabularyRepository;
     }
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
@@ -383,7 +387,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 snapshot,
                 CombatDefenseProfile.FromEntityDefinition(entity),
                 loadout.Where(skill => skill.Activation == SkillActivation.Passive),
-                ailments.Values);
+                ailments.Values,
+                registeredEventIds: _durationVocabulary?.RegisteredEventIds,
+                registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds);
             return new CatalogBattleActorCreationResult(
                 new CatalogBattleActor(entity, state, loadout),
                 diagnostics);

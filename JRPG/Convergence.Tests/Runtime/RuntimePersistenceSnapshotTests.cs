@@ -208,6 +208,188 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_AndActorRestoreAcceptEveryRetainedDurationKind()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        RuntimeActorSnapshot retained = CopyActor(
+            actor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        Id("turn_state"),
+                        new TurnDurationDefinition(2, Id("owner_turn_end"), false)),
+                    new RuntimeTimedStateSnapshot(
+                        Id("phase_state"),
+                        new PhaseDurationDefinition(Id("player_phase"))),
+                    new RuntimeTimedStateSnapshot(
+                        Id("battle_state"),
+                        new BattleDurationDefinition()),
+                    new RuntimeTimedStateSnapshot(
+                        Id("permanent_state"),
+                        new PermanentDurationDefinition())
+                ]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [retained, baseline.Actors[1]]),
+            catalog);
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            retained,
+            CombatDefenseProfile.Empty,
+            retained.Skills.EquippedSkillIds
+                .Select(skillId => catalog.Skills[skillId])
+                .Where(skill => skill.Activation == SkillActivation.Passive));
+
+        Assert.True(
+            validation.IsValid,
+            string.Join(Environment.NewLine, validation.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        Assert.Collection(
+            restored.ToSnapshot().BattleStatus.Statuses.OrderBy(status => status.Id.ToString()),
+            status => Assert.IsType<BattleDurationDefinition>(status.Duration),
+            status => Assert.IsType<PermanentDurationDefinition>(status.Duration),
+            status => Assert.IsType<PhaseDurationDefinition>(status.Duration),
+            status => Assert.IsType<TurnDurationDefinition>(status.Duration));
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMalformedDurationInEveryTimedStateCollection()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        ContentId poison = Id("convergence.shared_effects_demo:poison_demo");
+        RuntimeActorSnapshot malformed = CopyActor(
+            actor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                ailments:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        poison,
+                        new TurnDurationDefinition(0, Id("owner_turn_end"), false))
+                ],
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        Id("instant_state"),
+                        new InstantDurationDefinition())
+                ],
+                statStages:
+                [
+                    new RuntimeStatStageSnapshot(
+                        Id("attack"),
+                        1,
+                        new TurnDurationDefinition(1, default, false))
+                ],
+                charges:
+                [
+                    new RuntimeChargeSnapshot(
+                        ChargeKind.Physical,
+                        2m,
+                        new PhaseDurationDefinition(default))
+                ],
+                shields:
+                [
+                    new RuntimeShieldSnapshot(
+                        ShieldKind.Magical,
+                        new TurnDurationDefinition(-1, Id("unregistered_event"), false))
+                ],
+                affinityBreaks:
+                [
+                    new RuntimeAffinityBreakSnapshot(
+                        DamageElement.Ice,
+                        new InstantDurationDefinition())
+                ],
+                affinityOverrides:
+                [
+                    new RuntimeAffinityOverrideSnapshot(
+                        DamageElement.Fire,
+                        ElementalAffinity.Resist,
+                        new PhaseDurationDefinition(Id("unregistered_phase")))
+                ]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        Assert.False(validation.IsValid);
+        Assert.Equal(
+        [
+            (RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange,
+                "$.actors[0].battleStatus.ailments[0].duration.value"),
+            (RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid,
+                "$.actors[0].battleStatus.statuses[0].duration.kind"),
+            (RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid,
+                "$.actors[0].battleStatus.statStages[0].duration.tickEventId"),
+            (RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid,
+                "$.actors[0].battleStatus.charges[0].duration.phaseId"),
+            (RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange,
+                "$.actors[0].battleStatus.shields[0].duration.value"),
+            (RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid,
+                "$.actors[0].battleStatus.shields[0].duration.tickEventId"),
+            (RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid,
+                "$.actors[0].battleStatus.affinityBreaks[0].duration.kind"),
+            (RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid,
+                "$.actors[0].battleStatus.affinityOverrides[0].duration.phaseId")
+        ],
+            validation.Diagnostics
+                .Where(diagnostic => diagnostic.Code is
+                    RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid or
+                    RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange or
+                    RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid or
+                    RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid)
+                .Select(diagnostic => (diagnostic.Code, diagnostic.Path)));
+        Assert.Contains(
+            validation.Diagnostics,
+            diagnostic =>
+                diagnostic.Path == "$.actors[0].battleStatus.shields[0].duration.tickEventId" &&
+                diagnostic.Message.Contains("not registered", StringComparison.Ordinal));
+        Assert.Contains(
+            validation.Diagnostics,
+            diagnostic =>
+                diagnostic.Path == "$.actors[0].battleStatus.affinityOverrides[0].duration.phaseId" &&
+                diagnostic.Message.Contains("not registered", StringComparison.Ordinal));
+
+        SkillDefinition[] passives = malformed.Skills.EquippedSkillIds
+            .Select(skillId => catalog.Skills[skillId])
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .ToArray();
+        RuntimeActorSnapshot unregisteredOnly = CopyActor(
+            actor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        Id("unknown_tick_state"),
+                        new TurnDurationDefinition(1, Id("unregistered_event"), false))
+                ]));
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
+            unregisteredOnly,
+            CombatDefenseProfile.Empty,
+            passives,
+            registeredEventIds: catalog.RegisteredEventIds,
+            registeredPhaseIds: catalog.RegisteredPhaseIds));
+        Assert.Contains(
+            "$.battleStatus.statuses[0].duration.tickEventId",
+            directRestore.Message,
+            StringComparison.Ordinal);
+
+        CatalogBattleActorCreationResult catalogRestore = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog).Restore(unregisteredOnly);
+        CatalogBattleActorDiagnostic restoreDiagnostic = Assert.Single(
+            catalogRestore.Diagnostics,
+            diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.SnapshotInvalid);
+        Assert.Contains(
+            "$.battleStatus.statuses[0].duration.tickEventId",
+            restoreDiagnostic.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_AggregatesActorNumericDomainErrorsBeforeRestore()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -1450,6 +1632,7 @@ public sealed class RuntimePersistenceSnapshotTests
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterEntityKind("demon")
             .RegisterEvent("battle_start", "owner_turn_end")
+            .RegisterPhase("player_phase")
             .RegisterAilmentGroup("poison")
             .RegisterBattleKind("normal_battle")
             .RegisterMoonPhase("new_moon")

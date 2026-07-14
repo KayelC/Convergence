@@ -70,7 +70,11 @@ public enum RuntimeSaveValidationCode
     ActorStatStageOutOfRange,
     ActorBaseStatOutOfRange,
     ActorEffectiveStatOutOfRange,
-    ActorBaseResourceValueOutOfRange
+    ActorBaseResourceValueOutOfRange,
+    ActorRetainedDurationKindInvalid,
+    ActorTurnDurationValueOutOfRange,
+    ActorTurnDurationTickEventIdInvalid,
+    ActorPhaseDurationPhaseIdInvalid
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -439,7 +443,9 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 actor,
                 equippedPassiveSkillIds,
-                catalog.Ailments.Keys);
+                catalog.Ailments.Keys,
+                catalog.RegisteredEventIds,
+                catalog.RegisteredPhaseIds);
         foreach (RuntimeActorSnapshotIntegrityDiagnostic issue in integrityDiagnostics)
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -513,6 +519,10 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.BaseStatOutOfRange => RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.EffectiveStatOutOfRange => RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.BaseResourceValueOutOfRange => RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,
+            RuntimeActorSnapshotIntegrityCode.RetainedDurationKindInvalid => RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid,
+            RuntimeActorSnapshotIntegrityCode.TurnDurationValueOutOfRange => RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange,
+            RuntimeActorSnapshotIntegrityCode.TurnDurationTickEventIdInvalid => RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid,
+            RuntimeActorSnapshotIntegrityCode.PhaseDurationPhaseIdInvalid => RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid,
             _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown actor snapshot integrity code.")
         };
 

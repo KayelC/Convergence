@@ -182,7 +182,9 @@ public sealed class RuntimeActorState
         CombatDefenseProfile defenseProfile,
         IEnumerable<SkillDefinition>? passiveSkills = null,
         IEnumerable<AilmentDefinition>? ailments = null,
-        IEnumerable<ContentId>? capabilityIds = null)
+        IEnumerable<ContentId>? capabilityIds = null,
+        IReadOnlySet<ContentId>? registeredEventIds = null,
+        IReadOnlySet<ContentId>? registeredPhaseIds = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(defenseProfile);
@@ -192,7 +194,9 @@ public sealed class RuntimeActorState
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 snapshot,
                 passiveDefinitions.Select(skill => skill.Id),
-                ailmentDefinitions.Select(ailment => ailment.Id));
+                ailmentDefinitions.Select(ailment => ailment.Id),
+                registeredEventIds,
+                registeredPhaseIds);
         if (integrityDiagnostics.Count > 0)
         {
             RuntimeActorSnapshotIntegrityDiagnostic first = integrityDiagnostics[0];
