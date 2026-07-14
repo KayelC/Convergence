@@ -28,6 +28,52 @@ public sealed class ProductBoundaryTests
             .ToArray();
 
         Assert.Equal(ExpectedProjectPaths.Order(StringComparer.Ordinal), projectPaths);
+        Assert.All(
+            projectPaths,
+            path => Assert.True(
+                File.Exists(RepositoryPath(path)),
+                $"Active solution project '{path}' does not exist relative to the repository root."));
+    }
+
+    [Fact]
+    public void ActiveProductRoot_IsTheGitRepositoryRootWhenGitMetadataIsPresent()
+    {
+        string productRoot = RepositoryRoot();
+        string? gitRoot = FindAncestorContaining(productRoot, ".git");
+
+        if (gitRoot is not null)
+        {
+            Assert.Equal(
+                Path.GetFullPath(gitRoot),
+                Path.GetFullPath(productRoot),
+                ignoreCase: OperatingSystem.IsWindows());
+        }
+
+        Assert.True(File.Exists(Path.Combine(productRoot, "README.md")));
+        Assert.StartsWith(
+            "# Convergence Framework",
+            File.ReadAllText(Path.Combine(productRoot, "README.md")),
+            StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(productRoot, "global.json")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "src")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "samples")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "tests")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "content")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "docs")));
+
+        Assert.False(File.Exists(Path.Combine(productRoot, "JRPG.sln")));
+        Assert.False(File.Exists(Path.Combine(productRoot, "JRPG", "Convergence.sln")));
+        Assert.False(File.Exists(Path.Combine(productRoot, "JRPG", "README.md")));
+        Assert.True(File.Exists(Path.Combine(
+            productRoot,
+            "ArchiveDocs",
+            "LegacyRepository",
+            "JRPG.sln")));
+        Assert.True(File.Exists(Path.Combine(
+            productRoot,
+            "ArchiveDocs",
+            "LegacyRepository",
+            "README-retired.md")));
     }
 
     [Fact]
@@ -140,7 +186,7 @@ public sealed class ProductBoundaryTests
         path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Contains(segment, StringComparer.OrdinalIgnoreCase);
 
-    private static string RepositoryPath(params string[] segments)
+    private static string RepositoryRoot()
     {
         string? current = AppContext.BaseDirectory;
         while (current is not null && !File.Exists(Path.Combine(current, "Convergence.sln")))
@@ -149,7 +195,27 @@ public sealed class ProductBoundaryTests
         }
 
         Assert.NotNull(current);
-        return Path.Combine([current!, .. segments]);
+        return current!;
+    }
+
+    private static string RepositoryPath(params string[] segments) =>
+        Path.Combine([RepositoryRoot(), .. segments]);
+
+    private static string? FindAncestorContaining(string start, string entryName)
+    {
+        string? current = Path.GetFullPath(start);
+        while (current is not null)
+        {
+            if (Directory.Exists(Path.Combine(current, entryName)) ||
+                File.Exists(Path.Combine(current, entryName)))
+            {
+                return current;
+            }
+
+            current = Directory.GetParent(current)?.FullName;
+        }
+
+        return null;
     }
 
     private static string NormalizePath(string path) =>

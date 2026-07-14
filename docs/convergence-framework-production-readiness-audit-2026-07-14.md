@@ -49,17 +49,28 @@ The following is present in current code, independent of the archived legacy pro
 
 ## Findings
 
-### Blocker 1: The Git Repository Still Opens As The Retired Product
+### Blocker 1: The Git Repository Still Opens As The Retired Product - Resolved
 
-The clean product lives under `JRPG/`, but the Git root still contains a stale [`JRPG.sln`](../../JRPG.sln#L1) that references the deleted `JRPG/JRPG.csproj`. Running the root solution fails with `MSB3202`. The root [`README.md`](../../README.md#L1) still presents an SMT fan framework, while the active [`JRPG/README.md`](../README.md#L1) presents the generic Convergence product.
+The original audit found the clean product under `JRPG/`, while the Git root
+contained a stale solution that referenced the deleted `JRPG/JRPG.csproj` and a
+README for the retired prototype. That layout caused the root build to fail with
+`MSB3202` and presented the wrong product to developers.
 
-The root also retains separate `Documentation/` and `Old Files Archive/` trees in addition to the active product's `docs/` and `ArchiveDocs/`. They do not affect the clean build, but they make the repository boundary misleading for humans, IDEs, CI, and source-distribution users.
+The clean [`Convergence.sln`](../Convergence.sln), [`README.md`](../README.md),
+`global.json`, source, samples, tests, content, and active documentation now live
+directly at the Git root. The superseded solution, README, `Documentation/`, and
+`Old Files Archive/` are preserved under
+[`ArchiveDocs/LegacyRepository`](../ArchiveDocs/LegacyRepository/README.md) and
+are excluded from the active build.
 
-**Required action:** make the Git root the Convergence product root. Move or archive the stale root solution and old root documentation, promote the clean solution/README/global configuration to the root, and make one obvious clone-build-test path.
+**Resolution:** the repository has one obvious clone-build-test path:
+`dotnet build Convergence.sln` and `dotnet test Convergence.sln`. A product
+boundary regression test verifies that the active product root equals the Git
+root when Git metadata is present and that all solution projects resolve there.
 
 ### Blocker 2: The Current License Conflicts With The Intended Developer Audience
 
-The repository does have a license: [`LICENSE.md`](../../LICENSE.md). It is Creative Commons BY-NC-SA 4.0. Its `NonCommercial` restriction prevents commercial use, and its `ShareAlike` terms impose downstream conditions. That conflicts with the stated goal of a reusable framework that independent Godot developers can integrate into their games.
+The repository does have a license: [`LICENSE.md`](../LICENSE.md). It is Creative Commons BY-NC-SA 4.0. Its `NonCommercial` restriction prevents commercial use, and its `ShareAlike` terms impose downstream conditions. That conflicts with the stated goal of a reusable framework that independent Godot developers can integrate into their games.
 
 This is not a missing-file problem; it is a product decision problem. The framework cannot honestly be presented as generally usable open-source game middleware until the intended software license is chosen and applied clearly to code, sample content, and documentation.
 
@@ -280,7 +291,22 @@ A finished framework needs a stable, documented, composable supported scope. It 
 - Framework forbidden-reference boundary tests: passed.
 - Active content: 36 JSON files; manifest/reference contract tests passed.
 - Git worktree was clean and synchronized before this report.
-- Repository-root legacy solution build: **failed as expected** because `JRPG/JRPG.csproj` no longer exists.
+- Original repository-root legacy solution build: **failed as expected** because `JRPG/JRPG.csproj` no longer existed. Blocker 1 subsequently archived that solution and promoted the clean solution to the Git root.
+
+### Blocker 1 Resolution Verification
+
+- Git-root nonincremental solution build: **0 warnings, 0 errors**.
+- Clean tests from the Git-root solution: **705 passed, 0 failed, 0 skipped**.
+  - Framework: 557.
+  - DemoHost: 148.
+- Product-boundary regression tests: **5 passed**, including the Git-root
+  identity and solution-project resolution checks.
+- DemoHost smoke modes: battle, field, save, Training Annex, and help all exited
+  successfully from the Git root.
+- Active documentation: **22 Markdown files** checked; all local links resolve.
+- Active source and project archive-reference search: no matches.
+- Active content remains 36 manifest-owned JSON documents; only repository paths
+  changed.
 
 ## Final Recommendation
 

@@ -137,3 +137,19 @@ Phase 8 completed on `track-12-recovery` on 2026-07-14.
 - Repository verification: active documentation links passed, forbidden-reference searches returned no production matches, and `git diff --check` reported no whitespace errors.
 
 The 1,113-test figure above remains the frozen pre-archive recovery baseline. It is not the clean product test count: legacy characterization and adapter tests are intentionally retained as non-built historical evidence.
+
+### Git-Root Promotion
+
+The final repository-entry-point correction was completed on `main` on
+2026-07-14:
+
+- `Convergence.sln`, `global.json`, the clean README, and all active product
+  directories now live directly at the Git root;
+- the superseded root `JRPG.sln`, README, `Documentation/`, and
+  `Old Files Archive/` are preserved under
+  `ArchiveDocs/LegacyRepository`;
+- active product-boundary tests verify that the product root and Git root match
+  whenever Git metadata is present, every solution project resolves from that
+  root, and the retired entry points remain archived;
+- the old nested `JRPG/` path contains no tracked product files and is not part
+  of a clean checkout.

@@ -1,23 +1,63 @@
-# Shin Megami Tensei: Convergence
-This Framework Inspired by the Shin Megami Tensei series, developed by ATLUS.
+# Convergence Framework
 
-Full development and design notes are available in the [Doc.ipynb](/Documentation/Doc.ipynb) Jupyter Notebook.
+Convergence is an engine-neutral, modular JRPG rules framework. It combines reusable concepts from several JRPG traditions without requiring a particular game, presentation layer, content setting, or engine.
 
-IMPORTANT: Copyright and License
+The framework is under active development and has not reached a stable public release.
 
-This project is a Framework created as a homage to the Shin Megami Tensei series, containing Logic to produce Fan-Made SMT Titles. Some things to note include:
+## Product Layout
 
-    Not for Sale: The Engine and Games do not, and will never, go up for sale. It’s just fans making something for fellow fans out of pure love for the Series, and its developers. Nothing monetary is being sought from it.
+```text
+src/Convergence.Framework/          reusable .NET 8 library
+samples/Convergence.DemoHost/       optional console example
+tests/Convergence.Framework.Tests/  framework-only tests
+tests/Convergence.DemoHost.Tests/   example-host tests
+content/                            generic reference and demo content
+docs/                               active product documentation
+```
 
-    License: This project and all contents thereof are licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (BY-NC-SA 4.0). This means:
+Historical prototype material is retained under `ArchiveDocs/LegacyFramework` and is not part of the active build.
 
-    Attribution (BY): You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+## Supported Baseline
 
-    NonCommercial (NC): You may not utilize this material for commercial purposes.
+- .NET 8
+- C# 12
+- Godot 4.5 or another .NET 8-compatible host
 
-    ShareAlike (SA): If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original ones.
+`Convergence.Framework` has no external package dependency, is intentionally non-packable, and is distributed as source. A game references the framework project directly.
 
-    Respect for Original Copyright Holders: Any rights involving characters such as logos or trademarks associated with Atlus' franchise known as Shin Megami Tensei remain their property or that of other respective copyright holders whether they are Sega or Atlus themselves.
+## Godot Source Integration
 
-This work is a labor of love. Created to celebrate the Shin Megami Tensei series and share our collective creativity within the fan community, not to infringe on the rights of the original creators.
+Keep the framework outside the Godot project directory so Godot's source glob does not compile the same files a second time:
 
+```text
+MyGameRepository/
+|- Game/
+|  |- project.godot
+|  `- MyGame.csproj
+`- Convergence/
+   `- src/
+      `- Convergence.Framework/
+         `- Convergence.Framework.csproj
+```
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\Convergence\src\Convergence.Framework\Convergence.Framework.csproj" />
+</ItemGroup>
+```
+
+Godot owns nodes, resources, scenes, input, presentation, scheduling, and save-file serialization. Convergence owns serializer-neutral content, rules, runtime state, transitions, diagnostics, and results. See the [Godot integration contract](docs/godot-integration-contract.md).
+
+## Build And Test
+
+```powershell
+dotnet --version
+dotnet restore Convergence.sln
+dotnet build Convergence.sln --no-restore
+dotnet test Convergence.sln --no-restore
+dotnet run --project samples/Convergence.DemoHost -- --help
+```
+
+The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, DemoHost, and their independent test projects.
+
+Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), [mechanics and player rules](docs/mechanics/README.md), and [capability matrix](docs/framework-capability-matrix.md).

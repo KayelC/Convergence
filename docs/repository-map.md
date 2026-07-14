@@ -2,6 +2,10 @@
 
 ## Active Product
 
+The Git repository root is the product root. Cloning Convergence opens directly
+on the active solution, README, source, samples, tests, content, and
+documentation; no nested workspace directory is required.
+
 ```text
 Convergence.sln
 src/
@@ -16,7 +20,9 @@ content/
   demos/
   original/training-annex/
 docs/
-ArchiveDocs/LegacyFramework/
+ArchiveDocs/
+  LegacyFramework/
+  LegacyRepository/
 ```
 
 | Path | Ownership |
@@ -30,6 +36,7 @@ ArchiveDocs/LegacyFramework/
 | `content/original/training-annex` | Original end-to-end example content. |
 | `docs` | Current product documentation. |
 | `ArchiveDocs/LegacyFramework` | Non-built, unsupported prototype history and migration evidence. |
+| `ArchiveDocs/LegacyRepository` | Retired pre-Convergence root solution, README, documentation, and older file archive. |
 
 Generated `bin` and `obj` directories are not source and are ignored by Git.
 
@@ -56,4 +63,9 @@ See [Public API Namespaces](public-api-namespaces.md) for detailed responsibilit
 
 ## Historical Material
 
-The archived console executable, adapters, DTOs, prototype content, characterization tests, old solution, ledgers, reviews, and migration plans are preserved under `ArchiveDocs/LegacyFramework`. They are excluded from `Convergence.sln`, are not copied by active projects, and are not release inputs.
+The archived console executable, adapters, DTOs, prototype content,
+characterization tests, ledgers, reviews, and migration plans are preserved
+under `ArchiveDocs/LegacyFramework`. The superseded repository-root solution,
+README, documentation, and older archive are preserved under
+`ArchiveDocs/LegacyRepository`. Both trees are excluded from `Convergence.sln`,
+are not copied by active projects, and are not release inputs.
