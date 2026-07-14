@@ -45,3 +45,9 @@ dotnet test JRPG.sln
 ```
 
 The first command should report an installed .NET 8 SDK selected through `global.json`. `JRPG.ConsoleHost` remains a compatibility and demonstration host; a Godot game only needs a reference to `JRPG.Framework`.
+
+## Repository Map
+
+The reusable product is `JRPG.Framework/`. The root-level `Core/`, `Data/`, `Entities/`, `Host/`, `Logic/`, and `Services/` folders are compiled by the root `JRPG.ConsoleHost.csproj`; they are active console-host and compatibility code, not stray framework files.
+
+See [Current Repository Map](docs/repository-map.md) for the current ownership map, content categories, documentation lanes, and safe physical-cleanup direction. Start with the [Documentation Index](docs/README.md) for documentation authority.

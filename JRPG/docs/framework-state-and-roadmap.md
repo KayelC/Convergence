@@ -451,7 +451,7 @@ CodeReview-7-2 verification passed `166/166` focused identity, recall, stock, pe
 
 CodeReview-7-3 post-interruption verification passed `198/198` broad fusion, stock, persistence, host, boundary, and roadmap tests plus `930/930` full-suite tests. The framework build remained at `0` warnings, the solution retained `98` protected legacy-host warnings, all four clean demos passed, boundary and diff checks passed, and `Data/Jsons` remained unchanged.
 
-The fresh [Phase 7 Code Review And Readiness](phase-7-code-review.md) is based on the current source after CodeReview7-5. It reopened the gate for four medium and two low-priority findings; all six are now resolved, and Phase 7 is review-closed for Phase 8-36. Review closure still does not imply `clean_parity` or authorize legacy removal.
+The fresh [Phase 7 Code Review And Readiness](../ArchiveDocs/Reviews/phase-7-code-review.md) is based on the current source after CodeReview7-5. It reopened the gate for four medium and two low-priority findings; all six are now resolved, and Phase 7 is review-closed for Phase 8-36. Review closure still does not imply `clean_parity` or authorize legacy removal.
 
 ## Ground Rules For Future Work
 

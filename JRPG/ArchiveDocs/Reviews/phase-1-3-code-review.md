@@ -234,8 +234,8 @@ The `clean_foundation` status is accurate. This is a sound contract proof with i
 
 **Evidence**
 
-- `TrainingAnnexRuntimeActor` stores both `CatalogBattleActor Actor` and `RuntimeActorStateSet RuntimeState` in [TrainingAnnexHostSupport.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs#L14).
-- Field and battle adapters copy current resource values into and out of the two states in [TrainingAnnexFieldActionAdapter.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexFieldActionAdapter.cs#L97) and [TrainingAnnexBattleActionAdapter.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L537).
+- `TrainingAnnexRuntimeActor` stores both `CatalogBattleActor Actor` and `RuntimeActorStateSet RuntimeState` in [TrainingAnnexHostSupport.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexHostSupport.cs#L14).
+- Field and battle adapters copy current resource values into and out of the two states in [TrainingAnnexFieldActionAdapter.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexFieldActionAdapter.cs#L97) and [TrainingAnnexBattleActionAdapter.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L537).
 - `BattleResourceState.Maximum` is immutable, while synchronization calls only `SetResource` for the current value.
 
 **Impact**
@@ -266,7 +266,7 @@ CodeReview-1 final verification: 810 tests passed with no failures or skips; foc
 
 **Evidence**
 
-- Every enemy option is encoded as the same `CleanTrainingAnnexPlayCommand.TargetEnemy` value in [TrainingAnnexBattleActionAdapter.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L1115).
+- Every enemy option is encoded as the same `CleanTrainingAnnexPlayCommand.TargetEnemy` value in [TrainingAnnexBattleActionAdapter.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L1115).
 - After any target option is selected, `SelectTargetAsync` returns `eligible[0].InstanceId` in the same file at line 890.
 
 **Impact**
@@ -285,8 +285,8 @@ Use a target command payload that contains the selected `RuntimeInstanceId` or `
 
 **Evidence**
 
-- `TryRestoreActor` looks up only the current runtime instance ID, then replaces `RuntimeState` with the retrieved snapshot in [CleanTrainingAnnexPlayHost.cs](../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1307).
-- `RuntimeSaveValidator` verifies that the saved entity exists in the catalog, but does not compare it with the host actor expected for that runtime ID in [RuntimePersistenceSnapshots.cs](../JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs#L251).
+- `TryRestoreActor` looks up only the current runtime instance ID, then replaces `RuntimeState` with the retrieved snapshot in [CleanTrainingAnnexPlayHost.cs](../../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1307).
+- `RuntimeSaveValidator` verifies that the saved entity exists in the catalog, but does not compare it with the host actor expected for that runtime ID in [RuntimePersistenceSnapshots.cs](../../JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs#L251).
 
 **Impact**
 
@@ -300,7 +300,7 @@ Host restore must verify instance ID, entity definition ID, actor kind, and any 
 
 **Evidence**
 
-- `RecalculatePlayerResourcesAsync` subtracts HP through a transaction, calls the growth policy's `Recalculate`, prints the returned values, and returns `true` in [CleanTrainingAnnexPlayHost.cs](../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1930).
+- `RecalculatePlayerResourcesAsync` subtracts HP through a transaction, calls the growth policy's `Recalculate`, prints the returned values, and returns `true` in [CleanTrainingAnnexPlayHost.cs](../../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1930).
 - The returned `ResourceRecalculationResult` is never written back into `RuntimeActorStateSet`.
 
 **Impact**
@@ -319,8 +319,8 @@ Add a resource-recalculation transaction that replaces the resource snapshot aft
 
 **Evidence**
 
-- `BattleEncounterEvent` has no typed Press Turn state payload in [BattleEncounterRunner.cs](../JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs#L51).
-- `TrainingAnnexPressTurnEventSink` parses the English string `Press Turn: X full, Y blinking.` in [TrainingAnnexBattleActionAdapter.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L1608).
+- `BattleEncounterEvent` has no typed Press Turn state payload in [BattleEncounterRunner.cs](../../JRPG.Framework/Logic/Battle/Runtime/BattleEncounterRunner.cs#L51).
+- `TrainingAnnexPressTurnEventSink` parses the English string `Press Turn: X full, Y blinking.` in [TrainingAnnexBattleActionAdapter.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L1608).
 
 **Impact**
 
@@ -338,7 +338,7 @@ Add the smallest serializer-neutral typed metadata to the event, such as a `Pres
 
 **Evidence**
 
-- `RuntimeSavePolicyService.AssessLoad` validates the supplied current context and save kind, but never validates `record.Context` in [RuntimeSavePolicies.cs](../JRPG.Framework/Logic/Runtime/RuntimeSavePolicies.cs#L137).
+- `RuntimeSavePolicyService.AssessLoad` validates the supplied current context and save kind, but never validates `record.Context` in [RuntimeSavePolicies.cs](../../JRPG.Framework/Logic/Runtime/RuntimeSavePolicies.cs#L137).
 
 **Impact**
 
@@ -352,7 +352,7 @@ Validate both creation metadata and current load context, with separate diagnost
 
 **Evidence**
 
-- `ValidateField` verifies only that `DungeonTraversal.DungeonId` exists in the catalog in [RuntimePersistenceSnapshots.cs](../JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs#L423).
+- `ValidateField` verifies only that `DungeonTraversal.DungeonId` exists in the catalog in [RuntimePersistenceSnapshots.cs](../../JRPG.Framework/Logic/Runtime/RuntimePersistenceSnapshots.cs#L423).
 
 **Impact**
 
@@ -366,7 +366,7 @@ Either validate against an explicit runtime dungeon graph supplied by the host, 
 
 **Evidence**
 
-- `ApplyPreparedBattleRewardAsync` mutates progression first and then attempts the wallet transaction in [CleanTrainingAnnexPlayHost.cs](../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1854).
+- `ApplyPreparedBattleRewardAsync` mutates progression first and then attempts the wallet transaction in [CleanTrainingAnnexPlayHost.cs](../../Host/CleanConsole/TrainingAnnex/CleanTrainingAnnexPlayHost.cs#L1854).
 
 **Impact**
 
@@ -380,7 +380,7 @@ Assess every mutation first, then commit one aggregate result, or preserve a rol
 
 **Evidence**
 
-- The skill menu maps five known skill IDs to five enum values in [TrainingAnnexBattleActionAdapter.cs](../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L979).
+- The skill menu maps five known skill IDs to five enum values in [TrainingAnnexBattleActionAdapter.cs](../../Host/CleanConsole/TrainingAnnex/TrainingAnnexBattleActionAdapter.cs#L979).
 - The item menu exposes only Annex Tonic.
 - Practice Blade and several transition IDs are fixed host constants.
 

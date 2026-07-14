@@ -34,6 +34,10 @@ Documents belong here when they are:
 
 Generated fusion implementation walkthroughs from the legacy console architecture. The corresponding source and tests remain the implementation authority.
 
+### Reviews
+
+Completed phase and framework-wide code-review snapshots. They preserve the findings and reasoning that led to corrections, but they are not the current implementation queue. Current source, tests, and active roadmap documents remain authoritative.
+
 ### LegacyFramework
 
 Retirement holding area for legacy framework or console-host source files after a capability reaches `clean_parity` and its parity-ledger entry explicitly authorizes removal from active code. No active source has been moved there yet.

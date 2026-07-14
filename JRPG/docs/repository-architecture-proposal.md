@@ -24,7 +24,7 @@ Command used:
 git -c safe.directory=C:/Users/kayel/Documents/GitHub/Convergence ls-files -- JRPG
 ```
 
-The current `JRPG` subtree has **389 tracked files**.
+The current `JRPG` subtree has **453 tracked files**, including this repository map update.
 
 Build outputs under `bin/` and `obj/` exist on disk, but they are ignored by the parent repository `.gitignore` and are not part of the tracked source architecture.
 
@@ -34,19 +34,18 @@ Build outputs under `bin/` and `obj/` exist on disk, but they are ignored by the
 | --- | ---: | --- | --- |
 | `JRPG.ConsoleHost.csproj` | 1 | Root console executable project | Project is at the same level as source, tests, framework, docs, archive, and data. |
 | `Program.cs` | 1 | Console-host entry point | Root-level executable file makes the root look like a project folder rather than a repo folder. |
-| `Core/` | 3 | Legacy console-host core enums/results/helpers | Console-owned code is not inside a console-host project folder. |
+| `Core/` | 4 | Legacy console-host core enums/results/helpers | Console-owned code is not inside a console-host project folder. |
 | `Data/` | 62 | Legacy DTOs, legacy JSON, clean demo JSON, original clean content | Multiple content types are mixed under one name. |
 | `Entities/` | 7 | Legacy live runtime actors and adapters | Console-owned runtime objects are root-level. |
-| `Host/` | 10 | Console game host and clean demo hosts | Host code is root-level instead of under the console host project. |
-| `Logic/` | 92 | Legacy console workflows, adapters, presentation bridges, compatibility facades | Largest root-level source area; mixes battle, field, fusion, adapters, presentation, and old runtime logic. |
+| `Host/` | 25 | Console game host and clean demo hosts | Host code is root-level instead of under the console host project. |
+| `Logic/` | 97 | Legacy console workflows, adapters, presentation bridges, compatibility facades | Largest root-level source area; mixes battle, field, fusion, adapters, presentation, and old runtime logic. |
 | `Services/` | 3 | Console I/O and menu helpers | Console-only services are root-level. |
 | `Properties/` | 1 | Console-host assembly info | Root-level project artifact. |
-| `JRPG.Framework/` | 63 | Engine-neutral framework library | Mostly correct project boundary, but internal names still carry old history. |
-| `Convergence.Tests/` | 73 | Test project, fixtures, parity ledgers | Good project boundary, but test files are mixed between root tests and subfolders. |
-| `docs/` | 27 | Active documentation | Mostly cleaned up; needs this architecture proposal linked into the current doc order. |
-| `ArchiveDocs/` | 44 | Historical plans and generated technical notes | Good as non-authoritative history; should not receive live source until archive gate passes. |
+| `JRPG.Framework/` | 85 | Engine-neutral framework library | Mostly correct project boundary, but internal names still carry old history. |
+| `Convergence.Tests/` | 82 | Test project, fixtures, parity ledgers | Good project boundary, but test files are mixed between root tests and subfolders. |
+| `docs/` | 31 | Active documentation | Current plans, contracts, subsystem references, and the repository map. |
+| `ArchiveDocs/` | 51 | Historical plans, completed reviews, and generated technical notes | Good as non-authoritative history; should not receive live source until archive gate passes. |
 | `JRPG.sln` | 1 | Solution file | Correct root-level file. |
-| `repomix-output.xml` | 1 | Generated repository bundle | Tracked generated artifact at root; should be archived or removed from active source after approval. |
 
 ## Current File Ownership Map
 
@@ -181,21 +180,14 @@ The project boundary is fine. The internal organization can improve:
 - old planning tracks;
 - discarded migration reports;
 - generated technical fusion docs;
+- completed phase and framework-wide review snapshots;
 - `ArchiveDocs/LegacyFramework`, which is policy-only until a capability reaches true clean parity.
 
 This split is healthy. The main addition needed is this repository architecture map.
 
-### Generated Root Artifact
+### Generated Output
 
-`repomix-output.xml` is tracked at the repository root.
-
-This is not source code, not active documentation, and not runtime content. It should not live beside the solution and project files.
-
-Recommended future handling:
-
-1. confirm whether anyone still uses it;
-2. if it is only historical, move it to `ArchiveDocs/Generated/repomix-output.xml`;
-3. if it can be regenerated, remove it from tracked source after approval and document the generation command.
+No generated repository bundle is currently tracked at the root. Local `bin/` and `obj/` directories are ignored build output and are not part of the source architecture.
 
 ## Main Findings
 
@@ -384,7 +376,6 @@ JRPG/
 | `Data/Jsons/training_annex_slice.*` | `content/original/training-annex/` | Content split pass. |
 | `Convergence.Tests/` | `tests/Convergence.Tests/` | Test project move after source project moves. |
 | root-level test files inside `Convergence.Tests/` | `tests/Convergence.Tests/ConsoleHost/Legacy/` or `Framework/` | Test internal cleanup. |
-| `repomix-output.xml` | `ArchiveDocs/Generated/repomix-output.xml` or removed after approval | Generated artifact cleanup. |
 
 ## Migration Strategy
 
@@ -507,16 +498,16 @@ Verification:
 
 - full test suite.
 
-### Pass 8: Generated Artifact Cleanup
+### Pass 8: Generated Artifact Guard
 
 Purpose:
 
-- move or remove `repomix-output.xml` after approval.
+- confirm generated build and analysis output remains ignored and untracked.
 
 Verification:
 
-- no runtime/test dependency on the file;
-- docs updated with regeneration/archive policy.
+- no runtime/test dependency on generated local output;
+- repository status remains free of tracked build artifacts.
 
 ## Priority Markers
 
@@ -527,7 +518,7 @@ Verification:
 | Move framework into `src/JRPG.Framework` | `P1` | Makes project structure standard and clearer. |
 | Move tests into `tests/Convergence.Tests` | `P1` | Makes solution shape easier to scan. |
 | Split `Data/Jsons` by content purpose | `P1` | Prevents legacy prototype data from looking like framework-owned production content. |
-| Move/retire `repomix-output.xml` | `P1` | Root generated artifact is noise. |
+| Keep generated output untracked | `P2` | Prevent local build and analysis artifacts from becoming source clutter. |
 | Rename framework `Data/SkillSystem` internals | `P2` | Helpful, but safer after physical moves. |
 | Move `CombatDefenseProfile` to clean battle/runtime folder | `P2` | Clarifies framework ownership. |
 | Reorganize test internals | `P2` | Improves navigation, but less urgent than project layout. |
