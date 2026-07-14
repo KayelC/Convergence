@@ -208,7 +208,7 @@ public sealed class RuntimeActorState
         _isActive = Deployment.IsActive;
     }
 
-    public static RuntimeActorState Restore(
+    internal static RuntimeActorState Restore(
         RuntimeActorSnapshot snapshot,
         CombatDefenseProfile defenseProfile,
         IEnumerable<SkillDefinition>? passiveSkills = null,

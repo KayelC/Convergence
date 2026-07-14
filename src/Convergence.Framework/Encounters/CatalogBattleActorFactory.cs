@@ -16,6 +16,53 @@ public sealed record CatalogBattleActorCreationRequest(
     RuntimeActorDeployment Deployment = RuntimeActorDeployment.Deployed,
     bool IsActive = true);
 
+public enum CatalogBattleActorRestoreMode
+{
+    RecomposeDerivedState,
+    PreserveValidatedSnapshot
+}
+
+public sealed record CatalogBattleActorRestoreRequest
+{
+    public CatalogBattleActorRestoreRequest(
+        RuntimeActorSnapshot snapshot,
+        RuntimeStatSourceKind statSourceKind,
+        MissingHostedEntityBehavior missingHostedEntityBehavior,
+        RuntimeActorState? activeHostedEntity = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
+        CatalogBattleActorRestoreMode mode = CatalogBattleActorRestoreMode.RecomposeDerivedState)
+    {
+        if (!Enum.IsDefined(statSourceKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(statSourceKind), "Stat source kind is not supported.");
+        }
+        if (!Enum.IsDefined(missingHostedEntityBehavior))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(missingHostedEntityBehavior),
+                "Missing hosted-entity behavior is not supported.");
+        }
+        if (!Enum.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), "Catalog actor restore mode is not supported.");
+        }
+
+        Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+        StatSourceKind = statSourceKind;
+        MissingHostedEntityBehavior = missingHostedEntityBehavior;
+        ActiveHostedEntity = activeHostedEntity;
+        EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
+        Mode = mode;
+    }
+
+    public RuntimeActorSnapshot Snapshot { get; }
+    public RuntimeStatSourceKind StatSourceKind { get; }
+    public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
+    public RuntimeActorState? ActiveHostedEntity { get; }
+    public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+    public CatalogBattleActorRestoreMode Mode { get; }
+}
+
 public sealed record BattleActorInitialization
 {
     public BattleActorInitialization(
@@ -56,6 +103,7 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotActorKindMismatch,
     SnapshotSkillMissing,
     SnapshotAilmentMissing,
+    SnapshotStatCompositionFailed,
     SnapshotInvalid,
     IdentifierInvalid
 }
@@ -118,7 +166,7 @@ public sealed class CatalogBattleActorCreationException : Exception
 public interface ICatalogBattleActorFactory
 {
     CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request);
-    CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot);
+    CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request);
 }
 
 public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
@@ -128,12 +176,14 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
     private readonly IAilmentDefinitionRepository? _ailments;
     private readonly IBattleActorInitializationPolicy _initialization;
     private readonly IDurationVocabularyRepository? _durationVocabulary;
+    private readonly IRuntimeActorStatCompositionService _statComposition;
 
     public CatalogBattleActorFactory(
         IEntityDefinitionRepository entities,
         ISkillDefinitionRepository skills,
         IBattleActorInitializationPolicy initialization,
-        IAilmentDefinitionRepository? ailments = null)
+        IAilmentDefinitionRepository? ailments = null,
+        IRuntimeActorStatCompositionService? statComposition = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
@@ -142,6 +192,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         _durationVocabulary = entities as IDurationVocabularyRepository ??
             skills as IDurationVocabularyRepository ??
             _ailments as IDurationVocabularyRepository;
+        _statComposition = statComposition ?? new RuntimeActorStatCompositionService();
     }
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
@@ -377,9 +428,10 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         }
     }
 
-    public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+    public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(request);
+        RuntimeActorSnapshot snapshot = request.Snapshot;
         var diagnostics = new List<CatalogBattleActorDiagnostic>();
         ContentId entityId = snapshot.Identity.EntityDefinitionId;
         if (!entityId.IsValid || !snapshot.Identity.InstanceId.IsValid ||
@@ -483,6 +535,28 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 ailments.Values,
                 registeredEventIds: _durationVocabulary?.RegisteredEventIds,
                 registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds);
+
+            if (request.Mode == CatalogBattleActorRestoreMode.RecomposeDerivedState)
+            {
+                RuntimeActorStatCompositionResult composition = _statComposition.Compose(
+                    new RuntimeActorStatCompositionRequest(
+                        state,
+                        request.StatSourceKind,
+                        request.MissingHostedEntityBehavior,
+                        request.ActiveHostedEntity,
+                        snapshot.Rosters,
+                        request.EquipmentStatModifiers));
+                if (!composition.Applied)
+                {
+                    diagnostics.AddRange(composition.Diagnostics.Select(diagnostic =>
+                        new CatalogBattleActorDiagnostic(
+                            CatalogBattleActorDiagnosticCode.SnapshotStatCompositionFailed,
+                            diagnostic.Message,
+                            entityId)));
+                    return new CatalogBattleActorCreationResult(null, diagnostics);
+                }
+            }
+
             return new CatalogBattleActorCreationResult(
                 new CatalogBattleActor(entity, state, loadout),
                 diagnostics);

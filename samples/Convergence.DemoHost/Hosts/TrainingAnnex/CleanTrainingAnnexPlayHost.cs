@@ -333,7 +333,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,
-            new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy));
+            new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy),
+            catalog,
+            statCompositionService);
         var encounterPreparation = new CatalogEncounterPreparationService(
             new CatalogEncounterStartPlanner(catalog),
             actorFactory);

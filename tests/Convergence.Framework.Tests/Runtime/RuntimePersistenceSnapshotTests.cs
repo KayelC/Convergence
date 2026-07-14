@@ -48,7 +48,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));
         foreach (RuntimeActorSnapshot actor in validation.RequireValidSnapshot().Actors)
         {
-            CatalogBattleActorCreationResult restored = factory.Restore(actor);
+            CatalogBattleActorCreationResult restored = factory.Restore(ActorRestore(actor));
 
             Assert.True(
                 restored.IsSuccess,
@@ -57,7 +57,9 @@ public sealed class RuntimePersistenceSnapshotTests
             Assert.Equal(actor.Identity, roundTrip.Identity);
             Assert.Equal(actor.Ownership, roundTrip.Ownership);
             Assert.Equal(actor.Progression, roundTrip.Progression);
-            Assert.Equal(actor.Resources, roundTrip.Resources);
+            Assert.All(roundTrip.Resources, resource =>
+                Assert.InRange(resource.Current, 0m, resource.Maximum));
+            Assert.Equal(StandardProgressionIds.CoreStats.Count, roundTrip.Stats.EffectiveStats.Count);
             Assert.Equal(actor.Skills.LearnedSkillIds, roundTrip.Skills.LearnedSkillIds);
             Assert.Equal(actor.Skills.EquippedSkillIds, roundTrip.Skills.EquippedSkillIds);
         }
@@ -169,7 +171,7 @@ public sealed class RuntimePersistenceSnapshotTests
             catalog,
             catalog,
             new RestoreOnlyInitializationPolicy(),
-            catalog).Restore(malformed);
+            catalog).Restore(ActorRestore(malformed));
         Assert.False(catalogRestore.IsSuccess);
         Assert.Contains(catalogRestore.Diagnostics, item => item.Code == CatalogBattleActorDiagnosticCode.SnapshotInvalid);
     }
@@ -378,7 +380,7 @@ public sealed class RuntimePersistenceSnapshotTests
             catalog,
             catalog,
             new RestoreOnlyInitializationPolicy(),
-            catalog).Restore(unregisteredOnly);
+            catalog).Restore(ActorRestore(unregisteredOnly));
         CatalogBattleActorDiagnostic restoreDiagnostic = Assert.Single(
             catalogRestore.Diagnostics,
             diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.SnapshotInvalid);
@@ -476,7 +478,7 @@ public sealed class RuntimePersistenceSnapshotTests
             catalog,
             catalog,
             new RestoreOnlyInitializationPolicy(),
-            catalog).Restore(malformed);
+            catalog).Restore(ActorRestore(malformed));
         Assert.False(catalogRestore.IsSuccess);
         Assert.Contains(
             catalogRestore.Diagnostics,
@@ -1747,6 +1749,12 @@ public sealed class RuntimePersistenceSnapshotTests
             .Build();
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static CatalogBattleActorRestoreRequest ActorRestore(RuntimeActorSnapshot snapshot) =>
+        new(
+            snapshot,
+            RuntimeStatSourceKind.Actor,
+            MissingHostedEntityBehavior.UseActorBaseStats);
 
     private static void AssertDiagnostic(
         RuntimeSaveValidationResult result,

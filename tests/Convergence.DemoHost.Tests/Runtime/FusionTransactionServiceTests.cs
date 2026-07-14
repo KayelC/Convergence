@@ -861,10 +861,10 @@ public sealed class FusionTransactionServiceTests
             return inner.Create(request);
         }
 
-        public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+        public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request)
         {
             RestoreCount++;
-            return inner.Restore(snapshot);
+            return inner.Restore(request);
         }
     }
 
@@ -886,7 +886,7 @@ public sealed class FusionTransactionServiceTests
                 ]);
         }
 
-        public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+        public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request)
         {
             RestoreCount++;
             throw new InvalidOperationException("Restore must not be called after creation rejection.");
@@ -899,8 +899,8 @@ public sealed class FusionTransactionServiceTests
         public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request) =>
             inner.Create(request with { TeamId = Id("wrong_team") });
 
-        public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot) =>
-            inner.Restore(snapshot);
+        public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request) =>
+            inner.Restore(request);
     }
 
     private sealed class MismatchedPreviewService : IFusionPreviewService

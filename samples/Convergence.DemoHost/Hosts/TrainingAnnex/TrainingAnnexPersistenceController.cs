@@ -310,7 +310,8 @@ internal sealed class TrainingAnnexPersistenceController
                 continue;
             }
 
-            CatalogBattleActorCreationResult restored = actorFactory.Restore(savedActor);
+            CatalogBattleActorCreationResult restored = actorFactory.Restore(
+                ActorStatRestoreRequest(savedActor));
             if (!restored.IsSuccess)
             {
                 string restoreDiagnostics = string.Join("; ", restored.Diagnostics.Select(item => item.Message));
@@ -527,7 +528,8 @@ internal sealed class TrainingAnnexPersistenceController
             return false;
         }
 
-        CatalogBattleActorCreationResult result = actorFactory.Restore(snapshot);
+        CatalogBattleActorCreationResult result = actorFactory.Restore(
+            ActorStatRestoreRequest(snapshot));
         if (!result.IsSuccess)
         {
             restored = current;
@@ -539,6 +541,13 @@ internal sealed class TrainingAnnexPersistenceController
         diagnostic = null;
         return true;
     }
+
+    private static CatalogBattleActorRestoreRequest ActorStatRestoreRequest(
+        RuntimeActorSnapshot snapshot) =>
+        new(
+            snapshot,
+            RuntimeStatSourceKind.Actor,
+            MissingHostedEntityBehavior.UseActorBaseStats);
 
     private async ValueTask PublishSavePolicyDiagnosticsAsync(
         string actionLabel,

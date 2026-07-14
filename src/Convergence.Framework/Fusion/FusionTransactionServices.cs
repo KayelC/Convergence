@@ -584,7 +584,11 @@ public sealed class FusionTransactionService : IFusionTransactionService
             baseline.BaseResourceValues,
             baseline.VitalResourceId,
             baseline.CapabilityIds);
-        return _actorFactory.Restore(resultSnapshot);
+        return _actorFactory.Restore(new CatalogBattleActorRestoreRequest(
+            resultSnapshot,
+            RuntimeStatSourceKind.Actor,
+            MissingHostedEntityBehavior.UseActorBaseStats,
+            mode: CatalogBattleActorRestoreMode.PreserveValidatedSnapshot));
     }
 
     private static bool ActorMatchesPreparedDecision(

@@ -878,10 +878,10 @@ public sealed class CompendiumRuntimeServiceTests
             return inner.Create(request);
         }
 
-        public CatalogBattleActorCreationResult Restore(RuntimeActorSnapshot snapshot)
+        public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request)
         {
             RestoreCalls++;
-            return inner.Restore(snapshot);
+            return inner.Restore(request);
         }
     }
 
