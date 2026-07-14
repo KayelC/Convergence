@@ -46,7 +46,7 @@ internal sealed class CleanFieldDemoHost
 
     public CleanFieldDemoHost(TextWriter output, string? contentRoot = null)
         : this(
-            new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Data", "Jsons")),
+            new FileContentPackSource(contentRoot ?? Path.Combine(AppContext.BaseDirectory, "Content")),
             new TextWriterEventSink(output))
     {
     }

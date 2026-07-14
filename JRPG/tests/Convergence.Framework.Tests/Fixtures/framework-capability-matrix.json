@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "product": "Convergence.Framework",
+  "states": ["complete", "partial", "deferred"],
+  "demoCoverageLevels": ["none", "focused", "end_to_end"],
+  "capabilities": [
+    {
+      "id": "content_definitions",
+      "implementationState": "complete",
+      "frameworkTests": ["DomainDefinitionTests", "ReferenceContentTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "portable_deserialization",
+      "implementationState": "complete",
+      "frameworkTests": ["SchemaDeserializationTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "content_validation",
+      "implementationState": "complete",
+      "frameworkTests": ["ContentValidationTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "catalog_loading",
+      "implementationState": "complete",
+      "frameworkTests": ["CatalogLoaderTests", "CatalogSurfaceTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "runtime_actor_state",
+      "implementationState": "complete",
+      "frameworkTests": ["RuntimeStateSnapshotTests", "CatalogBattleRuntimeTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "progression_and_resources",
+      "implementationState": "complete",
+      "frameworkTests": ["ProgressionPolicyTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "typed_action_and_effect_execution",
+      "implementationState": "complete",
+      "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "combat_resolution",
+      "implementationState": "complete",
+      "frameworkTests": ["ProductionCombatRulesetTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "turn_economy",
+      "implementationState": "complete",
+      "frameworkTests": ["BattleEncounterRunnerTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "status_and_passive_lifecycle",
+      "implementationState": "complete",
+      "frameworkTests": ["BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "encounter_orchestration",
+      "implementationState": "complete",
+      "frameworkTests": ["BattleEncounterRunnerTests", "EncounterPreparationServiceTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "battle_knowledge",
+      "implementationState": "complete",
+      "frameworkTests": ["RuntimePersistenceSnapshotTests", "CatalogBattleRuntimeTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "party_and_stock",
+      "implementationState": "complete",
+      "frameworkTests": ["PartyStockTransitionTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "inventory_equipment_economy",
+      "implementationState": "complete",
+      "frameworkTests": ["ResourceManagementServiceTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "navigation",
+      "implementationState": "complete",
+      "frameworkTests": ["RuntimeNavigationTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "dungeon_traversal",
+      "implementationState": "complete",
+      "frameworkTests": ["RuntimeDungeonTraversalTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "negotiation_and_rewards",
+      "implementationState": "complete",
+      "frameworkTests": ["NegotiationRewardRuntimeTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "fusion_and_inheritance",
+      "implementationState": "complete",
+      "frameworkTests": ["FusionInheritanceTests", "FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "compendium",
+      "implementationState": "complete",
+      "frameworkTests": ["CompendiumRuntimeServiceTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "persistence_snapshots",
+      "implementationState": "complete",
+      "frameworkTests": ["RuntimePersistenceSnapshotTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
+    },
+    {
+      "id": "host_contracts",
+      "implementationState": "complete",
+      "frameworkTests": ["FrameworkBoundaryTests", "GodotIntegrationContractTests"],
+      "demoCoverage": "end_to_end",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": []
+    },
+    {
+      "id": "authored_schema_contracts",
+      "implementationState": "partial",
+      "frameworkTests": ["SchemaDeserializationTests", "CatalogSurfaceTests"],
+      "demoCoverage": "focused",
+      "hostNeutral": true,
+      "optionalModule": false,
+      "knownGaps": ["Checked-in JSON Schema artifacts do not yet cover every future content family."]
+    },
+    {
+      "id": "godot_adapter",
+      "implementationState": "deferred",
+      "frameworkTests": ["GodotIntegrationContractTests"],
+      "demoCoverage": "none",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": ["A real Godot project and engine-specific adapters remain host work."]
+    },
+    {
+      "id": "save_version_migration",
+      "implementationState": "deferred",
+      "frameworkTests": ["RuntimePersistenceSnapshotTests"],
+      "demoCoverage": "none",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": ["Migration between future released save-contract versions is not implemented."]
+    },
+    {
+      "id": "deterministic_replay",
+      "implementationState": "deferred",
+      "frameworkTests": ["RuntimePersistenceSnapshotTests"],
+      "demoCoverage": "none",
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": ["Checkpoint breadcrumbs are diagnostic records, not a replay log."]
+    }
+  ]
+}

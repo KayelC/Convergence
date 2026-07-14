@@ -6,6 +6,16 @@
 
 **Baseline:** 1,113 tests passed, 0 failed, 0 skipped. The standalone `JRPG.Framework` build produced 0 warnings; the transitional full solution produced 100 legacy/package warnings and 0 errors.
 
+## Checkpoint Status
+
+| Checkpoint | Status | Evidence |
+|---|---|---|
+| 1. Boundary record | Complete | Commit `6dc5ab3`; recovery baseline recorded before movement. |
+| 2. Clean projects | Complete | Commit `543b717`; Framework and DemoHost build independently on .NET 8 with 0 compiler warnings. |
+| 3. Content and tests | Complete | Clean content is separated into 36 reference/demo/original documents; 548 Framework tests and 145 DemoHost tests pass with 0 failures and 0 skips. |
+| 4. Namespace migration | Pending | `JRPGPrototype.*` names remain until the dedicated breaking rename. |
+| 5. Archive gate | Pending | The old solution and prototype remain available for comparison until the clean gate passes. |
+
 ## Purpose
 
 Phase 8 replaces the transitional root console project with an atomic clean product. The reusable assembly, clean example host, clean content, and clean tests become independently understandable and buildable. The retained prototype becomes non-built historical evidence.

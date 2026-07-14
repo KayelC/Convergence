@@ -15,7 +15,7 @@ public sealed class CleanTrainingAnnexDemoHostTests
     public async Task CleanTrainingAnnexDemo_RunsOriginalCleanRuntimeSliceEndToEnd()
     {
         using var output = new StringWriter();
-        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var source = new RecordingContentPackTextSource(Path.Combine(AppContext.BaseDirectory, "Content"));
         var host = new CleanTrainingAnnexDemoHost(source, new TextWriterEventSink(output));
 
         int exitCode = await host.RunAsync();
@@ -94,17 +94,6 @@ public sealed class CleanTrainingAnnexDemoHostTests
 
     private static ContentId Qualified(string localId) =>
         ContentId.Parse($"convergence.training_annex_slice:{localId}");
-
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
-    }
 
     private sealed class RecordingContentPackTextSource(string root) : IContentPackTextSource
     {

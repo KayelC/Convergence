@@ -207,36 +207,32 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
-    public void TrainingAnnexSlice_DungeonContentRunsThroughRuntimeStateMachine()
+    public void TrainingAnnexSlice_DungeonContentAndGenericTraversalRemainSeparate()
     {
         GameDataCatalog catalog = LoadCatalog();
-        RuntimeDungeonContentSnapshot content = ToRuntimeDungeonContent(
-            catalog.GetRequiredDungeon(Qualified("training_annex")));
-        var service = new RuntimeFieldDungeonService(new SequenceRandomSource(1, 1));
-        var progress = new RuntimeDungeonProgressSnapshot(Qualified("training_annex"));
+        DungeonDefinition dungeon = catalog.GetRequiredDungeon(Qualified("training_annex"));
+        DungeonBlockDefinition block = Assert.Single(dungeon.Blocks);
+        Assert.Contains(Qualified("mixed_drill"), block.EncounterPoolIds);
+        Assert.Contains(block.FixedFloors, floor =>
+            floor.Floor == 3 && floor.Kind == DungeonFixedFloorKind.SafeRoom && floor.HasTerminal);
+        Assert.Contains(block.FixedFloors, floor =>
+            floor.Floor == 4 && floor.EncounterId == Qualified("shell_check"));
+        Assert.Contains(block.FixedFloors, floor =>
+            floor.Floor == 5 && floor.Kind == DungeonFixedFloorKind.BlockEnd);
 
-        RuntimeDungeonTransitionResult entered = service.EnterDungeon(content, progress);
-        RuntimeDungeonTransitionResult firstBattle = service.Ascend(content, entered.After);
-        RuntimeDungeonTransitionResult safeRoom = service.Ascend(content, firstBattle.After);
-        RuntimeDungeonTransitionResult shellCheck = service.Ascend(content, safeRoom.After);
-        RuntimeDungeonTransitionResult barrier = service.Ascend(content, shellCheck.After);
-        RuntimeDungeonTransitionResult blocked = service.Ascend(content, barrier.After);
-        RuntimeDungeonTransitionResult returned = service.RequestDungeonExit(barrier.After);
+        var service = new RuntimeDungeonTraversalService(new AllowDungeonTraversalPolicy());
+        var before = new RuntimeDungeonTraversalSnapshot(dungeon.Id, Qualified("annex_entrance"));
+        var transition = new RuntimeDungeonTraversalTransition(
+            Id("enter_review_hall"),
+            dungeon.Id,
+            Qualified("annex_entrance"),
+            Qualified("review_hall"));
 
-        Assert.Equal(RuntimeDungeonFloorKind.SafeRoom, entered.Floor!.Kind);
-        Assert.Contains(entered.Events, ev => ev.Kind == RuntimeDungeonEventKind.DungeonEntered);
-        Assert.Equal(RuntimeDungeonFloorKind.Battle, firstBattle.Floor!.Kind);
-        Assert.Equal([Qualified("mixed_drill")], firstBattle.Floor.EnemyIds);
-        Assert.Contains(firstBattle.Events, ev => ev.Kind == RuntimeDungeonEventKind.EncounterRequested);
-        Assert.Equal(RuntimeDungeonFloorKind.SafeRoom, safeRoom.Floor!.Kind);
-        Assert.Equal([1, 3], safeRoom.After.UnlockedTerminals);
-        Assert.Contains(safeRoom.Events, ev => ev.Kind == RuntimeDungeonEventKind.TerminalUnlocked && ev.Floor == 3);
-        Assert.Equal(RuntimeDungeonFloorKind.Battle, shellCheck.Floor!.Kind);
-        Assert.Equal([Qualified("shell_check")], shellCheck.Floor.EnemyIds);
-        Assert.Equal(RuntimeDungeonFloorKind.BlockEnd, barrier.Floor!.Kind);
-        Assert.Equal(RuntimeDungeonTransitionCode.BarrierBlocked, blocked.Code);
-        Assert.Equal(5, blocked.After.CurrentFloor);
-        Assert.Equal(1, returned.After.CurrentFloor);
+        RuntimeDungeonTraversalResult traversed = service.Traverse(before, transition);
+
+        Assert.True(traversed.Applied);
+        Assert.Equal(Qualified("review_hall"), traversed.After.CurrentNodeId);
+        Assert.Equal(RuntimeDungeonTraversalEventKind.TransitionApplied, Assert.Single(traversed.Events).Kind);
     }
 
     [Fact]
@@ -801,42 +797,8 @@ public sealed class OriginalCleanContentSliceTests
 
     private static string FindJsonRoot()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        string root = directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
-        return Path.Combine(root, "Data", "Jsons");
+        return Path.Combine(AppContext.BaseDirectory, "Content");
     }
-
-    private static RuntimeDungeonContentSnapshot ToRuntimeDungeonContent(DungeonDefinition dungeon) =>
-        new(
-            dungeon.Id,
-            dungeon.DisplayName,
-            dungeon.Blocks.Select(block => new RuntimeDungeonBlockSnapshot(
-                block.Id,
-                block.DisplayName,
-                block.StartFloor,
-                block.EndFloor,
-                block.EncounterPoolIds,
-                block.FixedFloors.Select(ToRuntimeFixedFloor))));
-
-    private static RuntimeDungeonFixedFloorSnapshot ToRuntimeFixedFloor(DungeonFixedFloorDefinition floor) =>
-        new(
-            floor.Floor,
-            floor.Kind switch
-            {
-                DungeonFixedFloorKind.SafeRoom => RuntimeDungeonFloorKind.SafeRoom,
-                DungeonFixedFloorKind.Boss => RuntimeDungeonFloorKind.Boss,
-                DungeonFixedFloorKind.BlockEnd => RuntimeDungeonFloorKind.BlockEnd,
-                DungeonFixedFloorKind.Battle => RuntimeDungeonFloorKind.Battle,
-                _ => RuntimeDungeonFloorKind.Empty
-            },
-            floor.EncounterId,
-            floor.HasTerminal,
-            floor.Description);
 
     private static RuntimeActorState Actor(string id, decimal hp, decimal maxHp, decimal sp, decimal maxSp) =>
         Actor(id, "team", hp, maxHp, sp, maxSp);
@@ -883,6 +845,12 @@ public sealed class OriginalCleanContentSliceTests
             [
                 new AdjacentTierFusionMutationPolicy(Id("standard_mutation"), chancePercent: 20)
             ]);
+
+    private sealed class AllowDungeonTraversalPolicy : IRuntimeDungeonTraversalPolicy
+    {
+        public RuntimeDungeonTraversalPolicyDecision Evaluate(RuntimeDungeonTraversalPolicyRequest request) =>
+            new(true);
+    }
 
     private sealed class SequenceRandomSource(params int[] values) : IRandomSource
     {

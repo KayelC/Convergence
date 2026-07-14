@@ -43,8 +43,7 @@ public sealed class PassiveSkillRuntimeTests
     {
         string path = Path.Combine(
             AppContext.BaseDirectory,
-            "Data",
-            "Jsons",
+            "Content",
             "skill_system_redesign.skills.sample.json");
         SkillDefinition iceBoost = Assert.Single(
             new SkillSystemJsonDeserializer().DeserializeSkills(File.ReadAllText(path), path).Records);

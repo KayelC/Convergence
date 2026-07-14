@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Convergence.Tests.Runtime;
+using Convergence.DemoHost.Tests.TestSupport;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Host;
 using JRPGPrototype.Logic.Runtime;
@@ -13,7 +13,7 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonRoundTrip_PreservesRuntimeSaveFamilies()
     {
-        RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
+        RuntimeSaveGameSnapshot snapshot = CleanSaveTestFixture.CreateSaveSnapshot();
 
         string json = CleanSaveJsonCodec.Serialize(snapshot);
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(json);
@@ -51,7 +51,7 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonRoundTrip_PreservesCanonicalActorBattleStateAndDurationKinds()
     {
-        RuntimeActorSnapshot original = RuntimePersistenceSnapshotTests.CreateActor(
+        RuntimeActorSnapshot original = CleanSaveTestFixture.CreateActor(
             RuntimeInstanceId.Parse("frost"),
             ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"));
         var actor = new RuntimeActorSnapshot(
@@ -111,7 +111,7 @@ public sealed class CleanSaveDemoHostTests
             original.BaseResourceValues,
             original.VitalResourceId,
             [ContentId.Parse("analyze"), ContentId.Parse("switch_form")]);
-        RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(actors: [actor]);
+        RuntimeSaveGameSnapshot snapshot = CleanSaveTestFixture.CreateSaveSnapshot(actors: [actor]);
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(CleanSaveJsonCodec.Serialize(snapshot));
         RuntimeActorSnapshot restoredActor = Assert.Single(restored.Actors);
@@ -134,7 +134,7 @@ public sealed class CleanSaveDemoHostTests
     public void CleanSaveDemo_ValidatesSerializesRestoresAndExitsWithoutInput()
     {
         using var output = new StringWriter();
-        int exitCode = new CleanSaveDemoHost(output, Path.Combine(FindRepositoryRoot(), "Data", "Jsons")).Run();
+        int exitCode = new CleanSaveDemoHost(output, Path.Combine(AppContext.BaseDirectory, "Content")).Run();
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
@@ -154,7 +154,7 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonCorruption_ReportsDuplicateCompendiumSkillsAndNegativeStats()
     {
-        string json = CleanSaveJsonCodec.Serialize(RuntimePersistenceSnapshotTests.CreateSaveSnapshot());
+        string json = CleanSaveJsonCodec.Serialize(CleanSaveTestFixture.CreateSaveSnapshot());
         JsonObject root = JsonNode.Parse(json)?.AsObject()
             ?? throw new InvalidOperationException("Expected a host save JSON object.");
         JsonObject entry = root["Compendium"]?["Entries"]?[0]?.AsObject()
@@ -172,7 +172,7 @@ public sealed class CleanSaveDemoHostTests
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
             restored,
-            RuntimePersistenceSnapshotTests.LoadCatalog());
+            CleanSaveTestFixture.LoadCatalog());
 
         Assert.False(validation.IsValid);
         Assert.Contains(validation.Diagnostics, diagnostic =>
@@ -189,7 +189,7 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonCorruption_ReportsUnknownAndMissingCompendiumStats()
     {
-        string json = CleanSaveJsonCodec.Serialize(RuntimePersistenceSnapshotTests.CreateSaveSnapshot());
+        string json = CleanSaveJsonCodec.Serialize(CleanSaveTestFixture.CreateSaveSnapshot());
         JsonObject root = JsonNode.Parse(json)?.AsObject()
             ?? throw new InvalidOperationException("Expected a host save JSON object.");
         JsonObject stats = root["Compendium"]?["Entries"]?[0]?["Stats"]?.AsObject()
@@ -200,7 +200,7 @@ public sealed class CleanSaveDemoHostTests
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
             restored,
-            RuntimePersistenceSnapshotTests.LoadCatalog());
+            CleanSaveTestFixture.LoadCatalog());
 
         Assert.False(validation.IsValid);
         Assert.Contains(validation.Diagnostics, diagnostic =>
@@ -216,7 +216,7 @@ public sealed class CleanSaveDemoHostTests
     {
         ContentId entityId = ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo");
         ContentId ailmentId = ContentId.Parse("convergence.shared_effects_demo:poison_demo");
-        RuntimeSaveGameSnapshot snapshot = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+        RuntimeSaveGameSnapshot snapshot = CleanSaveTestFixture.CreateSaveSnapshot(
             knowledge: new RuntimeKnowledgeSnapshot(
                 elementalAffinities:
                 [
@@ -258,7 +258,7 @@ public sealed class CleanSaveDemoHostTests
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
             restored,
-            RuntimePersistenceSnapshotTests.LoadCatalog());
+            CleanSaveTestFixture.LoadCatalog());
 
         Assert.Equal(2, restored.Knowledge.ElementalAffinities.Count);
         Assert.Equal(2, restored.Knowledge.AilmentResistances.Count);
@@ -287,7 +287,7 @@ public sealed class CleanSaveDemoHostTests
     {
         RuntimeSaveRecord record = new(
             RuntimeSaveKind.Suspend,
-            RuntimePersistenceSnapshotTests.CreateSaveSnapshot(),
+            CleanSaveTestFixture.CreateSaveSnapshot(),
             new RuntimeSaveContextSnapshot(ContentId.Parse("dungeon_menu")),
             sequence: 42);
 
@@ -314,9 +314,9 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonRoundTrip_PreservesOptionalNavigationAndDungeonState()
     {
-        RuntimeSaveGameSnapshot noField = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+        RuntimeSaveGameSnapshot noField = CleanSaveTestFixture.CreateSaveSnapshot(
             includeDefaultField: false);
-        RuntimeSaveGameSnapshot navigationOnly = RuntimePersistenceSnapshotTests.CreateSaveSnapshot(
+        RuntimeSaveGameSnapshot navigationOnly = CleanSaveTestFixture.CreateSaveSnapshot(
             field: new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(ContentId.Parse("host_owned_location"))));
 
@@ -332,14 +332,4 @@ public sealed class CleanSaveDemoHostTests
         Assert.Null(restoredNavigationOnly.Field.DungeonTraversal);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
-    }
 }

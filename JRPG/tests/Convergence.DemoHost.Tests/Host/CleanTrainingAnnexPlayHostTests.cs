@@ -24,7 +24,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 7, 0, 9);
         using var output = new StringWriter();
-        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var source = new RecordingContentPackTextSource(ContentRoot());
         var host = new CleanTrainingAnnexPlayHost(
             source,
             new TextWriterEventSink(output),
@@ -1169,7 +1169,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         var io = new ScriptedGameIO().QueueMenu(6, 6, 8, 6, 6, 7, 7, 7, 9);
         using var output = new StringWriter();
-        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var source = new RecordingContentPackTextSource(ContentRoot());
         var host = new CleanTrainingAnnexPlayHost(
             source,
             new TextWriterEventSink(output),
@@ -1216,7 +1216,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 7, 7, 9);
         using var output = new StringWriter();
-        var source = new RecordingContentPackTextSource(Path.Combine(FindRepositoryRoot(), "Data", "Jsons"));
+        var source = new RecordingContentPackTextSource(ContentRoot());
         var host = new CleanTrainingAnnexPlayHost(
             source,
             new TextWriterEventSink(output),
@@ -1935,7 +1935,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             1, 0, 0,
             13);
         using var output = new StringWriter();
-        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string root = ContentRoot();
         var host = new CleanTrainingAnnexPlayHost(
             new DisplayTextMutatingContentPackTextSource(root),
             new TextWriterEventSink(output),
@@ -2890,7 +2890,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public void CleanTrainingAnnexShell_DoesNotReferenceLegacyEffectInputs()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Host", "CleanConsole", "TrainingAnnex");
+        string root = Path.Combine(
+            FindRepositoryRoot(),
+            "samples",
+            "Convergence.DemoHost",
+            "Hosts",
+            "TrainingAnnex");
         string[] banned =
         [
             "SkillData",
@@ -3707,7 +3712,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private static async Task<GameDataCatalog> LoadTrainingAnnexCatalogAsync()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string root = ContentRoot();
         var source = new RecordingContentPackTextSource(root);
         ContentPackTextBundle bundle = await source.ReadAsync(TrainingAnnexHostSupport.CreateContentRequest());
         CatalogLoadResult load = new SkillSystemCatalogLoader().Load(
@@ -3809,17 +3814,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
             initialEquipment,
             initialWallet);
 
-    private static string ContentRoot() => Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+    private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
 
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName
+               ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
     private sealed class RejectingEconomyTransactionService : IEconomyTransactionService

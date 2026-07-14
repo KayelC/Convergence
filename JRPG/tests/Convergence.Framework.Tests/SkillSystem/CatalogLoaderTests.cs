@@ -69,7 +69,7 @@ public sealed class CatalogLoaderTests
     [Fact]
     public void ReferenceFixturePack_BuildsQualifiedImmutableCatalog()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string root = Path.Combine(AppContext.BaseDirectory, "Content");
         string manifestName = "skill_system_redesign.manifest.sample.json";
         string[] documentNames =
         [
@@ -425,8 +425,7 @@ public sealed class CatalogLoaderTests
                 candidate.Namespace?.StartsWith("Newtonsoft.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Godot", StringComparison.Ordinal) == true ||
                 candidate == typeof(FileInfo) || candidate == typeof(DirectoryInfo) ||
-                candidate == typeof(JRPGPrototype.Data.SkillData) ||
-                candidate == typeof(JRPGPrototype.Data.PersonaData));
+                candidate.Name is "SkillData" or "PersonaData");
         }
     }
 

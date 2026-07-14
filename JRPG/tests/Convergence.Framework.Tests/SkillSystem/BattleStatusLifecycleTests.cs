@@ -639,8 +639,7 @@ public sealed class BattleStatusLifecycleTests
     [Fact]
     public void StatusLifecycleDemoPack_LoadsTheElevenLegacyAilments()
     {
-        string root = FindRepositoryRoot();
-        string jsonRoot = Path.Combine(root, "Data", "Jsons");
+        string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         string manifestName = "status_lifecycle_demo.manifest.json";
         string ailmentName = "status_lifecycle_demo.ailments.json";
         var bundle = new ContentPackTextBundle(

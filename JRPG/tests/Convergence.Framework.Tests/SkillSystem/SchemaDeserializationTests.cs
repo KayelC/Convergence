@@ -15,8 +15,7 @@ public sealed class SchemaDeserializationTests
     [Fact]
     public void ReferencePack_DeserializesThroughPortableBoundary()
     {
-        string root = FindRepositoryRoot();
-        string jsonRoot = Path.Combine(root, "Data", "Jsons");
+        string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
 
         ContentPackManifest manifest = _deserializer.DeserializeManifest(
             File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.manifest.sample.json")),
@@ -453,8 +452,7 @@ public sealed class SchemaDeserializationTests
                 candidate.Namespace?.StartsWith("System.Text.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Newtonsoft.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Godot", StringComparison.Ordinal) == true ||
-                candidate == typeof(JRPGPrototype.Data.SkillData) ||
-                candidate == typeof(JRPGPrototype.Data.PersonaData));
+                candidate.Name is "SkillData" or "PersonaData");
         }
     }
 

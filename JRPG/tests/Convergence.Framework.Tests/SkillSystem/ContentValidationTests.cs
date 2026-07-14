@@ -15,7 +15,7 @@ public sealed class ContentValidationTests
     [Fact]
     public void ReferencePack_ValidatesWithExplicitRegistrations()
     {
-        string jsonRoot = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         ContentPackManifest manifest = ReadManifest(jsonRoot, "skill_system_redesign.manifest.sample.json");
         var registrations = new SkillSystemRegistrationBuilder()
             .RegisterEntityKind("demon")
@@ -51,7 +51,7 @@ public sealed class ContentValidationTests
     [Fact]
     public void InvalidReferencePack_AggregatesOrderedSourceAwareDiagnostics()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Convergence.Tests", "SkillSystem", "Fixtures", "Validation");
+        string root = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Validation");
         ContentPackManifest manifest = ReadManifest(root, "invalid.manifest.json");
         SkillSystemValidationRequest request = new(
             manifest,
@@ -614,8 +614,7 @@ public sealed class ContentValidationTests
                 candidate.Namespace?.StartsWith("Newtonsoft.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Godot", StringComparison.Ordinal) == true ||
                 candidate == typeof(FileInfo) || candidate == typeof(DirectoryInfo) ||
-                candidate == typeof(JRPGPrototype.Data.SkillData) ||
-                candidate == typeof(JRPGPrototype.Data.PersonaData));
+                candidate.Name is "SkillData" or "PersonaData");
         }
     }
 

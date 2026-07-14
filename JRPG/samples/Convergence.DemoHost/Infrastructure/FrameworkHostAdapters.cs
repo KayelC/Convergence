@@ -50,6 +50,40 @@ internal sealed class TextWriterEventSink : IHostEventSink<string>
     }
 }
 
+internal interface IConsoleMenuDriver
+{
+    int RenderMenu(
+        string header,
+        IReadOnlyList<string> options,
+        int initialIndex,
+        IReadOnlyList<bool> disabledOptions);
+}
+
+internal sealed class ConsoleHostCommandSource<TCommand> : IHostCommandSource<TCommand>
+{
+    private readonly IConsoleMenuDriver _menu;
+
+    public ConsoleHostCommandSource(IConsoleMenuDriver menu)
+    {
+        _menu = menu ?? throw new ArgumentNullException(nameof(menu));
+    }
+
+    public ValueTask<HostCommandReadResult<TCommand>> ReadAsync(
+        HostCommandRequest<TCommand> request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string[] labels = request.Options.Select(option => option.Label).ToArray();
+        bool[] disabled = request.Options.Select(option => !option.IsEnabled).ToArray();
+        int selection = _menu.RenderMenu(request.Prompt, labels, request.InitialIndex, disabled);
+        return ValueTask.FromResult(selection < 0
+            ? HostCommandReadResult<TCommand>.Cancelled()
+            : HostCommandReadResult<TCommand>.Selected(request.Options[selection]));
+    }
+}
+
 internal sealed class TextReaderCommandSource<TCommand> : IHostCommandSource<TCommand>
 {
     private readonly TextReader _reader;

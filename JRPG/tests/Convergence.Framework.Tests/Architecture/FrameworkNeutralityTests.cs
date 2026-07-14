@@ -41,9 +41,8 @@ public sealed class FrameworkNeutralityTests
     }
 
     [Fact]
-    public void LegacyFloorDungeonService_IsHostOwnedWhileGenericTraversalRemainsFrameworkOwned()
+    public void GenericDungeonTraversal_IsFrameworkOwnedWithoutPrototypeFloorService()
     {
-        Assert.Equal("JRPG.ConsoleHost", typeof(RuntimeFieldDungeonService).Assembly.GetName().Name);
         Assert.Equal("Convergence.Framework", typeof(RuntimeDungeonTraversalService).Assembly.GetName().Name);
         Assert.False(File.Exists(RepositoryPath(
             "src",
@@ -51,11 +50,6 @@ public sealed class FrameworkNeutralityTests
             "Logic",
             "Runtime",
             "FieldDungeonStateMachines.cs")));
-        Assert.True(File.Exists(RepositoryPath(
-            "Logic",
-            "Field",
-            "Dungeon",
-            "LegacyFieldDungeonStateMachines.cs")));
     }
 
     [Fact]

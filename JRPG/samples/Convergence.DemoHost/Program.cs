@@ -29,7 +29,7 @@ internal static class DemoHostApplication
             return UsageError;
         }
 
-        string contentRoot = Path.Combine(AppContext.BaseDirectory, "Data", "Jsons");
+        string contentRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         return args[0] switch
         {
             "--clean-battle-demo" => await new CleanBattleDemoHost(output, contentRoot)

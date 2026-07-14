@@ -312,7 +312,7 @@ public sealed class GodotIntegrationContractTests
 
         public static GodotResourceContentSource FromDataJsons(string resourceRoot, params string[] paths)
         {
-            string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+            string root = Path.Combine(AppContext.BaseDirectory, "Content");
             return new GodotResourceContentSource(
                 resourceRoot,
                 paths.ToDictionary(

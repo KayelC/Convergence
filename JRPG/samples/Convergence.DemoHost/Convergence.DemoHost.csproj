@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\Data\Jsons\*.json" Link="Data\Jsons\%(Filename)%(Extension)">
+    <Content Include="..\..\content\**\*.json" Link="Content\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

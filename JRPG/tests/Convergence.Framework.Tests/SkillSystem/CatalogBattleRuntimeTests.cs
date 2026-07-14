@@ -1081,7 +1081,7 @@ public sealed class CatalogBattleRuntimeTests
 
     private static GameDataCatalog LoadDemoCatalog()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string root = Path.Combine(AppContext.BaseDirectory, "Content");
         ContentPackTextBundle reference = Bundle(root,
             "skill_system_redesign.manifest.sample.json",
             "skill_system_redesign.races.sample.json",

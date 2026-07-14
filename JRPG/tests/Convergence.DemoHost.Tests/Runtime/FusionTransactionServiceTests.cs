@@ -831,19 +831,7 @@ public sealed class FusionTransactionServiceTests
         return result.RequireCatalog();
     }
 
-    private static string FindJsonRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return Path.Combine(
-            directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln."),
-            "Data",
-            "Jsons");
-    }
+    private static string FindJsonRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
     private static ContentId Qualified(string localId) => Id($"{Pack}:{localId}");
     private static ContentId Id(string value) => ContentId.Parse(value);

@@ -267,7 +267,7 @@ public sealed class SharedEffectsRuntimeTests
     public void CleanFieldDemo_RunsWithoutInput()
     {
         var output = new StringWriter();
-        int exitCode = new CleanFieldDemoHost(output, Path.Combine(FindRepositoryRoot(), "Data", "Jsons")).Run();
+        int exitCode = new CleanFieldDemoHost(output, Path.Combine(AppContext.BaseDirectory, "Content")).Run();
 
         Assert.Equal(0, exitCode);
         Assert.Contains("request_dungeon_exit", output.ToString(), StringComparison.Ordinal);
@@ -355,7 +355,7 @@ public sealed class SharedEffectsRuntimeTests
 
     private static GameDataCatalog LoadCatalog()
     {
-        string root = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string root = Path.Combine(AppContext.BaseDirectory, "Content");
         ContentPackTextBundle reference = Bundle(root,
             "skill_system_redesign.manifest.sample.json",
             "skill_system_redesign.races.sample.json",
@@ -408,16 +408,6 @@ public sealed class SharedEffectsRuntimeTests
             .SupportModifier<NumericRuleModifierDefinition>()
             .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
             .Build();
-
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
-        {
-            directory = directory.Parent;
-        }
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
-    }
 
     private static IEnumerable<Type> PublicSignatureTypes(Type type)
     {

@@ -519,7 +519,7 @@ public sealed class CatalogSurfaceTests
 
     private static ContentPackTextBundle Bundle(string manifestName, params string[] documentNames)
     {
-        string jsonRoot = Path.Combine(FindRepositoryRoot(), "Data", "Jsons");
+        string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         return new ContentPackTextBundle(
             manifestName,
             File.ReadAllText(Path.Combine(jsonRoot, manifestName)),
