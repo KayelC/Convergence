@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "races": [
+    {
+      "id": "annex_spirit",
+      "displayName": "Annex Spirit",
+      "alignmentIds": ["neutral"],
+      "negotiationPersonalityId": "steady_sample"
+    },
+    {
+      "id": "annex_beast",
+      "displayName": "Annex Beast",
+      "alignmentIds": ["neutral"],
+      "negotiationPersonalityId": "steady_sample"
+    },
+    {
+      "id": "annex_construct",
+      "displayName": "Annex Construct",
+      "alignmentIds": ["neutral"],
+      "negotiationPersonalityId": "steady_sample"
+    }
+  ]
+}

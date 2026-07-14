@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ailments": [
+    {
+      "id": "invalid_ailment",
+      "displayName": "Invalid Ailment",
+      "description": "Exercises ailment behavior and recovery diagnostics.",
+      "groupIds": [
+        "missing_group",
+        "missing_group"
+      ],
+      "exclusivityGroupId": "missing_exclusive_group",
+      "defaultDuration": {
+        "type": "turns",
+        "value": 0,
+        "tick": "missing_event",
+        "suspendWhileReserve": false
+      },
+      "turnBehavior": {
+        "type": "chance_skip_or_flee",
+        "skipChance": 70,
+        "fleeChance": 50,
+        "demonFleeOutcome": "return_to_stock"
+      },
+      "modifiers": {
+        "evasionMultiplier": 0,
+        "criticalChanceTakenBonus": 0,
+        "damageTakenMultiplier": 0,
+        "damageDealtMultiplier": 0,
+        "isRigidBody": false
+      },
+      "triggers": [
+        {
+          "event": "missing_event",
+          "effects": []
+        }
+      ],
+      "recovery": {
+        "natural": {
+          "baseChance": 101,
+          "statId": "missing_stat",
+          "statMultiplier": 0
+        },
+        "removeOnEvents": [
+          "missing_event",
+          "missing_event"
+        ]
+      }
+    }
+  ]
+}

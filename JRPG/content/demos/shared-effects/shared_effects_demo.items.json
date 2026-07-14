@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "medicine_demo",
+      "displayName": "Medicine",
+      "description": "Restores 25 HP.",
+      "itemKind": "consumable",
+      "stackLimit": 99,
+      "baseValue": 100,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "restore_resource",
+            "resourceId": "hp",
+            "amount": {
+              "type": "flat",
+              "value": 25
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "dis_poison_demo",
+      "displayName": "Dis-Poison",
+      "description": "Removes Poison.",
+      "itemKind": "consumable",
+      "stackLimit": 99,
+      "baseValue": 80,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "remove_ailment",
+            "scope": "selected",
+            "ailmentIds": ["poison_demo"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "revival_bead_demo",
+      "displayName": "Revival Bead",
+      "description": "Revives one defeated ally with half HP.",
+      "itemKind": "consumable",
+      "stackLimit": 99,
+      "baseValue": 500,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "dead",
+          "allowSelf": false
+        },
+        "effects": [
+          {
+            "type": "revive",
+            "resourceId": "hp",
+            "amount": {
+              "type": "percent_max",
+              "value": 50
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "traesto_gem_demo",
+      "displayName": "Traesto Gem",
+      "description": "Requests escape from battle.",
+      "itemKind": "consumable",
+      "stackLimit": 10,
+      "baseValue": 250,
+      "usage": {
+        "contexts": ["battle"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "none",
+          "selection": "none",
+          "lifeState": "any",
+          "allowSelf": false
+        },
+        "effects": [
+          {
+            "type": "escape",
+            "eligibilityRuleId": "standard_escape",
+            "chance": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "goho_m_demo",
+      "displayName": "Goho-M",
+      "description": "Requests a host-owned dungeon exit.",
+      "itemKind": "consumable",
+      "stackLimit": 10,
+      "baseValue": 300,
+      "usage": {
+        "contexts": ["field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "none",
+          "selection": "none",
+          "lifeState": "any",
+          "allowSelf": false
+        },
+        "effects": [
+          {
+            "type": "custom",
+            "handlerId": "request_dungeon_exit",
+            "parameters": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "old_coin_demo",
+      "displayName": "Old Coin",
+      "description": "A valuable item with no executable usage.",
+      "itemKind": "valuable",
+      "stackLimit": 99,
+      "baseValue": 1000
+    }
+  ]
+}

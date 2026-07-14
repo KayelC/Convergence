@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "races": [
+    {
+      "id": "demo_spirit",
+      "displayName": "Demo Spirit"
+    }
+  ]
+}

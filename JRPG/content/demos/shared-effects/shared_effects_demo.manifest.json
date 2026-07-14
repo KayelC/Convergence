@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "convergence.shared_effects_demo",
+  "version": "0.1.0",
+  "displayName": "Shared Effects Demo",
+  "dependencies": [
+    {
+      "id": "convergence.clean_battle_demo",
+      "version": "0.1.0"
+    }
+  ],
+  "documents": [
+    {
+      "type": "ailments",
+      "path": "shared_effects_demo.ailments.json"
+    },
+    {
+      "type": "skills",
+      "path": "shared_effects_demo.skills.json"
+    },
+    {
+      "type": "entities",
+      "path": "shared_effects_demo.entities.json"
+    },
+    {
+      "type": "items",
+      "path": "shared_effects_demo.items.json"
+    }
+  ]
+}

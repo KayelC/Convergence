@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "fusionRecipes": [
+    {
+      "id": "demo_spirit_binary_sample",
+      "displayName": "Demo Spirit Binary Fusion",
+      "description": "A minimal race-based fusion recipe sample.",
+      "parents": [
+        {
+          "kind": "entity",
+          "id": "convergence.clean_battle_demo:frost_duelist_demo"
+        },
+        {
+          "kind": "entity",
+          "id": "convergence.clean_battle_demo:ember_duelist_demo"
+        }
+      ],
+      "result": {
+        "operation": "create_entity",
+        "resultEntityId": "convergence.clean_battle_demo:frost_duelist_demo"
+      },
+      "accidentPolicyId": "standard_accident",
+      "mutationPolicyId": "standard_mutation"
+    }
+  ]
+}

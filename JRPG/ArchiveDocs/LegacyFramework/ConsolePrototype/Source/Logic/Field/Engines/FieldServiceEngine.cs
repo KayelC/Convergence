@@ -1,0 +1,676 @@
+using JRPGPrototype.Core;
+using JRPGPrototype.Data;
+using JRPGPrototype.Entities;
+using JRPGPrototype.Logic.Core;
+using JRPGPrototype.Logic.Battle;
+using JRPGPrototype.Logic.Battle.Engines;
+using JRPGPrototype.Logic.Field;
+using JRPGPrototype.Logic.Field.Bridges;
+using JRPGPrototype.Logic.Field.Dungeon;
+using JRPGPrototype.Logic.Field.Messaging;
+using JRPGPrototype.Logic.Runtime;
+using JRPGPrototype.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace JRPGPrototype.Logic.Field.Engines
+{
+    /// <summary>
+    /// The logic engine for the Field Sub-System.
+    /// Handles the "Math and State" for services like the Hospital, 
+    /// Item/Skill usage, Equipment management, and Dungeon progression.
+    /// </summary>
+    public class FieldServiceEngine
+    {
+        private readonly IFieldMessenger _messenger;
+        private readonly IGameIO _io;
+        private readonly EconomyManager _economy;
+        private readonly InventoryManager _inventory;
+        private readonly PartyManager _party;
+        private readonly DungeonState _dungeonState;
+
+        // Shop Components
+        private readonly ShopEngine _shopEngine;
+        private readonly ShopUIBridge _shopUI;
+
+        // Logic Components
+        private readonly StatusRegistry _statusRegistry;
+
+        public FieldServiceEngine(
+            IFieldMessenger messenger,
+            IGameIO io,
+            EconomyManager economy,
+            InventoryManager inventory,
+            PartyManager party,
+            DungeonState dungeonState)
+        {
+            _messenger = messenger;
+            _io = io;
+            _economy = economy;
+            _inventory = inventory;
+            _party = party;
+            _dungeonState = dungeonState;
+
+            // Initialize Shop Components
+            _shopEngine = new ShopEngine(_inventory, _economy, _messenger);
+            _shopUI = new ShopUIBridge(_io, _messenger, _shopEngine, _economy, _inventory);
+
+            // Initialize Logic Components
+            _statusRegistry = new StatusRegistry();
+        }
+
+        #region Shop and Equipment
+
+        /// <summary>
+        /// Global method for adding items to inventory (Shop, Boss Drops, Chests).
+        /// Ensures that unhydrated metadata (blank names) is repaired before possession.
+        /// </summary>
+        public void AddPossession(string id, ShopCategory category, int quantity = 1)
+        {
+            // 1. Repair metadata before the item is ever seen by the player
+            object? dataObject = category switch
+            {
+                ShopCategory.Weapon => Database.Weapons.TryGetValue(id, out var w) ? w : null,
+                ShopCategory.Armor => Database.Armors.TryGetValue(id, out var a) ? a : null,
+                ShopCategory.Boots => Database.Boots.TryGetValue(id, out var b) ? b : null,
+                ShopCategory.Accessory => Database.Accessories.TryGetValue(id, out var acc) ? acc : null,
+                ShopCategory.Item => Database.Items.TryGetValue(id, out var i) ? i : null,
+                _ => null
+            };
+
+            if (dataObject != null)
+            {
+                ValidateMetadata(dataObject, id);
+            }
+
+            // 2. Add to actual inventory
+            if (category == ShopCategory.Item)
+            {
+                _inventory.AddItem(id, quantity);
+            }
+            else
+            {
+                for (int i = 0; i < quantity; i++)
+                {
+                    _inventory.AddEquipment(id, category);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Shop and Equipment
+
+        public void OpenShop(Combatant player, ShopType shopType)
+        {
+            _shopUI.OpenShop(player, shopType);
+        }
+
+        public void PerformEquip(Combatant player, string equipId, ShopCategory category)
+        {
+            string id = equipId?.Trim() ?? "";
+            bool success = false;
+            bool canEquip = LegacyInventoryResourceAdapter.Shared.Equip(_inventory, player, id, category);
+
+            switch (category)
+            {
+                case ShopCategory.Weapon:
+                    if (canEquip && Database.Weapons.TryGetValue(id, out var w))
+                    {
+                        ValidateMetadata(w, id);
+                        player.EquippedWeapon = w;
+                        success = true;
+                    }
+                    break;
+                case ShopCategory.Armor:
+                    if (canEquip && Database.Armors.TryGetValue(id, out var a))
+                    {
+                        ValidateMetadata(a, id);
+                        player.EquippedArmor = a;
+                        success = true;
+                    }
+                    break;
+                case ShopCategory.Boots:
+                    if (canEquip && Database.Boots.TryGetValue(id, out var b))
+                    {
+                        ValidateMetadata(b, id);
+                        player.EquippedBoots = b;
+                        success = true;
+                    }
+                    break;
+                case ShopCategory.Accessory:
+                    if (canEquip && Database.Accessories.TryGetValue(id, out var acc))
+                    {
+                        ValidateMetadata(acc, id);
+                        player.EquippedAccessory = acc;
+                        success = true;
+                    }
+                    break;
+            }
+
+            if (success)
+            {
+                player.RecalculateResources();
+                _messenger.Publish("Equipped successfully!", ConsoleColor.Gray, 500);
+            }
+            else
+            {
+                _messenger.Publish($"Error: ID {id} not found in Database.", ConsoleColor.Red, 1000);
+            }
+        }
+
+        /// <summary>
+        /// Fixes unhydrated Database objects. 
+        /// Priority 1: Use existing name if present.
+        /// Priority 2: Use Shop Registry metadata.
+        /// Priority 3: Fallback to ID-based formatting (Final Safety).
+        /// </summary>
+        private void ValidateMetadata(object obj, string id)
+        {
+            var meta = Database.ShopInventory.FirstOrDefault(x => x.Id == id);
+
+            if (obj is WeaponData w)
+            {
+                if (string.IsNullOrEmpty(w.Name)) w.Name = meta?.Name ?? $"Weapon {id}";
+                w.Id = id;
+            }
+            else if (obj is ArmorData a)
+            {
+                if (string.IsNullOrEmpty(a.Name)) a.Name = meta?.Name ?? $"Armor {id}";
+                a.Id = id;
+            }
+            else if (obj is BootData b)
+            {
+                if (string.IsNullOrEmpty(b.Name)) b.Name = meta?.Name ?? $"Boots {id}";
+                b.Id = id;
+            }
+            else if (obj is AccessoryData acc)
+            {
+                if (string.IsNullOrEmpty(acc.Name)) acc.Name = meta?.Name ?? $"Accessory {id}";
+                acc.Id = id;
+            }
+        }
+
+        #endregion
+
+        #region Restoration Logic
+
+        /// <summary>
+        /// Calculates the Macca cost to fully restore a combatant.
+        /// Logic: 1 Macca per 1 HP, 5 Macca per 1 SP.
+        /// </summary>
+        public int CalculateRestorationCost(Combatant patient)
+        {
+            return LegacyInventoryResourceAdapter.Shared.CalculateRestorationCost(patient);
+        }
+
+        /// <summary>
+        /// Logic for processing a Hospital treatment.
+        /// Validates funds and applies the state change.
+        /// Now handles persistent ailment removal (Task Implementation).
+        /// </summary>
+        public bool TryRestoreCombatant(Combatant patient) =>
+            TryRestoreCombatantDetailed(patient).LegacySuccess;
+
+        public HospitalTreatmentPresentationResult TryRestoreCombatantDetailed(Combatant patient)
+        {
+            var result = LegacyInventoryResourceAdapter.Shared.Restore(_economy, patient);
+            string? message;
+            ConsoleColor color;
+            int delay;
+
+            if (result.Applied)
+            {
+                message = $"{patient.Name} has been fully restored!";
+                color = ConsoleColor.Green;
+                delay = 800;
+            }
+            else
+            {
+                message = "Could not complete treatment.";
+                color = ConsoleColor.Red;
+                delay = 1000;
+            }
+
+            return new HospitalTreatmentPresentationResult(patient, result, message, color, delay);
+        }
+
+        #endregion
+
+        #region Item Usage Logic
+
+        /// <summary>
+        /// Executes item usage and returns an explicit result signal to the Conductor.
+        /// </summary>
+        public ItemUsageResult ExecuteItemUsage(ItemData item, Combatant user, Combatant target)
+        {
+            return ExecuteItemUsageDetailed(item, user, target).LegacyResult;
+        }
+
+        public FieldUseAssessment AssessItemUsage(ItemData item, Combatant target)
+        {
+            if (!_inventory.HasItem(item.Id))
+            {
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.ItemUnavailable);
+            }
+
+            if (item.Name == "Goho-M")
+            {
+                return FieldUseAssessment.RequestDungeonExit;
+            }
+
+            switch (item.Type)
+            {
+                case "Healing":
+                case "Healing_All":
+                    return target.CurrentHP >= target.MaxHP
+                        ? FieldUseAssessment.Failed(FieldUseExecutionReason.FullHp)
+                        : FieldUseAssessment.CanApply(consumeItem: true);
+
+                case "Spirit":
+                    return target.CurrentSP >= target.MaxSP
+                        ? FieldUseAssessment.Failed(FieldUseExecutionReason.FullSp)
+                        : FieldUseAssessment.CanApply(consumeItem: true);
+
+                case "Cure":
+                    return CanCure(target, item.Name)
+                        ? FieldUseAssessment.CanApply(consumeItem: true)
+                        : FieldUseAssessment.Failed(FieldUseExecutionReason.NoEffect);
+            }
+
+            return FieldUseAssessment.Failed(FieldUseExecutionReason.UnsupportedFieldUse);
+        }
+
+        public FieldUseExecutionResult ExecuteItemUsageDetailed(ItemData item, Combatant user, Combatant target)
+        {
+            var events = new List<FieldUsePresentationEvent>();
+            FieldUseAssessment assessment = AssessItemUsage(item, target);
+
+            if (!assessment.CanExecute)
+            {
+                switch (assessment.Reason)
+                {
+                    case FieldUseExecutionReason.FullHp:
+                        PublishFieldEvent(events, $"{target.Name}'s HP is already full.");
+                        break;
+                    case FieldUseExecutionReason.FullSp:
+                        PublishFieldEvent(events, $"{target.Name}'s SP is already full.");
+                        break;
+                    case FieldUseExecutionReason.NoEffect:
+                        PublishFieldEvent(events, "The item had no effect.");
+                        break;
+                }
+
+                return new FieldUseExecutionResult(
+                    assessment.LegacyResult,
+                    applied: false,
+                    consumeItem: false,
+                    assessment.Reason,
+                    events);
+            }
+
+            if (item.Name == "Goho-M")
+            {
+                PublishFieldEvent(events, "Using Goho-M... A mystical light surrounds the party.", ConsoleColor.Gray, 1000);
+                bool consumed = LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
+                _dungeonState.ResetToEntry();
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.RequestDungeonExit,
+                    applied: true,
+                    consumeItem: consumed,
+                    FieldUseExecutionReason.DungeonExitRequested,
+                    events);
+            }
+
+            bool effectApplied = false;
+
+            switch (item.Type)
+            {
+                case "Healing":
+                case "Healing_All":
+                    int healAmount = item.EffectValue >= 9999 ? target.MaxHP : item.EffectValue;
+                    target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + healAmount);
+                    PublishFieldEvent(events, $"{target.Name} recovered health.");
+                    effectApplied = true;
+                    break;
+
+                case "Spirit":
+                    target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + item.EffectValue);
+                    PublishFieldEvent(events, $"{target.Name} recovered SP.");
+                    effectApplied = true;
+                    break;
+
+                case "Cure":
+                    StatusRegistry sr = new StatusRegistry();
+                    if (sr.CheckAndExecuteCure(target, item.Name))
+                    {
+                        PublishFieldEvent(events, $"{target.Name} was cured of their ailment!");
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        PublishFieldEvent(events, "The item had no effect.");
+                    }
+                    break;
+            }
+
+            if (!effectApplied)
+            {
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.Failed,
+                    applied: false,
+                    consumeItem: false,
+                    FieldUseExecutionReason.NoEffect,
+                    events);
+            }
+
+            bool itemConsumed = LegacyInventoryResourceAdapter.Shared.RemoveItem(_inventory, item.Id, 1);
+            PublishFieldEvent(events, null, ConsoleColor.Gray, 800);
+            return new FieldUseExecutionResult(
+                ItemUsageResult.Applied,
+                applied: true,
+                consumeItem: itemConsumed,
+                FieldUseExecutionReason.None,
+                events);
+        }
+
+        #endregion
+
+        #region Skill Usage Logic
+
+        /// <summary>
+        /// Logic for using a character's skill on the field.
+        /// Handles SP cost deduction and effect calculation.
+        /// </summary>
+        public bool ExecuteSkillUsage(SkillData skill, Combatant user, Combatant target)
+        {
+            return ExecuteSkillUsageDetailed(skill, user, target).Applied;
+        }
+
+        public FieldUseAssessment AssessSkillUsage(SkillData skill, Combatant user, Combatant target)
+        {
+            var cost = skill.ParseCost();
+
+            if (user.CurrentSP < cost.value)
+            {
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.InsufficientSp);
+            }
+
+            // --- EFFECTIVENESS GATE ---
+            // If the action is redundant (e.g. curing a healthy person or healing a full HP person), block execution.
+            if (_statusRegistry.IsActionRedundant(user, skill, new List<Combatant> { target }))
+            {
+                return FieldUseAssessment.Failed(FieldUseExecutionReason.NoEffect);
+            }
+
+            return FieldUseAssessment.CanApply();
+        }
+
+        public FieldUseExecutionResult ExecuteSkillUsageDetailed(SkillData skill, Combatant user, Combatant target)
+        {
+            var events = new List<FieldUsePresentationEvent>();
+            FieldUseAssessment assessment = AssessSkillUsage(skill, user, target);
+
+            if (!assessment.CanExecute)
+            {
+                if (assessment.Reason == FieldUseExecutionReason.InsufficientSp)
+                {
+                    PublishFieldEvent(events, $"{user.Name} does not have enough SP.", ConsoleColor.Gray, 800);
+                }
+                else if (assessment.Reason == FieldUseExecutionReason.NoEffect)
+                {
+                    PublishFieldEvent(events, "This action would have no effect.");
+                }
+
+                return new FieldUseExecutionResult(
+                    ItemUsageResult.Failed,
+                    applied: false,
+                    consumeItem: false,
+                    assessment.Reason,
+                    events);
+            }
+
+            var cost = skill.ParseCost();
+            bool applied = false;
+            string effectLower = skill.Effect.ToLower();
+
+            // Decoupled Logic: Priority is Ailment Removal
+            if (effectLower.Contains("cure") || effectLower.Contains("dispel") || effectLower.Contains("patra"))
+            {
+                applied = _statusRegistry.CheckAndExecuteCure(target, skill.Effect);
+            }
+
+            // Secondary Logic: Recovery (Only if it wasn't a dedicated Cure that already finished)
+            if (!applied && skill.Category.Contains("Recovery"))
+            {
+                int heal = 0;
+                // Parse the power from the skill effect string if numerical
+                Match m = Regex.Match(skill.Effect, @"\((\d+)\)");
+                if (m.Success) heal = int.Parse(m.Groups[1].Value);
+
+                // Handle percentage-based field heals
+                if (skill.Effect.Contains("50%")) heal = target.MaxHP / 2;
+                if (skill.Effect.Contains("full")) heal = target.MaxHP;
+
+                // Apply standard power if neither percentage nor specific value found
+                if (heal == 0) heal = skill.GetPowerVal();
+
+                if (target.CurrentHP < target.MaxHP)
+                {
+                    target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + heal);
+                    PublishFieldEvent(events, $"{target.Name} was healed.");
+                    applied = true;
+                }
+                else if (effectLower.Contains("sp") || effectLower.Contains("spirit"))
+                {
+                    if (target.CurrentSP < target.MaxSP)
+                    {
+                        target.CurrentSP = Math.Min(target.MaxSP, target.CurrentSP + heal);
+                        PublishFieldEvent(events, $"{target.Name}'s SP was restored.");
+                        applied = true;
+                    }
+                }
+            }
+
+            if (applied)
+            {
+                user.CurrentSP -= cost.value;
+                PublishFieldEvent(events, null, ConsoleColor.Gray, 800);
+            }
+
+            return new FieldUseExecutionResult(
+                applied ? ItemUsageResult.Applied : ItemUsageResult.Failed,
+                applied,
+                consumeItem: false,
+                applied ? FieldUseExecutionReason.None : FieldUseExecutionReason.NoEffect,
+                events);
+        }
+
+        #endregion
+
+        #region Stat Allocation logic
+
+        // Handles the menu loop and selection for stat allocation.
+        public void AllocateStatPoint(Combatant player, StatType type)
+        {
+            if (player.StatPoints <= 0) return;
+
+            // Hard Cap Check
+            if (player.CharacterStats.ContainsKey(type) && player.CharacterStats[type] >= 40)
+            {
+                _messenger.Publish($"{type} has already reached the maximum cap of 40.", ConsoleColor.Yellow, 800);
+                return;
+            }
+
+            player.AllocateStat(type);
+            _messenger.Publish($"{type} increased!", ConsoleColor.Gray, 300);
+        }
+
+        // Rollback method to revert stats and points to a previous snapshot if player cancels.
+        public void RollbackStats(Combatant player, Dictionary<StatType, int> statBackup, int pointBackup)
+        {
+            foreach (var stat in statBackup)
+            {
+                player.CharacterStats[stat.Key] = stat.Value;
+            }
+            player.StatPoints = pointBackup;
+
+            // Crucial: Recalculate to fix HP/SP caps after stats are reverted
+            player.RecalculateResources();
+        }
+
+        #endregion
+
+        #region Persona Logic
+
+        /// <summary>
+        /// Executes a Persona swap in the field.
+        /// Uses "Flat Preservation" (Current HP remains same but capped at new MaxHP).
+        /// </summary>
+        public void PerformPersonaSwap(Combatant player, Persona newPersona)
+            => PerformPersonaSwapDetailed(player, newPersona);
+
+        public PartyStockPresentationResult PerformPersonaSwapDetailed(Combatant player, Persona newPersona)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SwapActivePersonaDetailed(player, newPersona);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.SwapActivePersona, transition);
+            }
+
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"Equipped {newPersona.Name}!", ConsoleColor.Gray, 800);
+
+            // Refresh Max Pools based on new stats (Vi/Ma influence)
+            player.RecalculateResources();
+
+            // Apply Edge-Case Capping (Absolute values preserved, but capped at new maximums)
+            player.CurrentHP = Math.Min(player.CurrentHP, player.MaxHP);
+            player.CurrentSP = Math.Min(player.CurrentSP, player.MaxSP);
+
+            return PartyStockResult(PartyStockPresentationOperation.SwapActivePersona, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult SummonDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SummonDemonDetailed(_party, owner, demon);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.SummonDemon, transition);
+            }
+
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{demon.Name} joined the party!", ConsoleColor.Gray, 800);
+            return PartyStockResult(PartyStockPresentationOperation.SummonDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult ReturnDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.ReturnDemonDetailed(_party, owner, demon);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.ReturnDemon, transition);
+            }
+
+            demon.ClearTransientBattleState();
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{demon.Name} returned to stock.", ConsoleColor.Gray, 600);
+            return PartyStockResult(PartyStockPresentationOperation.ReturnDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult SwapActiveDemonDetailed(Combatant owner, Combatant activeToRemove, Combatant standbyToAdd)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.SwapActiveDemonDetailed(
+                _party,
+                owner,
+                activeToRemove,
+                standbyToAdd);
+            if (!transition.Applied)
+            {
+                return PartyStockResult(PartyStockPresentationOperation.SwapActiveDemon, transition);
+            }
+
+            activeToRemove.ClearTransientBattleState();
+            PartyStockPresentationEvent presentationEvent =
+                PublishPartyStockEvent($"{activeToRemove.Name} swapped for {standbyToAdd.Name}!", ConsoleColor.Gray, 600);
+            return PartyStockResult(PartyStockPresentationOperation.SwapActiveDemon, transition, [presentationEvent]);
+        }
+
+        public PartyStockPresentationResult DismissDemonDetailed(Combatant owner, Combatant demon)
+        {
+            PartyStockTransitionResult transition = LegacyPartyStockAdapter.Shared.DismissDemonDetailed(_party, owner, demon);
+            return PartyStockResult(PartyStockPresentationOperation.DismissDemon, transition);
+        }
+
+        #endregion
+
+        #region Dungeon and Progression Logic
+
+        // Registers the defeat of a floor boss.
+        public void RegisterBossDefeat(string bossId)
+        {
+            if (!string.IsNullOrEmpty(bossId)) _dungeonState.MarkBossDefeated(bossId);
+        }
+
+        // Persistently unlocks a terminal for future warping.
+        public void UnlockTerminal(int floor)
+        {
+            _dungeonState.UnlockTerminal(floor);
+        }
+
+        #endregion
+
+        private static bool CanCure(Combatant target, string effectText)
+        {
+            if (target.CurrentAilment == null) return false;
+
+            string effectLower = effectText.ToLower();
+            bool curesAll = effectLower.Contains("cure all") ||
+                           effectLower.Contains("cures all") ||
+                           effectLower.Contains("amrita") ||
+                           effectLower.Contains("salvation");
+
+            return curesAll ||
+                effectLower.Contains(target.CurrentAilment.Name.ToLower()) ||
+                effectLower.Contains("dispel") ||
+                effectLower.Contains("dispels");
+        }
+
+        private static PartyStockPresentationResult PartyStockResult(
+            PartyStockPresentationOperation operation,
+            PartyStockTransitionResult transition,
+            IEnumerable<PartyStockPresentationEvent>? events = null) =>
+            new(
+                operation,
+                transition.Applied,
+                transition.Code,
+                transition.AffectedInstanceIds,
+                events);
+
+        private PartyStockPresentationEvent PublishPartyStockEvent(
+            string message,
+            ConsoleColor color,
+            int delay,
+            bool waitForInput = false,
+            bool clearScreen = false)
+        {
+            var presentationEvent = new PartyStockPresentationEvent(message, color, delay, waitForInput, clearScreen);
+            _messenger.Publish(message, color, delay, waitForInput, clearScreen);
+            return presentationEvent;
+        }
+
+        private void PublishFieldEvent(
+            List<FieldUsePresentationEvent> events,
+            string? message,
+            ConsoleColor color = ConsoleColor.Gray,
+            int delay = 0,
+            bool waitForInput = false,
+            bool clearScreen = false)
+        {
+            events.Add(new FieldUsePresentationEvent(message, color, delay, waitForInput, clearScreen));
+            _messenger.Publish(message, color, delay, waitForInput, clearScreen);
+        }
+    }
+}

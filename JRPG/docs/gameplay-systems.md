@@ -1,128 +1,47 @@
 # Gameplay Systems
 
-This document explains the main player-facing systems and the code that implements them.
+This document summarizes the reusable systems currently implemented by `Convergence.Framework`. Presentation and game-specific composition belong to the host.
 
-## Boot And Scenario Selection
+## Content And Catalog
 
-`Program.cs` starts the application, loads all JSON data, creates shared state managers, and asks the player to select a scenario. Scenarios configure the player's class, active persona, persona stock, demon stock, level, resources, and debug paths.
+The framework provides immutable definitions for skills, entities, races, ailments, items, equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets. Strict `System.Text.Json` DTOs are mapped into serializer-neutral definitions, semantically validated with explicit registrations, dependency-checked, qualified, and exposed through immutable repositories.
 
-Important scenario concepts:
+## Actors, Stats, Resources, And Growth
 
-- Human: basic character with no persona or demon management.
-- Persona User: has one active persona.
-- Wild Card: has an active persona plus persona stock.
-- Operator: commands demons through COMP-style demon stock and active party deployment.
-- Debug scenarios jump directly into battle, stress fusion, test compendium registration, or verify unified stock behavior.
+Catalog actor factories hydrate identity, level, stats, defenses, resources, learned skills, active skills, and passives. Runtime snapshots preserve canonical actor state. Progression services own stat resolution, experience curves, level growth, resource recalculation, allocation, and rollback through injected policies.
 
-## Character Classes
+## Actions And Effects
 
-`ClassType` in `Core/Enums.cs` controls major behavior branches.
+Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape, stock/form transitions, and host-mediated actions. Skills and items share targeting, condition evaluation, ordered effects, diagnostics, and transaction-safe inventory decisions. Behavior comes from typed definitions, not display text.
 
-- `Human`: baseline humanoid progression.
-- `PersonaUser` and `WildCard`: humanoids with persona stat influence.
-- `Operator`: humanoid with no persona stat influence, but access to demon stock and COMP party management.
-- `Demon`: combatant whose stats and affinities come from its active persona template.
+## Combat And Turn Economy
 
-The distinction matters in `StatProcessor`, `PartyManager`, `FusionConductor`, `FusionMutator`, and field/battle UI bridges.
+Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Press Turn is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
 
-## Personas And Demons
+## Status And Passives
 
-`PersonaData` is the JSON-backed template. `Persona` is the live mask/entity data used at runtime. `CombatantFactory` turns templates into enemy or allied demon combatants.
+The lifecycle service handles battle start, turn restrictions, turn end, duration ticking, reserve suspension, cleanup, ailment application, and passive trigger dispatch. Custom-handler execution is transactional. Passive modifiers support deterministic stacking and typed affinity or ailment replacements.
 
-Player-facing behavior:
+## Encounters, AI, Knowledge, And Rewards
 
-- Personas supply affinities, stat modifiers, base skills, and learned skills.
-- Demons are represented as `Combatant` instances with `ClassType.Demon` and an `ActivePersona`.
-- Enemies receive all eligible skills immediately.
-- Allied demons follow player-allied scaling and can be stored, summoned, fused, dismissed, recalled, or registered.
+The encounter runner owns initiative, phases, turns, lifecycle dispatch, command execution, liveness, cancellation, outcomes, and ordered events. Strategy ports allow deterministic or host-defined action selection. Player knowledge can persist through snapshots, while encounter AI knowledge may be scoped to one battle. Negotiation and reward services return immutable outcomes without owning presentation.
 
-## Battle
+## Party, Stock, Inventory, And Economy
 
-Battles use an SMT-style Press Turn loop.
+Transition services enforce runtime-ID uniqueness, active/reserve roles, form and stock capacity, summon/return/swap/consume behavior, item stacks, unique equipment ownership, equip compatibility, wallet arithmetic, shop transactions, and restoration transactions. Hosts own UI and durable inventory storage.
 
-Core flow:
+## Navigation, Traversal, And Encounter Preparation
 
-1. `BattleConductor.StartBattle` announces enemies and rolls initiative through `CombatMath.RollInitiative`.
-2. Initial passive buffs are applied by `StatusRegistry.ProcessInitialPassives`.
-3. Each side begins a phase with one full turn icon per alive actor through `PressTurnEngine.StartPhase`.
-4. Actors process turn-start restrictions through `StatusRegistry.ProcessTurnStart`.
-5. Player choices are collected by `InteractionBridge`; enemy choices are selected by `BehaviorEngine`.
-6. `ActionProcessor` executes attacks, skills, items, swaps, and analysis.
-7. Effects are resolved by `BattleEffectRegistry` strategies and `CombatMath`.
-8. `PressTurnEngine` consumes, chains, or terminates icons according to hit outcome.
-9. Battle completion resolves rewards, recruitment, cleanup, and compendium registration.
+Generic navigation uses arbitrary `ContentId` locations and injected access policy. Optional dungeon traversal uses arbitrary node IDs and injected traversal policy. Neither service prescribes scenes, menus, floors, or automatic battles. Hosts explicitly trigger authored encounters; preparation services hydrate ordered runtime actors from catalog formations.
 
-Important battle concepts:
+## Fusion, Inheritance, And Compendium
 
-- Weakness and critical hits convert full icons to blinking icons when available.
-- Miss and null consume two icons.
-- Repel and absorb terminate the phase.
-- Guarding halves damage, blocks critical hits, and suppresses weakness.
-- Rigid-body ailments such as Freeze, Shock, Bind, and Stun make physical hits critical.
-- `BattleKnowledge` records discovered affinities and powers analysis/AI decisions.
+Fusion services resolve typed recipes and strategy policies, build deterministic candidate plans, validate inherited skill selections, construct previews, and assess transactions. Inheritance precedence is typed and shared between preview and commit. Compendium services distinguish first acquisition from explicit updates: `RecordAcquisition` adds a missing entry but preserves an existing snapshot, while `RegisterActor` is the deliberate add-or-update operation. Recall pricing and familiar-knowledge import remain separately configurable.
 
-## Negotiation And Recruitment
+## Persistence
 
-Negotiation is part of the battle subsystem through `NegotiationEngine`, using negotiation questions loaded from `questions.json`.
+Versioned snapshots cover actors, party/stock, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Hosts own serialization, slots, suspend-save storage, and UI.
 
-Player-facing behavior:
+## Demonstration Coverage
 
-- Moon phase can block negotiation at Full Moon through `MoonPhaseSystem.IsNegotiationBlocked`.
-- Demons can make demands involving resources or items.
-- Recruitment interacts with party/stock limits through `PartyManager`.
-- Familiar demons can use alternate dialogue paths.
-- Successful recruitment can feed compendium registration after battle.
-
-## Field, City, And Dungeon
-
-`FieldConductor` owns non-combat navigation. It coordinates city services, inventory, status, party organization, dungeon entry, and fusion access.
-
-Field gameplay is split between:
-
-- `FieldServiceEngine`: hospital restoration, field items, field skills, equipment, stat allocation, and progression side effects.
-- `DungeonManager`: current floor evaluation, fixed floor handling, random encounter generation, terminals, and boss state.
-- `ExplorationProcessor`: floor transitions, entry triggers, terminal unlocks, and enemy hydration.
-- Field bridges: menu rendering and choice collection.
-
-Dungeon state is stored in `DungeonState`: current dungeon ID, current floor, max floor reached, unlocked terminals, and defeated bosses.
-
-## Inventory, Equipment, Shops, And Economy
-
-`InventoryManager` stores consumable quantities and owned equipment IDs. `EconomyManager` stores Macca. `ShopEngine` calculates buy/sell prices and executes transactions.
-
-Important rules:
-
-- Items are quantity-based.
-- Equipment ownership is stored as ID lists by category.
-- Buy prices decrease with Luck down to a 50% multiplier.
-- Sell prices start at 50% and increase with Luck.
-- Equipment metadata can be patched from shop entries if JSON-loaded objects are missing names or IDs.
-- Equipping recalculates resources because accessories and defensive equipment can affect derived stats and pools.
-
-## Fusion And Compendium
-
-`FusionConductor` runs the Cathedral workflow. `FusionCalculator` predicts results, `FusionMutator` commits transactions, and strategies implement operation-specific mutation.
-
-Supported fusion concepts:
-
-- Binary fusion.
-- Sacrificial fusion with EXP transfer.
-- Race-table fusion from `fusion_table.json`.
-- Specific-ID fusion recipes.
-- Element rank up/down mutations.
-- Mitama stat-boost fusion.
-- Fusion accidents, with higher accident chance at Full Moon.
-- Skill inheritance with exclusive-skill filtering and slot scaling.
-- Compendium registration and recall.
-
-Operators fuse demons from demon stock and active party references. Wild Cards fuse personas from active persona and persona stock.
-
-## Extension Mindset
-
-When adding new gameplay content:
-
-- Add raw data to JSON when the system is already data-driven.
-- Add enum values only when new behavior branches are truly needed.
-- Add new battle effect strategies when a skill category requires new rule logic.
-- Add field/fusion/battle bridge options only after the engine behavior exists.
-- Keep state mutation centralized in managers, engines, processors, or strategies rather than UI bridges.
+DemoHost provides focused battle, field, and save demonstrations plus the original Training Annex end-to-end slice. The [capability matrix](framework-capability-matrix.md) records whether each framework area is complete, partial, or deferred independently from demo breadth.

@@ -1,56 +1,30 @@
-# JRPGPrototype Documentation
+# Convergence Documentation
 
-This documentation describes the JRPG console prototype as both a gameplay system and a C# codebase. It is written for future developers, designers, and writers who need to understand how player-facing features map to concrete classes, data files, and runtime flows.
+This directory is the active documentation authority for Convergence Framework.
 
-## Project At A Glance
+## Start Here
 
-- Runtime: .NET 9 console executable with nullable reference types enabled.
-- Data: JSON content in `Data/Jsons`, loaded through the static `Database` class with `Newtonsoft.Json`.
-- Presentation: console I/O is abstracted behind `IGameIO`, with `ConsoleIO` as the current implementation.
-- Architecture: conductors orchestrate workflows, engines/processors own rules, bridges own menus, and messengers/loggers separate logic events from console output.
-- Validation baseline: `dotnet build --no-restore` succeeds, currently with nullable and DTO initialization warnings. There is no separate test project.
+1. [Project Vision](project-vision.md): what Convergence is and what it deliberately does not own.
+2. [Repository Map](repository-map.md): where active product code, tests, content, and examples live.
+3. [Architecture](architecture.md): dependency direction and module responsibilities.
+4. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
+5. [Capability Matrix](framework-capability-matrix.md): executable maturity state and known gaps.
+6. [Roadmap](roadmap.md): current forward priorities after the Phase 8 product boundary.
+7. [Godot Integration Contract](godot-integration-contract.md): how an engine host consumes the framework.
+8. [Public API Namespaces](public-api-namespaces.md): namespace ownership.
+9. [Content Contract](content-contract.md): clean content organization and loading authority.
+10. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
 
-## Recommended Reading Order
+## Authority Rules
 
-1. [Architecture](architecture.md) explains the codebase shape and recurring patterns.
-2. [Gameplay Systems](gameplay-systems.md) explains the player-facing systems in implementation terms.
-3. [Project Vision](project-vision.md) records the long-term direction for Convergence as a reusable RPG systems framework.
-4. [Host/Core Boundary](host-core-boundary.md) maps current code into future framework, host, adapter, and transitional responsibilities.
-5. [Bridge Contracts](bridge-contracts.md) defines the shared command/result/cancel pattern for future bridge and adapter refactors.
-6. [Refactor Roadmap](refactor-roadmap.md) lays out the migration path from console prototype to reusable framework.
-7. [Skill System GDD](skill-system-gdd.md) defines the target elements, skill taxonomy, effects, passives, and inheritance groups.
-8. [Content Schema v1 Proposal](content-schema-v1-proposal.md) proposes the replacement content model to approve before further data migration.
-9. Subsystem chapters:
-   - [Core](subsystems/core.md)
-   - [Data](subsystems/data.md)
-   - [Entities](subsystems/entities.md)
-   - [Services](subsystems/services.md)
-   - [Battle](subsystems/battle.md)
-   - [Field](subsystems/field.md)
-   - [Fusion](subsystems/fusion.md)
+- Current source and automated tests define implemented behavior.
+- Active documents describe ownership, supported integration, and future priorities.
+- [`phase-8-product-boundary-plan.md`](phase-8-product-boundary-plan.md) is the completed restructuring record.
+- Everything under [`ArchiveDocs/LegacyFramework`](../ArchiveDocs/LegacyFramework) is unsupported historical evidence. Active implementation must not depend on it.
 
-## Runtime Flow
+## Maintenance
 
-`Program.cs` is the executable entry point. It initializes `IGameIO`, loads JSON content through `Database.LoadData`, creates shared managers, builds a player scenario, and then either jumps into debug/test scenarios or enters the field loop through `FieldConductor`.
-
-Most gameplay flows follow the same shape:
-
-1. A conductor owns the high-level loop.
-2. Bridges collect user choices through `IGameIO`.
-3. Engines/processors apply rules and mutate state.
-4. Messengers publish events.
-5. Loggers render those events to the console.
-
-## Documentation Convention
-
-Each subsystem chapter uses the same structure:
-
-- Purpose and player-facing concept.
-- Key classes and responsibilities.
-- Main runtime flows.
-- Important state and invariants.
-- JSON or data dependencies.
-- Extension points and common modification paths.
-- Known caveats observed in the current implementation.
-
-This keeps future iterations predictable: when a module changes, update the concept, code responsibilities, and flow notes together.
+- Update active docs with behavior or ownership changes.
+- Keep host-specific instructions out of framework contracts.
+- Record deferred work explicitly in the capability matrix or roadmap.
+- Archive superseded plans instead of allowing multiple documents to claim authority.

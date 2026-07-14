@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "convergence.skill_system_redesign_sample",
+  "version": "0.1.0",
+  "displayName": "Skill System Redesign Sample",
+  "documents": [
+    {
+      "type": "races",
+      "path": "skill_system_redesign.races.sample.json"
+    },
+    {
+      "type": "skills",
+      "path": "skill_system_redesign.skills.sample.json"
+    },
+    {
+      "type": "entities",
+      "path": "skill_system_redesign.entities.sample.json"
+    }
+  ]
+}

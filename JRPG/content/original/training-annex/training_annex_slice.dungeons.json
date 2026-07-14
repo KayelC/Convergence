@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "dungeons": [
+    {
+      "id": "training_annex",
+      "displayName": "Training Annex",
+      "description": "A small original clean-content dungeon segment for framework review.",
+      "blocks": [
+        {
+          "id": "annex_floor",
+          "displayName": "Annex Floor",
+          "startFloor": 2,
+          "endFloor": 5,
+          "encounterPoolIds": [
+            "ashling_drill",
+            "mixed_drill"
+          ],
+          "fixedFloors": [
+            {
+              "floor": 3,
+              "kind": "safe_room",
+              "description": "A quiet review alcove with a terminal.",
+              "hasTerminal": true,
+              "transitionRuleId": "return_to_lobby"
+            },
+            {
+              "floor": 4,
+              "kind": "battle",
+              "description": "A controlled defensive check.",
+              "encounterId": "shell_check"
+            },
+            {
+              "floor": 5,
+              "kind": "block_end",
+              "description": "A sealed marker showing the end of the sample annex.",
+              "barrierRuleId": "training_barrier"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

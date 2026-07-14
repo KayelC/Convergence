@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "equipment": [
+    {
+      "id": "shortsword_sample",
+      "displayName": "Shortsword",
+      "description": "A simple physical weapon sample.",
+      "slot": "weapon",
+      "baseValue": 1200,
+      "weapon": {
+        "basicAttack": {
+          "element": "physical",
+          "power": 20,
+          "accuracy": 92,
+          "isLongRange": false
+        }
+      }
+    },
+    {
+      "id": "school_uniform_sample",
+      "displayName": "School Uniform",
+      "description": "A light armor sample.",
+      "slot": "armor",
+      "baseValue": 500,
+      "armor": {
+        "defense": 12,
+        "evasion": 2
+      }
+    },
+    {
+      "id": "rubber_soles_sample",
+      "displayName": "Rubber Soles",
+      "description": "A basic boots sample.",
+      "slot": "boots",
+      "baseValue": 800,
+      "boots": {
+        "evasion": 5
+      }
+    },
+    {
+      "id": "strength_wristband_sample",
+      "displayName": "Strength Wristband",
+      "description": "A small strength accessory sample.",
+      "slot": "accessory",
+      "baseValue": 3000,
+      "accessory": {
+        "statModifiers": [
+          {
+            "statId": "strength",
+            "value": 2
+          }
+        ]
+      }
+    }
+  ]
+}

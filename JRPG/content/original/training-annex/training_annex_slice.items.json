@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "annex_tonic",
+      "displayName": "Annex Tonic",
+      "description": "Restores 20 HP in battle or field contexts.",
+      "itemKind": "consumable",
+      "stackLimit": 20,
+      "baseValue": 50,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "restore_resource",
+            "resourceId": "hp",
+            "amount": {
+              "type": "flat",
+              "value": 20
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "focus_tea",
+      "displayName": "Focus Tea",
+      "description": "Restores a small amount of SP in battle or field contexts.",
+      "itemKind": "consumable",
+      "stackLimit": 10,
+      "baseValue": 70,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "restore_resource",
+            "resourceId": "sp",
+            "amount": {
+              "type": "flat",
+              "value": 8
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cleanse_drop",
+      "displayName": "Cleanse Drop",
+      "description": "Removes the sample poison ailment in battle or field contexts.",
+      "itemKind": "consumable",
+      "stackLimit": 10,
+      "baseValue": 40,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "alive",
+          "allowSelf": true
+        },
+        "effects": [
+          {
+            "type": "remove_ailment",
+            "scope": "selected",
+            "ailmentIds": ["sample_poison"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "revival_pin",
+      "displayName": "Revival Pin",
+      "description": "Revives one defeated ally with partial HP.",
+      "itemKind": "consumable",
+      "stackLimit": 5,
+      "baseValue": 150,
+      "usage": {
+        "contexts": ["battle", "field"],
+        "consumeOn": "successful_execution",
+        "targeting": {
+          "relation": "ally",
+          "selection": "single",
+          "lifeState": "dead",
+          "allowSelf": false
+        },
+        "effects": [
+          {
+            "type": "revive",
+            "resourceId": "hp",
+            "amount": {
+              "type": "percent_max",
+              "value": 50
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "training_badge",
+      "displayName": "Training Badge",
+      "description": "A key item placeholder proving non-consumable item records.",
+      "itemKind": "key",
+      "stackLimit": 1,
+      "baseValue": 0
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "convergence.catalog_surface_sample",
+  "version": "0.1.0",
+  "displayName": "Catalog Surface Sample",
+  "dependencies": [
+    {
+      "id": "convergence.clean_battle_demo",
+      "version": "0.1.0"
+    },
+    {
+      "id": "convergence.shared_effects_demo",
+      "version": "0.1.0"
+    }
+  ],
+  "documents": [
+    {
+      "type": "equipment",
+      "path": "catalog_surface_sample.equipment.json"
+    },
+    {
+      "type": "shops",
+      "path": "catalog_surface_sample.shops.json"
+    },
+    {
+      "type": "negotiations",
+      "path": "catalog_surface_sample.negotiations.json"
+    },
+    {
+      "type": "encounters",
+      "path": "catalog_surface_sample.encounters.json"
+    },
+    {
+      "type": "dungeons",
+      "path": "catalog_surface_sample.dungeons.json"
+    },
+    {
+      "type": "fusion",
+      "path": "catalog_surface_sample.fusion.json"
+    },
+    {
+      "type": "rulesets",
+      "path": "catalog_surface_sample.rulesets.json"
+    }
+  ]
+}

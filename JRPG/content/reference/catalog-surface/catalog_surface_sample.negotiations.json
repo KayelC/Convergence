@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "negotiations": [
+    {
+      "id": "childlike_sample",
+      "displayName": "Childlike Negotiation",
+      "description": "A compact negotiation sample based on a playful personality.",
+      "personalityId": "childlike",
+      "questions": [
+        {
+          "text": "Hee-ho! You wanna be my friend?",
+          "answers": [
+            {
+              "text": "Of course.",
+              "score": 2
+            },
+            {
+              "text": "Only if you are strong.",
+              "score": 0
+            },
+            {
+              "text": "Not now.",
+              "score": -1
+            }
+          ]
+        }
+      ],
+      "familiarDialogueLines": [
+        "Hee-ho! I already know you!"
+      ],
+      "demands": [
+        {
+          "demandId": "macca",
+          "weight": 1,
+          "parameters": {
+            "amount": 100
+          }
+        }
+      ],
+      "defaultRaceIds": [
+        "convergence.clean_battle_demo:demo_spirit"
+      ],
+      "defaultEntityIds": [
+        "convergence.clean_battle_demo:frost_duelist_demo"
+      ]
+    }
+  ]
+}

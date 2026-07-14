@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "shops": [
+    {
+      "id": "paulownia_blacksmith_sample",
+      "displayName": "Paulownia Blacksmith",
+      "description": "A minimal shop catalog sample.",
+      "categoryId": "weapon_shop",
+      "availabilityContexts": ["field"],
+      "offers": [
+        {
+          "contentKind": "equipment",
+          "contentId": "shortsword_sample",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 1200
+          },
+          "stock": {
+            "kind": "unlimited"
+          }
+        },
+        {
+          "contentKind": "item",
+          "contentId": "convergence.shared_effects_demo:medicine_demo",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 150
+          },
+          "stock": {
+            "kind": "limited",
+            "quantity": 8
+          }
+        }
+      ]
+    }
+  ]
+}

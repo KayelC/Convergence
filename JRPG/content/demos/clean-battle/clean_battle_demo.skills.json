@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "frost_lance_demo",
+      "displayName": "Frost Lance",
+      "description": "A deterministic Ice attack for the clean battle demo.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "ice",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 3
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": [
+          "battle"
+        ]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "ice",
+          "power": 16,
+          "accuracy": 100,
+          "critical": {
+            "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ember_bolt_demo",
+      "displayName": "Ember Bolt",
+      "description": "A deterministic Fire attack for the clean battle demo.",
+      "activation": "active",
+      "menuGroup": "offense",
+      "inheritanceGroupId": "fire",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "costs": [
+        {
+          "resourceId": "sp",
+          "amount": {
+            "type": "flat",
+            "value": 3
+          }
+        }
+      ],
+      "targeting": {
+        "relation": "enemy",
+        "selection": "single",
+        "lifeState": "alive",
+        "allowSelf": false
+      },
+      "availability": {
+        "contexts": [
+          "battle"
+        ]
+      },
+      "effects": [
+        {
+          "type": "damage",
+          "elementId": "fire",
+          "power": 12,
+          "accuracy": 100,
+          "critical": {
+            "mode": "never"
+          },
+          "hits": {
+            "minimum": 1,
+            "maximum": 1,
+            "distribution": "fixed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "regenerate_demo",
+      "displayName": "Regenerate",
+      "description": "Restores HP at the end of the owner's committed action.",
+      "activation": "passive",
+      "inheritanceGroupId": "passive",
+      "inheritance": {
+        "isInheritable": true
+      },
+      "triggers": [
+        {
+          "event": "owner_turn_end",
+          "effects": [
+            {
+              "type": "restore_resource",
+              "resourceId": "hp",
+              "amount": {
+                "type": "percent_max",
+                "value": 5
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

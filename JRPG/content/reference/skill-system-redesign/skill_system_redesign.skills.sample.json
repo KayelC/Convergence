@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "ice_boost_sample",
+      "displayName": "Ice Boost Sample",
+      "description": "Reference passive that increases Ice damage by 25 percent.",
+      "activation": "passive",
+      "inheritanceGroupId": "passive",
+      "inheritance": {
+        "isInheritable": true,
+        "exclusiveOwnerEntityIds": []
+      },
+      "modifiers": [
+        {
+          "type": "damage_dealt",
+          "operation": "multiply",
+          "value": 1.25,
+          "when": {
+            "type": "effect_element_is",
+            "elementId": "ice"
+          }
+        }
+      ]
+    }
+  ]
+}

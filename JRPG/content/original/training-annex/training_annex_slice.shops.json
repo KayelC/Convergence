@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "shops": [
+    {
+      "id": "training_supply",
+      "displayName": "Training Supply",
+      "description": "A small shop catalog for generic sample content.",
+      "categoryId": "training_supply",
+      "availabilityContexts": ["field"],
+      "offers": [
+        {
+          "contentKind": "item",
+          "contentId": "annex_tonic",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 50
+          },
+          "stock": {
+            "kind": "unlimited"
+          }
+        },
+        {
+          "contentKind": "item",
+          "contentId": "cleanse_drop",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 40
+          },
+          "stock": {
+            "kind": "limited",
+            "quantity": 5
+          }
+        },
+        {
+          "contentKind": "equipment",
+          "contentId": "practice_blade",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 120
+          },
+          "stock": {
+            "kind": "unlimited"
+          }
+        },
+        {
+          "contentKind": "equipment",
+          "contentId": "padded_jacket",
+          "price": {
+            "kind": "fixed",
+            "basePrice": 90
+          },
+          "stock": {
+            "kind": "unlimited"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,725 @@
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Runtime;
+using Xunit;
+
+namespace Convergence.Framework.Tests.Content;
+
+public sealed class BattleActionExecutorTests
+{
+    private static readonly ContentId Battle = Id("battle");
+    private static readonly ContentId TeamA = Id("team_a");
+    private static readonly ContentId TeamB = Id("team_b");
+    private static readonly ContentId Hp = StandardProgressionIds.Hp;
+    private static readonly ContentId Sp = StandardProgressionIds.Sp;
+
+    [Fact]
+    public async Task GuardAndPass_ReturnTypedTurnConsumptionWithoutPresentationCoupling()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+
+        BattleActionExecutionResult guard = await Execute(executor, new GuardBattleActionCommand(), actor, [actor]);
+        BattleActionExecutionResult pass = await Execute(executor, new PassBattleActionCommand(), actor, [actor]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, guard.Status);
+        Assert.True(actor.IsGuarding);
+        Assert.Equal(ActionTurnConsumptionKind.Normal, guard.TurnConsumption.Kind);
+        Assert.Equal(ActionTurnConsumptionKind.Pass, pass.TurnConsumption.Kind);
+        Assert.DoesNotContain(
+            guard.Events.Concat(pass.Events),
+            battleEvent => battleEvent.Message.Contains("Console", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task BasicAttack_ExecutesTypedDamageAndReturnsPressTurnOutcome()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
+            "target",
+            TeamB,
+            hp: 40,
+            defense: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Physical, ElementalAffinity.Weak)]));
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            SingleEnemy(),
+            [target.InstanceId]);
+
+        BattleActionExecutionResult result = await Execute(executor, command, actor, [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(30, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(ActionTurnConsumptionKind.PressTurn, result.TurnConsumption.Kind);
+        Assert.Equal(PressTurnOutcome.Weakness, result.TurnConsumption.PressTurn!.Outcome);
+        Assert.Equal(ElementalAffinity.Weak, Assert.Single(result.Effects).ResolvedAffinity);
+    }
+
+    [Fact]
+    public async Task SkillAction_SharesAssessmentWithExecutionAndCommitsCosts()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA, sp: 10);
+        RuntimeActorState target = Actor("target", TeamB);
+        SkillDefinition skill = ActiveSkill(
+            "frost",
+            [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))],
+            [new DamageEffectDefinition(DamageElement.Ice, 7, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1))]);
+        var command = new SkillBattleActionCommand(skill, [target.InstanceId]);
+        var request = Request(command, actor, [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(7, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.PressTurn, result.TurnConsumption.Kind);
+    }
+
+    [Fact]
+    public async Task RandomSkill_OneStepExecutionResolvesAndMutatesExactlyOneTarget()
+    {
+        var randomTargets = new AlternatingSkillRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(randomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        SkillDefinition skill = ActiveSkill(
+            "random_frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))],
+            RandomEnemy());
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new SkillBattleActionCommand(skill), actor, [actor, first, second]));
+
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task RandomItem_PreparedAssessmentExecutesTheDisplayedTargetWithoutRerolling()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamA, hp: 20);
+        RuntimeActorState second = Actor("second", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "random_medicine",
+            [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))],
+            RandomAlly());
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine),
+            actor,
+            [actor, first, second],
+            inventory);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([first.InstanceId], assessment.TargetIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeInstanceId>)assessment.TargetIds).Add(second.InstanceId));
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Equal(40, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(20, second.GetRequiredResource(Hp).Current);
+        Assert.Equal(0, inventory.Quantity);
+    }
+
+    [Fact]
+    public async Task RandomBasicAttack_PreparedAssessmentIsSingleUseAndNeverRerolls()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            RandomEnemy());
+        BattleActionExecutionRequest request = Request(command, actor, [actor, first, second]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult executed = await executor.ExecuteAsync(request, assessment);
+        BattleActionExecutionResult reused = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([first.InstanceId], assessment.TargetIds);
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(executed.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, reused.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(reused.Diagnostics).Code);
+    }
+
+    [Fact]
+    public async Task Analyze_PreparedAssessmentExecutesItsDisplayedTargetWithoutRandomSelection()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var command = new AnalyzeBattleActionCommand(target.InstanceId, [AnalysisLayer.Affinities]);
+        BattleActionExecutionRequest request = Request(command, actor, [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([target.InstanceId], assessment.TargetIds);
+        Assert.Equal(0, randomTargets.CallCount);
+        Assert.Equal(target.InstanceId, Assert.Single(result.Effects).TargetId);
+        Assert.Contains(AnalysisLayer.Affinities, actor.GetAnalysis(target.InstanceId));
+    }
+
+    [Fact]
+    public async Task PreparedAssessment_RejectsAnotherRequestWithoutConsumptionOrMutation()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        BattleActionExecutor otherExecutor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            RandomEnemy());
+        BattleActionExecutionRequest assessedRequest = Request(command, actor, [actor, first, second]);
+        BattleActionExecutionRequest differentRequest = Request(command, actor, [actor, first, second]);
+
+        BattleActionAssessment assessment = executor.Assess(assessedRequest);
+        BattleActionExecutionResult wrongExecutor = await otherExecutor.ExecuteAsync(assessedRequest, assessment);
+        BattleActionExecutionResult mismatch = await executor.ExecuteAsync(differentRequest, assessment);
+        BattleActionExecutionResult executed = await executor.ExecuteAsync(assessedRequest, assessment);
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, wrongExecutor.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(wrongExecutor.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, mismatch.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(mismatch.Diagnostics).Code);
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(first.InstanceId, Assert.Single(executed.Effects).TargetId);
+        Assert.Equal(90, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task ItemAction_ReservesAndCommitsOnlyWhenConsumptionSucceeds()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.ItemConsumption);
+        Assert.True(result.ItemConsumptionCommitted);
+        Assert.Equal(0, inventory.Quantity);
+        Assert.Equal(40, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task ItemAction_DoesNotReserveWhenAssessmentRejects()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 100);
+        ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
+    public async Task ItemAction_ThrowingEffectRollsBackReservationAndActorState()
+    {
+        ContentId handlerId = Id("throwing_item_effect");
+        BattleActionExecutor executor = Executor(
+            customEffects: [new(handlerId, new ThrowingCustomEffectHandler())]);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition item = ConsumableItem(
+            "unstable_medicine",
+            [
+                new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)),
+                new CustomEffectDefinition(handlerId)
+            ]);
+        var inventory = new TestItemInventory(item.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(item, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == BattleActionDiagnosticCode.ItemRejected &&
+            diagnostic.Message.Contains("failed before commit", StringComparison.Ordinal));
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.False(result.ItemConsumptionCommitted);
+        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleActionEventKind.ItemRolledBack);
+    }
+
+    [Fact]
+    public async Task ItemAction_RejectedCommitLeavesStagedEffectsUnpublished()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new RejectingCommitInventory(medicine.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ItemCommitFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.True(inventory.WasRolledBack);
+        Assert.False(result.ItemConsumptionCommitted);
+    }
+
+    [Fact]
+    public async Task ItemAction_ThrowingReservationReturnsTypedFailureWithoutMutation()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new ThrowingReserveInventory(medicine.Id);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ItemReservationFailed,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task ItemAction_CancellationOccursBeforeReservation()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem("medicine", new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await executor.ExecuteAsync(
+                Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory),
+                cancellation.Token));
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
+    public async Task PreparedItemCancellationDoesNotConsumeAssessmentOrReserveInventory()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamA, hp: 20);
+        RuntimeActorState second = Actor("second", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "random_medicine",
+            [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))],
+            RandomAlly());
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine),
+            actor,
+            [actor, first, second],
+            inventory);
+        BattleActionAssessment assessment = executor.Assess(request);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await executor.ExecuteAsync(request, assessment, cancellation.Token));
+        BattleActionExecutionResult retried = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(1, inventory.ReservationsCreated);
+        Assert.Equal(BattleActionExecutionStatus.Executed, retried.Status);
+        Assert.Equal(40, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(20, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task AnalyzeEscapeHostAndPartyCommands_ReturnStructuredResults()
+    {
+        ContentId escapeRule = Id("standard_escape");
+        BattleActionExecutor executor = Executor(escapeRules: [new(escapeRule, new AlwaysEscapeRule())]);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        RuntimePartyStockSnapshot stock = PartyStock();
+
+        BattleActionExecutionResult analyze = await Execute(
+            executor,
+            new AnalyzeBattleActionCommand(target.InstanceId, [AnalysisLayer.Stats]),
+            actor,
+            [actor, target]);
+        BattleActionExecutionResult escape = await Execute(
+            executor,
+            new EscapeAttemptBattleActionCommand(escapeRule, 100),
+            actor,
+            [actor, target]);
+        BattleActionExecutionResult host = await Execute(
+            executor,
+            new HostMediatedBattleActionCommand(BattleActionKind.TacticsChange, Id("change_strategy"), ActionTurnConsumption.None),
+            actor,
+            [actor]);
+        BattleActionExecutionResult summon = await Execute(
+            executor,
+            new DemonSummonBattleActionCommand(stock, RuntimeInstanceId.Parse("demon:pixie")),
+            actor,
+            [actor]);
+
+        Assert.Contains(AnalysisLayer.Stats, actor.GetAnalysis(target.InstanceId));
+        Assert.True(escape.EscapeRequested);
+        Assert.Equal(ActionTurnConsumptionKind.None, escape.TurnConsumption.Kind);
+        Assert.Equal([Id("change_strategy")], host.HostActionRequestIds);
+        Assert.NotNull(summon.PartyStockTransition);
+        Assert.True(summon.PartyStockTransition.Applied);
+    }
+
+    private static BattleActionExecutionRequest Request(
+        BattleActionCommand command,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        IItemActionInventory? inventory = null) =>
+        new(command, actor, participants, new EffectExecutionEnvironment(Battle), inventory);
+
+    private static Task<BattleActionExecutionResult> Execute(
+        BattleActionExecutor executor,
+        BattleActionCommand command,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants) =>
+        executor.ExecuteAsync(Request(command, actor, participants)).AsTask();
+
+    private static BattleActionExecutor Executor(
+        IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
+        IRandomTargetSelectionPolicy? randomTargetPolicy = null,
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
+    {
+        var services = new BattleExecutionServices(
+            EmptyAilments.Instance,
+            new FixedDamagePolicy(),
+            new NeverInstantDeathPolicy(),
+            new NeverAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new PowerAmountPolicy(),
+            randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
+            escapeRuleHandlers: escapeRules,
+            customEffectHandlers: customEffects,
+            runtimeRandomTargetPolicy: runtimeRandomTargetPolicy);
+        return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
+    }
+
+    private static RuntimeActorState Actor(
+        string id,
+        ContentId team,
+        decimal hp = 100,
+        decimal sp = 20,
+        CombatDefenseProfile? defense = null) =>
+        new(
+            RuntimeInstanceId.Parse(id),
+            Id(id + "_entity"),
+            team,
+            Hp,
+            defense ?? CombatDefenseProfile.Empty,
+            [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 20)],
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Agility, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Luck, 10)
+            ]);
+
+    private static SkillDefinition ActiveSkill(
+        string id,
+        IEnumerable<SkillCostDefinition> costs,
+        IEnumerable<EffectDefinition> effects,
+        TargetingDefinition? targeting = null) =>
+        new(
+            Id(id),
+            id,
+            id,
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            InheritanceGroup.Ice,
+            new SkillInheritanceDefinition(true),
+            costs: costs,
+            targeting: targeting ?? SingleEnemy(),
+            effects: effects,
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+    private static ItemDefinition ConsumableItem(string id, EffectDefinition effect) =>
+        ConsumableItem(id, [effect]);
+
+    private static ItemDefinition ConsumableItem(string id, IEnumerable<EffectDefinition> effects) =>
+        ConsumableItem(id, effects, SingleAlly());
+
+    private static ItemDefinition ConsumableItem(
+        string id,
+        IEnumerable<EffectDefinition> effects,
+        TargetingDefinition targeting) =>
+        new(
+            Id(id),
+            id,
+            id,
+            ItemKind.Consumable,
+            99,
+            10,
+            new ItemUsageDefinition([Battle], targeting, effects));
+
+    private static TargetingDefinition SingleEnemy() =>
+        new(TargetRelation.Enemy, TargetSelection.Single, TargetLifeState.Alive, false);
+
+    private static TargetingDefinition SingleAlly() =>
+        new(TargetRelation.Ally, TargetSelection.Single, TargetLifeState.Alive, true);
+
+    private static TargetingDefinition RandomEnemy() =>
+        new(
+            TargetRelation.Enemy,
+            TargetSelection.Random,
+            TargetLifeState.Alive,
+            false,
+            new TargetCountDefinition(1, 1));
+
+    private static TargetingDefinition RandomAlly() =>
+        new(
+            TargetRelation.Ally,
+            TargetSelection.Random,
+            TargetLifeState.Alive,
+            false,
+            new TargetCountDefinition(1, 1));
+
+    private static RuntimePartyStockSnapshot PartyStock() =>
+        new(
+            new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero"),
+            10,
+            [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero")],
+            demonStock:
+            [
+                new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("demon:pixie"), Id("pixie"), "Pixie")
+            ]);
+
+    private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private sealed class EmptyAilments : IAilmentDefinitionRepository
+    {
+        public static EmptyAilments Instance { get; } = new();
+        public bool TryGetAilment(ContentId id, out AilmentDefinition? definition)
+        {
+            definition = null;
+            return false;
+        }
+
+        public AilmentDefinition GetRequiredAilment(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class FixedDamagePolicy : IDamageExecutionPolicy
+    {
+        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) =>
+            [new DamageHitResolution(true, 10)];
+    }
+
+    private sealed class NeverInstantDeathPolicy : IInstantDeathExecutionPolicy
+    {
+        public bool ShouldDefeat(InstantDeathPolicyRequest request) => false;
+    }
+
+    private sealed class NeverAilmentPolicy : IAilmentApplicationPolicy
+    {
+        public bool ShouldApply(AilmentApplicationPolicyRequest request) => false;
+    }
+
+    private sealed class AlwaysChancePolicy : IChanceExecutionPolicy
+    {
+        public bool Roll(ChancePolicyRequest request) => true;
+    }
+
+    private sealed class PowerAmountPolicy : IPowerAmountPolicy
+    {
+        public decimal Resolve(PowerAmountDefinition amount, AmountResolutionContext context) => amount.Power;
+    }
+
+    private sealed class OrderedRandomTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request) =>
+            Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());
+    }
+
+    private sealed class AlternatingSkillRandomTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request)
+        {
+            int index = CallCount++ % candidates.Count;
+            return [candidates[index]];
+        }
+    }
+
+    private sealed class AlternatingRuntimeRandomTargetPolicy : IRuntimeRandomTargetSelectionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            EffectActionExecutionRequest request)
+        {
+            int index = CallCount++ % candidates.Count;
+            return [candidates[index]];
+        }
+    }
+
+    private sealed class AlwaysEscapeRule : IEscapeRuleHandler
+    {
+        public bool CanEscape(EscapeEffectDefinition effect, EffectExecutionContext context) => true;
+    }
+
+    private sealed class ThrowingCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
+            throw new InvalidOperationException("Custom item effect failed deliberately.");
+    }
+
+    private sealed class TestItemInventory(ContentId itemId, int quantity) : IItemActionInventory
+    {
+        public int Quantity { get; private set; } = quantity;
+        public int ReservationsCreated { get; private set; }
+
+        public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
+            requestedItemId == itemId && Quantity >= requestedQuantity;
+
+        public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity)
+        {
+            if (!HasAvailable(requestedItemId, requestedQuantity))
+            {
+                throw new InvalidOperationException("Item is unavailable.");
+            }
+
+            ReservationsCreated++;
+            return new Reservation(this, requestedItemId, requestedQuantity);
+        }
+
+        private sealed class Reservation(TestItemInventory inventory, ContentId itemId, int quantity) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = itemId;
+            public int Quantity { get; } = quantity;
+            public bool IsCommitted { get; private set; }
+            public bool IsRolledBack { get; private set; }
+
+            public ItemActionReservationTransitionResult Commit()
+            {
+                if (IsCommitted || IsRolledBack)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
+                }
+
+                inventory.Quantity -= Quantity;
+                IsCommitted = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+
+            public ItemActionReservationTransitionResult Rollback()
+            {
+                if (IsCommitted || IsRolledBack)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Item reservation has already been completed.");
+                }
+
+                IsRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+        }
+    }
+
+    private sealed class RejectingCommitInventory(ContentId itemId, int quantity) : IItemActionInventory
+    {
+        public int Quantity { get; private set; } = quantity;
+        public bool WasRolledBack { get; private set; }
+
+        public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
+            requestedItemId == itemId && Quantity >= requestedQuantity;
+
+        public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity) =>
+            new Reservation(this, requestedItemId, requestedQuantity);
+
+        private sealed class Reservation(
+            RejectingCommitInventory inventory,
+            ContentId itemId,
+            int quantity) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = itemId;
+            public int Quantity { get; } = quantity;
+            public bool IsCommitted { get; private set; }
+            public bool IsRolledBack { get; private set; }
+
+            public ItemActionReservationTransitionResult Commit() =>
+                ItemActionReservationTransitionResult.Rejected("Host inventory rejected the commit.");
+
+            public ItemActionReservationTransitionResult Rollback()
+            {
+                IsRolledBack = true;
+                inventory.WasRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+        }
+    }
+
+    private sealed class ThrowingReserveInventory(ContentId itemId) : IItemActionInventory
+    {
+        public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
+            requestedItemId == itemId && requestedQuantity == 1;
+
+        public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity) =>
+            throw new InvalidOperationException("Host inventory failed during reservation.");
+    }
+}

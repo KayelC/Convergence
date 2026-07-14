@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "id": "field_medic_demo",
+      "displayName": "Field Medic",
+      "description": "An actor template used by the shared-effects demo.",
+      "entityKind": "demon",
+      "raceId": "convergence.clean_battle_demo:demo_spirit",
+      "rank": 1,
+      "baseLevel": 5,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 3,
+        "magic": 8,
+        "vitality": 5,
+        "agility": 5,
+        "luck": 5
+      },
+      "elementalAffinities": {},
+      "ailmentResistances": {
+        "poison_demo": "normal"
+      },
+      "baseSkillIds": ["field_recovery_demo"],
+      "skillUnlocks": []
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "id": "invalid_entity",
+      "displayName": "Invalid Entity",
+      "description": "Exercises entity, reference, and inheritance diagnostics.",
+      "entityKind": "missing_kind",
+      "raceId": "missing_race",
+      "rank": 0,
+      "baseLevel": 0,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": [
+            "ice",
+            "ice"
+          ]
+        },
+        "blockedSkillIds": [
+          "locked_passive"
+        ],
+        "allowedSkillIds": [
+          "locked_passive"
+        ]
+      },
+      "stats": {
+        "missing_stat": 1
+      },
+      "elementalAffinities": {
+        "almighty": "resist"
+      },
+      "ailmentResistances": {
+        "missing_ailment": "immune"
+      },
+      "baseSkillIds": [
+        "unstable_blast",
+        "unstable_blast"
+      ],
+      "skillUnlocks": [
+        {
+          "level": 0,
+          "skillId": "locked_passive"
+        }
+      ]
+    }
+  ]
+}

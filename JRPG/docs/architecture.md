@@ -1,93 +1,47 @@
 # Architecture
 
-JRPGPrototype is organized around gameplay subsystems rather than a generic application framework. The important architectural rule is separation of orchestration, rules, interaction, and output.
+## Product Boundary
 
-## Layers And Patterns
+`Convergence.Framework` is a dependency-free .NET 8 class library. It owns game rules and state transitions but never owns a presentation technology, filesystem, scene graph, save-file encoding, or game-specific content source.
 
-### Conductors
+`Convergence.DemoHost` is an optional reference consumer. It demonstrates how a host supplies content, commands, events, randomness, inventory reservations, and save serialization. It is not required by Framework and is not a compatibility layer.
 
-Conductors own high-level workflows and decide which subsystem should act next.
+## Core Principles
 
-- `FieldConductor` runs the city, dungeon, inventory, status, party organization, and fusion entry loops.
-- `BattleConductor` runs the encounter lifecycle, phase loop, actor turns, completion checks, and reward/cleanup flow.
-- `FusionConductor` runs Cathedral menus, participant selection, result staging, inheritance choice, confirmation, accidents, and compendium actions.
+- Framework first: reusable rules are designed without console or engine assumptions.
+- Explicit authority: hosts request transitions; services return immutable results and diagnostics.
+- Serializer-neutral APIs: JSON DTOs and converters remain internal to `Convergence.Serialization`.
+- Host-owned presentation: display names may be rendered but never determine behavior.
+- Injected policy: optional mechanics and game-specific decisions are supplied through policies or registrations.
+- Deterministic testing: randomness enters through `IRandomSource`.
+- Atomic mutation: assessment, execution tokens, reservations, and rollback boundaries prevent partial state changes.
+- Portable persistence: framework snapshots describe runtime state; the host owns the wire format.
 
-Conductors should remain workflow coordinators. When adding new rules, prefer placing rule logic in an engine, processor, strategy, or registry.
+## Content Flow
 
-### Engines And Processors
+```text
+host text source
+    -> deserializer
+    -> semantic validator + explicit registrations
+    -> dependency-aware catalog loader
+    -> immutable GameDataCatalog
+    -> runtime factories and services
+```
 
-Engines and processors own deterministic rules or bounded state mutations.
+Hosts provide all JSON text and diagnostic source names. The framework validates pack versions, paths, records, references, host vocabulary, dependency visibility, and qualification. Runtime services consume catalog definitions, never serializer-owned values.
 
-- `CombatMath` calculates damage, accuracy, crit chance, initiative, EXP, and Macca yields.
-- `PressTurnEngine` owns the full/blinking turn icon state machine.
-- `StatusRegistry` owns ailment application, turn-start restrictions, passive startup effects, buff/debuff handling, cures, and redundancy checks.
-- `ActionProcessor` executes attacks, skills, items, persona swaps, and analysis by delegating to effect strategies.
-- `FieldServiceEngine`, `ShopEngine`, and `ExplorationProcessor` own field-side service, shop, item, skill, equipment, and dungeon traversal rules.
-- `FusionCalculator`, `FusionMutator`, and fusion strategies own fusion prediction and state mutation.
-- `StatProcessor`, `GrowthProcessor`, `DamageHandler`, and `CombatantFactory` keep entity logic outside the `Combatant` data shell.
+## Runtime Flow
 
-### Bridges
+Runtime actors are identified by `RuntimeInstanceId` and content records by `ContentId`. Actor state, party/stock, inventory, equipment, wallet, navigation, traversal, Compendium, knowledge, and session state have immutable snapshot boundaries.
 
-Bridges are interactive console UI adapters. They turn game state into menus and return user choices to conductors.
+Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
-- Battle: `InteractionBridge`.
-- Field: `ServiceUIBridge`, `DungeonUIBridge`, `InventoryUIBridge`, `StatusUIBridge`, `ShopUIBridge`.
-- Fusion: `CathedralUIBridge`.
+## Optional Modules
 
-Bridge code is allowed to know about menu layout and display strings. Rule code should not depend on bridge behavior except through returned choices.
+Navigation, dungeon traversal, Press Turn, ailments/passives, party/stock, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-### Messengers And Loggers
+Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. DemoHost does not require or bind a moon-phase system.
 
-Battle, field, and fusion each use a small event-style messaging layer.
+## Distribution
 
-- Messengers publish structured message args.
-- Loggers subscribe and render to `IGameIO`.
-- Conductors unsubscribe loggers when leaving long-lived loops to avoid duplicate messages and leaks.
-
-This keeps engines mostly independent from console rendering while still allowing narration, pauses, colors, and analysis displays.
-
-### Static Database
-
-`Database` is the content registry. It loads JSON files from `Data/Jsons` into static dictionaries and lists:
-
-- skills, entities/personas/demons, ailments, items, dungeons, equipment, fusion recipes, negotiation questions, and shop inventory.
-
-Runtime systems assume `Database.LoadData(io)` has completed before factories, shops, battle effects, dungeon traversal, or fusion logic are used.
-
-## Runtime Dependency Shape
-
-`Program.cs` creates the initial shared services:
-
-- `IGameIO` for console access.
-- `InventoryManager` and `EconomyManager` for persistent player resources.
-- `DungeonState` for Tartarus progress.
-- `CompendiumRegistry` for demon snapshots.
-- `BattleKnowledge` for affinity discovery memory.
-- `Combatant` for the player and test scenario state.
-
-The field subsystem then creates the party manager, dungeon manager, bridges, service engines, exploration processor, and fusion conductor. Battle conductors are created as encounters occur, using the current party, enemies, inventory, economy, knowledge, and compendium.
-
-## Data Flow
-
-1. JSON files define content templates.
-2. `Database` hydrates templates into static registries.
-3. Factories convert templates into live `Combatant` or `Persona` instances.
-4. Managers hold persistent state such as stock, inventory, economy, dungeon progress, and compendium entries.
-5. Conductors move state through gameplay loops.
-6. Engines and processors calculate outcomes and mutate state.
-7. Bridges and loggers present results through `IGameIO`.
-
-## Design Constraints
-
-- `Combatant` is intentionally broad because it represents humans, operators, demons, enemies, and party members.
-- Demons use `ActivePersona` as their stat and affinity source; their own character stats are reset to zero by the factory.
-- Operators use demon stock and active party references; Wild Cards use active persona plus persona stock.
-- The project currently has no persistence layer beyond in-memory managers and runtime JSON loading.
-- The console UI is abstracted, but the current UI is still menu-driven and synchronous.
-
-## Caveats
-
-- Nullable warnings are present across DTOs, events, and some return paths. Many come from JSON-populated classes without required constructors.
-- `Database` is global mutable state. This is simple for a prototype but makes test isolation harder.
-- Some systems compare names or string IDs directly. Normalize IDs to lowercase where possible and be careful when adding new content.
-- There is no automated test suite. Build success catches compilation issues, but behavior changes need manual scenario validation or future tests.
+The supported distribution is a Git checkout, submodule, subtree, or copied source tree plus a `ProjectReference` to `src/Convergence.Framework/Convergence.Framework.csproj`. Framework is non-packable until a separate release decision establishes package versioning and compatibility policy.

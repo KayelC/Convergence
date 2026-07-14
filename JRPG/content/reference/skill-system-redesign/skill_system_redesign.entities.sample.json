@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "id": "cinder_fodder_sample",
+      "displayName": "Cinder Fodder Sample",
+      "description": "Reference fusion-fodder demon that cannot inherit active Ice skills.",
+      "entityKind": "demon",
+      "raceId": "sample_spirit",
+      "rank": 1,
+      "baseLevel": 3,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": [
+            "ice"
+          ]
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 3,
+        "magic": 4,
+        "vitality": 3,
+        "agility": 4,
+        "luck": 3
+      },
+      "elementalAffinities": {
+        "fire": "resist",
+        "ice": "weak"
+      },
+      "ailmentResistances": {},
+      "baseSkillIds": [
+        "ice_boost_sample"
+      ],
+      "skillUnlocks": []
+    }
+  ]
+}
