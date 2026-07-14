@@ -1,9 +1,9 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Logic.Fusion.Inheritance;
+using Convergence.Content;
+using Convergence.Inheritance;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class FusionInheritanceTests
 {

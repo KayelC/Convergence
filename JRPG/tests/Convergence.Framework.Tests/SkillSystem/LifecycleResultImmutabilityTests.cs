@@ -1,9 +1,9 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Execution;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class LifecycleResultImmutabilityTests
 {

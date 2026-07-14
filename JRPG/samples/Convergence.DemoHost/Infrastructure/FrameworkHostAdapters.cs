@@ -1,7 +1,7 @@
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Hosting;
+using Convergence.Catalog;
+using Convergence.Hosting;
 
-namespace JRPGPrototype.Host;
+namespace Convergence.DemoHost;
 
 internal sealed class FileContentPackSource : IContentPackTextSource
 {

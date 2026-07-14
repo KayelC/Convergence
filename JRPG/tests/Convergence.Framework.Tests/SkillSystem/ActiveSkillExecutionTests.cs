@@ -1,12 +1,11 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class ActiveSkillExecutionTests
 {
@@ -1008,7 +1007,7 @@ public sealed class ActiveSkillExecutionTests
     public void ExecutionPublicApiDoesNotExposeLegacyOrHostSpecificTypes()
     {
         Type[] publicTypes = typeof(SkillExecutor).Assembly.GetTypes()
-            .Where(type => type.IsPublic && type.Namespace == "JRPGPrototype.Logic.Battle.Execution")
+            .Where(type => type.IsPublic && type.Namespace == "Convergence.Execution")
             .ToArray();
         string[] forbidden = ["Newtonsoft", "System.Text.Json", "Godot", "SkillData", "PersonaData", "Combatant"];
 

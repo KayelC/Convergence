@@ -1,21 +1,21 @@
-using Convergence.Tests.TestSupport;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Host;
-using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Engines;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.DemoHost.Tests.TestSupport;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.DemoHost;
+using Convergence.DemoHost.TrainingAnnex;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Knowledge;
+using Convergence.TurnEconomy;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Fusion;
+using Convergence.Runtime;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
 
-namespace Convergence.Tests.Host;
+namespace Convergence.DemoHost.Tests.Host;
 
 public sealed class CleanTrainingAnnexPlayHostTests
 {
@@ -2900,7 +2900,6 @@ public sealed class CleanTrainingAnnexPlayHostTests
         [
             "SkillData",
             "ItemData",
-            "JRPGPrototype.Data.Database",
             "Database.",
             "Database[",
             "Database.LoadData",

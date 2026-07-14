@@ -1,110 +1,61 @@
 # Godot Integration Contract
 
-> **Status: Track P/R contract proof.** This document defines how a Godot host consumes `JRPG.Framework` without making the framework depend on Godot.
-
 ## Purpose
 
-Track P proves that Godot integration is adapter work. The framework remains an engine-neutral class library that owns content validation, catalogs, runtime rules, transitions, and immutable results. A Godot project owns resource acquisition, nodes, scenes, input, presentation scheduling, asset IDs, and save-file format.
+Godot is Convergence's primary host target, but `Convergence.Framework` does not depend on Godot. Integration is adapter work around engine-neutral framework contracts.
 
-No GodotSharp package or Godot project is required in this repository for Track P. The proof lives in test-only Godot-shaped adapters that use fake `res://` paths, signal-style commands, event sinks, scene-instance handles, and host-owned save snapshots. Track R extends the same boundary with framework-owned save snapshot contracts and a console-host JSON proof.
+Godot owns resources, nodes, scenes, input, presentation, scheduling, assets, and save files. The framework owns content contracts, catalogs, rules, runtime state, transitions, diagnostics, and immutable results.
 
-## Framework Acquisition And Target Compatibility
+## Source Reference
 
-Godot is the primary host target. `JRPG.Framework`, the compatibility host, and the test project target `net8.0` with C# 12. The repository `global.json` requests the .NET 8 SDK line with controlled feature-band roll-forward, so a machine that also has .NET 9 or .NET 10 installed still builds this repository with .NET 8.
-
-The supported integration model is a GitHub checkout and a project reference. A package manager is not required, and `JRPG.Framework` is intentionally marked non-packable while source integration is the maintained release path.
-
-Recommended layout:
-
-```text
-MyGameRepository/
-|- Game/
-|  |- project.godot
-|  `- MyGame.csproj
-`- Framework/
-   `- JRPG.Framework/
-      `- JRPG.Framework.csproj
-```
+Convergence targets .NET 8 and C# 12. It is source-distributed and deliberately non-packable. Keep the framework checkout outside the Godot project directory and add a project reference from the game:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\Framework\JRPG.Framework\JRPG.Framework.csproj" />
+  <ProjectReference Include="..\Convergence\src\Convergence.Framework\Convergence.Framework.csproj" />
 </ItemGroup>
 ```
 
-The framework should remain outside the Godot game directory so the game project does not include the same `.cs` files through its default source glob as well as through the project reference. The source may be obtained through a normal clone, a Git submodule, a subtree, or a checked-in copy; that is repository ownership, not a framework runtime concern.
+This avoids compiling framework sources both through Godot's default source glob and through the referenced project.
 
-Godot 4.5 requires .NET 8 or later for C# projects. A platform export that requires a newer host SDK can target that newer runtime while continuing to reference the `net8.0` framework. See the [Godot C# prerequisites](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#prerequisites). Godot also supports NuGet packages, but that optional capability does not make NuGet the distribution contract for this project; see [using NuGet packages in Godot](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#using-nuget-packages-in-godot).
+## Host Adapters
 
-## Host Responsibilities
+A Godot host supplies adapters for these framework boundaries:
 
-A Godot host must provide these adapters around the existing framework contracts:
+- `IContentPackTextSource`: read `res://`, imported resources, or another host source and return JSON text with diagnostic names.
+- `IHostCommandSource<TCommand>`: translate signals, buttons, input actions, and cancellation into typed commands.
+- `IHostEventSink<TEvent>`: map ordered events to UI, animation, audio, and scene work.
+- `IRandomSource`: provide deterministic or production randomness.
+- runtime instance mapping: associate `RuntimeInstanceId` values with host-owned node or scene handles.
+- persistence: serialize framework snapshots inside a Godot-owned save envelope.
 
-- Content acquisition: read JSON or imported resources from Godot-owned locations such as `res://`, then supply JSON text and diagnostic source names through `IContentPackTextSource`.
-- Input: translate player input, UI button signals, and menu cancellation into `IHostCommandSource<TCommand>` results.
-- Presentation: consume framework events through event sinks and map them to UI, animation, audio, waits, and scene transitions.
-- Scheduling: await `IBattleEncounterRunner.RunAsync`; do not use the concrete compatibility-only synchronous wrapper from Godot. Framework continuations have no engine-thread affinity, so a Godot event sink or command adapter must marshal Node, signal, animation, and UI work onto the host-owned scheduler.
-- Randomness: provide an `IRandomSource` seeded or unseeded according to the host's run mode.
-- Scene identity: map framework `RuntimeInstanceId` or battle instance IDs to host-owned node/scene handles.
-- Navigation input: translate doorway triggers, map selections, VN hotspots, or scripts into generic `RuntimeNavigationTransition` requests. Godot still owns movement and scene changes.
-- Dungeon traversal input: translate room doors, corridor exits, scene portals, barriers, checkpoints, and boss interactions into `RuntimeDungeonTraversalTransition` or state-change requests. Node IDs are framework identities, not Godot scene paths.
-- Encounter triggers: own placed enemy scenes, patrols, touch/attack triggers, spawn points, and scripted battle triggers; when an encounter actually begins, pass the chosen encounter or formation into the framework for battle resolution.
-- Encounter preparation: translate the chosen scene interaction into `RuntimeEncounterTriggerRequest`. `CatalogEncounterPreparationService` returns ordered runtime actors; keep Node handles, positions, despawn/respawn rules, and trigger-consumed state in Godot.
-- Field actions: present inventory, skills, and targets through Godot UI, then submit typed item/skill commands with `EffectExecutionEnvironment("field")`. Keep inventory state in the host, implement reservation through `IItemActionInventory`, and commit consumption only when framework execution requests it.
-- Persistence: store framework snapshots inside the Godot save format alongside host-owned scene, asset, and UI state.
+Await asynchronous framework operations. The framework has no engine-thread affinity, so adapters must marshal node and scene changes onto Godot's scheduler.
 
-The framework must not know about `Node`, `Resource`, `PackedScene`, `SceneTree`, `res://`, animation players, save-file layout, or Godot signals.
+## Exploration And Encounters
 
-Godot exploration should not be forced into the console demo's floor-transition battle model. Floor-triggered encounters are useful for deterministic tests and text demos, while production Godot scenes should be free to use visible enemy entities, trigger volumes, scripted bosses, or other host-owned encounter-start rules.
+Navigation and dungeon traversal are optional, policy-injected modules. A Godot game may use movement, doors, map selection, visual-novel hotspots, or scripts to request the same logical transitions. The framework never prescribes a menu or a scene graph.
 
-## Framework Responsibilities
-
-`JRPG.Framework` owns the reusable logic:
-
-- content definitions, validation, catalog loading, and qualified IDs;
-- actor hydration from catalog definitions;
-- skill, item, passive, status, action, battle, dungeon, party/stock, economy, fusion, and Compendium rule services;
-- encounter resolution once the host has selected an encounter, including battle setup, outcome, rewards, and state updates;
-- ordered events and diagnostics expressed as serializer-neutral records;
-- runtime snapshots such as `RuntimeActorSnapshot` and `RuntimeDungeonTraversalSnapshot`;
-- optional generic navigation through `ContentId` locations, explicit transitions, and a host-supplied `IRuntimeNavigationPolicy`;
-- optional generic dungeon traversal through arbitrary node IDs and a host-supplied `IRuntimeDungeonTraversalPolicy`; the service never starts encounters by movement alone;
-- versioned persistence snapshots such as `RuntimeSaveGameSnapshot`, `RuntimeKnowledgeSnapshot`, `RuntimeSessionProgressSnapshot`, and checkpoint logs.
-
-Framework APIs remain plain .NET contracts. JSON DTOs, `JsonElement`, console types, filesystem access, Newtonsoft, legacy DTOs, and Godot types must not appear in public framework signatures.
-
-## Track P Proof
-
-`GodotIntegrationContractTests` proves the current adapter boundary by:
-
-- loading the retained reference and clean battle demo packs from fake `res://` resources while preserving logical document paths;
-- building a `GameDataCatalog` through explicit registrations;
-- creating clean battle actors through `CatalogBattleActorFactory`;
-- planning host-triggered encounters through `CatalogEncounterStartPlanner` without passing Godot scene handles into the framework;
-- mapping actor instance IDs to host-owned scene handles;
-- reading selected and cancelled signal-style commands through `IHostCommandSource<TCommand>`;
-- running deterministic clean battle execution and consuming ordered framework events;
-- restoring actor and field/dungeon snapshots through a host-owned save store.
-
-This is not a gameplay migration track. It proves that a Godot project can stand beside the console host and consume the same framework without core rule changes.
+Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes, and despawn rules. Once the host chooses an authored encounter, framework services prepare actors and resolve battle rules. Movement does not automatically start combat.
 
 ## Save Boundary
 
-The framework exposes serializer-neutral snapshots. Phase 1-07 advances the pre-release aggregate save boundary to `RuntimeSaveGameSnapshot` contract version `2`: field state may be absent, generic navigation may exist without a dungeon, and Phase 1-08 dungeon traversal may be attached only when that optional module is used. The dungeon snapshot stores logical dungeon/node/checkpoint/boss IDs, not scene paths or coordinates. A Godot save file should wrap that snapshot with host-owned information such as scene paths, node handles, current scene, camera state, UI state, asset references, and any engine-specific metadata.
+The framework exposes serializer-neutral runtime snapshots and validates them against a `GameDataCatalog`. A Godot save may wrap those snapshots with scene paths, transforms, camera state, UI state, and asset references.
 
-The framework does not prescribe JSON, binary, Godot `Resource`, or any other save format. It only provides stable state objects and `IRuntimeSaveValidator`, which checks restored snapshots against a `GameDataCatalog` without duplicating catalog definitions into the save. Host-authored saves may deserialize duplicate knowledge rows for diagnostics, but validation rejects duplicate elemental, ailment, and instant-death keys before restore or familiar import.
+The framework does not prescribe JSON, binary data, Godot `Resource`, save slots, cloud storage, or migration UI. `Convergence.DemoHost` uses host-owned `System.Text.Json` only as a portability example.
 
-`--clean-save-demo` is the console-host proof: it serializes a representative `RuntimeSaveGameSnapshot` using host-owned `System.Text.Json` DTOs, deserializes it, validates it, rebuilds runtime actor state, and exits without input. A Godot host would replace those DTOs with its own save envelope while preserving the same framework snapshot and validation boundary.
+## Verification
 
-Phase 3-20 adds serializer-neutral save policy records and a Training Annex clean-host proof for manual and suspend saves. A Godot host can use the same `RuntimeSavePolicyService` to ask whether saving/loading is allowed in a field, dungeon, menu, or other host-defined context, and whether a suspend save should be consumed after successful restore. Godot still owns the save slot, file/resource format, scene metadata, and deletion/consumption action.
+`GodotIntegrationContractTests` proves that a Godot-shaped host can:
 
-## Non-Goals
+- supply content using fake `res://` diagnostic paths;
+- build a catalog without framework filesystem access;
+- hydrate actors and run deterministic actions and encounters;
+- consume ordered events through host sinks;
+- map runtime IDs to host scene handles;
+- round-trip actor and field snapshots through host-owned storage.
 
-- No GodotSharp dependency is added.
-- No Godot project or scene is checked in.
-- No production content is reauthored.
-- No legacy console file is removed.
-- No parity-ledger capability moves to `clean_parity`.
-- No framework public API is changed for Godot-specific concepts.
-- No permanent save-slot UI, cloud-save policy, battle-save policy, or save-version migration system is added.
-- No NuGet publication contract is established; package distribution may be reconsidered only as a separate future release decision.
+The proof intentionally uses no Godot assembly. A real Godot adapter project remains application work and is tracked as deferred in the [capability matrix](framework-capability-matrix.md).
+
+## Forbidden Coupling
+
+Framework public APIs and source must not depend on Godot, console APIs, filesystem APIs, host serializers, or host scene types. The reusable assembly may be consumed without `Convergence.DemoHost`.

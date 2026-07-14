@@ -1,8 +1,7 @@
 using Convergence.DemoHost;
-using JRPGPrototype.Host;
 using Xunit;
 
-namespace Convergence.Tests.Host;
+namespace Convergence.DemoHost.Tests.Host;
 
 public sealed class DemoHostApplicationTests
 {

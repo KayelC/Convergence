@@ -1,44 +1,27 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Xml.Linq;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
+using Convergence.Content;
+using Convergence.Hosting;
 using Xunit;
 
-namespace Convergence.Tests.Architecture;
+namespace Convergence.Framework.Tests.Architecture;
 
 public sealed class FrameworkBoundaryTests
 {
-    private static readonly string[] ForbiddenPublicTypeFragments =
-    [
-        "System.Console",
-        "System.IO.File",
-        "System.IO.Directory",
-        "System.Text.Json",
-        "Newtonsoft",
-        "Godot",
-        "JRPGPrototype.Data.Database",
-        "JRPGPrototype.Data.SkillData",
-        "JRPGPrototype.Data.PersonaData",
-        "JRPGPrototype.Data.ItemData",
-        "JRPGPrototype.Entities.Combatant",
-        "JRPGPrototype.Entities.Persona",
-        "JRPGPrototype.Services.IGameIO"
-    ];
-
     [Fact]
     public void FrameworkAssembly_HasNoConsoleHostDependencyOrExternalPackageReference()
     {
         Assembly framework = typeof(ContentId).Assembly;
 
         Assert.Equal("Convergence.Framework", framework.GetName().Name);
-        Assert.DoesNotContain(
-            framework.GetReferencedAssemblies(),
-            reference => reference.Name == "JRPG.ConsoleHost");
+        Assert.All(
+            framework.GetExportedTypes(),
+            type => Assert.StartsWith("Convergence.", type.Namespace, StringComparison.Ordinal));
 
         string project = File.ReadAllText(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
         Assert.DoesNotContain("PackageReference", project, StringComparison.Ordinal);
-        Assert.DoesNotContain("JRPG.ConsoleHost", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectReference", project, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -48,8 +31,8 @@ public sealed class FrameworkBoundaryTests
         [
             RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"),
             RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"),
-            RepositoryPath("JRPG.ConsoleHost.csproj"),
-            RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj")
+            RepositoryPath("tests", "Convergence.Framework.Tests", "Convergence.Framework.Tests.csproj"),
+            RepositoryPath("tests", "Convergence.DemoHost.Tests", "Convergence.DemoHost.Tests.csproj")
         ];
 
         foreach (string projectPath in projects)
@@ -80,15 +63,30 @@ public sealed class FrameworkBoundaryTests
     {
         XDocument framework = XDocument.Load(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
         XDocument demoHost = XDocument.Load(RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"));
-        XDocument tests = XDocument.Load(RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj"));
+        XDocument frameworkTests = XDocument.Load(RepositoryPath(
+            "tests",
+            "Convergence.Framework.Tests",
+            "Convergence.Framework.Tests.csproj"));
+        XDocument demoTests = XDocument.Load(RepositoryPath(
+            "tests",
+            "Convergence.DemoHost.Tests",
+            "Convergence.DemoHost.Tests.csproj"));
 
         Assert.Equal("false", RequiredProperty(framework, "IsPackable"));
         Assert.Contains(
             demoHost.Descendants("ProjectReference"),
             reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
         Assert.Contains(
-            tests.Descendants("ProjectReference"),
-            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../src/convergence.framework/convergence.framework.csproj");
+            frameworkTests.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
+        Assert.Single(frameworkTests.Descendants("ProjectReference"));
+        Assert.Contains(
+            demoTests.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
+        Assert.Contains(
+            demoTests.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../samples/convergence.demohost/convergence.demohost.csproj");
+        Assert.Equal(2, demoTests.Descendants("ProjectReference").Count());
     }
 
     [Fact]
@@ -124,7 +122,16 @@ public sealed class FrameworkBoundaryTests
     public void FrameworkSources_DoNotUseConsoleFilesystemSleepingOrNewtonsoft()
     {
         string frameworkRoot = RepositoryPath("src", "Convergence.Framework");
-        string[] forbidden = ["Console.", "File.", "Directory.", "Thread.Sleep", "Newtonsoft", "Godot"];
+        string[] forbidden =
+        [
+            "Console.",
+            "File.",
+            "Directory.",
+            "Thread.Sleep",
+            "Newtonsoft",
+            "Godot",
+            "Legacy"
+        ];
 
         foreach (string file in Directory.EnumerateFiles(frameworkRoot, "*.cs", SearchOption.AllDirectories))
         {
@@ -145,7 +152,7 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies()
     {
-        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Logic", "Fusion");
+        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Fusion");
         string[] legacyStrategyTokens =
         [
             "mitama",
@@ -170,7 +177,7 @@ public sealed class FrameworkBoundaryTests
     [Fact]
     public void FrameworkCompendiumSources_DoNotOwnHostCurrencyTerminology()
     {
-        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Logic", "Fusion");
+        string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Fusion");
         string[] files =
         [
             Path.Combine(fusionRoot, "FusionRuntimeServices.cs"),
@@ -189,10 +196,11 @@ public sealed class FrameworkBoundaryTests
     {
         foreach (Type candidate in Expand(type))
         {
-            string identity = candidate.FullName ?? candidate.Name;
-            Assert.DoesNotContain(
-                ForbiddenPublicTypeFragments,
-                forbidden => identity.Contains(forbidden, StringComparison.Ordinal));
+            string? candidateNamespace = candidate.Namespace;
+            Assert.True(
+                candidate.Assembly == typeof(ContentId).Assembly ||
+                candidateNamespace?.StartsWith("System", StringComparison.Ordinal) == true,
+                $"Public API exposes non-framework type '{candidate.FullName ?? candidate.Name}'.");
         }
     }
 

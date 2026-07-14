@@ -1,11 +1,11 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class EncounterPreparationServiceTests
 {

@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Convergence.DemoHost.Tests.TestSupport;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Host;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.DemoHost;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Host;
+namespace Convergence.DemoHost.Tests.Host;
 
 public sealed class CleanSaveDemoHostTests
 {

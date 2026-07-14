@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Xunit;
 
-namespace Convergence.Tests.Architecture;
+namespace Convergence.Framework.Tests.Architecture;
 
 public sealed class FrameworkCapabilityMatrixTests
 {

@@ -1,10 +1,10 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Encounters;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class NegotiationRewardRuntimeTests
 {

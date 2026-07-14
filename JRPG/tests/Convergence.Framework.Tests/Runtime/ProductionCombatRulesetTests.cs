@@ -1,12 +1,11 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class ProductionCombatRulesetTests
 {

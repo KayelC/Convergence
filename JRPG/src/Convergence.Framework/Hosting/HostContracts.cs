@@ -1,8 +1,8 @@
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Catalog;
+using Convergence.Content;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Hosting;
+namespace Convergence.Hosting;
 
 public sealed record ContentPackTextRequest
 {

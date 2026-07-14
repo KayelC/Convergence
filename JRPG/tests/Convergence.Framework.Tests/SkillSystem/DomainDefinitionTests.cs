@@ -1,9 +1,9 @@
 using System.Reflection;
 using System.Text.Json;
-using JRPGPrototype.Data.Definitions;
+using Convergence.Content;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class DomainDefinitionTests
 {
@@ -366,13 +366,6 @@ public sealed class DomainDefinitionTests
     [Fact]
     public void DefinitionNamespace_DoesNotReferenceLegacyRuntimeTypes()
     {
-        var forbiddenTypeNames = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "JRPGPrototype.Data.SkillData",
-            "JRPGPrototype.Data.PersonaData",
-            "JRPGPrototype.Core.Element",
-            "JRPGPrototype.Core.Affinity"
-        };
         Type[] definitionTypes = typeof(SkillDefinition).Assembly.GetTypes()
             .Where(type => type.Namespace == typeof(SkillDefinition).Namespace)
             .ToArray();
@@ -385,7 +378,9 @@ public sealed class DomainDefinitionTests
                 .Concat(definitionType.GetConstructors().SelectMany(constructor =>
                     constructor.GetParameters().SelectMany(parameter => Flatten(parameter.ParameterType))));
 
-            Assert.DoesNotContain(exposedTypes, type => forbiddenTypeNames.Contains(type.FullName ?? string.Empty));
+            Assert.DoesNotContain(exposedTypes, type =>
+                type.Assembly != typeof(SkillDefinition).Assembly &&
+                type.Namespace?.StartsWith("System", StringComparison.Ordinal) != true);
         }
     }
 

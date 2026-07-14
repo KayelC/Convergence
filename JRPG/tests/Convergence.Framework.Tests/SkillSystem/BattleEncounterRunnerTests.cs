@@ -1,12 +1,13 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle.Engines;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Battle;
+using Convergence.Knowledge;
+using Convergence.TurnEconomy;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class BattleEncounterRunnerTests
 {
@@ -712,7 +713,7 @@ public sealed class BattleEncounterRunnerTests
     public void RuntimePublicApi_DoesNotExposeHostSerializerFilesystemOrLegacyTypes()
     {
         Type[] publicTypes = typeof(BattleEncounterRunner).Assembly.GetTypes()
-            .Where(type => type.IsPublic && type.Namespace == "JRPGPrototype.Logic.Battle.Runtime")
+            .Where(type => type.IsPublic && type.Namespace == "Convergence.Encounters")
             .ToArray();
         string[] forbidden =
         [

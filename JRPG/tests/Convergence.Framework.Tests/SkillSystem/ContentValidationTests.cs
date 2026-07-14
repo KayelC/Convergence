@@ -1,11 +1,10 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class ContentValidationTests
 {
@@ -852,12 +851,12 @@ public sealed class ContentValidationTests
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
 
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
     private sealed class RejectingParameterValidator : IContentParameterValidator

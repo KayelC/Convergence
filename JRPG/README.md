@@ -1,6 +1,21 @@
-# Convergence JRPG Framework
+# Convergence Framework
 
-This repository contains an engine-neutral JRPG rules framework and a retained console compatibility host. The framework is under active development and is not yet a stable public release.
+Convergence is an engine-neutral, modular JRPG rules framework. It combines reusable concepts from several JRPG traditions without requiring a particular game, presentation layer, content setting, or engine.
+
+The framework is under active development and has not reached a stable public release.
+
+## Product Layout
+
+```text
+src/Convergence.Framework/          reusable .NET 8 library
+samples/Convergence.DemoHost/       optional console example
+tests/Convergence.Framework.Tests/  framework-only tests
+tests/Convergence.DemoHost.Tests/   example-host tests
+content/                            generic reference and demo content
+docs/                               active product documentation
+```
+
+Historical prototype material is retained under `ArchiveDocs/LegacyFramework` and is not part of the active build.
 
 ## Supported Baseline
 
@@ -8,46 +23,40 @@ This repository contains an engine-neutral JRPG rules framework and a retained c
 - C# 12
 - Godot 4.5 or another .NET 8-compatible host
 
-`global.json` keeps repository builds on the .NET 8 SDK line even when newer SDKs are installed. `JRPG.Framework` has no external package dependencies and is intentionally not published as a NuGet package at this stage.
+`Convergence.Framework` has no external package dependency, is intentionally non-packable, and is distributed as source. A game references the framework project directly.
 
-## GitHub Source Integration
+## Godot Source Integration
 
-Download or clone the repository, keep the framework project outside the Godot project's source directory, and reference it from the Godot C# project:
+Keep the framework outside the Godot project directory so Godot's source glob does not compile the same files a second time:
 
 ```text
 MyGameRepository/
 |- Game/
 |  |- project.godot
 |  `- MyGame.csproj
-`- Framework/
-   `- JRPG.Framework/
-      `- JRPG.Framework.csproj
+`- Convergence/
+   `- src/
+      `- Convergence.Framework/
+         `- Convergence.Framework.csproj
 ```
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\Framework\JRPG.Framework\JRPG.Framework.csproj" />
+  <ProjectReference Include="..\Convergence\src\Convergence.Framework\Convergence.Framework.csproj" />
 </ItemGroup>
 ```
 
-Keeping the framework outside the Godot project directory prevents the host project from compiling the framework source once through its default source glob and again through the project reference. A Git submodule, subtree, or ordinary checked-in copy may be used to obtain the source; none of those choices changes the framework API.
-
-Godot owns Nodes, Resources, scenes, input, presentation, scheduling, and save-file serialization. `JRPG.Framework` owns serializer-neutral content, rules, runtime state, transitions, diagnostics, and results. Godot types must remain in the host adapter and must not enter framework APIs.
-
-See [Godot Integration Contract](docs/godot-integration-contract.md) and [Architecture](docs/architecture.md) for the complete boundary.
+Godot owns nodes, resources, scenes, input, presentation, scheduling, and save-file serialization. Convergence owns serializer-neutral content, rules, runtime state, transitions, diagnostics, and results. See the [Godot integration contract](docs/godot-integration-contract.md).
 
 ## Build And Test
 
 ```powershell
 dotnet --version
-dotnet build JRPG.Framework/JRPG.Framework.csproj
-dotnet test JRPG.sln
+dotnet build Convergence.sln --no-restore
+dotnet test Convergence.sln --no-restore
+dotnet run --project samples/Convergence.DemoHost -- --help
 ```
 
-The first command should report an installed .NET 8 SDK selected through `global.json`. `JRPG.ConsoleHost` remains a compatibility and demonstration host; a Godot game only needs a reference to `JRPG.Framework`.
+The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, DemoHost, and their independent test projects.
 
-## Repository Map
-
-The reusable product is `JRPG.Framework/`. The root-level `Core/`, `Data/`, `Entities/`, `Host/`, `Logic/`, and `Services/` folders are compiled by the root `JRPG.ConsoleHost.csproj`; they are active console-host and compatibility code, not stray framework files.
-
-See [Current Repository Map](docs/repository-map.md) for the current ownership map, content categories, documentation lanes, and safe physical-cleanup direction. Start with the [Documentation Index](docs/README.md) for documentation authority.
+Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), and [capability matrix](docs/framework-capability-matrix.md).

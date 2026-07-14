@@ -1,9 +1,9 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Execution;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed record TrainingAnnexHospitalRestorationEvidence(
     RuntimeInstanceId PatientId,

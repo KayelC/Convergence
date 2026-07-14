@@ -1,9 +1,9 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Encounters;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed class TrainingAnnexBattleRewardApplicator
 {

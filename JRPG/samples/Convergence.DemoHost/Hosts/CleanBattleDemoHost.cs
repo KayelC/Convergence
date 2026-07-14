@@ -1,13 +1,14 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Engines;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Hosting;
+using Convergence.Knowledge;
+using Convergence.TurnEconomy;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host;
+namespace Convergence.DemoHost;
 
 internal sealed class DemoBattleActorInitializationPolicy : IBattleActorInitializationPolicy
 {

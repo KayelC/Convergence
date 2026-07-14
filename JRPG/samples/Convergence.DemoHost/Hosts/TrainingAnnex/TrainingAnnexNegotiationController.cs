@@ -1,11 +1,11 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Encounters;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed record TrainingAnnexNegotiationEvidence(
     ContentId TargetEntityId,
@@ -122,7 +122,7 @@ internal sealed class TrainingAnnexNegotiationController
         if (session.Outcome != NegotiationOutcomeKind.Success)
         {
             await _eventSink.PublishAsync(
-                $"Negotiation ended: {session.Outcome} ({LegacyReasonLabel(session.Reason)}); wallet and Demon stock are unchanged.",
+                $"Negotiation ended: {session.Outcome} ({PresentationReasonLabel(session.Reason)}); wallet and Demon stock are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
@@ -368,7 +368,7 @@ internal sealed class TrainingAnnexNegotiationController
     private static int StatAsInt(RuntimeActorSnapshot actor, ContentId statId) =>
         (int)Math.Round(actor.Stats.EffectiveStats.GetValueOrDefault(statId), MidpointRounding.AwayFromZero);
 
-    private static string LegacyReasonLabel(NegotiationOutcomeReason reason) => reason switch
+    private static string PresentationReasonLabel(NegotiationOutcomeReason reason) => reason switch
     {
         NegotiationOutcomeReason.PolicyBlocked => "MoonBlocked",
         NegotiationOutcomeReason.FamiliarTarget => "FamiliarDemon",

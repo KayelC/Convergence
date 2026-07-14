@@ -1,11 +1,11 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimeStateSnapshotTests
 {
@@ -313,7 +313,7 @@ public sealed class RuntimeStateSnapshotTests
     public void RuntimeSnapshotContracts_ExposeNoHostOrLegacyTypes()
     {
         Type[] runtimeTypes = typeof(RuntimeActorSnapshot).Assembly.GetExportedTypes()
-            .Where(type => type.Namespace == "JRPGPrototype.Logic.Runtime")
+            .Where(type => type.Namespace == "Convergence.Runtime")
             .ToArray();
 
         string[] forbidden =
@@ -322,14 +322,7 @@ public sealed class RuntimeStateSnapshotTests
             "System.IO",
             "System.Text.Json",
             "Newtonsoft",
-            "Godot",
-            "JRPGPrototype.Data.Database",
-            "JRPGPrototype.Data.SkillData",
-            "JRPGPrototype.Data.PersonaData",
-            "JRPGPrototype.Data.ItemData",
-            "JRPGPrototype.Entities.Combatant",
-            "JRPGPrototype.Entities.Persona",
-            "JRPGPrototype.Services.IGameIO"
+            "Godot"
         ];
 
         foreach (Type type in runtimeTypes)
@@ -453,7 +446,7 @@ public sealed class RuntimeStateSnapshotTests
     private static TurnDurationDefinition Turns(int value) =>
         new(value, Id("owner_turn_end"), false);
 
-    private sealed class FixedRandomSource : JRPGPrototype.Hosting.IRandomSource
+    private sealed class FixedRandomSource : Convergence.Hosting.IRandomSource
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
         public decimal NextUnitDecimal() => 0m;

@@ -1,16 +1,15 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Fusion;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimePersistenceSnapshotTests
 {
@@ -1425,7 +1424,7 @@ public sealed class RuntimePersistenceSnapshotTests
     public void RuntimePersistenceContracts_ExposeNoHostSerializerOrLegacyTypes()
     {
         Type[] runtimeTypes = typeof(RuntimeSaveGameSnapshot).Assembly.GetExportedTypes()
-            .Where(type => type.Namespace == "JRPGPrototype.Logic.Runtime")
+            .Where(type => type.Namespace == "Convergence.Runtime")
             .ToArray();
 
         string[] forbidden =
@@ -1434,14 +1433,7 @@ public sealed class RuntimePersistenceSnapshotTests
             "System.IO",
             "System.Text.Json",
             "Newtonsoft",
-            "Godot",
-            "JRPGPrototype.Data.Database",
-            "JRPGPrototype.Data.SkillData",
-            "JRPGPrototype.Data.PersonaData",
-            "JRPGPrototype.Data.ItemData",
-            "JRPGPrototype.Entities.Combatant",
-            "JRPGPrototype.Entities.Persona",
-            "JRPGPrototype.Services.IGameIO"
+            "Godot"
         ];
 
         foreach (Type type in runtimeTypes)
@@ -1766,12 +1758,12 @@ public sealed class RuntimePersistenceSnapshotTests
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
 
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)

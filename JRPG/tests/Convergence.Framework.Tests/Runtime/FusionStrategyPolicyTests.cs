@@ -1,11 +1,11 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Fusion.Inheritance;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Fusion;
+using Convergence.Inheritance;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class FusionStrategyPolicyTests
 {

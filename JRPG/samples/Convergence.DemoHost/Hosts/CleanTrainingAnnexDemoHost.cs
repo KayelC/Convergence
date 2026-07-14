@@ -1,17 +1,16 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.DemoHost.TrainingAnnex;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Fusion;
+using Convergence.Runtime;
 
-using static JRPGPrototype.Host.CleanConsole.TrainingAnnex.TrainingAnnexHostSupport;
+using static Convergence.DemoHost.TrainingAnnex.TrainingAnnexHostSupport;
 
-namespace JRPGPrototype.Host;
+namespace Convergence.DemoHost;
 
 internal sealed record CleanTrainingAnnexDemoSummary(
     IReadOnlyList<string> RequestedManifestPaths,
@@ -209,7 +208,7 @@ internal sealed class CleanTrainingAnnexDemoHost
                 new ItemBattleActionCommand(tonic, [echo.State.InstanceId]),
                 echo.State,
                 [echo.State, ashling.State],
-                new EffectExecutionEnvironment(Battle, NormalBattle),
+                new EffectExecutionEnvironment(TrainingAnnexHostSupport.Battle, NormalBattle),
                 new DemoItemActionInventory(inventory)),
             cancellationToken).ConfigureAwait(false);
         await PrintAsync(
@@ -233,7 +232,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             new AutomatedBattleTurnRestrictionResolver())
             .Run(new AutomatedBattleRequest(
                 [echo, ashling],
-                Battle,
+                TrainingAnnexHostSupport.Battle,
                 NormalBattle,
                 null,
                 10));

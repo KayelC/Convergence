@@ -1,13 +1,12 @@
 using System.Text.Json;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Hosting;
+using Convergence.Fusion;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host;
+namespace Convergence.DemoHost;
 
 internal sealed class CleanSaveDemoHost
 {

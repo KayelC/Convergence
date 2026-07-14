@@ -1,10 +1,10 @@
-using Convergence.Tests.TestSupport;
-using JRPGPrototype.Host;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Data.Definitions;
+using Convergence.DemoHost.Tests.TestSupport;
+using Convergence.DemoHost;
+using Convergence.Hosting;
+using Convergence.Content;
 using Xunit;
 
-namespace Convergence.Tests.Host;
+namespace Convergence.DemoHost.Tests.Host;
 
 public sealed class FrameworkHostAdapterTests
 {

@@ -1,15 +1,15 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Engines;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Knowledge;
+using Convergence.TurnEconomy;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Fusion;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal enum CleanTrainingAnnexPlayCommand
 {

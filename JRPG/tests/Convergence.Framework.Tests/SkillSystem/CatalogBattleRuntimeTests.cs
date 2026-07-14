@@ -1,17 +1,18 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Engines;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Battle;
+using Convergence.Hosting;
+using Convergence.Knowledge;
+using Convergence.TurnEconomy;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class CatalogBattleRuntimeTests
 {
@@ -1065,7 +1066,7 @@ public sealed class CatalogBattleRuntimeTests
     public void RuntimePublicApi_DoesNotExposeHostSerializerFilesystemOrLegacyTypes()
     {
         Type[] publicTypes = typeof(CatalogBattleActorFactory).Assembly.GetTypes()
-            .Where(type => type.IsPublic && type.Namespace == "JRPGPrototype.Logic.Battle.Runtime")
+            .Where(type => type.IsPublic && type.Namespace == "Convergence.Encounters")
             .ToArray();
         string[] forbidden =
         [
@@ -1331,11 +1332,11 @@ public sealed class CatalogBattleRuntimeTests
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);

@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using JRPGPrototype.Host;
+using Convergence.DemoHost;
 
-namespace Convergence.Tests.TestSupport;
+namespace Convergence.DemoHost.Tests.TestSupport;
 
 internal sealed record GameIoMenuCall(
     string Header,

@@ -1,6 +1,6 @@
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Runtime;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed class TrainingAnnexSaveSlotStore
 {

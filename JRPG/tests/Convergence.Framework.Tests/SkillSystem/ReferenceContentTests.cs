@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Xunit;
 
-namespace Convergence.Tests;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class SkillSystemRedesignFixtureTests
 {

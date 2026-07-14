@@ -1,7 +1,7 @@
-using JRPGPrototype.Logic.Runtime;
-using JRPGPrototype.Hosting;
+using Convergence.Runtime;
+using Convergence.Hosting;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal enum TrainingAnnexPartyOperation
 {

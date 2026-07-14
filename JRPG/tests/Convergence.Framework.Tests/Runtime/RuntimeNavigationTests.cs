@@ -1,8 +1,8 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimeNavigationTests
 {

@@ -1,8 +1,8 @@
 using System.Reflection;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Architecture;
+namespace Convergence.Framework.Tests.Architecture;
 
 public sealed class FrameworkNeutralityTests
 {
@@ -33,9 +33,7 @@ public sealed class FrameworkNeutralityTests
         string negotiation = File.ReadAllText(RepositoryPath(
             "src",
             "Convergence.Framework",
-            "Logic",
-            "Battle",
-            "Runtime",
+            "Encounters",
             "BattleNegotiationAndRewards.cs"));
         Assert.DoesNotContain("Demon Stock", negotiation, StringComparison.OrdinalIgnoreCase);
     }
@@ -47,7 +45,6 @@ public sealed class FrameworkNeutralityTests
         Assert.False(File.Exists(RepositoryPath(
             "src",
             "Convergence.Framework",
-            "Logic",
             "Runtime",
             "FieldDungeonStateMachines.cs")));
     }

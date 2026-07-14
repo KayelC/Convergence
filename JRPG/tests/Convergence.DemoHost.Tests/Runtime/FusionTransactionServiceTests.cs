@@ -1,17 +1,16 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Fusion.Inheritance;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Battle;
+using Convergence.DemoHost.TrainingAnnex;
+using Convergence.Hosting;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Fusion;
+using Convergence.Inheritance;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.DemoHost.Tests.Runtime;
 
 public sealed class FusionTransactionServiceTests
 {

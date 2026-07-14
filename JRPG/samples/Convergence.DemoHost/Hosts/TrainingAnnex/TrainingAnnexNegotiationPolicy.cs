@@ -1,7 +1,7 @@
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Runtime;
+using Convergence.Hosting;
+using Convergence.Encounters;
 
-namespace JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed class TrainingAnnexNegotiationPolicy : INegotiationSessionPolicy
 {

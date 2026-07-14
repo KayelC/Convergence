@@ -1,15 +1,14 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Host;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.DemoHost;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.DemoHost.Tests.Content;
 
 public sealed class SharedEffectsRuntimeTests
 {

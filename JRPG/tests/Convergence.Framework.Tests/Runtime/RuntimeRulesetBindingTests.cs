@@ -1,13 +1,13 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Hosting;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimeRulesetBindingTests
 {
@@ -84,7 +84,7 @@ public sealed class RuntimeRulesetBindingTests
             catalog,
             Qualified("standard_press_turn_sample"))
             .RequireService();
-        var pressTurn = Assert.IsType<JRPGPrototype.Logic.Battle.Engines.PressTurnEngine>(
+        var pressTurn = Assert.IsType<Convergence.TurnEconomy.PressTurnEngine>(
             turnEconomy.CreateEconomy());
         pressTurn.StartPhase(2);
         pressTurn.ConsumeAction(new PressTurnResolution(PressTurnOutcome.Weakness, false, false));

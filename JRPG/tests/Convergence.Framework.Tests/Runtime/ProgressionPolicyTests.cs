@@ -1,10 +1,10 @@
 using System.Reflection;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Hosting;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Runtime;
+namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class ProgressionPolicyTests
 {
@@ -375,7 +375,7 @@ public sealed class ProgressionPolicyTests
     public void ProgressionPublicApi_ExposesNoHostSerializerOrLegacyRuntimeTypes()
     {
         Type[] runtimeTypes = typeof(StandardLevelGrowthPolicy).Assembly.GetExportedTypes()
-            .Where(type => type.Namespace == "JRPGPrototype.Logic.Runtime")
+            .Where(type => type.Namespace == "Convergence.Runtime")
             .ToArray();
         string[] forbidden =
         [
@@ -383,14 +383,7 @@ public sealed class ProgressionPolicyTests
             "System.IO",
             "System.Text.Json",
             "Newtonsoft",
-            "Godot",
-            "JRPGPrototype.Data.Database",
-            "JRPGPrototype.Data.SkillData",
-            "JRPGPrototype.Data.PersonaData",
-            "JRPGPrototype.Data.ItemData",
-            "JRPGPrototype.Entities.Combatant",
-            "JRPGPrototype.Entities.Persona",
-            "JRPGPrototype.Services.IGameIO"
+            "Godot"
         ];
 
         foreach (Type type in runtimeTypes)

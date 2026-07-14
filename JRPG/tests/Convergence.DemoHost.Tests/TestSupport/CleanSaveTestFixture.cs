@@ -1,11 +1,10 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Fusion;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Battle;
+using Convergence.Execution;
+using Convergence.Fusion;
+using Convergence.Runtime;
 
 namespace Convergence.DemoHost.Tests.TestSupport;
 

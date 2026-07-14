@@ -1,12 +1,11 @@
 using System.Collections;
 using System.Reflection;
 using System.Text.Json;
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem;
-using JRPGPrototype.Data.SkillSystem.Schemas;
+using Convergence.Content;
+using Convergence.Serialization;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class SchemaDeserializationTests
 {
@@ -514,11 +513,11 @@ public sealed class SchemaDeserializationTests
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
 
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 }

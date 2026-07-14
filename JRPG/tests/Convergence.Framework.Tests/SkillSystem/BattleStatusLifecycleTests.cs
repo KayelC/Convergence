@@ -1,14 +1,14 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Data.SkillSystem.Validation;
-using JRPGPrototype.Entities.Components;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.Validation;
+using Convergence.Battle;
+using Convergence.Hosting;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.SkillSystem;
+namespace Convergence.Framework.Tests.Content;
 
 public sealed class BattleStatusLifecycleTests
 {
@@ -834,12 +834,12 @@ public sealed class BattleStatusLifecycleTests
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "JRPG.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Convergence.sln")))
         {
             directory = directory.Parent;
         }
 
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find JRPG.sln.");
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
     private sealed class SequenceRandomSource(params int[] values) : IRandomSource

@@ -1,5 +1,5 @@
-using JRPGPrototype.Host;
-using JRPGPrototype.Host.CleanConsole.TrainingAnnex;
+using Convergence.DemoHost;
+using Convergence.DemoHost.TrainingAnnex;
 
 namespace Convergence.DemoHost;
 

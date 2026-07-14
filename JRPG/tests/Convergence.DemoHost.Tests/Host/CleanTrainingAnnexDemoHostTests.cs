@@ -1,13 +1,13 @@
-using JRPGPrototype.Data.Definitions;
-using JRPGPrototype.Data.SkillSystem.Catalog;
-using JRPGPrototype.Host;
-using JRPGPrototype.Hosting;
-using JRPGPrototype.Logic.Battle.Execution;
-using JRPGPrototype.Logic.Battle.Runtime;
-using JRPGPrototype.Logic.Runtime;
+using Convergence.Content;
+using Convergence.Catalog;
+using Convergence.DemoHost;
+using Convergence.Hosting;
+using Convergence.Execution;
+using Convergence.Encounters;
+using Convergence.Runtime;
 using Xunit;
 
-namespace Convergence.Tests.Host;
+namespace Convergence.DemoHost.Tests.Host;
 
 public sealed class CleanTrainingAnnexDemoHostTests
 {

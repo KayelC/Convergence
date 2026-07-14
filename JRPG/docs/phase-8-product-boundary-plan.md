@@ -13,7 +13,7 @@
 | 1. Boundary record | Complete | Commit `6dc5ab3`; recovery baseline recorded before movement. |
 | 2. Clean projects | Complete | Commit `543b717`; Framework and DemoHost build independently on .NET 8 with 0 compiler warnings. |
 | 3. Content and tests | Complete | Clean content is separated into 36 reference/demo/original documents; 548 Framework tests and 145 DemoHost tests pass with 0 failures and 0 skips. |
-| 4. Namespace migration | Pending | `JRPGPrototype.*` names remain until the dedicated breaking rename. |
+| 4. Namespace migration | Complete | Active Framework, DemoHost, and test sources use the `Convergence.*` namespaces and the product-area folder layout; 693 tests pass. |
 | 5. Archive gate | Pending | The old solution and prototype remain available for comparison until the clean gate passes. |
 
 ## Purpose
