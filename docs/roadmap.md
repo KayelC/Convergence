@@ -4,6 +4,8 @@
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 21 complete capabilities, one partial capability, and three deferred capabilities.
 
+The current pre-release checkpoint is the [Neutral Vocabulary Migration](neutral-vocabulary-migration.md). It replaces the remaining prototype-shaped Action Token and actor-ownership vocabulary before public API stabilization. The same checkpoint removes the obsolete weighted Vessel stat model and deliberately advances the content and save contracts without compatibility aliases.
+
 ## Priority 1: Authoring Contract Completion
 
 Expand checked-in authoring schemas and contract documentation so every implemented content family has a stable structural reference. Semantic graph and host-registration rules remain validator-owned. Add author-facing examples and diagnostics guidance without embedding game content into Framework.
