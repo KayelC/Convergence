@@ -146,7 +146,7 @@ public sealed class ResourceManagementServiceTests
         RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(equipment, repository);
         var statPolicy = new StandardStatResolutionPolicy();
         StatResolutionResult resolvedMagic = statPolicy.Resolve(new StatResolutionRequest(
-            StandardProgressionIds.Human,
+            RuntimeStatSourceKind.Actor,
             magic,
             [new KeyValuePair<ContentId, decimal>(magic, 4)],
             equipmentStatModifiers: profile.StatModifiers));

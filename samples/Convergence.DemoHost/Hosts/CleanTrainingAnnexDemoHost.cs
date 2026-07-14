@@ -115,7 +115,9 @@ internal sealed class CleanTrainingAnnexDemoHost
         GrowthRulesetServices growthServices = resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService();
-        resolver.BindStatResolutionPolicy(catalog, Qualified("standard_stat")).RequireService();
+        IStatResolutionPolicy statPolicy = resolver
+            .BindStatResolutionPolicy(catalog, Qualified("standard_stat"))
+            .RequireService();
         BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();
@@ -127,19 +129,23 @@ internal sealed class CleanTrainingAnnexDemoHost
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,
-            new DemoBattleActorInitializationPolicy());
-        CatalogBattleActorCreationResult echoResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
-            Qualified("echo_adept"),
-            RuntimeInstanceId.Parse("echo_adept"),
-            PlayerTeam,
-            3));
-        if (!echoResult.IsSuccess)
+            new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy));
+        TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
+        if (!rosterResult.IsSuccess)
         {
-            await PrintActorDiagnosticsAsync(echoResult.Diagnostics, cancellationToken).ConfigureAwait(false);
+            foreach (string diagnostic in rosterResult.Diagnostics)
+            {
+                await _eventSink.PublishAsync(diagnostic, cancellationToken).ConfigureAwait(false);
+            }
+
             return 4;
         }
 
-        CatalogBattleActor echo = echoResult.RequireActor();
+        TrainingAnnexActorRoster roster = rosterResult.RequireRoster();
+        RuntimePartyRosterSnapshot partyRoster = new TrainingAnnexPartyController()
+            .CreateInitialParty(roster)
+            .Snapshot;
+        CatalogBattleActor echo = roster.Player.Actor;
         await PrintAsync(sequence++, "actor", $"Hydrated {echo.Entity.DisplayName}.", cancellationToken)
             .ConfigureAwait(false);
 
@@ -257,15 +263,47 @@ internal sealed class CleanTrainingAnnexDemoHost
 
         BattleRewardResult reward = rewardService.Calculate(new BattleRewardRequest(
             [EnemyRewardSnapshot(ashling.Entity, ashlingRequest.Level)],
-            [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveHostedEntity: false)]));
+            [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveHostedEntity: true)]));
+        RuntimeActorSnapshot beforeGrowth = echo.State.ToSnapshot();
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
-            InitialProgression(echo.Entity, 3),
-            ActorStats(echo.Entity),
-            echo.Entity.EntityKindId,
+            beforeGrowth.Progression,
+            beforeGrowth.Stats,
+            StandardLevelGrowthProfiles.Vessel,
             reward.TotalExperience,
             random,
-            resources: RuntimeResources(echo.State),
-            baseResourceValues: BaseResourceValues(echo.State)));
+            resources: beforeGrowth.Resources,
+            baseResourceValues: beforeGrowth.BaseResourceValues));
+        RuntimeMutationResult growthMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
+            echo.State,
+            growth);
+        if (!growthMutation.Applied)
+        {
+            foreach (RuntimeMutationDiagnostic diagnostic in growthMutation.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[growth:{diagnostic.Code}] {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return 5;
+        }
+
+        RuntimeActorStatCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerStats(
+            roster,
+            partyRoster,
+            new RuntimeActorStatCompositionService(statPolicy, growthServices.ResourceGrowthPolicy),
+            new RuntimeEquipmentProfile());
+        if (!composition.Applied)
+        {
+            foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[stat_composition:{diagnostic.Code}] {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return 5;
+        }
         await PrintAsync(
             sequence++,
             "reward",
@@ -274,9 +312,9 @@ internal sealed class CleanTrainingAnnexDemoHost
 
         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(
             catalog,
-            echo,
+            roster,
+            partyRoster,
             ashling,
-            growth,
             inventory,
             reward,
             new RuntimeFieldSnapshot(
@@ -319,24 +357,24 @@ internal sealed class CleanTrainingAnnexDemoHost
 
     private static RuntimeSaveGameSnapshot BuildSaveSnapshot(
         GameDataCatalog catalog,
-        CatalogBattleActor echo,
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         CatalogBattleActor ashling,
-        LevelGrowthResult growth,
         IReadOnlyDictionary<ContentId, int> inventory,
         BattleRewardResult reward,
         RuntimeFieldSnapshot field)
     {
-        RuntimeActorSnapshot echoSnapshot = ActorSnapshot(echo, RuntimeInstanceId.Parse("echo_adept"), growth);
-        RuntimeActorSnapshot ashlingSnapshot = ActorSnapshot(ashling, RuntimeInstanceId.Parse("ashling"), null);
-        RuntimeActorReferenceSnapshot echoReference = Reference(echoSnapshot);
+        RuntimeActorSnapshot echoSnapshot = roster.Player.Actor.State.ToSnapshot();
+        RuntimeActorSnapshot[] actorSnapshots =
+        [
+            .. roster.AllActors.Select(member => member.Actor.State.ToSnapshot()),
+            ashling.State.ToSnapshot()
+        ];
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("0.2.0"),
             [TrainingAnnexHostSupport.PackIdentity],
-            [echoSnapshot, ashlingSnapshot],
-            new RuntimePartyRosterSnapshot(
-                echoReference,
-                echoSnapshot.Progression.Level,
-                activeParty: [echoReference]),
+            actorSnapshots,
+            partyRoster,
             new RuntimeInventorySnapshot(inventory),
             new RuntimeEquipmentSnapshot(),
             new RuntimeWalletSnapshot(reward.TotalCurrency),
@@ -357,31 +395,6 @@ internal sealed class CleanTrainingAnnexDemoHost
                 new RuntimeCheckpointEntrySnapshot(3, RuntimeCheckpointKind.SaveCreated, "Training Annex snapshot validated.", echoSnapshot.Identity.InstanceId, catalog.GetRequiredItem(Qualified("annex_tonic")).Id)
             ]),
             hostContext: [new KeyValuePair<ContentId, string>(ContentId.Parse("host_demo"), "clean_training_annex")]);
-    }
-
-    private static RuntimeActorSnapshot ActorSnapshot(
-        CatalogBattleActor actor,
-        RuntimeInstanceId instanceId,
-        LevelGrowthResult? growth)
-    {
-        RuntimeProgressionSnapshot progression = growth?.Progression ?? InitialProgression(actor.Entity, actor.Entity.BaseLevel);
-        RuntimeStatBlockSnapshot stats = growth?.Stats ?? ActorStats(actor.Entity);
-        IReadOnlyList<RuntimeResourceSnapshot> resources = growth?.Resources ?? RuntimeResources(actor.State);
-        IReadOnlyDictionary<ContentId, decimal> baseResources = growth?.BaseResourceValues ?? BaseResourceValues(actor.State);
-        return new RuntimeActorSnapshot(
-            new RuntimeActorIdentitySnapshot(instanceId, actor.Entity.Id, actor.Entity.EntityKindId, actor.Entity.DisplayName),
-            new RuntimeActorOwnershipSnapshot(ContentId.Parse("clean_training_annex"), actor.State.TeamId),
-            new RuntimeActorDeploymentSnapshot(actor.State.TeamId == PlayerTeam ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Deployed, actor.State.IsActive),
-            progression,
-            resources,
-            stats,
-            new RuntimeSkillStateSnapshot(actor.SkillLoadout.Select(skill => skill.Id), actor.ActiveSkills.Select(skill => skill.Id)),
-            new RuntimeActorRosterSnapshot(),
-            new RuntimeEquipmentSnapshot(),
-            new RuntimeBattleStatusSnapshot(),
-            new RuntimeBattleActivationSnapshot(),
-            baseResources,
-            actor.State.VitalResourceId);
     }
 
     private static CleanTrainingAnnexDemoSummary CreateSummary(

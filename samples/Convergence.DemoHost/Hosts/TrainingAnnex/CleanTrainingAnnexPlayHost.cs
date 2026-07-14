@@ -90,6 +90,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<string> RequestedManifestPaths,
     IReadOnlyList<string> RequestedDocumentPaths,
     ContentId PlayerEntityId,
+    ContentId PlayerActorKindId,
     int PlayerLevel,
     int ActorCount,
     int EnemyActorCount,
@@ -105,6 +106,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     CompendiumStateSnapshot Compendium,
     IReadOnlyList<TrainingAnnexCompendiumEvidence> CompendiumEvidence,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
+    RuntimeStatBlockSnapshot PlayerStats,
+    RuntimeActorRosterSnapshot PlayerRosters,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
     int ActiveSkillCount,
@@ -322,6 +325,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         IStatResolutionPolicy statPolicy = rulesetResolver
             .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
             .RequireService();
+        var statCompositionService = new RuntimeActorStatCompositionService(
+            statPolicy,
+            growthServices.ResourceGrowthPolicy);
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
         var actorFactory = new CatalogBattleActorFactory(
@@ -381,6 +387,17 @@ internal sealed class CleanTrainingAnnexPlayHost
             inventory.Snapshot,
             _initialEquipment,
             equipmentTransitions));
+        if (!await ComposePlayerStateAsync(
+                roster,
+                partyRoster,
+                statCompositionService,
+                equipmentProfileResolver,
+                catalog,
+                cancellationToken,
+                initializeResourcesToMaximum: true).ConfigureAwait(false))
+        {
+            return 4;
+        }
         var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
             manualAllowedContextIds:
             [
@@ -725,13 +742,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                     break;
                 }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
-                    RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
-                        roster.Player.Actor.State.ToSnapshot().Equipment,
-                        catalog);
                     statPreview = await ResolvePlayerStatsAsync(
                         roster.Player,
                         statPolicy,
-                        equipmentProfile,
                         cancellationToken).ConfigureAwait(false);
                     statResolutionPreviewed = true;
                     break;
@@ -1272,6 +1285,17 @@ internal sealed class CleanTrainingAnnexPlayHost
                 }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
+            }
+
+            if (!await ComposePlayerStateAsync(
+                    roster,
+                    partyRoster,
+                    statCompositionService,
+                    equipmentProfileResolver,
+                    catalog,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                return 4;
             }
         }
     }
@@ -1925,6 +1949,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             [request.ManifestPath],
             request.DocumentPaths,
             player.Entity.Id,
+            playerSnapshot.Identity.ActorKindId,
             roster.Player.Level,
             roster.AllActors.Count,
             roster.Enemies.Count,
@@ -1940,6 +1965,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             compendium,
             compendiumEvidence.ToArray(),
             playerSnapshot.Resources,
+            playerSnapshot.Stats,
+            playerSnapshot.Rosters,
             playerSnapshot.Progression,
             statPreview.ToArray(),
             player.ActiveSkills.Count,
@@ -2013,35 +2040,78 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
     }
 
+    private async ValueTask<bool> ComposePlayerStateAsync(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
+        IRuntimeActorStatCompositionService compositionService,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        IEquipmentDefinitionRepository equipmentRepository,
+        CancellationToken cancellationToken,
+        bool initializeResourcesToMaximum = false)
+    {
+        RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+            roster.Player.Actor.State.ToSnapshot().Equipment,
+            equipmentRepository);
+        if (equipmentProfile.Diagnostics.Count > 0)
+        {
+            foreach (RuntimeEquipmentProfileDiagnostic diagnostic in equipmentProfile.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[equipment:{diagnostic.Code}] {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return false;
+        }
+
+        RuntimeActorStatCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerStats(
+            roster,
+            partyRoster,
+            compositionService,
+            equipmentProfile);
+        if (composition.Applied)
+        {
+            if (initializeResourcesToMaximum)
+            {
+                foreach (BattleResourceState resource in roster.Player.Actor.State.Resources.Values)
+                {
+                    roster.Player.Actor.State.SetResource(resource.Id, resource.Maximum);
+                }
+            }
+
+            return true;
+        }
+
+        foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
+        {
+            await _eventSink.PublishAsync(
+                $"[stat_composition:{diagnostic.Code}] {diagnostic.Message}",
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return false;
+    }
+
     private async ValueTask<IReadOnlyList<StatResolutionResult>> ResolvePlayerStatsAsync(
         TrainingAnnexRuntimeActor player,
         IStatResolutionPolicy statPolicy,
-        RuntimeEquipmentProfile equipmentProfile,
         CancellationToken cancellationToken)
     {
         RuntimeActorSnapshot snapshot = player.Actor.State.ToSnapshot();
         RuntimeStatStageSnapshot attackStage = new(StandardProgressionIds.Attack, 1);
-        IEnumerable<KeyValuePair<ContentId, decimal>> activeHostedEntityStats =
-            snapshot.Identity.ActorKindId == StandardProgressionIds.Companion
-                ? snapshot.Stats.BaseStats
-                : [];
         var results = new List<StatResolutionResult>();
         var messages = new List<string>();
 
         foreach (ContentId statId in StandardProgressionIds.CoreStats)
         {
             StatResolutionResult unmodified = statPolicy.Resolve(new StatResolutionRequest(
-                snapshot.Identity.ActorKindId,
+                RuntimeStatSourceKind.Actor,
                 statId,
-                snapshot.Stats.BaseStats,
-                activeHostedEntityStats,
-                equipmentStatModifiers: equipmentProfile.StatModifiers));
+                snapshot.Stats.EffectiveStats));
             StatResolutionResult boosted = statPolicy.Resolve(new StatResolutionRequest(
-                snapshot.Identity.ActorKindId,
+                RuntimeStatSourceKind.Actor,
                 statId,
-                snapshot.Stats.BaseStats,
-                activeHostedEntityStats,
-                equipmentStatModifiers: equipmentProfile.StatModifiers,
+                snapshot.Stats.EffectiveStats,
                 statStages: [attackStage]));
             results.Add(boosted);
             messages.Add($"{statId} {unmodified.FinalValue}->{boosted.FinalValue}");
@@ -2068,7 +2138,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             before.Progression,
             before.Stats,
-            before.Identity.ActorKindId,
+            StandardLevelGrowthProfiles.Vessel,
             award,
             new TrainingAnnexMinimumRandomSource(),
             resources: before.Resources,

@@ -5,7 +5,7 @@
       "id": "echo_adept",
       "displayName": "Echo Adept",
       "description": "The first original clean-content player actor for the Training Annex slice.",
-      "entityKind": "companion",
+      "entityKind": "vessel",
       "raceId": "annex_spirit",
       "rank": 1,
       "baseLevel": 3,

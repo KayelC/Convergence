@@ -30,7 +30,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             before.Progression,
             before.Stats,
-            before.Identity.ActorKindId,
+            StandardLevelGrowthProfiles.Vessel,
             reward.TotalExperience,
             _randomSource,
             resources: before.Resources,

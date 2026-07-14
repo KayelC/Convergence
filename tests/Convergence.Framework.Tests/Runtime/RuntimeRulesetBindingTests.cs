@@ -44,7 +44,7 @@ public sealed class RuntimeRulesetBindingTests
             Qualified("standard_stat_sample"))
             .RequireService();
         StatResolutionResult stat = stats.Resolve(new StatResolutionRequest(
-            StandardProgressionIds.Human,
+            RuntimeStatSourceKind.Actor,
             StandardProgressionIds.Strength,
             [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 50m)]));
         Assert.Equal(40, stat.CappedValue);

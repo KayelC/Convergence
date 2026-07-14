@@ -517,11 +517,9 @@ public sealed class RuntimePersistenceSnapshotTests
 
         StatResolutionResult resolved = new StandardStatResolutionPolicy().Resolve(
             new StatResolutionRequest(
-                StandardProgressionIds.WildCard,
+                RuntimeStatSourceKind.Actor,
                 StandardProgressionIds.Strength,
-                restored.BaseStats,
-                restored.Stats,
-                restored.Stats));
+                restored.BaseStats));
         ResourceRecalculationResult resources = new StandardResourceGrowthPolicy().Recalculate(
             new ResourceRecalculationRequest(
                 restored.ToSnapshot().Resources,

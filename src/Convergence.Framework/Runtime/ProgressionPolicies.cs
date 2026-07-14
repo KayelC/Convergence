@@ -14,10 +14,8 @@ public static class StandardProgressionIds
     public static ContentId Luck { get; } = ContentId.Parse("luck");
     public static ContentId Hp { get; } = ContentId.Parse("hp");
     public static ContentId Sp { get; } = ContentId.Parse("sp");
-    public static ContentId Human { get; } = ContentId.Parse("human");
-    public static ContentId PersonaUser { get; } = ContentId.Parse("persona_user");
-    public static ContentId WildCard { get; } = ContentId.Parse("wild_card");
-    public static ContentId Operator { get; } = ContentId.Parse("operator");
+    public static ContentId IndependentActor { get; } = ContentId.Parse("independent_actor");
+    public static ContentId Vessel { get; } = ContentId.Parse("vessel");
     public static ContentId Companion { get; } = ContentId.Parse("companion");
     public static ContentId PhysicalAttack { get; } = ContentId.Parse("physical_attack");
     public static ContentId MagicalAttack { get; } = ContentId.Parse("magical_attack");
@@ -41,10 +39,16 @@ public enum ResourceCurrentAdjustmentMode
     LevelUpDelta
 }
 
-public enum ProgressionSubjectKind
+public enum RuntimeStatSourceKind
 {
     Actor,
-    Form
+    ActiveHostedEntity
+}
+
+public enum MissingHostedEntityBehavior
+{
+    RejectStatResolution,
+    UseActorBaseStats
 }
 
 public enum ProgressionMutationStatus
@@ -72,7 +76,6 @@ public sealed record StandardStatPolicyConfig
         int statCap = 40,
         decimal buffMultiplier = 1.4m,
         decimal debuffMultiplier = 0.6m,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? activeHostedEntityWeights = null,
         IEnumerable<StatModifierTrackAlias>? modifierTrackAliases = null)
     {
         if (statCap <= 0)
@@ -87,26 +90,15 @@ public sealed record StandardStatPolicyConfig
         StatCap = statCap;
         BuffMultiplier = buffMultiplier;
         DebuffMultiplier = debuffMultiplier;
-        ActiveHostedEntityWeights = SnapshotDictionary(activeHostedEntityWeights ?? DefaultWeights());
         ModifierTrackAliases = SnapshotList(modifierTrackAliases ?? DefaultAliases());
     }
 
     public int StatCap { get; }
     public decimal BuffMultiplier { get; }
     public decimal DebuffMultiplier { get; }
-    public IReadOnlyDictionary<ContentId, decimal> ActiveHostedEntityWeights { get; }
     public IReadOnlyList<StatModifierTrackAlias> ModifierTrackAliases { get; }
 
     public static StandardStatPolicyConfig Default { get; } = new();
-
-    private static IEnumerable<KeyValuePair<ContentId, decimal>> DefaultWeights()
-    {
-        yield return new(StandardProgressionIds.Strength, 0.4m);
-        yield return new(StandardProgressionIds.Magic, 0.4m);
-        yield return new(StandardProgressionIds.Vitality, 0.25m);
-        yield return new(StandardProgressionIds.Agility, 0.25m);
-        yield return new(StandardProgressionIds.Luck, 0.5m);
-    }
 
     private static IEnumerable<StatModifierTrackAlias> DefaultAliases()
     {
@@ -118,36 +110,34 @@ public sealed record StandardStatPolicyConfig
         yield return new(StandardProgressionIds.AgilityTrack, StandardProgressionIds.Agility);
     }
 
-    private static IReadOnlyDictionary<TKey, TValue> SnapshotDictionary<TKey, TValue>(
-        IEnumerable<KeyValuePair<TKey, TValue>> values)
-        where TKey : notnull =>
-        new ReadOnlyDictionary<TKey, TValue>(values.ToDictionary(pair => pair.Key, pair => pair.Value));
-
-    private static IReadOnlyList<T> SnapshotList<T>(IEnumerable<T> values) =>
-        Array.AsReadOnly(values.ToArray());
 }
 
 public sealed record StatResolutionRequest
 {
     public StatResolutionRequest(
-        ContentId actorKindId,
+        RuntimeStatSourceKind sourceKind,
         ContentId statId,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? actorStats = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? activeHostedEntityStats = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
         IEnumerable<RuntimeStatStageSnapshot>? statStages = null)
     {
-        ActorKindId = actorKindId;
+        if (!Enum.IsDefined(sourceKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sourceKind), "Stat source kind is not supported.");
+        }
+
+        SourceKind = sourceKind;
         StatId = statId;
-        BaseStats = SnapshotDictionary(baseStats);
+        ActorStats = SnapshotDictionary(actorStats);
         ActiveHostedEntityStats = SnapshotDictionary(activeHostedEntityStats);
         EquipmentStatModifiers = SnapshotDictionary(equipmentStatModifiers);
         StatStages = SnapshotList(statStages);
     }
 
-    public ContentId ActorKindId { get; }
+    public RuntimeStatSourceKind SourceKind { get; }
     public ContentId StatId { get; }
-    public IReadOnlyDictionary<ContentId, decimal> BaseStats { get; }
+    public IReadOnlyDictionary<ContentId, decimal> ActorStats { get; }
     public IReadOnlyDictionary<ContentId, decimal> ActiveHostedEntityStats { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
     public IReadOnlyList<RuntimeStatStageSnapshot> StatStages { get; }
@@ -198,28 +188,16 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
 
     private decimal ResolveRawValue(StatResolutionRequest request)
     {
-        if (request.ActorKindId == StandardProgressionIds.Companion)
+        IReadOnlyDictionary<ContentId, decimal> sourceStats = request.SourceKind switch
         {
-            return ValueOrZero(request.ActiveHostedEntityStats, request.StatId);
-        }
+            RuntimeStatSourceKind.Actor => request.ActorStats,
+            RuntimeStatSourceKind.ActiveHostedEntity => request.ActiveHostedEntityStats,
+            _ => throw new ArgumentOutOfRangeException(nameof(request), "Stat source kind is not supported.")
+        };
 
-        decimal baseValue = SaturatingAdd(
-            ValueOrZero(request.BaseStats, request.StatId),
-            ValueOrZero(request.EquipmentStatModifiers, request.StatId));
-
-        if (request.ActorKindId == StandardProgressionIds.Human ||
-            request.ActorKindId == StandardProgressionIds.Operator ||
-            !request.ActiveHostedEntityStats.ContainsKey(request.StatId))
-        {
-            return baseValue;
-        }
-
-        decimal weight = _config.ActiveHostedEntityWeights.TryGetValue(request.StatId, out decimal configured)
-            ? configured
-            : 0m;
         return SaturatingAdd(
-            baseValue,
-            SaturatingMultiply(ValueOrZero(request.ActiveHostedEntityStats, request.StatId), weight));
+            ValueOrZero(sourceStats, request.StatId),
+            ValueOrZero(request.EquipmentStatModifiers, request.StatId));
     }
 
     private bool AffectsStat(ContentId trackId, ContentId statId) =>
@@ -453,34 +431,79 @@ public sealed record ProgressionMutationDiagnostic(
     ProgressionMutationErrorCode Code,
     string Message);
 
+public sealed record RuntimeLevelGrowthProfile
+{
+    public RuntimeLevelGrowthProfile(
+        int manualStatPointsPerLevel,
+        bool growsBaseResources,
+        int randomCoreStatIncreasesPerLevel)
+    {
+        if (manualStatPointsPerLevel < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(manualStatPointsPerLevel),
+                "Manual stat points per level cannot be negative.");
+        }
+        if (randomCoreStatIncreasesPerLevel < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(randomCoreStatIncreasesPerLevel),
+                "Random core-stat increases per level cannot be negative.");
+        }
+
+        ManualStatPointsPerLevel = manualStatPointsPerLevel;
+        GrowsBaseResources = growsBaseResources;
+        RandomCoreStatIncreasesPerLevel = randomCoreStatIncreasesPerLevel;
+    }
+
+    public int ManualStatPointsPerLevel { get; }
+    public bool GrowsBaseResources { get; }
+    public int RandomCoreStatIncreasesPerLevel { get; }
+}
+
+public static class StandardLevelGrowthProfiles
+{
+    public static RuntimeLevelGrowthProfile IndependentActor { get; } = new(
+        manualStatPointsPerLevel: 1,
+        growsBaseResources: true,
+        randomCoreStatIncreasesPerLevel: 0);
+
+    public static RuntimeLevelGrowthProfile Vessel { get; } = new(
+        manualStatPointsPerLevel: 0,
+        growsBaseResources: true,
+        randomCoreStatIncreasesPerLevel: 0);
+
+    public static RuntimeLevelGrowthProfile OwnedEntity { get; } = new(
+        manualStatPointsPerLevel: 0,
+        growsBaseResources: false,
+        randomCoreStatIncreasesPerLevel: 1);
+}
+
 public sealed record LevelGrowthRequest
 {
     public LevelGrowthRequest(
         RuntimeProgressionSnapshot progression,
         RuntimeStatBlockSnapshot stats,
-        ContentId subjectKindId,
+        RuntimeLevelGrowthProfile growthProfile,
         long experienceAward,
         IRandomSource randomSource,
-        ProgressionSubjectKind subjectKind = ProgressionSubjectKind.Actor,
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null)
     {
         Progression = progression ?? throw new ArgumentNullException(nameof(progression));
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
-        SubjectKindId = subjectKindId;
+        GrowthProfile = growthProfile ?? throw new ArgumentNullException(nameof(growthProfile));
         ExperienceAward = experienceAward;
         RandomSource = randomSource ?? throw new ArgumentNullException(nameof(randomSource));
-        SubjectKind = subjectKind;
         Resources = SnapshotList(resources);
         BaseResourceValues = SnapshotDictionary(baseResourceValues);
     }
 
     public RuntimeProgressionSnapshot Progression { get; }
     public RuntimeStatBlockSnapshot Stats { get; }
-    public ContentId SubjectKindId { get; }
+    public RuntimeLevelGrowthProfile GrowthProfile { get; }
     public long ExperienceAward { get; }
     public IRandomSource RandomSource { get; }
-    public ProgressionSubjectKind SubjectKind { get; }
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
 }
@@ -616,7 +639,10 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                 experience -= requiredExperience;
                 level = checked(level + 1);
 
-                if (request.SubjectKind == ProgressionSubjectKind.Form)
+                Dictionary<ContentId, decimal> statIncreases = [];
+                for (int increaseIndex = 0;
+                     increaseIndex < request.GrowthProfile.RandomCoreStatIncreasesPerLevel;
+                     increaseIndex++)
                 {
                     ContentId stat = StandardProgressionIds.CoreStats[
                         request.RandomSource.NextInt32(0, StandardProgressionIds.CoreStats.Count)];
@@ -627,19 +653,14 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                         baseStats[stat] = checked(current + increase);
                         effectiveStats[stat] = checked(
                             effectiveStats.GetValueOrDefault(stat) + increase);
+                        statIncreases[stat] = statIncreases.GetValueOrDefault(stat) + increase;
                     }
-
-                    levelUps.Add(new LevelUpEvent(
-                        level,
-                        statIncreases: increase > 0
-                            ? [new KeyValuePair<ContentId, decimal>(stat, increase)]
-                            : []));
-                    continue;
                 }
 
-                statPoints = checked(statPoints + 1);
+                statPoints = checked(
+                    statPoints + request.GrowthProfile.ManualStatPointsPerLevel);
                 Dictionary<ContentId, decimal> baseResourceIncreases = [];
-                if (request.SubjectKindId != StandardProgressionIds.Companion)
+                if (request.GrowthProfile.GrowsBaseResources)
                 {
                     decimal hpIncrease = request.RandomSource.NextInt32(6, 11);
                     decimal spIncrease = request.RandomSource.NextInt32(3, 8);
@@ -652,17 +673,21 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                 }
 
                 IReadOnlyList<RuntimeResourceSnapshot> before = resources;
-                ResourceRecalculationResult recalculated = _resourceGrowthPolicy.Recalculate(
-                    new ResourceRecalculationRequest(
-                        resources,
-                        baseResources,
-                        effectiveStats,
-                        ResourceCurrentAdjustmentMode.LevelUpDelta));
-                resources = recalculated.Resources;
+                if (resources.Count > 0)
+                {
+                    ResourceRecalculationResult recalculated = _resourceGrowthPolicy.Recalculate(
+                        new ResourceRecalculationRequest(
+                            resources,
+                            baseResources,
+                            effectiveStats,
+                            ResourceCurrentAdjustmentMode.LevelUpDelta));
+                    resources = recalculated.Resources;
+                }
                 levelUps.Add(new LevelUpEvent(
                     level,
+                    statIncreases: statIncreases,
                     baseResourceIncreases: baseResourceIncreases,
-                    statPointsAwarded: 1,
+                    statPointsAwarded: request.GrowthProfile.ManualStatPointsPerLevel,
                     resourcesBefore: before,
                     resourcesAfter: resources));
             }

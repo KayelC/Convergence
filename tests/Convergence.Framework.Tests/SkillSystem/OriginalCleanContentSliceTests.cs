@@ -757,7 +757,7 @@ public sealed class OriginalCleanContentSliceTests
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterModifierTrack("attack", "defense")
-            .RegisterEntityKind("companion")
+            .RegisterEntityKind("vessel", "companion")
             .RegisterAlignment("neutral")
             .RegisterNegotiationPersonality("steady_sample")
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")

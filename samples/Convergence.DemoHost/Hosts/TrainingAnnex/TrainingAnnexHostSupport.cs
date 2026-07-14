@@ -177,7 +177,7 @@ internal static class TrainingAnnexHostSupport
             .RegisterResource("hp", "sp")
             .RegisterStat("strength", "magic", "vitality", "agility", "luck")
             .RegisterModifierTrack("attack", "defense")
-            .RegisterEntityKind("companion")
+            .RegisterEntityKind("vessel", "companion")
             .RegisterAlignment("neutral")
             .RegisterNegotiationPersonality("steady_sample")
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
@@ -229,7 +229,8 @@ internal static class TrainingAnnexHostSupport
 
         var diagnostics = new List<string>();
         GrowthRulesetServices? growthServices = BindGrowthServices(catalog, diagnostics);
-        if (growthServices is null)
+        IStatResolutionPolicy? statPolicy = BindStatPolicy(catalog, diagnostics);
+        if (growthServices is null || statPolicy is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
@@ -244,7 +245,7 @@ internal static class TrainingAnnexHostSupport
             EchoAdeptInstance,
             PlayerTeam,
             3,
-            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            new RuntimeProgressionSnapshot(3, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Active));
         if (!playerResult.IsSuccess)
@@ -257,7 +258,7 @@ internal static class TrainingAnnexHostSupport
             SupportAnnexMentorInstance,
             PlayerTeam,
             5,
-            new RuntimeProgressionSnapshot(5, 0, 0, 4),
+            new RuntimeProgressionSnapshot(5, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -271,7 +272,7 @@ internal static class TrainingAnnexHostSupport
             FormAnnexMentorInstance,
             PlayerTeam,
             5,
-            new RuntimeProgressionSnapshot(5, 0, 0, 4),
+            new RuntimeProgressionSnapshot(5, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -285,7 +286,7 @@ internal static class TrainingAnnexHostSupport
             PersonaBrambleRunnerInstance,
             PlayerTeam,
             3,
-            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            new RuntimeProgressionSnapshot(3, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -299,7 +300,7 @@ internal static class TrainingAnnexHostSupport
             DemonAshlingInstance,
             PlayerTeam,
             2,
-            new RuntimeProgressionSnapshot(2, 0, 0, 1),
+            new RuntimeProgressionSnapshot(2, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -313,7 +314,7 @@ internal static class TrainingAnnexHostSupport
             DemonWardShellInstance,
             PlayerTeam,
             4,
-            new RuntimeProgressionSnapshot(4, 0, 0, 3),
+            new RuntimeProgressionSnapshot(4, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -327,7 +328,7 @@ internal static class TrainingAnnexHostSupport
             ReplacementBrambleRunnerInstance,
             PlayerTeam,
             3,
-            new RuntimeProgressionSnapshot(3, 0, 0, 2),
+            new RuntimeProgressionSnapshot(3, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
@@ -362,9 +363,44 @@ internal static class TrainingAnnexHostSupport
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
 
+        CatalogBattleActor player = playerResult.RequireActor();
+        CatalogBattleActor activeHostedEntity = activeHostedEntityResult.RequireActor();
+        var playerRosters = new RuntimeActorRosterSnapshot(
+            activeHostedEntity: Reference(activeHostedEntity.State.ToSnapshot()),
+            hostedEntityRoster: [Reference(hostedEntityRosterResult.RequireActor().State.ToSnapshot())],
+            companionRoster:
+            [
+                Reference(demonAshlingResult.RequireActor().State.ToSnapshot()),
+                Reference(demonWardShellResult.RequireActor().State.ToSnapshot()),
+                Reference(replacementBrambleResult.RequireActor().State.ToSnapshot())
+            ]);
+        RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService(
+                statPolicy,
+                growthServices.ResourceGrowthPolicy)
+            .Compose(new RuntimeActorStatCompositionRequest(
+                player.State,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                activeHostedEntity.State,
+                playerRosters));
+        if (!composition.Applied)
+        {
+            foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
+            {
+                diagnostics.Add($"[stat_composition:{diagnostic.Code}] {diagnostic.Message}");
+            }
+
+            return new TrainingAnnexActorRosterResult(null, diagnostics);
+        }
+
+        foreach (BattleResourceState resource in player.State.Resources.Values)
+        {
+            player.State.SetResource(resource.Id, resource.Maximum);
+        }
+
         return new TrainingAnnexActorRosterResult(
             new TrainingAnnexActorRoster(
-                new TrainingAnnexRuntimeActor("Player", playerResult.RequireActor()),
+                new TrainingAnnexRuntimeActor("Player", player),
                 [new TrainingAnnexRuntimeActor("Reserve", mentorResult.RequireActor())],
                 [
                     new TrainingAnnexRuntimeActor("Active Form", activeHostedEntityResult.RequireActor()),
@@ -540,7 +576,11 @@ internal static class TrainingAnnexHostSupport
     public static ContentId Qualified(string localId) => ContentId.Parse($"{PackId}:{localId}");
 
     public static RuntimeProgressionSnapshot InitialProgression(EntityDefinition entity, int level) =>
-        new(level, 0, 0, entity.EntityKindId == StandardProgressionIds.Companion ? 0 : level - 1);
+        new(
+            level,
+            0,
+            0,
+            entity.EntityKindId == StandardProgressionIds.IndependentActor ? level - 1 : 0);
 
     public static RuntimeStatBlockSnapshot ActorStats(EntityDefinition entity) =>
         new(
@@ -561,6 +601,39 @@ internal static class TrainingAnnexHostSupport
     public static RuntimeActorReferenceSnapshot Reference(TrainingAnnexRuntimeActor actor) =>
         Reference(actor.Actor.State.ToSnapshot());
 
+    public static RuntimeActorStatCompositionResult ComposePlayerStats(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
+        IRuntimeActorStatCompositionService compositionService,
+        RuntimeEquipmentProfile equipmentProfile)
+    {
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(partyRoster);
+        ArgumentNullException.ThrowIfNull(compositionService);
+        ArgumentNullException.ThrowIfNull(equipmentProfile);
+
+        RuntimeActorReferenceSnapshot? activeReference = partyRoster.ActiveHostedEntity;
+        RuntimeActorState? activeState = activeReference is null
+            ? null
+            : roster.AllActors
+                .Select(member => member.Actor.State)
+                .FirstOrDefault(state =>
+                    state.InstanceId == activeReference.InstanceId &&
+                    state.EntityId == activeReference.EntityDefinitionId);
+        var actorRosters = new RuntimeActorRosterSnapshot(
+            partyRoster.ActiveHostedEntity,
+            partyRoster.HostedEntityRoster,
+            partyRoster.CompanionRoster);
+
+        return compositionService.Compose(new RuntimeActorStatCompositionRequest(
+            roster.Player.Actor.State,
+            RuntimeStatSourceKind.ActiveHostedEntity,
+            MissingHostedEntityBehavior.RejectStatResolution,
+            activeState,
+            actorRosters,
+            equipmentProfile.StatModifiers));
+    }
+
     public static IReadOnlyDictionary<ContentId, decimal> InitialBaseResourceValues(int level) =>
         new Dictionary<ContentId, decimal>
         {
@@ -580,6 +653,25 @@ internal static class TrainingAnnexHostSupport
         foreach (RulesetBindingDiagnostic diagnostic in growth.Diagnostics)
         {
             diagnostics.Add($"[growth:{diagnostic.Code}] {diagnostic.Message}");
+        }
+
+        return null;
+    }
+
+    private static IStatResolutionPolicy? BindStatPolicy(
+        GameDataCatalog catalog,
+        List<string> diagnostics)
+    {
+        RulesetBindingResult<IStatResolutionPolicy> stats = new RuntimeRulesetBindingResolver()
+            .BindStatResolutionPolicy(catalog, Qualified("standard_stat"));
+        if (stats.IsSuccess)
+        {
+            return stats.RequireService();
+        }
+
+        foreach (RulesetBindingDiagnostic diagnostic in stats.Diagnostics)
+        {
+            diagnostics.Add($"[stat:{diagnostic.Code}] {diagnostic.Message}");
         }
 
         return null;

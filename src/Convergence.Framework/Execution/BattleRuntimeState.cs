@@ -915,6 +915,45 @@ public sealed class RuntimeActorState
         _baseResourceValues = nextBaseResourceValues;
     }
 
+    internal void ApplyStatComposition(
+        RuntimeActorRosterSnapshot rosters,
+        IEnumerable<KeyValuePair<ContentId, decimal>> effectiveStats,
+        IEnumerable<RuntimeResourceSnapshot> resources)
+    {
+        ArgumentNullException.ThrowIfNull(rosters);
+        IReadOnlyDictionary<ContentId, decimal> nextEffectiveStats = Snapshot(effectiveStats);
+        RuntimeActorNumericDomain.RequireValidStatValues(nextEffectiveStats, nameof(effectiveStats));
+        RequireValid(rosters.ActiveHostedEntity, nameof(rosters));
+        RequireValid(rosters.HostedEntityRoster, nameof(rosters));
+        RequireValid(rosters.CompanionRoster, nameof(rosters));
+
+        RuntimeResourceSnapshot[] resourceSnapshots =
+            (resources ?? throw new ArgumentNullException(nameof(resources))).ToArray();
+        if (resourceSnapshots.Select(resource => resource.ResourceId).Distinct().Count() != resourceSnapshots.Length ||
+            !resourceSnapshots.Any(resource => resource.ResourceId == VitalResourceId))
+        {
+            throw new ArgumentException(
+                "Composed resources must be unique and contain the vital resource.",
+                nameof(resources));
+        }
+
+        BattleResourceState[] nextResources = resourceSnapshots
+            .Select(resource => new BattleResourceState(
+                resource.ResourceId,
+                resource.Current,
+                resource.Maximum))
+            .ToArray();
+
+        _resources.Clear();
+        foreach (BattleResourceState resource in nextResources)
+        {
+            _resources.Add(resource.Id, resource);
+        }
+
+        _effectiveStats = nextEffectiveStats;
+        Rosters = rosters;
+    }
+
     internal void ReplaceResources(IEnumerable<RuntimeResourceSnapshot> resources)
     {
         RuntimeResourceSnapshot[] replacements =

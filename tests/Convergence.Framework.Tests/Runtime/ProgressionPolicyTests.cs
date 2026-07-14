@@ -1,5 +1,7 @@
 using System.Reflection;
+using Convergence.Battle;
 using Convergence.Content;
+using Convergence.Execution;
 using Convergence.Hosting;
 using Convergence.Runtime;
 using Xunit;
@@ -13,15 +15,14 @@ public sealed class ProgressionPolicyTests
     private readonly IExperienceCurve _curve = new CubicExperienceCurve();
 
     [Theory]
-    [InlineData("human", 10)]
-    [InlineData("operator", 10)]
-    [InlineData("persona_user", 18)]
-    [InlineData("wild_card", 18)]
-    [InlineData("companion", 20)]
-    public void StatPolicy_ResolvesClassSpecificStrengthComposition(string actorKind, int expected)
+    [InlineData(RuntimeStatSourceKind.Actor, 10)]
+    [InlineData(RuntimeStatSourceKind.ActiveHostedEntity, 20)]
+    public void StatPolicy_UsesOnlyTheExplicitStatSource(
+        RuntimeStatSourceKind sourceKind,
+        int expected)
     {
         StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
-            Id(actorKind),
+            sourceKind,
             StandardProgressionIds.Strength,
             BaseStats(10),
             ActiveHostedEntityStats(20)));
@@ -29,26 +30,26 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(expected, result.FinalValue);
     }
 
-    [Theory]
-    [InlineData("vitality", 15)]
-    [InlineData("agility", 15)]
-    [InlineData("luck", 20)]
-    public void StatPolicy_UsesApprovedPersonaWeights(string stat, int expected)
+    [Fact]
+    public void StatPolicy_UsesTheEntireHostedEntityStatBlockWithoutWeights()
     {
-        StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
-            StandardProgressionIds.WildCard,
-            Id(stat),
-            BaseStats(10),
-            ActiveHostedEntityStats(20)));
+        foreach (ContentId statId in StandardProgressionIds.CoreStats)
+        {
+            StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                statId,
+                BaseStats(10),
+                ActiveHostedEntityStats(20)));
 
-        Assert.Equal(expected, result.FinalValue);
+            Assert.Equal(20, result.FinalValue);
+        }
     }
 
     [Fact]
     public void StatPolicy_AppliesAccessoryModifiersBeforeCapAndStagesAfterCap()
     {
         StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
-            StandardProgressionIds.Human,
+            RuntimeStatSourceKind.Actor,
             StandardProgressionIds.Strength,
             BaseStats(38),
             equipmentStatModifiers: [new(StandardProgressionIds.Strength, 10)],
@@ -74,10 +75,168 @@ public sealed class ProgressionPolicyTests
 
         int Resolve(ContentId stat, RuntimeStatStageSnapshot stage) =>
             _stats.Resolve(new StatResolutionRequest(
-                StandardProgressionIds.Human,
+                RuntimeStatSourceKind.Actor,
                 stat,
                 BaseStats(10),
                 statStages: [stage])).FinalValue;
+    }
+
+    [Fact]
+    public void ActorComposition_UsesHostedStatsEquipmentStagesAndPreservesCurrentResources()
+    {
+        RuntimeActorState hostedEntity = CreateActor("hosted", 20m);
+        RuntimeActorReferenceSnapshot hostedReference = Reference(hostedEntity);
+        RuntimeActorRosterSnapshot rosters = new(activeHostedEntity: hostedReference);
+        RuntimeActorState vessel = CreateActor("vessel", 5m, rosters, hpCurrent: 90m);
+        vessel.ChangeStatStage(StandardProgressionIds.Attack, 1, duration: null);
+        var service = new RuntimeActorStatCompositionService(_stats, _resources);
+
+        RuntimeActorStatCompositionResult result = service.Compose(
+            new RuntimeActorStatCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                hostedEntity,
+                equipmentStatModifiers:
+                [
+                    new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 2m),
+                    new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 1m)
+                ]));
+
+        Assert.True(result.Applied);
+        Assert.Equal(RuntimeStatSourceKind.ActiveHostedEntity, result.ResolvedSourceKind);
+        Assert.Equal(30m, vessel.Stats[StandardProgressionIds.Strength]);
+        Assert.Equal(21m, vessel.Stats[StandardProgressionIds.Vitality]);
+        Assert.Equal(90m, vessel.Resources[StandardProgressionIds.Hp].Current);
+        Assert.Equal(125m, vessel.Resources[StandardProgressionIds.Hp].Maximum);
+        Assert.Equal(20m, vessel.Resources[StandardProgressionIds.Sp].Current);
+        Assert.Equal(90m, vessel.Resources[StandardProgressionIds.Sp].Maximum);
+        Assert.Equal(rosters.ActiveHostedEntity, vessel.Rosters.ActiveHostedEntity);
+    }
+
+    [Fact]
+    public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
+    {
+        RuntimeActorState rejectedActor = CreateActor("rejected_vessel", 7m);
+        RuntimeActorSnapshot rejectedBefore = rejectedActor.ToSnapshot();
+        var service = new RuntimeActorStatCompositionService(_stats, _resources);
+
+        RuntimeActorStatCompositionResult rejected = service.Compose(
+            new RuntimeActorStatCompositionRequest(
+                rejectedActor,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution));
+
+        Assert.False(rejected.Applied);
+        Assert.Equal(
+            RuntimeActorStatCompositionDiagnosticCode.MissingActiveHostedEntity,
+            Assert.Single(rejected.Diagnostics).Code);
+        AssertCompositionStateUnchanged(rejectedBefore, rejectedActor.ToSnapshot());
+
+        RuntimeActorState fallbackActor = CreateActor("fallback_vessel", 7m, hpCurrent: 80m);
+        RuntimeActorStatCompositionResult fallback = service.Compose(
+            new RuntimeActorStatCompositionRequest(
+                fallbackActor,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.UseActorBaseStats));
+
+        Assert.True(fallback.Applied);
+        Assert.Equal(RuntimeStatSourceKind.Actor, fallback.ResolvedSourceKind);
+        Assert.Equal(7m, fallbackActor.Stats[StandardProgressionIds.Strength]);
+        Assert.Equal(55m, fallbackActor.Resources[StandardProgressionIds.Hp].Maximum);
+        Assert.Equal(55m, fallbackActor.Resources[StandardProgressionIds.Hp].Current);
+    }
+
+    [Fact]
+    public void ActorComposition_RejectsHostedEntityIdentityMismatchWithoutMutation()
+    {
+        RuntimeActorState expected = CreateActor("expected_hosted", 20m);
+        RuntimeActorState supplied = CreateActor("supplied_hosted", 30m);
+        RuntimeActorState vessel = CreateActor(
+            "mismatched_vessel",
+            5m,
+            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(expected)));
+        RuntimeActorSnapshot before = vessel.ToSnapshot();
+
+        RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
+            new RuntimeActorStatCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                supplied));
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch,
+            Assert.Single(result.Diagnostics).Code);
+        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
+    }
+
+    [Fact]
+    public void ActorComposition_ResolutionFailureIsAtomic()
+    {
+        RuntimeActorState hostedEntity = CreateActor("atomic_hosted", 20m);
+        RuntimeActorState vessel = CreateActor(
+            "atomic_vessel",
+            5m,
+            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(hostedEntity)));
+        RuntimeActorSnapshot before = vessel.ToSnapshot();
+        var service = new RuntimeActorStatCompositionService(
+            new ThrowingStatResolutionPolicy(StandardProgressionIds.Magic),
+            _resources);
+
+        RuntimeActorStatCompositionResult result = service.Compose(
+            new RuntimeActorStatCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                hostedEntity));
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+            Assert.Single(result.Diagnostics).Code);
+        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
+    }
+
+    [Fact]
+    public void ActorComposition_DrivesBattleDamageFromTheHostedEntityStats()
+    {
+        RuntimeActorState hostedEntity = CreateActor("damage_hosted", 20m);
+        RuntimeActorState vessel = CreateActor(
+            "damage_vessel",
+            5m,
+            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(hostedEntity)));
+        RuntimeActorState actorSourced = CreateActor("damage_actor_source", 5m);
+        RuntimeActorState target = CreateActor("damage_target", 5m);
+        RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService().Compose(
+            new RuntimeActorStatCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                hostedEntity));
+        Assert.True(composition.Applied);
+
+        var ruleset = new ProductionCombatRuleset(new MinimumRandomSource());
+        ProductionDamageResolutionResult composedDamage = ruleset.ResolveDamage(
+            DamageRequest(vessel, target));
+        ProductionDamageResolutionResult actorDamage = ruleset.ResolveDamage(
+            DamageRequest(actorSourced, target));
+
+        Assert.True(composedDamage.TotalDamage > actorDamage.TotalDamage);
+
+        static ProductionDamageResolutionRequest DamageRequest(
+            RuntimeActorState attacker,
+            RuntimeActorState defender) =>
+            new(
+                ProductionCombatRuleset.FromRuntimeActor(attacker),
+                ProductionCombatRuleset.FromRuntimeActor(defender),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                Power: 20,
+                Accuracy: 100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1));
     }
 
     [Fact]
@@ -125,21 +284,15 @@ public sealed class ProgressionPolicyTests
         decimal maximumStat = RuntimeActorNumericDomain.MaximumStatValue;
         var extremeConfig = new StandardStatPolicyConfig(
             statCap: int.MaxValue,
-            buffMultiplier: decimal.MaxValue,
-            activeHostedEntityWeights:
-            [
-                new KeyValuePair<ContentId, decimal>(
-                    StandardProgressionIds.Strength,
-                    decimal.MaxValue)
-            ]);
+            buffMultiplier: decimal.MaxValue);
         var stats = new StandardStatResolutionPolicy(extremeConfig);
 
         StatResolutionResult stat = stats.Resolve(new StatResolutionRequest(
-            StandardProgressionIds.WildCard,
+            RuntimeStatSourceKind.ActiveHostedEntity,
             StandardProgressionIds.Strength,
             BaseStats(maximumStat),
-            ActiveHostedEntityStats(maximumStat),
-            equipmentStatModifiers: BaseStats(maximumStat),
+            ActiveHostedEntityStats(decimal.MaxValue),
+            equipmentStatModifiers: BaseStats(decimal.MaxValue),
             statStages: [new RuntimeStatStageSnapshot(StandardProgressionIds.Attack, 1)]));
         ResourceRecalculationResult resources = _resources.Recalculate(new ResourceRecalculationRequest(
             [
@@ -202,17 +355,16 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
-    public void LevelGrowth_AppliesMultiLevelHumanoidGrowthWithDeterministicBaseResourceRolls()
+    public void LevelGrowth_IndependentActorAwardsPointsAndDeterministicBaseResourceGrowth()
     {
         var growth = new StandardLevelGrowthPolicy(_curve, _resources);
 
         LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
             new RuntimeProgressionSnapshot(1, 0, 0, 0),
             new RuntimeStatBlockSnapshot(BaseStats(2), BaseStats(2)),
-            StandardProgressionIds.Human,
+            StandardLevelGrowthProfiles.IndependentActor,
             experienceAward: 13,
             new SequenceRandomSource(6, 3, 10, 7),
-            ProgressionSubjectKind.Actor,
             [
                 new RuntimeResourceSnapshot(StandardProgressionIds.Hp, 10, 30),
                 new RuntimeResourceSnapshot(StandardProgressionIds.Sp, 5, 12)
@@ -235,7 +387,7 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
-    public void LevelGrowth_FormGrowthIncrementsRandomStatAndRespectsCap()
+    public void LevelGrowth_OwnedEntityIncrementsRandomStatAndRespectsCap()
     {
         var growth = new StandardLevelGrowthPolicy(_curve, _resources);
 
@@ -244,16 +396,43 @@ public sealed class ProgressionPolicyTests
             new RuntimeStatBlockSnapshot(
                 [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 39)],
                 [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 39)]),
-            StandardProgressionIds.WildCard,
+            StandardLevelGrowthProfiles.OwnedEntity,
             experienceAward: 13,
-            new SequenceRandomSource(0, 0),
-            ProgressionSubjectKind.Form));
+            new SequenceRandomSource(0, 0)));
 
         Assert.True(result.Applied);
         Assert.Equal(3, result.Progression.Level);
         Assert.Equal(40, result.Stats.BaseStats[StandardProgressionIds.Strength]);
         Assert.Equal(1, result.LevelUps[0].StatIncreases[StandardProgressionIds.Strength]);
         Assert.Empty(result.LevelUps[1].StatIncreases);
+    }
+
+    [Fact]
+    public void LevelGrowth_VesselGrowsBaseResourcesWithoutManualStatPoints()
+    {
+        var growth = new StandardLevelGrowthPolicy(_curve, _resources);
+
+        LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
+            new RuntimeProgressionSnapshot(1, 0, 0, 0),
+            new RuntimeStatBlockSnapshot(BaseStats(20), BaseStats(20)),
+            StandardLevelGrowthProfiles.Vessel,
+            experienceAward: 1,
+            new SequenceRandomSource(6, 3),
+            [
+                new RuntimeResourceSnapshot(StandardProgressionIds.Hp, 50, 120),
+                new RuntimeResourceSnapshot(StandardProgressionIds.Sp, 20, 66)
+            ],
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6)
+            ]));
+
+        Assert.True(result.Applied);
+        Assert.Equal(2, result.Progression.Level);
+        Assert.Equal(0, result.Progression.UnspentStatPoints);
+        Assert.Equal(26m, result.BaseResourceValues[StandardProgressionIds.Hp]);
+        Assert.Equal(9m, result.BaseResourceValues[StandardProgressionIds.Sp]);
+        Assert.Empty(Assert.Single(result.LevelUps).StatIncreases);
     }
 
     [Fact]
@@ -266,10 +445,9 @@ public sealed class ProgressionPolicyTests
         LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
             progression,
             stats,
-            StandardProgressionIds.Human,
+            StandardLevelGrowthProfiles.IndependentActor,
             experienceAward: -1,
-            new SequenceRandomSource(),
-            ProgressionSubjectKind.Actor));
+            new SequenceRandomSource()));
 
         Assert.False(result.Applied);
         Assert.Equal(progression, result.Progression);
@@ -286,10 +464,9 @@ public sealed class ProgressionPolicyTests
         LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
             progression,
             stats,
-            StandardProgressionIds.Human,
+            StandardLevelGrowthProfiles.IndependentActor,
             experienceAward: 1,
-            new SequenceRandomSource(),
-            ProgressionSubjectKind.Actor));
+            new SequenceRandomSource()));
 
         Assert.False(result.Applied);
         Assert.Same(progression, result.Progression);
@@ -309,10 +486,9 @@ public sealed class ProgressionPolicyTests
         LevelGrowthResult result = growth.ApplyExperience(new LevelGrowthRequest(
             progression,
             stats,
-            StandardProgressionIds.Human,
+            StandardLevelGrowthProfiles.IndependentActor,
             experienceAward: 1,
-            new SequenceRandomSource(),
-            ProgressionSubjectKind.Actor));
+            new SequenceRandomSource()));
 
         Assert.False(result.Applied);
         Assert.Equal(
@@ -411,8 +587,6 @@ public sealed class ProgressionPolicyTests
         }
     }
 
-    private static ContentId Id(string value) => ContentId.Parse(value);
-
     private static KeyValuePair<ContentId, decimal>[] BaseStats(decimal value) =>
     [
         new(StandardProgressionIds.Strength, value),
@@ -423,6 +597,69 @@ public sealed class ProgressionPolicyTests
     ];
 
     private static KeyValuePair<ContentId, decimal>[] ActiveHostedEntityStats(decimal value) => BaseStats(value);
+
+    private static RuntimeActorState CreateActor(
+        string id,
+        decimal statValue,
+        RuntimeActorRosterSnapshot? rosters = null,
+        decimal hpCurrent = 50m) =>
+        new(
+            RuntimeInstanceId.Parse(id),
+            ContentId.Parse($"{id}_entity"),
+            ContentId.Parse("player_team"),
+            StandardProgressionIds.Hp,
+            CombatDefenseProfile.Empty,
+            [
+                new BattleResourceState(StandardProgressionIds.Hp, hpCurrent, 100m),
+                new BattleResourceState(StandardProgressionIds.Sp, 20m, 30m)
+            ],
+            stats: BaseStats(statValue),
+            identity: new RuntimeActorIdentitySnapshot(
+                RuntimeInstanceId.Parse(id),
+                ContentId.Parse($"{id}_entity"),
+                StandardProgressionIds.Vessel,
+                id),
+            baseResourceValues:
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20m),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
+            ],
+            baseStats: BaseStats(statValue),
+            rosters: rosters);
+
+    private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
+        new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);
+
+    private static void AssertCompositionStateUnchanged(
+        RuntimeActorSnapshot expected,
+        RuntimeActorSnapshot actual)
+    {
+        Assert.Equal(expected.Identity, actual.Identity);
+        Assert.Equal(expected.Ownership, actual.Ownership);
+        Assert.Equal(expected.Deployment, actual.Deployment);
+        Assert.Equal(expected.Progression, actual.Progression);
+        Assert.Equal(expected.VitalResourceId, actual.VitalResourceId);
+        Assert.Equal(expected.Resources.ToArray(), actual.Resources.ToArray());
+        Assert.Equal(
+            expected.BaseResourceValues.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray(),
+            actual.BaseResourceValues.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray());
+        Assert.Equal(
+            expected.Stats.BaseStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray(),
+            actual.Stats.BaseStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray());
+        Assert.Equal(
+            expected.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray(),
+            actual.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray());
+        Assert.Equal(expected.Rosters.ActiveHostedEntity, actual.Rosters.ActiveHostedEntity);
+        Assert.Equal(
+            expected.Rosters.HostedEntityRoster.ToArray(),
+            actual.Rosters.HostedEntityRoster.ToArray());
+        Assert.Equal(
+            expected.Rosters.CompanionRoster.ToArray(),
+            actual.Rosters.CompanionRoster.ToArray());
+        Assert.Equal(
+            expected.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray(),
+            actual.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray());
+    }
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)
     {
@@ -470,5 +707,27 @@ public sealed class ProgressionPolicyTests
     private sealed class ZeroExperienceCurve : IExperienceCurve
     {
         public long GetRequiredExperience(int level) => 0;
+    }
+
+    private sealed class MinimumRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class ThrowingStatResolutionPolicy(ContentId rejectedStatId) : IStatResolutionPolicy
+    {
+        private readonly StandardStatResolutionPolicy _inner = new();
+
+        public StatResolutionResult Resolve(StatResolutionRequest request)
+        {
+            if (request.StatId == rejectedStatId)
+            {
+                throw new InvalidOperationException("Test policy rejected the stat.");
+            }
+
+            return _inner.Resolve(request);
+        }
     }
 }
