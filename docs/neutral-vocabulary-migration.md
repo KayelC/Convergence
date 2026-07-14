@@ -22,6 +22,8 @@ Future breaking changes after a stable release require deprecation and migration
 
 The supplied turn economy is named **Action Token**. `IBattleTurnEconomy` remains the generic extension boundary, while the supplied policy uses full and partial tokens. Passing consumes a partial token before converting a full token. Consequently `[partial, full]` becomes `[full]`; a pass with only full tokens converts one full token into one partial token.
 
+Ruleset content deliberately keeps the generic category `turn_economy`. Categories identify the framework contract family, while `standard_action_token` identifies Convergence's supplied implementation. There is no `action_token` category: a host may register a different turn-economy policy without changing the structural category. This refines the original migration table in favor of the optional-module boundary.
+
 Ownership uses these neutral roles:
 
 - a **Vessel** may use an **Active Hosted Entity** as its stat source;

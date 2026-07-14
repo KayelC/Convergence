@@ -46,6 +46,8 @@ Guard is executable runtime state and may reduce damage or normalize weakness ac
 
 `IBattleTurnEconomy` is the reusable turn interface. Action Token is one optional implementation, not a mandatory battle model.
 
+In ruleset content, `turn_economy` is the generic category and `standard_action_token` is the supplied policy ID. The category is intentionally not named `action_token`, because another host may bind a different implementation of the same turn-economy contract.
+
 The supplied Action Token behavior is:
 
 - A phase starts with one full token per active living actor.

@@ -22,6 +22,8 @@ The active pre-release authoring contract is schema version `2`. Version `1` is 
 
 Definitions and catalogs retain no serializer-owned values. Hosts may use another source format by mapping it into the same domain contracts or by supplying compatible JSON text.
 
+Ruleset categories identify generic service families. In particular, `turn_economy` is the category for any `IBattleTurnEconomy` implementation; `standard_action_token` is the policy ID for the optional Action Token implementation supplied by Convergence.
+
 ## Generic Content Policy
 
 Checked-in active content must be generic, original, and small enough to review. It demonstrates contracts; it is not mandatory built-in game data. Historical prototype content is archived and never loaded by active projects.
