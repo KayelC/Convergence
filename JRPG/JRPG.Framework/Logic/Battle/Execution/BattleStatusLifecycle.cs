@@ -222,9 +222,41 @@ public sealed record BattleTurnEndLifecycleRequest(
     ContentId? BattleKindId = null,
     ContentId? MoonPhaseId = null);
 
-public sealed record BattleTurnEndLifecycleResult(
-    IReadOnlyList<BattleStatusLifecycleEvent> Events,
-    IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations);
+public sealed record BattleTurnEndLifecycleResult
+{
+    private readonly IReadOnlyList<BattleStatusLifecycleEvent> _events =
+        Array.Empty<BattleStatusLifecycleEvent>();
+    private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
+        Array.Empty<PassiveTriggerExecutionResult>();
+
+    public BattleTurnEndLifecycleResult(
+        IReadOnlyList<BattleStatusLifecycleEvent> Events,
+        IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations)
+    {
+        this.Events = Events;
+        this.PassiveActivations = PassiveActivations;
+    }
+
+    public IReadOnlyList<BattleStatusLifecycleEvent> Events
+    {
+        get => _events;
+        init => _events = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+
+    public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations
+    {
+        get => _passiveActivations;
+        init => _passiveActivations = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+
+    public void Deconstruct(
+        out IReadOnlyList<BattleStatusLifecycleEvent> Events,
+        out IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations)
+    {
+        Events = this.Events;
+        PassiveActivations = this.PassiveActivations;
+    }
+}
 
 public sealed record BattleAilmentApplicationRequest
 {
@@ -266,11 +298,35 @@ public sealed record BattleAilmentApplicationRequest
     public SkillDefinition? Skill { get; }
 }
 
-public sealed record BattleAilmentApplicationResult(
-    BattleAilmentApplicationStatus Status,
-    IReadOnlyList<BattleStatusLifecycleEvent> Events)
+public sealed record BattleAilmentApplicationResult
 {
+    private readonly IReadOnlyList<BattleStatusLifecycleEvent> _events =
+        Array.Empty<BattleStatusLifecycleEvent>();
+
+    public BattleAilmentApplicationResult(
+        BattleAilmentApplicationStatus Status,
+        IReadOnlyList<BattleStatusLifecycleEvent> Events)
+    {
+        this.Status = Status;
+        this.Events = Events;
+    }
+
+    public BattleAilmentApplicationStatus Status { get; init; }
+    public IReadOnlyList<BattleStatusLifecycleEvent> Events
+    {
+        get => _events;
+        init => _events = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+
     public bool Applied => Status == BattleAilmentApplicationStatus.Applied;
+
+    public void Deconstruct(
+        out BattleAilmentApplicationStatus Status,
+        out IReadOnlyList<BattleStatusLifecycleEvent> Events)
+    {
+        Status = this.Status;
+        Events = this.Events;
+    }
 }
 
 public interface IBattleAilmentApplicationService

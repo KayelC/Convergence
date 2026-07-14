@@ -179,6 +179,15 @@ Callers can supply a `List<T>`, mutate it after construction, or replace it thro
 
 Recommended correction: replace positional collection records with constructors and `init` accessors that defensively snapshot, matching `EffectExecutionResult`.
 
+**Correction status (2026-07-14): implemented.**
+
+- The complete public framework scan identified exactly four affected lifecycle result contracts: `PassiveTriggerExecutionResult`, `PassiveTriggerDispatchResult`, `BattleTurnEndLifecycleResult`, and `BattleAilmentApplicationResult`. No other public `*Result` record in the lifecycle surface retained a positional `IReadOnlyList`.
+- Each result now copies supplied collections into read-only snapshots in both its constructor and collection `init` accessor. Mutating the original caller list after construction therefore cannot change historical result evidence.
+- Record cloning remains supported. Assigning a mutable replacement list through `with` creates another snapshot instead of retaining that list, while assigning `null` defensively produces an immutable empty collection consistent with `EffectExecutionResult`.
+- Existing scalar `init` behavior, constructor CLR signatures, and positional `Deconstruct` signatures were preserved. Current hosts and framework callers require no construction or deconstruction changes.
+- Five focused regressions cover all four result contracts, constructor aliasing, record-clone aliasing, exposed-interface mutation, null replacement, derived `Applied` state, and deconstruction compatibility. The broader affected execution/lifecycle gate passed 81 tests.
+- All 1,095 solution tests passed with no failures or skips. The framework build remains at 0 warnings; the complete solution retains its existing 100 compatibility-host warnings. Battle, field, save, and Training Annex demos completed successfully, framework neutrality searches found no prohibited references, and `Data/Jsons` remained unchanged.
+
 ### L2. Default value-type IDs bypass constructor normalization
 
 `ContentId` and `RuntimeInstanceId` are structs, so `default` remains representable even though their public constructors reject empty values.
@@ -222,8 +231,8 @@ Recommended correction: complete package metadata and deterministic package sett
 
 ## Quality Gate
 
-- Latest focused passive/status/encounter tests: 72 passed, 0 failed, 0 skipped.
-- Complete solution tests after M1-M5 corrections: 1,090 passed, 0 failed, 0 skipped.
+- Latest affected execution/lifecycle tests: 81 passed, 0 failed, 0 skipped.
+- Complete solution tests after M1-M5 and L1 corrections: 1,095 passed, 0 failed, 0 skipped.
 - Framework nonincremental build: 0 warnings, 0 errors.
 - Solution nonincremental build: 100 warnings, 0 errors. These warnings are in the retained console-host compatibility surface; framework build remains warning-free.
 - Package: `JRPG.Framework.1.0.0.nupkg` produced successfully; publication metadata remains incomplete as noted in L3.
@@ -239,13 +248,12 @@ NuGet vulnerability metadata could not be refreshed because network access to `a
 
 I am comfortable moving forward with production development and Phase 8. The framework has coherent ownership boundaries, strong deterministic tests, clean engine neutrality, and no critical architectural defect requiring another rewrite. All five medium findings from this review are now corrected and verified.
 
-I am not comfortable labeling the framework a stable public production release yet. L1 and L2 should be corrected before declaring the public contracts stable. L3 must be completed before publishing a package.
+I am not comfortable labeling the framework a stable public production release yet. L2 should be corrected before declaring the public contracts stable. L3 must be completed before publishing a package.
 
 Recommended order:
 
-1. Finish immutable lifecycle result contracts.
-2. Reject default/empty value-type IDs at every public validation boundary.
-3. Complete package/release metadata and SDK reproducibility policy.
-4. Repeat the focused adversarial and full release gates.
+1. Reject default/empty value-type IDs at every public validation boundary.
+2. Complete package/release metadata and SDK reproducibility policy.
+3. Repeat the focused adversarial and full release gates.
 
 No broad redesign or renewed legacy migration is warranted by this review.

@@ -434,16 +434,74 @@ public enum PassiveTriggerOutcome
     ActivationLimitReached
 }
 
-public sealed record PassiveTriggerExecutionResult(
-    ContentId SkillId,
-    int TriggerIndex,
-    ContentId EventId,
-    RuntimeInstanceId TargetId,
-    PassiveTriggerOutcome Outcome,
-    IReadOnlyList<EffectExecutionResult> Effects);
-
-public sealed record PassiveTriggerDispatchResult(IReadOnlyList<PassiveTriggerExecutionResult> Activations)
+public sealed record PassiveTriggerExecutionResult
 {
+    private readonly IReadOnlyList<EffectExecutionResult> _effects =
+        Array.Empty<EffectExecutionResult>();
+
+    public PassiveTriggerExecutionResult(
+        ContentId SkillId,
+        int TriggerIndex,
+        ContentId EventId,
+        RuntimeInstanceId TargetId,
+        PassiveTriggerOutcome Outcome,
+        IReadOnlyList<EffectExecutionResult> Effects)
+    {
+        this.SkillId = SkillId;
+        this.TriggerIndex = TriggerIndex;
+        this.EventId = EventId;
+        this.TargetId = TargetId;
+        this.Outcome = Outcome;
+        this.Effects = Effects;
+    }
+
+    public ContentId SkillId { get; init; }
+    public int TriggerIndex { get; init; }
+    public ContentId EventId { get; init; }
+    public RuntimeInstanceId TargetId { get; init; }
+    public PassiveTriggerOutcome Outcome { get; init; }
+    public IReadOnlyList<EffectExecutionResult> Effects
+    {
+        get => _effects;
+        init => _effects = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+
+    public void Deconstruct(
+        out ContentId SkillId,
+        out int TriggerIndex,
+        out ContentId EventId,
+        out RuntimeInstanceId TargetId,
+        out PassiveTriggerOutcome Outcome,
+        out IReadOnlyList<EffectExecutionResult> Effects)
+    {
+        SkillId = this.SkillId;
+        TriggerIndex = this.TriggerIndex;
+        EventId = this.EventId;
+        TargetId = this.TargetId;
+        Outcome = this.Outcome;
+        Effects = this.Effects;
+    }
+}
+
+public sealed record PassiveTriggerDispatchResult
+{
+    private readonly IReadOnlyList<PassiveTriggerExecutionResult> _activations =
+        Array.Empty<PassiveTriggerExecutionResult>();
+
+    public PassiveTriggerDispatchResult(IReadOnlyList<PassiveTriggerExecutionResult> Activations)
+    {
+        this.Activations = Activations;
+    }
+
+    public IReadOnlyList<PassiveTriggerExecutionResult> Activations
+    {
+        get => _activations;
+        init => _activations = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+
+    public void Deconstruct(out IReadOnlyList<PassiveTriggerExecutionResult> Activations) =>
+        Activations = this.Activations;
+
     public static PassiveTriggerDispatchResult Empty { get; } = new([]);
 }
 
