@@ -724,6 +724,16 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         int actorIndex)
     {
         string formsPath = $"$.actors[{actorIndex}].rosters";
+        foreach (RuntimeActorRosterInvariantDiagnostic rosterDiagnostic in
+                 RuntimeActorRosterInvariantRules.Validate(actor.Rosters))
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.DuplicateActorFormReference,
+                rosterDiagnostic.Message,
+                rosterDiagnostic.InstanceId,
+                Path: formsPath + rosterDiagnostic.Path[1..]));
+        }
+
         if (actor.Rosters.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
             ValidateActorReference(
@@ -735,7 +745,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 $"Actor '{actor.Identity.InstanceId}' active form");
         }
 
-        HashSet<RuntimeInstanceId> personaIds = ValidateActorFormReferenceList(
+        ValidateActorFormReferenceList(
             actor,
             actor.Rosters.HostedEntityRoster,
             actors,
@@ -746,19 +756,16 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             actor.Rosters.CompanionRoster,
             actors,
             diagnostics,
-            formsPath + ".companionRoster",
-            personaIds);
+            formsPath + ".companionRoster");
     }
 
-    private static HashSet<RuntimeInstanceId> ValidateActorFormReferenceList(
+    private static void ValidateActorFormReferenceList(
         RuntimeActorSnapshot owner,
         IReadOnlyList<RuntimeActorReferenceSnapshot> references,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
-        string path,
-        ISet<RuntimeInstanceId>? conflictingStockIds = null)
+        string path)
     {
-        var seen = new HashSet<RuntimeInstanceId>();
         for (int index = 0; index < references.Count; index++)
         {
             RuntimeActorReferenceSnapshot reference = references[index];
@@ -770,19 +777,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 referencePath,
                 RuntimeSaveValidationCode.MissingActorReference,
                 $"Actor '{owner.Identity.InstanceId}' form-stock reference");
-
-            if (!seen.Add(reference.InstanceId) || conflictingStockIds?.Contains(reference.InstanceId) == true)
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.DuplicateActorFormReference,
-                    $"Actor form reference '{reference.InstanceId}' appears in more than one position or stock role.",
-                    reference.InstanceId,
-                    reference.EntityDefinitionId,
-                    referencePath));
-            }
         }
-
-        return seen;
     }
 
     private static void ValidatePartyReferences(

@@ -201,9 +201,7 @@ public sealed class RuntimeActorState
         RequireValid(Skills.LearnedSkillIds, nameof(skillState));
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
         RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
-        RequireValid(Rosters.ActiveHostedEntity, nameof(rosters));
-        RequireValid(Rosters.HostedEntityRoster, nameof(rosters));
-        RequireValid(Rosters.CompanionRoster, nameof(rosters));
+        RequireValidRoster(Rosters, nameof(rosters));
         Passives = new BattlePassiveCollection(passiveSkills);
         _isActive = Deployment.IsActive;
     }
@@ -923,9 +921,7 @@ public sealed class RuntimeActorState
         ArgumentNullException.ThrowIfNull(rosters);
         IReadOnlyDictionary<ContentId, decimal> nextEffectiveStats = Snapshot(effectiveStats);
         RuntimeActorNumericDomain.RequireValidStatValues(nextEffectiveStats, nameof(effectiveStats));
-        RequireValid(rosters.ActiveHostedEntity, nameof(rosters));
-        RequireValid(rosters.HostedEntityRoster, nameof(rosters));
-        RequireValid(rosters.CompanionRoster, nameof(rosters));
+        RequireValidRoster(rosters, nameof(rosters));
 
         RuntimeResourceSnapshot[] resourceSnapshots =
             (resources ?? throw new ArgumentNullException(nameof(resources))).ToArray();
@@ -1276,6 +1272,24 @@ public sealed class RuntimeActorState
         {
             RequireValid(reference, parameterName);
         }
+    }
+
+    private static void RequireValidRoster(RuntimeActorRosterSnapshot roster, string parameterName)
+    {
+        RequireValid(roster.ActiveHostedEntity, parameterName);
+        RequireValid(roster.HostedEntityRoster, parameterName);
+        RequireValid(roster.CompanionRoster, parameterName);
+        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> diagnostics =
+            RuntimeActorRosterInvariantRules.Validate(roster);
+        if (diagnostics.Count == 0)
+        {
+            return;
+        }
+
+        RuntimeActorRosterInvariantDiagnostic first = diagnostics[0];
+        throw new ArgumentException(
+            $"Actor roster is invalid at '{first.Path}': {first.Message}",
+            parameterName);
     }
 
     private sealed class ReadOnlySet<T>(IEnumerable<T> values) : IReadOnlySet<T>

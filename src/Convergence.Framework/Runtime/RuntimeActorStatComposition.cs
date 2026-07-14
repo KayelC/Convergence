@@ -17,6 +17,7 @@ public enum RuntimeActorStatCompositionDiagnosticCode
     ActiveHostedEntityIdentityMismatch,
     StatResolutionFailed,
     ResourceRecalculationFailed,
+    RosterInvariantViolation,
     CommitFailed
 }
 
@@ -118,6 +119,19 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
         RuntimeStatSourceKind resolvedSource = request.SourceKind;
         IReadOnlyDictionary<ContentId, decimal> hostedStats =
             RuntimeSnapshotCollections.Dictionary<ContentId, decimal>();
+
+        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> rosterDiagnostics =
+            RuntimeActorRosterInvariantRules.Validate(rosters);
+        if (rosterDiagnostics.Count > 0)
+        {
+            RuntimeActorRosterInvariantDiagnostic first = rosterDiagnostics[0];
+            return Rejected(
+                before,
+                resolvedSource,
+                RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
+                $"Actor roster is invalid at '{first.Path}': {first.Message}",
+                instanceId: first.InstanceId);
+        }
 
         if (request.SourceKind == RuntimeStatSourceKind.ActiveHostedEntity)
         {

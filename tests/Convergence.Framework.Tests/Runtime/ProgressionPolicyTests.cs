@@ -173,6 +173,68 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void ActorComposition_RejectsEveryActorRosterInvariantWithoutMutation()
+    {
+        RuntimeActorReferenceSnapshot first = ActorReference("owned_first");
+        RuntimeActorReferenceSnapshot second = ActorReference("owned_second");
+        RuntimeActorRosterSnapshot[] invalidRosters =
+        [
+            new(hostedEntityRoster: [first, first]),
+            new(companionRoster: [first, first]),
+            new(hostedEntityRoster: [first], companionRoster: [first]),
+            new(activeHostedEntity: second, hostedEntityRoster: [second])
+        ];
+
+        Assert.Throws<ArgumentException>(() =>
+            CreateActor("invalid_constructor_roster", 5m, invalidRosters[0]));
+
+        for (int index = 0; index < invalidRosters.Length; index++)
+        {
+            RuntimeActorState actor = CreateActor($"invalid_roster_{index}", 5m);
+            RuntimeActorSnapshot before = actor.ToSnapshot();
+
+            RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
+                new RuntimeActorStatCompositionRequest(
+                    actor,
+                    RuntimeStatSourceKind.Actor,
+                    MissingHostedEntityBehavior.UseActorBaseStats,
+                    rosters: invalidRosters[index]));
+
+            Assert.False(result.Applied);
+            Assert.Equal(
+                RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
+                Assert.Single(result.Diagnostics).Code);
+            AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        }
+    }
+
+    [Fact]
+    public void ActorRosterInvariantRules_ReturnOrderedImmutableDiagnostics()
+    {
+        RuntimeActorReferenceSnapshot reference = ActorReference("repeated_actor");
+        var roster = new RuntimeActorRosterSnapshot(
+            activeHostedEntity: reference,
+            hostedEntityRoster: [reference, reference],
+            companionRoster: [reference, reference]);
+
+        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> diagnostics =
+            RuntimeActorRosterInvariantRules.Validate(roster);
+
+        Assert.Equal(
+            [
+                RuntimeActorRosterInvariantCode.DuplicateHostedEntityReference,
+                RuntimeActorRosterInvariantCode.DuplicateCompanionReference,
+                RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster,
+                RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster,
+                RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision,
+                RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision
+            ],
+            diagnostics.Select(diagnostic => diagnostic.Code));
+        Assert.IsAssignableFrom<System.Collections.ObjectModel.ReadOnlyCollection<RuntimeActorRosterInvariantDiagnostic>>(
+            diagnostics);
+    }
+
+    [Fact]
     public void ActorComposition_ResolutionFailureIsAtomic()
     {
         RuntimeActorState hostedEntity = CreateActor("atomic_hosted", 20m);
@@ -629,6 +691,12 @@ public sealed class ProgressionPolicyTests
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
         new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);
+
+    private static RuntimeActorReferenceSnapshot ActorReference(string id) =>
+        new(
+            RuntimeInstanceId.Parse(id),
+            ContentId.Parse($"{id}_entity"),
+            id);
 
     private static void AssertCompositionStateUnchanged(
         RuntimeActorSnapshot expected,
