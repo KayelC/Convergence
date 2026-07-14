@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
@@ -30,7 +31,7 @@ public sealed class BattleResourceState
         return Current - previous;
     }
 
-    internal decimal Add(decimal value) => Set(Current + value);
+    internal decimal Add(decimal value) => Set(CombatArithmetic.SaturatingAdd(Current, value));
 
     internal void Replace(decimal current, decimal maximum)
     {

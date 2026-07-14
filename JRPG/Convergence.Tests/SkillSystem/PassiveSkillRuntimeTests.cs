@@ -90,6 +90,42 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void NumericModifiers_SaturateExtremeAddAndMultiplyStacks()
+    {
+        SkillDefinition firstAdd = PassiveSkill(
+            "first_add",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.DamageDealt,
+                    ModifierOperation.Add,
+                    decimal.MaxValue)
+            ]);
+        SkillDefinition secondAdd = PassiveSkill(
+            "second_add",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.DamageDealt,
+                    ModifierOperation.Add,
+                    decimal.MaxValue)
+            ]);
+        SkillDefinition multiply = PassiveSkill(
+            "multiply",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.DamageDealt,
+                    ModifierOperation.Multiply,
+                    decimal.MaxValue)
+            ]);
+
+        decimal result = ResolveDamage([firstAdd, secondAdd, multiply], Services());
+
+        Assert.Equal(decimal.MaxValue, result);
+    }
+
+    [Fact]
     public void ArmsMaster_UsesEveryTypedSkillElementWhenResolvingCosts()
     {
         SkillDefinition armsMaster = PassiveSkill(

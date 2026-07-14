@@ -123,6 +123,40 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
+    public void DamageBinding_AllowsExtremeAuthoredMultipliersWithoutCreatingAnOverflowPath()
+    {
+        ContentId rulesetId = Id("test.pack:extreme_damage");
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Extreme Damage",
+            "Proves the runtime saturation boundary without imposing a balance ceiling.",
+            RulesetCategory.Damage,
+            StandardRulesetPolicyIds.StandardDamage,
+            [
+                new KeyValuePair<string, object?>("weakMultiplier", decimal.MaxValue),
+                new KeyValuePair<string, object?>("resistMultiplier", decimal.MaxValue)
+            ]));
+
+        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+            .BindProductionCombatRuleset(catalog, rulesetId, new SequenceRandomSource())
+            .RequireService();
+        var target = new ProductionCombatantProfile(
+            1,
+            new ProductionCombatStats(1m, 1m, 1m, 1m, 1m));
+
+        ProductionDamageApplicationResult result = ruleset.ApplyDamage(
+            new ProductionDamageApplicationRequest(
+                target,
+                2m,
+                DamageElement.Fire,
+                ElementalAffinity.Weak,
+                Critical: false));
+
+        Assert.Equal(decimal.MaxValue, ruleset.Config.WeakDamageMultiplier);
+        Assert.Equal(decimal.MaxValue, result.DamageDealt);
+    }
+
+    [Fact]
     public void StockCapacityBinding_RequiresAuthoredTiersInsteadOfSupplyingAHiddenCurve()
     {
         ContentId missingTiersId = Id("test.pack:missing_tiers");

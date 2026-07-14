@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
@@ -14,8 +15,14 @@ internal static class BattleAmountResolver
         decimal value = amount switch
         {
             FlatAmountDefinition flat => flat.Value,
-            PercentMaximumAmountDefinition percent => resource.Maximum * percent.Value / 100m,
-            PercentCurrentAmountDefinition percent => resource.Current * percent.Value / 100m,
+            PercentMaximumAmountDefinition percent => CombatArithmetic.SaturatingMultiplyDivide(
+                resource.Maximum,
+                percent.Value,
+                100m),
+            PercentCurrentAmountDefinition percent => CombatArithmetic.SaturatingMultiplyDivide(
+                resource.Current,
+                percent.Value,
+                100m),
             FullAmountDefinition => resource.Maximum,
             PowerAmountDefinition power => services.PowerAmountPolicy.Resolve(power, context),
             FormulaAmountDefinition formula when services.FormulaHandlers.TryGetValue(
@@ -92,7 +99,9 @@ internal static class BattleConditionEvaluator
             return false;
         }
 
-        decimal percentage = resource.Maximum == 0 ? 0 : resource.Current * 100m / resource.Maximum;
+        decimal percentage = resource.Maximum == 0
+            ? 0
+            : CombatArithmetic.SaturatingMultiplyDivide(resource.Current, 100m, resource.Maximum);
         return Compare(percentage, condition.Comparison, condition.Value);
     }
 

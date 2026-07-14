@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Battle;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -224,6 +225,7 @@ public sealed class SkillExecutor : ISkillExecutor
         ICollection<SkillExecutionDiagnostic> diagnostics)
     {
         var requiredByResource = new Dictionary<ContentId, decimal>();
+        var unrepresentableTotals = new HashSet<ContentId>();
         var resolvedCosts = new List<ResolvedSkillCost>();
         foreach (SkillCostDefinition cost in request.Skill.Costs)
         {
@@ -263,8 +265,17 @@ public sealed class SkillExecutor : ISkillExecutor
                 amount,
                 new RuleModifierContext(conditionContext, request.Skill, cost.ResourceId)));
             resolvedCosts.Add(new ResolvedSkillCost(cost.ResourceId, amount));
-            requiredByResource[cost.ResourceId] = requiredByResource.GetValueOrDefault(cost.ResourceId) + amount;
-            decimal remaining = resource.Current - requiredByResource[cost.ResourceId];
+            decimal previousRequired = requiredByResource.GetValueOrDefault(cost.ResourceId);
+            bool representable = CombatArithmetic.TryAdd(previousRequired, amount, out decimal required);
+            requiredByResource[cost.ResourceId] = required;
+            if (!representable)
+            {
+                unrepresentableTotals.Add(cost.ResourceId);
+            }
+
+            decimal remaining = unrepresentableTotals.Contains(cost.ResourceId)
+                ? -1m
+                : resource.Current - required;
             if (remaining < 0 || (!cost.CanReduceToZero && remaining <= 0))
             {
                 diagnostics.Add(new SkillExecutionDiagnostic(

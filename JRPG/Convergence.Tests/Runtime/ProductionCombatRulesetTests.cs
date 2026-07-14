@@ -254,6 +254,125 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(int.MaxValue, ruleset.CalculateCurrencyYield(enemy));
     }
 
+    [Fact]
+    public void ExtremeCombatInputsSaturateInsteadOfThrowingOrWrapping()
+    {
+        var config = new ProductionCombatRulesetConfig
+        {
+            DamageFormulaScalar = decimal.MaxValue,
+            DamageVarianceMinimum = decimal.MaxValue,
+            DamageVarianceMaximum = decimal.MaxValue,
+            ChargeMultiplier = decimal.MaxValue,
+            CriticalDamageMultiplier = decimal.MaxValue,
+            WeakDamageMultiplier = decimal.MaxValue,
+            ResistDamageMultiplier = decimal.MaxValue,
+            GuardDamageMultiplier = decimal.MaxValue,
+            InitiativeVarianceMinimum = decimal.MaxValue,
+            InitiativeVarianceMaximum = decimal.MaxValue
+        };
+        var ruleset = new ProductionCombatRuleset(new SequenceRandomSource([0m, 0m, 0m]), config);
+        ProductionCombatantProfile attacker = Actor(
+            stats: new ProductionCombatStats(
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue),
+            status: new ProductionCombatStatus(HasPhysicalCharge: true),
+            modifiers: new ProductionCombatModifiers(
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                int.MaxValue));
+        ProductionCombatantProfile target = Actor(
+            stats: new ProductionCombatStats(0m, 0m, 0m, 0m, 0m),
+            modifiers: new ProductionCombatModifiers(
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                int.MaxValue));
+
+        ProductionDamageResolutionResult damage = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                attacker,
+                target,
+                DamageElement.Physical,
+                ElementalAffinity.Weak,
+                int.MaxValue,
+                100,
+                new ChanceCriticalDefinition(100),
+                new HitCountDefinition(1, 1)));
+        ProductionDamageApplicationResult applied = ruleset.ApplyDamage(
+            new ProductionDamageApplicationRequest(
+                target,
+                decimal.MaxValue,
+                DamageElement.Fire,
+                ElementalAffinity.Weak,
+                Critical: true));
+        ProductionHitCheckResult lowestHitChance = ruleset.CheckHit(
+            new ProductionHitCheckRequest(target, attacker, 0));
+
+        Assert.Equal(decimal.MaxValue, Assert.Single(damage.Hits).Damage);
+        Assert.Equal(decimal.MaxValue, damage.TotalDamage);
+        Assert.Equal(decimal.MaxValue, applied.DamageDealt);
+        Assert.Equal(config.HitChanceMinimum, lowestHitChance.Chance);
+        Assert.Equal(
+            config.CriticalChanceMaximum,
+            ruleset.CalculateCriticalChance(attacker, target));
+        Assert.True(ruleset.RollInitiative(decimal.MaxValue, decimal.MaxValue));
+        Assert.Equal(
+            decimal.MaxValue,
+            new ProductionDamageResolutionResult(
+                [
+                    new ProductionDamageResolutionHit(true, decimal.MaxValue, false, 100, 0),
+                    new ProductionDamageResolutionHit(true, decimal.MaxValue, false, 100, 0)
+                ],
+                ElementalAffinity.Normal).TotalDamage);
+    }
+
+    [Fact]
+    public void RuntimeCombatProfileSaturatesStackedAilmentModifiersAndBonuses()
+    {
+        var actor = new RuntimeActorState(
+            RuntimeInstanceId.Parse("afflicted_actor"),
+            ContentId.Parse("afflicted_entity"),
+            ContentId.Parse("player_team"),
+            StandardProgressionIds.Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(StandardProgressionIds.Hp, 100m, 100m)],
+            [
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Strength,
+                    RuntimeActorNumericDomain.MaximumStatValue),
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Magic,
+                    RuntimeActorNumericDomain.MaximumStatValue),
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Vitality,
+                    RuntimeActorNumericDomain.MaximumStatValue),
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Agility,
+                    RuntimeActorNumericDomain.MaximumStatValue),
+                new KeyValuePair<ContentId, decimal>(
+                    StandardProgressionIds.Luck,
+                    RuntimeActorNumericDomain.MaximumStatValue)
+            ]);
+        actor.ApplyAilment(ExtremeAilment("extreme_one"), new BattleDurationDefinition());
+        actor.ApplyAilment(ExtremeAilment("extreme_two"), new BattleDurationDefinition());
+
+        ProductionCombatantProfile profile = ProductionCombatRuleset.FromRuntimeActor(actor);
+
+        Assert.Equal(decimal.MaxValue, profile.Modifiers.DamageDealtMultiplier);
+        Assert.Equal(decimal.MaxValue, profile.Modifiers.DamageTakenMultiplier);
+        Assert.Equal(decimal.MaxValue, profile.Modifiers.EvasionMultiplier);
+        Assert.Equal(int.MaxValue, profile.Modifiers.CriticalChanceTakenBonus);
+    }
+
     private static ProductionCombatRuleset Rules(params decimal[] units) =>
         new(new SequenceRandomSource(units));
 
@@ -263,6 +382,21 @@ public sealed class ProductionCombatRulesetTests
         ProductionCombatStatus? status = null,
         ProductionCombatModifiers? modifiers = null) =>
         new(level, stats ?? new ProductionCombatStats(20, 20, 20, 20, 20), status, modifiers);
+
+    private static AilmentDefinition ExtremeAilment(string id) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Exercises saturating combat modifiers.",
+            new BattleDurationDefinition(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(
+                decimal.MaxValue,
+                int.MaxValue,
+                decimal.MaxValue,
+                decimal.MaxValue,
+                false),
+            new AilmentRecoveryDefinition());
 
     private sealed class SequenceRandomSource : IRandomSource
     {

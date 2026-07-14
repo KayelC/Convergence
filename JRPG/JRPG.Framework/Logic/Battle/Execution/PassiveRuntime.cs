@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Entities.Components;
+using JRPGPrototype.Logic.Battle;
 using JRPGPrototype.Logic.Runtime;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
@@ -212,14 +213,20 @@ public sealed class AddThenMultiplyStackingPolicy : INumericModifierStackingPoli
 {
     public decimal Resolve(decimal baseValue, IReadOnlyList<NumericRuleModifierDefinition> modifiers)
     {
-        decimal additive = modifiers
+        ArgumentNullException.ThrowIfNull(modifiers);
+
+        decimal additive = CombatArithmetic.SaturatingSum(modifiers
             .Where(modifier => modifier.Operation == ModifierOperation.Add)
-            .Sum(modifier => modifier.Value);
+            .Select(modifier => modifier.Value));
         decimal multiplier = modifiers
             .Where(modifier => modifier.Operation == ModifierOperation.Multiply)
-            .Aggregate(1m, (product, modifier) => product * modifier.Value);
+            .Aggregate(
+                1m,
+                (product, modifier) => CombatArithmetic.SaturatingMultiply(product, modifier.Value));
 
-        return (baseValue + additive) * multiplier;
+        return CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingAdd(baseValue, additive),
+            multiplier);
     }
 }
 

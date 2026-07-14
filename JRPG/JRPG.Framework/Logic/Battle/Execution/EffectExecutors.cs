@@ -1,4 +1,5 @@
 using JRPGPrototype.Data.Definitions;
+using JRPGPrototype.Logic.Battle;
 
 namespace JRPGPrototype.Logic.Battle.Execution;
 
@@ -89,7 +90,8 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             return Failure(context, PressTurnOutcome.Miss, "All damage hits missed.");
         }
 
-        decimal total = landed.Sum(hit => Math.Max(0, hit.Damage));
+        decimal total = CombatArithmetic.SaturatingSum(
+            landed.Select(hit => Math.Max(0, hit.Damage)));
         var attackConditionContext = new BattleConditionContext(
             context.Actor,
             target,

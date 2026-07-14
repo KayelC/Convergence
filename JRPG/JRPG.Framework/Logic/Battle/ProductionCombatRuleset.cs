@@ -281,7 +281,8 @@ public sealed record ProductionDamageResolutionResult
 
     public IReadOnlyList<ProductionDamageResolutionHit> Hits { get; }
     public ElementalAffinity Affinity { get; }
-    public decimal TotalDamage => Hits.Where(hit => hit.Hit).Sum(hit => hit.Damage);
+    public decimal TotalDamage => CombatArithmetic.SaturatingSum(
+        Hits.Where(hit => hit.Hit).Select(hit => hit.Damage));
     public bool AnyCritical => Hits.Any(hit => hit.Critical);
 }
 
@@ -403,14 +404,16 @@ public sealed class ProductionCombatRuleset :
                 request.Target,
                 request.Power,
                 request.Element);
-            damage *= request.Target.Modifiers.DamageTakenMultiplier;
+            damage = CombatArithmetic.SaturatingMultiply(
+                damage,
+                request.Target.Modifiers.DamageTakenMultiplier);
             if (critical.Critical)
             {
-                damage *= _config.CriticalDamageMultiplier;
+                damage = CombatArithmetic.SaturatingMultiply(damage, _config.CriticalDamageMultiplier);
             }
             if (request.Target.Status.IsGuarding)
             {
-                damage *= _config.GuardDamageMultiplier;
+                damage = CombatArithmetic.SaturatingMultiply(damage, _config.GuardDamageMultiplier);
             }
 
             damage = ApplyAffinityMultiplier(damage, NormalizeGuardedAffinity(
@@ -418,7 +421,9 @@ public sealed class ProductionCombatRuleset :
                 request.Target.Status.IsGuarding));
             hits.Add(new ProductionDamageResolutionHit(
                 true,
-                Math.Floor(damage * RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum)),
+                Math.Floor(CombatArithmetic.SaturatingMultiply(
+                    damage,
+                    RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum))),
                 critical.Critical,
                 hit.Chance,
                 critical.Chance));
@@ -438,7 +443,9 @@ public sealed class ProductionCombatRuleset :
             request.Target,
             request.Power,
             request.Element);
-        damage *= request.Target.Modifiers.DamageTakenMultiplier;
+        damage = CombatArithmetic.SaturatingMultiply(
+            damage,
+            request.Target.Modifiers.DamageTakenMultiplier);
 
         if (request.AllowCritical)
         {
@@ -450,11 +457,13 @@ public sealed class ProductionCombatRuleset :
             critical = criticalResult.Critical;
             if (critical)
             {
-                damage *= _config.CriticalDamageMultiplier;
+                damage = CombatArithmetic.SaturatingMultiply(damage, _config.CriticalDamageMultiplier);
             }
         }
 
-        damage *= RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum);
+        damage = CombatArithmetic.SaturatingMultiply(
+            damage,
+            RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum));
         return new ProductionRawDamageResult(Math.Floor(damage), critical);
     }
 
@@ -470,7 +479,7 @@ public sealed class ProductionCombatRuleset :
         bool critical = request.Critical;
         if (request.Target.Status.IsGuarding)
         {
-            damage *= _config.GuardDamageMultiplier;
+            damage = CombatArithmetic.SaturatingMultiply(damage, _config.GuardDamageMultiplier);
             critical = false;
         }
         if (request.Target.Status.IsRigidBody && IsPhysical(request.Element))
@@ -479,21 +488,21 @@ public sealed class ProductionCombatRuleset :
         }
         if (critical)
         {
-            damage *= _config.CriticalDamageMultiplier;
+            damage = CombatArithmetic.SaturatingMultiply(damage, _config.CriticalDamageMultiplier);
         }
 
         damage = Math.Floor(damage);
         return affinity switch
         {
             ElementalAffinity.Weak => new ProductionDamageApplicationResult(
-                Math.Floor(damage * _config.WeakDamageMultiplier),
+                Math.Floor(CombatArithmetic.SaturatingMultiply(damage, _config.WeakDamageMultiplier)),
                 0m,
                 affinity,
                 critical,
                 PressTurnOutcome.Weakness,
                 "WEAKNESS STRUCK!"),
             ElementalAffinity.Resist => new ProductionDamageApplicationResult(
-                Math.Floor(damage * _config.ResistDamageMultiplier),
+                Math.Floor(CombatArithmetic.SaturatingMultiply(damage, _config.ResistDamageMultiplier)),
                 0m,
                 affinity,
                 critical,
@@ -539,11 +548,22 @@ public sealed class ProductionCombatRuleset :
             return new ProductionHitCheckResult(true, _config.HitChanceMaximum);
         }
 
-        decimal attackerAgility = request.Attacker.Stats.Agility * request.Attacker.Modifiers.HitMultiplier;
-        decimal targetAgility = request.Target.Stats.Agility * request.Target.Modifiers.EvasionMultiplier;
-        decimal chance = request.BaseAccuracy +
-            ((attackerAgility - targetAgility) * 2m) +
-            (request.Attacker.Stats.Luck - request.Target.Stats.Luck);
+        decimal attackerAgility = CombatArithmetic.SaturatingMultiply(
+            request.Attacker.Stats.Agility,
+            request.Attacker.Modifiers.HitMultiplier);
+        decimal targetAgility = CombatArithmetic.SaturatingMultiply(
+            request.Target.Stats.Agility,
+            request.Target.Modifiers.EvasionMultiplier);
+        decimal chance = CombatArithmetic.SaturatingAdd(
+            request.BaseAccuracy,
+            CombatArithmetic.SaturatingMultiply(
+                CombatArithmetic.SaturatingSubtract(attackerAgility, targetAgility),
+                2m));
+        chance = CombatArithmetic.SaturatingAdd(
+            chance,
+            CombatArithmetic.SaturatingSubtract(
+                request.Attacker.Stats.Luck,
+                request.Target.Stats.Luck));
         int clamped = ClampPercent(chance, _config.HitChanceMinimum, _config.HitChanceMaximum);
         return new ProductionHitCheckResult(RollPercent(clamped), clamped);
     }
@@ -565,15 +585,24 @@ public sealed class ProductionCombatRuleset :
             return new ProductionCriticalCheckResult(false, 0);
         }
 
-        decimal baseChance = ((request.Attacker.Stats.Luck - request.Target.Stats.Luck) / 2m) +
-            _config.CriticalChanceBase +
-            request.Target.Modifiers.CriticalChanceTakenBonus;
+        decimal baseChance = CombatArithmetic.SaturatingAdd(
+            CombatArithmetic.SaturatingDivide(
+                CombatArithmetic.SaturatingSubtract(
+                    request.Attacker.Stats.Luck,
+                    request.Target.Stats.Luck),
+                2m),
+            _config.CriticalChanceBase);
+        baseChance = CombatArithmetic.SaturatingAdd(
+            baseChance,
+            request.Target.Modifiers.CriticalChanceTakenBonus);
         if (request.Critical is ChanceCriticalDefinition chanceCritical)
         {
             baseChance = Math.Max(baseChance, chanceCritical.Chance);
         }
 
-        baseChance *= request.Attacker.Modifiers.CriticalChanceMultiplier;
+        baseChance = CombatArithmetic.SaturatingMultiply(
+            baseChance,
+            request.Attacker.Modifiers.CriticalChanceMultiplier);
         int clamped = ClampPercent(baseChance, _config.CriticalChanceMinimum, _config.CriticalChanceMaximum);
         return new ProductionCriticalCheckResult(RollPercent(clamped), clamped);
     }
@@ -583,8 +612,13 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(attacker);
         ArgumentNullException.ThrowIfNull(target);
 
-        decimal chance = (((attacker.Stats.Luck - target.Stats.Luck) / 2m) + _config.CriticalChanceBase) *
-            attacker.Modifiers.CriticalChanceMultiplier;
+        decimal chance = CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingAdd(
+                CombatArithmetic.SaturatingDivide(
+                    CombatArithmetic.SaturatingSubtract(attacker.Stats.Luck, target.Stats.Luck),
+                    2m),
+                _config.CriticalChanceBase),
+            attacker.Modifiers.CriticalChanceMultiplier);
         return ClampPercent(chance, _config.CriticalChanceMinimum, _config.CriticalChanceMaximum);
     }
 
@@ -597,8 +631,11 @@ public sealed class ProductionCombatRuleset :
             return new ProductionInstantDeathResult(false, 0);
         }
 
-        decimal chance = request.BaseChance +
-            (request.Attacker.Stats.Luck - request.Target.Stats.Luck);
+        decimal chance = CombatArithmetic.SaturatingAdd(
+            request.BaseChance,
+            CombatArithmetic.SaturatingSubtract(
+                request.Attacker.Stats.Luck,
+                request.Target.Stats.Luck));
         int clamped = ClampPercent(chance, _config.InstantDeathChanceMinimum, _config.InstantDeathChanceMaximum);
         return new ProductionInstantDeathResult(RollPercent(clamped), clamped);
     }
@@ -613,12 +650,14 @@ public sealed class ProductionCombatRuleset :
         }
 
         decimal chance = request.BaseChance;
-        chance *= request.Resistance switch
-        {
-            ResistanceLevel.Vulnerable => 1.25m,
-            ResistanceLevel.Resistant => 0.5m,
-            _ => 1m
-        };
+        chance = CombatArithmetic.SaturatingMultiply(
+            chance,
+            request.Resistance switch
+            {
+                ResistanceLevel.Vulnerable => 1.25m,
+                ResistanceLevel.Resistant => 0.5m,
+                _ => 1m
+            });
         int clamped = ClampPercent(chance, 0, 100);
         return new ProductionAilmentApplicationResult(RollPercent(clamped), clamped);
     }
@@ -628,24 +667,31 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(enemy);
 
         decimal level = enemy.Level;
-        decimal levelCubed = SaturatingMultiply(SaturatingMultiply(level, level), level);
-        decimal baseYield = SaturatingDivide(
-            SaturatingMultiply(1.5m, levelCubed),
+        decimal levelCubed = CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingMultiply(level, level),
+            level);
+        decimal baseYield = CombatArithmetic.SaturatingDivide(
+            CombatArithmetic.SaturatingMultiply(1.5m, levelCubed),
             _config.EnemiesPerLevelForExperience);
-        decimal expectedStats = SaturatingAdd(
-            SaturatingMultiply(level, _config.ExpectedStatLevelMultiplier),
+        decimal expectedStats = CombatArithmetic.SaturatingAdd(
+            CombatArithmetic.SaturatingMultiply(level, _config.ExpectedStatLevelMultiplier),
             _config.ExpectedStatBase);
-        decimal actualStats = SaturatingSum(
+        decimal actualStats = CombatArithmetic.SaturatingSum(
+        [
             enemy.Stats.Strength,
             enemy.Stats.Magic,
             enemy.Stats.Vitality,
             enemy.Stats.Agility,
-            enemy.Stats.Luck);
-        decimal statMultiplier = SaturatingAdd(
+            enemy.Stats.Luck
+        ]);
+        decimal statMultiplier = CombatArithmetic.SaturatingAdd(
             1m,
-            Math.Max(0m, SaturatingDivide(actualStats - expectedStats, _config.StatDensityDivisor)));
+            Math.Max(0m, CombatArithmetic.SaturatingDivide(
+                CombatArithmetic.SaturatingSubtract(actualStats, expectedStats),
+                _config.StatDensityDivisor)));
         statMultiplier = Math.Min(_config.MaximumStatDensityMultiplier, statMultiplier);
-        return Math.Max(1, SaturatingFloorToInt(SaturatingMultiply(baseYield, statMultiplier)));
+        return Math.Max(1, CombatArithmetic.SaturatingFloorToInt(
+            CombatArithmetic.SaturatingMultiply(baseYield, statMultiplier)));
     }
 
     public int CalculateCurrencyYield(ProductionCombatantProfile enemy)
@@ -653,22 +699,28 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(enemy);
 
         decimal level = enemy.Level;
-        decimal baseCurrency = SaturatingMultiply(
+        decimal baseCurrency = CombatArithmetic.SaturatingMultiply(
             _config.CurrencyBaseMultiplier,
-            SaturatingMultiply(level, level));
-        decimal luckBonus = SaturatingMultiply(enemy.Stats.Luck, _config.CurrencyLuckMultiplier);
+            CombatArithmetic.SaturatingMultiply(level, level));
+        decimal luckBonus = CombatArithmetic.SaturatingMultiply(
+            enemy.Stats.Luck,
+            _config.CurrencyLuckMultiplier);
         decimal variance = RollVariance(_config.CurrencyVarianceMinimum, _config.CurrencyVarianceMaximum);
-        return SaturatingFloorToInt(SaturatingMultiply(SaturatingAdd(baseCurrency, luckBonus), variance));
+        return CombatArithmetic.SaturatingFloorToInt(CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingAdd(baseCurrency, luckBonus),
+            variance));
     }
 
     public bool RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(playerAverageAgility);
         ArgumentOutOfRangeException.ThrowIfNegative(enemyAverageAgility);
-        decimal playerRoll = playerAverageAgility *
-            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum);
-        decimal enemyRoll = enemyAverageAgility *
-            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum);
+        decimal playerRoll = CombatArithmetic.SaturatingMultiply(
+            playerAverageAgility,
+            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum));
+        decimal enemyRoll = CombatArithmetic.SaturatingMultiply(
+            enemyAverageAgility,
+            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum));
         return playerRoll >= enemyRoll;
     }
 
@@ -679,25 +731,32 @@ public sealed class ProductionCombatRuleset :
         DamageElement element)
     {
         decimal attack = IsPhysical(element) ? attacker.Stats.Strength : attacker.Stats.Magic;
-        decimal defense = Math.Max(1m, target.Stats.Vitality + target.Stats.Defense);
-        attack *= attacker.Modifiers.DamageDealtMultiplier;
+        decimal defense = Math.Max(
+            1m,
+            CombatArithmetic.SaturatingAdd(target.Stats.Vitality, target.Stats.Defense));
+        attack = CombatArithmetic.SaturatingMultiply(
+            attack,
+            attacker.Modifiers.DamageDealtMultiplier);
         if (IsPhysical(element) && attacker.Status.HasPhysicalCharge)
         {
-            attack *= _config.ChargeMultiplier;
+            attack = CombatArithmetic.SaturatingMultiply(attack, _config.ChargeMultiplier);
         }
         else if (!IsPhysical(element) && attacker.Status.HasMagicalCharge)
         {
-            attack *= _config.ChargeMultiplier;
+            attack = CombatArithmetic.SaturatingMultiply(attack, _config.ChargeMultiplier);
         }
 
-        decimal ratio = attack / defense;
-        return _config.DamageFormulaScalar * (decimal)Math.Sqrt((double)(power * ratio));
+        decimal ratio = CombatArithmetic.SaturatingDivide(attack, defense);
+        // The formula already requires a square root; multiplying in double avoids a decimal-only overflow before it.
+        double radicand = (double)power * (double)ratio;
+        decimal root = CombatArithmetic.SaturatingFromDouble(Math.Sqrt(radicand));
+        return CombatArithmetic.SaturatingMultiply(_config.DamageFormulaScalar, root);
     }
 
     private decimal ApplyAffinityMultiplier(decimal damage, ElementalAffinity affinity) => affinity switch
     {
-        ElementalAffinity.Weak => damage * _config.WeakDamageMultiplier,
-        ElementalAffinity.Resist => damage * _config.ResistDamageMultiplier,
+        ElementalAffinity.Weak => CombatArithmetic.SaturatingMultiply(damage, _config.WeakDamageMultiplier),
+        ElementalAffinity.Resist => CombatArithmetic.SaturatingMultiply(damage, _config.ResistDamageMultiplier),
         _ => damage
     };
 
@@ -733,11 +792,15 @@ public sealed class ProductionCombatRuleset :
             return true;
         }
 
-        return _random.NextUnitDecimal() * 100m < chance;
+        return CombatArithmetic.SaturatingMultiply(_random.NextUnitDecimal(), 100m) < chance;
     }
 
     private decimal RollVariance(decimal minimum, decimal maximum) =>
-        minimum + ((_random.NextUnitDecimal()) * (maximum - minimum));
+        CombatArithmetic.SaturatingAdd(
+            minimum,
+            CombatArithmetic.SaturatingMultiply(
+                _random.NextUnitDecimal(),
+                CombatArithmetic.SaturatingSubtract(maximum, minimum)));
 
     private static ElementalAffinity NormalizeGuardedAffinity(ElementalAffinity affinity, bool isGuarding) =>
         isGuarding && affinity == ElementalAffinity.Weak ? ElementalAffinity.Normal : affinity;
@@ -766,10 +829,18 @@ public sealed class ProductionCombatRuleset :
 
         foreach (ActiveAilmentState ailment in actor.Ailments.Values)
         {
-            damageDealt *= ailment.Definition.Modifiers.DamageDealtMultiplier;
-            damageTaken *= ailment.Definition.Modifiers.DamageTakenMultiplier;
-            evasion *= ailment.Definition.Modifiers.EvasionMultiplier;
-            criticalTakenBonus += ailment.Definition.Modifiers.CriticalChanceTakenBonus;
+            damageDealt = CombatArithmetic.SaturatingMultiply(
+                damageDealt,
+                ailment.Definition.Modifiers.DamageDealtMultiplier);
+            damageTaken = CombatArithmetic.SaturatingMultiply(
+                damageTaken,
+                ailment.Definition.Modifiers.DamageTakenMultiplier);
+            evasion = CombatArithmetic.SaturatingMultiply(
+                evasion,
+                ailment.Definition.Modifiers.EvasionMultiplier);
+            criticalTakenBonus = CombatArithmetic.SaturatingAdd(
+                criticalTakenBonus,
+                ailment.Definition.Modifiers.CriticalChanceTakenBonus);
             rigid |= ailment.Definition.Modifiers.IsRigidBody;
         }
 
@@ -788,65 +859,4 @@ public sealed class ProductionCombatRuleset :
                 CriticalChanceTakenBonus: criticalTakenBonus));
     }
 
-    private static decimal SaturatingMultiply(decimal left, decimal right)
-    {
-        try
-        {
-            return checked(left * right);
-        }
-        catch (OverflowException)
-        {
-            return Math.Sign(left) == Math.Sign(right) ? decimal.MaxValue : decimal.MinValue;
-        }
-    }
-
-    private static decimal SaturatingAdd(decimal left, decimal right)
-    {
-        try
-        {
-            return checked(left + right);
-        }
-        catch (OverflowException)
-        {
-            return left >= 0 && right >= 0 ? decimal.MaxValue : decimal.MinValue;
-        }
-    }
-
-    private static decimal SaturatingDivide(decimal dividend, decimal divisor)
-    {
-        try
-        {
-            return dividend / divisor;
-        }
-        catch (OverflowException)
-        {
-            return Math.Sign(dividend) == Math.Sign(divisor) ? decimal.MaxValue : decimal.MinValue;
-        }
-    }
-
-    private static decimal SaturatingSum(params decimal[] values)
-    {
-        decimal result = 0m;
-        foreach (decimal value in values)
-        {
-            result = SaturatingAdd(result, value);
-        }
-
-        return result;
-    }
-
-    private static int SaturatingFloorToInt(decimal value)
-    {
-        decimal floored = Math.Floor(value);
-        if (floored >= int.MaxValue)
-        {
-            return int.MaxValue;
-        }
-        if (floored <= int.MinValue)
-        {
-            return int.MinValue;
-        }
-
-        return decimal.ToInt32(floored);
-    }
 }

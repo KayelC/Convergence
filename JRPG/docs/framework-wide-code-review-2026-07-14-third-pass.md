@@ -95,6 +95,16 @@ Extreme but contract-valid authored multipliers, or several large ailment multip
 
 Recommended correction: choose explicit numeric ceilings during content/ruleset validation, or consistently use checked saturating arithmetic at the runtime boundary. Add tests combining maximum runtime stats with large ruleset and ailment multipliers.
 
+**Correction status (2026-07-14): implemented.**
+
+- The framework now uses one internal `CombatArithmetic` policy for checked decimal addition, subtraction, multiplication, division, multiply-then-divide scaling, aggregation, integer bonus aggregation, and double-to-decimal formula conversion. An operation that exceeds the representable numeric domain saturates at the matching decimal or integer boundary instead of throwing or wrapping.
+- No arbitrary balance ceiling was introduced. Catalog-authored ruleset multipliers and programmatic combat profiles retain their existing nonnegative contract, including extreme values; the execution boundary now contains those values safely.
+- `ProductionCombatRuleset` applies the policy to base damage, charge, target damage, critical, guard, affinity, variance, hit/evasion, critical chance, instant death, ailment application, initiative, reward helpers, multi-hit totals, and ailment-derived profile modifiers. Critical-taken bonuses also saturate rather than wrapping.
+- The shared typed-effect path now protects multi-hit aggregation, passive add-then-multiply stacks, percentage amount and resource-condition calculations, and resource restoration. Ordinary calculations keep their existing operation order; multiply-then-divide falls back to a bounded representation only when the original decimal product cannot be represented.
+- Aggregate skill costs are intentionally different from damage: an unrepresentable total is rejected as insufficient before mutation instead of being saturated and accidentally treated as payable.
+- Adversarial tests cover maximum combat profiles/configuration, maximum catalog-bound Weak and Resist multipliers, stacked maximum ailment modifiers and critical bonuses, two maximum damage hits, maximum percentage restoration, overflowing passive stacks, and an unrepresentable two-cost skill. Existing normal-value combat vectors remain unchanged.
+- Verification passed 84 focused combat/ruleset/passive/effect tests and all 1,075 solution tests with no failures or skips. The framework build remains at 0 warnings; the complete solution retains its existing 100 legacy-host warnings. Battle, field, save, and Training Annex demos all completed successfully, and production content remained unchanged.
+
 ### M4. Reward and negotiation aggregates can overflow or wrap
 
 Individual reward yields now saturate, but the service aggregates them with `int` sums. Negotiation also accepts unbounded answer scores and positive demand weights.

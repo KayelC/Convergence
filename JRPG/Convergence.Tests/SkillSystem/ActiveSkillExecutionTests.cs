@@ -84,6 +84,96 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_SaturatesExtremeMultiHitAndPercentResourceArithmetic()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var damageTarget = new RuntimeActorState(
+            RuntimeInstanceId.Parse("damage_target"),
+            ContentId.Parse("damage_target_entity"),
+            EnemyTeam,
+            Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Hp, decimal.MaxValue, decimal.MaxValue)]);
+        SkillDefinition damageSkill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+        ]);
+        SkillExecutionResult damage = new SkillExecutor(Services(
+            damage: _ =>
+            [
+                new DamageHitResolution(true, decimal.MaxValue),
+                new DamageHitResolution(true, decimal.MaxValue)
+            ])).Execute(Request(
+                damageSkill,
+                actor,
+                [actor, damageTarget],
+                [damageTarget.InstanceId]));
+
+        decimal halfMaximum = decimal.MaxValue / 2m;
+        var recoveryTarget = new RuntimeActorState(
+            RuntimeInstanceId.Parse("recovery_target"),
+            ContentId.Parse("recovery_target_entity"),
+            EnemyTeam,
+            Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Hp, halfMaximum, decimal.MaxValue)]);
+        SkillDefinition recoverySkill = ActiveSkill(
+            [new RestoreResourceEffectDefinition(Hp, new PercentMaximumAmountDefinition(100m))]);
+        SkillExecutionResult recovery = new SkillExecutor(Services()).Execute(Request(
+            recoverySkill,
+            actor,
+            [actor, recoveryTarget],
+            [recoveryTarget.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, damage.Status);
+        Assert.Equal(decimal.MaxValue, Assert.Single(damage.Effects).Value);
+        Assert.Equal(0m, damageTarget.GetRequiredResource(Hp).Current);
+        Assert.Equal(SkillExecutionStatus.Executed, recovery.Status);
+        Assert.Equal(decimal.MaxValue, recoveryTarget.GetRequiredResource(Hp).Current);
+        Assert.Equal(decimal.MaxValue - halfMaximum, Assert.Single(recovery.Effects).Value);
+    }
+
+    [Fact]
+    public void Assess_RejectsAnUnrepresentableAggregateSkillCostWithoutMutation()
+    {
+        var actor = new RuntimeActorState(
+            RuntimeInstanceId.Parse("actor"),
+            ContentId.Parse("actor_entity"),
+            PlayerTeam,
+            Hp,
+            CombatDefenseProfile.Empty,
+            [
+                new BattleResourceState(Hp, 100m, 100m),
+                new BattleResourceState(Sp, decimal.MaxValue, decimal.MaxValue)
+            ]);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+            [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
+            costs:
+            [
+                new SkillCostDefinition(Sp, new FlatAmountDefinition(decimal.MaxValue), true),
+                new SkillCostDefinition(Sp, new FlatAmountDefinition(decimal.MaxValue), true)
+            ]);
+        var executor = new SkillExecutor(Services());
+        SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
+
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        SkillExecutionResult execution = executor.Execute(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Contains(assessment.Diagnostics, diagnostic =>
+            diagnostic.Code == SkillExecutionDiagnosticCode.InsufficientResource);
+        Assert.Equal(SkillExecutionStatus.Rejected, execution.Status);
+        Assert.Equal(decimal.MaxValue, actor.GetRequiredResource(Sp).Current);
+        Assert.False(execution.CostsCommitted);
+    }
+
+    [Fact]
     public void Execute_TypedAilmentUsesAuthoritativeGuardRule()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);
