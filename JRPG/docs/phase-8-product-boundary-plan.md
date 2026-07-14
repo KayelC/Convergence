@@ -1,0 +1,114 @@
+# Phase 8: Convergence Product Boundary And Legacy Archive
+
+**Status:** Approved implementation plan
+
+**Starting branch:** `track-12-recovery`
+
+**Baseline:** 1,113 tests passed, 0 failed, 0 skipped. The standalone `JRPG.Framework` build produced 0 warnings; the transitional full solution produced 100 legacy/package warnings and 0 errors.
+
+## Purpose
+
+Phase 8 replaces the transitional root console project with an atomic clean product. The reusable assembly, clean example host, clean content, and clean tests become independently understandable and buildable. The retained prototype becomes non-built historical evidence.
+
+This supersedes the earlier interpretation of Phase 8 as presentation work alone. Console presentation is now only one optional host implementation; it is not a prerequisite for framework ownership or Godot integration.
+
+## Final Active Layout
+
+```text
+src/Convergence.Framework/
+samples/Convergence.DemoHost/
+tests/Convergence.Framework.Tests/
+tests/Convergence.DemoHost.Tests/
+content/reference/
+content/demos/
+content/original/training-annex/
+docs/
+ArchiveDocs/LegacyFramework/
+Convergence.sln
+```
+
+## Ownership Rules
+
+- `Convergence.Framework` owns definitions, content loading, validation, catalogs, rules, runtime state, transitions, diagnostics, and serializer-neutral host contracts.
+- `Convergence.DemoHost` owns console input/output, filesystem content reads, host JSON save encoding, command routing, and example orchestration.
+- Framework tests reference only `Convergence.Framework`.
+- DemoHost tests reference only Framework and DemoHost.
+- Clean content contains generic reference, demonstration, and Training Annex records only.
+- Archived source, data, tests, plans, and ledgers are not referenced by active projects or active documentation authority.
+- A Godot project references `src/Convergence.Framework/Convergence.Framework.csproj`; DemoHost is optional.
+
+## Destination Inventory
+
+| Current ownership | Destination | Reason |
+|---|---|---|
+| `JRPG.Framework/` | `src/Convergence.Framework/` | Reusable product assembly. |
+| Clean `Host/Clean*` and Training Annex files | `samples/Convergence.DemoHost/` | Optional framework-native example host. |
+| Framework host adapters without legacy types | DemoHost `Infrastructure/` | Filesystem, text output, random source, and console command ownership belong to the host. |
+| Clean runtime/content tests | `tests/Convergence.Framework.Tests/` | Prove the library without host or legacy references. |
+| Clean host and Training Annex tests | `tests/Convergence.DemoHost.Tests/` | Prove optional example integration. |
+| 36 clean JSON documents | `content/reference`, `content/demos`, or `content/original/training-annex` | Keep generic content visibly separate from implementation. |
+| Root `Core`, legacy DTOs, `Entities`, `Logic`, `Services`, old `Program`, and old host files | `ArchiveDocs/LegacyFramework/ConsolePrototype/Source/` | Retained non-built prototype history. |
+| 14 prototype or generated JSON files | `ArchiveDocs/LegacyFramework/ConsolePrototype/Content/` | Prevent prototype data from appearing framework-required. |
+| Legacy and mixed characterization tests | `ArchiveDocs/LegacyFramework/ConsolePrototype/Tests/` | Preserve evidence without allowing it to mask clean dependencies. |
+| Recovery parity and production ledgers | `ArchiveDocs/LegacyFramework/Evidence/` | Freeze migration history after the product boundary changes. |
+
+## Namespace And Assembly Identity
+
+- Assembly/project: `Convergence.Framework`.
+- Public root namespace: `Convergence`.
+- Main namespaces: `Convergence.Content`, `Convergence.Hosting`, `Convergence.Battle`, `Convergence.Runtime`, and `Convergence.Fusion`.
+- Demo assembly/project and namespace: `Convergence.DemoHost`.
+- No `JRPGPrototype.*` compatibility shims or type forwards remain in active code.
+- Namespace and assembly changes do not alter JSON wire contracts or save contract versions.
+
+## DemoHost Contract
+
+One executable supports:
+
+```text
+--clean-training-annex-play
+--clean-training-annex-demo
+--clean-battle-demo
+--clean-field-demo
+--clean-save-demo
+--help
+```
+
+No arguments or unknown arguments print usage and return nonzero. The interactive host uses `IHostCommandSource<T>` and `IHostEventSink<T>` adapters owned by DemoHost. It does not use `IGameIO`, legacy DTOs, `Database`, legacy actors, or adapters.
+
+## Progress Model
+
+The recovery parity ledger measured coexistence with the old console prototype. It is frozen as history and replaced by a clean capability matrix with these independent fields:
+
+- implementation: `complete`, `partial`, or `deferred`;
+- framework test evidence;
+- demo coverage: `none`, `focused`, or `end_to_end`;
+- host neutrality;
+- optional-module status;
+- known gaps.
+
+Legacy coexistence no longer prevents a framework capability from being represented accurately.
+
+## Archive Gate
+
+Legacy files may leave the active tree only after the clean solution builds and tests without the root console project. The final active source must contain no references to `ArchiveDocs`, `JRPGPrototype`, `JRPG.ConsoleHost`, Newtonsoft.Json, `Database`, legacy actors/DTOs, `IGameIO`, or `Legacy*Adapter` types.
+
+The old Moon Phase console implementation is archived. Nullable moon-phase metadata remains an optional framework extension point; DemoHost does not register, bind, or require it.
+
+## Verification
+
+- Record the current 1,113-test recovery baseline before movement.
+- Build Framework and DemoHost independently on .NET 8 with zero compiler warnings.
+- Run every clean test with no failures or skips and record the new exact total.
+- Run all five DemoHost modes and scripted interactive coverage.
+- Validate every active content document through its manifest or a contract test.
+- Preserve the Godot host-contract proof without engine types entering Framework.
+- Run active-source forbidden-reference searches, active-doc link validation, archive-reference searches, and `git diff --check`.
+
+## Commit Sequence
+
+1. `docs: define convergence product boundary`
+2. `architecture: extract convergence framework and demo host`
+3. `test: separate clean framework and demo coverage`
+4. `refactor: adopt convergence public namespaces`
+5. `cleanup: archive legacy console prototype`

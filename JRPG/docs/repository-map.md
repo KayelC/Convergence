@@ -1,9 +1,9 @@
 # Current Repository Map
 
-**Status:** Active orientation guide
+**Status:** Phase 8 starting-state inventory
 **Purpose:** Explain what the repository currently builds, what each top-level area owns, and which files are historical.
 
-This document describes the repository as it exists today. It is not a proposed end-state layout. The longer-term physical reorganization is tracked separately in [repository-architecture-proposal.md](repository-architecture-proposal.md).
+This document records the transitional repository at the start of Phase 8. The approved product layout and ordered migration are defined by [Phase 8: Convergence Product Boundary And Legacy Archive](phase-8-product-boundary-plan.md). This map will be rewritten around the clean product after the archive gate passes.
 
 ## The Short Version
 
@@ -134,26 +134,24 @@ The ordinary console path and its characterization tests still compile and call 
 
 Completed review documents can safely leave the active `docs/` index because they do not compile and are retained under `ArchiveDocs/Reviews/`.
 
-## Recommended Physical Cleanup
+## Approved Phase 8 Destination
 
 The clean end-state remains:
 
 ```text
-src/JRPG.Framework/
-src/JRPG.ConsoleHost/
-tests/Convergence.Tests/
-content/legacy-prototype/
-content/historical-generated/
-content/clean-reference/
-content/clean-demos/
-content/original/
+src/Convergence.Framework/
+samples/Convergence.DemoHost/
+tests/Convergence.Framework.Tests/
+tests/Convergence.DemoHost.Tests/
+content/reference/
+content/demos/
+content/original/training-annex/
 docs/
-ArchiveDocs/
+ArchiveDocs/LegacyFramework/
+Convergence.sln
 ```
 
-That move should be performed as a dedicated, behavior-neutral repository-architecture pass with project-file updates, content-source updates, link checking, full builds, and the complete test suite. The current audit does not mix that broad path churn into ongoing framework work.
-
-Until then, use this rule of thumb:
+The move is being performed through the independently verified checkpoints in the Phase 8 boundary plan. Until a checkpoint changes the active tree, use this starting-state rule of thumb:
 
 - Work in `JRPG.Framework/` for reusable rules and contracts.
 - Work in `Host/` or other root host folders only for console integration and compatibility.

@@ -1,6 +1,6 @@
 # Repository Architecture And Declutter Proposal
 
-> **Status: Proposal.** This document analyzes the current repository layout and proposes a cleaner physical architecture. It does not approve moving files, deleting files, archiving live code, renaming namespaces, or changing runtime behavior.
+> **Status: Superseded.** This inventory informed the approved [Phase 8 product boundary plan](phase-8-product-boundary-plan.md). Where the documents differ, Phase 8 is authoritative, including the `Convergence` product name and archive gate.
 
 ## Why This Exists
 

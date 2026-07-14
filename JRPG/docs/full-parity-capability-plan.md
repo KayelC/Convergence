@@ -235,6 +235,8 @@ Phase 7 implementation status: passes 7-30 through 7-35 and CodeReview7-1 throug
 
 ### Phase 8: Presentation And Archive Gate
 
+> **Phase 8 correction:** The approved [Convergence Product Boundary And Legacy Archive](phase-8-product-boundary-plan.md) expands this gate into clean project extraction, test/content separation, Convergence namespace adoption, and archival of the non-built prototype. The `parallel_partial` ledger is migration history, not the post-extraction framework maturity model.
+
 Goal: verify host interchangeability and only then review archive eligibility.
 
 | Pass | Capability | Current Status | Goal |
