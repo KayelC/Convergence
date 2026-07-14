@@ -24,7 +24,8 @@ public enum BattleEncounterCommandStatus
 
 public enum BattleEncounterFaultCode
 {
-    DuplicateParticipantInstanceId
+    DuplicateParticipantInstanceId,
+    LifecycleExecutionFailed
 }
 
 public enum BattleEncounterEventKind
@@ -476,13 +477,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await services.Events.PublishAsync(battleEvent, cancellationToken).ConfigureAwait(false);
         }
 
-        async ValueTask AddFaultAsync(string message, BattleEncounterFaultCode? faultCode)
+        async ValueTask AddFaultAsync(
+            string message,
+            BattleEncounterFaultCode? faultCode,
+            RuntimeInstanceId? actorId = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var battleEvent = new BattleEncounterEvent(
                 ++sequence,
                 BattleEncounterEventKind.BattleFaulted,
-                message)
+                message,
+                actorId)
             {
                 FaultCode = faultCode
             };
@@ -568,10 +573,33 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 "Initiative order: " + string.Join(", ", teamOrder.Select(team => team.ToString())) + ".")
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        await AddRangeAsync(await services.Lifecycle.ProcessBattleStartAsync(
-                new BattleEncounterLifecycleRequest(request, request.Participants, teamOrder),
-                cancellationToken).ConfigureAwait(false))
-            .ConfigureAwait(false);
+        IReadOnlyList<BattleEncounterEvent> battleStartEvents;
+        try
+        {
+            var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+            IReadOnlyList<BattleEncounterEvent> returnedEvents = await services.Lifecycle.ProcessBattleStartAsync(
+                    new BattleEncounterLifecycleRequest(
+                        lifecycleTransaction.CreateEncounter(request),
+                        lifecycleTransaction.Participants,
+                        teamOrder),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            battleStartEvents = SnapshotLifecycleEvents(returnedEvents, "battle-start");
+            lifecycleTransaction.Commit();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return await FaultDuringBattleAsync(
+                    LifecycleFailureMessage("battle-start", exception),
+                    faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
+                .ConfigureAwait(false);
+        }
+
+        await AddRangeAsync(battleStartEvents).ConfigureAwait(false);
 
         BattleEncounterCompletion initial = EvaluateCompletion(null);
         if (initial.IsComplete)
@@ -636,14 +664,36 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    BattleTurnStartLifecycleResult turnStart = await services.Lifecycle.ProcessTurnStartAsync(
-                            new BattleEncounterTurnLifecycleRequest(
-                                request,
-                                actor,
-                                request.Participants,
-                                CanReturnToStock(actor)),
-                            cancellationToken)
-                        .ConfigureAwait(false);
+                    BattleTurnStartLifecycleResult turnStart;
+                    try
+                    {
+                        var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                        BattleEncounterParticipant stagedActor = lifecycleTransaction.GetStaged(actor);
+                        turnStart = await services.Lifecycle.ProcessTurnStartAsync(
+                                new BattleEncounterTurnLifecycleRequest(
+                                    lifecycleTransaction.CreateEncounter(request),
+                                    stagedActor,
+                                    lifecycleTransaction.Participants,
+                                    CanReturnToStock(stagedActor)),
+                                cancellationToken)
+                            .ConfigureAwait(false)
+                            ?? throw new InvalidOperationException(
+                                "The battle lifecycle returned a null turn-start result.");
+                        lifecycleTransaction.Commit();
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        return await FaultDuringBattleAsync(
+                                LifecycleFailureMessage("turn-start", exception),
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.LifecycleExecutionFailed)
+                            .ConfigureAwait(false);
+                    }
+
                     await AddRangeAsync(MapStatusEvents(turnStart.Events)).ConfigureAwait(false);
 
                     if (turnStart.Outcome != BattleTurnStartOutcome.CanAct)
@@ -729,14 +779,37 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     if (command.TurnConsumption.Kind != ActionTurnConsumptionKind.None)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        await AddRangeAsync(await services.Lifecycle.ProcessTurnEndAsync(
-                                new BattleEncounterTurnLifecycleRequest(
-                                    request,
-                                    actor,
-                                    request.Participants,
-                                    CanReturnToStock(actor)),
-                                cancellationToken).ConfigureAwait(false))
-                            .ConfigureAwait(false);
+                        IReadOnlyList<BattleEncounterEvent> turnEndEvents;
+                        try
+                        {
+                            var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                            BattleEncounterParticipant stagedActor = lifecycleTransaction.GetStaged(actor);
+                            IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                                await services.Lifecycle.ProcessTurnEndAsync(
+                                    new BattleEncounterTurnLifecycleRequest(
+                                        lifecycleTransaction.CreateEncounter(request),
+                                        stagedActor,
+                                        lifecycleTransaction.Participants,
+                                        CanReturnToStock(stagedActor)),
+                                    cancellationToken)
+                                .ConfigureAwait(false);
+                            turnEndEvents = SnapshotLifecycleEvents(returnedEvents, "turn-end");
+                            lifecycleTransaction.Commit();
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception exception)
+                        {
+                            return await FaultDuringBattleAsync(
+                                    LifecycleFailureMessage("turn-end", exception),
+                                    actor.InstanceId,
+                                    BattleEncounterFaultCode.LifecycleExecutionFailed)
+                                .ConfigureAwait(false);
+                        }
+
+                        await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
                     }
 
                     await AddTurnEconomyAsync(actor.InstanceId, afterEconomy).ConfigureAwait(false);
@@ -760,11 +833,35 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-                await AddRangeAsync(await services.Lifecycle.ProcessPhaseEndAsync(
-                        new BattleEncounterLifecycleRequest(request, request.Participants, teamOrder),
-                        teamId,
-                        cancellationToken).ConfigureAwait(false))
-                    .ConfigureAwait(false);
+                IReadOnlyList<BattleEncounterEvent> phaseEndEvents;
+                try
+                {
+                    var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                    IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                        await services.Lifecycle.ProcessPhaseEndAsync(
+                            new BattleEncounterLifecycleRequest(
+                                lifecycleTransaction.CreateEncounter(request),
+                                lifecycleTransaction.Participants,
+                                teamOrder),
+                            teamId,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    phaseEndEvents = SnapshotLifecycleEvents(returnedEvents, "phase-end");
+                    lifecycleTransaction.Commit();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    return await FaultDuringBattleAsync(
+                            LifecycleFailureMessage("phase-end", exception),
+                            faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
+                        .ConfigureAwait(false);
+                }
+
+                await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
                 await AddAsync(BattleEncounterEventKind.PhaseEnded, $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
             }
@@ -807,18 +904,51 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         async ValueTask<BattleEncounterResult> FaultDuringBattleAsync(
             string message,
-            RuntimeInstanceId? actorId = null)
+            RuntimeInstanceId? actorId = null,
+            BattleEncounterFaultCode? faultCode = null)
         {
-            await AddAsync(BattleEncounterEventKind.BattleFaulted, message, actorId).ConfigureAwait(false);
-            return await FinishAsync(BattleEncounterOutcome.Faulted, null, message).ConfigureAwait(false);
+            await AddFaultAsync(message, faultCode, actorId).ConfigureAwait(false);
+            return await FinishAsync(BattleEncounterOutcome.Faulted, null, message, faultCode)
+                .ConfigureAwait(false);
         }
 
         async ValueTask<BattleEncounterResult> FinishAsync(
             BattleEncounterOutcome outcome,
             ContentId? winningTeamId,
-            string? message)
+            string? message,
+            BattleEncounterFaultCode? faultCode = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<BattleEncounterEvent> battleEndEvents;
+            try
+            {
+                var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                    await services.Lifecycle.ProcessBattleEndAsync(
+                        new BattleEncounterLifecycleRequest(
+                            lifecycleTransaction.CreateEncounter(request),
+                            lifecycleTransaction.Participants,
+                            teamOrder),
+                        outcome,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                battleEndEvents = SnapshotLifecycleEvents(returnedEvents, "battle-end");
+                lifecycleTransaction.Commit();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                outcome = BattleEncounterOutcome.Faulted;
+                winningTeamId = null;
+                message = LifecycleFailureMessage("battle-end", exception);
+                faultCode = BattleEncounterFaultCode.LifecycleExecutionFailed;
+                battleEndEvents = [];
+                await AddFaultAsync(message, faultCode).ConfigureAwait(false);
+            }
+
             string endMessage = message ?? (outcome == BattleEncounterOutcome.Victory && winningTeamId is ContentId team
                 ? $"Team {team} won."
                 : outcome == BattleEncounterOutcome.Escape
@@ -830,14 +960,25 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             : "Battle ended.");
             await AddAsync(BattleEncounterEventKind.BattleEnded, endMessage, source: winningTeamId)
                 .ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            await AddRangeAsync(await services.Lifecycle.ProcessBattleEndAsync(
-                    new BattleEncounterLifecycleRequest(request, request.Participants, teamOrder),
-                    outcome,
-                    cancellationToken).ConfigureAwait(false))
-                .ConfigureAwait(false);
-            return new BattleEncounterResult(outcome, winningTeamId, request.Participants, events, message);
+            await AddRangeAsync(battleEndEvents).ConfigureAwait(false);
+            return new BattleEncounterResult(
+                outcome,
+                winningTeamId,
+                request.Participants,
+                events,
+                message,
+                faultCode);
         }
+
+        static string LifecycleFailureMessage(string stage, Exception exception) =>
+            $"Battle lifecycle step '{stage}' failed: {exception.Message}";
+
+        static IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
+            IReadOnlyList<BattleEncounterEvent>? lifecycleEvents,
+            string stage) =>
+            Array.AsReadOnly((lifecycleEvents ?? throw new InvalidOperationException(
+                    $"The battle lifecycle returned a null {stage} event collection."))
+                .ToArray());
     }
 
     private static BattleEncounterParticipant[] ActiveTeam(

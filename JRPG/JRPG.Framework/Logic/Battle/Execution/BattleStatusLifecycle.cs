@@ -539,6 +539,16 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
+        var transaction = new RuntimeActorExecutionTransaction(actor, [actor]);
+        BattleTurnStartLifecycleResult result = ProcessTurnStartCore(
+            new BattleTurnStartLifecycleRequest(transaction.Actor, request.CanReturnToStock));
+        transaction.Commit();
+        return result;
+    }
+
+    private BattleTurnStartLifecycleResult ProcessTurnStartCore(BattleTurnStartLifecycleRequest request)
+    {
+        RuntimeActorState actor = request.Actor;
         var events = new List<BattleStatusLifecycleEvent>();
 
         if (actor.IsGuarding)
@@ -582,6 +592,29 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
         RuntimeActorState[] participants = request.Participants?.ToArray()
             ?? throw new ArgumentNullException(nameof(request.Participants));
+        RuntimeActorState[] transactionActors = participants
+            .Append(actor)
+            .Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance)
+            .ToArray();
+        var transaction = new RuntimeActorExecutionTransaction(actor, transactionActors);
+        var stagedRequest = new BattleTurnEndLifecycleRequest(
+            transaction.Actor,
+            participants.Select(transaction.GetStaged),
+            request.ContextId,
+            request.EventId,
+            request.BattleKindId,
+            request.MoonPhaseId);
+        BattleTurnEndLifecycleResult result = ProcessTurnEndCore(stagedRequest, services);
+        transaction.Commit();
+        return result;
+    }
+
+    private BattleTurnEndLifecycleResult ProcessTurnEndCore(
+        BattleTurnEndLifecycleRequest request,
+        BattleExecutionServices services)
+    {
+        RuntimeActorState actor = request.Actor;
+        RuntimeActorState[] participants = request.Participants.ToArray();
         var events = new List<BattleStatusLifecycleEvent>();
         var passiveActivations = new List<PassiveTriggerExecutionResult>();
 

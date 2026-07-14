@@ -250,6 +250,50 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(7, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
     }
 
+    [Theory]
+    [InlineData(ThrowingLifecycleStage.BattleStart, 0, null)]
+    [InlineData(ThrowingLifecycleStage.TurnStart, 0, "lifecycle_player")]
+    [InlineData(ThrowingLifecycleStage.TurnEnd, 1, "lifecycle_player")]
+    [InlineData(ThrowingLifecycleStage.PhaseEnd, 1, null)]
+    [InlineData(ThrowingLifecycleStage.BattleEnd, 1, null)]
+    public void Runner_ConvertsLifecycleExceptionsToTypedFaultsAndRollsBackTheStep(
+        ThrowingLifecycleStage stage,
+        int expectedCommandCount,
+        string? expectedActorId)
+    {
+        BattleEncounterParticipant player = Participant("lifecycle_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("lifecycle_enemy", EnemyTeam);
+        var lifecycle = new MutatingThrowingLifecycle(stage);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        IBattleEncounterCompletionPolicy completion = stage == ThrowingLifecycleStage.BattleEnd
+            ? new CompleteAfterTurnsPolicy(1)
+            : new CompleteAfterTurnsPolicy(99);
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            completion);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.LifecycleExecutionFailed, result.FaultCode);
+        Assert.Contains(DiagnosticName(stage), result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(expectedCommandCount, handler.Requests.Count);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
+        Assert.All(result.Participants, participant =>
+            Assert.Equal(10, participant.State.Resources.Single(resource => resource.ResourceId == Hp).Current));
+        BattleEncounterEvent fault = Assert.Single(
+            result.Events,
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleFaulted);
+        Assert.Equal(BattleEncounterFaultCode.LifecycleExecutionFailed, fault.FaultCode);
+        Assert.Equal(
+            expectedActorId is null ? null : RuntimeInstanceId.Parse(expectedActorId),
+            fault.ActorId);
+    }
+
     [Fact]
     public void Runner_FaultBeforeStartAlsoReturnsDetachedParticipantSnapshots()
     {
@@ -953,6 +997,83 @@ public sealed class BattleEncounterRunnerTests
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
         }
     }
+
+    public enum ThrowingLifecycleStage
+    {
+        BattleStart,
+        TurnStart,
+        TurnEnd,
+        PhaseEnd,
+        BattleEnd
+    }
+
+    private sealed class MutatingThrowingLifecycle(ThrowingLifecycleStage stage)
+        : IBattleEncounterLifecyclePort
+    {
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.BattleStart, request.Participants[0].State);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
+        }
+
+        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.TurnStart, request.Actor.State);
+            return new ValueTask<BattleTurnStartLifecycleResult>(
+                new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []));
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.TurnEnd, request.Actor.State);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.PhaseEnd, request.Participants[0].State);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.BattleEnd, request.Participants[0].State);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
+        }
+
+        private void FailIf(ThrowingLifecycleStage candidate, RuntimeActorState actor)
+        {
+            if (stage != candidate)
+            {
+                return;
+            }
+
+            actor.SetResource(Hp, 1);
+            throw new InvalidOperationException($"Deliberate {DiagnosticName(candidate)} failure.");
+        }
+    }
+
+    private static string DiagnosticName(ThrowingLifecycleStage stage) => stage switch
+    {
+        ThrowingLifecycleStage.BattleStart => "battle-start",
+        ThrowingLifecycleStage.TurnStart => "turn-start",
+        ThrowingLifecycleStage.TurnEnd => "turn-end",
+        ThrowingLifecycleStage.PhaseEnd => "phase-end",
+        ThrowingLifecycleStage.BattleEnd => "battle-end",
+        _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
+    };
 
     private sealed class RecordingSynchronizer : IBattleEncounterStateSynchronizer
     {

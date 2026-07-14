@@ -500,10 +500,45 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(services);
 
+        RuntimeActorState[] transactionActors = request.Participants
+            .Concat(request.Targets)
+            .Append(request.Owner)
+            .Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance)
+            .ToArray();
+        var transaction = new RuntimeActorExecutionTransaction(request.Owner, transactionActors);
+        var stagedRequest = new PassiveTriggerDispatchRequest(
+            request.EventId,
+            transaction.GetStaged(request.Owner),
+            request.Participants.Select(transaction.GetStaged),
+            request.Targets.Select(transaction.GetStaged),
+            request.ContextId,
+            request.BattleKindId,
+            request.MoonPhaseId);
+
+        try
+        {
+            PassiveTriggerDispatchResult result = DispatchCore(stagedRequest, services);
+            transaction.Commit();
+            return result;
+        }
+        finally
+        {
+            if (_activeTriggers.Value is { Count: 0 })
+            {
+                _activeTriggers.Value = null;
+            }
+        }
+    }
+
+    private PassiveTriggerDispatchResult DispatchCore(
+        PassiveTriggerDispatchRequest request,
+        BattleExecutionServices services)
+    {
         var results = new List<PassiveTriggerExecutionResult>();
         HashSet<ActiveTriggerKey> activeTriggers = _activeTriggers.Value ??= [];
+        SkillDefinition[] enabledSkills = request.Owner.Passives.EnabledSkills.ToArray();
 
-        foreach (SkillDefinition skill in request.Owner.Passives.EnabledSkills)
+        foreach (SkillDefinition skill in enabledSkills)
         {
             for (int triggerIndex = 0; triggerIndex < skill.Triggers.Count; triggerIndex++)
             {
@@ -514,7 +549,11 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                 }
 
                 PassiveEventPolicy policy = _policies.Resolve(request.EventId);
-                var activeKey = new ActiveTriggerKey(request.Owner, skill.Id, triggerIndex, request.EventId);
+                var activeKey = new ActiveTriggerKey(
+                    request.Owner.InstanceId,
+                    skill.Id,
+                    triggerIndex,
+                    request.EventId);
                 foreach (RuntimeActorState target in request.Targets)
                 {
                     if (!policy.AllowReentry && activeTriggers.Contains(activeKey))
@@ -640,7 +679,7 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         new(skillId, triggerIndex, eventId, targetId, outcome, []);
 
     private sealed record ActiveTriggerKey(
-        RuntimeActorState Owner,
+        RuntimeInstanceId OwnerId,
         ContentId SkillId,
         int TriggerIndex,
         ContentId EventId);

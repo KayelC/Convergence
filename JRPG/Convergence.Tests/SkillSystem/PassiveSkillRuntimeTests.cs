@@ -357,6 +357,39 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void TriggerDispatch_ThrowingHandlerRollsBackEffectsAndActivationBookkeeping()
+    {
+        ContentId eventId = ContentId.Parse("atomic_event");
+        ContentId handlerId = ContentId.Parse("mutate_then_throw");
+        SkillDefinition passive = PassiveSkill(
+            "atomic_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [
+                        new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10)),
+                        new CustomEffectDefinition(handlerId)
+                    ])
+            ]);
+        RuntimeActorState owner = Actor("atomic_owner", PlayerTeam, hp: 50, passiveSkills: [passive]);
+        BattleExecutionServices services = Services(
+            customEffects:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new MutatingThrowingEffectHandler())
+            ]);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            Dispatch(eventId, owner, [owner], [owner], services));
+
+        Assert.Equal("Deliberate custom-effect failure.", exception.Message);
+        Assert.Equal(50, owner.GetRequiredResource(Hp).Current);
+        Assert.Empty(owner.ToSnapshot().BattleActivations.PassiveActivations);
+    }
+
+    [Fact]
     public void Endure_RestoresAfterFirstLethalHitButSecondLethalHitDefeatsOwner()
     {
         SkillDefinition endure = PassiveSkill(
@@ -739,5 +772,14 @@ public sealed class PassiveSkillRuntimeTests
     {
         public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
             new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure);
+    }
+
+    private sealed class MutatingThrowingEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context)
+        {
+            (context.Target ?? context.Actor).SetResource(Hp, 1);
+            throw new InvalidOperationException("Deliberate custom-effect failure.");
+        }
     }
 }

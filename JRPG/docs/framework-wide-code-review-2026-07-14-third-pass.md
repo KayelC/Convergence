@@ -151,6 +151,18 @@ If a registered lifecycle handler throws after an earlier effect succeeds, resou
 
 Recommended correction: execute each lifecycle dispatch through staged participant state, commit only after all effects succeed, and convert extension failures into a typed encounter fault. Decide whether one failing trigger rolls back only that trigger or the complete lifecycle step, then encode that policy in tests.
 
+**Correction status (2026-07-14): implemented.**
+
+- The rollback unit is the complete lifecycle step. Battle-start covers every participant; turn-start covers guard clearing and ailment behavior; turn-end covers passive triggers, ailment triggers, recovery, and duration ticks; phase-end and battle-end cover every participant processed by that callback.
+- Lifecycle execution now reuses the canonical `RuntimeActorExecutionTransaction`. Registered custom handlers receive staged actor objects, and canonical actors are updated only after the lifecycle result and its event collection have been produced successfully. Resources, ailments, timed statuses, deployment, forms, equipment, passive enabled state, and per-battle passive activation counts are included in the staged state.
+- `PassiveTriggerDispatcher` is independently atomic for direct callers. A throwing effect rolls back earlier trigger effects and activation bookkeeping. Dispatch snapshots the enabled passive loadout at event start, while recursion identity uses stable runtime instance IDs, so nested dispatch cannot invalidate iteration or bypass recursion suppression when actors are staged.
+- `BattleStatusLifecycleService` independently stages turn-start and turn-end work. A custom turn-behavior failure therefore restores guarding and any handler mutation; a turn-end handler failure restores all earlier effects and prevents recovery or duration changes from leaking.
+- `BattleStatusEncounterLifecyclePort` stages battle-start across all actors and stages multi-actor phase/battle-end work. One later actor's failure cannot commit earlier actors' passives, cleanup, or activation counts.
+- `BattleEncounterRunner` adds the stable `LifecycleExecutionFailed` fault code and stages every injected lifecycle port, including host implementations. Exceptions from battle-start, turn-start, turn-end, phase-end, and battle-end become a `Faulted` result plus `BattleFaulted` event; cancellation remains `OperationCanceledException`. Returned event collections are snapshotted before commit, and null lifecycle results are rejected within the same rollback boundary.
+- Framework actor state is transactional. An extension remains responsible for its own external side effects, such as network calls or host file writes, because those cannot be rolled back by an engine-neutral actor-state transaction.
+- Nine adversarial regressions cover direct passive rollback, activation rollback, custom turn-start rollback, custom turn-end rollback, cross-participant battle-start rollback, and all five encounter lifecycle stages. The focused passive/status/encounter gate passed 72 tests; all 1,090 solution tests passed with no failures or skips.
+- The nonincremental framework build remains at 0 warnings. The complete solution retains its existing 100 legacy-host warnings. Battle, field, save, and Training Annex demos completed successfully, framework neutrality searches found no prohibited references, and `Data/Jsons` remained unchanged.
+
 ### L1. Some public lifecycle result collections can still be mutated
 
 Most newer result types snapshot supplied collections. A few positional records still store caller-owned `IReadOnlyList` references directly.
@@ -210,8 +222,8 @@ Recommended correction: complete package metadata and deterministic package sett
 
 ## Quality Gate
 
-- Focused runtime tests: 123 passed, 0 failed, 0 skipped.
-- Complete solution tests: 1,059 passed, 0 failed, 0 skipped.
+- Latest focused passive/status/encounter tests: 72 passed, 0 failed, 0 skipped.
+- Complete solution tests after M1-M5 corrections: 1,090 passed, 0 failed, 0 skipped.
 - Framework nonincremental build: 0 warnings, 0 errors.
 - Solution nonincremental build: 100 warnings, 0 errors. These warnings are in the retained console-host compatibility surface; framework build remains warning-free.
 - Package: `JRPG.Framework.1.0.0.nupkg` produced successfully; publication metadata remains incomplete as noted in L3.
@@ -225,17 +237,15 @@ NuGet vulnerability metadata could not be refreshed because network access to `a
 
 ## Production Readiness Verdict
 
-I am comfortable moving forward with production development and Phase 8. The framework has coherent ownership boundaries, strong deterministic tests, clean engine neutrality, and no critical architectural defect requiring another rewrite.
+I am comfortable moving forward with production development and Phase 8. The framework has coherent ownership boundaries, strong deterministic tests, clean engine neutrality, and no critical architectural defect requiring another rewrite. All five medium findings from this review are now corrected and verified.
 
-I am not comfortable labeling the framework a stable public production release yet. M1 through M5 should be corrected first because they concern authored-content safety, lifecycle correctness, and extension-boundary atomicity. L1 and L2 should follow before declaring public contracts stable. L3 must be completed before publishing a package.
+I am not comfortable labeling the framework a stable public production release yet. L1 and L2 should be corrected before declaring the public contracts stable. L3 must be completed before publishing a package.
 
 Recommended order:
 
-1. Correct automated turn restrictions.
-2. Close restore-time duration validation.
-3. Define and enforce numeric domains across combat, rewards, and negotiation.
-4. Make lifecycle dispatch atomic and fault-aware.
-5. Finish immutable result and non-default ID contracts.
-6. Complete package/release metadata.
+1. Finish immutable lifecycle result contracts.
+2. Reject default/empty value-type IDs at every public validation boundary.
+3. Complete package/release metadata and SDK reproducibility policy.
+4. Repeat the focused adversarial and full release gates.
 
-After those corrections, repeat focused adversarial tests and the full gate. No broad redesign or renewed legacy migration is warranted by this review.
+No broad redesign or renewed legacy migration is warranted by this review.

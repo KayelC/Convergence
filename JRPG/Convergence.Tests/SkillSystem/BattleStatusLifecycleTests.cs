@@ -4,6 +4,7 @@ using JRPGPrototype.Data.SkillSystem.Validation;
 using JRPGPrototype.Entities.Components;
 using JRPGPrototype.Hosting;
 using JRPGPrototype.Logic.Battle.Execution;
+using JRPGPrototype.Logic.Battle.Runtime;
 using JRPGPrototype.Logic.Runtime;
 using Xunit;
 
@@ -15,6 +16,8 @@ public sealed class BattleStatusLifecycleTests
     private static readonly ContentId Sp = ContentId.Parse("sp");
     private static readonly ContentId Luck = ContentId.Parse("luck");
     private static readonly ContentId Battle = ContentId.Parse("battle");
+    private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
+    private static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
     private static readonly ContentId PoisonFormula = ContentId.Parse("legacy_poison_damage");
     private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
@@ -135,6 +138,31 @@ public sealed class BattleStatusLifecycleTests
             () => missingHandlerService.ProcessTurnStart(new(actor)));
         Assert.Contains(handlerId.ToString(), exception.Message, StringComparison.Ordinal);
         Assert.Contains("custom", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TurnStart_ThrowingCustomBehaviorRollsBackGuardAndHandlerMutations()
+    {
+        ContentId handlerId = ContentId.Parse("mutate_then_throw");
+        var handler = new MutatingThrowingTurnBehaviorHandler();
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(handlerId, handler)]);
+        RuntimeActorState actor = Actor("atomic_turn_start", hp: 50);
+        actor.SetGuarding(true);
+        actor.ApplyAilment(
+            IndependentAilment(
+                "custom_atomic",
+                new CustomAilmentTurnBehaviorDefinition(handlerId)),
+            Turns(3));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => service.ProcessTurnStart(new BattleTurnStartLifecycleRequest(actor)));
+
+        Assert.Equal("Deliberate turn-behavior failure.", exception.Message);
+        Assert.True(actor.IsGuarding);
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, handler.ReceivedActor);
     }
 
     [Fact]
@@ -362,6 +390,83 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_ThrowingAilmentHandlerRollsBackEffectsAndDurationTicks()
+    {
+        ContentId handlerId = ContentId.Parse("mutate_then_throw");
+        RuntimeActorState actor = Actor("atomic_turn_end", hp: 50);
+        actor.ApplyAilment(
+            IndependentAilment(
+                "atomic_trigger",
+                new NormalAilmentTurnBehaviorDefinition(),
+                [new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [
+                        new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10)),
+                        new CustomEffectDefinition(handlerId)
+                    ])]),
+            Turns(3));
+        BattleExecutionServices services = Services(
+            customEffectHandlers:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new MutatingThrowingCustomEffectHandler())
+            ]);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            new BattleStatusLifecycleService(new SequenceRandomSource()).ProcessTurnEnd(
+                new BattleTurnEndLifecycleRequest(actor, [actor], Battle, OwnerTurnEnd),
+                services));
+
+        Assert.Equal("Deliberate lifecycle-effect failure.", exception.Message);
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        ActiveAilmentState active = Assert.Single(actor.Ailments).Value;
+        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(active.Duration).Value);
+    }
+
+    [Fact]
+    public async Task BattleStartPort_ThrowingLaterHandlerRollsBackEarlierActorsAndActivations()
+    {
+        ContentId handlerId = ContentId.Parse("mutate_then_throw");
+        SkillDefinition restore = PassiveSkill(
+            "battle_start_restore",
+            [new PassiveTriggerDefinition(
+                BattleStart,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])]);
+        SkillDefinition fail = PassiveSkill(
+            "battle_start_failure",
+            [new PassiveTriggerDefinition(
+                BattleStart,
+                [new CustomEffectDefinition(handlerId)])]);
+        RuntimeActorState first = Actor("first_atomic_start", hp: 50, passiveSkills: [restore]);
+        RuntimeActorState second = Actor("second_atomic_start", hp: 50, passiveSkills: [fail]);
+        BattleExecutionServices services = Services(
+            customEffectHandlers:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new MutatingThrowingCustomEffectHandler())
+            ]);
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        var port = new BattleStatusEncounterLifecyclePort(lifecycle, services, BattleStart, OwnerTurnEnd);
+        BattleEncounterParticipant[] participants =
+        [
+            new(first, "First"),
+            new(second, "Second")
+        ];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => port.ProcessBattleStartAsync(
+                new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam]))
+            .AsTask());
+
+        Assert.Equal(50, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(50, second.GetRequiredResource(Hp).Current);
+        Assert.Empty(first.ToSnapshot().BattleActivations.PassiveActivations);
+        Assert.Empty(second.ToSnapshot().BattleActivations.PassiveActivations);
+    }
+
+    [Fact]
     public void StatStages_SaturateAtApprovedBoundsWithoutOverflow()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
@@ -564,7 +669,8 @@ public sealed class BattleStatusLifecycleTests
         decimal sp = 100,
         decimal luck = 10,
         CombatDefenseProfile? defense = null,
-        bool isActive = true) =>
+        bool isActive = true,
+        IEnumerable<SkillDefinition>? passiveSkills = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -573,7 +679,21 @@ public sealed class BattleStatusLifecycleTests
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
             [new KeyValuePair<ContentId, decimal>(Luck, luck)],
-            isActive: isActive);
+            isActive: isActive,
+            passiveSkills: passiveSkills);
+
+    private static SkillDefinition PassiveSkill(
+        string id,
+        IEnumerable<PassiveTriggerDefinition> triggers) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Test passive.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            triggers: triggers);
 
     private static TurnDurationDefinition Turns(int value) =>
         new(value, OwnerTurnEnd, true);
@@ -790,12 +910,37 @@ public sealed class BattleStatusLifecycleTests
         }
     }
 
+    private sealed class MutatingThrowingTurnBehaviorHandler : ICustomAilmentTurnBehaviorHandler
+    {
+        public RuntimeActorState? ReceivedActor { get; private set; }
+
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request)
+        {
+            ReceivedActor = request.Actor;
+            request.Actor.SetResource(Hp, 1);
+            throw new InvalidOperationException("Deliberate turn-behavior failure.");
+        }
+    }
+
     private sealed class FailingCustomEffectHandler : ICustomEffectHandler
     {
         public EffectExecutionResult Execute(
             CustomEffectDefinition effect,
             EffectExecutionContext context) =>
             new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure);
+    }
+
+    private sealed class MutatingThrowingCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(
+            CustomEffectDefinition effect,
+            EffectExecutionContext context)
+        {
+            (context.Target ?? context.Actor).SetResource(Hp, 1);
+            throw new InvalidOperationException("Deliberate lifecycle-effect failure.");
+        }
     }
 
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy
