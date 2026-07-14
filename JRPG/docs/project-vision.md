@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Convergence began as a hobby Persona-like JRPG prototype and evolved into a broader C# framework for complex turn-based RPG systems. The long-term goal is not only to build a single game, but to create a reusable, engine-agnostic library that developers can plug into Unity, Godot, or any C#-capable runtime.
+Convergence began as a hobby Persona-like JRPG prototype and evolved into a broader C# framework for complex turn-based RPG systems. The primary host target is Godot, while the framework itself remains engine-neutral so other compatible .NET hosts can consume the same rules and state contracts.
 
 This document records the intent behind the project so future refactors, features, and documentation stay aligned with the framework direction.
 
@@ -30,7 +30,7 @@ The ideal shape is:
 
 1. A core framework/library containing deterministic gameplay systems.
 2. A console sample app for testing and demonstration.
-3. Future Unity/Godot adapters that translate engine input, UI, scenes, animation, and persistence into framework commands and state updates.
+3. A Godot adapter that translates engine input, UI, scenes, animation, and persistence into framework commands and state updates, with room for other .NET host adapters later.
 4. Example content packs that demonstrate behavior without locking the framework to any protected IP.
 
 ## Release Philosophy

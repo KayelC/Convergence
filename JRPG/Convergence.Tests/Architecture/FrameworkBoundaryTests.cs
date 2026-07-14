@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Text.Json;
+using System.Xml.Linq;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Hosting;
 using Xunit;
@@ -37,6 +39,55 @@ public sealed class FrameworkBoundaryTests
         string project = File.ReadAllText(RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"));
         Assert.DoesNotContain("PackageReference", project, StringComparison.Ordinal);
         Assert.DoesNotContain("JRPG.ConsoleHost", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RepositoryProjects_TargetTheGodotCompatibleDotNet8AndCSharp12Baseline()
+    {
+        string[] projects =
+        [
+            RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"),
+            RepositoryPath("JRPG.ConsoleHost.csproj"),
+            RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj")
+        ];
+
+        foreach (string projectPath in projects)
+        {
+            XDocument project = XDocument.Load(projectPath);
+            Assert.Equal("net8.0", RequiredProperty(project, "TargetFramework"));
+            Assert.Equal("12.0", RequiredProperty(project, "LangVersion"));
+        }
+
+        XDocument framework = XDocument.Load(projects[0]);
+        Assert.Equal("false", RequiredProperty(framework, "IsPackable"));
+        Assert.Empty(framework.Descendants("PackageReference"));
+    }
+
+    [Fact]
+    public void RepositorySdkPolicy_SelectsTheDotNet8LineWithControlledRollForward()
+    {
+        using JsonDocument policy = JsonDocument.Parse(File.ReadAllText(RepositoryPath("global.json")));
+        JsonElement sdk = policy.RootElement.GetProperty("sdk");
+
+        Assert.StartsWith("8.0.", sdk.GetProperty("version").GetString(), StringComparison.Ordinal);
+        Assert.Equal("latestFeature", sdk.GetProperty("rollForward").GetString());
+        Assert.False(sdk.GetProperty("allowPrerelease").GetBoolean());
+    }
+
+    [Fact]
+    public void FrameworkDistribution_IsSourceProjectReferenceRatherThanPackagePublication()
+    {
+        XDocument framework = XDocument.Load(RepositoryPath("JRPG.Framework", "JRPG.Framework.csproj"));
+        XDocument consoleHost = XDocument.Load(RepositoryPath("JRPG.ConsoleHost.csproj"));
+        XDocument tests = XDocument.Load(RepositoryPath("Convergence.Tests", "Convergence.Tests.csproj"));
+
+        Assert.Equal("false", RequiredProperty(framework, "IsPackable"));
+        Assert.Contains(
+            consoleHost.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "jrpg.framework/jrpg.framework.csproj");
+        Assert.Contains(
+            tests.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../jrpg.framework/jrpg.framework.csproj");
     }
 
     [Fact]
@@ -168,4 +219,14 @@ public sealed class FrameworkBoundaryTests
         Assert.NotNull(current);
         return Path.Combine([current!, .. segments]);
     }
+
+    private static string RequiredProperty(XDocument project, string name)
+    {
+        XElement? property = project.Descendants(name).SingleOrDefault();
+        Assert.NotNull(property);
+        return property!.Value.Trim();
+    }
+
+    private static string NormalizePath(string? path) =>
+        (path ?? string.Empty).Replace('\\', '/').ToLowerInvariant();
 }

@@ -1,5 +1,7 @@
 # Framework-Wide Code Review After Corrections
 
+> **Historical verification snapshot.** SDK, target-framework, and package-output statements record the repository at this review date. The current Godot/.NET 8 source-distribution decision is defined by L3 in the 2026-07-14 third-pass review and the Godot integration contract.
+
 Date: 2026-07-13
 
 Branch: `track-12-recovery`

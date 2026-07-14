@@ -8,6 +8,34 @@ Track P proves that Godot integration is adapter work. The framework remains an 
 
 No GodotSharp package or Godot project is required in this repository for Track P. The proof lives in test-only Godot-shaped adapters that use fake `res://` paths, signal-style commands, event sinks, scene-instance handles, and host-owned save snapshots. Track R extends the same boundary with framework-owned save snapshot contracts and a console-host JSON proof.
 
+## Framework Acquisition And Target Compatibility
+
+Godot is the primary host target. `JRPG.Framework`, the compatibility host, and the test project target `net8.0` with C# 12. The repository `global.json` requests the .NET 8 SDK line with controlled feature-band roll-forward, so a machine that also has .NET 9 or .NET 10 installed still builds this repository with .NET 8.
+
+The supported integration model is a GitHub checkout and a project reference. A package manager is not required, and `JRPG.Framework` is intentionally marked non-packable while source integration is the maintained release path.
+
+Recommended layout:
+
+```text
+MyGameRepository/
+|- Game/
+|  |- project.godot
+|  `- MyGame.csproj
+`- Framework/
+   `- JRPG.Framework/
+      `- JRPG.Framework.csproj
+```
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\Framework\JRPG.Framework\JRPG.Framework.csproj" />
+</ItemGroup>
+```
+
+The framework should remain outside the Godot game directory so the game project does not include the same `.cs` files through its default source glob as well as through the project reference. The source may be obtained through a normal clone, a Git submodule, a subtree, or a checked-in copy; that is repository ownership, not a framework runtime concern.
+
+Godot 4.5 requires .NET 8 or later for C# projects. A platform export that requires a newer host SDK can target that newer runtime while continuing to reference the `net8.0` framework. See the [Godot C# prerequisites](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#prerequisites). Godot also supports NuGet packages, but that optional capability does not make NuGet the distribution contract for this project; see [using NuGet packages in Godot](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html#using-nuget-packages-in-godot).
+
 ## Host Responsibilities
 
 A Godot host must provide these adapters around the existing framework contracts:
@@ -79,3 +107,4 @@ Phase 3-20 adds serializer-neutral save policy records and a Training Annex clea
 - No parity-ledger capability moves to `clean_parity`.
 - No framework public API is changed for Godot-specific concepts.
 - No permanent save-slot UI, cloud-save policy, battle-save policy, or save-version migration system is added.
+- No NuGet publication contract is established; package distribution may be reconsidered only as a separate future release decision.

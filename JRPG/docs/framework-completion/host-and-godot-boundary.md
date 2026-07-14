@@ -8,6 +8,8 @@ Test-only Godot-shaped adapters prove the framework can be consumed without taki
 
 There is no real Godot project or production Godot adapter yet.
 
+The acquisition and runtime baseline are decided: Godot is the primary host, the framework targets .NET 8/C# 12, and developers obtain the source from GitHub and use a `ProjectReference`. NuGet publication is not required for framework integration.
+
 ## Problem
 
 The framework must remain engine-neutral, but the project still needs a practical host story.
@@ -26,13 +28,13 @@ Host-facing example mappings:
 
 ## Decisions Still Needed
 
-- Will the first real external host be Godot or a cleaner console sample?
-- Should Godot adapters live in this repository or a separate package?
+- What is the smallest real Godot project that should replace the current test-shaped proof?
+- Should production Godot adapter source live beside the framework or in a separate repository folder?
 - What event/presentation detail does Godot need that the framework does not currently expose?
 - Which runtime snapshots must be stable public contracts before a Godot prototype starts?
 
 ## Recommended Next Step
 
-Do not add a Godot dependency yet.
+Do not add a Godot dependency to `JRPG.Framework`.
 
-Build a slightly richer clean console sample first, then design the Godot adapter around proven framework contracts rather than around speculation.
+When host work resumes, create the smallest real Godot adapter over the existing .NET 8 contracts. Keep Nodes, scenes, signals, resource loading, presentation, scheduling, and save serialization in that host project. Framework capability work may continue independently and should not wait for console presentation polish.

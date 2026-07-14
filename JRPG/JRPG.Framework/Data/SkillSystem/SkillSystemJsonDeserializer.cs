@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using JRPGPrototype.Data.Definitions;
 using JRPGPrototype.Data.SkillSystem.Schemas;
 
@@ -67,6 +69,7 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         {
             TDto dto = JsonSerializer.Deserialize(json, typeInfo)
                 ?? throw new JsonException("The document contains JSON null instead of an object.");
+            ValidateRequiredReferences(dto, typeInfo, "$");
             return mapper(dto);
         }
         catch (SchemaMappingException exception)
@@ -116,7 +119,6 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
             TypeInfoResolver = SkillSystemJsonContext.Default,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = false,
-            RespectNullableAnnotations = true,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             ReadCommentHandling = JsonCommentHandling.Disallow,
             AllowTrailingCommas = false
@@ -164,4 +166,78 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<RulesetCategory>());
         return options;
     }
+
+    private static void ValidateRequiredReferences(object dto, JsonTypeInfo typeInfo, string path)
+    {
+        if (typeInfo.Kind != JsonTypeInfoKind.Object)
+        {
+            return;
+        }
+
+        foreach (JsonPropertyInfo property in typeInfo.Properties)
+        {
+            if (property.Get is not { } get)
+            {
+                continue;
+            }
+
+            object? value = get(dto);
+            string propertyPath = $"{path}.{property.Name}";
+            if (property.IsRequired && !property.PropertyType.IsValueType && value is null)
+            {
+                throw new JsonException(
+                    $"The required property '{property.Name}' cannot be null.",
+                    propertyPath,
+                    lineNumber: null,
+                    bytePositionInLine: null);
+            }
+
+            ValidateNestedRequiredReferences(value, propertyPath);
+        }
+    }
+
+    private static void ValidateNestedRequiredReferences(object? value, string path)
+    {
+        if (value is null || value is string || value is JsonElement)
+        {
+            return;
+        }
+
+        Type valueType = value.GetType();
+        if (IsSchemaDto(valueType))
+        {
+            ValidateRequiredReferences(value, Options.GetTypeInfo(valueType), path);
+            return;
+        }
+
+        if (value is not IEnumerable sequence)
+        {
+            return;
+        }
+
+        int index = 0;
+        foreach (object? item in sequence)
+        {
+            string itemPath = $"{path}[{index}]";
+            if (item is null)
+            {
+                throw new JsonException(
+                    "Schema collections cannot contain null elements.",
+                    itemPath,
+                    lineNumber: null,
+                    bytePositionInLine: null);
+            }
+
+            if (IsSchemaDto(item.GetType()))
+            {
+                ValidateRequiredReferences(item, Options.GetTypeInfo(item.GetType()), itemPath);
+            }
+
+            index++;
+        }
+    }
+
+    private static bool IsSchemaDto(Type type) =>
+        type.Namespace == typeof(SkillSystemJsonContext).Namespace &&
+        type.Name.EndsWith("Dto", StringComparison.Ordinal);
 }

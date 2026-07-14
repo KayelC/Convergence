@@ -4,6 +4,8 @@ Date: 2026-07-14
 Branch: `track-12-recovery`  
 Reviewed commit: `255d349` (`Review-Whole-19`)
 
+L3 correction baseline: `9eeb82f`; the correction described below is in the current working tree.
+
 ## Review Method
 
 This review was performed from the current source and tests. Earlier review reports and their summaries were not used as evidence.
@@ -15,9 +17,9 @@ The review covered:
 - Runtime actor state, persistence, progression, party and stock, inventory, equipment, economy, navigation, and dungeon transitions.
 - Typed actions and effects, passive dispatch, status lifecycle, combat resolution, encounter orchestration, AI selection, Press Turn, and battle knowledge.
 - Fusion, inheritance, transactions, Compendium, negotiation, recruitment, and rewards.
-- Project references, framework neutrality, package output, deterministic randomness, and the current test suite.
+- Project references, framework neutrality, target-runtime compatibility, distribution boundaries, deterministic randomness, and the current test suite.
 
-No critical or high-severity finding was identified. Five medium findings and three low findings remain.
+No critical or high-severity finding was identified. Five medium and three low findings were identified and subsequently corrected.
 
 ## Findings
 
@@ -216,15 +218,23 @@ Recommended correction: add `IsValid`/`IsEmpty` semantics and reject default IDs
 - Raw definition and snapshot contracts intentionally remain able to represent a default value. They are import/save evidence containers; validity is established only by the validator or restore boundary. Successfully validated content and live runtime state cannot contain an empty ID.
 - The focused affected gate passed 186 tests. The complete solution passed 1,109 tests with no failures or skips; the framework build remains at 0 warnings, the solution retains its established 100 compatibility-host warnings, all four clean demos exited 0, framework neutrality searches found no prohibited references, and `Data/Jsons` remained unchanged.
 
-### L3. The library package is buildable but not publication-ready
+### L3. Godot .NET 8 compatibility and source distribution (corrected 2026-07-14)
 
-`JRPG.Framework.csproj` currently declares only target framework, implicit usings, and nullable analysis. `dotnet pack` therefore produced an implicit `1.0.0` package containing only the DLL and emitted a missing-readme notice. The repository also has no `global.json`, so this review used installed SDK `10.0.301` to build the `net9.0` target even though SDK `9.0.315` is installed.
+The original L3 framed an automatically produced NuGet archive as the intended release surface. That was the wrong product assumption. Godot is the primary host, developers are expected to obtain the framework from GitHub, and source-level `ProjectReference` integration is the approved distribution model. The actual defect was more important: `JRPG.Framework` targeted `net9.0`, so a Godot project targeting .NET 8 could not reference it, and the repository had no SDK-selection policy to stop an installed .NET 10 SDK from becoming the compiler implicitly.
 
 Impact:
 
-Runtime behavior is unaffected, but public package identity, versioning policy, license, repository metadata, readme, symbols/source, and SDK reproducibility are not yet controlled.
+The framework API remained engine-neutral, but its target framework was incompatible with the intended .NET 8 host baseline. Treating package metadata as the correction would have polished an unapproved distribution path while leaving the primary host unable to consume the library directly.
 
-Recommended correction: complete package metadata and deterministic package settings before publishing. Add an intentional SDK selection policy, either a pinned `global.json` with controlled roll-forward or a documented multi-SDK build matrix.
+**Correction status (2026-07-14): implemented.**
+
+- `JRPG.Framework`, `JRPG.ConsoleHost`, and `Convergence.Tests` now target `net8.0` and explicitly compile as C# 12. Retargeting all three means the complete test and compatibility-host surface, not only an isolated library build, exercises the supported baseline.
+- Root `global.json` requests the .NET 8 SDK line with `latestFeature` roll-forward and prerelease SDKs disabled. On the verification machine, which also has .NET 9 and .NET 10 installed, `dotnet --version` now resolves to `8.0.422`.
+- `JRPG.Framework` remains dependency-free and is explicitly `IsPackable=false`. NuGet publication is deferred to a separate future product decision rather than left as an accidental SDK default.
+- The root README and Godot integration contract define GitHub checkout plus `ProjectReference` as the supported integration path, including a layout that keeps framework source outside the Godot game directory.
+- Godot, serializer, filesystem, console, and legacy types remain outside framework public APIs. The existing Godot-shaped integration tests now compile and run as .NET 8 consumers.
+- .NET 9's `JsonSerializerOptions.RespectNullableAnnotations` was the only incompatible framework API found by compilation. The .NET 8 implementation now rejects explicit `null` for required schema references through source-generated `JsonTypeInfo` metadata before mapping. Strict nested paths and the no-reflection-fallback serializer boundary are preserved.
+- A newer host runtime may reference the `net8.0` framework. This permits platform-specific Godot exports to choose a newer SDK without raising the framework's minimum host requirement.
 
 ## Verified Strengths
 
@@ -244,15 +254,16 @@ Recommended correction: complete package metadata and deterministic package sett
 
 - Latest affected execution/lifecycle tests: 81 passed, 0 failed, 0 skipped.
 - L2 affected identifier-boundary tests: 186 passed, 0 failed, 0 skipped.
-- Complete solution tests after M1-M5 and L1-L2 corrections: 1,109 passed, 0 failed, 0 skipped.
+- L3 .NET 8 boundary, strict-schema, and Godot-contract tests: 36 passed, 0 failed, 0 skipped.
+- Complete solution tests after L3: 1,113 passed, 0 failed, 0 skipped on `.NETCoreApp,Version=v8.0`.
 - Framework nonincremental build: 0 warnings, 0 errors.
-- Solution nonincremental build: 100 warnings, 0 errors. These warnings are in the retained console-host compatibility surface; framework build remains warning-free.
-- Package: `JRPG.Framework.1.0.0.nupkg` produced successfully; publication metadata remains incomplete as noted in L3.
+- Solution nonincremental build: 100 warnings, 0 errors. The total includes two `NU1900` advisories because vulnerability metadata could not be refreshed; remaining warnings are retained console-host compatibility nullability debt. The framework build remains warning-free.
+- SDK selection: `dotnet --version` resolves to `8.0.422` through `global.json` even with SDK 9.0.315 and 10.0.301 installed.
+- Distribution: all projects target `net8.0` / C# 12; `JRPG.Framework` has no package references and is explicitly non-packable. Source `ProjectReference` integration is documented and tested.
 - Clean battle, field, save, and Training Annex demos: all exited 0.
 - Framework forbidden-reference and unfinished-marker searches: no matches.
 - `git diff --check`: passed.
 - `Data/Jsons`: unchanged.
-- Worktree before this report: clean and synchronized at `255d349`.
 
 NuGet vulnerability metadata could not be refreshed because network access to `api.nuget.org` was unavailable. Exact packages were restored from the machine's local cache. This does not affect `JRPG.Framework`, which has no package references, but the console/test dependency audit remains an external verification gap.
 
@@ -260,11 +271,12 @@ NuGet vulnerability metadata could not be refreshed because network access to `a
 
 I am comfortable moving forward with production development and Phase 8. The framework has coherent ownership boundaries, strong deterministic tests, clean engine neutrality, and no critical architectural defect requiring another rewrite. All five medium findings from this review are now corrected and verified.
 
-I am not comfortable labeling the framework a stable public production release yet. L2 is corrected, so default struct state no longer compromises validated content or restored runtime state. L3 must still be completed before publishing a package.
+I am not comfortable labeling the framework a finished stable public release yet because feature completion, a real Godot adapter, API versioning, licensing, and release policy still require deliberate product work. That is no longer a NuGet-packaging blocker: L3 is corrected for the approved Godot-first, GitHub-source distribution model.
 
 Recommended order:
 
-1. Complete package/release metadata and SDK reproducibility policy.
-2. Repeat the focused adversarial and full release gates against the intended publication configuration.
+1. Continue Phase 8 framework capability work against the .NET 8 baseline.
+2. Build the first real Godot host adapter from the documented project-reference boundary when host integration becomes the selected priority.
+3. Decide versioning, license, and any optional package publication only as an explicit release track, not as a prerequisite for source integration.
 
 No broad redesign or renewed legacy migration is warranted by this review.

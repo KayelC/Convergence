@@ -336,6 +336,39 @@ public sealed class SchemaDeserializationTests
     }
 
     [Fact]
+    public void StrictReader_RejectsNullRequiredReferencesAndCollectionElementsOnDotNet8()
+    {
+        string nullText = WrapSkill(MinimalPassiveRecord().Replace(
+            "\"displayName\": \"Passive Sample\"",
+            "\"displayName\": null",
+            StringComparison.Ordinal));
+        string nullObject = WrapSkill(MinimalPassiveRecord().Replace(
+            "\"inheritance\": { \"isInheritable\": true }",
+            "\"inheritance\": null",
+            StringComparison.Ordinal));
+        const string nullRecord = """
+            { "schemaVersion": 1, "skills": [null] }
+            """;
+        string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
+
+        ContentDeserializationException textError = Assert.Throws<ContentDeserializationException>(
+            () => _deserializer.DeserializeSkills(nullText, "null-text.json"));
+        ContentDeserializationException objectError = Assert.Throws<ContentDeserializationException>(
+            () => _deserializer.DeserializeSkills(nullObject, "null-object.json"));
+        ContentDeserializationException recordError = Assert.Throws<ContentDeserializationException>(
+            () => _deserializer.DeserializeSkills(nullRecord, "null-record.json"));
+        ContentDeserializationException effectError = Assert.Throws<ContentDeserializationException>(
+            () => _deserializer.DeserializeSkills(nullEffect, "null-effect.json"));
+
+        Assert.Contains("displayName", textError.Message, StringComparison.Ordinal);
+        Assert.Contains("inheritance", objectError.Message, StringComparison.Ordinal);
+        Assert.Contains("skills", textError.JsonPath ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("skills", objectError.JsonPath ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal("$.skills[0]", recordError.JsonPath);
+        Assert.Equal("$.skills[0].effects[0]", effectError.JsonPath);
+    }
+
+    [Fact]
     public void StrictReader_RejectsUnknownEnumValues()
     {
         string json = WrapSkill(MinimalPassiveRecord().Replace(

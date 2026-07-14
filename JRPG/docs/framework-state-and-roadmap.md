@@ -19,6 +19,8 @@ The solution currently has two main runtime assemblies:
 - `JRPG.Framework`: the reusable, engine-neutral class library.
 - `JRPG.ConsoleHost`: the root executable and compatibility host.
 
+All solution projects target .NET 8 and C# 12. `global.json` keeps repository builds on the .NET 8 SDK line, matching the primary Godot host baseline even when newer SDKs are installed. The framework is distributed from GitHub as source and consumed through `ProjectReference`; it is intentionally non-packable for now.
+
 Supporting areas:
 
 - `Convergence.Tests`: framework, host, parity, characterization, content, and runtime tests.

@@ -8,7 +8,7 @@ The solution is organized around gameplay subsystems with a physical host bounda
 
 ### JRPG.Framework
 
-`JRPG.Framework` is a `net9.0` class library containing the reusable clean path:
+`JRPG.Framework` is a dependency-free `net8.0` / C# 12 class library containing the reusable clean path. .NET 8 is the minimum framework contract because Godot is the primary host target; a host that targets a newer compatible .NET runtime may still reference the `net8.0` library.
 
 - immutable content definitions;
 - serializer-neutral deserialization contracts, validation, and catalog construction;
@@ -21,6 +21,8 @@ The solution is organized around gameplay subsystems with a physical host bounda
 - serializer-neutral runtime save validation and checkpoint diagnostics.
 
 The framework has no package references and does not access the console, filesystem, Godot, or the legacy static database. JSON implementation details remain internal to the content-loading subsystem.
+
+The supported distribution model is source acquisition from GitHub plus a `ProjectReference`. The framework project is intentionally non-packable until a separate package-distribution decision is made. A Godot game should keep `JRPG.Framework` outside its game source directory and reference the project from its `.csproj`; this avoids compiling framework source both through Godot's host project glob and through the project reference. The repository's `global.json` selects the .NET 8 SDK line, and every solution project compiles with C# 12 so compatibility is exercised by the complete test suite rather than inferred from the framework project alone.
 
 ### JRPG.ConsoleHost
 
