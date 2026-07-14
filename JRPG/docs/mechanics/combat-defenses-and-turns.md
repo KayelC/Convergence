@@ -50,7 +50,7 @@ The supplied Press Turn behavior is:
 
 - A phase starts with one full icon per active living actor.
 - A normal action consumes one blinking icon first, otherwise one full icon.
-- Passing converts one full icon to blinking; if only blinking remains, it consumes one.
+- Passing consumes an existing blinking icon before touching any full icon. Only when no blinking icon exists does passing convert one full icon to blinking.
 - Weakness or Critical converts a full icon to blinking; if only blinking remains, it consumes one.
 - Miss or Null consumes up to two icons.
 - Repel or Absorb ends the phase.
@@ -64,4 +64,3 @@ The supplied Press Turn behavior is:
 The encounter runner owns initiative, battle start, team phases, actor turns, lifecycle calls, command execution, turn-economy application, participant refresh, defeat checks, cancellation, round limits, faults, and ordered events.
 
 The runner ends with victory, defeat, escape, draw/round limit, host cancellation, or fault. Rewards and recruitment are separate services; an encounter does not silently grant either.
-

@@ -1063,6 +1063,25 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void PressTurnPass_ConsumesAnExistingBlinkingIconBeforeAFullIcon()
+    {
+        var engine = new PressTurnEngine();
+        engine.StartPhase(2);
+        engine.ConsumeAction(new PressTurnResolution(
+            PressTurnOutcome.Weakness,
+            AnyCritical: false,
+            TerminatesPhase: false));
+
+        Assert.Equal(1, engine.FullIcons);
+        Assert.Equal(1, engine.BlinkingIcons);
+
+        engine.Pass();
+
+        Assert.Equal(1, engine.FullIcons);
+        Assert.Equal(0, engine.BlinkingIcons);
+    }
+
+    [Fact]
     public void RuntimePublicApi_DoesNotExposeHostSerializerFilesystemOrLegacyTypes()
     {
         Type[] publicTypes = typeof(CatalogBattleActorFactory).Assembly.GetTypes()
