@@ -249,7 +249,18 @@ public sealed record NegotiationSessionRequest
         FamiliarDialogueLines = Array.AsReadOnly((familiarDialogueLines ?? []).ToArray());
         SpecificFamiliarDialogue = specificFamiliarDialogue;
         AvailableHealingItems = Array.AsReadOnly((availableHealingItems ?? []).ToArray());
-        Demands = Array.AsReadOnly((demands ?? []).ToArray());
+        NegotiationRuntimeDemand[] demandSnapshot = (demands ?? []).ToArray();
+        if (!NegotiationNumericDomain.TrySumDemandWeights(
+                demandSnapshot.Select(demand => demand.Weight),
+                out _))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(demands),
+                $"The aggregate authored demand weight must be positive and no greater than " +
+                $"{NegotiationNumericDomain.MaximumDemandWeightTotal}.");
+        }
+
+        Demands = Array.AsReadOnly(demandSnapshot);
     }
 
     public string TargetName { get; }
@@ -430,7 +441,9 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 throw new InvalidOperationException("Negotiation answer selection was outside the prompt options.");
             }
 
-            moodScore += question.Answers[answer.SelectedIndex].Score;
+            moodScore = NegotiationNumericDomain.AddMoodScore(
+                moodScore,
+                question.Answers[answer.SelectedIndex].Score);
         }
 
         if (moodScore >= _policy.PositiveMoodThreshold)
@@ -699,9 +712,16 @@ public sealed class NegotiationSessionService : INegotiationSessionService
 
     private NegotiationRuntimeDemand SelectAuthoredDemand(IReadOnlyList<NegotiationRuntimeDemand> demands)
     {
-        int totalWeight = checked(demands.Sum(demand => demand.Weight));
+        if (!NegotiationNumericDomain.TrySumDemandWeights(
+                demands.Select(demand => demand.Weight),
+                out int totalWeight) || totalWeight == 0)
+        {
+            throw new InvalidOperationException(
+                "Authored negotiation demand weights must have a positive aggregate within the supported numeric domain.");
+        }
+
         int roll = _random.NextInt32(0, totalWeight);
-        int cumulative = 0;
+        long cumulative = 0;
         foreach (NegotiationRuntimeDemand demand in demands)
         {
             cumulative += demand.Weight;
@@ -860,8 +880,8 @@ public sealed class BattleRewardService : IBattleRewardService
             return new BattleRewardResult(0, 0);
         }
 
-        int totalExperience = request.Enemies.Sum(CalculateExperienceYield);
-        int totalCurrency = request.Enemies.Sum(CalculateCurrencyYield);
+        int totalExperience = AggregateRewards(request.Enemies, CalculateExperienceYield);
+        int totalCurrency = AggregateRewards(request.Enemies, CalculateCurrencyYield);
         var applications = new List<BattleRewardApplication>();
         foreach (BattleRewardRecipientSnapshot recipient in request.Recipients.Where(recipient => recipient.IsAlive))
         {
@@ -890,6 +910,19 @@ public sealed class BattleRewardService : IBattleRewardService
         _ruleset.CalculateCurrencyYield(new(
             enemy.Level,
             Stats(enemy)));
+
+    private static int AggregateRewards(
+        IEnumerable<BattleRewardEnemySnapshot> enemies,
+        Func<BattleRewardEnemySnapshot, int> calculateYield)
+    {
+        int total = 0;
+        foreach (BattleRewardEnemySnapshot enemy in enemies)
+        {
+            total = CombatArithmetic.SaturatingAdd(total, calculateYield(enemy));
+        }
+
+        return total;
+    }
 
     private static ProductionCombatStats Stats(BattleRewardEnemySnapshot enemy) =>
         new(

@@ -122,6 +122,17 @@ Two individually saturated enemy rewards can throw during total calculation. Lar
 
 Recommended correction: aggregate with `long` or saturating arithmetic, validate total authored demand weight, and define an explicit score domain. Add multi-enemy and multi-answer boundary tests.
 
+**Correction status (2026-07-14): implemented.**
+
+- Negotiation now has one public, serializer-neutral `NegotiationNumericDomain`. Mood scores use the complete signed 32-bit range and saturating addition, so the framework imposes no arbitrary balance ceiling while preventing positive values from wrapping negative or negative values from wrapping positive.
+- Content validation calculates the possible positive and negative authored mood aggregates across negotiation questions. Definitions whose possible score range exceeds the declared mood domain receive a stable `ValueOutOfRange` diagnostic at `$.negotiations[index].questions`, including an actionable suggestion.
+- Demand weights remain positive relative weights. Their authored aggregate must fit `1..int.MaxValue`; content receives a `ValueOutOfRange` diagnostic at `$.negotiations[index].demands`, while direct runtime requests reject an oversized aggregate before random selection. An aggregate exactly equal to `int.MaxValue` remains supported.
+- Weighted selection no longer uses checked `Enumerable.Sum<int>` followed by unchecked cumulative arithmetic. It consumes the validated total and accumulates with `long`, preserving deterministic weighted behavior without overflow.
+- Battle reward totals now use saturating per-enemy accumulation. Individual and multi-enemy EXP/currency totals therefore converge on `int.MaxValue` instead of throwing, and reward applications receive that same bounded total.
+- Existing ordinary behavior remains unchanged: the established reward vector still yields 46 EXP and 125 currency, and ordinary negotiation demand/mood flows retain their prior results.
+- Six focused regressions cover positive and negative mood saturation, exact maximum demand-weight selection, oversized runtime demand rejection, authored score/weight diagnostics, exact-boundary content acceptance, and two-enemy reward saturation. The focused negotiation/catalog gate passed 18 tests; all 1,081 solution tests passed with no failures or skips.
+- The nonincremental framework build remains at 0 warnings. The complete solution retains its existing 100 legacy-host warnings. Battle, field, save, and Training Annex demos completed successfully, and production content remained unchanged.
+
 ### M5. Lifecycle custom-handler failures can leave partial live mutations
 
 Skill and item execution stage actor mutations and reject on handler failure. Battle-start and turn-end passive lifecycle execution instead runs directly against live actor state.

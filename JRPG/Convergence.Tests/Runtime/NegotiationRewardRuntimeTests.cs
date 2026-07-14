@@ -250,6 +250,140 @@ public sealed class NegotiationRewardRuntimeTests
             new BattleRewardApplication(ContentId.Parse("x"), BattleRewardRecipientKind.Actor, 1)));
     }
 
+    [Fact]
+    public async Task NegotiationSession_SaturatesMoodAndAcceptsMaximumDemandWeightTotal()
+    {
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0, int.MaxValue - 1]),
+            new TestNegotiationPolicy());
+        var commands = new QueueNegotiationCommands(
+            answers: [0, 0],
+            demands: [NegotiationDemandDecision.Accept]);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            new NegotiationSessionRequest(
+                "Boundary Target",
+                actorLevel: 1,
+                targetLevel: 1,
+                actorLuck: 0,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 1,
+                questions:
+                [
+                    Question("Maximum adjustment?", int.MaxValue),
+                    Question("One more?", 1)
+                ],
+                demands:
+                [
+                    new NegotiationRuntimeDemand(
+                        ContentId.Parse("maximum_weight"),
+                        NegotiationDemandKind.Currency,
+                        int.MaxValue,
+                        currencyAmount: 1)
+                ]),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Success, result.Outcome);
+        Assert.Equal(NegotiationNumericDomain.MaximumMoodScore, result.MoodScore);
+        Assert.Equal(1, result.CurrencySpent);
+        Assert.Single(commands.DemandPrompts);
+    }
+
+    [Fact]
+    public async Task NegotiationSession_SaturatesNegativeMoodWithoutWrappingPositive()
+    {
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0]),
+            new TestNegotiationPolicy());
+
+        NegotiationSessionResult result = await service.RunAsync(
+            new NegotiationSessionRequest(
+                "Boundary Target",
+                actorLevel: 1,
+                targetLevel: 1,
+                actorLuck: 0,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 0,
+                questions:
+                [
+                    Question("Minimum adjustment?", int.MinValue),
+                    Question("One less?", -1)
+                ]),
+            new QueueNegotiationCommands(answers: [0, 0], demands: []));
+
+        Assert.Equal(NegotiationOutcomeKind.Failure, result.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.MoodFailure, result.Reason);
+        Assert.Equal(NegotiationNumericDomain.MinimumMoodScore, result.MoodScore);
+    }
+
+    [Fact]
+    public void NegotiationSessionRequest_RejectsDemandWeightAggregateBeyondSupportedDomain()
+    {
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new NegotiationSessionRequest(
+                "Boundary Target",
+                actorLevel: 1,
+                targetLevel: 1,
+                actorLuck: 0,
+                activeOpponentCount: 1,
+                contextIds: [],
+                isTargetFamiliar: false,
+                hasRecruitmentCapacity: true,
+                currentCurrency: 0,
+                demands:
+                [
+                    new NegotiationRuntimeDemand(
+                        ContentId.Parse("maximum_weight"),
+                        NegotiationDemandKind.Currency,
+                        int.MaxValue,
+                        currencyAmount: 1),
+                    new NegotiationRuntimeDemand(
+                        ContentId.Parse("overflow_weight"),
+                        NegotiationDemandKind.Currency,
+                        1,
+                        currencyAmount: 1)
+                ]));
+
+        Assert.Equal("demands", exception.ParamName);
+        Assert.Contains(int.MaxValue.ToString(), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BattleRewardService_SaturatesMultiEnemyTotalsAndApplications()
+    {
+        var service = new BattleRewardService(new ProductionCombatRuleset(
+            new SequenceRandomSource(units: [0.5m, 0.5m])));
+        BattleRewardEnemySnapshot maximumEnemy = new(
+            ContentId.Parse("maximum_enemy"),
+            int.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue);
+
+        BattleRewardResult result = service.Calculate(new BattleRewardRequest(
+            enemies: [maximumEnemy, maximumEnemy with { EnemyId = ContentId.Parse("second_enemy") }],
+            recipients:
+            [
+                new BattleRewardRecipientSnapshot(
+                    ContentId.Parse("hero"),
+                    IsAlive: true,
+                    HasActiveForm: false)
+            ]));
+
+        Assert.Equal(int.MaxValue, result.TotalExperience);
+        Assert.Equal(int.MaxValue, result.TotalCurrency);
+        Assert.Equal(int.MaxValue, Assert.Single(result.Applications).Experience);
+    }
+
     private static NegotiationQuestionPrompt Question(string text, int score) =>
         new(text, [new NegotiationAnswerOption("Yes", score)]);
 

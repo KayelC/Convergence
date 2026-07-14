@@ -754,6 +754,9 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     "Negotiation definitions require at least one question.");
             }
 
+            long possiblePositiveMood = 0;
+            long possibleNegativeMood = 0;
+            bool moodRangeExceeded = false;
             for (int questionIndex = 0; questionIndex < negotiation.Questions.Count; questionIndex++)
             {
                 NegotiationQuestionDefinition question = negotiation.Questions[questionIndex];
@@ -762,9 +765,42 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     Add(source, source.Path + $".questions[{questionIndex}].answers",
                         ContentValidationErrorCode.ShapeInvalid,
                         "Negotiation questions require at least one answer.");
+                    continue;
+                }
+
+                int largestAdjustment = question.Answers.Max(answer => answer.Score);
+                if (largestAdjustment > 0 &&
+                    possiblePositiveMood > NegotiationNumericDomain.MaximumMoodScore - (long)largestAdjustment)
+                {
+                    moodRangeExceeded = true;
+                }
+                else if (largestAdjustment > 0)
+                {
+                    possiblePositiveMood += largestAdjustment;
+                }
+
+                int smallestAdjustment = question.Answers.Min(answer => answer.Score);
+                if (smallestAdjustment < 0 &&
+                    possibleNegativeMood < NegotiationNumericDomain.MinimumMoodScore - (long)smallestAdjustment)
+                {
+                    moodRangeExceeded = true;
+                }
+                else if (smallestAdjustment < 0)
+                {
+                    possibleNegativeMood += smallestAdjustment;
                 }
             }
 
+            if (moodRangeExceeded)
+            {
+                Add(source, source.Path + ".questions", ContentValidationErrorCode.ValueOutOfRange,
+                    $"The possible authored mood-score aggregate must remain between " +
+                    $"{NegotiationNumericDomain.MinimumMoodScore} and {NegotiationNumericDomain.MaximumMoodScore}.",
+                    "Reduce answer-score magnitudes or split the negotiation into separate definitions.");
+            }
+
+            long totalDemandWeight = 0;
+            bool demandWeightRangeExceeded = false;
             for (int demandIndex = 0; demandIndex < negotiation.Demands.Count; demandIndex++)
             {
                 NegotiationDemandDefinition demand = negotiation.Demands[demandIndex];
@@ -772,6 +808,23 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 RequireRegistration(source, demand.DemandId, path + ".demandId",
                     _registrations.NegotiationDemandIds, "negotiation demand");
                 RequirePositive(source, demand.Weight, path + ".weight", "Negotiation demand weight");
+                if (demand.Weight > 0 &&
+                    totalDemandWeight > NegotiationNumericDomain.MaximumDemandWeightTotal - (long)demand.Weight)
+                {
+                    demandWeightRangeExceeded = true;
+                }
+                else if (demand.Weight > 0)
+                {
+                    totalDemandWeight += demand.Weight;
+                }
+            }
+
+            if (demandWeightRangeExceeded)
+            {
+                Add(source, source.Path + ".demands", ContentValidationErrorCode.ValueOutOfRange,
+                    $"The aggregate negotiation demand weight cannot exceed " +
+                    $"{NegotiationNumericDomain.MaximumDemandWeightTotal}.",
+                    "Reduce demand weights while preserving their intended relative proportions.");
             }
 
             ValidateContentReferenceDuplicates(source, negotiation.DefaultRaceIds, source.Path + ".defaultRaceIds");

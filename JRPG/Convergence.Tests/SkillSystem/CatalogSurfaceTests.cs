@@ -184,6 +184,108 @@ public sealed class CatalogSurfaceTests
     }
 
     [Fact]
+    public void CatalogSurfaceValidation_RejectsUnsafeNegotiationAggregates()
+    {
+        ContentPackManifest manifest = new(
+            1,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("negotiations", "negotiations.json")]);
+        NegotiationDefinition negotiation = new(
+            Id("unsafe_negotiation"),
+            "Unsafe Negotiation",
+            "Exercises aggregate numeric validation.",
+            Id("test_personality"),
+            questions:
+            [
+                new NegotiationQuestionDefinition("Maximum?", [new NegotiationAnswerDefinition("Yes", int.MaxValue)]),
+                new NegotiationQuestionDefinition("Positive overflow?", [new NegotiationAnswerDefinition("Yes", 1)]),
+                new NegotiationQuestionDefinition("Minimum?", [new NegotiationAnswerDefinition("No", int.MinValue)]),
+                new NegotiationQuestionDefinition("Negative overflow?", [new NegotiationAnswerDefinition("No", -1)])
+            ],
+            demands:
+            [
+                new NegotiationDemandDefinition(Id("first_demand"), int.MaxValue),
+                new NegotiationDemandDefinition(Id("second_demand"), 1)
+            ]);
+
+        ContentValidationResult result = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder()
+                    .RegisterNegotiationPersonality("test_personality")
+                    .RegisterNegotiationDemand("first_demand", "second_demand")
+                    .Build(),
+                negotiationDocuments:
+                [
+                    Source(
+                        "negotiations.json",
+                        "negotiations.json",
+                        new DeserializedContentDocument<NegotiationDefinition>(1, [negotiation]))
+                ]));
+
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.negotiations[0].questions" &&
+            error.Code == ContentValidationErrorCode.ValueOutOfRange);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.negotiations[0].demands" &&
+            error.Code == ContentValidationErrorCode.ValueOutOfRange);
+        Assert.Null(result.ValidatedContent);
+    }
+
+    [Fact]
+    public void CatalogSurfaceValidation_AcceptsExactNegotiationNumericBoundaries()
+    {
+        ContentPackManifest manifest = new(
+            1,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("negotiations", "negotiations.json")]);
+        NegotiationDefinition negotiation = new(
+            Id("boundary_negotiation"),
+            "Boundary Negotiation",
+            "Uses the complete supported numeric domain.",
+            Id("test_personality"),
+            questions:
+            [
+                new NegotiationQuestionDefinition("Maximum?", [new NegotiationAnswerDefinition("Yes", int.MaxValue)]),
+                new NegotiationQuestionDefinition("Minimum?", [new NegotiationAnswerDefinition("No", int.MinValue)])
+            ],
+            demands:
+            [
+                new NegotiationDemandDefinition(Id("maximum_demand"), int.MaxValue)
+            ]);
+
+        ContentValidationResult result = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder()
+                    .RegisterNegotiationPersonality("test_personality")
+                    .RegisterNegotiationDemand("maximum_demand")
+                    .Build(),
+                negotiationDocuments:
+                [
+                    Source(
+                        "negotiations.json",
+                        "negotiations.json",
+                        new DeserializedContentDocument<NegotiationDefinition>(1, [negotiation]))
+                ]));
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine,
+            result.Errors.Select(error => $"{error.Code} {error.JsonPath}: {error.Message}")));
+        Assert.NotNull(result.ValidatedContent);
+    }
+
+    [Fact]
     public void CatalogSurfaceValidation_RequiresExactlyTwoFusionParents()
     {
         ContentPackManifest manifest = new(
