@@ -224,7 +224,8 @@ internal sealed class CleanTrainingAnnexDemoHost
             new DeterministicBattleActionSelector(skillExecutor),
             executionServices,
             lifecycle,
-            turnEconomy)
+            turnEconomy,
+            new AutomatedBattleTurnRestrictionResolver())
             .Run(new AutomatedBattleRequest(
                 [echo, ashling],
                 Battle,

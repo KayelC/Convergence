@@ -519,8 +519,250 @@ public sealed class CatalogBattleRuntimeTests
             typeof(IBattleActionSelector),
             typeof(BattleExecutionServices),
             typeof(IBattleEncounterLifecyclePort),
-            typeof(BattleTurnEconomyRuleset)
+            typeof(BattleTurnEconomyRuleset),
+            typeof(IAutomatedBattleTurnRestrictionResolver)
         ], constructor.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public void Runner_SkipRestrictionConsumesTheTurnWithoutSelectingANormalAction()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active("test.pack:skip_attack", DamageElement.Fire);
+        CatalogBattleActor player = RuntimeCatalogActor("skip_player", "skip_player", PlayerTeam, [attack]);
+        CatalogBattleActor enemy = RuntimeCatalogActor("skip_enemy", "skip_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.Skip));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services,
+            lifecycle).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.ActorId == player.State.InstanceId);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillPassed &&
+            battleEvent.ActorId == player.State.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_LimitedActionExecutesAnExplicitlyAllowedTypedCommand()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active("test.pack:limited_strike", DamageElement.Physical);
+        CatalogBattleActor player = RuntimeCatalogActor("limited_player", "limited_player", PlayerTeam, [attack]);
+        CatalogBattleActor enemy = RuntimeCatalogActor("limited_enemy", "limited_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                attack.Id,
+                new SkillBattleActionCommand(
+                    attack,
+                    [request.Participants.Single(actor => actor.State.TeamId == EnemyTeam).State.InstanceId])));
+        var resolver = RestrictionResolver(skillExecutor, services, source);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.LimitedAction, [attack.Id]));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: resolver).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(1, source.CallCount);
+        Assert.Equal(BattleTurnStartOutcome.LimitedAction, source.LastRequest!.Turn.TurnStartOutcome);
+        Assert.Equal(99m, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.ActorId == player.State.InstanceId &&
+            battleEvent.SkillId == attack.Id);
+    }
+
+    [Fact]
+    public void Runner_LimitedActionRejectsADisallowedCommandBeforeMutation()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active("test.pack:forbidden_strike", DamageElement.Physical);
+        CatalogBattleActor player = RuntimeCatalogActor("forbidden_player", "forbidden_player", PlayerTeam, [attack]);
+        CatalogBattleActor enemy = RuntimeCatalogActor("forbidden_enemy", "forbidden_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                attack.Id,
+                new SkillBattleActionCommand(
+                    attack,
+                    [request.Participants.Single(actor => actor.State.TeamId == EnemyTeam).State.InstanceId])));
+        var resolver = RestrictionResolver(skillExecutor, services, source);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.LimitedAction, [Id("guard")]));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: resolver).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("not allowed", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
+    }
+
+    [Fact]
+    public void Runner_ForcedPhysicalExecutesTheTypedBasicAttackSelectedByTheHostPolicy()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("forced_player", "forced_player", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor("forced_enemy", "forced_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                Id("basic_attack"),
+                new BasicAttackBattleActionCommand(
+                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 10, 100, false),
+                    new TargetingDefinition(
+                        TargetRelation.Enemy,
+                        TargetSelection.Single,
+                        TargetLifeState.Alive,
+                        false),
+                    [request.Participants.Single(actor => actor.State.TeamId == EnemyTeam).State.InstanceId])));
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedPhysical));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: RestrictionResolver(skillExecutor, services, source)).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(90m, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.ActorId == player.State.InstanceId &&
+            battleEvent.SkillId == Id("basic_attack"));
+    }
+
+    [Fact]
+    public void Runner_ForcedConfusionExecutesTheTypedTargetChosenByTheHostPolicy()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("confused_player", "confused_player", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor("confused_enemy", "confused_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                Id("confused_attack"),
+                new BasicAttackBattleActionCommand(
+                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 7, 100, false),
+                    new TargetingDefinition(
+                        TargetRelation.Any,
+                        TargetSelection.Single,
+                        TargetLifeState.Alive,
+                        true),
+                    [request.Actor.State.InstanceId],
+                    Id("confused_attack"))));
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedConfusion));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: RestrictionResolver(skillExecutor, services, source)).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(93m, player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.EffectResolved &&
+            battleEvent.TargetId == player.State.InstanceId);
+    }
+
+    [Theory]
+    [InlineData(BattleTurnStartOutcome.FleeBattle, RuntimeActorDeployment.Active, "fled the battle")]
+    [InlineData(BattleTurnStartOutcome.ReturnToStock, RuntimeActorDeployment.Reserve, "returned to stock")]
+    public void Runner_ExitRestrictionsRemoveTheActorAndPreserveDistinctDeploymentMeaning(
+        BattleTurnStartOutcome outcome,
+        RuntimeActorDeployment expectedDeployment,
+        string expectedMessage)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("leaving_player", "leaving_player", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor("remaining_enemy", "remaining_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(outcome));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.Equal(EnemyTeam, result.WinningTeamId);
+        BattleActorFinalSnapshot finalPlayer = result.FinalActors.Single(actor =>
+            actor.InstanceId == player.State.InstanceId);
+        Assert.False(finalPlayer.IsActive);
+        Assert.Equal(expectedDeployment, finalPlayer.Deployment);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.DeploymentChanged &&
+            battleEvent.ActorId == player.State.InstanceId &&
+            battleEvent.Message.Contains(expectedMessage, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Runner_FaultsRatherThanDiscardingAForcedCommandWithoutAConfiguredPolicy()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("unresolved_player", "unresolved_player", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor("unresolved_enemy", "unresolved_enemy", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedPhysical));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("explicit action source", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(100m, player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
     }
 
     [Fact]
@@ -847,7 +1089,8 @@ public sealed class CatalogBattleRuntimeTests
         IBattleActionSelector selector,
         BattleExecutionServices services,
         IBattleEncounterLifecyclePort? lifecycle = null,
-        BattleTurnEconomyRuleset? turnEconomy = null) =>
+        BattleTurnEconomyRuleset? turnEconomy = null,
+        IAutomatedBattleTurnRestrictionResolver? restrictionResolver = null) =>
         new(
             executor,
             selector,
@@ -857,7 +1100,19 @@ public sealed class CatalogBattleRuntimeTests
                 services,
                 Id("battle_start"),
                 Id("owner_turn_end")),
-            turnEconomy ?? StandardTurnEconomy());
+            turnEconomy ?? StandardTurnEconomy(),
+            restrictionResolver ?? new AutomatedBattleTurnRestrictionResolver());
+
+    private static AutomatedBattleTurnRestrictionResolver RestrictionResolver(
+        ISkillExecutor skillExecutor,
+        BattleExecutionServices services,
+        IAutomatedBattleRestrictionActionSource source) =>
+        new(
+            new BattleActionExecutor(
+                skillExecutor,
+                new ItemExecutor(services),
+                services),
+            source);
 
     private static BattleTurnEconomyRuleset StandardTurnEconomy() =>
         new(
@@ -1179,6 +1434,88 @@ public sealed class CatalogBattleRuntimeTests
                 : ActionTurnConsumption.Normal;
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Executed(consumption));
+        }
+    }
+
+    private sealed class FixedTurnRestrictionLifecyclePort : IBattleEncounterLifecyclePort
+    {
+        private readonly RuntimeInstanceId _restrictedActorId;
+        private readonly BattleTurnStartRestriction _restriction;
+
+        public FixedTurnRestrictionLifecyclePort(
+            RuntimeInstanceId restrictedActorId,
+            BattleTurnStartRestriction restriction)
+        {
+            _restrictedActorId = restrictedActorId;
+            _restriction = restriction;
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BattleTurnStartRestriction restriction = request.Actor.InstanceId == _restrictedActorId
+                ? _restriction
+                : BattleTurnStartRestriction.CanAct;
+            return new ValueTask<BattleTurnStartLifecycleResult>(
+                new BattleTurnStartLifecycleResult(restriction, []));
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+    }
+
+    private sealed class RecordingRestrictedActionSource(
+        Func<AutomatedBattleRestrictionActionRequest, AutomatedRestrictedActionSelection> select)
+        : IAutomatedBattleRestrictionActionSource
+    {
+        public int CallCount { get; private set; }
+        public AutomatedBattleRestrictionActionRequest? LastRequest { get; private set; }
+
+        public ValueTask<AutomatedRestrictedActionSelection> SelectAsync(
+            AutomatedBattleRestrictionActionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
+            LastRequest = request;
+            return new ValueTask<AutomatedRestrictedActionSelection>(select(request));
         }
     }
 

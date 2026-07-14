@@ -257,6 +257,16 @@ public sealed class RuntimeActorState
             Deployment = Deployment with { IsActive = value };
         }
     }
+
+    internal void SetDeployment(RuntimeActorDeployment deployment, bool isActive)
+    {
+        _isActive = isActive;
+        Deployment = new RuntimeActorDeploymentSnapshot(
+            deployment,
+            isActive,
+            Deployment.HasSwappedThisTurn);
+    }
+
     public bool IsGuarding { get; private set; }
     public bool IsDefeated => GetRequiredResource(VitalResourceId).Current <= 0;
     public IReadOnlyDictionary<ContentId, BattleResourceState> Resources =>

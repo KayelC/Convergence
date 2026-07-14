@@ -196,7 +196,8 @@ internal sealed class CleanBattleDemoHost
             new DeterministicBattleActionSelector(executor),
             services,
             lifecycle,
-            turnEconomy);
+            turnEconomy,
+            new AutomatedBattleTurnRestrictionResolver());
         AutomatedBattleResult battle = runner.Run(new AutomatedBattleRequest(
             [frostResult.RequireActor(), emberResult.RequireActor()],
             Battle,

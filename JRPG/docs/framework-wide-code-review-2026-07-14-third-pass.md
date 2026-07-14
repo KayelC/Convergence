@@ -42,6 +42,15 @@ This affects the public automated runner whenever authored ailments impose those
 
 Recommended correction: add a typed automated restriction resolver that chooses allowed or forced commands and applies flee/return deployment outcomes. Add one encounter-level test for every `BattleTurnStartOutcome`.
 
+**Correction status (2026-07-14): implemented.**
+
+- `AutomatedBattleRunner` now requires an explicit `IAutomatedBattleTurnRestrictionResolver` and forwards every non-`CanAct` restriction to it instead of collapsing the outcome.
+- `AutomatedBattleTurnRestrictionResolver` consumes `Skip`, applies distinct flee and return-to-stock deployment transitions, and executes limited/forced commands through an injected `IAutomatedBattleRestrictionActionSource` plus the canonical `IBattleActionExecutor`.
+- The action source supplies the registered action ID alongside the typed command, so limited actions are checked against authored allowed-action IDs without hardcoded command names. Skill, item, and basic-attack IDs are cross-checked against their command definitions before assessment or mutation. Forced physical requires a typed `BasicAttackBattleActionCommand`. Confusion targeting and command choice remain developer-policy decisions rather than framework guesses.
+- A missing command policy, unavailable selection, disallowed action, failed assessment, or rejected execution produces an explicit battle fault. The old silent skip behavior is no longer available.
+- Automated battle results now retain final deployment/active state and map `DeploymentChanged` events, allowing hosts and tests to observe flee and return-to-stock outcomes without inspecting mutable actors.
+- Encounter-level tests at `CatalogBattleRuntimeTests.cs:528-758` cover `Skip`, allowed and rejected `LimitedAction`, `ForcedPhysical`, `ForcedConfusion`, `FleeBattle`, `ReturnToStock`, and the missing-policy fault path.
+
 ### M2. Restored timed state is not validated as runtime-valid
 
 Authored content validation requires positive turn durations and registered tick/phase IDs, but snapshot restoration does not repeat the structural duration checks.

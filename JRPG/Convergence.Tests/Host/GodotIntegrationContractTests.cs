@@ -135,7 +135,8 @@ public sealed class GodotIntegrationContractTests
             new DeterministicBattleActionSelector(executor),
             services,
             lifecycle,
-            turnEconomy).Run(new AutomatedBattleRequest(
+            turnEconomy,
+            new AutomatedBattleTurnRestrictionResolver()).Run(new AutomatedBattleRequest(
             [frost, ember],
             Battle,
             NormalBattle,

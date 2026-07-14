@@ -243,7 +243,9 @@ public enum BattleRuntimeEventKind
     ResourceChanged,
     ActorDefeated,
     BattleFaulted,
-    BattleEnded
+    BattleEnded,
+    DeploymentChanged,
+    HostActionRequested
 }
 
 public sealed record BattleRuntimeEvent(
@@ -266,6 +268,8 @@ public sealed record BattleActorFinalSnapshot
         InstanceId = participant.InstanceId;
         EntityId = participant.EntityId;
         TeamId = participant.TeamId;
+        Deployment = participant.State.Deployment.Deployment;
+        IsActive = participant.IsActive;
         IsDefeated = participant.IsDefeated;
         Resources = new ReadOnlyDictionary<ContentId, decimal>(
             participant.State.Resources.ToDictionary(resource => resource.ResourceId, resource => resource.Current));
@@ -274,6 +278,8 @@ public sealed record BattleActorFinalSnapshot
     public RuntimeInstanceId InstanceId { get; }
     public ContentId EntityId { get; }
     public ContentId TeamId { get; }
+    public RuntimeActorDeployment Deployment { get; }
+    public bool IsActive { get; }
     public bool IsDefeated { get; }
     public IReadOnlyDictionary<ContentId, decimal> Resources { get; }
 }
@@ -339,19 +345,22 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
     private readonly BattleExecutionServices _services;
     private readonly IBattleEncounterLifecyclePort _lifecycle;
     private readonly BattleTurnEconomyRuleset _turnEconomy;
+    private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
 
     public AutomatedBattleRunner(
         ISkillExecutor executor,
         IBattleActionSelector selector,
         BattleExecutionServices services,
         IBattleEncounterLifecyclePort lifecycle,
-        BattleTurnEconomyRuleset turnEconomy)
+        BattleTurnEconomyRuleset turnEconomy,
+        IAutomatedBattleTurnRestrictionResolver restrictionResolver)
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _selector = selector ?? throw new ArgumentNullException(nameof(selector));
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         _turnEconomy = turnEconomy ?? throw new ArgumentNullException(nameof(turnEconomy));
+        _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
     }
 
     public AutomatedBattleResult Run(AutomatedBattleRequest request)
@@ -366,7 +375,12 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
             _lifecycle,
-            new AutomatedBattleTurnHandler(_executor, _selector, _services, request.Participants),
+            new AutomatedBattleTurnHandler(
+                _executor,
+                _selector,
+                _services,
+                request.Participants,
+                _restrictionResolver),
             new LastTeamStandingCompletionPolicy(),
             _turnEconomy.CreateEconomy,
             _turnEconomy.PhaseProgress);
@@ -415,6 +429,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                     BattleRuntimeEventKind.PressTurnChanged,
                 BattleEncounterEventKind.TurnEconomyChanged => BattleRuntimeEventKind.TurnEconomyChanged,
                 BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
+                BattleEncounterEventKind.DeploymentChanged => BattleRuntimeEventKind.DeploymentChanged,
+                BattleEncounterEventKind.HostActionRequested => BattleRuntimeEventKind.HostActionRequested,
                 BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
                 BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,
                 BattleEncounterEventKind.BattleEnded => BattleRuntimeEventKind.BattleEnded,
@@ -449,17 +465,20 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         private readonly IBattleActionSelector _selector;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly Dictionary<ContentId, ElementalAffinityKnowledge> _knowledge;
+        private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
 
         public AutomatedBattleTurnHandler(
             ISkillExecutor executor,
             IBattleActionSelector selector,
             BattleExecutionServices services,
-            IReadOnlyList<CatalogBattleActor> actors)
+            IReadOnlyList<CatalogBattleActor> actors,
+            IAutomatedBattleTurnRestrictionResolver restrictionResolver)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             ArgumentNullException.ThrowIfNull(services);
             _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+            _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
             _knowledge = _actors.Select(actor => actor.State.TeamId).Distinct()
                 .ToDictionary(team => team, _ => new ElementalAffinityKnowledge());
         }
@@ -474,8 +493,13 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 
             if (request.TurnStartOutcome != BattleTurnStartOutcome.CanAct)
             {
-                return new ValueTask<BattleEncounterCommandResult>(
-                    BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+                return _restrictionResolver.ResolveAsync(
+                    new AutomatedBattleTurnRestrictionRequest(
+                        request,
+                        actor,
+                        _actors,
+                        _knowledge[actor.State.TeamId]),
+                    cancellationToken);
             }
 
             var selectionRequest = new BattleActionSelectionRequest(
