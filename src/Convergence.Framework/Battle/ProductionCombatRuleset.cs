@@ -249,7 +249,7 @@ public sealed record ProductionDamageApplicationResult(
     decimal Recovered,
     ElementalAffinity Affinity,
     bool Critical,
-    PressTurnOutcome Outcome,
+    TurnEconomyOutcome Outcome,
     string Message);
 
 public sealed record ProductionDamageResolutionRequest(
@@ -499,42 +499,42 @@ public sealed class ProductionCombatRuleset :
                 0m,
                 affinity,
                 critical,
-                PressTurnOutcome.Weakness,
+                TurnEconomyOutcome.Weakness,
                 "WEAKNESS STRUCK!"),
             ElementalAffinity.Resist => new ProductionDamageApplicationResult(
                 Math.Floor(CombatArithmetic.SaturatingMultiply(damage, _config.ResistDamageMultiplier)),
                 0m,
                 affinity,
                 critical,
-                PressTurnOutcome.Normal,
+                TurnEconomyOutcome.Normal,
                 critical ? "CRITICAL (Resisted)!" : "Resisted."),
             ElementalAffinity.Null => new ProductionDamageApplicationResult(
                 0m,
                 0m,
                 affinity,
                 critical,
-                PressTurnOutcome.Null,
+                TurnEconomyOutcome.Null,
                 "Blocked!"),
             ElementalAffinity.Repel => new ProductionDamageApplicationResult(
                 0m,
                 0m,
                 affinity,
                 critical,
-                PressTurnOutcome.Repel,
+                TurnEconomyOutcome.Repel,
                 "Repelled!"),
             ElementalAffinity.Absorb => new ProductionDamageApplicationResult(
                 0m,
                 damage,
                 affinity,
                 critical,
-                PressTurnOutcome.Absorb,
+                TurnEconomyOutcome.Absorb,
                 $"Absorbed {damage} HP!"),
             _ => new ProductionDamageApplicationResult(
                 damage,
                 0m,
                 affinity,
                 critical,
-                critical ? PressTurnOutcome.Critical : PressTurnOutcome.Normal,
+                critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal,
                 critical ? "CRITICAL HIT!" : string.Empty)
         };
     }

@@ -130,7 +130,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<ContentId> ExecutedBattleActionIds,
     IReadOnlyList<TrainingAnnexTypedEffectEvidence> ExecutedBattleEffectEvidence,
     IReadOnlyList<TrainingAnnexCombatResolutionEvidence> CombatResolutionEvidence,
-    IReadOnlyList<TrainingAnnexPressTurnEvidence> PressTurnEvidence,
+    IReadOnlyList<TrainingAnnexTurnEconomyEvidence> TurnEconomyEvidence,
     IReadOnlyList<TrainingAnnexLifecycleEvidence> LifecycleEvidence,
     IReadOnlyList<TrainingAnnexAiDecisionEvidence> AiDecisionEvidence,
     IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence,
@@ -264,18 +264,18 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         IBattleRewardService rewardService = rewardBinding.RequireService();
-        RulesetBindingResult<BattleTurnEconomyRuleset> pressTurnBinding =
+        RulesetBindingResult<BattleTurnEconomyRuleset> turnEconomyBinding =
             rulesetResolver.BindTurnEconomy(
                 catalog,
-                TrainingAnnexHostSupport.Qualified("standard_press_turn"));
-        if (!pressTurnBinding.IsSuccess)
+                TrainingAnnexHostSupport.Qualified("standard_action_token"));
+        if (!turnEconomyBinding.IsSuccess)
         {
-            await PublishRulesetDiagnosticsAsync("press_turn", pressTurnBinding.Diagnostics, cancellationToken)
+            await PublishRulesetDiagnosticsAsync("action_token", turnEconomyBinding.Diagnostics, cancellationToken)
                 .ConfigureAwait(false);
             return 4;
         }
 
-        BattleTurnEconomyRuleset turnEconomy = pressTurnBinding.RequireService();
+        BattleTurnEconomyRuleset turnEconomy = turnEconomyBinding.RequireService();
         RulesetBindingResult<IStockCapacityPolicy> stockCapacityBinding =
             rulesetResolver.BindStockCapacityPolicy(
                 catalog,
@@ -420,7 +420,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var executedBattleActionIds = new List<ContentId>();
         var executedBattleEffectEvidence = new List<TrainingAnnexTypedEffectEvidence>();
         var combatResolutionEvidence = new List<TrainingAnnexCombatResolutionEvidence>();
-        var pressTurnEvidence = new List<TrainingAnnexPressTurnEvidence>();
+        var turnEconomyEvidence = new List<TrainingAnnexTurnEconomyEvidence>();
         var lifecycleEvidence = new List<TrainingAnnexLifecycleEvidence>();
         var aiDecisionEvidence = new List<TrainingAnnexAiDecisionEvidence>();
         var playerBattleKnowledge = new TrainingAnnexBattleKnowledgeState();
@@ -507,7 +507,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleActionIds,
                     executedBattleEffectEvidence,
                     combatResolutionEvidence,
-                    pressTurnEvidence,
+                    turnEconomyEvidence,
                     lifecycleEvidence,
                     aiDecisionEvidence,
                     battleKnowledgeEvidence,
@@ -810,7 +810,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             executedBattleActionIds,
                             executedBattleEffectEvidence,
                             combatResolutionEvidence,
-                            pressTurnEvidence,
+                            turnEconomyEvidence,
                             lifecycleEvidence,
                             aiDecisionEvidence,
                             battleKnowledgeEvidence,
@@ -992,7 +992,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     executedBattleActionIds.AddRange(battle.ExecutedActionIds);
                     executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
                     combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
-                    pressTurnEvidence.AddRange(battle.PressTurnEvidence);
+                    turnEconomyEvidence.AddRange(battle.TurnEconomyEvidence);
                     lifecycleEvidence.AddRange(battle.LifecycleEvidence);
                     aiDecisionEvidence.AddRange(battle.AiDecisionEvidence);
                     battleKnowledgeEvidence.AddRange(battle.BattleKnowledgeEvidence);
@@ -1884,7 +1884,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<ContentId> executedBattleActionIds,
         IReadOnlyList<TrainingAnnexTypedEffectEvidence> executedBattleEffectEvidence,
         IReadOnlyList<TrainingAnnexCombatResolutionEvidence> combatResolutionEvidence,
-        IReadOnlyList<TrainingAnnexPressTurnEvidence> pressTurnEvidence,
+        IReadOnlyList<TrainingAnnexTurnEconomyEvidence> turnEconomyEvidence,
         IReadOnlyList<TrainingAnnexLifecycleEvidence> lifecycleEvidence,
         IReadOnlyList<TrainingAnnexAiDecisionEvidence> aiDecisionEvidence,
         IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> battleKnowledgeEvidence,
@@ -1965,7 +1965,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             executedBattleActionIds.ToArray(),
             executedBattleEffectEvidence.ToArray(),
             combatResolutionEvidence.ToArray(),
-            pressTurnEvidence.ToArray(),
+            turnEconomyEvidence.ToArray(),
             lifecycleEvidence.ToArray(),
             aiDecisionEvidence.ToArray(),
             battleKnowledgeEvidence.ToArray(),

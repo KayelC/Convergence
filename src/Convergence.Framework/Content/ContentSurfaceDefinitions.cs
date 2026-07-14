@@ -58,7 +58,7 @@ public enum RulesetCategory
     Damage,
     Growth,
     Stat,
-    PressTurn,
+    TurnEconomy,
     StockCapacity,
     Reward,
     Economy,

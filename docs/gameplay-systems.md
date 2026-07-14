@@ -16,7 +16,7 @@ Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape,
 
 ## Combat And Turn Economy
 
-Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Press Turn is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
+Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Action Token is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
 
 ## Status And Passives
 

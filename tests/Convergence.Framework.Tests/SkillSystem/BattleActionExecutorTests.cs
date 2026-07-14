@@ -34,7 +34,7 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
-    public async Task BasicAttack_ExecutesTypedDamageAndReturnsPressTurnOutcome()
+    public async Task BasicAttack_ExecutesTypedDamageAndReturnsTurnEconomyOutcome()
     {
         BattleActionExecutor executor = Executor();
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -53,8 +53,8 @@ public sealed class BattleActionExecutorTests
 
         Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
         Assert.Equal(30, target.GetRequiredResource(Hp).Current);
-        Assert.Equal(ActionTurnConsumptionKind.PressTurn, result.TurnConsumption.Kind);
-        Assert.Equal(PressTurnOutcome.Weakness, result.TurnConsumption.PressTurn!.Outcome);
+        Assert.Equal(ActionTurnConsumptionKind.TurnEconomy, result.TurnConsumption.Kind);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnConsumption.TurnEconomy!.Outcome);
         Assert.Equal(ElementalAffinity.Weak, Assert.Single(result.Effects).ResolvedAffinity);
     }
 
@@ -77,7 +77,7 @@ public sealed class BattleActionExecutorTests
         Assert.True(assessment.CanExecute);
         Assert.Equal(7, actor.GetRequiredResource(Sp).Current);
         Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
-        Assert.Equal(ActionTurnConsumptionKind.PressTurn, result.TurnConsumption.Kind);
+        Assert.Equal(ActionTurnConsumptionKind.TurnEconomy, result.TurnConsumption.Kind);
     }
 
     [Fact]

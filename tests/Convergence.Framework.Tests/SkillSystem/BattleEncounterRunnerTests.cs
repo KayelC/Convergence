@@ -316,25 +316,25 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Theory]
-    [InlineData(PressTurnOutcome.Normal, false, false, 1, 0)]
-    [InlineData(PressTurnOutcome.Weakness, false, false, 1, 1)]
-    [InlineData(PressTurnOutcome.Critical, true, false, 1, 1)]
-    [InlineData(PressTurnOutcome.Miss, false, false, 0, 0)]
-    [InlineData(PressTurnOutcome.Null, false, false, 0, 0)]
-    [InlineData(PressTurnOutcome.Repel, false, true, 0, 0)]
-    [InlineData(PressTurnOutcome.Absorb, false, true, 0, 0)]
-    public void Runner_AppliesEveryPressTurnOutcome(
-        PressTurnOutcome outcome,
+    [InlineData(TurnEconomyOutcome.Normal, false, false, 1, 0)]
+    [InlineData(TurnEconomyOutcome.Weakness, false, false, 1, 1)]
+    [InlineData(TurnEconomyOutcome.Critical, true, false, 1, 1)]
+    [InlineData(TurnEconomyOutcome.Miss, false, false, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Null, false, false, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Repel, false, true, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Absorb, false, true, 0, 0)]
+    public void Runner_AppliesEveryTurnEconomyOutcome(
+        TurnEconomyOutcome outcome,
         bool critical,
         bool terminates,
-        int expectedFullIcons,
-        int expectedBlinkingIcons)
+        int expectedFullTokens,
+        int expectedPartialTokens)
     {
         BattleEncounterParticipant first = Participant("first", PlayerTeam);
         BattleEncounterParticipant second = Participant("second", PlayerTeam);
         BattleEncounterParticipant enemy = Participant("enemy", EnemyTeam);
         var handler = new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
-            ActionTurnConsumption.FromPressTurn(new PressTurnResolution(outcome, critical, terminates))));
+            ActionTurnConsumption.FromTurnEconomy(new TurnEconomyResolution(outcome, critical, terminates))));
 
         BattleEncounterResult result = Run(
             [first, second, enemy],
@@ -342,13 +342,13 @@ public sealed class BattleEncounterRunnerTests
             new RecordingLifecycle(),
             handler,
             new CompleteAfterTurnsPolicy(1),
-            () => new PressTurnEngine());
+            () => new ActionTokenTurnEconomy());
 
         BattleEncounterEvent changed = Assert.Single(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
-        var pressTurn = Assert.IsType<PressTurnEconomySnapshot>(changed.TurnEconomyState);
-        Assert.Equal(expectedFullIcons, pressTurn.FullIcons);
-        Assert.Equal(expectedBlinkingIcons, pressTurn.BlinkingIcons);
+        var turnEconomy = Assert.IsType<ActionTokenTurnEconomySnapshot>(changed.TurnEconomyState);
+        Assert.Equal(expectedFullTokens, turnEconomy.FullTokens);
+        Assert.Equal(expectedPartialTokens, turnEconomy.PartialTokens);
     }
 
     [Fact]
@@ -691,15 +691,15 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
-    public void Runner_UsesStandardActionEconomyWithoutPressTurnState()
+    public void Runner_UsesStandardActionEconomyWithoutTurnEconomyState()
     {
         BattleEncounterResult result = Run(
             [Participant("standard_player", PlayerTeam), Participant("standard_enemy", EnemyTeam)],
             new FixedInitiative(PlayerTeam, EnemyTeam),
             new RecordingLifecycle(),
             new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
-                ActionTurnConsumption.FromPressTurn(
-                    new PressTurnResolution(PressTurnOutcome.Weakness, false, false)))),
+                ActionTurnConsumption.FromTurnEconomy(
+                    new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false)))),
             new CompleteAfterTurnsPolicy(1));
 
         BattleEncounterEvent changed = Assert.Single(result.Events, battleEvent =>

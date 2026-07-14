@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "entities": [
     {
       "id": "cinder_fodder_sample",

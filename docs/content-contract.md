@@ -14,6 +14,8 @@ Every active manifest lists its documents in authored order. DemoHost flattens t
 
 ## Validation Layers
 
+The active pre-release authoring contract is schema version `2`. Version `1` is intentionally unsupported after the Action Token vocabulary migration; the validator reports an unsupported-schema diagnostic instead of translating old documents.
+
 1. Strict deserialization validates JSON structure, fields, and discriminators.
 2. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 3. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.

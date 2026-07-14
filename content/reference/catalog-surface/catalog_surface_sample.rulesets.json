@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "rulesets": [
     {
       "id": "standard_damage_sample",
@@ -34,11 +34,11 @@
       "policyId": "standard_stat"
     },
     {
-      "id": "standard_press_turn_sample",
-      "displayName": "Standard Press Turn Policy",
-      "description": "Names the host-owned Press Turn policy.",
-      "category": "press_turn",
-      "policyId": "standard_press_turn"
+      "id": "standard_action_token_sample",
+      "displayName": "Standard Action Token Policy",
+      "description": "Names the host-owned Action Token policy.",
+      "category": "turn_economy",
+      "policyId": "standard_action_token"
     },
     {
       "id": "standard_stock_capacity_sample",

@@ -386,7 +386,7 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
-    public void Runner_ExecutesDeterministicKnowledgePassiveAndPressTurnLifecycle()
+    public void Runner_ExecutesDeterministicKnowledgePassiveAndActionTokenLifecycle()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
         CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
@@ -836,7 +836,7 @@ public sealed class CatalogBattleRuntimeTests
             () =>
             {
                 economyCreations++;
-                return new PressTurnEngine();
+                return new ActionTokenTurnEconomy();
             },
             new BattlePhaseProgressPolicy(256, 32));
         var executor = new SkillExecutor(scenario.Services);
@@ -872,12 +872,12 @@ public sealed class CatalogBattleRuntimeTests
             battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
             battleEvent.ActorId == scenario.Player.State.InstanceId);
         Assert.All(
-            result.Events.Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged),
-            battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState));
+            result.Events.Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged),
+            battleEvent => Assert.IsType<ActionTokenTurnEconomySnapshot>(battleEvent.TurnEconomyState));
     }
 
     [Fact]
-    public void Runner_PreservesTypedEventsForANonPressTurnEconomy()
+    public void Runner_PreservesTypedEventsForANonActionTokenEconomy()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
         CatalogBattleActor player = RuntimeCatalogActor("standard_player", "standard_player", PlayerTeam);
@@ -908,8 +908,6 @@ public sealed class CatalogBattleRuntimeTests
             Assert.NotNull(battleEvent.TurnEconomyState);
             Assert.Equal(StandardActionTurnEconomy.EconomyId, battleEvent.TurnEconomyState!.EconomyId);
         });
-        Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged);
     }
 
     [Fact]
@@ -969,13 +967,13 @@ public sealed class CatalogBattleRuntimeTests
             direct.Player.State.OtherStatuses.Contains(direct.BattleStatusId),
             automated.Player.State.OtherStatuses.Contains(automated.BattleStatusId));
 
-        PressTurnEconomySnapshot[] automatedEconomyEvents = automatedResult.Events
-            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.PressTurnChanged)
-            .Select(battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState))
+        ActionTokenTurnEconomySnapshot[] automatedEconomyEvents = automatedResult.Events
+            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged)
+            .Select(battleEvent => Assert.IsType<ActionTokenTurnEconomySnapshot>(battleEvent.TurnEconomyState))
             .ToArray();
-        PressTurnEconomySnapshot[] directEconomyEvents = directResult.Events
+        ActionTokenTurnEconomySnapshot[] directEconomyEvents = directResult.Events
             .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged)
-            .Select(battleEvent => Assert.IsType<PressTurnEconomySnapshot>(battleEvent.TurnEconomyState))
+            .Select(battleEvent => Assert.IsType<ActionTokenTurnEconomySnapshot>(battleEvent.TurnEconomyState))
             .ToArray();
         Assert.Equal(
             directEconomyEvents.Select(TurnEconomyValues),
@@ -1039,46 +1037,46 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Theory]
-    [InlineData(PressTurnOutcome.Normal, false, false, 1, 0)]
-    [InlineData(PressTurnOutcome.Weakness, false, false, 1, 1)]
-    [InlineData(PressTurnOutcome.Critical, true, false, 1, 1)]
-    [InlineData(PressTurnOutcome.Miss, false, false, 0, 0)]
-    [InlineData(PressTurnOutcome.Null, false, false, 0, 0)]
-    [InlineData(PressTurnOutcome.Repel, false, true, 0, 0)]
-    [InlineData(PressTurnOutcome.Absorb, false, true, 0, 0)]
-    public void CleanPressTurnOverload_ConsumesEveryTypedOutcome(
-        PressTurnOutcome outcome,
+    [InlineData(TurnEconomyOutcome.Normal, false, false, 1, 0)]
+    [InlineData(TurnEconomyOutcome.Weakness, false, false, 1, 1)]
+    [InlineData(TurnEconomyOutcome.Critical, true, false, 1, 1)]
+    [InlineData(TurnEconomyOutcome.Miss, false, false, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Null, false, false, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Repel, false, true, 0, 0)]
+    [InlineData(TurnEconomyOutcome.Absorb, false, true, 0, 0)]
+    public void CleanActionTokenOverload_ConsumesEveryTypedOutcome(
+        TurnEconomyOutcome outcome,
         bool critical,
         bool terminates,
         int expectedFull,
         int expectedBlinking)
     {
-        var engine = new PressTurnEngine();
+        var engine = new ActionTokenTurnEconomy();
         engine.StartPhase(2);
 
-        engine.ConsumeAction(new PressTurnResolution(outcome, critical, terminates));
+        engine.ConsumeAction(new TurnEconomyResolution(outcome, critical, terminates));
 
-        Assert.Equal(expectedFull, engine.FullIcons);
-        Assert.Equal(expectedBlinking, engine.BlinkingIcons);
+        Assert.Equal(expectedFull, engine.FullTokens);
+        Assert.Equal(expectedBlinking, engine.PartialTokens);
     }
 
     [Fact]
-    public void PressTurnPass_ConsumesAnExistingBlinkingIconBeforeAFullIcon()
+    public void ActionTokenPass_ConsumesAnExistingPartialTokenBeforeAFullToken()
     {
-        var engine = new PressTurnEngine();
+        var engine = new ActionTokenTurnEconomy();
         engine.StartPhase(2);
-        engine.ConsumeAction(new PressTurnResolution(
-            PressTurnOutcome.Weakness,
+        engine.ConsumeAction(new TurnEconomyResolution(
+            TurnEconomyOutcome.Weakness,
             AnyCritical: false,
             TerminatesPhase: false));
 
-        Assert.Equal(1, engine.FullIcons);
-        Assert.Equal(1, engine.BlinkingIcons);
+        Assert.Equal(1, engine.FullTokens);
+        Assert.Equal(1, engine.PartialTokens);
 
         engine.Pass();
 
-        Assert.Equal(1, engine.FullIcons);
-        Assert.Equal(0, engine.BlinkingIcons);
+        Assert.Equal(1, engine.FullTokens);
+        Assert.Equal(0, engine.PartialTokens);
     }
 
     [Fact]
@@ -1196,7 +1194,7 @@ public sealed class CatalogBattleRuntimeTests
 
     private static BattleTurnEconomyRuleset StandardTurnEconomy() =>
         new(
-            () => new PressTurnEngine(),
+            () => new ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(
                 maximumCommands: 256,
                 maximumConsecutiveFreeActions: 32));
@@ -1206,7 +1204,7 @@ public sealed class CatalogBattleRuntimeTests
             () =>
             {
                 onCreated();
-                return new PressTurnEngine();
+                return new ActionTokenTurnEconomy();
             },
             new BattlePhaseProgressPolicy(
                 maximumCommands: 256,
@@ -1258,9 +1256,9 @@ public sealed class CatalogBattleRuntimeTests
             battleStatusId);
     }
 
-    private static (int FullIcons, int BlinkingIcons) TurnEconomyValues(
-        PressTurnEconomySnapshot snapshot) =>
-        (snapshot.FullIcons, snapshot.BlinkingIcons);
+    private static (int FullTokens, int PartialTokens) TurnEconomyValues(
+        ActionTokenTurnEconomySnapshot snapshot) =>
+        (snapshot.FullTokens, snapshot.PartialTokens);
 
     private static SkillDefinition Active(
         string id,

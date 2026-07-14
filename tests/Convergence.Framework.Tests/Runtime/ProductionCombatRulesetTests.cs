@@ -19,12 +19,12 @@ public sealed class ProductionCombatRulesetTests
 
     public static IEnumerable<object[]> AffinityDamageCases()
     {
-        yield return [ElementalAffinity.Weak, 75m, PressTurnOutcome.Weakness];
-        yield return [ElementalAffinity.Normal, 50m, PressTurnOutcome.Normal];
-        yield return [ElementalAffinity.Resist, 25m, PressTurnOutcome.Normal];
-        yield return [ElementalAffinity.Null, 0m, PressTurnOutcome.Null];
-        yield return [ElementalAffinity.Repel, 0m, PressTurnOutcome.Repel];
-        yield return [ElementalAffinity.Absorb, 0m, PressTurnOutcome.Absorb];
+        yield return [ElementalAffinity.Weak, 75m, TurnEconomyOutcome.Weakness];
+        yield return [ElementalAffinity.Normal, 50m, TurnEconomyOutcome.Normal];
+        yield return [ElementalAffinity.Resist, 25m, TurnEconomyOutcome.Normal];
+        yield return [ElementalAffinity.Null, 0m, TurnEconomyOutcome.Null];
+        yield return [ElementalAffinity.Repel, 0m, TurnEconomyOutcome.Repel];
+        yield return [ElementalAffinity.Absorb, 0m, TurnEconomyOutcome.Absorb];
     }
 
     [Theory]
@@ -54,7 +54,7 @@ public sealed class ProductionCombatRulesetTests
     public void DamageApplication_UsesApprovedAffinityMultipliersAndOutcomes(
         ElementalAffinity affinity,
         decimal expectedDamage,
-        PressTurnOutcome expectedOutcome)
+        TurnEconomyOutcome expectedOutcome)
     {
         ProductionCombatRuleset ruleset = Rules();
 
@@ -86,7 +86,7 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(25, result.DamageDealt);
         Assert.Equal(ElementalAffinity.Normal, result.Affinity);
         Assert.False(result.Critical);
-        Assert.Equal(PressTurnOutcome.Normal, result.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.Outcome);
     }
 
     [Fact]

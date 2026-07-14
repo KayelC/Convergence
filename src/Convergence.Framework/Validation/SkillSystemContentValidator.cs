@@ -4,7 +4,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 1;
+    private const int SupportedSchemaVersion = 2;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {

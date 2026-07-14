@@ -200,7 +200,7 @@ public sealed class OriginalCleanContentSliceTests
             Qualified("standard_economy")).RequireService().Inventory);
         Assert.NotNull(resolver.BindTurnEconomy(
             catalog,
-            Qualified("standard_press_turn")).RequireService());
+            Qualified("standard_action_token")).RequireService());
         Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);
     }
 
@@ -768,7 +768,7 @@ public sealed class OriginalCleanContentSliceTests
                 "standard_reward",
                 "standard_growth",
                 "standard_stat",
-                "standard_press_turn",
+                "standard_action_token",
                 "standard_stock_capacity",
                 "standard_economy",
                 "return_to_lobby",

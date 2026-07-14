@@ -33,7 +33,7 @@ public enum ActionTurnConsumptionKind
     None,
     Normal,
     Pass,
-    PressTurn,
+    TurnEconomy,
     TerminatePhase
 }
 
@@ -69,15 +69,15 @@ public enum BattleActionEventKind
 
 public sealed record ActionTurnConsumption(
     ActionTurnConsumptionKind Kind,
-    PressTurnResolution? PressTurn = null)
+    TurnEconomyResolution? TurnEconomy = null)
 {
     public static ActionTurnConsumption None { get; } = new(ActionTurnConsumptionKind.None);
     public static ActionTurnConsumption Normal { get; } = new(ActionTurnConsumptionKind.Normal);
     public static ActionTurnConsumption Pass { get; } = new(ActionTurnConsumptionKind.Pass);
     public static ActionTurnConsumption TerminatePhase { get; } = new(ActionTurnConsumptionKind.TerminatePhase);
 
-    public static ActionTurnConsumption FromPressTurn(PressTurnResolution resolution) =>
-        new(ActionTurnConsumptionKind.PressTurn, resolution);
+    public static ActionTurnConsumption FromTurnEconomy(TurnEconomyResolution resolution) =>
+        new(ActionTurnConsumptionKind.TurnEconomy, resolution);
 }
 
 public sealed record BattleActionDiagnostic(
@@ -569,7 +569,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 attack.Targeting,
                 attack.SelectedTargetIds,
                 [BasicAttackEffect(attack.BasicAttack)],
-                ActionTurnConsumptionKind.PressTurn,
+                ActionTurnConsumptionKind.TurnEconomy,
                 assessment),
             AnalyzeBattleActionCommand analyze => ExecuteEffects(
                 request,
@@ -732,7 +732,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 ? BattleActionExecutionStatus.Interrupted
                 : BattleActionExecutionStatus.Executed,
             command.Kind,
-            ActionTurnConsumption.FromPressTurn(skill.PressTurn),
+            ActionTurnConsumption.FromTurnEconomy(skill.TurnEconomy),
             skill.Effects,
             events: EffectEvents(request.Actor.InstanceId, command.Skill.Id, skill.Effects),
             escapeRequested: skill.EscapeRequested,
@@ -960,9 +960,9 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         }
 
         transaction.Commit();
-        PressTurnResolution pressTurn = AggregatePressTurn(execution.Effects);
-        ActionTurnConsumption turn = defaultTurnKind == ActionTurnConsumptionKind.PressTurn
-            ? ActionTurnConsumption.FromPressTurn(pressTurn)
+        TurnEconomyResolution turnEconomy = AggregateTurnEconomy(execution.Effects);
+        ActionTurnConsumption turn = defaultTurnKind == ActionTurnConsumptionKind.TurnEconomy
+            ? ActionTurnConsumption.FromTurnEconomy(turnEconomy)
             : new ActionTurnConsumption(defaultTurnKind);
         return new BattleActionExecutionResult(
             execution.Interrupted ? BattleActionExecutionStatus.Interrupted : BattleActionExecutionStatus.Executed,
@@ -1164,26 +1164,26 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             sourceId,
             effect.Value)).ToArray());
 
-    private static PressTurnResolution AggregatePressTurn(IReadOnlyList<EffectExecutionResult> effects)
+    private static TurnEconomyResolution AggregateTurnEconomy(IReadOnlyList<EffectExecutionResult> effects)
     {
         EffectExecutionResult? interruption = effects.FirstOrDefault(effect =>
-            effect.PressTurnOutcome is PressTurnOutcome.Repel or PressTurnOutcome.Absorb);
+            effect.TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
         if (interruption is not null)
         {
-            return new PressTurnResolution(interruption.PressTurnOutcome, effects.Any(effect => effect.IsCritical), true);
+            return new TurnEconomyResolution(interruption.TurnEconomyOutcome, effects.Any(effect => effect.IsCritical), true);
         }
 
-        PressTurnOutcome outcome = effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Null)
-            ? PressTurnOutcome.Null
-            : effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Miss)
-                ? PressTurnOutcome.Miss
-                : effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Weakness)
-                    ? PressTurnOutcome.Weakness
+        TurnEconomyOutcome outcome = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Null)
+            ? TurnEconomyOutcome.Null
+            : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss)
+                ? TurnEconomyOutcome.Miss
+                : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Weakness)
+                    ? TurnEconomyOutcome.Weakness
                     : effects.Any(effect => effect.IsCritical)
-                        ? PressTurnOutcome.Critical
-                        : PressTurnOutcome.Normal;
+                        ? TurnEconomyOutcome.Critical
+                        : TurnEconomyOutcome.Normal;
 
-        return new PressTurnResolution(outcome, effects.Any(effect => effect.IsCritical), false);
+        return new TurnEconomyResolution(outcome, effects.Any(effect => effect.IsCritical), false);
     }
 
     private static TargetingDefinition SingleAnyTargeting() =>

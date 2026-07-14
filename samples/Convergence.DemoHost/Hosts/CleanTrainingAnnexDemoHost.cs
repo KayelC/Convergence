@@ -118,7 +118,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         resolver.BindStatResolutionPolicy(catalog, Qualified("standard_stat")).RequireService();
         BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
-            Qualified("standard_press_turn")).RequireService();
+            Qualified("standard_action_token")).RequireService();
         resolver.BindStockCapacityPolicy(catalog, Qualified("standard_stock_capacity")).RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
@@ -330,7 +330,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         RuntimeActorSnapshot ashlingSnapshot = ActorSnapshot(ashling, RuntimeInstanceId.Parse("ashling"), null);
         RuntimeActorReferenceSnapshot echoReference = Reference(echoSnapshot);
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.1.0"),
+            SemanticVersion.Parse("0.2.0"),
             [TrainingAnnexHostSupport.PackIdentity],
             [echoSnapshot, ashlingSnapshot],
             new RuntimePartyStockSnapshot(

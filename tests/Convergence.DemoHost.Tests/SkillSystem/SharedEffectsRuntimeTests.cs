@@ -24,7 +24,7 @@ public sealed class SharedEffectsRuntimeTests
         string json =
             """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "items": [
                 {
                   "id": "medicine", "displayName": "Medicine", "description": "Heal.",
@@ -79,7 +79,7 @@ public sealed class SharedEffectsRuntimeTests
                 new TargetingDefinition(TargetRelation.Ally, TargetSelection.Single, TargetLifeState.Alive, true),
                 []));
         var manifest = new ContentPackManifest(
-            1, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
+            2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
             [new ContentPackDocumentReference("items", "items.json")]);
         var request = new SkillSystemValidationRequest(
             manifest,
@@ -90,7 +90,7 @@ public sealed class SharedEffectsRuntimeTests
                 new SourceContentDocument<ItemDefinition>(
                     "items.json",
                     "items.json",
-                    new DeserializedContentDocument<ItemDefinition>(1, [item]))
+                    new DeserializedContentDocument<ItemDefinition>(2, [item]))
             ]);
 
         ContentValidationResult result = new SkillSystemContentValidator().Validate(request);

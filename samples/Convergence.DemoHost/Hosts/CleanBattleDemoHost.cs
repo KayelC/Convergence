@@ -187,7 +187,7 @@ internal sealed class CleanBattleDemoHost
             BattleStart,
             OwnerTurnEnd);
         var turnEconomy = new BattleTurnEconomyRuleset(
-            () => new PressTurnEngine(),
+            () => new ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(
                 maximumCommands: 256,
                 maximumConsecutiveFreeActions: 32));

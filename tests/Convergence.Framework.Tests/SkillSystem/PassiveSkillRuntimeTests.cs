@@ -412,7 +412,7 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(PassiveTriggerOutcome.ActivationLimitReached, Assert.Single(second.PassiveActivations).Outcome);
         Assert.Equal(0, target.GetRequiredResource(Hp).Current);
         Assert.True(target.IsDefeated);
-        Assert.Equal(first.PressTurn.Outcome, second.PressTurn.Outcome);
+        Assert.Equal(first.TurnEconomy.Outcome, second.TurnEconomy.Outcome);
     }
 
     [Fact]

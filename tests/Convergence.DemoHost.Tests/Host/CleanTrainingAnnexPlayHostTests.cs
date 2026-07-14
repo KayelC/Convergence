@@ -1412,7 +1412,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(frost.Hit);
         Assert.False(frost.IsCritical);
         Assert.Equal(ElementalAffinity.Weak, frost.ResolvedAffinity);
-        Assert.Equal(PressTurnOutcome.Weakness, frost.PressTurnOutcome);
+        Assert.Equal(TurnEconomyOutcome.Weakness, frost.TurnEconomyOutcome);
         Assert.Contains(summary.BattleKnowledgeEvidence, evidence =>
             IsElementalKnowledge(
                 evidence,
@@ -1424,31 +1424,31 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.EntityId == Qualified("ashling") &&
             knowledge.Element == DamageElement.Ice &&
             knowledge.Affinity == ElementalAffinity.Weak);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.PressTurn &&
-            evidence.PressTurnOutcome == PressTurnOutcome.Weakness &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 1);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.TurnEconomy &&
+            evidence.TurnEconomyOutcome == TurnEconomyOutcome.Weakness &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 1);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
-            evidence.BeforeFullIcons == 0 &&
-            evidence.BeforeBlinkingIcons == 1 &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+            evidence.BeforeFullTokens == 0 &&
+            evidence.BeforePartialTokens == 1 &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("review_hall_trigger_ashling_1") &&
             evidence.ActionId == Qualified("ash_spark") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.PressTurn &&
-            evidence.PressTurnOutcome == PressTurnOutcome.Normal &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.TurnEconomy &&
+            evidence.TurnEconomyOutcome == TurnEconomyOutcome.Normal &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         Assert.NotNull(summary.PreparedBattleRewardPreview);
         Assert.Equal(1, summary.PreparedBattleRewardPreview!.TotalExperience);
         Assert.Equal(14, summary.PreparedBattleRewardPreview.TotalCurrency);
@@ -1473,8 +1473,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         string text = output.ToString();
         Assert.Contains("Clean battle started: Ashling Drill.", text, StringComparison.Ordinal);
-        Assert.Contains("Press Turn before command: 1 full, 0 blinking.", text, StringComparison.Ordinal);
-        Assert.Contains("Press Turn updated: 0 full, 1 blinking.", text, StringComparison.Ordinal);
+        Assert.Contains("Action Token before command: 1 full, 0 partial.", text, StringComparison.Ordinal);
+        Assert.Contains("Action Token updated: 0 full, 1 partial.", text, StringComparison.Ordinal);
         Assert.Contains("Battle action executed: Echo Adept used Frost Tip.", text, StringComparison.Ordinal);
         Assert.Contains("Battle knowledge updated: 1 discovery.", text, StringComparison.Ordinal);
         Assert.Contains("Battle action executed: Ashling used Ash Spark.", text, StringComparison.Ordinal);
@@ -1528,15 +1528,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(12, attack.Power);
         Assert.Equal(95, attack.Accuracy);
         Assert.Equal(23, attack.Value);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("practice_blade") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.PressTurn &&
-            evidence.PressTurnOutcome == PressTurnOutcome.Normal &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.TurnEconomy &&
+            evidence.TurnEconomyOutcome == TurnEconomyOutcome.Normal &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         Assert.Contains(
             "Battle action executed: Echo Adept used Practice Blade.",
             output.ToString(),
@@ -1672,31 +1672,31 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task PressTurnEventSink_UsesTypedStateAndIgnoresDisplayMessageWording()
+    public async Task ActionTokenEventSink_UsesTypedStateAndIgnoresDisplayMessageWording()
     {
         using var output = new StringWriter();
-        var tracker = new TrainingAnnexPressTurnTracker();
+        var tracker = new TrainingAnnexTurnEconomyTracker();
         RuntimeInstanceId actorId = RuntimeInstanceId.Parse("echo_adept");
         tracker.RecordBefore(
             actorId,
             Qualified("frost_tip"),
             1,
             0,
-            ActionTurnConsumption.FromPressTurn(
-                new PressTurnResolution(PressTurnOutcome.Weakness, false, false)));
-        var sink = new TrainingAnnexPressTurnEventSink(new TextWriterEventSink(output), tracker);
+            ActionTurnConsumption.FromTurnEconomy(
+                new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false)));
+        var sink = new TrainingAnnexTurnEconomyEventSink(new TextWriterEventSink(output), tracker);
 
         await sink.PublishAsync(new BattleEncounterEvent(
             1,
             BattleEncounterEventKind.TurnEconomyChanged,
             "Localized presentation text with no parseable icon counts.",
             actorId,
-            TurnEconomyState: new PressTurnEconomySnapshot(0, 1)));
+            TurnEconomyState: new ActionTokenTurnEconomySnapshot(0, 1)));
 
-        TrainingAnnexPressTurnEvidence evidence = Assert.Single(tracker.Evidence);
-        Assert.Equal(0, evidence.AfterFullIcons);
-        Assert.Equal(1, evidence.AfterBlinkingIcons);
-        Assert.Contains("Press Turn updated: 0 full, 1 blinking.", output.ToString(), StringComparison.Ordinal);
+        TrainingAnnexTurnEconomyEvidence evidence = Assert.Single(tracker.Evidence);
+        Assert.Equal(0, evidence.AfterFullTokens);
+        Assert.Equal(1, evidence.AfterPartialTokens);
+        Assert.Contains("Action Token updated: 0 full, 1 partial.", output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1901,15 +1901,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
             IsDamage(effect, Qualified("ash_spark"), DamageElement.Fire));
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(67, Resource(summary, "hp").Current);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("annex_tonic") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
             evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Normal &&
-            evidence.PressTurnOutcome is null &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.TurnEconomyOutcome is null &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         Assert.Contains(
             "Battle action executed: Echo Adept used Annex Tonic.",
             output.ToString(),
@@ -1939,34 +1939,34 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(ContentId.Parse("guard"), summary.ExecutedBattleActionIds);
         Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
         Assert.Equal(3, summary.ExecutedBattleActionIds.Count(id => id == Qualified("ash_spark")));
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == ContentId.Parse("analyze") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
             evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Normal &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == ContentId.Parse("guard") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
             evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Normal &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == ContentId.Parse("pass") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
             evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Pass &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 1);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 1);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == ContentId.Parse("pass") &&
-            evidence.BeforeFullIcons == 0 &&
-            evidence.BeforeBlinkingIcons == 1 &&
+            evidence.BeforeFullTokens == 0 &&
+            evidence.BeforePartialTokens == 1 &&
             evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Pass &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
             effect.SourceActionId == ContentId.Parse("analyze") &&
             effect.EffectIndex == 0 &&
@@ -2014,7 +2014,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
             evidence.RelatedContentId == Qualified("steady_breath")));
-        Assert.DoesNotContain(summary.PressTurnEvidence, evidence =>
+        Assert.DoesNotContain(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == Qualified("frost_tip") ||
             evidence.ActionId == Qualified("echo_strike") ||
             evidence.ActionId == Qualified("annex_tonic"));
@@ -2199,29 +2199,29 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(5, miss.Accuracy);
         Assert.False(miss.Hit);
         Assert.Equal(EffectExecutionOutcome.Failure, miss.Outcome);
-        Assert.Equal(PressTurnOutcome.Miss, miss.PressTurnOutcome);
+        Assert.Equal(TurnEconomyOutcome.Miss, miss.TurnEconomyOutcome);
         Assert.Null(miss.Value);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.PressTurnOutcome == PressTurnOutcome.Miss &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnEconomyOutcome == TurnEconomyOutcome.Miss &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
         io.AssertConsumed();
     }
 
     [Theory]
-    [InlineData("echo_strike", 1, DamageElement.Physical, true, PressTurnOutcome.Critical)]
-    [InlineData("frost_tip", 0, DamageElement.Ice, false, PressTurnOutcome.Weakness)]
+    [InlineData("echo_strike", 1, DamageElement.Physical, true, TurnEconomyOutcome.Critical)]
+    [InlineData("frost_tip", 0, DamageElement.Ice, false, TurnEconomyOutcome.Weakness)]
     public async Task CleanTrainingAnnexPlay_CriticalPolicyUsesTypedDamageElement(
         string skillId,
         int skillMenuIndex,
         DamageElement element,
         bool expectedCritical,
-        PressTurnOutcome expectedOutcome)
+        TurnEconomyOutcome expectedOutcome)
     {
         var io = new ScriptedGameIO().QueueMenu(
             6, 6, 9, 10,
@@ -2248,26 +2248,26 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(element, resolution.DamageElement);
         Assert.Equal(CriticalMode.Chance, resolution.CriticalMode);
         Assert.Equal(expectedCritical, resolution.IsCritical);
-        Assert.Equal(expectedOutcome, resolution.PressTurnOutcome);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Equal(expectedOutcome, resolution.TurnEconomyOutcome);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified(skillId) &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.PressTurnOutcome == expectedOutcome &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 1);
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnEconomyOutcome == expectedOutcome &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 1);
         io.AssertConsumed();
     }
 
     [Theory]
-    [InlineData("null", ElementalAffinity.Null, PressTurnOutcome.Null)]
-    [InlineData("repel", ElementalAffinity.Repel, PressTurnOutcome.Repel)]
-    [InlineData("absorb", ElementalAffinity.Absorb, PressTurnOutcome.Absorb)]
-    public async Task CleanTrainingAnnexPlay_DefensivePressTurnOutcomesTerminatePlayerPhase(
+    [InlineData("null", ElementalAffinity.Null, TurnEconomyOutcome.Null)]
+    [InlineData("repel", ElementalAffinity.Repel, TurnEconomyOutcome.Repel)]
+    [InlineData("absorb", ElementalAffinity.Absorb, TurnEconomyOutcome.Absorb)]
+    public async Task CleanTrainingAnnexPlay_DefensiveTurnEconomyOutcomesTerminatePlayerPhase(
         string affinity,
         ElementalAffinity expectedAffinity,
-        PressTurnOutcome expectedOutcome)
+        TurnEconomyOutcome expectedOutcome)
     {
         var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 0, 0, -1, 13);
         using var output = new StringWriter();
@@ -2284,15 +2284,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.CombatResolutionEvidence,
             evidence => evidence.SourceActionId == Qualified("frost_tip"));
         Assert.Equal(expectedAffinity, resolution.ResolvedAffinity);
-        Assert.Equal(expectedOutcome, resolution.PressTurnOutcome);
-        Assert.Contains(summary.PressTurnEvidence, evidence =>
+        Assert.Equal(expectedOutcome, resolution.TurnEconomyOutcome);
+        Assert.Contains(summary.TurnEconomyEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.ActionId == Qualified("frost_tip") &&
-            evidence.BeforeFullIcons == 1 &&
-            evidence.BeforeBlinkingIcons == 0 &&
-            evidence.PressTurnOutcome == expectedOutcome &&
-            evidence.AfterFullIcons == 0 &&
-            evidence.AfterBlinkingIcons == 0);
+            evidence.BeforeFullTokens == 1 &&
+            evidence.BeforePartialTokens == 0 &&
+            evidence.TurnEconomyOutcome == expectedOutcome &&
+            evidence.AfterFullTokens == 0 &&
+            evidence.AfterPartialTokens == 0);
         io.AssertConsumed();
     }
 
@@ -2510,7 +2510,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Theory]
     [InlineData("standard_damage", "standard_reward", "damage")]
     [InlineData("standard_reward", "standard_damage", "reward")]
-    [InlineData("standard_press_turn", "standard_damage", "press_turn")]
+    [InlineData("standard_action_token", "standard_damage", "action_token")]
     public async Task CleanTrainingAnnexPlay_InvalidCombatBindingFailsWithoutFallback(
         string rulesetId,
         string policyId,
@@ -2534,15 +2534,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Theory]
     [InlineData(true, RulesetBindingDiagnosticCode.MissingRuleset)]
     [InlineData(false, RulesetBindingDiagnosticCode.CategoryMismatch)]
-    public async Task CleanTrainingAnnexPlay_InvalidPressTurnBindingFailsBeforeSession(
+    public async Task CleanTrainingAnnexPlay_InvalidActionTokenBindingFailsBeforeSession(
         bool removeRuleset,
         RulesetBindingDiagnosticCode expectedCode)
     {
         var io = new ScriptedGameIO();
         using var output = new StringWriter();
         IContentPackTextSource source = removeRuleset
-            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_press_turn")
-            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_press_turn", "damage");
+            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_action_token")
+            : new RulesetCategoryMutatingContentPackTextSource(ContentRoot(), "standard_action_token", "damage");
         var host = CreateHost(io, output, source);
 
         int exitCode = await host.RunAsync();
@@ -2550,7 +2550,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(4, exitCode);
         Assert.Null(host.LastSummary);
         Assert.Empty(io.Menus);
-        Assert.Contains($"[press_turn:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains($"[action_token:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
     }
 
     [Theory]

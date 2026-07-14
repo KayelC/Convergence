@@ -13,33 +13,33 @@ internal abstract class TargetedEffectExecutor
         EffectExecutionContext context,
         decimal? value = null,
         ContentId? relatedId = null,
-        PressTurnOutcome pressTurn = PressTurnOutcome.Normal,
+        TurnEconomyOutcome turnEconomy = TurnEconomyOutcome.Normal,
         bool critical = false,
         string? detail = null,
         bool escape = false,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
         ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
-            pressTurn, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity);
+            turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity);
 
     protected static EffectExecutionResult Failure(
         EffectExecutionContext context,
-        PressTurnOutcome pressTurn = PressTurnOutcome.Miss,
+        TurnEconomyOutcome turnEconomy = TurnEconomyOutcome.Miss,
         string? detail = null,
         ContentId? relatedId = null,
         ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure,
-            pressTurn, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity);
+            turnEconomy, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity);
 
     protected static EffectExecutionResult Interrupted(
         EffectExecutionContext context,
-        PressTurnOutcome pressTurn,
+        TurnEconomyOutcome turnEconomy,
         decimal? value = null,
         string? detail = null,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
         ElementalAffinity? resolvedAffinity = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
-            pressTurn, Value: value, Detail: detail, PassiveActivations: passiveActivations,
+            turnEconomy, Value: value, Detail: detail, PassiveActivations: passiveActivations,
             ResolvedAffinity: resolvedAffinity);
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
@@ -87,7 +87,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         DamageHitResolution[] landed = hits.Where(hit => hit.Hit).ToArray();
         if (landed.Length == 0)
         {
-            return Failure(context, PressTurnOutcome.Miss, "All damage hits missed.");
+            return Failure(context, TurnEconomyOutcome.Miss, "All damage hits missed.");
         }
 
         decimal total = CombatArithmetic.SaturatingSum(
@@ -114,14 +114,14 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         switch (affinity)
         {
             case ElementalAffinity.Null:
-                return Failure(context, PressTurnOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
+                return Failure(context, TurnEconomyOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
             case ElementalAffinity.Repel:
             {
                 decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
                 IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
                 return Interrupted(
                     context,
-                    PressTurnOutcome.Repel,
+                    TurnEconomyOutcome.Repel,
                     reflected,
                     "The damage was reflected.",
                     activations,
@@ -130,7 +130,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             case ElementalAffinity.Absorb:
             {
                 decimal absorbed = target.AddResource(target.VitalResourceId, total);
-                return Interrupted(context, PressTurnOutcome.Absorb, absorbed, "The damage was absorbed.",
+                return Interrupted(context, TurnEconomyOutcome.Absorb, absorbed, "The damage was absorbed.",
                     resolvedAffinity: affinity);
             }
             default:
@@ -138,13 +138,13 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 decimal dealt = -target.AddResource(target.VitalResourceId, -total);
                 IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
                 ApplyDrain(definition.Drain, context.Actor, context.Services, dealt);
-                PressTurnOutcome outcome = affinity == ElementalAffinity.Weak
-                    ? PressTurnOutcome.Weakness
-                    : critical ? PressTurnOutcome.Critical : PressTurnOutcome.Normal;
+                TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
+                    ? TurnEconomyOutcome.Weakness
+                    : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
                 return Success(
                     context,
                     dealt,
-                    pressTurn: outcome,
+                    turnEconomy: outcome,
                     critical: critical,
                     passiveActivations: activations,
                     resolvedAffinity: affinity);
@@ -181,7 +181,7 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             new InstantDeathPolicyRequest(context.Actor, target, definition, resistance));
         if (!success)
         {
-            return Failure(context, PressTurnOutcome.Miss, "The instant-death attempt failed.");
+            return Failure(context, TurnEconomyOutcome.Miss, "The instant-death attempt failed.");
         }
 
         decimal removed = -target.SetResource(target.VitalResourceId, 0);

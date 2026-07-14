@@ -80,17 +80,17 @@ public sealed class RuntimeRulesetBindingTests
             maxSp: 10,
             hasAilment: false)));
 
-        BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
+        BattleTurnEconomyRuleset turnEconomyRuleset = resolver.BindTurnEconomy(
             catalog,
-            Qualified("standard_press_turn_sample"))
+            Qualified("standard_action_token_sample"))
             .RequireService();
-        var pressTurn = Assert.IsType<Convergence.TurnEconomy.PressTurnEngine>(
-            turnEconomy.CreateEconomy());
-        pressTurn.StartPhase(2);
-        pressTurn.ConsumeAction(new PressTurnResolution(PressTurnOutcome.Weakness, false, false));
-        Assert.Equal(1, pressTurn.FullIcons);
-        Assert.Equal(1, pressTurn.BlinkingIcons);
-        Assert.True(turnEconomy.PhaseProgress.MaximumCommands > 0);
+        var turnEconomy = Assert.IsType<Convergence.TurnEconomy.ActionTokenTurnEconomy>(
+            turnEconomyRuleset.CreateEconomy());
+        turnEconomy.StartPhase(2);
+        turnEconomy.ConsumeAction(new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false));
+        Assert.Equal(1, turnEconomy.FullTokens);
+        Assert.Equal(1, turnEconomy.PartialTokens);
+        Assert.True(turnEconomyRuleset.PhaseProgress.MaximumCommands > 0);
 
     }
 

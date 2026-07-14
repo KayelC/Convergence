@@ -15,7 +15,7 @@ public static class StandardRulesetPolicyIds
     public static ContentId StandardReward { get; } = ContentId.Parse("standard_reward");
     public static ContentId StandardGrowth { get; } = ContentId.Parse("standard_growth");
     public static ContentId StandardStat { get; } = ContentId.Parse("standard_stat");
-    public static ContentId StandardPressTurn { get; } = ContentId.Parse("standard_press_turn");
+    public static ContentId StandardActionToken { get; } = ContentId.Parse("standard_action_token");
     public static ContentId StandardStockCapacity { get; } = ContentId.Parse("standard_stock_capacity");
     public static ContentId StandardEconomy { get; } = ContentId.Parse("standard_economy");
     public static ContentId StandardMoonPhase { get; } = ContentId.Parse("standard_moon_phase");
@@ -235,13 +235,13 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         Bind<BattleTurnEconomyRuleset>(
             catalog,
             rulesetId,
-            RulesetCategory.PressTurn,
-            StandardRulesetPolicyIds.StandardPressTurn,
+            RulesetCategory.TurnEconomy,
+            StandardRulesetPolicyIds.StandardActionToken,
             (definition, diagnostics) =>
             {
                 RequireNoParameters(definition, diagnostics);
                 return new BattleTurnEconomyRuleset(
-                    () => new PressTurnEngine(),
+                    () => new ActionTokenTurnEconomy(),
                     new BattlePhaseProgressPolicy(
                         maximumCommands: 256,
                         maximumConsecutiveFreeActions: 32));

@@ -75,7 +75,7 @@ internal static class TrainingAnnexHostSupport
 {
     public const string PackId = "convergence.training_annex_slice";
     public static readonly ContentPackIdentity PackIdentity =
-        new(PackId, SemanticVersion.Parse("0.1.0"));
+        new(PackId, SemanticVersion.Parse("0.2.0"));
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
     public static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
@@ -191,7 +191,7 @@ internal static class TrainingAnnexHostSupport
                 "standard_reward",
                 "standard_growth",
                 "standard_stat",
-                "standard_press_turn",
+                "standard_action_token",
                 "standard_stock_capacity",
                 "standard_economy",
                 "return_to_lobby",
@@ -511,7 +511,7 @@ internal static class TrainingAnnexHostSupport
         }
 
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.1.0"),
+            SemanticVersion.Parse("0.2.0"),
             [PackIdentity],
             actors,
             partyStock ?? new RuntimePartyStockSnapshot(

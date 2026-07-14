@@ -44,18 +44,18 @@ Guard is executable runtime state and may reduce damage or normalize weakness ac
 
 ## Turn Economy
 
-`IBattleTurnEconomy` is the reusable turn interface. Press Turn is one optional implementation, not a mandatory battle model.
+`IBattleTurnEconomy` is the reusable turn interface. Action Token is one optional implementation, not a mandatory battle model.
 
-The supplied Press Turn behavior is:
+The supplied Action Token behavior is:
 
-- A phase starts with one full icon per active living actor.
-- A normal action consumes one blinking icon first, otherwise one full icon.
-- Passing consumes an existing blinking icon before touching any full icon. Only when no blinking icon exists does passing convert one full icon to blinking.
-- Weakness or Critical converts a full icon to blinking; if only blinking remains, it consumes one.
-- Miss or Null consumes up to two icons.
+- A phase starts with one full token per active living actor.
+- A normal action consumes one partial token first, otherwise one full token.
+- Passing consumes an existing partial token before touching any full token. Only when no partial token exists does passing convert one full token to partial.
+- Weakness or Critical converts a full token to a partial token; if only partial tokens remain, it consumes one.
+- Miss or Null consumes up to two tokens.
 - Repel or Absorb ends the phase.
-- A free action consumes no icon.
-- A terminate-phase result clears all remaining icons.
+- A free action consumes no token.
+- A terminate-phase result clears all remaining tokens.
 
 **Host responsibility:** presentation may use icons, pips, text, or no visible turn meter. The state change comes from Framework snapshots and events.
 

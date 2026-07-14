@@ -129,7 +129,7 @@ public sealed class GodotIntegrationContractTests
             Id("battle_start"),
             Id("owner_turn_end"));
         var turnEconomy = new BattleTurnEconomyRuleset(
-            () => new PressTurnEngine(),
+            () => new ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(256, 32));
         AutomatedBattleResult battle = new AutomatedBattleRunner(
             executor,

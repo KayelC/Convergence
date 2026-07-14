@@ -38,7 +38,7 @@ Action execution reuses typed targeting, conditions, effects, lifecycle rules, a
 
 ## Optional Modules
 
-Navigation, dungeon traversal, Press Turn, ailments/passives, party/stock, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
+Navigation, dungeon traversal, Action Token, ailments/passives, party/stock, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
 Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. DemoHost does not require or bind a moon-phase system.
 

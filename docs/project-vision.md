@@ -19,7 +19,7 @@ use is reserved for separate licensing by the copyright owner.
 
 ## Modularity
 
-A developer may use battle without fusion, navigation without dungeon traversal, a custom turn economy instead of Press Turn, or no moon-phase mechanic at all. Optional vocabulary does not imply mandatory runtime behavior. Features activate because the host registers, binds, and calls them.
+A developer may use battle without fusion, navigation without dungeon traversal, a custom turn economy instead of Action Token, or no moon-phase mechanic at all. Optional vocabulary does not imply mandatory runtime behavior. Features activate because the host registers, binds, and calls them.
 
 ## Quality Direction
 

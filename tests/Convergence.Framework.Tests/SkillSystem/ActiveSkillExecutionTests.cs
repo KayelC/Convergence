@@ -20,13 +20,13 @@ public sealed class ActiveSkillExecutionTests
 
     public static IEnumerable<object[]> DamageOutcomeCases()
     {
-        yield return [ElementalAffinity.Normal, true, false, PressTurnOutcome.Normal, EffectExecutionOutcome.Success];
-        yield return [ElementalAffinity.Normal, true, true, PressTurnOutcome.Critical, EffectExecutionOutcome.Success];
-        yield return [ElementalAffinity.Weak, true, false, PressTurnOutcome.Weakness, EffectExecutionOutcome.Success];
-        yield return [ElementalAffinity.Normal, false, false, PressTurnOutcome.Miss, EffectExecutionOutcome.Failure];
-        yield return [ElementalAffinity.Null, true, false, PressTurnOutcome.Null, EffectExecutionOutcome.Failure];
-        yield return [ElementalAffinity.Repel, true, false, PressTurnOutcome.Repel, EffectExecutionOutcome.Interrupted];
-        yield return [ElementalAffinity.Absorb, true, false, PressTurnOutcome.Absorb, EffectExecutionOutcome.Interrupted];
+        yield return [ElementalAffinity.Normal, true, false, TurnEconomyOutcome.Normal, EffectExecutionOutcome.Success];
+        yield return [ElementalAffinity.Normal, true, true, TurnEconomyOutcome.Critical, EffectExecutionOutcome.Success];
+        yield return [ElementalAffinity.Weak, true, false, TurnEconomyOutcome.Weakness, EffectExecutionOutcome.Success];
+        yield return [ElementalAffinity.Normal, false, false, TurnEconomyOutcome.Miss, EffectExecutionOutcome.Failure];
+        yield return [ElementalAffinity.Null, true, false, TurnEconomyOutcome.Null, EffectExecutionOutcome.Failure];
+        yield return [ElementalAffinity.Repel, true, false, TurnEconomyOutcome.Repel, EffectExecutionOutcome.Interrupted];
+        yield return [ElementalAffinity.Absorb, true, false, TurnEconomyOutcome.Absorb, EffectExecutionOutcome.Interrupted];
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public sealed class ActiveSkillExecutionTests
         Assert.True(target.HasAilment(Poison));
         Assert.Equal(22, actor.GetRequiredResource(Sp).Current);
         Assert.True(result.CostsCommitted);
-        Assert.Equal(PressTurnOutcome.Weakness, result.PressTurn.Outcome);
-        Assert.True(result.PressTurn.AnyCritical);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnEconomy.Outcome);
+        Assert.True(result.TurnEconomy.AnyCritical);
     }
 
     [Fact]
@@ -310,19 +310,19 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(SkillExecutionStatus.Interrupted, result.Status);
         Assert.Single(result.Effects);
         Assert.Equal(EffectExecutionOutcome.Interrupted, result.Effects[0].Outcome);
-        Assert.Equal(PressTurnOutcome.Repel, result.PressTurn.Outcome);
-        Assert.True(result.PressTurn.TerminatesPhase);
+        Assert.Equal(TurnEconomyOutcome.Repel, result.TurnEconomy.Outcome);
+        Assert.True(result.TurnEconomy.TerminatesPhase);
         Assert.Equal(70, actor.GetRequiredResource(Hp).Current);
         Assert.Equal(100, target.GetRequiredResource(Hp).Current);
     }
 
     [Theory]
     [MemberData(nameof(DamageOutcomeCases))]
-    public void Execute_DamagePreservesPressTurnOutcomes(
+    public void Execute_DamagePreservesTurnEconomyOutcomes(
         ElementalAffinity affinity,
         bool hit,
         bool critical,
-        PressTurnOutcome expectedPressTurn,
+        TurnEconomyOutcome expectedTurnEconomy,
         EffectExecutionOutcome expectedExecution)
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100);
@@ -340,11 +340,11 @@ public sealed class ActiveSkillExecutionTests
             Request(skill, actor, [actor, target], [target.InstanceId]));
 
         Assert.Equal(expectedExecution, result.Effects[0].Outcome);
-        Assert.Equal(expectedPressTurn, result.PressTurn.Outcome);
-        Assert.Equal(critical, result.PressTurn.AnyCritical);
+        Assert.Equal(expectedTurnEconomy, result.TurnEconomy.Outcome);
+        Assert.Equal(critical, result.TurnEconomy.AnyCritical);
         Assert.Equal(
-            expectedPressTurn is PressTurnOutcome.Repel or PressTurnOutcome.Absorb,
-            result.PressTurn.TerminatesPhase);
+            expectedTurnEconomy is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb,
+            result.TurnEconomy.TerminatesPhase);
     }
 
     [Fact]

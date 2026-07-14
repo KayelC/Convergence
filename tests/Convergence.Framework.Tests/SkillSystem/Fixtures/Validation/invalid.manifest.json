@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "validation.invalid_pack",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Invalid Validation Pack",
   "documents": [
     {

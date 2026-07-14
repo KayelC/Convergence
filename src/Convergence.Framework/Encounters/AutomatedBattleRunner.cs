@@ -240,7 +240,6 @@ public enum BattleRuntimeEventKind
     PassiveActivated,
     StatusChanged,
     TurnEconomyChanged,
-    PressTurnChanged,
     ResourceChanged,
     ActorDefeated,
     BattleFaulted,
@@ -425,9 +424,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterEventKind.EffectResolved => BattleRuntimeEventKind.EffectResolved,
                 BattleEncounterEventKind.PassiveActivated => BattleRuntimeEventKind.PassiveActivated,
                 BattleEncounterEventKind.StatusChanged => BattleRuntimeEventKind.StatusChanged,
-                BattleEncounterEventKind.TurnEconomyChanged
-                    when battleEvent.TurnEconomyState is PressTurnEconomySnapshot =>
-                    BattleRuntimeEventKind.PressTurnChanged,
                 BattleEncounterEventKind.TurnEconomyChanged => BattleRuntimeEventKind.TurnEconomyChanged,
                 BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
                 BattleEncounterEventKind.DeploymentChanged => BattleRuntimeEventKind.DeploymentChanged,
@@ -563,7 +559,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             RecordExecution(events, actor, selection.Skill, execution, _actors, _knowledge[actor.State.TeamId]);
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Executed(
-                    ActionTurnConsumption.FromPressTurn(execution.PressTurn),
+                    ActionTurnConsumption.FromTurnEconomy(execution.TurnEconomy),
                     events));
         }
     }
@@ -581,7 +577,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.EffectResolved,
-                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.PressTurnOutcome}).",
+                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome}).",
                 actor.State.InstanceId,
                 effect.TargetId,
                 skill.Id,

@@ -18,7 +18,7 @@ public enum EffectExecutionOutcome
     Interrupted
 }
 
-public enum PressTurnOutcome
+public enum TurnEconomyOutcome
 {
     Normal,
     Critical,
@@ -64,7 +64,7 @@ public sealed record EffectExecutionResult
         int EffectIndex,
         RuntimeInstanceId? TargetId,
         EffectExecutionOutcome Outcome,
-        PressTurnOutcome PressTurnOutcome = PressTurnOutcome.Normal,
+        TurnEconomyOutcome TurnEconomyOutcome = TurnEconomyOutcome.Normal,
         bool IsCritical = false,
         decimal? Value = null,
         ContentId? RelatedId = null,
@@ -77,7 +77,7 @@ public sealed record EffectExecutionResult
         this.EffectIndex = EffectIndex;
         this.TargetId = TargetId;
         this.Outcome = Outcome;
-        this.PressTurnOutcome = PressTurnOutcome;
+        this.TurnEconomyOutcome = TurnEconomyOutcome;
         this.IsCritical = IsCritical;
         this.Value = Value;
         this.RelatedId = RelatedId;
@@ -91,7 +91,7 @@ public sealed record EffectExecutionResult
     public int EffectIndex { get; init; }
     public RuntimeInstanceId? TargetId { get; init; }
     public EffectExecutionOutcome Outcome { get; init; }
-    public PressTurnOutcome PressTurnOutcome { get; init; }
+    public TurnEconomyOutcome TurnEconomyOutcome { get; init; }
     public bool IsCritical { get; init; }
     public decimal? Value { get; init; }
     public ContentId? RelatedId { get; init; }
@@ -191,7 +191,7 @@ public sealed record SkillExecutionAssessment
 
 internal sealed record ResolvedSkillCost(ContentId ResourceId, decimal Amount);
 
-public sealed record PressTurnResolution(PressTurnOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
+public sealed record TurnEconomyResolution(TurnEconomyOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
 
 public sealed record SkillExecutionResult
 {
@@ -210,7 +210,7 @@ public sealed record SkillExecutionResult
             Effects.SelectMany(effect => effect.PassiveActivations ?? []).ToArray());
         HostActionRequestIds = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.HostActionRequestIds ?? []).ToArray());
-        PressTurn = AggregatePressTurn(Effects);
+        TurnEconomy = AggregateTurnEconomy(Effects);
     }
 
     public SkillExecutionStatus Status { get; }
@@ -220,31 +220,31 @@ public sealed record SkillExecutionResult
     public bool EscapeRequested { get; }
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
-    public PressTurnResolution PressTurn { get; }
+    public TurnEconomyResolution TurnEconomy { get; }
 
     public static SkillExecutionResult Rejected(IEnumerable<SkillExecutionDiagnostic> diagnostics) =>
         new(SkillExecutionStatus.Rejected, [], diagnostics);
 
-    private static PressTurnResolution AggregatePressTurn(IReadOnlyList<EffectExecutionResult> effects)
+    private static TurnEconomyResolution AggregateTurnEconomy(IReadOnlyList<EffectExecutionResult> effects)
     {
         EffectExecutionResult? interruption = effects.FirstOrDefault(effect =>
-            effect.PressTurnOutcome is PressTurnOutcome.Repel or PressTurnOutcome.Absorb);
+            effect.TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
         if (interruption is not null)
         {
-            return new PressTurnResolution(interruption.PressTurnOutcome, effects.Any(effect => effect.IsCritical), true);
+            return new TurnEconomyResolution(interruption.TurnEconomyOutcome, effects.Any(effect => effect.IsCritical), true);
         }
 
-        PressTurnOutcome outcome = effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Null)
-            ? PressTurnOutcome.Null
-            : effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Miss)
-                ? PressTurnOutcome.Miss
-                : effects.Any(effect => effect.PressTurnOutcome == PressTurnOutcome.Weakness)
-                    ? PressTurnOutcome.Weakness
+        TurnEconomyOutcome outcome = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Null)
+            ? TurnEconomyOutcome.Null
+            : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss)
+                ? TurnEconomyOutcome.Miss
+                : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Weakness)
+                    ? TurnEconomyOutcome.Weakness
                     : effects.Any(effect => effect.IsCritical)
-                        ? PressTurnOutcome.Critical
-                        : PressTurnOutcome.Normal;
+                        ? TurnEconomyOutcome.Critical
+                        : TurnEconomyOutcome.Normal;
 
-        return new PressTurnResolution(outcome, effects.Any(effect => effect.IsCritical), false);
+        return new TurnEconomyResolution(outcome, effects.Any(effect => effect.IsCritical), false);
     }
 }
 

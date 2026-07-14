@@ -411,7 +411,7 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.EffectResolved,
-                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.PressTurnOutcome}).",
+                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome}).",
                 request.Actor.State.InstanceId,
                 effect.TargetId,
                 actionId,
