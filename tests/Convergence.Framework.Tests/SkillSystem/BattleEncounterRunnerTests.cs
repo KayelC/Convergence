@@ -296,6 +296,254 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_ContainsInitiativeExceptionsBeforeBattleStart()
+    {
+        var lifecycle = new RecordingLifecycle();
+
+        BattleEncounterResult result = Run(
+            [Participant("initiative_fault_player", PlayerTeam), Participant("initiative_fault_enemy", EnemyTeam)],
+            new ThrowingInitiative(),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(1));
+
+        AssertPortFault(result, BattleEncounterFaultCode.InitiativeExecutionFailed, "initiative");
+        Assert.Equal(0, lifecycle.BattleStartCalls);
+        Assert.Equal(0, lifecycle.BattleEndCalls);
+        Assert.Equal(
+            [BattleEncounterEventKind.BattleFaulted, BattleEncounterEventKind.BattleEnded],
+            result.Events.Select(battleEvent => battleEvent.Kind));
+    }
+
+    [Fact]
+    public void Runner_ContainsStateSynchronizationExceptionsAndRunsBattleEndOnce()
+    {
+        BattleEncounterParticipant player = Participant("synchronizer_fault_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request => request.Participants[0].State.SetResource(Hp, 7)
+        };
+        var synchronizer = new ThrowingSynchronizer(throwOnCall: 2);
+
+        BattleEncounterResult result = Run(
+            [player, Participant("synchronizer_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(1),
+            synchronizer: synchronizer);
+
+        AssertPortFault(result, BattleEncounterFaultCode.StateSynchronizationFailed, "state-synchronization");
+        Assert.Equal(2, synchronizer.Calls);
+        Assert.Equal(1, lifecycle.BattleStartCalls);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(7, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(7, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+    }
+
+    [Theory]
+    [InlineData(ThrowingTurnEconomyStage.Factory, 0)]
+    [InlineData(ThrowingTurnEconomyStage.NullFactory, 0)]
+    [InlineData(ThrowingTurnEconomyStage.StartPhase, 0)]
+    [InlineData(ThrowingTurnEconomyStage.CaptureSnapshot, 0)]
+    [InlineData(ThrowingTurnEconomyStage.NullSnapshot, 0)]
+    [InlineData(ThrowingTurnEconomyStage.HasTurnsRemaining, 0)]
+    [InlineData(ThrowingTurnEconomyStage.Apply, 1)]
+    public void Runner_ContainsEveryTurnEconomyPortException(
+        ThrowingTurnEconomyStage stage,
+        int expectedTurnHandlerCalls)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        Func<IBattleTurnEconomy> factory = stage switch
+        {
+            ThrowingTurnEconomyStage.Factory =>
+                () => throw new InvalidOperationException("Deliberate turn-economy-factory failure."),
+            ThrowingTurnEconomyStage.NullFactory => () => null!,
+            _ => () => new ThrowingTurnEconomy(stage)
+        };
+
+        BattleEncounterResult result = Run(
+            [Participant("economy_fault_player", PlayerTeam), Participant("economy_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            factory);
+
+        AssertPortFault(result, BattleEncounterFaultCode.TurnEconomyExecutionFailed, "turn-economy-");
+        Assert.Equal(expectedTurnHandlerCalls, handler.Requests.Count);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Runner_ContainsTurnHandlerExceptionsIncludingUnsignalledCancellation(bool cancellationShaped)
+    {
+        BattleEncounterParticipant player = Participant("handler_fault_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle();
+        Exception failure = cancellationShaped
+            ? new OperationCanceledException("Cancellation without the supplied token.")
+            : new InvalidOperationException("Deliberate turn-handler failure.");
+        var handler = new ThrowingTurnHandler(failure);
+
+        BattleEncounterResult result = Run(
+            [player, Participant("handler_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(result, BattleEncounterFaultCode.TurnHandlerExecutionFailed, "turn-handler");
+        Assert.Equal(player.InstanceId, result.Events.Single(battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleFaulted).ActorId);
+        Assert.Equal(1, handler.Calls);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+    }
+
+    [Fact]
+    public void Runner_ContainsMalformedNullTurnHandlerResult()
+    {
+        var lifecycle = new RecordingLifecycle();
+
+        BattleEncounterResult result = Run(
+            [Participant("null_handler_player", PlayerTeam), Participant("null_handler_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new NullTurnHandler(),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(result, BattleEncounterFaultCode.TurnHandlerExecutionFailed, "turn-handler");
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Runner_ContainsThrowingAndMalformedCompletionPolicies(bool returnNull)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var completion = new FailingCompletionPolicy(returnNull);
+
+        BattleEncounterResult result = Run(
+            [Participant("completion_fault_player", PlayerTeam), Participant("completion_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            completion);
+
+        AssertPortFault(result, BattleEncounterFaultCode.CompletionEvaluationFailed, "completion-evaluation");
+        Assert.Equal(1, completion.Calls);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+    }
+
+    [Theory]
+    [InlineData(BattleEncounterEventKind.ActorCreated, 0)]
+    [InlineData(BattleEncounterEventKind.RoundStarted, 1)]
+    public void Runner_ContainsEventSinkExceptionsAtPreStartAndActiveBattleStages(
+        BattleEncounterEventKind failingKind,
+        int expectedBattleEndCalls)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var eventSink = new ThrowingEventSink(failingKind);
+
+        BattleEncounterResult result = Run(
+            [Participant("event_fault_player", PlayerTeam), Participant("event_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            events: eventSink);
+
+        AssertPortFault(result, BattleEncounterFaultCode.EventPublicationFailed, "event-publication");
+        Assert.Equal(expectedBattleEndCalls, lifecycle.BattleEndCalls);
+        Assert.Equal(
+            Enumerable.Range(1, result.Events.Count),
+            result.Events.Select(battleEvent => battleEvent.Sequence));
+        Assert.Equal(BattleEncounterEventKind.BattleFaulted, result.Events[^2].Kind);
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+        Assert.DoesNotContain(eventSink.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.BattleFaulted or BattleEncounterEventKind.BattleEnded);
+    }
+
+    [Fact]
+    public void Runner_PreservesPrimaryPortFaultWhenFaultEventPublicationAlsoFails()
+    {
+        var lifecycle = new RecordingLifecycle();
+        var eventSink = new ThrowingEventSink(BattleEncounterEventKind.BattleFaulted);
+
+        BattleEncounterResult result = Run(
+            [Participant("secondary_sink_player", PlayerTeam), Participant("secondary_sink_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new ThrowingTurnHandler(new InvalidOperationException("Primary turn-handler failure.")),
+            new CompleteAfterTurnsPolicy(99),
+            events: eventSink);
+
+        AssertPortFault(result, BattleEncounterFaultCode.TurnHandlerExecutionFailed, "turn-handler");
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+    }
+
+    [Fact]
+    public void Runner_PreservesLifecycleFaultWhenFaultEventPublicationAlsoFails()
+    {
+        BattleEncounterParticipant player = Participant("lifecycle_sink_player", PlayerTeam);
+        var eventSink = new ThrowingEventSink(BattleEncounterEventKind.BattleFaulted);
+
+        BattleEncounterResult result = Run(
+            [player, Participant("lifecycle_sink_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new MutatingThrowingLifecycle(ThrowingLifecycleStage.TurnStart),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            events: eventSink);
+
+        AssertPortFault(result, BattleEncounterFaultCode.LifecycleExecutionFailed, "turn-start");
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+    }
+
+    [Fact]
+    public void Runner_PreservesPrimaryPortFaultAndRollsBackFailingBattleEndCleanup()
+    {
+        BattleEncounterParticipant player = Participant("cleanup_fault_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request =>
+            {
+                request.Participants[0].State.SetResource(Hp, 1);
+                throw new InvalidOperationException("Deliberate battle-end cleanup failure.");
+            }
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("cleanup_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new ThrowingTurnHandler(new InvalidOperationException("Primary turn-handler failure.")),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnHandlerExecutionFailed, result.FaultCode);
+        Assert.Contains("turn-handler", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Contains("battle-end", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+        Assert.Equal(
+            [BattleEncounterFaultCode.TurnHandlerExecutionFailed, BattleEncounterFaultCode.LifecycleExecutionFailed],
+            result.Events
+                .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleFaulted)
+                .Select(battleEvent => battleEvent.FaultCode));
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+    }
+
+    [Fact]
     public void Runner_FaultBeforeStartAlsoReturnsDetachedParticipantSnapshots()
     {
         BattleEncounterParticipant player = Participant("fault_snapshot_player", PlayerTeam);
@@ -752,6 +1000,19 @@ public sealed class BattleEncounterRunnerTests
     private static int Index(BattleEncounterResult result, BattleEncounterEventKind kind) =>
         result.Events.First(battleEvent => battleEvent.Kind == kind).Sequence;
 
+    private static void AssertPortFault(
+        BattleEncounterResult result,
+        BattleEncounterFaultCode expectedCode,
+        string expectedPortName)
+    {
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(expectedCode, result.FaultCode);
+        Assert.Contains(expectedPortName, result.FaultMessage, StringComparison.Ordinal);
+        BattleEncounterEvent fault = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleFaulted);
+        Assert.Equal(expectedCode, fault.FaultCode);
+    }
+
     private static BattleEncounterParticipant Participant(string id, ContentId teamId)
     {
         var state = new RuntimeActorState(
@@ -812,6 +1073,12 @@ public sealed class BattleEncounterRunnerTests
     private sealed class FixedInitiative(params ContentId[] teamOrder) : IBattleEncounterInitiativePolicy
     {
         public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request) => teamOrder;
+    }
+
+    private sealed class ThrowingInitiative : IBattleEncounterInitiativePolicy
+    {
+        public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request) =>
+            throw new InvalidOperationException("Deliberate initiative failure.");
     }
 
     private sealed class CountingInitiative(params ContentId[] teamOrder) : IBattleEncounterInitiativePolicy
@@ -925,6 +1192,28 @@ public sealed class BattleEncounterRunnerTests
         }
     }
 
+    private sealed class ThrowingTurnHandler(Exception failure) : IBattleEncounterTurnHandler
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return new ValueTask<BattleEncounterCommandResult>(
+                Task.FromException<BattleEncounterCommandResult>(failure));
+        }
+    }
+
+    private sealed class NullTurnHandler : IBattleEncounterTurnHandler
+    {
+        public ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default) =>
+            new((BattleEncounterCommandResult)null!);
+    }
+
     private sealed class CompleteAfterTurnsPolicy(int count) : IBattleEncounterCompletionPolicy
     {
         private int _turns;
@@ -940,6 +1229,19 @@ public sealed class BattleEncounterRunnerTests
             return _turns >= count
                 ? new BattleEncounterCompletion(true, BattleEncounterOutcome.Draw)
                 : new BattleEncounterCompletion(false);
+        }
+    }
+
+    private sealed class FailingCompletionPolicy(bool returnNull) : IBattleEncounterCompletionPolicy
+    {
+        public int Calls { get; private set; }
+
+        public BattleEncounterCompletion Evaluate(BattleEncounterCompletionRequest request)
+        {
+            Calls++;
+            return returnNull
+                ? null!
+                : throw new InvalidOperationException("Deliberate completion failure.");
         }
     }
 
@@ -1083,6 +1385,20 @@ public sealed class BattleEncounterRunnerTests
         public void Synchronize(IReadOnlyList<BattleEncounterParticipant> participants) => Calls++;
     }
 
+    private sealed class ThrowingSynchronizer(int throwOnCall) : IBattleEncounterStateSynchronizer
+    {
+        public int Calls { get; private set; }
+
+        public void Synchronize(IReadOnlyList<BattleEncounterParticipant> participants)
+        {
+            Calls++;
+            if (Calls == throwOnCall)
+            {
+                throw new InvalidOperationException("Deliberate state-synchronization failure.");
+            }
+        }
+    }
+
     private sealed class RecordingEventSink : IBattleEncounterEventSink
     {
         public List<BattleEncounterEvent> Events { get; } = [];
@@ -1115,6 +1431,85 @@ public sealed class BattleEncounterRunnerTests
             }
 
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingEventSink(BattleEncounterEventKind failingKind) : IBattleEncounterEventSink
+    {
+        private bool _failed;
+
+        public List<BattleEncounterEvent> Events { get; } = [];
+
+        public ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_failed || battleEvent.Kind == failingKind)
+            {
+                _failed = true;
+                return new ValueTask(Task.FromException(
+                    new InvalidOperationException("Deliberate event-publication failure.")));
+            }
+
+            Events.Add(battleEvent);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public enum ThrowingTurnEconomyStage
+    {
+        Factory,
+        NullFactory,
+        StartPhase,
+        CaptureSnapshot,
+        NullSnapshot,
+        HasTurnsRemaining,
+        Apply
+    }
+
+    private sealed class ThrowingTurnEconomy(ThrowingTurnEconomyStage stage) : IBattleTurnEconomy
+    {
+        private int _remaining;
+
+        public void StartPhase(int activeActorCount)
+        {
+            FailIf(ThrowingTurnEconomyStage.StartPhase);
+            _remaining = activeActorCount;
+        }
+
+        public bool HasTurnsRemaining()
+        {
+            FailIf(ThrowingTurnEconomyStage.HasTurnsRemaining);
+            return _remaining > 0;
+        }
+
+        public BattleTurnEconomySnapshot CaptureSnapshot()
+        {
+            FailIf(ThrowingTurnEconomyStage.CaptureSnapshot);
+            if (stage == ThrowingTurnEconomyStage.NullSnapshot)
+            {
+                return null!;
+            }
+
+            return new StandardActionTurnEconomySnapshot(_remaining);
+        }
+
+        public void Apply(ActionTurnConsumption consumption)
+        {
+            FailIf(ThrowingTurnEconomyStage.Apply);
+            if (consumption.Kind != ActionTurnConsumptionKind.None && _remaining > 0)
+            {
+                _remaining--;
+            }
+        }
+
+        private void FailIf(ThrowingTurnEconomyStage candidate)
+        {
+            if (stage == candidate)
+            {
+                throw new InvalidOperationException($"Deliberate turn-economy-{candidate} failure.");
+            }
         }
     }
 

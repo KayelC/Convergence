@@ -207,6 +207,47 @@ Correction verification:
 - active framework forbidden-reference search: clean;
 - active content: unchanged.
 
+### M5 corrected on 2026-07-15
+
+Status: Corrected after reviewed commit `33cfc9c`
+
+Encounter orchestration now contains non-cancellation failures from every
+injected execution port:
+
+- initiative, state synchronization, turn-economy creation and state methods,
+  turn handling, completion evaluation, and event publication each map to a
+  stable `BattleEncounterFaultCode`;
+- malformed null results from turn-economy factories, turn handlers, completion
+  policies, and turn-economy snapshots cross the same typed boundary;
+- an exception before `BattleStarted` returns detached participant snapshots and
+  does not invoke battle-end lifecycle;
+- an exception after `BattleStarted` invokes transactional battle-end lifecycle
+  exactly once before the result snapshot is captured;
+- a failing battle-end cleanup rolls back its staged actor mutations, adds a
+  secondary lifecycle fault event, and preserves the original port as the
+  result's primary fault code;
+- a failing event sink cannot prevent local ordered fault/end events or the
+  typed result from reaching the caller;
+- `OperationCanceledException` propagates only when the supplied token is
+  cancelled. A cancellation-shaped exception without token cancellation is a
+  fault of the port that raised it.
+
+Nineteen permanent adversarial cases cover synchronous and asynchronously
+faulted ports, null host returns, pre-start and active-battle failures, cleanup
+snapshots, cleanup rollback, secondary event-sink failure, and cancellation
+discrimination. The pre-existing cancellation and synchronization-context tests
+remain part of the focused gate.
+
+Correction verification:
+
+- focused encounter-runner tests: 52 passed;
+- full solution: 777 passed, 0 failed, 0 skipped;
+- nonincremental solution build: 0 warnings and 0 errors;
+- battle, field, save, and Training Annex demos: successful;
+- `git diff --check`: clean;
+- active framework host/legacy forbidden-reference search: clean;
+- active content: unchanged.
+
 ## Findings
 
 ### H1. Rejected resource recalculation can partially mutate the live actor
@@ -390,6 +431,9 @@ Severity: Medium
 
 Affected boundary: encounter orchestration and host integration
 
+Correction status: Corrected on 2026-07-15; original finding retained below as
+review evidence.
+
 Lifecycle callback failures are translated into a faulted
 `BattleEncounterResult`, but exceptions from several other injected ports are
 not contained consistently. These include initiative, participant
@@ -564,14 +608,13 @@ This is an ordered correction set, not a new feature roadmap:
 2. Prepared assessment freshness: M1 corrected.
 3. Enum and persisted-domain validation: M3 corrected.
 4. Negotiation cancellation semantics: M4 corrected.
-5. Encounter injected-port containment: M5.
+5. Encounter injected-port containment: M5 corrected.
 6. Fusion rank arithmetic: M6.
 7. DemoHost root confinement, formatting, and CI: L1 and L2.
 
-The H1 atomicity, M1 stale-assessment, M2 resource-overflow, M3 enum-domain, and
-M4 negotiation-cancellation defects are corrected. M5 should be resolved before
-a public Godot integration is described as production-ready. M6 should be
-resolved before arbitrary developer-authored fusion ranks are treated as
+The H1 atomicity, M1 stale-assessment, M2 resource-overflow, M3 enum-domain, M4
+negotiation-cancellation, and M5 encounter-port defects are corrected. M6 should
+be resolved before arbitrary developer-authored fusion ranks are treated as
 supported.
 
 ## Readiness Decision
