@@ -81,6 +81,32 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task SkillAction_RejectsStalePreparedCostWithoutMutationOrTurnConsumption()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA, sp: 10);
+        RuntimeActorState target = Actor("target", TeamB);
+        SkillDefinition skill = ActiveSkill(
+            "frost",
+            [new SkillCostDefinition(Sp, new FlatAmountDefinition(10), CanReduceToZero: true)],
+            [new DamageEffectDefinition(DamageElement.Ice, 7, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1))]);
+        var command = new SkillBattleActionCommand(skill, [target.InstanceId]);
+        var request = Request(command, actor, [actor, target]);
+        BattleActionAssessment assessment = executor.Assess(request);
+        actor.SetResource(Sp, 0);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.SkillRejected, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Empty(result.Effects);
+        Assert.Equal(0, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task RandomSkill_OneStepExecutionResolvesAndMutatesExactlyOneTarget()
     {
         var randomTargets = new AlternatingSkillRandomTargetPolicy();

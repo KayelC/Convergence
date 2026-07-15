@@ -189,7 +189,10 @@ public sealed record SkillExecutionAssessment
     internal ExecutionAssessmentToken<SkillExecutionRequest> Preparation { get; }
 }
 
-internal sealed record ResolvedSkillCost(ContentId ResourceId, decimal Amount);
+internal sealed record ResolvedSkillCost(
+    ContentId ResourceId,
+    decimal Amount,
+    bool CanReduceToZero);
 
 public sealed record TurnEconomyResolution(TurnEconomyOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
 

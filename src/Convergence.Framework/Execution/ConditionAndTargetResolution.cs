@@ -190,14 +190,7 @@ internal static class BattleTargetResolver
             return true;
         }
 
-        RuntimeActorState[] eligible = request.Participants
-            .Where(candidate => candidate.IsActive)
-            .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
-            .Where(candidate => targeting.Relation == TargetRelation.Self ||
-                                targeting.AllowSelf ||
-                                candidate.InstanceId != request.Actor.InstanceId)
-            .Where(candidate => LifeStateMatches(candidate, targeting.LifeState))
-            .ToArray();
+        RuntimeActorState[] eligible = GetEligibleTargets(request, targeting);
 
         IReadOnlyList<RuntimeActorState> targets;
         switch (targeting.Selection)
@@ -267,6 +260,94 @@ internal static class BattleTargetResolver
         return true;
     }
 
+    public static bool TryValidatePreparedTargets(
+        SkillExecutionRequest request,
+        ResolvedRuntimeTargetSet prepared,
+        out SkillExecutionDiagnostic? diagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(prepared);
+
+        if (request.Participants.Select(participant => participant.InstanceId).Distinct().Count() !=
+            request.Participants.Count)
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                "Battle participant instance IDs must be unique.");
+            return false;
+        }
+
+        TargetingDefinition? targeting = request.Skill.Targeting;
+        if (targeting is null)
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetingInvalid,
+                "Active skill targeting is missing.");
+            return false;
+        }
+
+        if (targeting.Relation == TargetRelation.None && targeting.Selection == TargetSelection.None)
+        {
+            bool isValidUntargeted = prepared.IsUntargeted && prepared.Targets.Count == 0;
+            diagnostic = isValidUntargeted
+                ? null
+                : new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                    "The prepared skill targets no longer match its untargeted targeting rules.");
+            return isValidUntargeted;
+        }
+
+        if (prepared.IsUntargeted)
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                "A targeted skill cannot execute with an untargeted assessment.");
+            return false;
+        }
+
+        RuntimeActorState[] eligible = GetEligibleTargets(request, targeting);
+        RuntimeInstanceId[] eligibleIds = eligible.Select(target => target.InstanceId).ToArray();
+        RuntimeInstanceId[] preparedIds = prepared.Targets.Select(target => target.InstanceId).ToArray();
+        if (preparedIds.Distinct().Count() != preparedIds.Length ||
+            preparedIds.Any(targetId => !eligibleIds.Contains(targetId)))
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                "One or more prepared skill targets are no longer eligible for the skill's targeting rules.");
+            return false;
+        }
+
+        bool selectionMatches = targeting.Selection switch
+        {
+            TargetSelection.Single => preparedIds.SequenceEqual(request.SelectedTargetIds),
+            TargetSelection.All => preparedIds.SequenceEqual(eligibleIds),
+            TargetSelection.Random => true,
+            _ => false
+        };
+        if (!selectionMatches)
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                "The prepared skill targets no longer match the authored selection rule.");
+            return false;
+        }
+
+        TargetCountDefinition expected = targeting.Count ?? new TargetCountDefinition(
+            1,
+            targeting.Selection == TargetSelection.All ? int.MaxValue : 1);
+        if (preparedIds.Length < expected.Minimum || preparedIds.Length > expected.Maximum)
+        {
+            diagnostic = new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.TargetSelectionInvalid,
+                $"Prepared target selection contains {preparedIds.Length} target(s); " +
+                $"expected {expected.Minimum} through {expected.Maximum}.");
+            return false;
+        }
+
+        diagnostic = null;
+        return true;
+    }
+
     private static IReadOnlyList<RuntimeActorState> ResolveSelected(
         SkillExecutionRequest request,
         IReadOnlyList<RuntimeActorState> eligible)
@@ -284,6 +365,18 @@ internal static class BattleTargetResolver
 
         return Array.AsReadOnly(targets.ToArray());
     }
+
+    private static RuntimeActorState[] GetEligibleTargets(
+        SkillExecutionRequest request,
+        TargetingDefinition targeting) =>
+        request.Participants
+            .Where(candidate => candidate.IsActive)
+            .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
+            .Where(candidate => targeting.Relation == TargetRelation.Self ||
+                                targeting.AllowSelf ||
+                                candidate.InstanceId != request.Actor.InstanceId)
+            .Where(candidate => LifeStateMatches(candidate, targeting.LifeState))
+            .ToArray();
 
     private static bool RelationMatches(RuntimeActorState actor, RuntimeActorState candidate, TargetRelation relation) =>
         relation switch

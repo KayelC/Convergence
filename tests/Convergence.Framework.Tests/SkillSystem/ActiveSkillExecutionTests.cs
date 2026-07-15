@@ -173,6 +173,88 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_PreparedAssessmentRejectsWhenCurrentResourceCanNoLongerPay()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+            [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
+            costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(10), CanReduceToZero: true)]);
+        var executor = new SkillExecutor(Services());
+        SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        actor.SetResource(Sp, 0);
+
+        SkillExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == SkillExecutionDiagnosticCode.InsufficientResource);
+        Assert.Empty(result.Effects);
+        Assert.False(result.CostsCommitted);
+        Assert.Equal(0, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+
+        actor.SetResource(Sp, 10);
+        SkillExecutionResult reused = executor.Execute(request, assessment);
+        Assert.Equal(SkillExecutionStatus.Rejected, reused.Status);
+        Assert.Equal(SkillExecutionDiagnosticCode.AssessmentInvalid, Assert.Single(reused.Diagnostics).Code);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public void Execute_PreparedAssessmentRevalidatesTheNonZeroResourceFloor()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 11);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+            [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
+            costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(10), CanReduceToZero: false)]);
+        var executor = new SkillExecutor(Services());
+        SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        actor.SetResource(Sp, 10);
+
+        SkillExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == SkillExecutionDiagnosticCode.InsufficientResource);
+        Assert.Empty(result.Effects);
+        Assert.False(result.CostsCommitted);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public void Execute_PreparedAssessmentRejectsTargetThatBecameIneligible()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+            [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
+            costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
+        var executor = new SkillExecutor(Services());
+        SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        target.SetResource(Hp, 0);
+
+        SkillExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == SkillExecutionDiagnosticCode.TargetSelectionInvalid);
+        Assert.Empty(result.Effects);
+        Assert.False(result.CostsCommitted);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(0, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Execute_TypedAilmentUsesAuthoritativeGuardRule()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);

@@ -16,6 +16,7 @@ This directory is the active documentation authority for Convergence Framework.
 10. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
 11. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
 12. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v2, save-v7, and vocabulary-enforcement contract.
+13. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
 
 ## Authority Rules
 

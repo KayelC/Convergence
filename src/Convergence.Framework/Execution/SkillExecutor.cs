@@ -71,6 +71,26 @@ public sealed class SkillExecutor : ISkillExecutor
                 : "The skill assessment was not created by this executor.");
         }
 
+        List<SkillExecutionDiagnostic> currentStateDiagnostics;
+        try
+        {
+            currentStateDiagnostics = ValidatePreparedState(request, assessment, preparedTargets);
+        }
+        catch (Exception exception)
+        {
+            return SkillExecutionResult.Rejected(
+            [
+                new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.ExecutionFailed,
+                    $"Skill execution preconditions could not be revalidated: {exception.Message}")
+            ]);
+        }
+
+        if (currentStateDiagnostics.Count > 0)
+        {
+            return SkillExecutionResult.Rejected(currentStateDiagnostics);
+        }
+
         OrderedEffectExecution execution;
         RuntimeActorExecutionTransaction transaction;
         try
@@ -264,7 +284,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 NumericRuleModifierType.ResourceCost,
                 amount,
                 new RuleModifierContext(conditionContext, request.Skill, cost.ResourceId)));
-            resolvedCosts.Add(new ResolvedSkillCost(cost.ResourceId, amount));
+            resolvedCosts.Add(new ResolvedSkillCost(cost.ResourceId, amount, cost.CanReduceToZero));
             decimal previousRequired = requiredByResource.GetValueOrDefault(cost.ResourceId);
             bool representable = CombatArithmetic.TryAdd(previousRequired, amount, out decimal required);
             requiredByResource[cost.ResourceId] = required;
@@ -285,6 +305,74 @@ public sealed class SkillExecutor : ISkillExecutor
         }
 
         return Array.AsReadOnly(resolvedCosts.ToArray());
+    }
+
+    private static List<SkillExecutionDiagnostic> ValidatePreparedState(
+        SkillExecutionRequest request,
+        SkillExecutionAssessment assessment,
+        ResolvedRuntimeTargetSet preparedTargets)
+    {
+        var diagnostics = new List<SkillExecutionDiagnostic>();
+        if (!BattleTargetResolver.TryValidatePreparedTargets(
+                request,
+                preparedTargets,
+                out SkillExecutionDiagnostic? targetingDiagnostic) &&
+            targetingDiagnostic is not null)
+        {
+            diagnostics.Add(targetingDiagnostic);
+        }
+
+        if (assessment.Costs.Count != request.Skill.Costs.Count)
+        {
+            diagnostics.Add(new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.AssessmentInvalid,
+                "The prepared skill costs no longer match the authored skill costs."));
+            return diagnostics;
+        }
+
+        var requiredByResource = new Dictionary<ContentId, decimal>();
+        for (int index = 0; index < assessment.Costs.Count; index++)
+        {
+            ResolvedSkillCost cost = assessment.Costs[index];
+            SkillCostDefinition authored = request.Skill.Costs[index];
+            if (cost.ResourceId != authored.ResourceId ||
+                cost.CanReduceToZero != authored.CanReduceToZero ||
+                cost.Amount < 0)
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.AssessmentInvalid,
+                    "The prepared skill costs no longer match the authored skill costs."));
+                return diagnostics;
+            }
+
+            if (!request.Actor.TryGetResource(cost.ResourceId, out BattleResourceState? resource) || resource is null)
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.ResourceMissing,
+                    $"Actor '{request.Actor.InstanceId}' no longer has resource '{cost.ResourceId}'."));
+                continue;
+            }
+
+            decimal previousRequired = requiredByResource.GetValueOrDefault(cost.ResourceId);
+            if (!CombatArithmetic.TryAdd(previousRequired, cost.Amount, out decimal required))
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.InsufficientResource,
+                    $"Resource '{cost.ResourceId}' cannot represent the prepared aggregate skill cost."));
+                continue;
+            }
+
+            requiredByResource[cost.ResourceId] = required;
+            decimal remaining = resource.Current - required;
+            if (remaining < 0 || (!cost.CanReduceToZero && remaining <= 0))
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.InsufficientResource,
+                    $"Resource '{cost.ResourceId}' can no longer pay the prepared skill costs."));
+            }
+        }
+
+        return diagnostics;
     }
 
     private static void CommitCosts(RuntimeActorState actor, IEnumerable<ResolvedSkillCost> costs)
