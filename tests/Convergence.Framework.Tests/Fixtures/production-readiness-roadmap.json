@@ -131,11 +131,11 @@
       "id": "PR-M5",
       "title": "Structured localization-safe encounter events",
       "severity": "medium",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 4,
       "plannedCommit": "battle: structure encounter event contracts",
       "evidence": ["BattleEncounterRunnerTests"],
-      "remainingWork": ["typed event payloads", "non-authoritative debug messages"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {

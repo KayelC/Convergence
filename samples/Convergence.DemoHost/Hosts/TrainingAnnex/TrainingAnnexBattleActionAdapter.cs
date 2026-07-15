@@ -1287,9 +1287,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 new(
                     0,
                     BattleEncounterEventKind.CommandSelected,
-                    $"{actor.State.InstanceId} selected {actionId}.",
-                    actor.State.InstanceId,
-                    SourceId: actionId)
+                    new BattleCommandSelectedEventPayload(actor.State.InstanceId, actionId),
+                    $"{actor.State.InstanceId} selected {actionId}.")
             };
 
             foreach (EffectExecutionResult effect in execution.Effects)
@@ -1297,21 +1296,19 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.EffectResolved,
-                    $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome}).",
-                    actor.State.InstanceId,
-                    effect.TargetId,
-                    actionId,
-                    effect.Value));
+                    new BattleEffectResolvedEventPayload(actor.State.InstanceId, actionId, effect),
+                    $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome})."));
                 if (effect.Value is decimal value)
                 {
                     events.Add(new BattleEncounterEvent(
                         0,
                         BattleEncounterEventKind.ResourceChanged,
-                        $"Resource changed by {value}.",
-                        actor.State.InstanceId,
-                        effect.TargetId,
-                        actionId,
-                        value));
+                        new BattleResourceChangedEventPayload(
+                            actor.State.InstanceId,
+                            effect.TargetId ?? actor.State.InstanceId,
+                            value,
+                            SourceId: actionId),
+                        $"Resource changed by {value}."));
                 }
             }
 
@@ -1320,11 +1317,13 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.ActionExecuted,
-                    actionEvent.Message,
-                    actionEvent.ActorId,
-                    actionEvent.TargetId,
-                    actionEvent.SourceId,
-                    actionEvent.Value));
+                    new BattleActionExecutedEventPayload(
+                        actionEvent.Kind,
+                        actionEvent.ActorId,
+                        actionEvent.TargetId,
+                        actionEvent.SourceId,
+                        actionEvent.Value),
+                    actionEvent.Message));
             }
 
             return events;
@@ -1517,20 +1516,33 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>
-        Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
-            0,
-            EncounterEventKind(statusEvent.Kind),
-            StatusMessage(statusEvent),
-            statusEvent.ActorId,
-            SourceId: statusEvent.RelatedId,
-            Value: statusEvent.Value)).ToArray());
+        Array.AsReadOnly(events.Select(MapStatusEvent).ToArray());
 
-    private static BattleEncounterEventKind EncounterEventKind(BattleStatusLifecycleEventKind kind) =>
-        kind switch
+    private static BattleEncounterEvent MapStatusEvent(BattleStatusLifecycleEvent statusEvent) =>
+        statusEvent.Kind switch
         {
-            BattleStatusLifecycleEventKind.ResourceChanged => BattleEncounterEventKind.ResourceChanged,
-            BattleStatusLifecycleEventKind.PassiveTriggered => BattleEncounterEventKind.PassiveActivated,
-            _ => BattleEncounterEventKind.StatusChanged
+            BattleStatusLifecycleEventKind.ResourceChanged => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ResourceChanged,
+                new BattleResourceChangedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.ActorId,
+                    statusEvent.Value ?? 0m,
+                    statusEvent.RelatedId),
+                StatusMessage(statusEvent)),
+            BattleStatusLifecycleEventKind.PassiveTriggered => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.PassiveActivated,
+                new BattlePassiveActivatedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.RelatedId ?? throw new InvalidOperationException(
+                        "Passive lifecycle events require a related skill ID.")),
+                StatusMessage(statusEvent)),
+            _ => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.StatusChanged,
+                new BattleStatusChangedEventPayload(statusEvent),
+                StatusMessage(statusEvent))
         };
 
     private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>
@@ -1651,7 +1663,10 @@ internal sealed class TrainingAnnexTurnEconomyEventSink(
             BattleEncounterEventKind.ResourceChanged or
             BattleEncounterEventKind.TurnRestricted)
         {
-            await events.PublishAsync(battleEvent.Message, cancellationToken).ConfigureAwait(false);
+            await events.PublishAsync(
+                    battleEvent.DebugText ?? battleEvent.Kind.ToString(),
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 

@@ -44,6 +44,73 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_PublishesImmutableTypedEncounterPayloadsWithoutRequiringDebugText()
+    {
+        BattleEncounterParticipant player = Participant("typed_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("typed_enemy", EnemyTeam);
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass)),
+            new CompleteAfterTurnsPolicy(1));
+
+        var started = Assert.IsType<BattleStartedEventPayload>(
+            result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleStarted).Payload);
+        Assert.Equal(Battle, started.ContextId);
+        Assert.Equal(Kind, started.BattleKindId);
+        Assert.Equal(Moon, started.MoonPhaseId);
+        Assert.Equal([player.InstanceId, enemy.InstanceId], started.ActorIds);
+        Assert.Equal([PlayerTeam, EnemyTeam], started.TeamIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeInstanceId>)started.ActorIds).Add(RuntimeInstanceId.Parse("late_actor")));
+
+        var initiative = Assert.IsType<BattleInitiativeRolledEventPayload>(
+            result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.InitiativeRolled).Payload);
+        Assert.Equal([PlayerTeam, EnemyTeam], initiative.TeamOrder);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)initiative.TeamOrder).Add(Id("late_team")));
+
+        Assert.Equal(
+            1,
+            Assert.IsType<BattleRoundStartedEventPayload>(
+                result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.RoundStarted).Payload)
+                .RoundNumber);
+        Assert.Equal(
+            PlayerTeam,
+            Assert.IsType<BattlePhaseStartedEventPayload>(
+                result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.PhaseStarted).Payload)
+                .TeamId);
+        Assert.Equal(
+            player.InstanceId,
+            Assert.IsType<BattleTurnStartedEventPayload>(
+                result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnStarted).Payload)
+                .ActorId);
+
+        var economy = Assert.IsType<BattleTurnEconomyChangedEventPayload>(
+            result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged).Payload);
+        Assert.Equal(1, economy.Before.RemainingActions);
+        Assert.Equal(0, economy.After.RemainingActions);
+        Assert.Equal(ActionTurnConsumptionKind.Pass, economy.Consumption.Kind);
+
+        var ended = Assert.IsType<BattleEndedEventPayload>(
+            result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Equal(result.Outcome, ended.Outcome);
+        Assert.Equal(1, ended.CompletedRounds);
+
+        var eventWithoutDebugText = new BattleEncounterEvent(
+            0,
+            BattleEncounterEventKind.CommandPassed,
+            new BattleCommandPassedEventPayload(player.InstanceId));
+        Assert.Null(eventWithoutDebugText.DebugText);
+        Assert.Throws<ArgumentException>(() => new BattleEncounterEvent(
+            0,
+            BattleEncounterEventKind.CommandPassed,
+            new BattleTurnStartedEventPayload(player.InstanceId, PlayerTeam)));
+    }
+
+    [Fact]
     public void Runner_ResultCapturesImmutableFinalParticipantSnapshots()
     {
         BattleEncounterParticipant player = Participant("snapshot_player", PlayerTeam);
@@ -125,7 +192,7 @@ public sealed class BattleEncounterRunnerTests
             result.Events.Select(battleEvent => battleEvent.Kind));
         BattleEncounterEvent fault = result.Events[0];
         Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, fault.FaultCode);
-        Assert.Null(result.Events[1].FaultCode);
+        Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, result.Events[1].FaultCode);
         Assert.Equal(result.Events, eventSink.Events);
 
         Assert.Equal(0, initiative.Calls);
@@ -730,7 +797,7 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(0, lifecycle.TurnEndCalls);
         Assert.Contains(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.ActionRejected &&
-            battleEvent.Message == "selection became invalid");
+            battleEvent.DebugText == "selection became invalid");
         Assert.DoesNotContain(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
     }

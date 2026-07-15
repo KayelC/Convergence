@@ -41,7 +41,7 @@ diagnostics and no hidden standard fallback. See
 
 Runtime actors are identified by `RuntimeInstanceId` and content records by `ContentId`. Actor state, party and rosters, inventory, equipment, wallet, navigation, traversal, Compendium, knowledge, and session state have immutable snapshot boundaries.
 
-Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
+Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
 ## Optional Modules
 

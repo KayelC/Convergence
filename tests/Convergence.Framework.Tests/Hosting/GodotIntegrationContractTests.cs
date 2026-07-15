@@ -440,7 +440,7 @@ public sealed class GodotIntegrationContractTests
                 battleEvent.Kind,
                 battleEvent.ActorId,
                 actorHandle,
-                battleEvent.Message));
+                battleEvent.DebugText ?? battleEvent.Payload.GetType().Name));
             return ValueTask.CompletedTask;
         }
     }
@@ -459,8 +459,8 @@ public sealed class GodotIntegrationContractTests
                         new BattleEncounterEvent(
                             0,
                             BattleEncounterEventKind.CommandPassed,
-                            $"{request.Actor.InstanceId} passed.",
-                            request.Actor.InstanceId)
+                            new BattleCommandPassedEventPayload(request.Actor.InstanceId),
+                            $"{request.Actor.InstanceId} passed.")
                     ]));
         }
     }

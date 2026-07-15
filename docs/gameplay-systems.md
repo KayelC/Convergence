@@ -28,7 +28,7 @@ The lifecycle service handles battle start, turn restrictions, turn end, duratio
 
 ## Encounters, AI, Knowledge, And Rewards
 
-The encounter runner owns initiative, phases, turns, lifecycle dispatch, command execution, liveness, cancellation, outcomes, and ordered events. Strategy ports allow deterministic or host-defined action selection. Player knowledge can persist through snapshots, while encounter AI knowledge may be scoped to one battle. Negotiation and reward services return immutable outcomes without owning presentation.
+The encounter runner owns initiative, phases, turns, lifecycle dispatch, command execution, liveness, cancellation, outcomes, and ordered events. Its events expose immutable typed payloads instead of making debug messages authoritative, so Godot, console, and test hosts can map the same event to different presentation. Strategy ports allow deterministic or host-defined action selection. Player knowledge can persist through snapshots, while encounter AI knowledge may be scoped to one battle. Negotiation and reward services return immutable outcomes without owning presentation.
 
 ## Party, Rosters, Inventory, And Economy
 

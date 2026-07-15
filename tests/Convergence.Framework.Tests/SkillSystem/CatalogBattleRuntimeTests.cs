@@ -621,7 +621,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(
             BattleEncounterFaultCode.DuplicateParticipantInstanceId,
             result.Events[0].FaultCode);
-        Assert.Null(result.Events[1].FaultCode);
+        Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, result.Events[1].FaultCode);
         Assert.Equal(100, player.State.GetRequiredResource(Id("hp")).Current);
         Assert.Equal(100, enemy.State.GetRequiredResource(Id("hp")).Current);
     }

@@ -1831,9 +1831,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         await sink.PublishAsync(new BattleEncounterEvent(
             1,
             BattleEncounterEventKind.TurnEconomyChanged,
-            "Localized presentation text with no parseable icon counts.",
-            actorId,
-            TurnEconomyState: new ActionTokenTurnEconomySnapshot(0, 1)));
+            new BattleTurnEconomyChangedEventPayload(
+                actorId,
+                new ActionTokenTurnEconomySnapshot(1, 0),
+                new ActionTokenTurnEconomySnapshot(0, 1),
+                ActionTurnConsumption.FromTurnEconomy(
+                    new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false))),
+            "Localized presentation text with no parseable token counts."));
 
         TrainingAnnexTurnEconomyEvidence evidence = Assert.Single(tracker.Evidence);
         Assert.Equal(0, evidence.AfterFullTokens);

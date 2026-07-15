@@ -31,46 +31,12 @@ public enum BattleEncounterFaultCode
     TurnEconomyExecutionFailed,
     TurnHandlerExecutionFailed,
     CompletionEvaluationFailed,
-    EventPublicationFailed
-}
-
-public enum BattleEncounterEventKind
-{
-    ActorCreated,
-    BattleStarted,
-    InitiativeRolled,
-    RoundStarted,
-    PhaseStarted,
-    TurnStarted,
-    TurnRestricted,
-    CommandSelected,
-    CommandPassed,
-    ActionExecuted,
-    ActionRejected,
-    EffectResolved,
-    PassiveActivated,
-    StatusChanged,
-    ResourceChanged,
-    TurnEconomyChanged,
-    DeploymentChanged,
-    ActorDefeated,
-    PhaseEnded,
-    BattleFaulted,
-    BattleEnded,
-    HostActionRequested
-}
-
-public sealed record BattleEncounterEvent(
-    int Sequence,
-    BattleEncounterEventKind Kind,
-    string Message,
-    RuntimeInstanceId? ActorId = null,
-    RuntimeInstanceId? TargetId = null,
-    ContentId? SourceId = null,
-    decimal? Value = null,
-    BattleTurnEconomySnapshot? TurnEconomyState = null)
-{
-    public BattleEncounterFaultCode? FaultCode { get; internal init; }
+    EventPublicationFailed,
+    PhaseCommandLimitExceeded,
+    ConsecutiveFreeActionLimitExceeded,
+    TurnEconomyTransitionInvalid,
+    CommandExecutionFaulted,
+    CommandRejected
 }
 
 public sealed record BattleEncounterParticipant
@@ -484,6 +450,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         var events = new List<BattleEncounterEvent>();
         var defeatedAnnouncements = new HashSet<RuntimeInstanceId>();
         int sequence = 0;
+        int completedRounds = 0;
         bool battleStarted = false;
         bool battleEndLifecycleAttempted = false;
         IReadOnlyList<ContentId> teamOrder = Array.Empty<ContentId>();
@@ -601,28 +568,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         async ValueTask AddAsync(
             BattleEncounterEventKind kind,
-            string message,
-            RuntimeInstanceId? actor = null,
-            RuntimeInstanceId? target = null,
-            ContentId? source = null,
-            decimal? value = null)
+            BattleEncounterEventPayload payload,
+            string? debugText = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var battleEvent = new BattleEncounterEvent(++sequence, kind, message, actor, target, source, value);
+            var battleEvent = new BattleEncounterEvent(++sequence, kind, payload, debugText);
             await PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
         }
 
         async ValueTask AddTurnEconomyAsync(
             RuntimeInstanceId actor,
-            BattleTurnEconomySnapshot state)
+            BattleTurnEconomySnapshot before,
+            BattleTurnEconomySnapshot after,
+            ActionTurnConsumption consumption)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var battleEvent = new BattleEncounterEvent(
                 ++sequence,
                 BattleEncounterEventKind.TurnEconomyChanged,
-                $"Turn economy {state.EconomyId}: {state.RemainingActions} action(s) remaining.",
-                actor,
-                TurnEconomyState: state);
+                new BattleTurnEconomyChangedEventPayload(actor, before, after, consumption),
+                $"Turn economy {after.EconomyId}: {after.RemainingActions} action(s) remaining.");
             await PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
         }
 
@@ -687,15 +652,29 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             participant.State.Passives.ResetBattleActivations();
             await AddAsync(
                     BattleEncounterEventKind.ActorCreated,
-                    $"Created {participant.DisplayName} as {participant.InstanceId} on {participant.TeamId}.",
-                    participant.InstanceId)
+                    new BattleActorCreatedEventPayload(
+                        participant.InstanceId,
+                        participant.State.EntityId,
+                        participant.TeamId),
+                    $"Created {participant.DisplayName} as {participant.InstanceId} on {participant.TeamId}.")
                 .ConfigureAwait(false);
         }
 
-        await AddAsync(BattleEncounterEventKind.BattleStarted, "Battle started.").ConfigureAwait(false);
+        await AddAsync(
+                BattleEncounterEventKind.BattleStarted,
+                new BattleStartedEventPayload(
+                    request.ContextId,
+                    request.BattleKindId,
+                    request.MoonPhaseId,
+                    request.RoundLimit,
+                    request.Participants.Select(participant => participant.InstanceId),
+                    participatingTeams),
+                "Battle started.")
+            .ConfigureAwait(false);
         battleStarted = true;
         await AddAsync(
                 BattleEncounterEventKind.InitiativeRolled,
+                new BattleInitiativeRolledEventPayload(teamOrder),
                 "Initiative order: " + string.Join(", ", teamOrder.Select(team => team.ToString())) + ".")
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -736,7 +715,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         for (int round = 1; round <= request.RoundLimit; round++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await AddAsync(BattleEncounterEventKind.RoundStarted, $"Round {round} started.").ConfigureAwait(false);
+            completedRounds = round;
+            await AddAsync(
+                    BattleEncounterEventKind.RoundStarted,
+                    new BattleRoundStartedEventPayload(round),
+                    $"Round {round} started.")
+                .ConfigureAwait(false);
 
             foreach (ContentId teamId in teamOrder)
             {
@@ -761,6 +745,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
                 await AddAsync(
                         BattleEncounterEventKind.PhaseStarted,
+                        new BattlePhaseStartedEventPayload(teamId, phaseStartState),
                         $"Team {teamId} started a phase using {phaseStartState.EconomyId} " +
                         $"with {phaseStartState.RemainingActions} action(s).")
                     .ConfigureAwait(false);
@@ -775,7 +760,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     {
                         return await FaultDuringBattleAsync(
                                 $"Team {teamId} exceeded the configured phase command limit " +
-                                $"of {services.PhaseProgress.MaximumCommands}.")
+                                $"of {services.PhaseProgress.MaximumCommands}.",
+                                faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
                             .ConfigureAwait(false);
                     }
 
@@ -790,8 +776,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     commandCount++;
                     await AddAsync(
                             BattleEncounterEventKind.TurnStarted,
-                            $"{actor.DisplayName}'s turn started.",
-                            actor.InstanceId)
+                            new BattleTurnStartedEventPayload(actor.InstanceId, actor.TeamId),
+                            $"{actor.DisplayName}'s turn started.")
                         .ConfigureAwait(false);
 
                     cancellationToken.ThrowIfCancellationRequested();
@@ -831,8 +817,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     {
                         await AddAsync(
                                 BattleEncounterEventKind.TurnRestricted,
-                                $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.",
-                                actor.InstanceId)
+                                new BattleTurnRestrictedEventPayload(actor.InstanceId, turnStart.Restriction),
+                                $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.")
                             .ConfigureAwait(false);
                     }
 
@@ -865,10 +851,18 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     {
                         await AddAsync(
                                 BattleEncounterEventKind.BattleFaulted,
-                                command.FaultMessage ?? "Battle command faulted.",
-                                actor.InstanceId)
+                                new BattleFaultedEventPayload(
+                                    BattleEncounterFaultCode.CommandExecutionFaulted,
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    "turn-handler"),
+                                command.FaultMessage ?? "Battle command faulted.")
                             .ConfigureAwait(false);
-                        return await FinishAsync(BattleEncounterOutcome.Faulted, null, command.FaultMessage)
+                        return await FinishAsync(
+                                BattleEncounterOutcome.Faulted,
+                                null,
+                                command.FaultMessage,
+                                BattleEncounterFaultCode.CommandExecutionFaulted)
                             .ConfigureAwait(false);
                     }
 
@@ -877,10 +871,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         string rejection = command.FaultMessage ?? "Battle command was rejected.";
                         await AddAsync(
                                 BattleEncounterEventKind.ActionRejected,
-                                rejection,
-                                actor.InstanceId)
+                                new BattleActionRejectedEventPayload(
+                                    actor.InstanceId,
+                                    BattleEncounterCommandStatus.Rejected),
+                                rejection)
                             .ConfigureAwait(false);
-                        return await FinishAsync(BattleEncounterOutcome.Faulted, null, rejection).ConfigureAwait(false);
+                        return await FinishAsync(
+                                BattleEncounterOutcome.Faulted,
+                                null,
+                                rejection,
+                                BattleEncounterFaultCode.CommandRejected)
+                            .ConfigureAwait(false);
                     }
 
                     InvokePortAction(
@@ -902,7 +903,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         return await FaultDuringBattleAsync(
                                 economyFault,
                                 actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyExecutionFailed)
+                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
 
@@ -915,7 +916,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             return await FaultDuringBattleAsync(
                                     $"Team {teamId} exceeded the configured consecutive free-action limit " +
                                     $"of {services.PhaseProgress.MaximumConsecutiveFreeActions}.",
-                                    actor.InstanceId)
+                                    actor.InstanceId,
+                                    BattleEncounterFaultCode.ConsecutiveFreeActionLimitExceeded)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -960,7 +962,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
                     }
 
-                    await AddTurnEconomyAsync(actor.InstanceId, afterEconomy).ConfigureAwait(false);
+                    await AddTurnEconomyAsync(
+                            actor.InstanceId,
+                            beforeEconomy,
+                            afterEconomy,
+                            command.TurnConsumption)
+                        .ConfigureAwait(false);
 
                     Synchronize();
                     await AnnounceNewDefeatsAsync(request.Participants, defeatedAnnouncements, AddAsync)
@@ -1010,7 +1017,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
 
                 await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
-                await AddAsync(BattleEncounterEventKind.PhaseEnded, $"Team {teamId} phase ended.")
+                BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
+                await AddAsync(
+                        BattleEncounterEventKind.PhaseEnded,
+                        new BattlePhaseEndedEventPayload(teamId, phaseEndState),
+                        $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
             }
         }
@@ -1080,15 +1091,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             bool publishDuringFinalization = publishEvents;
+            BattleEncounterFaultCode resolvedFaultCode =
+                faultCode ?? BattleEncounterFaultCode.CommandExecutionFaulted;
 
             await AppendFinalEventAsync(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleFaulted,
-                    primaryMessage,
-                    actorId)
-            {
-                FaultCode = faultCode
-            })
+                    new BattleFaultedEventPayload(resolvedFaultCode, actorId),
+                    primaryMessage))
                 .ConfigureAwait(false);
 
             IReadOnlyList<BattleEncounterEvent> battleEndEvents = [];
@@ -1123,10 +1133,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     await AppendFinalEventAsync(new BattleEncounterEvent(
                             0,
                             BattleEncounterEventKind.BattleFaulted,
-                            cleanupFailure)
-                    {
-                        FaultCode = BattleEncounterFaultCode.LifecycleExecutionFailed
-                    })
+                            new BattleFaultedEventPayload(
+                                BattleEncounterFaultCode.LifecycleExecutionFailed,
+                                PortName: "battle-end-lifecycle"),
+                            cleanupFailure))
                         .ConfigureAwait(false);
                 }
             }
@@ -1137,6 +1147,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await AppendFinalEventAsync(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleEnded,
+                    new BattleEndedEventPayload(
+                        BattleEncounterOutcome.Faulted,
+                        null,
+                        completedRounds,
+                        resolvedFaultCode),
                     finalMessage))
                 .ConfigureAwait(false);
             foreach (BattleEncounterEvent battleEndEvent in battleEndEvents)
@@ -1150,7 +1165,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 request.Participants,
                 events,
                 finalMessage,
-                faultCode);
+                resolvedFaultCode);
 
             async ValueTask AppendFinalEventAsync(BattleEncounterEvent unsequenced)
             {
@@ -1237,7 +1252,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         : outcome == BattleEncounterOutcome.Faulted
                             ? "Battle faulted."
                             : "Battle ended.");
-            await AddAsync(BattleEncounterEventKind.BattleEnded, endMessage, source: winningTeamId)
+            await AddAsync(
+                    BattleEncounterEventKind.BattleEnded,
+                    new BattleEndedEventPayload(outcome, winningTeamId, completedRounds, faultCode),
+                    endMessage)
                 .ConfigureAwait(false);
             await AddRangeAsync(battleEndEvents).ConfigureAwait(false);
             return new BattleEncounterResult(
@@ -1337,31 +1355,47 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
     private static IEnumerable<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>
-        events.Select(statusEvent => new BattleEncounterEvent(
-            0,
-            statusEvent.Kind is BattleStatusLifecycleEventKind.ResourceChanged
-                ? BattleEncounterEventKind.ResourceChanged
-                : BattleEncounterEventKind.StatusChanged,
-            statusEvent.Detail ?? statusEvent.Kind.ToString(),
-            statusEvent.ActorId,
-            SourceId: statusEvent.RelatedId,
-            Value: statusEvent.Value));
+        events.Select(MapStatusEvent);
+
+    private static BattleEncounterEvent MapStatusEvent(BattleStatusLifecycleEvent statusEvent) =>
+        statusEvent.Kind switch
+        {
+            BattleStatusLifecycleEventKind.ResourceChanged => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ResourceChanged,
+                new BattleResourceChangedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.ActorId,
+                    statusEvent.Value ?? 0m,
+                    statusEvent.RelatedId),
+                statusEvent.Detail),
+            BattleStatusLifecycleEventKind.PassiveTriggered => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.PassiveActivated,
+                new BattlePassiveActivatedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.RelatedId ?? throw new InvalidOperationException(
+                        "Passive lifecycle events require a related skill ID.")),
+                statusEvent.Detail),
+            _ => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.StatusChanged,
+                new BattleStatusChangedEventPayload(statusEvent),
+                statusEvent.Detail)
+        };
 
     private static async ValueTask AnnounceNewDefeatsAsync(
         IEnumerable<BattleEncounterParticipant> participants,
         HashSet<RuntimeInstanceId> announced,
-        Func<BattleEncounterEventKind, string, RuntimeInstanceId?, RuntimeInstanceId?, ContentId?, decimal?, ValueTask> add)
+        Func<BattleEncounterEventKind, BattleEncounterEventPayload, string?, ValueTask> add)
     {
         foreach (BattleEncounterParticipant participant in participants.Where(participant =>
                      participant.State.IsDefeated && announced.Add(participant.InstanceId)))
         {
             await add(
                     BattleEncounterEventKind.ActorDefeated,
-                    $"{participant.InstanceId} was defeated.",
-                    participant.InstanceId,
-                    null,
-                    null,
-                    null)
+                    new BattleActorDefeatedEventPayload(participant.InstanceId, participant.TeamId),
+                    $"{participant.InstanceId} was defeated.")
                 .ConfigureAwait(false);
         }
     }

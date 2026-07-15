@@ -441,7 +441,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             var runtimeEvent = new BattleRuntimeEvent(
                 mapped.Count + 1,
                 kind.Value,
-                battleEvent.Message,
+                battleEvent.DebugText ?? battleEvent.Kind.ToString(),
                 battleEvent.ActorId,
                 battleEvent.TargetId,
                 battleEvent.SourceId,
@@ -512,8 +512,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.CommandPassed,
-                    $"{actor.State.InstanceId} passed.",
-                    actor.State.InstanceId));
+                    new BattleCommandPassedEventPayload(actor.State.InstanceId),
+                    $"{actor.State.InstanceId} passed."));
                 return new ValueTask<BattleEncounterCommandResult>(
                     BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass, events));
             }
@@ -521,10 +521,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.CommandSelected,
-                $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}.",
-                actor.State.InstanceId,
-                selection.SelectedTargetIds.FirstOrDefault(),
-                selection.Skill.Id));
+                new BattleCommandSelectedEventPayload(
+                    actor.State.InstanceId,
+                    selection.Skill.Id,
+                    selection.SelectedTargetIds.FirstOrDefault()),
+                $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}."));
 
             if (selection.Assessment is not SkillExecutionAssessment prepared)
             {
@@ -532,9 +533,12 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleFaulted,
-                    fault,
-                    actor.State.InstanceId,
-                    SourceId: selection.Skill.Id));
+                    new BattleFaultedEventPayload(
+                        BattleEncounterFaultCode.CommandExecutionFaulted,
+                        actor.State.InstanceId,
+                        actor.State.TeamId,
+                        "automated-action"),
+                    fault));
                 return new ValueTask<BattleEncounterCommandResult>(
                     BattleEncounterCommandResult.Faulted(fault, events));
             }
@@ -549,9 +553,12 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleFaulted,
-                    fault,
-                    actor.State.InstanceId,
-                    SourceId: selection.Skill.Id));
+                    new BattleFaultedEventPayload(
+                        BattleEncounterFaultCode.CommandExecutionFaulted,
+                        actor.State.InstanceId,
+                        actor.State.TeamId,
+                        "automated-action"),
+                    fault));
                 return new ValueTask<BattleEncounterCommandResult>(
                     BattleEncounterCommandResult.Faulted(fault, events));
             }
@@ -577,21 +584,19 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.EffectResolved,
-                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome}).",
-                actor.State.InstanceId,
-                effect.TargetId,
-                skill.Id,
-                effect.Value));
+                new BattleEffectResolvedEventPayload(actor.State.InstanceId, skill.Id, effect),
+                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome})."));
             if (effect.Value is decimal value)
             {
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.ResourceChanged,
-                    $"Resource changed by {value}.",
-                    actor.State.InstanceId,
-                    effect.TargetId,
-                    skill.Id,
-                    value));
+                    new BattleResourceChangedEventPayload(
+                        actor.State.InstanceId,
+                        effect.TargetId ?? actor.State.InstanceId,
+                        value,
+                        SourceId: skill.Id),
+                    $"Resource changed by {value}."));
             }
 
             if (effect.TargetId is RuntimeInstanceId targetId &&
@@ -607,10 +612,13 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.PassiveActivated,
-                    $"Passive {passive.SkillId} resolved as {passive.Outcome}.",
-                    passive.TargetId,
-                    passive.TargetId,
-                    passive.SkillId));
+                    new BattlePassiveActivatedEventPayload(
+                        passive.TargetId,
+                        passive.SkillId,
+                        passive.Outcome,
+                        passive.TriggerIndex,
+                        passive.EventId),
+                    $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }
     }

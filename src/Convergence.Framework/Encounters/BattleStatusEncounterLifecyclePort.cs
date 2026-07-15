@@ -151,18 +151,34 @@ public sealed class BattleStatusEncounterLifecyclePort : IBattleEncounterLifecyc
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>
-        Array.AsReadOnly(events.Select(statusEvent => new BattleEncounterEvent(
-            0,
-            statusEvent.Kind switch
-            {
-                BattleStatusLifecycleEventKind.ResourceChanged => BattleEncounterEventKind.ResourceChanged,
-                BattleStatusLifecycleEventKind.PassiveTriggered => BattleEncounterEventKind.PassiveActivated,
-                _ => BattleEncounterEventKind.StatusChanged
-            },
-            StatusMessage(statusEvent),
-            statusEvent.ActorId,
-            SourceId: statusEvent.RelatedId,
-            Value: statusEvent.Value)).ToArray());
+        Array.AsReadOnly(events.Select(MapStatusEvent).ToArray());
+
+    private static BattleEncounterEvent MapStatusEvent(BattleStatusLifecycleEvent statusEvent) =>
+        statusEvent.Kind switch
+        {
+            BattleStatusLifecycleEventKind.ResourceChanged => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ResourceChanged,
+                new BattleResourceChangedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.ActorId,
+                    statusEvent.Value ?? 0m,
+                    statusEvent.RelatedId),
+                StatusMessage(statusEvent)),
+            BattleStatusLifecycleEventKind.PassiveTriggered => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.PassiveActivated,
+                new BattlePassiveActivatedEventPayload(
+                    statusEvent.ActorId,
+                    statusEvent.RelatedId ?? throw new InvalidOperationException(
+                        "Passive lifecycle events require a related skill ID.")),
+                StatusMessage(statusEvent)),
+            _ => new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.StatusChanged,
+                new BattleStatusChangedEventPayload(statusEvent),
+                StatusMessage(statusEvent))
+        };
 
     private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>
         statusEvent.Kind switch

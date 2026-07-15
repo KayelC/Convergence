@@ -207,8 +207,10 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             [new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.CommandPassed,
-                $"{request.Actor.State.InstanceId} could not act.",
-                request.Actor.State.InstanceId)]);
+                new BattleCommandPassedEventPayload(
+                    request.Actor.State.InstanceId,
+                    request.Turn.TurnStartOutcome),
+                $"{request.Actor.State.InstanceId} could not act.")]);
 
     private static BattleEncounterCommandResult LeaveBattle(
         AutomatedBattleTurnRestrictionRequest request,
@@ -230,8 +232,12 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             [new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.DeploymentChanged,
-                message,
-                actor.InstanceId)]);
+                new BattleDeploymentChangedEventPayload(
+                    actor.InstanceId,
+                    deployment,
+                    false,
+                    actor.TeamId),
+                message)]);
     }
 
     private async ValueTask<BattleEncounterCommandResult> ExecuteRestrictedActionAsync(
@@ -399,11 +405,12 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             new(
                 0,
                 BattleEncounterEventKind.CommandSelected,
+                new BattleCommandSelectedEventPayload(
+                    request.Actor.State.InstanceId,
+                    actionId,
+                    execution.Effects.FirstOrDefault()?.TargetId),
                 $"{request.Actor.State.InstanceId} selected {actionId} under " +
-                $"{request.Turn.TurnStartOutcome}.",
-                request.Actor.State.InstanceId,
-                execution.Effects.FirstOrDefault()?.TargetId,
-                actionId)
+                $"{request.Turn.TurnStartOutcome}.")
         };
 
         foreach (EffectExecutionResult effect in execution.Effects)
@@ -411,21 +418,19 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.EffectResolved,
-                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome}).",
-                request.Actor.State.InstanceId,
-                effect.TargetId,
-                actionId,
-                effect.Value));
+                new BattleEffectResolvedEventPayload(request.Actor.State.InstanceId, actionId, effect),
+                $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome})."));
             if (effect.Value is decimal value)
             {
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.ResourceChanged,
-                    $"Resource changed by {value}.",
-                    request.Actor.State.InstanceId,
-                    effect.TargetId,
-                    actionId,
-                    value));
+                    new BattleResourceChangedEventPayload(
+                        request.Actor.State.InstanceId,
+                        effect.TargetId ?? request.Actor.State.InstanceId,
+                        value,
+                        SourceId: actionId),
+                    $"Resource changed by {value}."));
             }
 
             LearnAffinity(request, command, effect);
@@ -434,10 +439,13 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                 events.Add(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.PassiveActivated,
-                    $"Passive {passive.SkillId} resolved as {passive.Outcome}.",
-                    passive.TargetId,
-                    passive.TargetId,
-                    passive.SkillId));
+                    new BattlePassiveActivatedEventPayload(
+                        passive.TargetId,
+                        passive.SkillId,
+                        passive.Outcome,
+                        passive.TriggerIndex,
+                        passive.EventId),
+                    $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }
 
@@ -446,9 +454,10 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             events.Add(new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.HostActionRequested,
-                $"Host action '{hostActionId}' was requested.",
-                request.Actor.State.InstanceId,
-                SourceId: hostActionId));
+                new BattleHostActionRequestedEventPayload(
+                    request.Actor.State.InstanceId,
+                    hostActionId),
+                $"Host action '{hostActionId}' was requested."));
         }
 
         return Array.AsReadOnly(events.ToArray());
@@ -495,6 +504,8 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             [new BattleEncounterEvent(
                 0,
                 BattleEncounterEventKind.ActionRejected,
-                message,
-                request.Actor.State.InstanceId)]);
+                new BattleActionRejectedEventPayload(
+                    request.Actor.State.InstanceId,
+                    BattleEncounterCommandStatus.Rejected),
+                message)]);
 }
