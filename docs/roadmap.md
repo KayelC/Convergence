@@ -4,7 +4,7 @@
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 21 complete capabilities, one partial capability, and three deferred capabilities.
 
-The current pre-release checkpoint is the [Neutral Vocabulary Migration](neutral-vocabulary-migration.md). It replaces the remaining prototype-shaped Action Token and actor-ownership vocabulary before public API stabilization. The same checkpoint removes the obsolete weighted Vessel stat model and deliberately advances the content and save contracts without compatibility aliases.
+The [Terminology Boundary](terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v2, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
 
 ## Priority 1: Authoring Contract Completion
 

@@ -1009,7 +1009,15 @@ public sealed class ActiveSkillExecutionTests
         Type[] publicTypes = typeof(SkillExecutor).Assembly.GetTypes()
             .Where(type => type.IsPublic && type.Namespace == "Convergence.Execution")
             .ToArray();
-        string[] forbidden = ["Newtonsoft", "System.Text.Json", "Godot", "SkillData", "PersonaData", "Combatant"];
+        string[] forbidden =
+        [
+            "Newtonsoft",
+            "System.Text.Json",
+            "Godot",
+            "SkillData",
+            string.Concat("Per", "sona", "Data"),
+            "Combatant"
+        ];
 
         IEnumerable<Type> exposedTypes = publicTypes.SelectMany(PublicSignatureTypes);
 

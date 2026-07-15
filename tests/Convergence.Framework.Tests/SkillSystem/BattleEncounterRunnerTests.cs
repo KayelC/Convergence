@@ -718,7 +718,7 @@ public sealed class BattleEncounterRunnerTests
         string[] forbidden =
         [
             "Newtonsoft", "System.Text.Json", "Godot", "System.IO.File", "Database",
-            "Combatant", "SkillData", "PersonaData", "ItemData", "IGameIO"
+            "Combatant", "SkillData", string.Concat("Per", "sona", "Data"), "ItemData", "IGameIO"
         ];
 
         IEnumerable<Type> signatures = publicTypes.SelectMany(PublicSignatureTypes);

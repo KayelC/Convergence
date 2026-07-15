@@ -548,7 +548,7 @@ public sealed class RuntimePersistenceSnapshotTests
             identity: new RuntimeActorIdentitySnapshot(
                 frost.Identity.InstanceId,
                 frost.Identity.EntityDefinitionId,
-                Id("operator"),
+                Id("independent_actor"),
                 frost.Identity.DisplayName),
             skills: new RuntimeSkillStateSnapshot(
                 [frostLance, iceBoost],
@@ -1116,8 +1116,8 @@ public sealed class RuntimePersistenceSnapshotTests
             CreateActor(RuntimeInstanceId.Parse("frost"), actualEntityId),
             CreateActor(RuntimeInstanceId.Parse("active"), actualEntityId),
             CreateActor(RuntimeInstanceId.Parse("reserve"), actualEntityId),
-            CreateActor(RuntimeInstanceId.Parse("form"), actualEntityId),
-            CreateActor(RuntimeInstanceId.Parse("hostedEntity"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("active_hosted_entity"), actualEntityId),
+            CreateActor(RuntimeInstanceId.Parse("hosted_entity_roster_entry"), actualEntityId),
             CreateActor(RuntimeInstanceId.Parse("companion"), actualEntityId)
         ];
         RuntimeActorReferenceSnapshot[] mismatches = actors

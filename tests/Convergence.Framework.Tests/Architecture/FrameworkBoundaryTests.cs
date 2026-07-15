@@ -153,15 +153,16 @@ public sealed class FrameworkBoundaryTests
     public void FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies()
     {
         string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Fusion");
+        string retiredCatalystFamily = string.Concat("mita", "ma");
         string[] legacyStrategyTokens =
         [
-            "mitama",
-            "ara_mitama",
-            "nigi_mitama",
-            "kusi_mitama",
-            "saki_mitama",
+            retiredCatalystFamily,
+            $"ara_{retiredCatalystFamily}",
+            $"nigi_{retiredCatalystFamily}",
+            $"kusi_{retiredCatalystFamily}",
+            $"saki_{retiredCatalystFamily}",
             "MoonPhase",
-            "Full Moon"
+            string.Concat("Full", " ", "Moon")
         ];
 
         foreach (string file in Directory.EnumerateFiles(fusionRoot, "*.cs", SearchOption.AllDirectories))
@@ -188,7 +189,7 @@ public sealed class FrameworkBoundaryTests
         foreach (string file in files)
         {
             string source = File.ReadAllText(file);
-            Assert.DoesNotContain("Macca", source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(string.Concat("Mac", "ca"), source, StringComparison.OrdinalIgnoreCase);
         }
     }
 

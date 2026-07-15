@@ -15,14 +15,14 @@ This directory is the active documentation authority for Convergence Framework.
 9. [Content Contract](content-contract.md): clean content organization and loading authority.
 10. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
 11. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
-12. [Neutral Vocabulary Migration](neutral-vocabulary-migration.md): the approved pre-release Action Token, Vessel, roster, schema-v2, and save-v7 contract change.
+12. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v2, save-v7, and vocabulary-enforcement contract.
 
 ## Authority Rules
 
 - Current source and automated tests define implemented behavior.
 - Active documents describe ownership, supported integration, and future priorities.
-- [`phase-8-product-boundary-plan.md`](phase-8-product-boundary-plan.md) is the completed restructuring record.
-- [`neutral-vocabulary-migration.md`](neutral-vocabulary-migration.md) is the active authority for the current breaking terminology and Vessel-stat migration.
+- [`terminology-boundary.md`](terminology-boundary.md) defines the active vocabulary and executable enforcement boundary.
+- Completed restructuring, migration, and recovery plans are preserved under `ArchiveDocs/LegacyFramework/Documentation` and are not implementation authority.
 - Everything under [`ArchiveDocs/LegacyFramework`](../ArchiveDocs/LegacyFramework) is unsupported historical evidence. Active implementation must not depend on it.
 
 ## Maintenance

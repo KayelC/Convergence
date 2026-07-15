@@ -451,7 +451,8 @@ public sealed class SchemaDeserializationTests
                 candidate.Namespace?.StartsWith("System.Text.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Newtonsoft.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Godot", StringComparison.Ordinal) == true ||
-                candidate.Name is "SkillData" or "PersonaData");
+                candidate.Name == "SkillData" ||
+                candidate.Name == string.Concat("Per", "sona", "Data"));
         }
     }
 

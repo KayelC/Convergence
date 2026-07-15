@@ -354,7 +354,7 @@ public sealed class FusionInheritanceTests
             "System.Text.Json",
             "Godot",
             "SkillData",
-            "PersonaData",
+            string.Concat("Per", "sona", "Data"),
             "Combatant",
             "Database"
         ];

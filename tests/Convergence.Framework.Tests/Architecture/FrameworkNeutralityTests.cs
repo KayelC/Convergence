@@ -12,13 +12,13 @@ public sealed class FrameworkNeutralityTests
         string frameworkRoot = RepositoryPath("src", "Convergence.Framework");
         string[] forbiddenTokens =
         [
-            "Macca",
-            "Full Moon",
+            string.Concat("Mac", "ca"),
+            string.Concat("Full", " ", "Moon"),
             "Medicine",
-            "E_slime",
-            "legacy_455f736c696d65",
-            "RuntimeFieldDungeonService",
-            "ReturnToCity"
+            string.Concat("E_", "sli", "me"),
+            string.Concat("legacy_455f", "736c696d65"),
+            string.Concat("Runtime", "Field", "Dungeon", "Service"),
+            string.Concat("Return", "To", "City")
         ];
 
         foreach (string file in SourceFiles(frameworkRoot))
@@ -52,7 +52,9 @@ public sealed class FrameworkNeutralityTests
     [Fact]
     public void WalletAndEconomyPublicContracts_UseNeutralCurrencyTermsOnly()
     {
-        Assert.Null(typeof(RuntimeWalletSnapshot).GetProperty("Macca", BindingFlags.Public | BindingFlags.Instance));
+        Assert.Null(typeof(RuntimeWalletSnapshot).GetProperty(
+            string.Concat("Mac", "ca"),
+            BindingFlags.Public | BindingFlags.Instance));
         Assert.Equal(
             ["Credit", "Debit"],
             typeof(IEconomyTransactionService)

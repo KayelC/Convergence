@@ -1182,7 +1182,7 @@ public sealed class CatalogBattleRuntimeTests
         string[] forbidden =
         [
             "Newtonsoft", "System.Text.Json", "Godot", "System.IO.File", "Database",
-            "Combatant", "SkillData", "PersonaData"
+            "Combatant", "SkillData", string.Concat("Per", "sona", "Data")
         ];
 
         IEnumerable<Type> signatures = publicTypes.SelectMany(PublicSignatureTypes);

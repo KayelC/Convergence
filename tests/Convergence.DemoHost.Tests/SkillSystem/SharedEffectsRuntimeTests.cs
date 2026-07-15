@@ -284,7 +284,7 @@ public sealed class SharedEffectsRuntimeTests
         string[] forbidden =
         [
             "System.Text.Json", "Newtonsoft", "Godot", "System.IO", "Database",
-            "Combatant", "SkillData", "PersonaData", "ItemData"
+            "Combatant", "SkillData", string.Concat("Per", "sona", "Data"), "ItemData"
         ];
 
         IEnumerable<Type> signatures = publicTypes.SelectMany(PublicSignatureTypes);

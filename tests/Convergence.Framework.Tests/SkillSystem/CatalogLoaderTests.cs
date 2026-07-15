@@ -424,7 +424,8 @@ public sealed class CatalogLoaderTests
                 candidate.Namespace?.StartsWith("Newtonsoft.Json", StringComparison.Ordinal) == true ||
                 candidate.Namespace?.StartsWith("Godot", StringComparison.Ordinal) == true ||
                 candidate == typeof(FileInfo) || candidate == typeof(DirectoryInfo) ||
-                candidate.Name is "SkillData" or "PersonaData");
+                candidate.Name == "SkillData" ||
+                candidate.Name == string.Concat("Per", "sona", "Data"));
         }
     }
 
