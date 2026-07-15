@@ -169,6 +169,11 @@ public sealed record RuntimeResourceSnapshot
 {
     public RuntimeResourceSnapshot(ContentId resourceId, decimal current, decimal maximum)
     {
+        if (!resourceId.IsValid)
+        {
+            throw new ArgumentException("Resource ID cannot be empty.", nameof(resourceId));
+        }
+
         if (maximum < 0 || current < 0 || current > maximum)
         {
             throw new ArgumentOutOfRangeException(nameof(current), "Resource values must satisfy 0 <= current <= maximum.");

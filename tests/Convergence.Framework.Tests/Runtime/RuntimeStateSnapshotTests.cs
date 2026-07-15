@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Convergence.Content;
 using Convergence.Battle;
 using Convergence.Execution;
@@ -246,6 +247,64 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     [Fact]
+    public void RuntimeResourceSnapshot_RejectsAnEmptyResourceId()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => new RuntimeResourceSnapshot(default, current: 0, maximum: 1));
+
+        Assert.Equal("resourceId", exception.ParamName);
+    }
+
+    [Fact]
+    public void ResourceRecalculationResult_RejectsDuplicateResourceIds()
+    {
+        RuntimeResourceSnapshot hp = new(Id("hp"), current: 72, maximum: 120);
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => new ResourceRecalculationResult([hp, hp]));
+
+        Assert.Equal("resources", exception.ParamName);
+    }
+
+    [Fact]
+    public void RuntimeResourceTransactions_RejectedRecalculationPreservesEveryResource()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        var recalculation = new ResourceRecalculationResult(
+        [
+            new RuntimeResourceSnapshot(Id("sp"), current: 1, maximum: 10)
+        ]);
+
+        RuntimeMutationResult result =
+            new RuntimeResourceTransactionService().ApplyRecalculation(actor, recalculation);
+
+        Assert.False(result.Applied);
+        Assert.Equal(RuntimeMutationErrorCode.ResourceValueOutOfRange, Assert.Single(result.Diagnostics).Code);
+        Assert.Same(result.Before, result.After);
+        AssertResourcesEqual(before, result.Before);
+        AssertResourcesEqual(before, actor.ToSnapshot());
+    }
+
+    [Fact]
+    public void RuntimeActorState_ReplacementValidationCompletesBeforeLiveResourcesAreCleared()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        // Exercise the internal defensive boundary with an object that bypassed its public constructor.
+        var malformed = (RuntimeResourceSnapshot)RuntimeHelpers.GetUninitializedObject(
+            typeof(RuntimeResourceSnapshot));
+
+        Assert.Throws<ArgumentException>(() => actor.ReplaceResources(
+        [
+            new RuntimeResourceSnapshot(Id("hp"), current: 1, maximum: 1),
+            malformed
+        ]));
+
+        AssertResourcesEqual(before, actor.ToSnapshot());
+    }
+
+    [Fact]
     public void RuntimeProgressionTransactions_ApplyGrowthResultToActorSnapshot()
     {
         RuntimeActorState actor = Restore(CreateCompleteSnapshot());
@@ -456,6 +515,11 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static void AssertResourcesEqual(RuntimeActorSnapshot expected, RuntimeActorSnapshot actual) =>
+        Assert.Equal(
+            expected.Resources.Select(resource => (resource.ResourceId, resource.Current, resource.Maximum)),
+            actual.Resources.Select(resource => (resource.ResourceId, resource.Current, resource.Maximum)));
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)
     {

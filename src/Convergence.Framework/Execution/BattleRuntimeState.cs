@@ -954,18 +954,27 @@ public sealed class RuntimeActorState
     {
         RuntimeResourceSnapshot[] replacements =
             (resources ?? throw new ArgumentNullException(nameof(resources))).ToArray();
-        var replacementIds = replacements.Select(resource => resource.ResourceId).ToHashSet();
+        if (replacements.Any(resource => resource is null))
+        {
+            throw new ArgumentException("Replacement resources cannot contain null entries.", nameof(resources));
+        }
+
+        BattleResourceState[] nextResources = replacements
+            .Select(resource => new BattleResourceState(
+                resource.ResourceId,
+                resource.Current,
+                resource.Maximum))
+            .ToArray();
+        var replacementIds = nextResources.Select(resource => resource.Id).ToHashSet();
         if (!replacementIds.Contains(VitalResourceId) || replacementIds.Count != replacements.Length)
         {
             throw new ArgumentException("Replacement resources must be unique and contain the vital resource.", nameof(resources));
         }
 
         _resources.Clear();
-        foreach (RuntimeResourceSnapshot resource in replacements)
+        foreach (BattleResourceState resource in nextResources)
         {
-            _resources.Add(
-                resource.ResourceId,
-                new BattleResourceState(resource.ResourceId, resource.Current, resource.Maximum));
+            _resources.Add(resource.Id, resource);
         }
     }
 

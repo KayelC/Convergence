@@ -270,7 +270,19 @@ public sealed record ResourceRecalculationResult
 {
     public ResourceRecalculationResult(IEnumerable<RuntimeResourceSnapshot> resources)
     {
-        Resources = SnapshotList(resources);
+        ArgumentNullException.ThrowIfNull(resources);
+        RuntimeResourceSnapshot[] snapshot = resources.ToArray();
+        if (snapshot.Any(resource => resource is null))
+        {
+            throw new ArgumentException("Recalculated resources cannot contain null entries.", nameof(resources));
+        }
+
+        if (snapshot.Select(resource => resource.ResourceId).Distinct().Count() != snapshot.Length)
+        {
+            throw new ArgumentException("Recalculated resources must have unique resource IDs.", nameof(resources));
+        }
+
+        Resources = Array.AsReadOnly(snapshot);
     }
 
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
