@@ -450,12 +450,11 @@ public sealed class FusionStrategyPolicyTests
     public void Resolver_TreatsStructuredResultsAsAuthoritativeOverCompatibilityTokens()
     {
         FusionRecipeSnapshot recipe = new(
-            EntityParent("parent_a"),
-            EntityParent("parent_b"),
+            EntityParent("parent_a", FusionParentRole.RankShiftTarget),
+            EntityParent("parent_b", FusionParentRole.Catalyst),
             new FusionRecipeResultSnapshot(
-                FusionResultOperationKind.RankOffset,
-                ResultRaceId: Id("race_child"),
-                RankOffset: 1),
+                FusionResultOperationKind.CatalystRankShift,
+                RankShift: 1),
             CompatibilityResultToken: "target");
         TestFusionRepository repository = Repository(recipes: [recipe]);
         var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
@@ -471,7 +470,7 @@ public sealed class FusionStrategyPolicyTests
 
         Assert.Null(direct);
         Assert.Equal(FusionRuntimeOperation.RankUpParent, resolved.Operation);
-        Assert.Equal(Id("child"), resolved.ResultEntityId);
+        Assert.Equal(Id("parent_a_next"), resolved.ResultEntityId);
     }
 
     [Fact]
@@ -793,6 +792,7 @@ public sealed class FusionStrategyPolicyTests
         new(
             [
                 Entity("parent_a", "race_a"),
+                Entity("parent_a_next", "race_a", rank: 2),
                 Entity("parent_b", "race_b"),
                 Entity("sacrifice", "race_c"),
                 Entity("child", "race_child"),
@@ -803,14 +803,14 @@ public sealed class FusionStrategyPolicyTests
             recipes,
             skills ?? []);
 
-    private static FusionEntitySnapshot Entity(string id, string race) =>
+    private static FusionEntitySnapshot Entity(string id, string race, int rank = 1) =>
         new(new EntityDefinition(
             Id(id),
             id,
             string.Empty,
             Id("companion"),
             Id(race),
-            rank: 1,
+            rank,
             baseLevel: 1,
             new EntityCapabilitiesDefinition(true, true, true),
             new EntityInheritanceRulesDefinition(
@@ -845,11 +845,15 @@ public sealed class FusionStrategyPolicyTests
 
     private static ContentId Id(string value) => ContentId.Parse(value);
 
-    private static FusionRecipeParentSelectorSnapshot EntityParent(string id) =>
-        new(FusionParentSelectorKind.Entity, Id(id));
+    private static FusionRecipeParentSelectorSnapshot EntityParent(
+        string id,
+        FusionParentRole role = FusionParentRole.Participant) =>
+        new(FusionParentSelectorKind.Entity, Id(id), role);
 
-    private static FusionRecipeParentSelectorSnapshot RaceParent(string id) =>
-        new(FusionParentSelectorKind.Race, Id(id));
+    private static FusionRecipeParentSelectorSnapshot RaceParent(
+        string id,
+        FusionParentRole role = FusionParentRole.Participant) =>
+        new(FusionParentSelectorKind.Race, Id(id), role);
 
     private sealed class TestFusionRepository : IFusionContentRepository
     {

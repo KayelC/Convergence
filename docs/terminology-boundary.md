@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `2`, and active runtime snapshots use save contract version `7`. Earlier pre-release shapes have no aliases or automatic translation. This is an intentional clean break made before a stable public release.
+Active content uses schema version `3`, and active runtime snapshots use save contract version `7`. Earlier pre-release shapes have no aliases or automatic translation. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

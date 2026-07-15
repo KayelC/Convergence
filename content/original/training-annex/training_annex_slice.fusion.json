@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "fusionRecipes": [
     {
       "id": "ashling_bramble_shell",
@@ -8,11 +8,13 @@
       "parents": [
         {
           "kind": "entity",
-          "id": "ashling"
+          "id": "ashling",
+          "role": "participant"
         },
         {
           "kind": "entity",
-          "id": "bramble_runner"
+          "id": "bramble_runner",
+          "role": "participant"
         }
       ],
       "result": {
@@ -23,23 +25,47 @@
       "mutationPolicyId": "standard_mutation"
     },
     {
-      "id": "spirit_beast_construct_rank",
-      "displayName": "Spirit + Beast Construct Rank",
-      "description": "A generic race-pair rank-offset recipe for framework review.",
+      "id": "echo_bramble_shell",
+      "displayName": "Echo Adept + Bramble Runner",
+      "description": "An explicit entity-pair recipe used by the clean inheritance preview.",
       "parents": [
         {
-          "kind": "race",
-          "id": "annex_spirit"
+          "kind": "entity",
+          "id": "echo_adept",
+          "role": "participant"
         },
         {
-          "kind": "race",
-          "id": "annex_beast"
+          "kind": "entity",
+          "id": "bramble_runner",
+          "role": "participant"
         }
       ],
       "result": {
-        "operation": "rank_offset",
-        "resultRaceId": "annex_construct",
-        "rankOffset": 1
+        "operation": "create_entity",
+        "resultEntityId": "ward_shell"
+      },
+      "accidentPolicyId": "standard_accident",
+      "mutationPolicyId": "standard_mutation"
+    },
+    {
+      "id": "spirit_catalyst_rank_shift",
+      "displayName": "Spirit Catalyst Rank Shift",
+      "description": "An explicit catalyst recipe that shifts a target within its own authored race chart.",
+      "parents": [
+        {
+          "kind": "race",
+          "id": "annex_spirit",
+          "role": "rank_shift_target"
+        },
+        {
+          "kind": "entity",
+          "id": "prism_catalyst",
+          "role": "catalyst"
+        }
+      ],
+      "result": {
+        "operation": "catalyst_rank_shift",
+        "rankShift": 1
       },
       "accidentPolicyId": "standard_accident",
       "mutationPolicyId": "standard_mutation"

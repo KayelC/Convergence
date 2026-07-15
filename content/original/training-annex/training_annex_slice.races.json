@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "races": [
     {
       "id": "annex_spirit",
@@ -16,6 +16,12 @@
     {
       "id": "annex_construct",
       "displayName": "Annex Construct",
+      "alignmentIds": ["neutral"],
+      "negotiationPersonalityId": "steady_sample"
+    },
+    {
+      "id": "annex_catalyst",
+      "displayName": "Annex Catalyst",
       "alignmentIds": ["neutral"],
       "negotiationPersonalityId": "steady_sample"
     }

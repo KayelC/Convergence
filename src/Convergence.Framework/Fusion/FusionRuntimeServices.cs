@@ -50,7 +50,11 @@ public enum FusionRuntimeDiagnosticCode
     RosterTransitionRejected,
     ActorCreationFailed,
     TransactionStateChanged,
-    AmbiguousRecipe
+    AmbiguousRecipe,
+    ParticipantDefinitionMismatch,
+    InvalidCatalystRankShift,
+    RankShiftResultMissing,
+    RankShiftResultAmbiguous
 }
 
 public sealed record FusionRuntimeDiagnostic(
@@ -64,30 +68,28 @@ public sealed record FusionRecipeResultSnapshot
     public FusionRecipeResultSnapshot(
         FusionResultOperationKind Operation,
         ContentId? ResultEntityId = null,
-        ContentId? ResultRaceId = null,
-        int? RankOffset = null,
+        int? RankShift = null,
         ContentId? PolicyId = null,
         IEnumerable<KeyValuePair<string, object?>>? Parameters = null)
     {
         this.Operation = Operation;
         this.ResultEntityId = ResultEntityId;
-        this.ResultRaceId = ResultRaceId;
-        this.RankOffset = RankOffset;
+        this.RankShift = RankShift;
         this.PolicyId = PolicyId;
         this.Parameters = DefinitionCollections.SnapshotParameters(Parameters);
     }
 
     public FusionResultOperationKind Operation { get; }
     public ContentId? ResultEntityId { get; }
-    public ContentId? ResultRaceId { get; }
-    public int? RankOffset { get; }
+    public int? RankShift { get; }
     public ContentId? PolicyId { get; }
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 }
 
 public sealed record FusionRecipeParentSelectorSnapshot(
     FusionParentSelectorKind Kind,
-    ContentId Id);
+    ContentId Id,
+    FusionParentRole Role = FusionParentRole.Participant);
 
 public sealed record FusionRecipeSnapshot
 {
@@ -324,7 +326,7 @@ public sealed class FusionResultResolver : IFusionResultResolver
 
         if (recipe.Result is not null)
         {
-            return ResolveAuthoredResult(recipe, a, b, isRecipeAccident, context);
+            return ResolveAuthoredResult(recipeMatch, a, b, isRecipeAccident, context);
         }
 
         string? token = recipe.CompatibilityResultToken;
@@ -437,17 +439,19 @@ public sealed class FusionResultResolver : IFusionResultResolver
     }
 
     private FusionResolvedResult ResolveAuthoredResult(
-        FusionRecipeSnapshot recipe,
+        FusionRecipeMatch recipeMatch,
         FusionParticipantSnapshot a,
         FusionParticipantSnapshot b,
         bool isAccident,
         FusionPolicyContext context)
     {
+        FusionRecipeSnapshot recipe = recipeMatch.Recipe!;
         FusionRecipeResultSnapshot result = recipe.Result!;
         return result.Operation switch
         {
             FusionResultOperationKind.CreateEntity => ResolveAuthoredCreateEntity(recipe, result, isAccident),
-            FusionResultOperationKind.RankOffset => ResolveAuthoredRankOffset(recipe, result, a, b, isAccident),
+            FusionResultOperationKind.CatalystRankShift =>
+                ResolveAuthoredCatalystRankShift(recipeMatch, result, isAccident),
             FusionResultOperationKind.StatBoost or FusionResultOperationKind.Special =>
                 ResolvePolicyResult(recipe, result, a, b, isAccident, context),
             _ => Failed(FusionRuntimeDiagnosticCode.NoFusionPossible,
@@ -472,42 +476,133 @@ public sealed class FusionResultResolver : IFusionResultResolver
             : Failed(FusionRuntimeDiagnosticCode.MissingEntity, $"Fusion result entity '{entityId}' was not found.");
     }
 
-    private FusionResolvedResult ResolveAuthoredRankOffset(
-        FusionRecipeSnapshot recipe,
+    private FusionResolvedResult ResolveAuthoredCatalystRankShift(
+        FusionRecipeMatch recipeMatch,
         FusionRecipeResultSnapshot result,
-        FusionParticipantSnapshot a,
-        FusionParticipantSnapshot b,
         bool isAccident)
     {
-        if (result.RankOffset is not int rankOffset || rankOffset == 0)
+        FusionRecipeSnapshot recipe = recipeMatch.Recipe!;
+        if (result.RankShift is not int rankShift || rankShift == 0)
         {
             return Failed(
-                FusionRuntimeDiagnosticCode.NoFusionPossible,
-                "Rank-offset fusion result must specify a nonzero rank offset.");
+                FusionRuntimeDiagnosticCode.InvalidCatalystRankShift,
+                "Catalyst rank-shift fusion requires a nonzero rank shift.");
         }
 
-        ContentId raceId = result.ResultRaceId ?? a.RaceId;
-        int baseRank = (a.Rank + b.Rank) / 2;
-        int targetRank = baseRank + rankOffset;
-
-        FusionEntitySnapshot[] racePool = _content.GetEntitiesByRace(raceId)
-            .OrderBy(entity => entity.Rank)
-            .ThenBy(entity => entity.BaseLevel)
-            .ThenBy(entity => entity.Id.ToString(), StringComparer.Ordinal)
-            .ToArray();
-        if (racePool.Length == 0)
+        FusionParticipantSnapshot? target = ParticipantForRole(
+            recipeMatch,
+            FusionParentRole.RankShiftTarget);
+        FusionParticipantSnapshot? catalyst = ParticipantForRole(
+            recipeMatch,
+            FusionParentRole.Catalyst);
+        if (target is null || catalyst is null)
         {
-            return Failed(FusionRuntimeDiagnosticCode.MissingRaceMembers, $"Race '{raceId}' has no fusion results.");
+            return Failed(
+                FusionRuntimeDiagnosticCode.InvalidCatalystRankShift,
+                "Catalyst rank-shift fusion requires one catalyst selector and one rank-shift target selector.");
         }
 
-        FusionEntitySnapshot ranked = rankOffset > 0
-            ? racePool.FirstOrDefault(entity => entity.Rank >= targetRank) ?? racePool[^1]
-            : racePool.LastOrDefault(entity => entity.Rank <= targetRank) ?? racePool[0];
+        if (!TryValidateCatalogParticipant(target, out FusionEntitySnapshot? targetDefinition, out FusionResolvedResult? failure))
+        {
+            return failure!;
+        }
+
+        if (!TryValidateCatalogParticipant(catalyst, out _, out failure))
+        {
+            return failure!;
+        }
+
+        long shiftedRank = (long)targetDefinition!.Rank + rankShift;
+        if (shiftedRank < 0 || shiftedRank > int.MaxValue)
+        {
+            return Failed([
+                new FusionRuntimeDiagnostic(
+                    FusionRuntimeDiagnosticCode.RankShiftResultMissing,
+                    $"Race '{targetDefinition.RaceId}' has no entity at shifted rank {shiftedRank}.",
+                    targetDefinition.Id,
+                    target.InstanceId)
+            ]);
+        }
+
+        FusionEntitySnapshot[] exactMatches = _content.GetEntitiesByRace(targetDefinition.RaceId)
+            .Where(entity => entity.Rank == (int)shiftedRank)
+            .ToArray();
+        if (exactMatches.Length == 0)
+        {
+            return Failed([
+                new FusionRuntimeDiagnostic(
+                    FusionRuntimeDiagnosticCode.RankShiftResultMissing,
+                    $"Race '{targetDefinition.RaceId}' has no entity at shifted rank {shiftedRank}.",
+                    targetDefinition.Id,
+                    target.InstanceId)
+            ]);
+        }
+
+        if (exactMatches.Length > 1)
+        {
+            return Failed([
+                new FusionRuntimeDiagnostic(
+                    FusionRuntimeDiagnosticCode.RankShiftResultAmbiguous,
+                    $"Race '{targetDefinition.RaceId}' has multiple entities at shifted rank {shiftedRank}.",
+                    targetDefinition.Id,
+                    target.InstanceId)
+            ]);
+        }
+
         return Successful(
-            rankOffset > 0 ? FusionRuntimeOperation.RankUpParent : FusionRuntimeOperation.RankDownParent,
-            ranked.Id,
+            rankShift > 0 ? FusionRuntimeOperation.RankUpParent : FusionRuntimeOperation.RankDownParent,
+            exactMatches[0].Id,
             isAccident,
+            transformedParent: target,
+            catalystParent: catalyst,
             matchedRecipe: recipe);
+    }
+
+    private static FusionParticipantSnapshot? ParticipantForRole(
+        FusionRecipeMatch match,
+        FusionParentRole role)
+    {
+        if (match.Recipe!.FirstParent.Role == role)
+        {
+            return match.FirstSelectorParticipant;
+        }
+
+        return match.Recipe.SecondParent.Role == role
+            ? match.SecondSelectorParticipant
+            : null;
+    }
+
+    private bool TryValidateCatalogParticipant(
+        FusionParticipantSnapshot participant,
+        out FusionEntitySnapshot? definition,
+        out FusionResolvedResult? failure)
+    {
+        if (!_content.TryGetEntity(participant.EntityId, out definition) || definition is null)
+        {
+            failure = Failed([
+                new FusionRuntimeDiagnostic(
+                    FusionRuntimeDiagnosticCode.MissingEntity,
+                    $"Fusion participant entity '{participant.EntityId}' was not found.",
+                    participant.EntityId,
+                    participant.InstanceId)
+            ]);
+            return false;
+        }
+
+        if (definition.RaceId != participant.RaceId || definition.Rank != participant.Rank)
+        {
+            failure = Failed([
+                new FusionRuntimeDiagnostic(
+                    FusionRuntimeDiagnosticCode.ParticipantDefinitionMismatch,
+                    $"Fusion participant '{participant.EntityId}' does not match catalog race and rank.",
+                    participant.EntityId,
+                    participant.InstanceId)
+            ]);
+            return false;
+        }
+
+        failure = null;
+        return true;
     }
 
     private FusionResolvedResult ResolvePolicyResult(
@@ -546,8 +641,14 @@ public sealed class FusionResultResolver : IFusionResultResolver
 
     private FusionRecipeMatch FindRecipe(
         FusionParticipantSnapshot first,
-        FusionParticipantSnapshot second) =>
-        FindRecipe(first.EntityId, first.RaceId, second.EntityId, second.RaceId);
+        FusionParticipantSnapshot second)
+    {
+        FusionRecipeMatch[] matches = _content.GetRecipes()
+            .Select(recipe => MatchRecipe(recipe, first, second))
+            .Where(match => match.Recipe is not null)
+            .ToArray();
+        return SelectAuthoritativeMatch(matches);
+    }
 
     private FusionRecipeMatch FindRecipe(
         ContentId firstEntityId,
@@ -555,26 +656,56 @@ public sealed class FusionResultResolver : IFusionResultResolver
         ContentId secondEntityId,
         ContentId secondRaceId)
     {
-        FusionRecipeSnapshot[] matches = _content.GetRecipes()
+        FusionRecipeMatch[] matches = _content.GetRecipes()
             .Where(recipe =>
                 (Matches(recipe.FirstParent, firstEntityId, firstRaceId) &&
                  Matches(recipe.SecondParent, secondEntityId, secondRaceId)) ||
                 (Matches(recipe.FirstParent, secondEntityId, secondRaceId) &&
                  Matches(recipe.SecondParent, firstEntityId, firstRaceId)))
+            .Select(recipe => new FusionRecipeMatch(recipe, null, null, IsAmbiguous: false))
             .ToArray();
+        return SelectAuthoritativeMatch(matches);
+    }
+
+    private static FusionRecipeMatch MatchRecipe(
+        FusionRecipeSnapshot recipe,
+        FusionParticipantSnapshot first,
+        FusionParticipantSnapshot second)
+    {
+        bool forward = Matches(recipe.FirstParent, first.EntityId, first.RaceId) &&
+                       Matches(recipe.SecondParent, second.EntityId, second.RaceId);
+        bool reverse = Matches(recipe.FirstParent, second.EntityId, second.RaceId) &&
+                       Matches(recipe.SecondParent, first.EntityId, first.RaceId);
+        if (!forward && !reverse)
+        {
+            return default;
+        }
+
+        if (forward && reverse && recipe.Result?.Operation == FusionResultOperationKind.CatalystRankShift)
+        {
+            return new FusionRecipeMatch(recipe, null, null, IsAmbiguous: true);
+        }
+
+        return forward
+            ? new FusionRecipeMatch(recipe, first, second, IsAmbiguous: false)
+            : new FusionRecipeMatch(recipe, second, first, IsAmbiguous: false);
+    }
+
+    private static FusionRecipeMatch SelectAuthoritativeMatch(FusionRecipeMatch[] matches)
+    {
         if (matches.Length == 0)
         {
             return default;
         }
 
-        int highestSpecificity = matches.Max(SelectorSpecificity);
-        FusionRecipeSnapshot[] authoritativeMatches = matches
-            .Where(recipe => SelectorSpecificity(recipe) == highestSpecificity)
+        int highestSpecificity = matches.Max(match => SelectorSpecificity(match.Recipe!));
+        FusionRecipeMatch[] authoritativeMatches = matches
+            .Where(match => SelectorSpecificity(match.Recipe!) == highestSpecificity)
             .Take(2)
             .ToArray();
-        return authoritativeMatches.Length == 1
-            ? new FusionRecipeMatch(authoritativeMatches[0], IsAmbiguous: false)
-            : new FusionRecipeMatch(null, IsAmbiguous: true);
+        return authoritativeMatches.Length == 1 && !authoritativeMatches[0].IsAmbiguous
+            ? authoritativeMatches[0]
+            : new FusionRecipeMatch(null, null, null, IsAmbiguous: true);
     }
 
     private static bool Matches(
@@ -594,6 +725,8 @@ public sealed class FusionResultResolver : IFusionResultResolver
 
     private readonly record struct FusionRecipeMatch(
         FusionRecipeSnapshot? Recipe,
+        FusionParticipantSnapshot? FirstSelectorParticipant,
+        FusionParticipantSnapshot? SecondSelectorParticipant,
         bool IsAmbiguous);
 
     private static bool TryToken(string? token, out ContentId id)
@@ -885,9 +1018,12 @@ public sealed class FusionPlanningService : IFusionPlanningService
                 $"Fusion mutation policy '{mutationPolicyId}' is not registered."), context);
         }
 
-        // Parent state carries forward only when a policy explicitly identifies the transformed parent.
-        // Neutral structured rank-offset recipes therefore start from the resolved catalog entity.
-        FusionParticipantSnapshot? previewBaseline = result.TransformedParent;
+        // Authored catalyst rank shifts create the exact catalog entity at the shifted rank. A
+        // registered custom result policy may still explicitly preserve an identified parent.
+        FusionParticipantSnapshot? previewBaseline =
+            result.Operation == FusionRuntimeOperation.StatBoost || result.ResultPolicyId is not null
+            ? result.TransformedParent
+            : null;
 
         IReadOnlyList<ContentId> naturalSkills = result.Operation == FusionRuntimeOperation.StatBoost
             ? Snapshot(previewBaseline?.SkillIds)

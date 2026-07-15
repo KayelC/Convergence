@@ -57,8 +57,8 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
         FusionParentSelectorDefinition second = recipe.Parents[1];
         FusionRecipeResultSnapshot result = ToResultSnapshot(recipe.Result);
         return new FusionRecipeSnapshot(
-            new FusionRecipeParentSelectorSnapshot(first.Kind, first.Id),
-            new FusionRecipeParentSelectorSnapshot(second.Kind, second.Id),
+            new FusionRecipeParentSelectorSnapshot(first.Kind, first.Id, first.Role),
+            new FusionRecipeParentSelectorSnapshot(second.Kind, second.Id, second.Role),
             result,
             recipe.AccidentPolicyId,
             recipe.MutationPolicyId);
@@ -68,8 +68,7 @@ public sealed class CatalogFusionContentRepository : IFusionContentRepository
         new(
             result.Operation,
             result.ResultEntityId,
-            result.ResultRaceId,
-            result.RankOffset,
+            result.RankShift,
             result.PolicyId,
             result.Parameters);
 }

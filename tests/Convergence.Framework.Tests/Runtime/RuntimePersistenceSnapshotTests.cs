@@ -1260,10 +1260,10 @@ public sealed class RuntimePersistenceSnapshotTests
             CreateSaveSnapshot(),
             contentPacks:
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.2.0")),
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.3.0")),
                 new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("9.9.9")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.2.0")),
-                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.2.0"))
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.3.0")),
+                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.3.0"))
             ]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
@@ -1491,10 +1491,10 @@ public sealed class RuntimePersistenceSnapshotTests
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.2.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.2.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.2.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.2.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.3.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.3.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.3.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.3.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(

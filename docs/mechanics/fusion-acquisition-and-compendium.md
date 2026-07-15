@@ -6,18 +6,23 @@ Fusion is an optional Framework module. Games that do not use fusion do not need
 
 ## Result Resolution
 
-Fusion content uses typed parent selectors and result operations. Repository and policy services can resolve direct recipes, group/race operations, rank offsets, stat boosts, accidents, mutation, and game-specific hooks.
+Fusion content uses typed parent selectors and result operations. Repository and policy services can resolve direct recipes, catalyst rank shifts, stat boosts, accidents, mutation, and game-specific hooks.
 
 Planning is deterministic for the same content, parent snapshots, policies, and random source. Parent-pair matching is symmetric where the recipe says it is, and result statistics do not depend accidentally on caller parent order.
 
-### Provisional Rank-Offset Contract
+### Catalyst Rank Shifting
 
-The current generic `RankOffset` operation is under pre-release semantic review
-and must not be treated as stable catalyst behavior. The approved future
-catalyst rule will transform the non-catalyst entity by an authored shift within
-that entity's own race chart. The catalyst does not contribute its rank, and a
-missing exact target rank produces no fusion rather than clamping to a boundary.
-This correction is tracked in the active roadmap and framework code review.
+A `catalyst_rank_shift` recipe assigns one parent selector the `catalyst` role
+and the other the `rank_shift_target` role. The target moves by the authored
+`rankShift` within its own catalog race chart. The catalyst's rank never enters
+the calculation, and caller parent order does not change either role.
+
+The participant snapshot's race and rank must match its catalog entity. The
+resolver then requires exactly one catalog entity at the shifted rank. A missing
+rank or duplicate rank is a typed no-fusion result; the resolver never clamps to
+a race endpoint. The resulting actor starts from the resolved catalog entity's
+state. Custom registered result policies remain free to define a different,
+explicit state-preservation rule.
 
 ## Inheritance
 

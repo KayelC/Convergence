@@ -96,15 +96,18 @@ internal sealed class TrainingAnnexFusionController
             catalog,
             resolver,
             "direct_entity_result",
-            ashling,
-            bramble,
+            ToFusionParticipant(ashling),
+            ToFusionParticipant(bramble),
             cancellationToken).ConfigureAwait(false);
+        FusionParticipantSnapshot prismCatalyst = ToFusionParticipant(
+            catalog.GetRequiredEntity(TrainingAnnexHostSupport.Qualified("prism_catalyst")),
+            RuntimeInstanceId.Parse("fusion_prism_catalyst"));
         TrainingAnnexFusionResultEvidence rank = await ResolveAsync(
             catalog,
             resolver,
-            "race_rank_offset_result",
-            roster.Player,
-            bramble,
+            "catalyst_rank_shift_result",
+            ToFusionParticipant(ashling),
+            prismCatalyst,
             cancellationToken).ConfigureAwait(false);
 
         TrainingAnnexFusionPlanningEvidence planning = await PlanAsync(
@@ -522,19 +525,17 @@ internal sealed class TrainingAnnexFusionController
         GameDataCatalog catalog,
         IFusionResultResolver resolver,
         string scenarioId,
-        TrainingAnnexRuntimeActor first,
-        TrainingAnnexRuntimeActor second,
+        FusionParticipantSnapshot first,
+        FusionParticipantSnapshot second,
         CancellationToken cancellationToken)
     {
-        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
-            ToFusionParticipant(first),
-            ToFusionParticipant(second)));
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(first, second));
         var evidence = new TrainingAnnexFusionResultEvidence(
             scenarioId,
-            first.Actor.State.InstanceId,
-            first.Actor.Entity.Id,
-            second.Actor.State.InstanceId,
-            second.Actor.Entity.Id,
+            first.InstanceId,
+            first.EntityId,
+            second.InstanceId,
+            second.EntityId,
             result.Operation,
             result.ResultEntityId,
             result.IsAccident,
@@ -660,10 +661,23 @@ internal sealed class TrainingAnnexFusionController
             actor.Actor.SkillLoadout.Select(skill => skill.Id),
             actor.Actor.Entity.Stats);
 
+    private static FusionParticipantSnapshot ToFusionParticipant(
+        EntityDefinition entity,
+        RuntimeInstanceId instanceId) =>
+        new(
+            instanceId,
+            entity.Id,
+            entity.DisplayName,
+            entity.RaceId,
+            entity.Rank,
+            entity.BaseLevel,
+            entity.BaseSkillIds,
+            entity.Stats);
+
     private static string FormatResult(
         GameDataCatalog catalog,
-        TrainingAnnexRuntimeActor first,
-        TrainingAnnexRuntimeActor second,
+        FusionParticipantSnapshot first,
+        FusionParticipantSnapshot second,
         TrainingAnnexFusionResultEvidence evidence)
     {
         if (evidence.ResultEntityId is ContentId resultId &&
@@ -671,7 +685,7 @@ internal sealed class TrainingAnnexFusionController
             resultEntity is not null)
         {
             return "Fusion result: "
-                + $"{first.Actor.Entity.DisplayName} + {second.Actor.Entity.DisplayName} -> "
+                + $"{first.DisplayName} + {second.DisplayName} -> "
                 + $"{resultEntity.DisplayName} ({FormatOperation(evidence.Operation)}; {evidence.ScenarioId}).";
         }
 
@@ -679,7 +693,7 @@ internal sealed class TrainingAnnexFusionController
             ? "no result"
             : string.Join(", ", evidence.Diagnostics.Select(diagnostic => diagnostic.Code.ToString()));
         return "Fusion result: "
-            + $"{first.Actor.Entity.DisplayName} + {second.Actor.Entity.DisplayName} failed "
+            + $"{first.DisplayName} + {second.DisplayName} failed "
             + $"({evidence.ScenarioId}; {diagnostics}).";
     }
 

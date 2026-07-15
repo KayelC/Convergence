@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "fusionRecipes": [
     {
       "id": "demo_spirit_binary_sample",
@@ -8,11 +8,13 @@
       "parents": [
         {
           "kind": "entity",
-          "id": "convergence.clean_battle_demo:frost_duelist_demo"
+          "id": "convergence.clean_battle_demo:frost_duelist_demo",
+          "role": "participant"
         },
         {
           "kind": "entity",
-          "id": "convergence.clean_battle_demo:ember_duelist_demo"
+          "id": "convergence.clean_battle_demo:ember_duelist_demo",
+          "role": "participant"
         }
       ],
       "result": {

@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "convergence.clean_battle_demo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Clean Battle Demo",
   "dependencies": [
     {
       "id": "convergence.skill_system_redesign_sample",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ],
   "documents": [

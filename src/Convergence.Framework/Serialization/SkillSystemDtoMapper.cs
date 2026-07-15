@@ -277,12 +277,14 @@ internal static class SkillSystemDtoMapper
             Id(dto.Id),
             dto.DisplayName,
             dto.Description,
-            dto.Parents.Select(parent => new FusionParentSelectorDefinition(parent.Kind, Id(parent.Id))),
+            dto.Parents.Select(parent => new FusionParentSelectorDefinition(
+                parent.Kind,
+                Id(parent.Id),
+                parent.Role)),
             new FusionResultDefinition(
                 dto.Result.Operation,
                 dto.Result.ResultEntityId is null ? null : Id(dto.Result.ResultEntityId),
-                dto.Result.ResultRaceId is null ? null : Id(dto.Result.ResultRaceId),
-                dto.Result.RankOffset,
+                dto.Result.RankShift,
                 dto.Result.PolicyId is null ? null : Id(dto.Result.PolicyId),
                 MapParameters(dto.Result.Parameters)),
             dto.AccidentPolicyId is null ? null : Id(dto.AccidentPolicyId),

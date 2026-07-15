@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "entities": [
     {
       "id": "echo_adept",
@@ -7,7 +7,7 @@
       "description": "The first original clean-content player actor for the Training Annex slice.",
       "entityKind": "vessel",
       "raceId": "annex_spirit",
-      "rank": 1,
+      "rank": 3,
       "baseLevel": 3,
       "capabilities": {
         "recruitable": false,
@@ -228,6 +228,79 @@
         "clear_toxin",
         "focus_call"
       ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "glimmer_guard",
+      "displayName": "Glimmer Guard",
+      "description": "The second member of the Annex Spirit fusion rank chart.",
+      "entityKind": "companion",
+      "raceId": "annex_spirit",
+      "rank": 2,
+      "baseLevel": 3,
+      "capabilities": {
+        "recruitable": true,
+        "fusionEligible": true,
+        "compendiumEligible": true
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 4,
+        "magic": 4,
+        "vitality": 5,
+        "agility": 4,
+        "luck": 4
+      },
+      "elementalAffinities": {
+        "fire": "normal",
+        "ice": "resist"
+      },
+      "ailmentResistances": {
+        "sample_poison": "normal"
+      },
+      "baseSkillIds": [
+        "shell_bash"
+      ],
+      "skillUnlocks": []
+    },
+    {
+      "id": "prism_catalyst",
+      "displayName": "Prism Catalyst",
+      "description": "A neutral catalyst entity used to demonstrate authored rank shifting.",
+      "entityKind": "companion",
+      "raceId": "annex_catalyst",
+      "rank": 1,
+      "baseLevel": 2,
+      "capabilities": {
+        "recruitable": false,
+        "fusionEligible": true,
+        "compendiumEligible": false
+      },
+      "inheritanceRules": {
+        "groupPolicy": {
+          "mode": "deny_list",
+          "groupIds": []
+        },
+        "blockedSkillIds": [],
+        "allowedSkillIds": []
+      },
+      "stats": {
+        "strength": 2,
+        "magic": 2,
+        "vitality": 2,
+        "agility": 2,
+        "luck": 2
+      },
+      "elementalAffinities": {},
+      "ailmentResistances": {},
+      "baseSkillIds": [],
       "skillUnlocks": []
     }
   ]

@@ -9,21 +9,15 @@ expands that finite correction sequence; they do not replace its unresolved
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 20 complete capabilities, two partial capabilities, and three deferred capabilities.
 
-The [Terminology Boundary](terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v2, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
+The [Terminology Boundary](terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
 
-## Recorded Semantic Correction
+## Completed Semantic Correction
 
-Catalyst rank shifting is deliberately recorded for later correction rather than
-being patched during the current review sequence. The intended rule moves the
-non-catalyst entity by an authored amount within that entity's own race chart and
-fails when the exact target rank does not exist. The active generic
-`RankOffset` implementation instead averages both parents and selects from a
-result race; that provisional behavior must not be stabilized.
-
-This correction does not block authoring-contract work or a real Godot consumer,
-but it must be completed before fusion APIs are declared stable. The detailed
-evidence and acceptance criteria are recorded as M6 in the current framework
-code review.
+Catalyst rank shifting now uses explicit authored catalyst and target roles. It
+moves the target by an exact offset within that target's catalog race, rejects
+stale participant rank data, and returns a typed no-fusion result when an exact
+destination does not exist. Schema v3 removes the provisional generic
+rank-offset shape before the public API baseline is established.
 
 ## Priority 1: Authoring Contract Completion
 

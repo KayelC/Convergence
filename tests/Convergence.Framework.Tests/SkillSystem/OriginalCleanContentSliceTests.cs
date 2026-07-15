@@ -22,8 +22,8 @@ public sealed class OriginalCleanContentSliceTests
         GameDataCatalog catalog = LoadCatalog();
 
         Assert.Equal(10, catalog.Skills.Count);
-        Assert.Equal(5, catalog.Entities.Count);
-        Assert.Equal(3, catalog.Races.Count);
+        Assert.Equal(7, catalog.Entities.Count);
+        Assert.Equal(4, catalog.Races.Count);
         Assert.Equal(5, catalog.Items.Count);
         Assert.Equal(3, catalog.Ailments.Count);
         Assert.Equal(4, catalog.Equipment.Count);
@@ -31,7 +31,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Single(catalog.Negotiations);
         Assert.Equal(3, catalog.Encounters.Count);
         Assert.Single(catalog.Dungeons);
-        Assert.Equal(2, catalog.FusionRecipes.Count);
+        Assert.Equal(3, catalog.FusionRecipes.Count);
         Assert.Equal(7, catalog.Rulesets.Count);
         Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);
 
@@ -52,10 +52,13 @@ public sealed class OriginalCleanContentSliceTests
         RaceDefinition race = catalog.GetRequiredRace(Qualified("annex_spirit"));
         RaceDefinition beast = catalog.GetRequiredRace(Qualified("annex_beast"));
         RaceDefinition construct = catalog.GetRequiredRace(Qualified("annex_construct"));
+        RaceDefinition catalystRace = catalog.GetRequiredRace(Qualified("annex_catalyst"));
         EntityDefinition actor = catalog.GetRequiredEntity(Qualified("echo_adept"));
         EntityDefinition enemy = catalog.GetRequiredEntity(Qualified("ashling"));
         EntityDefinition runner = catalog.GetRequiredEntity(Qualified("bramble_runner"));
         EntityDefinition shell = catalog.GetRequiredEntity(Qualified("ward_shell"));
+        EntityDefinition glimmer = catalog.GetRequiredEntity(Qualified("glimmer_guard"));
+        EntityDefinition catalyst = catalog.GetRequiredEntity(Qualified("prism_catalyst"));
         SkillDefinition active = catalog.GetRequiredSkill(Qualified("echo_strike"));
         SkillDefinition ice = catalog.GetRequiredSkill(Qualified("frost_tip"));
         SkillDefinition cure = catalog.GetRequiredSkill(Qualified("clear_toxin"));
@@ -78,10 +81,14 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal("Annex Spirit", race.DisplayName);
         Assert.Equal("Annex Beast", beast.DisplayName);
         Assert.Equal("Annex Construct", construct.DisplayName);
+        Assert.Equal("Annex Catalyst", catalystRace.DisplayName);
         Assert.Equal(Qualified("annex_spirit"), actor.RaceId);
         Assert.Equal(Qualified("annex_spirit"), enemy.RaceId);
         Assert.Equal(Qualified("annex_beast"), runner.RaceId);
         Assert.Equal(Qualified("annex_construct"), shell.RaceId);
+        Assert.Equal(Qualified("annex_spirit"), glimmer.RaceId);
+        Assert.Equal(2, glimmer.Rank);
+        Assert.Equal(Qualified("annex_catalyst"), catalyst.RaceId);
         Assert.Equal([Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")], actor.BaseSkillIds);
         Assert.Contains(actor.SkillUnlocks, unlock => unlock.Level == 4 && unlock.SkillId == Qualified("mend"));
         Assert.Equal([Qualified("ash_spark")], enemy.BaseSkillIds);
@@ -368,7 +375,7 @@ public sealed class OriginalCleanContentSliceTests
         EquipmentDefinition accessory = catalog.GetRequiredEquipment(Qualified("focus_charm"));
         NegotiationDefinition negotiation = catalog.GetRequiredNegotiation(Qualified("steady_sample"));
         FusionRecipeDefinition shellRecipe = catalog.GetRequiredFusionRecipe(Qualified("ashling_bramble_shell"));
-        FusionRecipeDefinition rankRecipe = catalog.GetRequiredFusionRecipe(Qualified("spirit_beast_construct_rank"));
+        FusionRecipeDefinition rankRecipe = catalog.GetRequiredFusionRecipe(Qualified("spirit_catalyst_rank_shift"));
         EncounterDefinition mixed = catalog.GetRequiredEncounter(Qualified("mixed_drill"));
         EncounterDefinition boss = catalog.GetRequiredEncounter(Qualified("shell_check"));
 
@@ -405,9 +412,13 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(Qualified("ward_shell"), shellRecipe.Result.ResultEntityId);
         Assert.Equal(Id("standard_accident"), shellRecipe.AccidentPolicyId);
         Assert.Equal(Id("standard_mutation"), shellRecipe.MutationPolicyId);
-        Assert.Equal(FusionResultOperationKind.RankOffset, rankRecipe.Result.Operation);
-        Assert.Equal(1, rankRecipe.Result.RankOffset);
-        Assert.Equal(Qualified("annex_construct"), rankRecipe.Result.ResultRaceId);
+        Assert.Equal(FusionResultOperationKind.CatalystRankShift, rankRecipe.Result.Operation);
+        Assert.Equal(1, rankRecipe.Result.RankShift);
+        Assert.Equal(
+            [FusionParentRole.RankShiftTarget, FusionParentRole.Catalyst],
+            rankRecipe.Parents.Select(parent => parent.Role));
+        Assert.Equal(Qualified("annex_spirit"), rankRecipe.Parents[0].Id);
+        Assert.Equal(Qualified("prism_catalyst"), rankRecipe.Parents[1].Id);
     }
 
     [Fact]
@@ -422,20 +433,23 @@ public sealed class OriginalCleanContentSliceTests
             {
                 Operation: FusionResultOperationKind.CreateEntity,
                 ResultEntityId: ContentId resultId
-            } && resultId == Qualified("ward_shell"));
-        FusionRecipeSnapshot raceRecipe = Assert.Single(repository.GetRecipes(), recipe =>
-            recipe.Result?.Operation == FusionResultOperationKind.RankOffset);
+            } && resultId == Qualified("ward_shell") &&
+            recipe.FirstParent.Id == Qualified("ashling"));
+        FusionRecipeSnapshot catalystRecipe = Assert.Single(repository.GetRecipes(), recipe =>
+            recipe.Result?.Operation == FusionResultOperationKind.CatalystRankShift);
 
         Assert.Equal(FusionParentSelectorKind.Entity, directRecipe.FirstParent.Kind);
         Assert.Equal(Qualified("ashling"), directRecipe.FirstParent.Id);
         Assert.Equal(FusionParentSelectorKind.Entity, directRecipe.SecondParent.Kind);
         Assert.Equal(Qualified("bramble_runner"), directRecipe.SecondParent.Id);
         Assert.Null(directRecipe.CompatibilityResultToken);
-        Assert.Equal(FusionParentSelectorKind.Race, raceRecipe.FirstParent.Kind);
-        Assert.Equal(Qualified("annex_spirit"), raceRecipe.FirstParent.Id);
-        Assert.Equal(FusionParentSelectorKind.Race, raceRecipe.SecondParent.Kind);
-        Assert.Equal(Qualified("annex_beast"), raceRecipe.SecondParent.Id);
-        Assert.Null(raceRecipe.CompatibilityResultToken);
+        Assert.Equal(FusionParentSelectorKind.Race, catalystRecipe.FirstParent.Kind);
+        Assert.Equal(FusionParentRole.RankShiftTarget, catalystRecipe.FirstParent.Role);
+        Assert.Equal(Qualified("annex_spirit"), catalystRecipe.FirstParent.Id);
+        Assert.Equal(FusionParentSelectorKind.Entity, catalystRecipe.SecondParent.Kind);
+        Assert.Equal(FusionParentRole.Catalyst, catalystRecipe.SecondParent.Role);
+        Assert.Equal(Qualified("prism_catalyst"), catalystRecipe.SecondParent.Id);
+        Assert.Null(catalystRecipe.CompatibilityResultToken);
 
         FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
             Participant(catalog.GetRequiredEntity(Qualified("ashling")), "ashling_parent"),
@@ -449,18 +463,19 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(Id("standard_accident"), direct.MatchedRecipe?.AccidentPolicyId);
         Assert.Equal(Id("standard_mutation"), direct.MatchedRecipe?.MutationPolicyId);
 
-        FusionResolvedResult rankOffset = resolver.Resolve(new FusionResultRequest(
-            Participant(catalog.GetRequiredEntity(Qualified("echo_adept")), "echo_parent"),
-            Participant(catalog.GetRequiredEntity(Qualified("bramble_runner")), "bramble_parent")));
+        FusionResolvedResult rankShift = resolver.Resolve(new FusionResultRequest(
+            Participant(catalog.GetRequiredEntity(Qualified("ashling")), "ashling_rank_target"),
+            Participant(catalog.GetRequiredEntity(Qualified("prism_catalyst")), "prism_catalyst")));
 
-        Assert.True(rankOffset.IsSuccessful);
-        Assert.False(rankOffset.IsAccident);
-        Assert.Empty(rankOffset.Diagnostics);
-        Assert.Equal(FusionRuntimeOperation.RankUpParent, rankOffset.Operation);
-        Assert.Equal(Qualified("ward_shell"), rankOffset.ResultEntityId);
+        Assert.True(rankShift.IsSuccessful);
+        Assert.False(rankShift.IsAccident);
+        Assert.Empty(rankShift.Diagnostics);
+        Assert.Equal(FusionRuntimeOperation.RankUpParent, rankShift.Operation);
+        Assert.Equal(Qualified("glimmer_guard"), rankShift.ResultEntityId);
+        Assert.Equal(Qualified("ashling"), rankShift.TransformedParent?.EntityId);
+        Assert.Equal(Qualified("prism_catalyst"), rankShift.CatalystParent?.EntityId);
         Assert.Contains(repository.GetRecipes(), recipe =>
-            recipe.Result is { Operation: FusionResultOperationKind.RankOffset, ResultRaceId: ContentId raceId } &&
-            raceId == Qualified("annex_construct"));
+            recipe.Result is { Operation: FusionResultOperationKind.CatalystRankShift, RankShift: 1 });
     }
 
     [Fact]

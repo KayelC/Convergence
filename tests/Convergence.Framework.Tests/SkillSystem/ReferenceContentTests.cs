@@ -13,10 +13,10 @@ public sealed class SkillSystemRedesignFixtureTests
         JsonObject raceDocument = LoadDocument("skill_system_redesign.races.sample.json");
         JsonObject manifest = LoadDocument("skill_system_redesign.manifest.sample.json");
 
-        Assert.Equal(2, RequireInt(manifest, "schemaVersion"));
-        Assert.Equal(2, RequireInt(skillDocument, "schemaVersion"));
-        Assert.Equal(2, RequireInt(entityDocument, "schemaVersion"));
-        Assert.Equal(2, RequireInt(raceDocument, "schemaVersion"));
+        Assert.Equal(3, RequireInt(manifest, "schemaVersion"));
+        Assert.Equal(3, RequireInt(skillDocument, "schemaVersion"));
+        Assert.Equal(3, RequireInt(entityDocument, "schemaVersion"));
+        Assert.Equal(3, RequireInt(raceDocument, "schemaVersion"));
 
         JsonObject skill = Assert.IsType<JsonObject>(Assert.Single(RequireArray(skillDocument, "skills")));
         JsonObject entity = Assert.IsType<JsonObject>(Assert.Single(RequireArray(entityDocument, "entities")));

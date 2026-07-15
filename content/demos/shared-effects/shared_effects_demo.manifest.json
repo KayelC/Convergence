@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "convergence.shared_effects_demo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Shared Effects Demo",
   "dependencies": [
     {
       "id": "convergence.clean_battle_demo",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ],
   "documents": [

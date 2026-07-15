@@ -4,7 +4,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 2;
+    private const int SupportedSchemaVersion = 3;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
@@ -955,7 +955,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Schema v1 fusion recipes require exactly two parents.");
+                    "Schema v3 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
@@ -963,6 +963,19 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 FusionParentSelectorDefinition parent = recipe.Parents[index];
                 string path = source.Path + $".parents[{index}]";
+                if (!Enum.IsDefined(parent.Kind))
+                {
+                    Add(source, path + ".kind", ContentValidationErrorCode.ShapeInvalid,
+                        $"Fusion parent selector kind '{parent.Kind}' is not supported.");
+                    continue;
+                }
+
+                if (!Enum.IsDefined(parent.Role))
+                {
+                    Add(source, path + ".role", ContentValidationErrorCode.ShapeInvalid,
+                        $"Fusion parent role '{parent.Role}' is not supported.");
+                }
+
                 if (parent.Id.IsValid &&
                     !seenParents.Add((parent.Kind, NormalizeContentReference(parent.Id))))
                 {
@@ -980,7 +993,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 }
             }
 
-            ValidateFusionResult(source, recipe.Result, source.Path + ".result");
+            ValidateFusionResult(source, recipe, source.Path + ".result");
             if (recipe.AccidentPolicyId is ContentId accidentPolicyId)
             {
                 RequireRegistration(source, accidentPolicyId, source.Path + ".accidentPolicyId",
@@ -1018,7 +1031,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         recipe.Path + ".parents",
                         ContentValidationErrorCode.FusionRecipeAmbiguous,
                         $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
-                        "Make the parent selectors non-overlapping; schema v1 has no recipe-priority field.");
+                        "Make the parent selectors non-overlapping; schema v3 has no recipe-priority field.");
                     break;
                 }
             }
@@ -1167,12 +1180,14 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 
         private void ValidateFusionResult(
             RecordSource<FusionRecipeDefinition> source,
-            FusionResultDefinition result,
+            FusionRecipeDefinition recipe,
             string path)
         {
+            FusionResultDefinition result = recipe.Result;
             switch (result.Operation)
             {
                 case FusionResultOperationKind.CreateEntity:
+                    RequireParticipantRoles(source, recipe);
                     if (result.ResultEntityId is null)
                     {
                         Add(source, path + ".resultEntityId", ContentValidationErrorCode.ShapeInvalid,
@@ -1183,26 +1198,34 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         ValidateContentReference(source, result.ResultEntityId.Value,
                             path + ".resultEntityId", _entityIndex, "entity");
                     }
+                    RejectUnexpectedRankShift(source, result, path);
+                    RejectUnexpectedPolicy(source, result, path);
                     break;
-                case FusionResultOperationKind.RankOffset:
-                    if (result.ResultRaceId is null)
+                case FusionResultOperationKind.CatalystRankShift:
+                    if (recipe.Parents.Count == 2 &&
+                        (recipe.Parents.Count(parent => parent.Role == FusionParentRole.Catalyst) != 1 ||
+                         recipe.Parents.Count(parent => parent.Role == FusionParentRole.RankShiftTarget) != 1))
                     {
-                        Add(source, path + ".resultRaceId", ContentValidationErrorCode.ShapeInvalid,
-                            "Rank-offset fusion results require resultRaceId.");
+                        Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
+                            "Catalyst rank-shift fusion requires exactly one catalyst parent and one rank-shift target parent.");
                     }
-                    else
+
+                    if (result.RankShift is null or 0)
                     {
-                        ValidateContentReference(source, result.ResultRaceId.Value,
-                            path + ".resultRaceId", _raceIndex, "race");
+                        Add(source, path + ".rankShift", ContentValidationErrorCode.ShapeInvalid,
+                            "Catalyst rank-shift fusion requires a nonzero rankShift.");
                     }
-                    if (result.RankOffset is null or 0)
+
+                    if (result.ResultEntityId is not null)
                     {
-                        Add(source, path + ".rankOffset", ContentValidationErrorCode.ShapeInvalid,
-                            "Rank-offset fusion results require a nonzero rank offset.");
+                        Add(source, path + ".resultEntityId", ContentValidationErrorCode.ShapeInvalid,
+                            "Catalyst rank-shift fusion derives its result from the target race and cannot declare resultEntityId.");
                     }
+                    RejectUnexpectedPolicy(source, result, path);
                     break;
                 case FusionResultOperationKind.StatBoost:
                 case FusionResultOperationKind.Special:
+                    RequireParticipantRoles(source, recipe);
                     if (result.PolicyId is null)
                     {
                         Add(source, path + ".policyId", ContentValidationErrorCode.ShapeInvalid,
@@ -1213,7 +1236,55 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         RequireRegistration(source, result.PolicyId.Value, path + ".policyId",
                             _registrations.PolicyIds, "policy");
                     }
+                    if (result.ResultEntityId is not null)
+                    {
+                        Add(source, path + ".resultEntityId", ContentValidationErrorCode.ShapeInvalid,
+                            $"{result.Operation} fusion results cannot declare resultEntityId.");
+                    }
+                    RejectUnexpectedRankShift(source, result, path);
                     break;
+                default:
+                    Add(source, path + ".operation", ContentValidationErrorCode.ShapeInvalid,
+                        $"Fusion result operation '{result.Operation}' is not supported.");
+                    break;
+            }
+        }
+
+        private void RequireParticipantRoles(
+            RecordSource<FusionRecipeDefinition> source,
+            FusionRecipeDefinition recipe)
+        {
+            for (int index = 0; index < recipe.Parents.Count; index++)
+            {
+                if (recipe.Parents[index].Role != FusionParentRole.Participant)
+                {
+                    Add(source, source.Path + $".parents[{index}].role", ContentValidationErrorCode.ShapeInvalid,
+                        $"{recipe.Result.Operation} fusion uses participant parent roles; catalyst roles are reserved for catalyst_rank_shift.");
+                }
+            }
+        }
+
+        private void RejectUnexpectedRankShift(
+            RecordSource<FusionRecipeDefinition> source,
+            FusionResultDefinition result,
+            string path)
+        {
+            if (result.RankShift is not null)
+            {
+                Add(source, path + ".rankShift", ContentValidationErrorCode.ShapeInvalid,
+                    $"{result.Operation} fusion results cannot declare rankShift.");
+            }
+        }
+
+        private void RejectUnexpectedPolicy(
+            RecordSource<FusionRecipeDefinition> source,
+            FusionResultDefinition result,
+            string path)
+        {
+            if (result.PolicyId is not null)
+            {
+                Add(source, path + ".policyId", ContentValidationErrorCode.ShapeInvalid,
+                    $"{result.Operation} fusion results cannot declare policyId.");
             }
         }
 

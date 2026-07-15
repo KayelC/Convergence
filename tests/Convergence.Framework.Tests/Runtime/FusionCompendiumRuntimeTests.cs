@@ -37,12 +37,11 @@ public sealed class FusionCompendiumRuntimeTests
                     new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("direct_child")),
                     AccidentPolicyId: Id("accident")),
                 new FusionRecipeSnapshot(
-                    RaceParent("fairy"),
-                    RaceParent("element"),
+                    RaceParent("fairy", FusionParentRole.RankShiftTarget),
+                    EntityParent("gale_catalyst", FusionParentRole.Catalyst),
                     new FusionRecipeResultSnapshot(
-                        FusionResultOperationKind.RankOffset,
-                        ResultRaceId: Id("fairy"),
-                        RankOffset: 1)),
+                        FusionResultOperationKind.CatalystRankShift,
+                        RankShift: 1)),
                 new FusionRecipeSnapshot(
                     EntityParent("catalyst"),
                     EntityParent("glow_wisp"),
@@ -76,6 +75,16 @@ public sealed class FusionCompendiumRuntimeTests
             Participant("gale_catalyst", "element", rank: 1, level: 8)));
         Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
         Assert.Equal(Id("greater_glow_wisp"), rank.ResultEntityId);
+        Assert.Equal(Id("glow_wisp"), rank.TransformedParent?.EntityId);
+        Assert.Equal(Id("gale_catalyst"), rank.CatalystParent?.EntityId);
+
+        FusionResolvedResult reversedRank = resolver.Resolve(new FusionResultRequest(
+            Participant("gale_catalyst", "element", rank: 1, level: 8),
+            Participant("glow_wisp", "fairy", rank: 1, level: 2)));
+        Assert.Equal(rank.Operation, reversedRank.Operation);
+        Assert.Equal(rank.ResultEntityId, reversedRank.ResultEntityId);
+        Assert.Equal(Id("glow_wisp"), reversedRank.TransformedParent?.EntityId);
+        Assert.Equal(Id("gale_catalyst"), reversedRank.CatalystParent?.EntityId);
 
         FusionResolvedResult accident = resolver.Resolve(new FusionResultRequest(
             Participant("glow_wisp", "fairy", rank: 1, level: 2),
@@ -93,6 +102,146 @@ public sealed class FusionCompendiumRuntimeTests
         Assert.Equal(Id("glow_wisp"), statBoost.ResultEntityId);
         Assert.Equal(Id("stat_boost"), statBoost.ResultPolicyId);
         Assert.Equal(2, statBoost.ResultStats[Id("strength")]);
+    }
+
+    [Fact]
+    public void CatalystRankShift_UsesExactCatalogRankAndNeverClampsAtRaceBoundaries()
+    {
+        FusionRecipeSnapshot recipe = new(
+            RaceParent("fairy", FusionParentRole.RankShiftTarget),
+            EntityParent("gale_catalyst", FusionParentRole.Catalyst),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.CatalystRankShift,
+                RankShift: 2));
+        var repository = new TestFusionRepository(
+            entities:
+            [
+                Entity("glow_wisp", "fairy", rank: 1, level: 2),
+                Entity("greater_glow_wisp", "fairy", rank: 2, level: 10),
+                Entity("gale_catalyst", "element", rank: 1, level: 8)
+            ],
+            recipes: [recipe],
+            skills: []);
+        var resolver = new FusionResultResolver(
+            repository,
+            new SequenceRandomSource(),
+            Policies());
+
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
+            Participant("glow_wisp", "fairy", rank: 1, level: 2),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
+
+        Assert.False(result.IsSuccessful);
+        Assert.Null(result.ResultEntityId);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.RankShiftResultMissing,
+            Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void CatalystRankShift_RejectsParticipantRankThatDisagreesWithCatalog()
+    {
+        FusionRecipeSnapshot recipe = new(
+            RaceParent("fairy", FusionParentRole.RankShiftTarget),
+            EntityParent("gale_catalyst", FusionParentRole.Catalyst),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.CatalystRankShift,
+                RankShift: 1));
+        var repository = new TestFusionRepository(
+            entities:
+            [
+                Entity("glow_wisp", "fairy", rank: 1, level: 2),
+                Entity("greater_glow_wisp", "fairy", rank: 2, level: 10),
+                Entity("gale_catalyst", "element", rank: 1, level: 8)
+            ],
+            recipes: [recipe],
+            skills: []);
+        var resolver = new FusionResultResolver(
+            repository,
+            new SequenceRandomSource(),
+            Policies());
+
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
+            Participant("glow_wisp", "fairy", rank: 2, level: 2),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
+
+        Assert.False(result.IsSuccessful);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.ParticipantDefinitionMismatch,
+            Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void CatalystRankShift_RanksDownAndRejectsTheLowerRaceBoundary()
+    {
+        FusionRecipeSnapshot recipe = new(
+            RaceParent("fairy", FusionParentRole.RankShiftTarget),
+            EntityParent("gale_catalyst", FusionParentRole.Catalyst),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.CatalystRankShift,
+                RankShift: -1));
+        var repository = new TestFusionRepository(
+            entities:
+            [
+                Entity("glow_wisp", "fairy", rank: 1, level: 2),
+                Entity("greater_glow_wisp", "fairy", rank: 2, level: 10),
+                Entity("gale_catalyst", "element", rank: 1, level: 8)
+            ],
+            recipes: [recipe],
+            skills: []);
+        var resolver = new FusionResultResolver(
+            repository,
+            new SequenceRandomSource(),
+            Policies());
+
+        FusionResolvedResult rankDown = resolver.Resolve(new FusionResultRequest(
+            Participant("greater_glow_wisp", "fairy", rank: 2, level: 10),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
+        FusionResolvedResult lowerBoundary = resolver.Resolve(new FusionResultRequest(
+            Participant("glow_wisp", "fairy", rank: 1, level: 2),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
+
+        Assert.True(rankDown.IsSuccessful);
+        Assert.Equal(FusionRuntimeOperation.RankDownParent, rankDown.Operation);
+        Assert.Equal(Id("glow_wisp"), rankDown.ResultEntityId);
+        Assert.False(lowerBoundary.IsSuccessful);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.RankShiftResultMissing,
+            Assert.Single(lowerBoundary.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void CatalystRankShift_RejectsAmbiguousExactRaceRank()
+    {
+        FusionRecipeSnapshot recipe = new(
+            RaceParent("fairy", FusionParentRole.RankShiftTarget),
+            EntityParent("gale_catalyst", FusionParentRole.Catalyst),
+            new FusionRecipeResultSnapshot(
+                FusionResultOperationKind.CatalystRankShift,
+                RankShift: -1));
+        var repository = new TestFusionRepository(
+            entities:
+            [
+                Entity("glow_wisp", "fairy", rank: 1, level: 2),
+                Entity("second_wisp", "fairy", rank: 1, level: 3),
+                Entity("greater_glow_wisp", "fairy", rank: 2, level: 10),
+                Entity("gale_catalyst", "element", rank: 1, level: 8)
+            ],
+            recipes: [recipe],
+            skills: []);
+        var resolver = new FusionResultResolver(
+            repository,
+            new SequenceRandomSource(),
+            Policies());
+
+        FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
+            Participant("greater_glow_wisp", "fairy", rank: 2, level: 10),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
+
+        Assert.False(result.IsSuccessful);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.RankShiftResultAmbiguous,
+            Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]
@@ -288,11 +437,15 @@ public sealed class FusionCompendiumRuntimeTests
         }
     }
 
-    private static FusionRecipeParentSelectorSnapshot EntityParent(string id) =>
-        new(FusionParentSelectorKind.Entity, Id(id));
+    private static FusionRecipeParentSelectorSnapshot EntityParent(
+        string id,
+        FusionParentRole role = FusionParentRole.Participant) =>
+        new(FusionParentSelectorKind.Entity, Id(id), role);
 
-    private static FusionRecipeParentSelectorSnapshot RaceParent(string id) =>
-        new(FusionParentSelectorKind.Race, Id(id));
+    private static FusionRecipeParentSelectorSnapshot RaceParent(
+        string id,
+        FusionParentRole role = FusionParentRole.Participant) =>
+        new(FusionParentSelectorKind.Race, Id(id), role);
 
     private static FusionEntitySnapshot Entity(
         string id,

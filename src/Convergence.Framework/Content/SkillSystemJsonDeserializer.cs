@@ -162,6 +162,7 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopStockKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<DungeonFixedFloorKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionParentSelectorKind>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionParentRole>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionResultOperationKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<RulesetCategory>());
         return options;

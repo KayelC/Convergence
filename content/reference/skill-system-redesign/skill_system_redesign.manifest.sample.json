@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "convergence.skill_system_redesign_sample",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Skill System Redesign Sample",
   "documents": [
     {

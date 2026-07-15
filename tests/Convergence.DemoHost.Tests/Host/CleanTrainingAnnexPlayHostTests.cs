@@ -290,9 +290,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Party setup: 1 active, 1 reserve.", text, StringComparison.Ordinal);
         Assert.Contains("Roster setup: active hosted entity 1, Hosted Entity roster 1, Companion roster 2.", text, StringComparison.Ordinal);
         Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
-        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
+        Assert.Contains("Session: convergence.training_annex_slice; 7 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
-        Assert.Contains("Session: convergence.training_annex_slice; 5 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: convergence.training_annex_slice:training_annex_entrance.", text, StringComparison.Ordinal);
+        Assert.Contains("Session: convergence.training_annex_slice; 7 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance); dungeon state: convergence.training_annex_slice:training_annex_entrance.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: returned to Staging Area; location Staging Area (convergence.training_annex_slice:staging_area).", text, StringComparison.Ordinal);
         Assert.Contains("Actor roster: 10 actor(s).", text, StringComparison.Ordinal);
         Assert.Contains("Player: Echo Adept; instance echo_adept; level 3; resources: hp 80/80, sp 40/40.", text, StringComparison.Ordinal);
@@ -591,13 +591,13 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(direct.Diagnostics);
 
         TrainingAnnexFusionResultEvidence rank = summary.FusionResults[1];
-        Assert.Equal("race_rank_offset_result", rank.ScenarioId);
-        Assert.Equal(RuntimeInstanceId.Parse("echo_adept"), rank.FirstParentInstanceId);
-        Assert.Equal(Qualified("echo_adept"), rank.FirstParentEntityId);
-        Assert.Equal(RuntimeInstanceId.Parse("replacement_bramble_runner"), rank.SecondParentInstanceId);
-        Assert.Equal(Qualified("bramble_runner"), rank.SecondParentEntityId);
+        Assert.Equal("catalyst_rank_shift_result", rank.ScenarioId);
+        Assert.Equal(RuntimeInstanceId.Parse("companion_ashling"), rank.FirstParentInstanceId);
+        Assert.Equal(Qualified("ashling"), rank.FirstParentEntityId);
+        Assert.Equal(RuntimeInstanceId.Parse("fusion_prism_catalyst"), rank.SecondParentInstanceId);
+        Assert.Equal(Qualified("prism_catalyst"), rank.SecondParentEntityId);
         Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
-        Assert.Equal(Qualified("ward_shell"), rank.ResultEntityId);
+        Assert.Equal(Qualified("glimmer_guard"), rank.ResultEntityId);
         Assert.False(rank.IsAccident);
         Assert.Equal(Id("standard_accident"), rank.AccidentPolicyId);
         Assert.Null(rank.ResultPolicyId);
@@ -632,7 +632,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Fusion result: Echo Adept + Bramble Runner -> Ward Shell (rank_up; race_rank_offset_result).",
+            "Fusion result: Ashling + Prism Catalyst -> Glimmer Guard (rank_up; catalyst_rank_shift_result).",
             text,
             StringComparison.Ordinal);
         Assert.Contains(

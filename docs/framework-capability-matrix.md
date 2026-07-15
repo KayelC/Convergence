@@ -18,12 +18,12 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 The matrix currently records 25 capabilities:
 
-- 20 complete framework capabilities;
-- 2 partial capabilities;
+- 21 complete framework capabilities;
+- 1 partial capability;
 - 3 explicitly deferred capabilities.
 
-The remaining gaps are checked-in schema breadth, catalyst rank-shift semantics,
-a real Godot adapter project, future save-version migration, and full
+The remaining gaps are checked-in schema breadth, a real Godot adapter project,
+future save-version migration, and full
 deterministic replay. These are explicit product gaps; they do not make the
 implemented runtime, content, execution, or host-boundary services
 legacy-dependent.

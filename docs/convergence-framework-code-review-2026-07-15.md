@@ -505,9 +505,13 @@ Required correction:
   catalyst fixture and test rank up, rank down, both parent orders, and both race
   boundaries.
 
-Status: explicitly deferred on 2026-07-15 so the current correction sequence can
-finish and planned product-roadmap work can resume. This operation must not be
-stabilized as public fusion behavior before the semantic correction is made.
+Resolution status: implemented pending consolidated review on 2026-07-15.
+Schema v3 replaces the provisional operation with `CatalystRankShift`, parent
+selectors carry explicit catalyst and rank-shift-target roles, participant ranks
+are checked against catalog authority, and exact same-race rank lookup rejects
+missing or ambiguous destinations without clamping. Framework, catalog,
+transaction, content, and DemoHost regressions cover both parent orders, rank up
+and down, both race boundaries, and the retired wire shape.
 
 ### L1. DemoHost file loading does not confine paths to its content root
 

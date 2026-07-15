@@ -115,12 +115,12 @@ public sealed class FusionTransactionServiceTests
     public void Commit_StructuredRankOperationUsesCatalogStateRegardlessOfParentOrder()
     {
         TransactionContext context = CreateContext();
-        FusionParticipantSnapshot echo = Participant(
-            context.Catalog.GetRequiredEntity(Qualified("echo_adept")),
-            "rank_echo_parent");
-        FusionParticipantSnapshot bramble = Participant(
-            context.Catalog.GetRequiredEntity(Qualified("bramble_runner")),
-            "rank_bramble_parent");
+        FusionParticipantSnapshot target = Participant(
+            context.Catalog.GetRequiredEntity(Qualified("ashling")),
+            "rank_shift_target");
+        FusionParticipantSnapshot catalyst = Participant(
+            context.Catalog.GetRequiredEntity(Qualified("prism_catalyst")),
+            "rank_shift_catalyst");
         var owner = new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("owner"),
             Qualified("echo_adept"),
@@ -128,12 +128,12 @@ public sealed class FusionTransactionServiceTests
         var service = new FusionTransactionService(
             context.ActorFactory,
             new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
-        EntityDefinition expectedEntity = context.Catalog.GetRequiredEntity(Qualified("ward_shell"));
+        EntityDefinition expectedEntity = context.Catalog.GetRequiredEntity(Qualified("glimmer_guard"));
 
         (FusionPlanningResult forwardPlan, PreparedFusionTransaction forwardPrepared, FusionTransactionCommitResult forward) =
-            Execute(echo, bramble, "rank_result_forward");
+            Execute(target, catalyst, "rank_result_forward");
         (FusionPlanningResult reversedPlan, PreparedFusionTransaction reversedPrepared, FusionTransactionCommitResult reversed) =
-            Execute(bramble, echo, "rank_result_reversed");
+            Execute(catalyst, target, "rank_result_reversed");
 
         Assert.Equal(FusionRuntimeOperation.RankUpParent, forwardPlan.Result.Operation);
         Assert.Equal(FusionRuntimeOperation.RankUpParent, reversedPlan.Result.Operation);
@@ -155,10 +155,10 @@ public sealed class FusionTransactionServiceTests
             reversed.ResultActorSnapshot!.Identity.InstanceId);
         AssertCatalogDecimalStats(forward.ResultActorSnapshot!.Stats.BaseStats);
         AssertCatalogDecimalStats(reversed.ResultActorSnapshot!.Stats.BaseStats);
-        Assert.Equal([echo.InstanceId, bramble.InstanceId], forward.ConsumedParticipantIds);
-        Assert.Equal([bramble.InstanceId, echo.InstanceId], reversed.ConsumedParticipantIds);
-        Assert.Equal(Qualified("ward_shell"), Assert.Single(forward.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
-        Assert.Equal(Qualified("ward_shell"), Assert.Single(reversed.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
+        Assert.Equal([target.InstanceId, catalyst.InstanceId], forward.ConsumedParticipantIds);
+        Assert.Equal([catalyst.InstanceId, target.InstanceId], reversed.ConsumedParticipantIds);
+        Assert.Equal(Qualified("glimmer_guard"), Assert.Single(forward.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
+        Assert.Equal(Qualified("glimmer_guard"), Assert.Single(reversed.AfterPartyRoster.CompanionRoster).EntityDefinitionId);
 
         (FusionPlanningResult Plan, PreparedFusionTransaction Prepared, FusionTransactionCommitResult Result) Execute(
             FusionParticipantSnapshot first,

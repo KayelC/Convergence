@@ -175,7 +175,7 @@ public sealed class ContentValidationTests
     {
         const string manifestJson = """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "id": "test.pack",
               "version": "1.0.0",
               "displayName": "Test Pack",
@@ -515,12 +515,12 @@ public sealed class ContentValidationTests
     public void DocumentDiagnosticsRetainManifestAndSourceProvenance()
     {
         ContentPackManifest manifest = new(
-            1, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
+            2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
             [new ContentPackDocumentReference("skills", "declared.skills.json")]);
         var supplied = new SourceContentDocument<SkillDefinition>(
             "undeclared.skills.json",
             "disk/undeclared.skills.json",
-            new DeserializedContentDocument<SkillDefinition>(1, []));
+            new DeserializedContentDocument<SkillDefinition>(2, []));
 
         ContentValidationResult result = _validator.Validate(new SkillSystemValidationRequest(
             manifest, "pack.manifest.json", new SkillSystemRegistrationBuilder().Build(), [supplied]));
@@ -543,21 +543,21 @@ public sealed class ContentValidationTests
     public void RecordDiagnosticsFollowManifestThenAuthoredRecordOrder()
     {
         ContentPackManifest manifest = new(
-            2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
+            3, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
             [
                 new ContentPackDocumentReference("races", "races.json"),
                 new ContentPackDocumentReference("skills", "skills.json")
             ]);
         var races = new SourceContentDocument<RaceDefinition>(
             "races.json", "races.json",
-            new DeserializedContentDocument<RaceDefinition>(2,
+            new DeserializedContentDocument<RaceDefinition>(3,
             [
                 new RaceDefinition(Id("test.pack:qualified_first"), "First"),
                 new RaceDefinition(Id("test.pack:qualified_second"), "Second")
             ]));
         var skills = new SourceContentDocument<SkillDefinition>(
             "skills.json", "skills.json",
-            new DeserializedContentDocument<SkillDefinition>(2,
+            new DeserializedContentDocument<SkillDefinition>(3,
             [
                 new SkillDefinition(
                     Id("active_after_races"), "Active", "Invalid active.",
@@ -581,10 +581,10 @@ public sealed class ContentValidationTests
         SkillSystemRegistrationSnapshot snapshot = builder.Build();
         builder.RegisterContext("field");
         var source = new SourceContentDocument<SkillDefinition>(
-            "skills.json", "skills.json", new DeserializedContentDocument<SkillDefinition>(2, []));
+            "skills.json", "skills.json", new DeserializedContentDocument<SkillDefinition>(3, []));
         var supplied = new List<SourceContentDocument<SkillDefinition>> { source };
         SkillSystemValidationRequest request = new(
-            new ContentPackManifest(2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
+            new ContentPackManifest(3, "test.pack", SemanticVersion.Parse("1.0.0"), "Test", null, null,
                 [new ContentPackDocumentReference("skills", "skills.json")]),
             "manifest.json", snapshot, supplied);
         supplied.Clear();
@@ -648,15 +648,15 @@ public sealed class ContentValidationTests
             new("ailments", "ailments.json")
         ];
         ContentPackManifest manifest = new(
-            2, "test.pack", SemanticVersion.Parse("1.0.0"), "Test Pack", null, null, references);
+            3, "test.pack", SemanticVersion.Parse("1.0.0"), "Test Pack", null, null, references);
         return new SkillSystemValidationRequest(
             manifest,
             "manifest.json",
             registrations,
-            [new SourceContentDocument<SkillDefinition>("skills.json", "skills.json", new(2, skills ?? []))],
-            [new SourceContentDocument<EntityDefinition>("entities.json", "entities.json", new(2, entities ?? []))],
-            [new SourceContentDocument<RaceDefinition>("races.json", "races.json", new(2, races ?? []))],
-            [new SourceContentDocument<AilmentDefinition>("ailments.json", "ailments.json", new(2, ailments ?? []))]);
+            [new SourceContentDocument<SkillDefinition>("skills.json", "skills.json", new(3, skills ?? []))],
+            [new SourceContentDocument<EntityDefinition>("entities.json", "entities.json", new(3, entities ?? []))],
+            [new SourceContentDocument<RaceDefinition>("races.json", "races.json", new(3, races ?? []))],
+            [new SourceContentDocument<AilmentDefinition>("ailments.json", "ailments.json", new(3, ailments ?? []))]);
     }
 
     private static SkillDefinition ActiveSkill(
@@ -736,7 +736,7 @@ public sealed class ContentValidationTests
             _inner.DeserializeManifest(json, sourceName);
 
         public DeserializedContentDocument<SkillDefinition> DeserializeSkills(string json, string sourceName) =>
-            new(2, [skill]);
+            new(3, [skill]);
 
         public DeserializedContentDocument<EntityDefinition> DeserializeEntities(string json, string sourceName) =>
             _inner.DeserializeEntities(json, sourceName);

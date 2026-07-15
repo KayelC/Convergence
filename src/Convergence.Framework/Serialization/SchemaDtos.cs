@@ -328,14 +328,14 @@ internal sealed class FusionParentSelectorDto
 {
     public required FusionParentSelectorKind Kind { get; init; }
     public required string Id { get; init; }
+    public required FusionParentRole Role { get; init; }
 }
 
 internal sealed class FusionResultDto
 {
     public required FusionResultOperationKind Operation { get; init; }
     public string? ResultEntityId { get; init; }
-    public string? ResultRaceId { get; init; }
-    public int? RankOffset { get; init; }
+    public int? RankShift { get; init; }
     public string? PolicyId { get; init; }
     public Dictionary<string, JsonElement> Parameters { get; init; } = [];
 }

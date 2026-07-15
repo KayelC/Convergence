@@ -45,10 +45,17 @@ public enum FusionParentSelectorKind
     Race
 }
 
+public enum FusionParentRole
+{
+    Participant,
+    Catalyst,
+    RankShiftTarget
+}
+
 public enum FusionResultOperationKind
 {
     CreateEntity,
-    RankOffset,
+    CatalystRankShift,
     StatBoost,
     Special
 }
@@ -391,30 +398,30 @@ public sealed record DungeonDefinition
     public IReadOnlyList<DungeonBlockDefinition> Blocks { get; }
 }
 
-public sealed record FusionParentSelectorDefinition(FusionParentSelectorKind Kind, ContentId Id);
+public sealed record FusionParentSelectorDefinition(
+    FusionParentSelectorKind Kind,
+    ContentId Id,
+    FusionParentRole Role = FusionParentRole.Participant);
 
 public sealed record FusionResultDefinition
 {
     public FusionResultDefinition(
         FusionResultOperationKind operation,
         ContentId? resultEntityId = null,
-        ContentId? resultRaceId = null,
-        int? rankOffset = null,
+        int? rankShift = null,
         ContentId? policyId = null,
         IEnumerable<KeyValuePair<string, object?>>? parameters = null)
     {
         Operation = operation;
         ResultEntityId = resultEntityId;
-        ResultRaceId = resultRaceId;
-        RankOffset = rankOffset;
+        RankShift = rankShift;
         PolicyId = policyId;
         Parameters = DefinitionCollections.SnapshotParameters(parameters);
     }
 
     public FusionResultOperationKind Operation { get; }
     public ContentId? ResultEntityId { get; }
-    public ContentId? ResultRaceId { get; }
-    public int? RankOffset { get; }
+    public int? RankShift { get; }
     public ContentId? PolicyId { get; }
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 }

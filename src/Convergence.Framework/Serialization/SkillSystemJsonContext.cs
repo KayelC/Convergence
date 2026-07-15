@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Convergence.Content;
 
 namespace Convergence.Serialization;
 
@@ -15,6 +16,7 @@ namespace Convergence.Serialization;
 [JsonSerializable(typeof(EncounterDocumentDto))]
 [JsonSerializable(typeof(DungeonDocumentDto))]
 [JsonSerializable(typeof(FusionDocumentDto))]
+[JsonSerializable(typeof(FusionParentRole))]
 [JsonSerializable(typeof(RulesetDocumentDto))]
 [JsonSerializable(typeof(ValueAmountDto))]
 [JsonSerializable(typeof(PowerAmountDto))]

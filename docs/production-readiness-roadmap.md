@@ -51,10 +51,11 @@ This roadmap remains active while any finding is `open` or
 | PR-M6 | Aggregate save restoration is host-reimplemented | `open` | Add framework session restoration and a version-migration seam. |
 | PR-L1 | Runtime random targeting has an ordered fallback | `implemented_pending_review` | Both targeting policies are mandatory; ordered behavior requires explicit injection. |
 | PR-L2 | DemoHost flattens content filenames | `open` | Preserve pack-relative output and resolution paths. |
+| CR-M6 | Catalyst rank shifting implements the wrong rule | `implemented_pending_review` | Schema v3 uses authored catalyst/target roles, exact same-race rank lookup, and typed rejection without clamping. |
 
-The later code review added `CR-M6`: catalyst rank shifting currently implements
-the wrong rule. It is tracked here because it changes the public fusion and
-content contract and must be corrected before the API baseline is frozen.
+The later code review added `CR-M6`: catalyst rank shifting implemented the
+wrong rule. Its implementation is complete and awaits the same consolidated
+review as the original audit findings.
 
 ## Ordered Completion Checkpoints
 
@@ -75,6 +76,13 @@ nonincremental builds, formatting verification, applicable demos, documentation
 checks, and its own green commit. Implemented findings remain
 `implemented_pending_review` until the final consolidated review and any
 resulting corrections are complete.
+
+## Checkpoint Evidence
+
+| Checkpoint | Commit/result | Verification |
+|---|---|---|
+| 1 | `44960bc` (`runtime: require explicit random targeting`) | 789 tests passed; 0 skipped; strict build produced 0 warnings; all noninteractive demos passed. |
+| 2 | `fusion: enforce catalyst rank shifts` | 794 tests passed; 0 skipped; schema v3 active packs at `0.3.0`; rank up/down, parent order, stale rank, both boundaries, ambiguity, and retired-shape rejection covered. |
 
 ## Review Evidence Standard
 

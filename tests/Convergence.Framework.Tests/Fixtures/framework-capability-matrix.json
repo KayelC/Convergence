@@ -159,14 +159,12 @@
     },
     {
       "id": "fusion_and_inheritance",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["FusionInheritanceTests", "FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Catalyst rank shifting must move the non-catalyst entity within its own race chart; the provisional generic RankOffset resolver currently averages both parent ranks and selects from an authored result race."
-      ]
+      "knownGaps": []
     },
     {
       "id": "compendium",

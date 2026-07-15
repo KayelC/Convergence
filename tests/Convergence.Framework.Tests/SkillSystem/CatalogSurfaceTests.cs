@@ -60,7 +60,7 @@ public sealed class CatalogSurfaceTests
     public void CatalogSurfaceValidation_RejectsBadRangesMissingRegistrationsAndShapes()
     {
         ContentPackManifest manifest = new(
-            2,
+3,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
@@ -83,7 +83,7 @@ public sealed class CatalogSurfaceTests
             equipmentDocuments:
             [
                 Source("equipment.json", "equipment.json", new DeserializedContentDocument<EquipmentDefinition>(
-                    2,
+3,
                     [
                         new EquipmentDefinition(
                             Id("bad_weapon"),
@@ -98,7 +98,7 @@ public sealed class CatalogSurfaceTests
             shopDocuments:
             [
                 Source("shops.json", "shops.json", new DeserializedContentDocument<ShopCatalogDefinition>(
-                    2,
+3,
                     [
                         new ShopCatalogDefinition(
                             Id("bad_shop"),
@@ -112,13 +112,13 @@ public sealed class CatalogSurfaceTests
             encounterDocuments:
             [
                 Source("encounters.json", "encounters.json", new DeserializedContentDocument<EncounterDefinition>(
-                    2,
+3,
                     [new EncounterDefinition(Id("empty_encounter"), "Empty", "No formations.")]))
             ],
             dungeonDocuments:
             [
                 Source("dungeons.json", "dungeons.json", new DeserializedContentDocument<DungeonDefinition>(
-                    2,
+3,
                     [
                         new DungeonDefinition(
                             Id("bad_dungeon"),
@@ -130,7 +130,7 @@ public sealed class CatalogSurfaceTests
             fusionDocuments:
             [
                 Source("fusion.json", "fusion.json", new DeserializedContentDocument<FusionRecipeDefinition>(
-                    2,
+3,
                     [
                         new FusionRecipeDefinition(
                             Id("bad_fusion"),
@@ -143,7 +143,7 @@ public sealed class CatalogSurfaceTests
             rulesetDocuments:
             [
                 Source("rulesets.json", "rulesets.json", new DeserializedContentDocument<RulesetDefinition>(
-                    2,
+3,
                     [
                         new RulesetDefinition(
                             Id("bad_ruleset"),
@@ -186,7 +186,7 @@ public sealed class CatalogSurfaceTests
     public void CatalogSurfaceValidation_RejectsUnsafeNegotiationAggregates()
     {
         ContentPackManifest manifest = new(
-            2,
+3,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
@@ -224,7 +224,7 @@ public sealed class CatalogSurfaceTests
                     Source(
                         "negotiations.json",
                         "negotiations.json",
-                        new DeserializedContentDocument<NegotiationDefinition>(2, [negotiation]))
+                        new DeserializedContentDocument<NegotiationDefinition>(3, [negotiation]))
                 ]));
 
         Assert.Equal(2, result.Errors.Count);
@@ -241,7 +241,7 @@ public sealed class CatalogSurfaceTests
     public void CatalogSurfaceValidation_AcceptsExactNegotiationNumericBoundaries()
     {
         ContentPackManifest manifest = new(
-            2,
+3,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
@@ -276,7 +276,7 @@ public sealed class CatalogSurfaceTests
                     Source(
                         "negotiations.json",
                         "negotiations.json",
-                        new DeserializedContentDocument<NegotiationDefinition>(2, [negotiation]))
+                        new DeserializedContentDocument<NegotiationDefinition>(3, [negotiation]))
                 ]));
 
         Assert.True(result.IsValid, string.Join(Environment.NewLine,
@@ -288,7 +288,7 @@ public sealed class CatalogSurfaceTests
     public void CatalogSurfaceValidation_RequiresExactlyTwoFusionParents()
     {
         ContentPackManifest manifest = new(
-            2,
+3,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
@@ -316,7 +316,7 @@ public sealed class CatalogSurfaceTests
                     Source(
                         "fusion.json",
                         "fusion.json",
-                        new DeserializedContentDocument<FusionRecipeDefinition>(2, [oneParent, threeParents]))
+                        new DeserializedContentDocument<FusionRecipeDefinition>(3, [oneParent, threeParents]))
                 ]));
 
         ContentValidationError[] cardinalityErrors = result.Errors
@@ -331,10 +331,52 @@ public sealed class CatalogSurfaceTests
     }
 
     [Fact]
+    public void CatalogSurfaceValidation_RequiresOneCatalystAndOneRankShiftTarget()
+    {
+        ContentPackManifest manifest = new(
+            3,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("fusion", "fusion.json")]);
+        var recipe = new FusionRecipeDefinition(
+            Id("bad_roles"),
+            "Bad Roles",
+            "Both selectors incorrectly use the normal participant role.",
+            [
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Race, Id("race_a")),
+                new FusionParentSelectorDefinition(FusionParentSelectorKind.Entity, Id("catalyst"))
+            ],
+            new FusionResultDefinition(
+                FusionResultOperationKind.CatalystRankShift,
+                rankShift: 1));
+
+        ContentValidationResult result = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder().Build(),
+                fusionDocuments:
+                [
+                    Source(
+                        "fusion.json",
+                        "fusion.json",
+                        new DeserializedContentDocument<FusionRecipeDefinition>(3, [recipe]))
+                ]));
+
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.ShapeInvalid &&
+            error.JsonPath == "$.fusionRecipes[0].parents" &&
+            error.Message.Contains("one catalyst", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void CatalogSurfaceValidation_RejectsOverlappingEqualSpecificityFusionRecipes()
     {
         ContentPackManifest manifest = new(
-            2,
+3,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
@@ -371,7 +413,7 @@ public sealed class CatalogSurfaceTests
                     Source(
                         "entities.json",
                         "entities.json",
-                        new DeserializedContentDocument<EntityDefinition>(2, [parentA, parentB, resultEntity]))
+                        new DeserializedContentDocument<EntityDefinition>(3, [parentA, parentB, resultEntity]))
                 ],
                 raceDocuments:
                 [
@@ -379,7 +421,7 @@ public sealed class CatalogSurfaceTests
                         "races.json",
                         "races.json",
                         new DeserializedContentDocument<RaceDefinition>(
-                            2,
+3,
                             [new RaceDefinition(Id("race_a"), "Race A"), new RaceDefinition(Id("race_b"), "Race B")]))
                 ],
                 fusionDocuments:
@@ -387,7 +429,7 @@ public sealed class CatalogSurfaceTests
                     Source(
                         "fusion.json",
                         "fusion.json",
-                        new DeserializedContentDocument<FusionRecipeDefinition>(2, [first, second]))
+                        new DeserializedContentDocument<FusionRecipeDefinition>(3, [first, second]))
                 ]));
 
         ContentValidationError ambiguity = Assert.Single(result.Errors);
@@ -434,7 +476,7 @@ public sealed class CatalogSurfaceTests
         Assert.Throws<ContentDeserializationException>(() => _deserializer.DeserializeEquipment(
             """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "equipment": [{
                 "id": "bad", "displayName": "Bad", "description": "Bad.",
                 "slot": "weapon", "baseValue": 1,
@@ -448,7 +490,7 @@ public sealed class CatalogSurfaceTests
         Assert.Throws<ContentDeserializationException>(() => _deserializer.DeserializeEquipment(
             """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "equipment": [{
                 "id": "bad", "displayName": "Bad", "description": "Bad.",
                 "slot": "wand", "baseValue": 1,
@@ -462,7 +504,7 @@ public sealed class CatalogSurfaceTests
             _deserializer.DeserializeShops(
                 """
                 {
-                  "schemaVersion": 2,
+                  "schemaVersion": 3,
                   "shops": [{
                     "id": "bad_shop", "displayName": "Bad", "description": "Bad.",
                     "categoryId": "weapon_shop", "availabilityContexts": ["field"],
@@ -477,6 +519,38 @@ public sealed class CatalogSurfaceTests
                 "bad.shops.json"));
 
         Assert.Equal("$.shops[0].offers[0].price", priceShape.JsonPath);
+
+        Assert.Throws<ContentDeserializationException>(() => _deserializer.DeserializeFusionRecipes(
+            """
+            {
+              "schemaVersion": 3,
+              "fusionRecipes": [{
+                "id": "old_rank", "displayName": "Old", "description": "Old shape.",
+                "parents": [
+                  { "kind": "race", "id": "race_a", "role": "rank_shift_target" },
+                  { "kind": "entity", "id": "catalyst", "role": "catalyst" }
+                ],
+                "result": { "operation": "rank_offset", "rankOffset": 1 }
+              }]
+            }
+            """,
+            "old-rank.fusion.json"));
+
+        Assert.Throws<ContentDeserializationException>(() => _deserializer.DeserializeFusionRecipes(
+            """
+            {
+              "schemaVersion": 3,
+              "fusionRecipes": [{
+                "id": "missing_role", "displayName": "Missing", "description": "Missing role.",
+                "parents": [
+                  { "kind": "race", "id": "race_a" },
+                  { "kind": "entity", "id": "catalyst", "role": "catalyst" }
+                ],
+                "result": { "operation": "catalyst_rank_shift", "rankShift": 1 }
+              }]
+            }
+            """,
+            "missing-role.fusion.json"));
     }
 
     private GameDataCatalog LoadCatalogSurfaceSample()

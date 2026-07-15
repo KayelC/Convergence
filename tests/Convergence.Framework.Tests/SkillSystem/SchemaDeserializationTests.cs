@@ -29,7 +29,7 @@ public sealed class SchemaDeserializationTests
             File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
-        Assert.Equal(2, manifest.SchemaVersion);
+        Assert.Equal(3, manifest.SchemaVersion);
         Assert.Equal(3, manifest.Documents.Count);
         SkillDefinition iceBoost = Assert.Single(skills.Records);
         EntityDefinition cinder = Assert.Single(entities.Records);
@@ -253,7 +253,7 @@ public sealed class SchemaDeserializationTests
     {
         string json = $$"""
         {
-          "schemaVersion": 2,
+          "schemaVersion": 3,
           "ailments": [
             {
               "id": "test_ailment", "displayName": "Test", "description": "Test ailment.",
@@ -320,11 +320,11 @@ public sealed class SchemaDeserializationTests
     }
 
     [Theory]
-    [InlineData("{ /* comment */ \"schemaVersion\": 2, \"skills\": [] }", "comment.json")]
-    [InlineData("{ \"schemaVersion\": 2, \"skills\": [], }", "trailing-comma.json")]
-    [InlineData("{ \"SchemaVersion\": 2, \"skills\": [] }", "case-mismatch.json")]
-    [InlineData("{ \"schemaVersion\": 2, \"skills\": \"wrong\" }", "wrong-token.json")]
-    [InlineData("{ \"schemaVersion\": 2, \"skills\": null }", "null-collection.json")]
+    [InlineData("{ /* comment */ \"schemaVersion\": 3, \"skills\": [] }", "comment.json")]
+    [InlineData("{ \"schemaVersion\": 3, \"skills\": [], }", "trailing-comma.json")]
+    [InlineData("{ \"SchemaVersion\": 3, \"skills\": [] }", "case-mismatch.json")]
+    [InlineData("{ \"schemaVersion\": 3, \"skills\": \"wrong\" }", "wrong-token.json")]
+    [InlineData("{ \"schemaVersion\": 3, \"skills\": null }", "null-collection.json")]
     public void StrictReader_RejectsNonCanonicalJson(string json, string sourceName)
     {
         ContentDeserializationException error = Assert.Throws<ContentDeserializationException>(
@@ -345,7 +345,7 @@ public sealed class SchemaDeserializationTests
             "\"inheritance\": null",
             StringComparison.Ordinal));
         const string nullRecord = """
-            { "schemaVersion": 2, "skills": [null] }
+            { "schemaVersion": 3, "skills": [null] }
             """;
         string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
 
@@ -457,7 +457,7 @@ public sealed class SchemaDeserializationTests
     }
 
     private static string WrapSkill(string record) => $$"""
-    { "schemaVersion": 2, "skills": [ {{record}} ] }
+    { "schemaVersion": 3, "skills": [ {{record}} ] }
     """;
 
     private static string MinimalPassiveRecord() =>

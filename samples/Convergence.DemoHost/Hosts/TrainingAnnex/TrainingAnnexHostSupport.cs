@@ -75,7 +75,7 @@ internal static class TrainingAnnexHostSupport
 {
     public const string PackId = "convergence.training_annex_slice";
     public static readonly ContentPackIdentity PackIdentity =
-        new(PackId, SemanticVersion.Parse("0.2.0"));
+        new(PackId, SemanticVersion.Parse("0.3.0"));
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
     public static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
@@ -548,7 +548,7 @@ internal static class TrainingAnnexHostSupport
         }
 
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.2.0"),
+            SemanticVersion.Parse("0.3.0"),
             [PackIdentity],
             actors,
             partyRoster ?? new RuntimePartyRosterSnapshot(

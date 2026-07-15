@@ -179,16 +179,14 @@ internal static class DefinitionQualifier
             definition.Description,
             definition.Parents.Select(parent => new FusionParentSelectorDefinition(
                 parent.Kind,
-                ContentReference(packId, parent.Id))),
+                ContentReference(packId, parent.Id),
+                parent.Role)),
             new FusionResultDefinition(
                 definition.Result.Operation,
                 definition.Result.ResultEntityId is null
                     ? null
                     : ContentReference(packId, definition.Result.ResultEntityId.Value),
-                definition.Result.ResultRaceId is null
-                    ? null
-                    : ContentReference(packId, definition.Result.ResultRaceId.Value),
-                definition.Result.RankOffset,
+                definition.Result.RankShift,
                 definition.Result.PolicyId,
                 definition.Result.Parameters),
             definition.AccidentPolicyId,

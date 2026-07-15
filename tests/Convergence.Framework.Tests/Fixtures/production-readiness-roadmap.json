@@ -175,11 +175,11 @@
       "id": "CR-M6",
       "title": "Catalyst rank-shift semantics",
       "severity": "medium",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 2,
       "plannedCommit": "fusion: enforce catalyst rank shifts",
-      "evidence": ["FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests"],
-      "remainingWork": ["authored catalyst roles", "exact same-race target rank", "schema v3 operation"],
+      "evidence": ["FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests", "CatalogSurfaceTests", "OriginalCleanContentSliceTests", "FusionTransactionServiceTests"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     }
   ]

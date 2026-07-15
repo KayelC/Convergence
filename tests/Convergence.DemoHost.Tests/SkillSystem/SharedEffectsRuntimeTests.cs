@@ -24,7 +24,7 @@ public sealed class SharedEffectsRuntimeTests
         string json =
             """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "items": [
                 {
                   "id": "medicine", "displayName": "Medicine", "description": "Heal.",
@@ -90,7 +90,7 @@ public sealed class SharedEffectsRuntimeTests
                 new SourceContentDocument<ItemDefinition>(
                     "items.json",
                     "items.json",
-                    new DeserializedContentDocument<ItemDefinition>(2, [item]))
+                    new DeserializedContentDocument<ItemDefinition>(3, [item]))
             ]);
 
         ContentValidationResult result = new SkillSystemContentValidator().Validate(request);

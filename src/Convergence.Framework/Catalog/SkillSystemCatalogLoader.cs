@@ -719,12 +719,6 @@ public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
                         resultEntityId, ReferenceKind.Entity, catalog, diagnostics);
                 }
 
-                if (recipe.Result.ResultRaceId is ContentId resultRaceId)
-                {
-                    CheckReference(pack, document.SourceName, "fusion recipe", recipe.Id,
-                        $"$.fusionRecipes[{recordIndex}].result.resultRaceId",
-                        resultRaceId, ReferenceKind.Race, catalog, diagnostics);
-                }
             }
         }
     }
