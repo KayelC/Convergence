@@ -590,193 +590,193 @@ internal sealed class CleanTrainingAnnexPlayHost
                         .ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations:
-                {
-                    await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
-                        .ConfigureAwait(false);
-                    await partyController.PrintRosterAsync(partyRoster, _eventSink, cancellationToken)
-                        .ConfigureAwait(false);
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> operationSelection =
-                        await _commandSource.ReadAsync(
-                            CreatePartyRosterOperationMenu(partyRoster),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!operationSelection.IsSelected ||
-                        operationSelection.Command == CleanTrainingAnnexPlayCommand.Back)
                     {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        break;
-                    }
-
-                    commands.Add(operationSelection.Command);
-                    TrainingAnnexPartyOperation operation = ToPartyOperation(operationSelection.Command);
-                    string operationName = PartyOperationName(operation);
-                    PartyRosterTransitionResult operationResult = partyController.ExecuteOperation(
-                        operation,
-                        partyRoster,
-                        roster);
-                    bool committed = false;
-                    if (operationResult.Applied)
-                    {
-                        committed = await ComposePlayerStateAsync(
-                                roster,
-                                operationResult.After,
-                                statCompositionService,
-                                equipmentProfileResolver,
-                                catalog,
-                                cancellationToken)
+                        await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
                             .ConfigureAwait(false);
-                        if (committed)
-                        {
-                            partyRoster = operationResult.After;
-                        }
-                        else
-                        {
-                            await _eventSink.PublishAsync(
-                                $"Party roster operation not committed: {operationName}; player stat composition was rejected.",
+                        await partyController.PrintRosterAsync(partyRoster, _eventSink, cancellationToken)
+                            .ConfigureAwait(false);
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> operationSelection =
+                            await _commandSource.ReadAsync(
+                                CreatePartyRosterOperationMenu(partyRoster),
                                 cancellationToken).ConfigureAwait(false);
+                        if (!operationSelection.IsSelected ||
+                            operationSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            break;
                         }
-                    }
 
-                    partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(
-                        operationName,
-                        operationResult,
-                        committed));
-                    if (!operationResult.Applied || committed)
-                    {
-                        await partyController.PrintOperationAsync(
+                        commands.Add(operationSelection.Command);
+                        TrainingAnnexPartyOperation operation = ToPartyOperation(operationSelection.Command);
+                        string operationName = PartyOperationName(operation);
+                        PartyRosterTransitionResult operationResult = partyController.ExecuteOperation(
+                            operation,
+                            partyRoster,
+                            roster);
+                        bool committed = false;
+                        if (operationResult.Applied)
+                        {
+                            committed = await ComposePlayerStateAsync(
+                                    roster,
+                                    operationResult.After,
+                                    statCompositionService,
+                                    equipmentProfileResolver,
+                                    catalog,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
+                            if (committed)
+                            {
+                                partyRoster = operationResult.After;
+                            }
+                            else
+                            {
+                                await _eventSink.PublishAsync(
+                                    $"Party roster operation not committed: {operationName}; player stat composition was rejected.",
+                                    cancellationToken).ConfigureAwait(false);
+                            }
+                        }
+
+                        partyTransitions.Add(TrainingAnnexPartyTransitionEvidence.From(
                             operationName,
                             operationResult,
-                            _eventSink,
-                            cancellationToken).ConfigureAwait(false);
+                            committed));
+                        if (!operationResult.Applied || committed)
+                        {
+                            await partyController.PrintOperationAsync(
+                                operationName,
+                                operationResult,
+                                _eventSink,
+                                cancellationToken).ConfigureAwait(false);
+                        }
+
+                        composeAfterCommand = false;
+
+                        break;
                     }
-
-                    composeAfterCommand = false;
-
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.OpenNegotiation:
-                {
-                    TrainingAnnexNegotiationInteractionResult negotiation =
-                        await new TrainingAnnexNegotiationController(
-                                _eventSink,
-                                _commandSource,
-                                _randomSource)
-                            .OpenAsync(
-                                catalog,
-                                roster,
-                                partyRoster,
-                                wallet,
-                                economy,
-                                recruitedThisSession,
-                                commands,
-                                cancellationToken).ConfigureAwait(false);
-                    partyRoster = negotiation.PartyRoster;
-                    wallet = negotiation.Wallet;
-                    negotiations.AddRange(negotiation.Evidence);
-                    foreach (TrainingAnnexNegotiationEvidence recruited in
-                             negotiation.Evidence.Where(evidence => evidence.Recruited))
                     {
-                        TrainingAnnexRuntimeActor acquiredActor = roster.AllActors.FirstOrDefault(actor =>
-                                actor.Actor.State.InstanceId == recruited.TargetInstanceId)
-                            ?? throw new InvalidOperationException(
-                                $"Recruited runtime actor '{recruited.TargetInstanceId}' is not in the host roster.");
-                        TrainingAnnexAcquisitionRegistrationResult acquisition =
-                            await acquisitionRegistrar.RecordAsync(
-                                compendium,
-                                playerBattleKnowledge,
-                                acquiredActor,
-                                partyRoster,
-                                wallet,
-                                TrainingAnnexHostSupport.NegotiationAcquisitionSource,
-                                cancellationToken).ConfigureAwait(false);
-                        compendium = acquisition.Compendium;
-                        playerBattleKnowledge = acquisition.PlayerKnowledge;
-                        compendiumEvidence.Add(acquisition.Evidence);
+                        TrainingAnnexNegotiationInteractionResult negotiation =
+                            await new TrainingAnnexNegotiationController(
+                                    _eventSink,
+                                    _commandSource,
+                                    _randomSource)
+                                .OpenAsync(
+                                    catalog,
+                                    roster,
+                                    partyRoster,
+                                    wallet,
+                                    economy,
+                                    recruitedThisSession,
+                                    commands,
+                                    cancellationToken).ConfigureAwait(false);
+                        partyRoster = negotiation.PartyRoster;
+                        wallet = negotiation.Wallet;
+                        negotiations.AddRange(negotiation.Evidence);
+                        foreach (TrainingAnnexNegotiationEvidence recruited in
+                                 negotiation.Evidence.Where(evidence => evidence.Recruited))
+                        {
+                            TrainingAnnexRuntimeActor acquiredActor = roster.AllActors.FirstOrDefault(actor =>
+                                    actor.Actor.State.InstanceId == recruited.TargetInstanceId)
+                                ?? throw new InvalidOperationException(
+                                    $"Recruited runtime actor '{recruited.TargetInstanceId}' is not in the host roster.");
+                            TrainingAnnexAcquisitionRegistrationResult acquisition =
+                                await acquisitionRegistrar.RecordAsync(
+                                    compendium,
+                                    playerBattleKnowledge,
+                                    acquiredActor,
+                                    partyRoster,
+                                    wallet,
+                                    TrainingAnnexHostSupport.NegotiationAcquisitionSource,
+                                    cancellationToken).ConfigureAwait(false);
+                            compendium = acquisition.Compendium;
+                            playerBattleKnowledge = acquisition.PlayerKnowledge;
+                            compendiumEvidence.Add(acquisition.Evidence);
+                        }
+                        break;
                     }
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.CalculateFusionResults:
-                {
-                    TrainingAnnexFusionCalculationResult calculated =
-                        await new TrainingAnnexFusionController(_eventSink)
-                            .CalculateAsync(catalog, roster, cancellationToken).ConfigureAwait(false);
-                    fusionResults.AddRange(calculated.Results);
-                    fusionPlanning.AddRange(calculated.Planning);
-                    break;
-                }
+                    {
+                        TrainingAnnexFusionCalculationResult calculated =
+                            await new TrainingAnnexFusionController(_eventSink)
+                                .CalculateAsync(catalog, roster, cancellationToken).ConfigureAwait(false);
+                        fusionResults.AddRange(calculated.Results);
+                        fusionPlanning.AddRange(calculated.Planning);
+                        break;
+                    }
                 case CleanTrainingAnnexPlayCommand.PreviewFusionResult:
-                {
-                    TrainingAnnexFusionPreviewEvidence? preview =
-                        await new TrainingAnnexFusionController(_eventSink)
-                            .PreviewAsync(
-                                catalog,
-                                roster,
-                                _commandSource,
-                                commands,
-                                cancellationToken).ConfigureAwait(false);
-                    if (preview is not null)
                     {
-                        fusionPreviews.Add(preview);
-                    }
+                        TrainingAnnexFusionPreviewEvidence? preview =
+                            await new TrainingAnnexFusionController(_eventSink)
+                                .PreviewAsync(
+                                    catalog,
+                                    roster,
+                                    _commandSource,
+                                    commands,
+                                    cancellationToken).ConfigureAwait(false);
+                        if (preview is not null)
+                        {
+                            fusionPreviews.Add(preview);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case CleanTrainingAnnexPlayCommand.CommitFusionTransaction:
-                {
-                    TrainingAnnexFusionTransactionResult transaction =
-                        await new TrainingAnnexFusionController(_eventSink)
-                            .CommitAsync(
-                                 catalog,
-                                 roster,
-                                 partyRoster,
-                                 fusionTransactionService,
-                                 _commandSource,
-                                commands,
-                                cancellationToken).ConfigureAwait(false);
-                    partyRoster = transaction.PartyRoster;
-                    fusionTransactions.Add(transaction.Evidence);
-                    if (transaction.ResultActor is not null)
                     {
-                        roster = roster.WithDynamicMember(transaction.ResultActor);
-                        TrainingAnnexAcquisitionRegistrationResult acquisition =
-                            await acquisitionRegistrar.RecordAsync(
-                                compendium,
-                                playerBattleKnowledge,
-                                transaction.ResultActor,
-                                partyRoster,
-                                wallet,
-                                TrainingAnnexHostSupport.FusionAcquisitionSource,
-                                cancellationToken).ConfigureAwait(false);
-                        compendium = acquisition.Compendium;
-                        playerBattleKnowledge = acquisition.PlayerKnowledge;
-                        compendiumEvidence.Add(acquisition.Evidence);
-                    }
+                        TrainingAnnexFusionTransactionResult transaction =
+                            await new TrainingAnnexFusionController(_eventSink)
+                                .CommitAsync(
+                                     catalog,
+                                     roster,
+                                     partyRoster,
+                                     fusionTransactionService,
+                                     _commandSource,
+                                    commands,
+                                    cancellationToken).ConfigureAwait(false);
+                        partyRoster = transaction.PartyRoster;
+                        fusionTransactions.Add(transaction.Evidence);
+                        if (transaction.ResultActor is not null)
+                        {
+                            roster = roster.WithDynamicMember(transaction.ResultActor);
+                            TrainingAnnexAcquisitionRegistrationResult acquisition =
+                                await acquisitionRegistrar.RecordAsync(
+                                    compendium,
+                                    playerBattleKnowledge,
+                                    transaction.ResultActor,
+                                    partyRoster,
+                                    wallet,
+                                    TrainingAnnexHostSupport.FusionAcquisitionSource,
+                                    cancellationToken).ConfigureAwait(false);
+                            compendium = acquisition.Compendium;
+                            playerBattleKnowledge = acquisition.PlayerKnowledge;
+                            compendiumEvidence.Add(acquisition.Evidence);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case CleanTrainingAnnexPlayCommand.OpenCompendium:
-                {
-                    TrainingAnnexCompendiumInteractionResult interaction =
-                        await new TrainingAnnexCompendiumController(
-                                _eventSink,
-                                _commandSource,
-                                compendiumRuntime,
-                                familiarKnowledge)
-                            .OpenAsync(
-                                compendium,
-                                partyRoster,
-                                wallet,
-                                roster,
-                                playerBattleKnowledge,
-                                commands,
-                                cancellationToken).ConfigureAwait(false);
-                    compendium = interaction.Compendium;
-                    partyRoster = interaction.PartyRoster;
-                    wallet = interaction.Wallet;
-                    roster = interaction.Roster;
-                    playerBattleKnowledge = interaction.PlayerKnowledge;
-                    compendiumEvidence.AddRange(interaction.Evidence);
-                    break;
-                }
+                    {
+                        TrainingAnnexCompendiumInteractionResult interaction =
+                            await new TrainingAnnexCompendiumController(
+                                    _eventSink,
+                                    _commandSource,
+                                    compendiumRuntime,
+                                    familiarKnowledge)
+                                .OpenAsync(
+                                    compendium,
+                                    partyRoster,
+                                    wallet,
+                                    roster,
+                                    playerBattleKnowledge,
+                                    commands,
+                                    cancellationToken).ConfigureAwait(false);
+                        compendium = interaction.Compendium;
+                        partyRoster = interaction.PartyRoster;
+                        wallet = interaction.Wallet;
+                        roster = interaction.Roster;
+                        playerBattleKnowledge = interaction.PlayerKnowledge;
+                        compendiumEvidence.AddRange(interaction.Evidence);
+                        break;
+                    }
                 case CleanTrainingAnnexPlayCommand.ResolveStats:
                     statPreview = await ResolvePlayerStatsAsync(
                         roster.Player,
@@ -901,42 +901,42 @@ internal sealed class CleanTrainingAnnexPlayHost
                     }
                     break;
                 case CleanTrainingAnnexPlayCommand.EnterTrainingAnnex:
-                {
-                    RuntimeNavigationResult navigationResult = navigation.Navigate(
-                        field.Navigation,
-                        TrainingAnnexHostSupport.EnterTrainingAnnexTransition);
-                    field = await fieldPresenter.ApplyNavigationAsync(
-                        field,
-                        navigationResult,
-                        "entered Training Annex",
-                        cancellationToken).ConfigureAwait(false);
-                    if (navigationResult.Applied)
                     {
-                        locationHistory.Add(field.Navigation.CurrentLocationId);
-                        field = new RuntimeFieldSnapshot(
+                        RuntimeNavigationResult navigationResult = navigation.Navigate(
                             field.Navigation,
-                            field.DungeonTraversal ?? new RuntimeDungeonTraversalSnapshot(
-                                TrainingAnnexHostSupport.TrainingAnnexDungeon,
-                                TrainingAnnexHostSupport.TrainingAnnexEntrance));
+                            TrainingAnnexHostSupport.EnterTrainingAnnexTransition);
+                        field = await fieldPresenter.ApplyNavigationAsync(
+                            field,
+                            navigationResult,
+                            "entered Training Annex",
+                            cancellationToken).ConfigureAwait(false);
+                        if (navigationResult.Applied)
+                        {
+                            locationHistory.Add(field.Navigation.CurrentLocationId);
+                            field = new RuntimeFieldSnapshot(
+                                field.Navigation,
+                                field.DungeonTraversal ?? new RuntimeDungeonTraversalSnapshot(
+                                    TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                                    TrainingAnnexHostSupport.TrainingAnnexEntrance));
+                        }
+                        break;
                     }
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.ReturnToStagingArea:
-                {
-                    RuntimeNavigationResult navigationResult = navigation.Navigate(
-                        field.Navigation,
-                        TrainingAnnexHostSupport.LeaveTrainingAnnexTransition);
-                    field = await fieldPresenter.ApplyNavigationAsync(
-                        field,
-                        navigationResult,
-                        "returned to Staging Area",
-                        cancellationToken).ConfigureAwait(false);
-                    if (navigationResult.Applied)
                     {
-                        locationHistory.Add(field.Navigation.CurrentLocationId);
+                        RuntimeNavigationResult navigationResult = navigation.Navigate(
+                            field.Navigation,
+                            TrainingAnnexHostSupport.LeaveTrainingAnnexTransition);
+                        field = await fieldPresenter.ApplyNavigationAsync(
+                            field,
+                            navigationResult,
+                            "returned to Staging Area",
+                            cancellationToken).ConfigureAwait(false);
+                        if (navigationResult.Applied)
+                        {
+                            locationHistory.Add(field.Navigation.CurrentLocationId);
+                        }
+                        break;
                     }
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.EnterReviewHall:
                     field = await fieldPresenter.ApplyDungeonTraversalAsync(
                         field,
@@ -970,17 +970,17 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.InspectTrainingBarrier:
-                {
-                    RuntimeDungeonTraversalResult traversal = dungeonTraversal.Traverse(
-                        TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
-                        TrainingAnnexHostSupport.InspectBarrierTransition);
-                    field = await fieldPresenter.ApplyDungeonTraversalAsync(
-                        field,
-                        traversal,
-                        cancellationToken).ConfigureAwait(false);
-                    barrierRejected = traversal.Code == RuntimeDungeonTraversalCode.PolicyRejected;
-                    break;
-                }
+                    {
+                        RuntimeDungeonTraversalResult traversal = dungeonTraversal.Traverse(
+                            TrainingAnnexFieldPresenter.RequireDungeonTraversal(field),
+                            TrainingAnnexHostSupport.InspectBarrierTransition);
+                        field = await fieldPresenter.ApplyDungeonTraversalAsync(
+                            field,
+                            traversal,
+                            cancellationToken).ConfigureAwait(false);
+                        barrierRejected = traversal.Code == RuntimeDungeonTraversalCode.PolicyRejected;
+                        break;
+                    }
                 case CleanTrainingAnnexPlayCommand.UnlockReviewCheckpoint:
                     field = await fieldPresenter.ApplyDungeonStateChangeAsync(
                         field,
@@ -990,342 +990,342 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ActivateAshlingEncounterTrigger:
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    EncounterPreparationResult preparation = encounterPreparation.Prepare(
-                        TrainingAnnexHostSupport.ReviewHallAshlingTrigger);
-                    encounterTriggerConsumed = await PresentEncounterPreparationAsync(
-                        preparation,
-                        cancellationToken).ConfigureAwait(false);
-                    if (preparation.IsSuccess)
                     {
-                        preparedEncounter = preparation.RequirePreparedEncounter();
-                        preparedEncounterIds.Add(preparedEncounter.Encounter.Id);
-                        preparedEncounterActorInstanceIds.AddRange(
-                            preparedEncounter.Actors.Select(actor => actor.State.InstanceId));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        EncounterPreparationResult preparation = encounterPreparation.Prepare(
+                            TrainingAnnexHostSupport.ReviewHallAshlingTrigger);
+                        encounterTriggerConsumed = await PresentEncounterPreparationAsync(
+                            preparation,
+                            cancellationToken).ConfigureAwait(false);
+                        if (preparation.IsSuccess)
+                        {
+                            preparedEncounter = preparation.RequirePreparedEncounter();
+                            preparedEncounterIds.Add(preparedEncounter.Encounter.Id);
+                            preparedEncounterActorInstanceIds.AddRange(
+                                preparedEncounter.Actors.Select(actor => actor.State.InstanceId));
+                        }
+                        break;
                     }
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.StartPreparedBattle:
-                {
-                    if (preparedEncounter is null)
                     {
-                        await _eventSink.PublishAsync(
-                            "No prepared encounter is available for battle.",
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    }
-
-                    if (preparedBattleStarted)
-                    {
-                        await _eventSink.PublishAsync(
-                            "Prepared battle has already been resolved.",
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    }
-
-                    var battle = await new TrainingAnnexBattleActionAdapter(
-                            catalog,
-                            _eventSink,
-                            _commandSource,
-                            executionServices,
-                            rewardService,
-                            turnEconomy,
-                            new BattleStatusLifecycleService(_randomSource),
-                            equipmentProfileResolver)
-                        .RunAsync(
-                            roster.Player,
-                            preparedEncounter,
-                            inventory,
-                            playerBattleKnowledge,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-                    preparedBattleStarted = battle.Started;
-                    preparedBattleOutcome = battle.Outcome;
-                    preparedBattleWinningTeamId = battle.WinningTeamId;
-                    executedBattleActionIds.AddRange(battle.ExecutedActionIds);
-                    executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
-                    combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
-                    turnEconomyEvidence.AddRange(battle.TurnEconomyEvidence);
-                    lifecycleEvidence.AddRange(battle.LifecycleEvidence);
-                    aiDecisionEvidence.AddRange(battle.AiDecisionEvidence);
-                    battleKnowledgeEvidence.AddRange(battle.BattleKnowledgeEvidence);
-                    encounterAiKnowledgeEvidence.AddRange(battle.EncounterAiKnowledgeEvidence);
-                    lastEncounterAiKnowledge = battle.EncounterAiKnowledge;
-                    preparedBattleRewardPreview = battle.RewardPreview;
-                    if (battle.RewardPreview is not null && appliedBattleReward is null)
-                    {
-                        TrainingAnnexBattleRewardApplication rewardApplication =
-                            await rewardApplicator.ApplyAsync(
-                                roster.Player,
-                                battle.RewardPreview,
-                                growthServices,
-                                economy,
-                                wallet,
-                                cancellationToken).ConfigureAwait(false);
-                        if (rewardApplication.Applied)
+                        if (preparedEncounter is null)
                         {
-                            wallet = rewardApplication.Wallet;
-                            appliedWalletTransaction = rewardApplication.WalletTransaction;
-                            appliedBattleReward = battle.RewardPreview;
-                            appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
-                            growthApplied = true;
-                            levelUpCount += rewardApplication.Growth.LevelUps.Count;
-                            sessionProgress = TrainingAnnexBattleRewardApplicator.RecordSessionProgress(
-                                sessionProgress,
-                                battle.RewardPreview);
+                            await _eventSink.PublishAsync(
+                                "No prepared encounter is available for battle.",
+                                cancellationToken).ConfigureAwait(false);
+                            break;
                         }
+
+                        if (preparedBattleStarted)
+                        {
+                            await _eventSink.PublishAsync(
+                                "Prepared battle has already been resolved.",
+                                cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        var battle = await new TrainingAnnexBattleActionAdapter(
+                                catalog,
+                                _eventSink,
+                                _commandSource,
+                                executionServices,
+                                rewardService,
+                                turnEconomy,
+                                new BattleStatusLifecycleService(_randomSource),
+                                equipmentProfileResolver)
+                            .RunAsync(
+                                roster.Player,
+                                preparedEncounter,
+                                inventory,
+                                playerBattleKnowledge,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                        preparedBattleStarted = battle.Started;
+                        preparedBattleOutcome = battle.Outcome;
+                        preparedBattleWinningTeamId = battle.WinningTeamId;
+                        executedBattleActionIds.AddRange(battle.ExecutedActionIds);
+                        executedBattleEffectEvidence.AddRange(battle.ExecutedEffectEvidence);
+                        combatResolutionEvidence.AddRange(battle.CombatResolutionEvidence);
+                        turnEconomyEvidence.AddRange(battle.TurnEconomyEvidence);
+                        lifecycleEvidence.AddRange(battle.LifecycleEvidence);
+                        aiDecisionEvidence.AddRange(battle.AiDecisionEvidence);
+                        battleKnowledgeEvidence.AddRange(battle.BattleKnowledgeEvidence);
+                        encounterAiKnowledgeEvidence.AddRange(battle.EncounterAiKnowledgeEvidence);
+                        lastEncounterAiKnowledge = battle.EncounterAiKnowledge;
+                        preparedBattleRewardPreview = battle.RewardPreview;
+                        if (battle.RewardPreview is not null && appliedBattleReward is null)
+                        {
+                            TrainingAnnexBattleRewardApplication rewardApplication =
+                                await rewardApplicator.ApplyAsync(
+                                    roster.Player,
+                                    battle.RewardPreview,
+                                    growthServices,
+                                    economy,
+                                    wallet,
+                                    cancellationToken).ConfigureAwait(false);
+                            if (rewardApplication.Applied)
+                            {
+                                wallet = rewardApplication.Wallet;
+                                appliedWalletTransaction = rewardApplication.WalletTransaction;
+                                appliedBattleReward = battle.RewardPreview;
+                                appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
+                                growthApplied = true;
+                                levelUpCount += rewardApplication.Growth.LevelUps.Count;
+                                sessionProgress = TrainingAnnexBattleRewardApplicator.RecordSessionProgress(
+                                    sessionProgress,
+                                    battle.RewardPreview);
+                            }
+                        }
+                        cancelledBattleCommandSelections += battle.CancelledSelections;
+                        preparedBattleEventCount += battle.EventCount;
+                        break;
                     }
-                    cancelledBattleCommandSelections += battle.CancelledSelections;
-                    preparedBattleEventCount += battle.EventCount;
-                    break;
-                }
                 case CleanTrainingAnnexPlayCommand.OpenInventory:
-                {
-                    await PrintInventoryAsync(catalog, inventory.Snapshot, cancellationToken)
-                        .ConfigureAwait(false);
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> itemSelection =
-                        await _commandSource.ReadAsync(
-                            CreateItemMenu(catalog, inventory.Snapshot),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!itemSelection.IsSelected || itemSelection.Command == CleanTrainingAnnexPlayCommand.Back)
                     {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        break;
-                    }
-
-                    commands.Add(itemSelection.Command);
-                    ItemDefinition? item = itemSelection.SelectionIdentity?.ContentId is ContentId itemId
-                        ? GetKnownFieldItems(catalog, inventory.Snapshot)
-                            .FirstOrDefault(candidate => candidate.Id == itemId)
-                        : null;
-                    if (item is null)
-                    {
-                        await _eventSink.PublishAsync(
-                            "Field item selection rejected; inventory and actor state are unchanged.",
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    }
-
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
-                        await _commandSource.ReadAsync(
-                            CreateTargetMenu(roster.Player),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
-                    {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        cancelledFieldTargetSelections++;
-                        await _eventSink.PublishAsync(
-                            "Field item target selection canceled; inventory and actor state are unchanged.",
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    }
-
-                    commands.Add(targetSelection.Command);
-                    TrainingAnnexFieldActionResult action = await fieldActions.UseItemAsync(
-                        roster.Player,
-                        item,
-                        inventory,
-                        cancellationToken).ConfigureAwait(false);
-                    await PresentFieldActionAsync(
-                            action,
-                            item.DisplayName,
-                            inventory.Snapshot,
-                            cancellationToken,
-                            item.Id)
-                        .ConfigureAwait(false);
-                    if (action.Applied)
-                    {
-                        executedFieldActionIds.Add(action.ActionId);
-                    }
-                    break;
-                }
-                case CleanTrainingAnnexPlayCommand.OpenFieldSkills:
-                {
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> skillSelection =
-                        await _commandSource.ReadAsync(
-                            CreateFieldSkillMenu(catalog, roster.Player),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!skillSelection.IsSelected || skillSelection.Command == CleanTrainingAnnexPlayCommand.Back)
-                    {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        break;
-                    }
-
-                    commands.Add(skillSelection.Command);
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
-                        await _commandSource.ReadAsync(
-                            CreateTargetMenu(roster.Player),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
-                    {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        cancelledFieldTargetSelections++;
-                        await _eventSink.PublishAsync(
-                            "Field skill target selection canceled; resources are unchanged.",
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    }
-
-                    commands.Add(targetSelection.Command);
-                    SkillDefinition skill = catalog.GetRequiredSkill(TrainingAnnexHostSupport.Mend);
-                    TrainingAnnexFieldActionResult action = await fieldActions.UseSkillAsync(
-                        roster.Player,
-                        skill,
-                        cancellationToken).ConfigureAwait(false);
-                    await PresentFieldActionAsync(action, skill.DisplayName, inventory.Snapshot, cancellationToken)
-                        .ConfigureAwait(false);
-                    if (action.Applied)
-                    {
-                        executedFieldActionIds.Add(action.ActionId);
-                    }
-                    break;
-                }
-                case CleanTrainingAnnexPlayCommand.OpenSaveLoad:
-                {
-                    HostCommandReadResult<CleanTrainingAnnexPlayCommand> saveSelection =
-                        await _commandSource.ReadAsync(
-                            CreateSaveLoadMenu(_saveSlots),
-                            cancellationToken).ConfigureAwait(false);
-                    if (!saveSelection.IsSelected || saveSelection.Command == CleanTrainingAnnexPlayCommand.Back)
-                    {
-                        commands.Add(CleanTrainingAnnexPlayCommand.Back);
-                        break;
-                    }
-
-                    commands.Add(saveSelection.Command);
-                    if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualSave
-                        or CleanTrainingAnnexPlayCommand.SuspendSave)
-                    {
-                        RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualSave
-                            ? RuntimeSaveKind.Manual
-                            : RuntimeSaveKind.Suspend;
-                        TrainingAnnexSaveActionResult save = await persistence.SaveCurrentSessionAsync(
-                            kind,
-                            savePolicy,
-                            catalog,
-                            roster,
-                            partyRoster,
-                            field,
-                            playerBattleKnowledge.ToSnapshot(),
-                            inventory.Snapshot,
-                            wallet,
-                            sessionProgress,
-                            encounterTriggerConsumed,
-                            preparedBattleStarted,
-                            preparedBattleOutcome,
-                            preparedBattleWinningTeamId,
-                            preparedEncounter is not null && !preparedBattleStarted,
-                            saveSequence,
-                            cancellationToken,
-                            compendium).ConfigureAwait(false);
-                        saveDiagnosticCount += save.DiagnosticCount;
-                        if (save.Applied)
-                        {
-                            saveSequence++;
-                            if (kind == RuntimeSaveKind.Manual)
-                            {
-                                manualSaveCount++;
-                            }
-                            else
-                            {
-                                suspendSaveCount++;
-                            }
-                        }
-                    }
-                    else if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualLoad
-                             or CleanTrainingAnnexPlayCommand.SuspendLoad)
-                    {
-                        RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualLoad
-                            ? RuntimeSaveKind.Manual
-                            : RuntimeSaveKind.Suspend;
-                        TrainingAnnexLoadActionResult loadResult = await persistence.LoadCurrentSessionAsync(
-                            kind,
-                            savePolicy,
-                            catalog,
-                            actorFactory,
-                            equipmentProfileResolver,
-                            roster,
-                            partyRoster,
-                            field,
-                            preparedEncounter is not null && !preparedBattleStarted,
-                            cancellationToken).ConfigureAwait(false);
-                        saveDiagnosticCount += loadResult.DiagnosticCount;
-                        if (loadResult.Restored is TrainingAnnexRestoredSession restored)
-                        {
-                            roster = restored.Roster;
-                            partyRoster = restored.PartyRoster;
-                            field = restored.Field;
-                            inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
-                            wallet = restored.Wallet;
-                            sessionProgress = restored.SessionProgress;
-                            compendium = restored.Compendium;
-                            playerBattleKnowledge = restored.PlayerBattleKnowledge;
-                            locationHistory.Clear();
-                            locationHistory.Add(field.Navigation.CurrentLocationId);
-                            encounterTriggerConsumed = restored.EncounterTriggerConsumed;
-                            preparedEncounter = null;
-                            preparedBattleStarted = restored.PreparedBattleStarted;
-                            preparedBattleOutcome = restored.PreparedBattleOutcome;
-                            preparedBattleWinningTeamId = restored.PreparedBattleWinningTeamId;
-                            preparedEncounterIds.Clear();
-                            preparedEncounterIds.AddRange(restored.PreparedEncounterIds);
-                            preparedEncounterActorInstanceIds.Clear();
-                            if (!restored.PreparedBattleStarted)
-                            {
-                                preparedBattleRewardPreview = null;
-                                appliedBattleReward = null;
-                                appliedBattleRewardLevelUpCount = 0;
-                            }
-
-                            if (kind == RuntimeSaveKind.Manual)
-                            {
-                                manualLoadCount++;
-                            }
-                            else
-                            {
-                                suspendLoadCount++;
-                            }
-
-                            suspendSaveConsumed |= loadResult.ConsumedRecord;
-                            composeAfterCommand = false;
-                        }
-                    }
-                    break;
-                }
-                case CleanTrainingAnnexPlayCommand.OpenShop:
-                {
-                    var shopResult = await new TrainingAnnexShopController(_eventSink, _commandSource)
-                        .OpenTrainingSupplyAsync(
-                        catalog,
-                        resourceManagement.Shop,
-                        equipmentTransitions,
-                        equipmentProfileResolver,
-                        roster.Player,
-                        inventory,
-                        wallet,
-                        commands,
-                        cancellationToken).ConfigureAwait(false);
-                    wallet = shopResult.Wallet;
-                    shopTransactions.AddRange(shopResult.Transactions);
-                    shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
-                    shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
-                    break;
-                }
-                case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
-                {
-                    TrainingAnnexRecoveryFacilityResult recoveryResult =
-                        await new TrainingAnnexRecoveryFacilityController(_eventSink, _commandSource)
-                            .OpenAsync(
-                                resourceManagement.Hospital,
-                                roster.Player,
-                                wallet,
-                                commands,
+                        await PrintInventoryAsync(catalog, inventory.Snapshot, cancellationToken)
+                            .ConfigureAwait(false);
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> itemSelection =
+                            await _commandSource.ReadAsync(
+                                CreateItemMenu(catalog, inventory.Snapshot),
                                 cancellationToken).ConfigureAwait(false);
-                    wallet = recoveryResult.Wallet;
-                    hospitalRestorations.AddRange(recoveryResult.Restorations);
-                    break;
-                }
+                        if (!itemSelection.IsSelected || itemSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            break;
+                        }
+
+                        commands.Add(itemSelection.Command);
+                        ItemDefinition? item = itemSelection.SelectionIdentity?.ContentId is ContentId itemId
+                            ? GetKnownFieldItems(catalog, inventory.Snapshot)
+                                .FirstOrDefault(candidate => candidate.Id == itemId)
+                            : null;
+                        if (item is null)
+                        {
+                            await _eventSink.PublishAsync(
+                                "Field item selection rejected; inventory and actor state are unchanged.",
+                                cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
+                            await _commandSource.ReadAsync(
+                                CreateTargetMenu(roster.Player),
+                                cancellationToken).ConfigureAwait(false);
+                        if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            cancelledFieldTargetSelections++;
+                            await _eventSink.PublishAsync(
+                                "Field item target selection canceled; inventory and actor state are unchanged.",
+                                cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        commands.Add(targetSelection.Command);
+                        TrainingAnnexFieldActionResult action = await fieldActions.UseItemAsync(
+                            roster.Player,
+                            item,
+                            inventory,
+                            cancellationToken).ConfigureAwait(false);
+                        await PresentFieldActionAsync(
+                                action,
+                                item.DisplayName,
+                                inventory.Snapshot,
+                                cancellationToken,
+                                item.Id)
+                            .ConfigureAwait(false);
+                        if (action.Applied)
+                        {
+                            executedFieldActionIds.Add(action.ActionId);
+                        }
+                        break;
+                    }
+                case CleanTrainingAnnexPlayCommand.OpenFieldSkills:
+                    {
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> skillSelection =
+                            await _commandSource.ReadAsync(
+                                CreateFieldSkillMenu(catalog, roster.Player),
+                                cancellationToken).ConfigureAwait(false);
+                        if (!skillSelection.IsSelected || skillSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            break;
+                        }
+
+                        commands.Add(skillSelection.Command);
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
+                            await _commandSource.ReadAsync(
+                                CreateTargetMenu(roster.Player),
+                                cancellationToken).ConfigureAwait(false);
+                        if (!targetSelection.IsSelected || targetSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            cancelledFieldTargetSelections++;
+                            await _eventSink.PublishAsync(
+                                "Field skill target selection canceled; resources are unchanged.",
+                                cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        commands.Add(targetSelection.Command);
+                        SkillDefinition skill = catalog.GetRequiredSkill(TrainingAnnexHostSupport.Mend);
+                        TrainingAnnexFieldActionResult action = await fieldActions.UseSkillAsync(
+                            roster.Player,
+                            skill,
+                            cancellationToken).ConfigureAwait(false);
+                        await PresentFieldActionAsync(action, skill.DisplayName, inventory.Snapshot, cancellationToken)
+                            .ConfigureAwait(false);
+                        if (action.Applied)
+                        {
+                            executedFieldActionIds.Add(action.ActionId);
+                        }
+                        break;
+                    }
+                case CleanTrainingAnnexPlayCommand.OpenSaveLoad:
+                    {
+                        HostCommandReadResult<CleanTrainingAnnexPlayCommand> saveSelection =
+                            await _commandSource.ReadAsync(
+                                CreateSaveLoadMenu(_saveSlots),
+                                cancellationToken).ConfigureAwait(false);
+                        if (!saveSelection.IsSelected || saveSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+                        {
+                            commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                            break;
+                        }
+
+                        commands.Add(saveSelection.Command);
+                        if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualSave
+                            or CleanTrainingAnnexPlayCommand.SuspendSave)
+                        {
+                            RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualSave
+                                ? RuntimeSaveKind.Manual
+                                : RuntimeSaveKind.Suspend;
+                            TrainingAnnexSaveActionResult save = await persistence.SaveCurrentSessionAsync(
+                                kind,
+                                savePolicy,
+                                catalog,
+                                roster,
+                                partyRoster,
+                                field,
+                                playerBattleKnowledge.ToSnapshot(),
+                                inventory.Snapshot,
+                                wallet,
+                                sessionProgress,
+                                encounterTriggerConsumed,
+                                preparedBattleStarted,
+                                preparedBattleOutcome,
+                                preparedBattleWinningTeamId,
+                                preparedEncounter is not null && !preparedBattleStarted,
+                                saveSequence,
+                                cancellationToken,
+                                compendium).ConfigureAwait(false);
+                            saveDiagnosticCount += save.DiagnosticCount;
+                            if (save.Applied)
+                            {
+                                saveSequence++;
+                                if (kind == RuntimeSaveKind.Manual)
+                                {
+                                    manualSaveCount++;
+                                }
+                                else
+                                {
+                                    suspendSaveCount++;
+                                }
+                            }
+                        }
+                        else if (saveSelection.Command is CleanTrainingAnnexPlayCommand.ManualLoad
+                                 or CleanTrainingAnnexPlayCommand.SuspendLoad)
+                        {
+                            RuntimeSaveKind kind = saveSelection.Command == CleanTrainingAnnexPlayCommand.ManualLoad
+                                ? RuntimeSaveKind.Manual
+                                : RuntimeSaveKind.Suspend;
+                            TrainingAnnexLoadActionResult loadResult = await persistence.LoadCurrentSessionAsync(
+                                kind,
+                                savePolicy,
+                                catalog,
+                                actorFactory,
+                                equipmentProfileResolver,
+                                roster,
+                                partyRoster,
+                                field,
+                                preparedEncounter is not null && !preparedBattleStarted,
+                                cancellationToken).ConfigureAwait(false);
+                            saveDiagnosticCount += loadResult.DiagnosticCount;
+                            if (loadResult.Restored is TrainingAnnexRestoredSession restored)
+                            {
+                                roster = restored.Roster;
+                                partyRoster = restored.PartyRoster;
+                                field = restored.Field;
+                                inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
+                                wallet = restored.Wallet;
+                                sessionProgress = restored.SessionProgress;
+                                compendium = restored.Compendium;
+                                playerBattleKnowledge = restored.PlayerBattleKnowledge;
+                                locationHistory.Clear();
+                                locationHistory.Add(field.Navigation.CurrentLocationId);
+                                encounterTriggerConsumed = restored.EncounterTriggerConsumed;
+                                preparedEncounter = null;
+                                preparedBattleStarted = restored.PreparedBattleStarted;
+                                preparedBattleOutcome = restored.PreparedBattleOutcome;
+                                preparedBattleWinningTeamId = restored.PreparedBattleWinningTeamId;
+                                preparedEncounterIds.Clear();
+                                preparedEncounterIds.AddRange(restored.PreparedEncounterIds);
+                                preparedEncounterActorInstanceIds.Clear();
+                                if (!restored.PreparedBattleStarted)
+                                {
+                                    preparedBattleRewardPreview = null;
+                                    appliedBattleReward = null;
+                                    appliedBattleRewardLevelUpCount = 0;
+                                }
+
+                                if (kind == RuntimeSaveKind.Manual)
+                                {
+                                    manualLoadCount++;
+                                }
+                                else
+                                {
+                                    suspendLoadCount++;
+                                }
+
+                                suspendSaveConsumed |= loadResult.ConsumedRecord;
+                                composeAfterCommand = false;
+                            }
+                        }
+                        break;
+                    }
+                case CleanTrainingAnnexPlayCommand.OpenShop:
+                    {
+                        var shopResult = await new TrainingAnnexShopController(_eventSink, _commandSource)
+                            .OpenTrainingSupplyAsync(
+                            catalog,
+                            resourceManagement.Shop,
+                            equipmentTransitions,
+                            equipmentProfileResolver,
+                            roster.Player,
+                            inventory,
+                            wallet,
+                            commands,
+                            cancellationToken).ConfigureAwait(false);
+                        wallet = shopResult.Wallet;
+                        shopTransactions.AddRange(shopResult.Transactions);
+                        shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
+                        shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
+                        break;
+                    }
+                case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
+                    {
+                        TrainingAnnexRecoveryFacilityResult recoveryResult =
+                            await new TrainingAnnexRecoveryFacilityController(_eventSink, _commandSource)
+                                .OpenAsync(
+                                    resourceManagement.Hospital,
+                                    roster.Player,
+                                    wallet,
+                                    commands,
+                                    cancellationToken).ConfigureAwait(false);
+                        wallet = recoveryResult.Wallet;
+                        hospitalRestorations.AddRange(recoveryResult.Restorations);
+                        break;
+                    }
                 default:
                     throw new InvalidOperationException($"Unknown Training Annex command '{command}'.");
             }

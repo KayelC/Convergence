@@ -441,23 +441,23 @@ public sealed class ItemExecutor : IItemExecutor
         EffectDefinition effect,
         RuntimeActorState actor,
         RuntimeActorState target) => effect switch
-    {
-        RestoreResourceEffectDefinition restore =>
-            target.TryGetResource(restore.ResourceId, out BattleResourceState? resource) &&
-            resource is not null && resource.Current < resource.Maximum,
-        RemoveAilmentEffectDefinition remove => target.Ailments.Values.Any(active =>
-            active.IsRemovable &&
-            (remove.Scope == AilmentRemovalScope.AllRemovable ||
-             remove.AilmentIds.Contains(active.Definition.Id) ||
-             active.Definition.GroupIds.Any(remove.AilmentGroupIds.Contains))),
-        ReviveEffectDefinition revive => target.IsDefeated && revive.ResourceId == target.VitalResourceId,
-        SetResourceEffectDefinition set => IsSetResourceApplicable(set, actor, target),
-        ReduceResourceEffectDefinition reduce =>
-            target.TryGetResource(reduce.ResourceId, out BattleResourceState? resource) &&
-            resource is not null && resource.Current > (reduce.CanReduceToZero ? 0 : Math.Min(1, resource.Maximum)),
-        RemoveStatusEffectDefinition remove => HasRemovableStatus(remove, target),
-        _ => true
-    };
+        {
+            RestoreResourceEffectDefinition restore =>
+                target.TryGetResource(restore.ResourceId, out BattleResourceState? resource) &&
+                resource is not null && resource.Current < resource.Maximum,
+            RemoveAilmentEffectDefinition remove => target.Ailments.Values.Any(active =>
+                active.IsRemovable &&
+                (remove.Scope == AilmentRemovalScope.AllRemovable ||
+                 remove.AilmentIds.Contains(active.Definition.Id) ||
+                 active.Definition.GroupIds.Any(remove.AilmentGroupIds.Contains))),
+            ReviveEffectDefinition revive => target.IsDefeated && revive.ResourceId == target.VitalResourceId,
+            SetResourceEffectDefinition set => IsSetResourceApplicable(set, actor, target),
+            ReduceResourceEffectDefinition reduce =>
+                target.TryGetResource(reduce.ResourceId, out BattleResourceState? resource) &&
+                resource is not null && resource.Current > (reduce.CanReduceToZero ? 0 : Math.Min(1, resource.Maximum)),
+            RemoveStatusEffectDefinition remove => HasRemovableStatus(remove, target),
+            _ => true
+        };
 
     private bool IsSetResourceApplicable(
         SetResourceEffectDefinition effect,

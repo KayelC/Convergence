@@ -36,6 +36,37 @@ public sealed class ProductBoundaryTests
     }
 
     [Fact]
+    public void ActiveQualityWorkflow_EnforcesTheCleanProductGate()
+    {
+        string workflow = File.ReadAllText(RepositoryPath(".github", "workflows", "quality.yml"));
+        string[] requiredTokens =
+        [
+            "permissions:",
+            "contents: read",
+            "actions/checkout@v6",
+            "actions/setup-dotnet@v5",
+            "dotnet-version: 8.0.x",
+            "dotnet format Convergence.sln --no-restore --verify-no-changes",
+            "-p:TreatWarningsAsErrors=true",
+            "-p:ContinuousIntegrationBuild=true",
+            "--filter FullyQualifiedName~Convergence.Framework.Tests.Architecture",
+            "dotnet test Convergence.sln",
+            "--clean-battle-demo",
+            "--clean-field-demo",
+            "--clean-save-demo",
+            "--clean-training-annex-demo"
+        ];
+
+        foreach (string token in requiredTokens)
+        {
+            Assert.Contains(token, workflow, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("ArchiveDocs", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("continue-on-error: true", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ActiveProductRoot_IsTheGitRepositoryRootWhenGitMetadataIsPresent()
     {
         string productRoot = RepositoryRoot();

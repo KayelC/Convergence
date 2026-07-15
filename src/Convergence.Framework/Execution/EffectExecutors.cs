@@ -116,39 +116,39 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             case ElementalAffinity.Null:
                 return Failure(context, TurnEconomyOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
             case ElementalAffinity.Repel:
-            {
-                decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
-                IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
-                return Interrupted(
-                    context,
-                    TurnEconomyOutcome.Repel,
-                    reflected,
-                    "The damage was reflected.",
-                    activations,
-                    affinity);
-            }
+                {
+                    decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
+                    IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
+                    return Interrupted(
+                        context,
+                        TurnEconomyOutcome.Repel,
+                        reflected,
+                        "The damage was reflected.",
+                        activations,
+                        affinity);
+                }
             case ElementalAffinity.Absorb:
-            {
-                decimal absorbed = target.AddResource(target.VitalResourceId, total);
-                return Interrupted(context, TurnEconomyOutcome.Absorb, absorbed, "The damage was absorbed.",
-                    resolvedAffinity: affinity);
-            }
+                {
+                    decimal absorbed = target.AddResource(target.VitalResourceId, total);
+                    return Interrupted(context, TurnEconomyOutcome.Absorb, absorbed, "The damage was absorbed.",
+                        resolvedAffinity: affinity);
+                }
             default:
-            {
-                decimal dealt = -target.AddResource(target.VitalResourceId, -total);
-                IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
-                ApplyDrain(definition.Drain, context.Actor, context.Services, dealt);
-                TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
-                    ? TurnEconomyOutcome.Weakness
-                    : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
-                return Success(
-                    context,
-                    dealt,
-                    turnEconomy: outcome,
-                    critical: critical,
-                    passiveActivations: activations,
-                    resolvedAffinity: affinity);
-            }
+                {
+                    decimal dealt = -target.AddResource(target.VitalResourceId, -total);
+                    IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
+                    ApplyDrain(definition.Drain, context.Actor, context.Services, dealt);
+                    TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
+                        ? TurnEconomyOutcome.Weakness
+                        : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
+                    return Success(
+                        context,
+                        dealt,
+                        turnEconomy: outcome,
+                        critical: critical,
+                        passiveActivations: activations,
+                        resolvedAffinity: affinity);
+                }
         }
     }
 

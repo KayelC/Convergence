@@ -574,6 +574,21 @@ Required correction:
 - Enable warnings-as-errors in CI, even if local developer builds remain less
   strict.
 
+Correction status: corrected on 2026-07-15. `dotnet format` changed whitespace
+only in the five reported files; `git diff --ignore-all-space --exit-code`
+confirmed that formatter set contained no non-whitespace change. The active
+solution now passes `dotnet format --verify-no-changes`.
+
+`.github/workflows/quality.yml` is now configured for `main`, pull requests, and
+manual dispatch with read-only repository permissions. It selects .NET 8, restores,
+verifies formatting, performs a nonincremental Release build with warnings as
+errors and deterministic CI build settings, runs architecture and terminology
+tests explicitly, runs the complete clean suite, and smoke-tests all four
+noninteractive DemoHost modes. Interactive Training Annex behavior remains in
+the deterministic scripted host tests rather than a fragile terminal pipe.
+`ProductBoundaryTests.ActiveQualityWorkflow_EnforcesTheCleanProductGate`
+protects the required workflow steps from silent removal.
+
 ## Verified Strengths
 
 The review also confirmed these important properties in current code:
@@ -606,7 +621,10 @@ The review also confirmed these important properties in current code:
 - Definition and result collections are generally copied into read-only
   snapshots.
 
-## Verification Results
+## Original Review Verification Results
+
+This table records the audit baseline before its correction sequence. Current
+correction verification follows it.
 
 | Gate | Result |
 |---|---|
@@ -630,6 +648,21 @@ The review also confirmed these important properties in current code:
 | `dotnet format --verify-no-changes` | Failed with 594 whitespace diagnostics |
 | Active CI configuration | None found |
 
+## Current L2 Verification
+
+| Gate | Result |
+|---|---|
+| `dotnet format Convergence.sln --no-restore --verify-no-changes` | Passed |
+| Strict nonincremental Release solution build | 0 warnings, 0 errors |
+| Explicit architecture and terminology tests | 26 passed, 0 failed, 0 skipped |
+| Full Release solution tests | 785 passed, 0 failed, 0 skipped |
+| Framework tests | 624 passed |
+| DemoHost tests | 161 passed |
+| `--clean-battle-demo` | Success; player-team victory |
+| `--clean-field-demo` | Success |
+| `--clean-save-demo` | Success; save contract v7; 0 validation diagnostics |
+| `--clean-training-annex-demo` | Success; victory; save validation succeeded |
+
 High line coverage and a green suite are meaningful strengths, but the focused
 reproductions demonstrate why branch, transition, and hostile-domain tests are
 still required at every public mutation boundary.
@@ -644,15 +677,15 @@ This is an ordered correction set, not a new feature roadmap:
 4. Negotiation cancellation semantics: M4 corrected.
 5. Encounter injected-port containment: M5 corrected.
 6. DemoHost root confinement: L1 corrected.
-7. Formatting and CI: L2 remains.
+7. Formatting and CI: L2 corrected.
 8. Catalyst rank-shift semantics: M6 recorded as deferred product work.
 
 The H1 atomicity, M1 stale-assessment, M2 resource-overflow, M3 enum-domain, M4
 negotiation-cancellation, M5 encounter-port, and L1 content-root defects are
-corrected. M6 is no longer treated as an arithmetic-hardening task. It is a
-documented fusion semantic correction that must be completed before the
-rank-shift contract or the broader public API is stabilized. L2 remains the next
-correction in this sequence.
+corrected. The immediate audit correction sequence is complete. M6 is no longer
+treated as an arithmetic-hardening task; it is a documented, deliberately
+deferred fusion semantic correction that must be completed before the rank-shift
+contract or the broader public API is stabilized.
 
 ## Readiness Decision
 

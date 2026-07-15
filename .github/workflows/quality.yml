@@ -1,0 +1,102 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: .NET 8 verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: true
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Show SDK selection
+        run: dotnet --info
+
+      - name: Restore
+        run: dotnet restore Convergence.sln -p:TreatWarningsAsErrors=true
+
+      - name: Verify formatting
+        run: dotnet format Convergence.sln --no-restore --verify-no-changes
+
+      - name: Build with warnings as errors
+        run: >-
+          dotnet build Convergence.sln
+          --configuration Release
+          --no-restore
+          --no-incremental
+          -p:TreatWarningsAsErrors=true
+          -p:ContinuousIntegrationBuild=true
+
+      - name: Verify architecture and terminology boundaries
+        run: >-
+          dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --filter FullyQualifiedName~Convergence.Framework.Tests.Architecture
+
+      - name: Run all clean tests
+        run: >-
+          dotnet test Convergence.sln
+          --configuration Release
+          --no-build
+          --no-restore
+
+      - name: Smoke-test clean battle demo
+        run: >-
+          dotnet run
+          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          -- --clean-battle-demo
+
+      - name: Smoke-test clean field demo
+        run: >-
+          dotnet run
+          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          -- --clean-field-demo
+
+      - name: Smoke-test clean save demo
+        run: >-
+          dotnet run
+          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          -- --clean-save-demo
+
+      - name: Smoke-test Training Annex demo
+        run: >-
+          dotnet run
+          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          -- --clean-training-annex-demo

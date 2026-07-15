@@ -1165,9 +1165,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexRuntimeActor selectedCandidate = originalRoster.Enemies
             .Single(actor => actor.Actor.State.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"))
             with
-            {
-                Role = "Companion Replacement Candidate"
-            };
+        {
+            Role = "Companion Replacement Candidate"
+        };
         var roster = new TrainingAnnexActorRoster(
             originalRoster.Player,
             originalRoster.SupportMembers,

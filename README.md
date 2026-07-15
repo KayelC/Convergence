@@ -68,11 +68,19 @@ Godot owns nodes, resources, scenes, input, presentation, scheduling, and save-f
 ```powershell
 dotnet --version
 dotnet restore Convergence.sln
-dotnet build Convergence.sln --no-restore
-dotnet test Convergence.sln --no-restore
+dotnet format Convergence.sln --no-restore --verify-no-changes
+dotnet build Convergence.sln --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true
+dotnet test Convergence.sln --configuration Release --no-build --no-restore
 dotnet run --project samples/Convergence.DemoHost -- --help
 ```
 
 The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, DemoHost, and their independent test projects.
+
+The same checks run automatically in
+[`quality.yml`](.github/workflows/quality.yml) for changes to `main`, pull
+requests, and manual workflow dispatch. CI also runs the architecture and
+terminology boundaries explicitly and smoke-tests every noninteractive DemoHost
+mode. Interactive Training Annex behavior is exercised through scripted host
+tests rather than terminal piping.
 
 Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), [mechanics and player rules](docs/mechanics/README.md), and [capability matrix](docs/framework-capability-matrix.md).

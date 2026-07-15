@@ -282,7 +282,7 @@ public sealed class SchemaDeserializationTests
                 "\"inheritance\": { \"isInheritable\": true }, \"mystery\": 1",
                 StringComparison.Ordinal));
         string unknownEffect = WrapSkill(
-            MinimalActiveRecord("[{ \"type\": \"mystery_effect\" }]") );
+            MinimalActiveRecord("[{ \"type\": \"mystery_effect\" }]"));
 
         ContentDeserializationException propertyError = Assert.Throws<ContentDeserializationException>(
             () => _deserializer.DeserializeSkills(unknownProperty, "unknown-property.json"));
