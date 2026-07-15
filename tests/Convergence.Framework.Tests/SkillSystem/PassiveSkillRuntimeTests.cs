@@ -683,6 +683,7 @@ public sealed class PassiveSkillRuntimeTests
             new AlwaysChancePolicy(),
             new FlatPowerPolicy(),
             new FirstTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy(),
             customEffectHandlers: customEffects);
 
     private sealed class TestAilmentRepository(IEnumerable<AilmentDefinition> ailments)

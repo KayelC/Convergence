@@ -122,6 +122,7 @@ public sealed class BattleExecutionServices
         IChanceExecutionPolicy chancePolicy,
         IPowerAmountPolicy powerAmountPolicy,
         IRandomTargetSelectionPolicy randomTargetPolicy,
+        IRuntimeRandomTargetSelectionPolicy runtimeRandomTargetPolicy,
         IEnumerable<KeyValuePair<ContentId, IFormulaAmountHandler>>? formulaHandlers = null,
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRuleHandlers = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditionHandlers = null,
@@ -133,7 +134,6 @@ public sealed class BattleExecutionServices
         PassiveEventPolicyRegistry? passiveEventPolicies = null,
         IPassiveTriggerDispatcher? passiveTriggers = null,
         ContentId? ownerWouldBeDefeatedEventId = null,
-        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
         IBattleAilmentApplicationService? ailmentApplications = null)
     {
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
@@ -143,7 +143,7 @@ public sealed class BattleExecutionServices
         ChancePolicy = chancePolicy ?? throw new ArgumentNullException(nameof(chancePolicy));
         PowerAmountPolicy = powerAmountPolicy ?? throw new ArgumentNullException(nameof(powerAmountPolicy));
         RandomTargetPolicy = randomTargetPolicy ?? throw new ArgumentNullException(nameof(randomTargetPolicy));
-        RuntimeRandomTargetPolicy = runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy();
+        RuntimeRandomTargetPolicy = runtimeRandomTargetPolicy ?? throw new ArgumentNullException(nameof(runtimeRandomTargetPolicy));
         FormulaHandlers = Snapshot(formulaHandlers);
         EscapeRuleHandlers = Snapshot(escapeRuleHandlers);
         CustomConditionHandlers = Snapshot(customConditionHandlers);

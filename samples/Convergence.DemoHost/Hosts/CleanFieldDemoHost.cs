@@ -267,6 +267,7 @@ internal sealed class CleanFieldDemoHost
             new DemoChancePolicy(),
             new DemoPowerAmountPolicy(),
             new DemoRandomTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy(),
             escapeRuleHandlers:
             [
                 new KeyValuePair<ContentId, IEscapeRuleHandler>(

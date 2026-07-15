@@ -153,11 +153,11 @@
       "id": "PR-L1",
       "title": "Explicit runtime random-target policy",
       "severity": "low",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 1,
       "plannedCommit": "runtime: require explicit random targeting",
-      "evidence": ["ActiveSkillExecutionTests"],
-      "remainingWork": ["remove ordered fallback", "require explicit host policy"],
+      "evidence": ["ActiveSkillExecutionTests.ExecutionServices_RequireExplicitSkillAndRuntimeRandomTargetPolicies", "BattleActionExecutorTests"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {

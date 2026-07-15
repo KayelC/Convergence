@@ -469,9 +469,9 @@ public sealed class BattleActionExecutorTests
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
+            runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy(),
             escapeRuleHandlers: escapeRules,
-            customEffectHandlers: customEffects,
-            runtimeRandomTargetPolicy: runtimeRandomTargetPolicy);
+            customEffectHandlers: customEffects);
         return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
     }
 

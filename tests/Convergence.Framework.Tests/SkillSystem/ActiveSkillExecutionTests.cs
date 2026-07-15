@@ -30,6 +30,40 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void ExecutionServices_RequireExplicitSkillAndRuntimeRandomTargetPolicies()
+    {
+        System.Reflection.ConstructorInfo constructor = Assert.Single(typeof(BattleExecutionServices).GetConstructors());
+        System.Reflection.ParameterInfo skillPolicy = Assert.Single(
+            constructor.GetParameters(),
+            parameter => parameter.Name == "randomTargetPolicy");
+        System.Reflection.ParameterInfo runtimePolicy = Assert.Single(
+            constructor.GetParameters(),
+            parameter => parameter.Name == "runtimeRandomTargetPolicy");
+
+        Assert.False(skillPolicy.IsOptional);
+        Assert.False(runtimePolicy.IsOptional);
+
+        Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
+            new TestAilmentRepository([Ailment(Poison)]),
+            new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
+            new DelegateInstantDeathPolicy(_ => false),
+            new AlwaysApplyAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new PowerAmountPolicy(),
+            null!,
+            new OrderedRuntimeTargetSelectionPolicy()));
+        Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
+            new TestAilmentRepository([Ailment(Poison)]),
+            new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
+            new DelegateInstantDeathPolicy(_ => false),
+            new AlwaysApplyAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new PowerAmountPolicy(),
+            new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
+            null!));
+    }
+
+    [Fact]
     public void Execute_RejectsIndependentPreflightErrorsWithoutSpendingResources()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100, sp: 5);
@@ -1203,6 +1237,7 @@ public sealed class ActiveSkillExecutionTests
             new PowerAmountPolicy(),
             new DelegateRandomTargetPolicy(randomTargets ?? ((candidates, count, _) =>
                 candidates.Take(count.Minimum).ToArray())),
+            new OrderedRuntimeTargetSelectionPolicy(),
             formulaHandlers: formulas,
             escapeRuleHandlers: escapeRules,
             customConditionHandlers: customConditions,

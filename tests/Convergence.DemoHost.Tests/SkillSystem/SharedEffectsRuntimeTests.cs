@@ -339,6 +339,7 @@ public sealed class SharedEffectsRuntimeTests
             new AlwaysChancePolicy(),
             new FlatPowerPolicy(),
             new FirstBattleTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy(),
             escapeRuleHandlers:
             [
                 new KeyValuePair<ContentId, IEscapeRuleHandler>(

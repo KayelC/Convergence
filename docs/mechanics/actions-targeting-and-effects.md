@@ -12,6 +12,12 @@ Authored targeting defines relation, selection style, and optional count. Relati
 
 **Framework rule:** resolved targets are captured once for an execution attempt. Random targets are not rolled again between assessment and mutation. Target order remains deterministic where authored or caller order is meaningful.
 
+Random selection has no implicit fallback. A host must explicitly supply both
+the skill-target and shared runtime-effect target policies when composing battle
+execution services. Hosts that deliberately want deterministic first-candidate
+selection may inject the supplied ordered runtime policy; the Framework never
+silently substitutes it for randomness.
+
 **Host responsibility:** a UI may use buttons, scene selection, a cursor, keyboard menus, or AI to choose among legal candidates. The host submits runtime IDs; it does not decide legality by reading names.
 
 ## Skill Costs

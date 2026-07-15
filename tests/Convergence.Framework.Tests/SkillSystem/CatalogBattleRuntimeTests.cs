@@ -1290,7 +1290,8 @@ public sealed class CatalogBattleRuntimeTests
         new TestAilmentPolicy(),
         new AlwaysChancePolicy(),
         new TestPowerPolicy(),
-        randomTargetPolicy ?? new FirstRandomTargetPolicy());
+        randomTargetPolicy ?? new FirstRandomTargetPolicy(),
+        new OrderedRuntimeTargetSelectionPolicy());
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,

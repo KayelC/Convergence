@@ -804,6 +804,7 @@ public sealed class BattleStatusLifecycleTests
             new AlwaysChancePolicy(),
             new ZeroPowerPolicy(),
             new FirstTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy(),
             formulaHandlers:
             [
                 new KeyValuePair<ContentId, IFormulaAmountHandler>(

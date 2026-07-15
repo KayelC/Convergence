@@ -294,7 +294,8 @@ public sealed class OriginalCleanContentSliceTests
             new AlwaysAilmentPolicy(),
             new AlwaysChancePolicy(),
             new FlatPowerPolicy(),
-            new FirstBattleTargetPolicy());
+            new FirstBattleTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy());
         var skills = new SkillExecutor(services);
         var items = new ItemExecutor(services);
         RuntimeActorState actor = Actor("echo", "player", 60, 100, 8, 20);

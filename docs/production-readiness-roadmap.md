@@ -49,7 +49,7 @@ This roadmap remains active while any finding is `open` or
 | PR-M4 | Authored rulesets are mostly fixed labels | `open` | Add host-registered typed policy factories and complete supported built-in parameters. |
 | PR-M5 | Encounter events leak presentation and omit data | `open` | Replace message-authoritative events with typed payloads. |
 | PR-M6 | Aggregate save restoration is host-reimplemented | `open` | Add framework session restoration and a version-migration seam. |
-| PR-L1 | Runtime random targeting has an ordered fallback | `open` | Require explicit policies at construction. |
+| PR-L1 | Runtime random targeting has an ordered fallback | `implemented_pending_review` | Both targeting policies are mandatory; ordered behavior requires explicit injection. |
 | PR-L2 | DemoHost flattens content filenames | `open` | Preserve pack-relative output and resolution paths. |
 
 The later code review added `CR-M6`: catalyst rank shifting currently implements
