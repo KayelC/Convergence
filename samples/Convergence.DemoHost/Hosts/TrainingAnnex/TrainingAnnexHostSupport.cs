@@ -612,6 +612,21 @@ internal static class TrainingAnnexHostSupport
         ArgumentNullException.ThrowIfNull(compositionService);
         ArgumentNullException.ThrowIfNull(equipmentProfile);
 
+        return compositionService.Compose(CreatePlayerStatCompositionRequest(
+            roster,
+            partyRoster,
+            equipmentProfile));
+    }
+
+    public static RuntimeActorStatCompositionRequest CreatePlayerStatCompositionRequest(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
+        RuntimeEquipmentProfile equipmentProfile)
+    {
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(partyRoster);
+        ArgumentNullException.ThrowIfNull(equipmentProfile);
+
         RuntimeActorReferenceSnapshot? activeReference = partyRoster.ActiveHostedEntity;
         RuntimeActorState? activeState = activeReference is null
             ? null
@@ -625,13 +640,13 @@ internal static class TrainingAnnexHostSupport
             partyRoster.HostedEntityRoster,
             partyRoster.CompanionRoster);
 
-        return compositionService.Compose(new RuntimeActorStatCompositionRequest(
+        return new RuntimeActorStatCompositionRequest(
             roster.Player.Actor.State,
             RuntimeStatSourceKind.ActiveHostedEntity,
             MissingHostedEntityBehavior.RejectStatResolution,
             activeState,
             actorRosters,
-            equipmentProfile.StatModifiers));
+            equipmentProfile.StatModifiers);
     }
 
     public static IReadOnlyDictionary<ContentId, decimal> InitialBaseResourceValues(int level) =>

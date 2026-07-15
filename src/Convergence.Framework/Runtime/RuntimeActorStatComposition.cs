@@ -190,7 +190,10 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
             .Select(pair => new RuntimeStatStageSnapshot(pair.Key, pair.Value.Stage, pair.Value.Duration))
             .ToArray();
         var resolutions = new List<StatResolutionResult>(StandardProgressionIds.CoreStats.Count);
-        var effectiveStats = new Dictionary<ContentId, decimal>();
+        HashSet<ContentId> composedStatIds = [.. StandardProgressionIds.CoreStats];
+        var effectiveStats = before.Stats.EffectiveStats
+            .Where(pair => !composedStatIds.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (ContentId statId in StandardProgressionIds.CoreStats)
         {
             StatResolutionResult resolution;

@@ -44,7 +44,9 @@ The old weighted actor-plus-form calculation is removed. Stat sourcing becomes a
 - The raw stat cap is applied before the Vessel actor's battle-stage multipliers.
 - Missing hosted entities produce either a typed rejection or an explicit actor-base fallback selected by the host.
 - Missing hosted entities never resolve to zero stats.
+- Standard composition owns the five registered core stats. Other registered effective stats are preserved unchanged rather than silently discarded.
 - Composition updates effective stats and resources atomically or leaves the actor unchanged.
+- Level growth may be staged with stat composition through one Framework transaction. The live actor is updated only when both operations succeed.
 
 Standard growth profiles remain optional supplied policies:
 

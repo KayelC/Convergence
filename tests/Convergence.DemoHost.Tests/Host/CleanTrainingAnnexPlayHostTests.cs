@@ -20,6 +20,36 @@ namespace Convergence.DemoHost.Tests.Host;
 public sealed class CleanTrainingAnnexPlayHostTests
 {
     [Fact]
+    public async Task CleanTrainingAnnexPlay_GrowthCompositionRejectionLeavesPlayerStateUnchanged()
+    {
+        var io = new ScriptedGameIO().QueueMenu(4, 9);
+        using var output = new StringWriter();
+        var rejectingComposition = new RejectNthPlayerCompositionService(rejectCall: 2);
+        var host = CreateHost(
+            io,
+            output,
+            statCompositionFactory: (stats, resources) =>
+                rejectingComposition.Initialize(stats, resources));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.False(summary.GrowthApplied);
+        Assert.Equal(0, summary.LevelUpCount);
+        Assert.Equal(3, summary.PlayerProgression.Level);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(6m, summary.PlayerStats.BaseStats[StandardProgressionIds.Strength]);
+        Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
+        Assert.Contains("[StatCompositionRejected]", output.ToString(), StringComparison.Ordinal);
+        Assert.Equal(
+            [CleanTrainingAnnexPlayCommand.ApplyVictoryExperience, CleanTrainingAnnexPlayCommand.Exit],
+            summary.Commands);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_LoadsCleanContentHydratesActorValidatesSnapshotAndExits()
     {
         var io = new ScriptedGameIO().QueueMenu(0, 1, 2, 3, 4, 6, 0, 5, 7, 0, 9);

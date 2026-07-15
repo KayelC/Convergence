@@ -791,12 +791,17 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ApplyVictoryExperience:
-                    LevelGrowthResult growth = await ApplyVictoryExperienceAsync(
-                        roster.Player,
+                    (LevelGrowthResult growth, bool growthCommitted) = await ApplyVictoryExperienceAsync(
+                        roster,
+                        partyRoster,
                         growthServices,
+                        statCompositionService,
+                        equipmentProfileResolver,
+                        catalog,
                         cancellationToken).ConfigureAwait(false);
-                    growthApplied = growth.Applied;
-                    levelUpCount = growth.LevelUps.Count;
+                    growthApplied = growthCommitted;
+                    levelUpCount = growthCommitted ? growth.LevelUps.Count : 0;
+                    composeAfterCommand = false;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator(rosterCapacityPolicy).Validate(
@@ -2165,11 +2170,16 @@ internal sealed class CleanTrainingAnnexPlayHost
         return results.ToArray();
     }
 
-    private async ValueTask<LevelGrowthResult> ApplyVictoryExperienceAsync(
-        TrainingAnnexRuntimeActor player,
+    private async ValueTask<(LevelGrowthResult Growth, bool Committed)> ApplyVictoryExperienceAsync(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         GrowthRulesetServices growthServices,
+        IRuntimeActorStatCompositionService statCompositionService,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        IEquipmentDefinitionRepository equipmentRepository,
         CancellationToken cancellationToken)
     {
+        TrainingAnnexRuntimeActor player = roster.Player;
         RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
         long requiredExperience = growthServices.ExperienceCurve.GetRequiredExperience(before.Progression.Level);
         long award = Math.Max(0, requiredExperience - before.Progression.Experience);
@@ -2181,22 +2191,41 @@ internal sealed class CleanTrainingAnnexPlayHost
             new TrainingAnnexMinimumRandomSource(),
             resources: before.Resources,
             baseResourceValues: before.BaseResourceValues));
-        RuntimeMutationResult mutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            player.Actor.State,
-            growth);
-        if (!mutation.Applied)
+        RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+            before.Equipment,
+            equipmentRepository);
+        if (equipmentProfile.Diagnostics.Count > 0)
         {
-            foreach (RuntimeMutationDiagnostic diagnostic in mutation.Diagnostics)
+            foreach (RuntimeEquipmentProfileDiagnostic diagnostic in equipmentProfile.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[equipment:{diagnostic.Code}] {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return (growth, false);
+        }
+
+        RuntimeActorGrowthCompositionResult transaction = new RuntimeActorGrowthCompositionService(
+            statCompositionService).Apply(new RuntimeActorGrowthCompositionRequest(
+                growth,
+                TrainingAnnexHostSupport.CreatePlayerStatCompositionRequest(
+                    roster,
+                    partyRoster,
+                    equipmentProfile)));
+        if (!transaction.Applied)
+        {
+            foreach (RuntimeActorGrowthCompositionDiagnostic diagnostic in transaction.Diagnostics)
             {
                 await _eventSink.PublishAsync(
                     $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return growth;
+            return (growth, false);
         }
 
-        RuntimeActorSnapshot after = mutation.After;
+        RuntimeActorSnapshot after = transaction.After;
         await _eventSink.PublishAsync(
             $"Victory EXP: awarded {award} EXP through standard_growth.",
             cancellationToken).ConfigureAwait(false);
@@ -2207,7 +2236,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Level-up events: {(growth.LevelUps.Count == 0 ? "none" : string.Join(", ", growth.LevelUps.Select(levelUp => levelUp.Level.ToString())))}.",
             cancellationToken).ConfigureAwait(false);
 
-        return growth;
+        return (growth, true);
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(
