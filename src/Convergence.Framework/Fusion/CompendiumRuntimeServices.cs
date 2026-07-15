@@ -571,11 +571,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             fresh.BaseResourceValues,
             fresh.VitalResourceId,
             fresh.CapabilityIds);
-        return _actors.Restore(new CatalogBattleActorRestoreRequest(
-            snapshot,
-            RuntimeStatSourceKind.Actor,
-            MissingHostedEntityBehavior.UseActorBaseStats,
-            mode: CatalogBattleActorRestoreMode.PreserveValidatedSnapshot));
+        return _actors.Restore(
+            CatalogBattleActorRestoreRequest.FromValidatedFrameworkSnapshot(snapshot));
     }
 
     private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedActorReferences(

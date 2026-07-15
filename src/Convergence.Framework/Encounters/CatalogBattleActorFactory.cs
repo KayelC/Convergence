@@ -16,12 +16,6 @@ public sealed record CatalogBattleActorCreationRequest(
     RuntimeActorDeployment Deployment = RuntimeActorDeployment.Deployed,
     bool IsActive = true);
 
-public enum CatalogBattleActorRestoreMode
-{
-    RecomposeDerivedState,
-    PreserveValidatedSnapshot
-}
-
 public sealed record CatalogBattleActorRestoreRequest
 {
     public CatalogBattleActorRestoreRequest(
@@ -29,8 +23,24 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimeActorState? activeHostedEntity = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
-        CatalogBattleActorRestoreMode mode = CatalogBattleActorRestoreMode.RecomposeDerivedState)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
+        : this(
+            snapshot,
+            statSourceKind,
+            missingHostedEntityBehavior,
+            activeHostedEntity,
+            equipmentStatModifiers,
+            preserveValidatedSnapshot: false)
+    {
+    }
+
+    private CatalogBattleActorRestoreRequest(
+        RuntimeActorSnapshot snapshot,
+        RuntimeStatSourceKind statSourceKind,
+        MissingHostedEntityBehavior missingHostedEntityBehavior,
+        RuntimeActorState? activeHostedEntity,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
+        bool preserveValidatedSnapshot)
     {
         if (!Enum.IsDefined(statSourceKind))
         {
@@ -42,17 +52,12 @@ public sealed record CatalogBattleActorRestoreRequest
                 nameof(missingHostedEntityBehavior),
                 "Missing hosted-entity behavior is not supported.");
         }
-        if (!Enum.IsDefined(mode))
-        {
-            throw new ArgumentOutOfRangeException(nameof(mode), "Catalog actor restore mode is not supported.");
-        }
-
         Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
         ActiveHostedEntity = activeHostedEntity;
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
-        Mode = mode;
+        PreserveValidatedSnapshot = preserveValidatedSnapshot;
     }
 
     public RuntimeActorSnapshot Snapshot { get; }
@@ -60,7 +65,17 @@ public sealed record CatalogBattleActorRestoreRequest
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
     public RuntimeActorState? ActiveHostedEntity { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
-    public CatalogBattleActorRestoreMode Mode { get; }
+    internal bool PreserveValidatedSnapshot { get; }
+
+    internal static CatalogBattleActorRestoreRequest FromValidatedFrameworkSnapshot(
+        RuntimeActorSnapshot snapshot) =>
+        new(
+            snapshot,
+            RuntimeStatSourceKind.Actor,
+            MissingHostedEntityBehavior.UseActorBaseStats,
+            activeHostedEntity: null,
+            equipmentStatModifiers: null,
+            preserveValidatedSnapshot: true);
 }
 
 public sealed record BattleActorInitialization
@@ -536,7 +551,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 registeredEventIds: _durationVocabulary?.RegisteredEventIds,
                 registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds);
 
-            if (request.Mode == CatalogBattleActorRestoreMode.RecomposeDerivedState)
+            if (!request.PreserveValidatedSnapshot)
             {
                 RuntimeActorStatCompositionResult composition = _statComposition.Compose(
                     new RuntimeActorStatCompositionRequest(

@@ -1239,6 +1239,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             savePolicy,
                             catalog,
                             actorFactory,
+                            equipmentProfileResolver,
                             roster,
                             partyRoster,
                             field,
@@ -1282,6 +1283,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             }
 
                             suspendSaveConsumed |= loadResult.ConsumedRecord;
+                            composeAfterCommand = false;
                         }
                     }
                     break;

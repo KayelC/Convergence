@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Hosting;
 using Convergence.Encounters;
+using Convergence.Execution;
 using Convergence.Fusion;
 using Convergence.Runtime;
 
@@ -91,6 +92,7 @@ internal sealed class TrainingAnnexPersistenceController
         IRuntimeSavePolicyService savePolicy,
         GameDataCatalog catalog,
         ICatalogBattleActorFactory actorFactory,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         TrainingAnnexActorRoster roster,
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeFieldSnapshot field,
@@ -133,7 +135,13 @@ internal sealed class TrainingAnnexPersistenceController
         }
 
         TrainingAnnexSessionRestoreResult restore =
-            RestoreTrainingAnnexSession(validation.RequireValidSnapshot(), roster, partyRoster, actorFactory);
+            RestoreTrainingAnnexSession(
+                validation.RequireValidSnapshot(),
+                roster,
+                partyRoster,
+                catalog,
+                actorFactory,
+                equipmentProfileResolver);
         if (restore.Restored is null)
         {
             foreach (string diagnostic in restore.Diagnostics)
@@ -223,7 +231,9 @@ internal sealed class TrainingAnnexPersistenceController
         RuntimeSaveGameSnapshot snapshot,
         TrainingAnnexActorRoster currentRoster,
         RuntimePartyRosterSnapshot currentPartyRoster,
-        ICatalogBattleActorFactory actorFactory)
+        GameDataCatalog catalog,
+        ICatalogBattleActorFactory actorFactory,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver)
     {
         var diagnostics = new List<string>();
         ValidateTrainingAnnexField(snapshot.Field, diagnostics);
@@ -231,11 +241,6 @@ internal sealed class TrainingAnnexPersistenceController
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
         ValidateTrainingAnnexParty(snapshot.PartyRoster, currentPartyRoster, actors, diagnostics);
-
-        if (!TryRestoreActor(currentRoster.Player, actors, actorFactory, out TrainingAnnexRuntimeActor player, out string? playerDiagnostic))
-        {
-            diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
-        }
 
         var supportMembers = new List<TrainingAnnexRuntimeActor>();
         foreach (TrainingAnnexRuntimeActor support in currentRoster.SupportMembers)
@@ -249,16 +254,31 @@ internal sealed class TrainingAnnexPersistenceController
             supportMembers.Add(restoredSupport);
         }
 
-        var stockMembers = new List<TrainingAnnexRuntimeActor>();
-        foreach (TrainingAnnexRuntimeActor stock in currentRoster.StockMembers)
+        HashSet<RuntimeInstanceId> dynamicActorIds = currentRoster.DynamicMembers
+            .Select(member => member.Actor.State.InstanceId)
+            .ToHashSet();
+        HashSet<RuntimeInstanceId> ownedActorIds = OwnedActorReferences(currentPartyRoster)
+            .Select(reference => reference.InstanceId)
+            .ToHashSet();
+        var ownedActors = new List<TrainingAnnexRuntimeActor>();
+        foreach (TrainingAnnexRuntimeActor ownedActor in currentRoster.AllActors.Where(member =>
+                     ownedActorIds.Contains(member.Actor.State.InstanceId) &&
+                     !dynamicActorIds.Contains(member.Actor.State.InstanceId)))
         {
-            if (!TryRestoreActor(stock, actors, actorFactory, out TrainingAnnexRuntimeActor restoredStock, out string? stockDiagnostic))
+            if (!TryRestoreActor(
+                    ownedActor,
+                    actors,
+                    actorFactory,
+                    out TrainingAnnexRuntimeActor restoredOwnedActor,
+                    out string? ownedActorDiagnostic))
             {
-                diagnostics.Add(stockDiagnostic ?? $"Saved stock actor '{stock.Actor.State.InstanceId}' could not be restored.");
+                diagnostics.Add(
+                    ownedActorDiagnostic ??
+                    $"Saved owned actor '{ownedActor.Actor.State.InstanceId}' could not be restored.");
                 continue;
             }
 
-            stockMembers.Add(restoredStock);
+            ownedActors.Add(restoredOwnedActor);
         }
 
         var enemies = new List<TrainingAnnexRuntimeActor>();
@@ -324,12 +344,61 @@ internal sealed class TrainingAnnexPersistenceController
                 restored.RequireActor()));
         }
 
+        TrainingAnnexRuntimeActor player = currentRoster.Player;
+        if (!TryGetCompatibleSnapshot(
+                currentRoster.Player,
+                actors,
+                out RuntimeActorSnapshot playerSnapshot,
+                out string? playerDiagnostic))
+        {
+            diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
+        }
+        else
+        {
+            RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+                playerSnapshot.Equipment,
+                catalog);
+            foreach (RuntimeEquipmentProfileDiagnostic diagnostic in equipmentProfile.Diagnostics)
+            {
+                diagnostics.Add($"Player equipment [{diagnostic.Code}]: {diagnostic.Message}");
+            }
+
+            RuntimeActorReferenceSnapshot? activeReference = snapshot.PartyRoster.ActiveHostedEntity;
+            RuntimeActorState? activeHostedEntity = activeReference is null
+                ? null
+                : supportMembers
+                    .Concat(ownedActors)
+                    .Concat(enemies)
+                    .Concat(dynamicMembers)
+                    .Select(member => member.Actor.State)
+                    .FirstOrDefault(state =>
+                        state.InstanceId == activeReference.InstanceId &&
+                        state.EntityId == activeReference.EntityDefinitionId);
+
+            if (equipmentProfile.Diagnostics.Count == 0 &&
+                !TryRestoreValidatedActor(
+                    currentRoster.Player,
+                    playerSnapshot,
+                    actorFactory,
+                    new CatalogBattleActorRestoreRequest(
+                        playerSnapshot,
+                        RuntimeStatSourceKind.ActiveHostedEntity,
+                        MissingHostedEntityBehavior.RejectStatResolution,
+                        activeHostedEntity,
+                        equipmentProfile.StatModifiers),
+                    out player,
+                    out playerDiagnostic))
+            {
+                diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
+            }
+        }
+
         if (diagnostics.Count > 0)
         {
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
         }
 
-        TrainingAnnexActorRoster roster = new(player, supportMembers, stockMembers, enemies, dynamicMembers);
+        TrainingAnnexActorRoster roster = new(player, supportMembers, ownedActors, enemies, dynamicMembers);
 
         RuntimeFieldSnapshot field = snapshot.Field ??
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -361,6 +430,25 @@ internal sealed class TrainingAnnexPersistenceController
                 winningTeam,
                 preparedEncounterIds),
             []);
+    }
+
+    private static IEnumerable<RuntimeActorReferenceSnapshot> OwnedActorReferences(
+        RuntimePartyRosterSnapshot partyRoster)
+    {
+        if (partyRoster.ActiveHostedEntity is not null)
+        {
+            yield return partyRoster.ActiveHostedEntity;
+        }
+
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.HostedEntityRoster)
+        {
+            yield return actor;
+        }
+
+        foreach (RuntimeActorReferenceSnapshot actor in partyRoster.CompanionRoster)
+        {
+            yield return actor;
+        }
     }
 
     private static void ValidateTrainingAnnexParty(
@@ -496,17 +584,38 @@ internal sealed class TrainingAnnexPersistenceController
         out TrainingAnnexRuntimeActor restored,
         out string? diagnostic)
     {
-        if (!actors.TryGetValue(current.Actor.State.InstanceId, out RuntimeActorSnapshot? snapshot))
+        if (!TryGetCompatibleSnapshot(current, actors, out RuntimeActorSnapshot snapshot, out diagnostic))
         {
             restored = current;
+            return false;
+        }
+
+        return TryRestoreValidatedActor(
+            current,
+            snapshot,
+            actorFactory,
+            ActorStatRestoreRequest(snapshot),
+            out restored,
+            out diagnostic);
+    }
+
+    private static bool TryGetCompatibleSnapshot(
+        TrainingAnnexRuntimeActor current,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        out RuntimeActorSnapshot snapshot,
+        out string? diagnostic)
+    {
+        if (!actors.TryGetValue(current.Actor.State.InstanceId, out RuntimeActorSnapshot? savedSnapshot))
+        {
+            snapshot = current.Actor.State.ToSnapshot();
             diagnostic = $"Saved session has no actor '{current.Actor.State.InstanceId}'.";
             return false;
         }
 
+        snapshot = savedSnapshot;
         RuntimeActorSnapshot expected = current.Actor.State.ToSnapshot();
         if (snapshot.Identity.EntityDefinitionId != expected.Identity.EntityDefinitionId)
         {
-            restored = current;
             diagnostic =
                 $"Saved actor '{snapshot.Identity.InstanceId}' has entity '{snapshot.Identity.EntityDefinitionId}', expected '{expected.Identity.EntityDefinitionId}' for {current.Role}.";
             return false;
@@ -514,7 +623,6 @@ internal sealed class TrainingAnnexPersistenceController
 
         if (snapshot.Identity.ActorKindId != expected.Identity.ActorKindId)
         {
-            restored = current;
             diagnostic =
                 $"Saved actor '{snapshot.Identity.InstanceId}' has kind '{snapshot.Identity.ActorKindId}', expected '{expected.Identity.ActorKindId}' for {current.Role}.";
             return false;
@@ -522,14 +630,24 @@ internal sealed class TrainingAnnexPersistenceController
 
         if (snapshot.Ownership.TeamId != expected.Ownership.TeamId)
         {
-            restored = current;
             diagnostic =
                 $"Saved actor '{snapshot.Identity.InstanceId}' has team '{snapshot.Ownership.TeamId}', expected '{expected.Ownership.TeamId}' for {current.Role}.";
             return false;
         }
 
-        CatalogBattleActorCreationResult result = actorFactory.Restore(
-            ActorStatRestoreRequest(snapshot));
+        diagnostic = null;
+        return true;
+    }
+
+    private static bool TryRestoreValidatedActor(
+        TrainingAnnexRuntimeActor current,
+        RuntimeActorSnapshot snapshot,
+        ICatalogBattleActorFactory actorFactory,
+        CatalogBattleActorRestoreRequest request,
+        out TrainingAnnexRuntimeActor restored,
+        out string? diagnostic)
+    {
+        CatalogBattleActorCreationResult result = actorFactory.Restore(request);
         if (!result.IsSuccess)
         {
             restored = current;

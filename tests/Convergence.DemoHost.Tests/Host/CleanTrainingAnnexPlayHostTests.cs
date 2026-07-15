@@ -3300,6 +3300,34 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_LoadRejectsBeforePublishingSuccessWhenVesselCompositionFails()
+    {
+        var io = new ScriptedGameIO().QueueMenu(10, 0, 10, 1, 9);
+        using var output = new StringWriter();
+        var composition = new RejectNthPlayerCompositionService(rejectCall: 3);
+        var host = CreateHost(
+            io,
+            output,
+            statCompositionFactory: (stats, resources) =>
+                composition.Initialize(stats, resources));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            "Manual load rejected: Rejected by the restore composition test.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Manual save restored", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_SuspendLoadConsumesSlotOnlyAfterSuccessfulRestore()
     {
         var io = new ScriptedGameIO().QueueMenu(10, 2, 10, 3, 10, 4, 9);
@@ -4045,6 +4073,45 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     new RuntimeActorStatCompositionDiagnostic(
                         RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
                         "Rejected by the atomic roster test.")
+                ]);
+        }
+    }
+
+    private sealed class RejectNthPlayerCompositionService(int rejectCall) : IRuntimeActorStatCompositionService
+    {
+        private IRuntimeActorStatCompositionService? _inner;
+        private int _matchingCallCount;
+
+        public IRuntimeActorStatCompositionService Initialize(
+            IStatResolutionPolicy stats,
+            IResourceGrowthPolicy resources)
+        {
+            _inner = new RuntimeActorStatCompositionService(stats, resources);
+            return this;
+        }
+
+        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        {
+            bool isPlayerVesselComposition =
+                request.Actor.InstanceId == TrainingAnnexHostSupport.EchoAdeptInstance &&
+                request.SourceKind == RuntimeStatSourceKind.ActiveHostedEntity;
+            if (!isPlayerVesselComposition || ++_matchingCallCount != rejectCall)
+            {
+                return (_inner ?? throw new InvalidOperationException("Composition service was not initialized."))
+                    .Compose(request);
+            }
+
+            RuntimeActorSnapshot before = request.Actor.ToSnapshot();
+            return new RuntimeActorStatCompositionResult(
+                RuntimeActorStatCompositionStatus.Rejected,
+                before,
+                before,
+                request.SourceKind,
+                diagnostics:
+                [
+                    new RuntimeActorStatCompositionDiagnostic(
+                        RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+                        "Rejected by the restore composition test.")
                 ]);
         }
     }

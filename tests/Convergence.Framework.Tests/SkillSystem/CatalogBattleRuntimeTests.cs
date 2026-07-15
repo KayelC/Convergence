@@ -348,6 +348,27 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_PublicRestoreSurfaceCannotBypassStatComposition()
+    {
+        Assembly assembly = typeof(CatalogBattleActorRestoreRequest).Assembly;
+        Type requestType = typeof(CatalogBattleActorRestoreRequest);
+
+        Assert.DoesNotContain(
+            assembly.GetExportedTypes(),
+            type => type.Name == "CatalogBattleActorRestoreMode");
+        Assert.DoesNotContain(
+            requestType.GetProperties(BindingFlags.Instance | BindingFlags.Public),
+            property => property.Name is "Mode" or "PreserveValidatedSnapshot");
+        Assert.All(
+            requestType.GetConstructors(BindingFlags.Instance | BindingFlags.Public),
+            constructor => Assert.DoesNotContain(
+                constructor.GetParameters(),
+                parameter =>
+                    parameter.Name?.Contains("mode", StringComparison.OrdinalIgnoreCase) == true ||
+                    parameter.Name?.Contains("preserve", StringComparison.OrdinalIgnoreCase) == true));
+    }
+
+    [Fact]
     public void ActorFactory_RestoreReportsTypedDiagnosticWhenHostedStateIsRequiredButMissing()
     {
         EntityDefinition vesselEntity = Entity("test.pack:vessel", []);
