@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Convergence.Content;
+using Convergence.Internal;
 
 namespace Convergence.Knowledge;
 
@@ -13,6 +14,8 @@ public sealed class ElementalAffinityKnowledge
 
     public void Learn(ContentId entityId, DamageElement element, ElementalAffinity affinity)
     {
+        EnumDomain.RequireDefined(element, nameof(element));
+        EnumDomain.RequireDefined(affinity, nameof(affinity));
         if (element == DamageElement.Almighty)
         {
             return;
@@ -52,6 +55,7 @@ public sealed class AilmentResistanceKnowledge
 
     public void Learn(ContentId entityId, ContentId ailmentId, ResistanceLevel resistance)
     {
+        EnumDomain.RequireDefined(resistance, nameof(resistance));
         _entries[new AilmentResistanceKnowledgeKey(entityId, ailmentId)] = resistance;
     }
 
@@ -78,6 +82,8 @@ public sealed class InstantDeathResistanceKnowledge
 
     public void Learn(ContentId entityId, InstantDeathChannel channel, ResistanceLevel resistance)
     {
+        EnumDomain.RequireDefined(channel, nameof(channel));
+        EnumDomain.RequireDefined(resistance, nameof(resistance));
         _entries[new InstantDeathResistanceKnowledgeKey(entityId, channel)] = resistance;
     }
 

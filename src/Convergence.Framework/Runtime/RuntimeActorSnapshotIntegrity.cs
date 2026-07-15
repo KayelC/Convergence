@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Execution;
+using Convergence.Internal;
 
 namespace Convergence.Runtime;
 
@@ -34,7 +35,8 @@ internal enum RuntimeActorSnapshotIntegrityCode
     RetainedDurationKindInvalid,
     TurnDurationValueOutOfRange,
     TurnDurationTickEventIdInvalid,
-    PhaseDurationPhaseIdInvalid
+    PhaseDurationPhaseIdInvalid,
+    UndefinedEnumValue
 }
 
 internal sealed record RuntimeActorSnapshotIntegrityDiagnostic(
@@ -55,6 +57,7 @@ internal static class RuntimeActorSnapshotIntegrity
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var diagnostics = new List<RuntimeActorSnapshotIntegrityDiagnostic>();
+        ValidateEnumValues(snapshot, diagnostics);
         ValidateIdentifiers(snapshot, diagnostics);
         ValidateUnique(
             snapshot.Resources,
@@ -224,6 +227,90 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidatePassives(snapshot.BattleActivations, loadedPassiveSkillIds, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
+    }
+
+    private static void ValidateEnumValues(
+        RuntimeActorSnapshot snapshot,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+    {
+        ValidateEnumValue(
+            snapshot.Deployment.Deployment,
+            "$.deployment.deployment",
+            diagnostics);
+
+        foreach (EquipmentSlot slot in snapshot.Equipment.EquippedItemIds.Keys)
+        {
+            ValidateEnumValue(
+                slot,
+                $"$.equipment.equippedItemIds.{slot.ToString().ToLowerInvariant()}",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleStatus.Charges.Count; index++)
+        {
+            ValidateEnumValue(
+                snapshot.BattleStatus.Charges[index].Kind,
+                $"$.battleStatus.charges[{index}].kind",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleStatus.Shields.Count; index++)
+        {
+            ValidateEnumValue(
+                snapshot.BattleStatus.Shields[index].Kind,
+                $"$.battleStatus.shields[{index}].kind",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleStatus.AffinityBreaks.Count; index++)
+        {
+            ValidateEnumValue(
+                snapshot.BattleStatus.AffinityBreaks[index].Element,
+                $"$.battleStatus.affinityBreaks[{index}].element",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.BattleStatus.AffinityOverrides.Count; index++)
+        {
+            RuntimeAffinityOverrideSnapshot affinity = snapshot.BattleStatus.AffinityOverrides[index];
+            ValidateEnumValue(
+                affinity.Element,
+                $"$.battleStatus.affinityOverrides[{index}].element",
+                diagnostics);
+            ValidateEnumValue(
+                affinity.Affinity,
+                $"$.battleStatus.affinityOverrides[{index}].affinity",
+                diagnostics);
+        }
+
+        for (int analysisIndex = 0; analysisIndex < snapshot.BattleStatus.Analysis.Count; analysisIndex++)
+        {
+            RuntimeAnalysisSnapshot analysis = snapshot.BattleStatus.Analysis[analysisIndex];
+            for (int layerIndex = 0; layerIndex < analysis.Layers.Count; layerIndex++)
+            {
+                ValidateEnumValue(
+                    analysis.Layers[layerIndex],
+                    $"$.battleStatus.analysis[{analysisIndex}].layers[{layerIndex}]",
+                    diagnostics);
+            }
+        }
+    }
+
+    private static void ValidateEnumValue<TEnum>(
+        TEnum value,
+        string path,
+        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
+        where TEnum : struct, Enum
+    {
+        if (EnumDomain.IsDefined(value))
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+            RuntimeActorSnapshotIntegrityCode.UndefinedEnumValue,
+            $"Value '{value}' is not defined for {typeof(TEnum).Name}.",
+            path));
     }
 
     private static void ValidateIdentifiers(

@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Catalog;
+using Convergence.Internal;
 
 namespace Convergence.Runtime;
 
@@ -57,6 +58,7 @@ public sealed record RuntimeInventorySnapshot
 
         foreach ((EquipmentSlot slot, IEnumerable<ContentId> ids) in ownedEquipmentIds ?? [])
         {
+            EnumDomain.RequireDefined(slot, nameof(ownedEquipmentIds));
             ContentId[] copy = ids?.Distinct().ToArray() ?? [];
             equipment[slot] = Array.AsReadOnly(copy);
         }

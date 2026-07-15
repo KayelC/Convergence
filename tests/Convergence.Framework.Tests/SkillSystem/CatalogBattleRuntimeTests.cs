@@ -120,6 +120,42 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_RejectsUndefinedDeploymentAtConstructionAndDiagnosticBoundaries()
+    {
+        EntityDefinition entity = Entity("test.pack:entity", []);
+        var initialization = new RecordingInitializationPolicy();
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(),
+            initialization);
+        var invalidDeployment = (RuntimeActorDeployment)999;
+
+        ArgumentOutOfRangeException construction = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new CatalogBattleActorCreationRequest(
+                entity.Id,
+                RuntimeInstanceId.Parse("instance"),
+                PlayerTeam,
+                1,
+                Deployment: invalidDeployment));
+        Assert.Equal("Deployment", construction.ParamName);
+
+        CatalogBattleActorCreationRequest malformed = new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            1) with
+        {
+            Deployment = invalidDeployment
+        };
+        CatalogBattleActorCreationResult result = factory.Create(malformed);
+
+        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.InvalidDeployment, diagnostic.Code);
+        Assert.Equal(0, initialization.CallCount);
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
     public void ActorFactory_RejectsMismatchedRequestAndProgressionLevelsBeforeInitialization()
     {
         EntityDefinition entity = Entity("test.pack:entity", []);

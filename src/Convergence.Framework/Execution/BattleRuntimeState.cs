@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -159,6 +160,7 @@ public sealed class RuntimeActorState
         Deployment = deployment ?? new RuntimeActorDeploymentSnapshot(
             isActive ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Reserve,
             isActive);
+        EnumDomain.RequireDefined(Deployment.Deployment, nameof(deployment));
         Progression = progression ?? new RuntimeProgressionSnapshot(1, 0, 0, 0);
         RequireValid(Identity.InstanceId, nameof(identity));
         RequireValid(Identity.EntityDefinitionId, nameof(identity));
@@ -293,11 +295,13 @@ public sealed class RuntimeActorState
 
     internal void SetDeployment(RuntimeActorDeployment deployment, bool isActive)
     {
-        _isActive = isActive;
-        Deployment = new RuntimeActorDeploymentSnapshot(
+        EnumDomain.RequireDefined(deployment, nameof(deployment));
+        RuntimeActorDeploymentSnapshot next = new(
             deployment,
             isActive,
             Deployment.HasSwappedThisTurn);
+        _isActive = isActive;
+        Deployment = next;
     }
 
     public bool IsGuarding { get; private set; }
@@ -407,14 +411,21 @@ public sealed class RuntimeActorState
         return next - current;
     }
 
-    public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration) =>
+    public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration)
+    {
+        EnumDomain.RequireDefined(kind, nameof(kind));
         _charges[kind] = new BattleChargeState(multiplier, duration);
+    }
 
-    public void GrantShield(ShieldKind kind, DurationDefinition? duration) =>
+    public void GrantShield(ShieldKind kind, DurationDefinition? duration)
+    {
+        EnumDomain.RequireDefined(kind, nameof(kind));
         _shields[kind] = new BattleShieldState(duration);
+    }
 
     public void BreakAffinity(DamageElement element, DurationDefinition duration)
     {
+        EnumDomain.RequireDefined(element, nameof(element));
         if (element == DamageElement.Almighty)
         {
             throw new ArgumentException("Almighty cannot receive an affinity Break.", nameof(element));
@@ -426,8 +437,12 @@ public sealed class RuntimeActorState
 
     public void SetGuarding(bool isGuarding) => IsGuarding = isGuarding;
 
-    public void OverrideAffinity(DamageElement element, ElementalAffinity affinity, DurationDefinition duration) =>
+    public void OverrideAffinity(DamageElement element, ElementalAffinity affinity, DurationDefinition duration)
+    {
+        EnumDomain.RequireDefined(element, nameof(element));
+        EnumDomain.RequireDefined(affinity, nameof(affinity));
         _affinityOverrides[element] = new BattleAffinityOverrideState(affinity, duration);
+    }
 
     public void AddOtherStatus(ContentId statusId) =>
         AddOtherStatus(statusId, new PermanentDurationDefinition());
@@ -755,13 +770,20 @@ public sealed class RuntimeActorState
 
     public void Reveal(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
     {
+        AnalysisLayer[] requestedLayers =
+            (layers ?? throw new ArgumentNullException(nameof(layers))).ToArray();
+        foreach (AnalysisLayer layer in requestedLayers)
+        {
+            EnumDomain.RequireDefined(layer, nameof(layers));
+        }
+
         if (!_analysis.TryGetValue(targetInstanceId, out HashSet<AnalysisLayer>? known))
         {
             known = [];
             _analysis.Add(targetInstanceId, known);
         }
 
-        foreach (AnalysisLayer layer in layers)
+        foreach (AnalysisLayer layer in requestedLayers)
         {
             if (layer == AnalysisLayer.Full)
             {

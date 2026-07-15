@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Battle;
 using Convergence.Execution;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Encounters;
@@ -14,7 +15,11 @@ public sealed record CatalogBattleActorCreationRequest(
     RuntimeProgressionSnapshot? Progression = null,
     ContentId? ControllerId = null,
     RuntimeActorDeployment Deployment = RuntimeActorDeployment.Deployed,
-    bool IsActive = true);
+    bool IsActive = true)
+{
+    public RuntimeActorDeployment Deployment { get; init; } =
+        EnumDomain.RequireDefined(Deployment, nameof(Deployment));
+}
 
 public sealed record CatalogBattleActorRestoreRequest
 {
@@ -120,7 +125,8 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotAilmentMissing,
     SnapshotStatCompositionFailed,
     SnapshotInvalid,
-    IdentifierInvalid
+    IdentifierInvalid,
+    InvalidDeployment
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -240,6 +246,13 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.IdentifierInvalid,
                 "Runtime actor controller ID cannot be empty.",
+                request.EntityId));
+        }
+        if (!EnumDomain.IsDefined(request.Deployment))
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.InvalidDeployment,
+                $"Runtime actor deployment '{request.Deployment}' is not supported.",
                 request.EntityId));
         }
         if (diagnostics.Count > 0)

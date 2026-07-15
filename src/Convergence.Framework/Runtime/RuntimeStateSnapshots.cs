@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Execution;
+using Convergence.Internal;
 
 namespace Convergence.Runtime;
 
@@ -127,7 +128,11 @@ public sealed record RuntimeActorOwnershipSnapshot(
 public sealed record RuntimeActorDeploymentSnapshot(
     RuntimeActorDeployment Deployment,
     bool IsActive,
-    bool HasSwappedThisTurn = false);
+    bool HasSwappedThisTurn = false)
+{
+    public RuntimeActorDeployment Deployment { get; init; } =
+        EnumDomain.RequireDefined(Deployment, nameof(Deployment));
+}
 
 public sealed record RuntimeProgressionSnapshot
 {
@@ -261,7 +266,13 @@ public sealed record RuntimeEquipmentSnapshot
 {
     public RuntimeEquipmentSnapshot(IEnumerable<KeyValuePair<EquipmentSlot, ContentId>>? equippedItemIds = null)
     {
-        EquippedItemIds = RuntimeSnapshotCollections.Dictionary(equippedItemIds);
+        KeyValuePair<EquipmentSlot, ContentId>[] entries = equippedItemIds?.ToArray() ?? [];
+        foreach ((EquipmentSlot slot, _) in entries)
+        {
+            EnumDomain.RequireDefined(slot, nameof(equippedItemIds));
+        }
+
+        EquippedItemIds = RuntimeSnapshotCollections.Dictionary(entries);
     }
 
     public IReadOnlyDictionary<EquipmentSlot, ContentId> EquippedItemIds { get; }
@@ -308,6 +319,7 @@ public sealed record RuntimeChargeSnapshot
         decimal multiplier,
         DurationDefinition? duration = null)
     {
+        EnumDomain.RequireDefined(kind, nameof(kind));
         if (multiplier <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(multiplier), "Charge multiplier must be positive.");
@@ -327,6 +339,7 @@ public sealed record RuntimeShieldSnapshot
 {
     public RuntimeShieldSnapshot(ShieldKind kind, DurationDefinition? duration = null)
     {
+        EnumDomain.RequireDefined(kind, nameof(kind));
         Kind = kind;
         Duration = duration;
     }
@@ -342,6 +355,8 @@ public sealed record RuntimeAffinityOverrideSnapshot
         ElementalAffinity affinity,
         DurationDefinition duration)
     {
+        EnumDomain.RequireDefined(element, nameof(element));
+        EnumDomain.RequireDefined(affinity, nameof(affinity));
         Element = element;
         Affinity = affinity;
         Duration = duration ?? throw new ArgumentNullException(nameof(duration));
@@ -356,6 +371,7 @@ public sealed record RuntimeAffinityBreakSnapshot
 {
     public RuntimeAffinityBreakSnapshot(DamageElement element, DurationDefinition duration)
     {
+        EnumDomain.RequireDefined(element, nameof(element));
         Element = element;
         Duration = duration ?? throw new ArgumentNullException(nameof(duration));
     }
@@ -368,8 +384,14 @@ public sealed record RuntimeAnalysisSnapshot
 {
     public RuntimeAnalysisSnapshot(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
     {
+        AnalysisLayer[] layerSnapshot = (layers ?? throw new ArgumentNullException(nameof(layers))).ToArray();
+        foreach (AnalysisLayer layer in layerSnapshot)
+        {
+            EnumDomain.RequireDefined(layer, nameof(layers));
+        }
+
         TargetInstanceId = targetInstanceId;
-        Layers = RuntimeSnapshotCollections.List(layers);
+        Layers = RuntimeSnapshotCollections.List(layerSnapshot);
     }
 
     public RuntimeInstanceId TargetInstanceId { get; }

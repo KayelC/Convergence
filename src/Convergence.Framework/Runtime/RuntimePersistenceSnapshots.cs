@@ -4,6 +4,7 @@ using Convergence.Catalog;
 using Convergence.Knowledge;
 using Convergence.TurnEconomy;
 using Convergence.Fusion;
+using Convergence.Internal;
 
 namespace Convergence.Runtime;
 
@@ -76,7 +77,8 @@ public enum RuntimeSaveValidationCode
     ActorTurnDurationTickEventIdInvalid,
     ActorPhaseDurationPhaseIdInvalid,
     InvalidRuntimeInstanceId,
-    InvalidContentId
+    InvalidContentId,
+    UndefinedEnumValue
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -147,17 +149,33 @@ public sealed record RuntimeKnowledgeSnapshot
 public sealed record RuntimeElementalAffinityKnowledgeSnapshot(
     ContentId EntityId,
     DamageElement Element,
-    ElementalAffinity Affinity);
+    ElementalAffinity Affinity)
+{
+    public DamageElement Element { get; init; } =
+        EnumDomain.RequireDefined(Element, nameof(Element));
+    public ElementalAffinity Affinity { get; init; } =
+        EnumDomain.RequireDefined(Affinity, nameof(Affinity));
+}
 
 public sealed record RuntimeAilmentResistanceKnowledgeSnapshot(
     ContentId EntityId,
     ContentId AilmentId,
-    ResistanceLevel Resistance);
+    ResistanceLevel Resistance)
+{
+    public ResistanceLevel Resistance { get; init; } =
+        EnumDomain.RequireDefined(Resistance, nameof(Resistance));
+}
 
 public sealed record RuntimeInstantDeathResistanceKnowledgeSnapshot(
     ContentId EntityId,
     InstantDeathChannel Channel,
-    ResistanceLevel Resistance);
+    ResistanceLevel Resistance)
+{
+    public InstantDeathChannel Channel { get; init; } =
+        EnumDomain.RequireDefined(Channel, nameof(Channel));
+    public ResistanceLevel Resistance { get; init; } =
+        EnumDomain.RequireDefined(Resistance, nameof(Resistance));
+}
 
 public sealed record RuntimeSessionProgressSnapshot
 {
@@ -203,6 +221,7 @@ public sealed record RuntimeCheckpointEntrySnapshot
         RuntimeInstanceId? actorId = null,
         ContentId? contentId = null)
     {
+        EnumDomain.RequireDefined(kind, nameof(kind));
         if (sequence < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sequence), "Checkpoint sequence cannot be negative.");
@@ -315,6 +334,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
         ValidateContentPacks(snapshot.ContentPacks, catalog, diagnostics);
         ValidateAggregateIdentifiers(snapshot, diagnostics);
+        ValidateAggregateEnumValues(snapshot, diagnostics);
 
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = [];
         for (int index = 0; index < snapshot.Actors.Count; index++)
@@ -476,6 +496,87 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     $"$.checkpoints.entries[{index}].contentId", diagnostics);
             }
         }
+    }
+
+    private static void ValidateAggregateEnumValues(
+        RuntimeSaveGameSnapshot snapshot,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        foreach (EquipmentSlot slot in snapshot.Inventory.OwnedEquipmentIds.Keys)
+        {
+            ValidateEnumValue(
+                slot,
+                $"$.inventory.ownedEquipmentIds.{SlotPath(slot)}",
+                diagnostics);
+        }
+
+        foreach (EquipmentSlot slot in snapshot.Equipment.EquippedItemIds.Keys)
+        {
+            ValidateEnumValue(
+                slot,
+                $"$.equipment.equippedItemIds.{SlotPath(slot)}",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.Knowledge.ElementalAffinities.Count; index++)
+        {
+            RuntimeElementalAffinityKnowledgeSnapshot entry = snapshot.Knowledge.ElementalAffinities[index];
+            ValidateEnumValue(
+                entry.Element,
+                $"$.knowledge.elementalAffinities[{index}].element",
+                diagnostics);
+            ValidateEnumValue(
+                entry.Affinity,
+                $"$.knowledge.elementalAffinities[{index}].affinity",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.Knowledge.AilmentResistances.Count; index++)
+        {
+            ValidateEnumValue(
+                snapshot.Knowledge.AilmentResistances[index].Resistance,
+                $"$.knowledge.ailmentResistances[{index}].resistance",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.Knowledge.InstantDeathResistances.Count; index++)
+        {
+            RuntimeInstantDeathResistanceKnowledgeSnapshot entry =
+                snapshot.Knowledge.InstantDeathResistances[index];
+            ValidateEnumValue(
+                entry.Channel,
+                $"$.knowledge.instantDeathResistances[{index}].channel",
+                diagnostics);
+            ValidateEnumValue(
+                entry.Resistance,
+                $"$.knowledge.instantDeathResistances[{index}].resistance",
+                diagnostics);
+        }
+
+        for (int index = 0; index < snapshot.Checkpoints.Entries.Count; index++)
+        {
+            ValidateEnumValue(
+                snapshot.Checkpoints.Entries[index].Kind,
+                $"$.checkpoints.entries[{index}].kind",
+                diagnostics);
+        }
+    }
+
+    private static void ValidateEnumValue<TEnum>(
+        TEnum value,
+        string path,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+        where TEnum : struct, Enum
+    {
+        if (EnumDomain.IsDefined(value))
+        {
+            return;
+        }
+
+        diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+            RuntimeSaveValidationCode.UndefinedEnumValue,
+            $"Value '{value}' is not defined for {typeof(TEnum).Name}.",
+            Path: path));
     }
 
     private static void ValidateActorReferenceIdentifiers(
@@ -711,6 +812,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.TurnDurationValueOutOfRange => RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange,
             RuntimeActorSnapshotIntegrityCode.TurnDurationTickEventIdInvalid => RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid,
             RuntimeActorSnapshotIntegrityCode.PhaseDurationPhaseIdInvalid => RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid,
+            RuntimeActorSnapshotIntegrityCode.UndefinedEnumValue => RuntimeSaveValidationCode.UndefinedEnumValue,
             _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown actor snapshot integrity code.")
         };
 

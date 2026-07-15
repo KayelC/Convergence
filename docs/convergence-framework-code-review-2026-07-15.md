@@ -136,6 +136,40 @@ Correction verification:
 - active framework forbidden-reference search: clean;
 - active content: unchanged.
 
+### M3 corrected on 2026-07-15
+
+Status: Corrected after reviewed commit `ff98c71`
+
+Enum-domain validation is now centralized in one internal helper and enforced
+at each affected boundary:
+
+- actor, status, knowledge, inventory/equipment, and checkpoint snapshot
+  constructors reject undefined values immediately;
+- live actor status mutations and knowledge-store writes validate before
+  mutation;
+- catalog actor requests reject invalid deployment during construction, while
+  the factory still returns a typed `InvalidDeployment` diagnostic if record
+  cloning bypasses that constructor;
+- actor restoration and save validation independently reject malformed
+  deployment, equipment-slot, charge, shield, affinity, analysis, knowledge,
+  and checkpoint values with `UndefinedEnumValue` and exact indexed paths.
+
+Seven permanent regressions cover ordinary construction, mutation atomicity,
+constructor-bypassing catalog requests, deliberately corrupted actor snapshots,
+and aggregate save data. The corruption tests use record cloning and controlled
+reflection so they exercise restore validation rather than merely confirming
+constructor exceptions.
+
+Correction verification:
+
+- focused actor, persistence, and catalog tests: 104 passed;
+- full solution: 745 passed, 0 failed, 0 skipped;
+- nonincremental solution build: 0 warnings and 0 errors;
+- battle, field, save, and Training Annex demos: successful;
+- touched-file formatting verification: successful;
+- active framework forbidden-reference search: clean;
+- active content: unchanged.
+
 ## Findings
 
 ### H1. Rejected resource recalculation can partially mutate the live actor
@@ -245,6 +279,9 @@ Required correction:
 - Prove both positive and negative extreme inputs preserve live state.
 
 ### M3. Undefined enum values pass actor and save boundaries
+
+Correction status: Corrected on 2026-07-15; the original finding is retained
+below as review evidence.
 
 Severity: Medium
 
@@ -485,16 +522,16 @@ This is an ordered correction set, not a new feature roadmap:
 
 1. Resource boundary: H1 and M2 corrected.
 2. Prepared assessment freshness: M1 corrected.
-3. Enum and persisted-domain validation: M3.
+3. Enum and persisted-domain validation: M3 corrected.
 4. Negotiation cancellation semantics: M4.
 5. Encounter injected-port containment: M5.
 6. Fusion rank arithmetic: M6.
 7. DemoHost root confinement, formatting, and CI: L1 and L2.
 
-The H1 atomicity, M1 stale-assessment, and M2 resource-overflow defects are
-corrected. M3 through M5 should be resolved before a public Godot integration
-is described as production-ready. M6 should be resolved before arbitrary
-developer-authored fusion ranks are treated as supported.
+The H1 atomicity, M1 stale-assessment, M2 resource-overflow, and M3 enum-domain
+defects are corrected. M4 and M5 should be resolved before a public Godot
+integration is described as production-ready. M6 should be resolved before
+arbitrary developer-authored fusion ranks are treated as supported.
 
 ## Readiness Decision
 
