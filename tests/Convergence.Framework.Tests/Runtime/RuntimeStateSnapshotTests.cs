@@ -117,7 +117,10 @@ public sealed class RuntimeStateSnapshotTests
         List<ContentId> capabilityIds = [Id("analyze"), Id("switch_form")];
         List<RuntimeActorReferenceSnapshot> hostedEntityRoster =
         [
-            new(RuntimeInstanceId.Parse("hostedEntity:orpheus_1"), Id("convergence.demo:orpheus"), "Orpheus")
+            new(
+                RuntimeInstanceId.Parse("hosted_entity:secondary_1"),
+                Id("convergence.demo:secondary_hosted_entity"),
+                "Secondary Hosted Entity")
         ];
 
         RuntimeActorSnapshot snapshot = CreateCompleteSnapshot(
@@ -385,7 +388,7 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("agi"), Id("ice_boost")], [Id("agi")]),
             new RuntimeActorRosterSnapshot(
                 activeHostedEntity,
-                hostedEntityRoster ?? [activeHostedEntity],
+                hostedEntityRoster ?? [],
                 [
                     new RuntimeActorReferenceSnapshot(
                         RuntimeInstanceId.Parse("companion:pixie_1"),
