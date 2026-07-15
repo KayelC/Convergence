@@ -241,6 +241,10 @@ internal sealed class TrainingAnnexPersistenceController
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
         ValidateTrainingAnnexParty(snapshot.PartyRoster, currentPartyRoster, actors, diagnostics);
+        if (diagnostics.Count > 0)
+        {
+            return new TrainingAnnexSessionRestoreResult(null, diagnostics);
+        }
 
         var supportMembers = new List<TrainingAnnexRuntimeActor>();
         foreach (TrainingAnnexRuntimeActor support in currentRoster.SupportMembers)
