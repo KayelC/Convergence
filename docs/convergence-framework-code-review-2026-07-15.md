@@ -461,29 +461,53 @@ Required correction:
 - Ensure battle-end lifecycle and result snapshot behavior are explicit for each
   fault stage.
 
-### M6. Fusion rank-offset arithmetic can wrap for accepted ranks
+### M6. Catalyst rank-shift semantics drifted during the clean rewrite
 
 Severity: Medium
 
 Affected boundary: fusion result resolution
 
-Fusion participant rank accepts any nonnegative `int`, while rank-offset
-resolution computes the average and offset with unchecked `int` arithmetic.
+The active `RankOffset` operation does not implement the established catalyst
+rule. It averages both parent ranks, applies the authored offset, selects from an
+authored result race, and falls back to an endpoint member. The preserved design
+and implementation instead treat rank as an entity's position within its own
+race chart: the catalyst is not transformed, and the other parent moves by the
+authored amount within that parent's race.
 
 Relevant code:
 
 - `src/Convergence.Framework/Fusion/FusionRuntimeServices.cs:475`
 
-At extreme accepted ranks, `(a.Rank + b.Rank) / 2` and the subsequent offset can
-wrap negative. The focused reproduction selected the lowest race member when the
-mathematically correct result should have selected the highest member.
+Historical evidence:
+
+- `ArchiveDocs/LegacyFramework/Documentation/TechnicalDocs/Logic/Fusion/FusionCalculator.md:158`
+- `ArchiveDocs/LegacyFramework/ConsolePrototype/Source/Logic/Fusion/LegacyFusionStrategyPolicies.cs:138`
+- `ArchiveDocs/LegacyFramework/Documentation/Planning/content-schema-v1-proposal.md:1178`
+
+Those sources agree that a positive shift ranks up the non-catalyst parent, a
+negative shift ranks it down, and no exact member at the target rank means no
+fusion. The arithmetic-overflow framing in the original review was therefore
+misdirected: extreme ranks should not define this mechanic in the first place.
 
 Required correction:
 
-- Calculate rank aggregates using `long` or checked domain helpers.
-- Either define and validate a supported rank maximum or return a typed overflow
-  diagnostic.
-- Test parent-order symmetry and both positive and negative offsets at bounds.
+- Replace or redefine the provisional generic `RankOffset` operation as an
+  explicit catalyst rank-shift contract.
+- Identify the transformed non-catalyst parent from authored recipe roles rather
+  than display vocabulary or caller order.
+- Calculate `targetRank = transformedParent.Rank + shift` and search that same
+  race for the exact target rank.
+- Return a typed no-fusion result when no exact adjacent member exists; do not
+  clamp to the first or last race member.
+- Validate participant rank against the catalog entity rather than treating an
+  arbitrary caller-supplied rank as fusion authority.
+- Replace the Training Annex generic two-race rank-offset example with a genuine
+  catalyst fixture and test rank up, rank down, both parent orders, and both race
+  boundaries.
+
+Status: explicitly deferred on 2026-07-15 so the current correction sequence can
+finish and planned product-roadmap work can resume. This operation must not be
+stabilized as public fusion behavior before the semantic correction is made.
 
 ### L1. DemoHost file loading does not confine paths to its content root
 
@@ -509,6 +533,16 @@ Required correction:
 - Reject paths outside the normalized root.
 - Preserve canonical logical paths in framework requests and diagnostics.
 - Test rooted paths, `..` traversal, mixed separators, and valid nested files.
+
+Correction status: corrected on 2026-07-15. `FileContentPackSource` now stores an
+absolute normalized root, interprets both directory separator styles, rejects
+rooted logical paths, resolves every requested path before any read, and applies
+an OS-appropriate comparison against a root prefix ending in a directory
+separator. Original logical paths remain in catalog documents while normalized
+absolute paths remain diagnostic source names. `FrameworkHostAdapterTests`
+covers nested paths, mixed separators, rooted manifest and document paths,
+parent traversal, sibling-prefix traversal, validation-before-read, missing
+files, and cancellation.
 
 ### L2. The active solution does not currently satisfy a formatting gate
 
@@ -609,13 +643,16 @@ This is an ordered correction set, not a new feature roadmap:
 3. Enum and persisted-domain validation: M3 corrected.
 4. Negotiation cancellation semantics: M4 corrected.
 5. Encounter injected-port containment: M5 corrected.
-6. Fusion rank arithmetic: M6.
-7. DemoHost root confinement, formatting, and CI: L1 and L2.
+6. DemoHost root confinement: L1 corrected.
+7. Formatting and CI: L2 remains.
+8. Catalyst rank-shift semantics: M6 recorded as deferred product work.
 
 The H1 atomicity, M1 stale-assessment, M2 resource-overflow, M3 enum-domain, M4
-negotiation-cancellation, and M5 encounter-port defects are corrected. M6 should
-be resolved before arbitrary developer-authored fusion ranks are treated as
-supported.
+negotiation-cancellation, M5 encounter-port, and L1 content-root defects are
+corrected. M6 is no longer treated as an arithmetic-hardening task. It is a
+documented fusion semantic correction that must be completed before the
+rank-shift contract or the broader public API is stabilized. L2 remains the next
+correction in this sequence.
 
 ## Readiness Decision
 

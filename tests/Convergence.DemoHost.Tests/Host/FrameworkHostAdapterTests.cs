@@ -1,5 +1,6 @@
 using Convergence.DemoHost.Tests.TestSupport;
 using Convergence.DemoHost;
+using Convergence.Catalog;
 using Convergence.Hosting;
 using Convergence.Content;
 using Xunit;
@@ -49,6 +50,102 @@ public sealed class FrameworkHostAdapterTests
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
                 await source.ReadAsync(new ContentPackTextRequest("missing.json", []), cancellation.Token));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FileContentSource_LoadsConfinedNestedPathsAndPreservesLogicalPaths()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            string nested = Path.Combine(root, "packs", "nested");
+            Directory.CreateDirectory(nested);
+            await File.WriteAllTextAsync(Path.Combine(nested, "pack.manifest.json"), "{\"manifest\":true}");
+            await File.WriteAllTextAsync(Path.Combine(nested, "document.json"), "{\"document\":true}");
+            var source = new FileContentPackSource(root);
+            const string manifestPath = "packs/nested/pack.manifest.json";
+            const string mixedDocumentPath = "packs\\nested/document.json";
+
+            ContentPackTextBundle bundle = await source.ReadAsync(new ContentPackTextRequest(
+                manifestPath,
+                [mixedDocumentPath]));
+
+            Assert.Equal(Path.GetFullPath(Path.Combine(nested, "pack.manifest.json")), bundle.ManifestSourceName);
+            ContentDocumentText document = Assert.Single(bundle.Documents);
+            Assert.Equal(mixedDocumentPath, document.Path);
+            Assert.Equal(Path.GetFullPath(Path.Combine(nested, "document.json")), document.SourceName);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FileContentSource_RejectsRootedManifestAndDocumentPathsEvenWhenContained()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            string manifest = Path.Combine(root, "pack.manifest.json");
+            string document = Path.Combine(root, "document.json");
+            await File.WriteAllTextAsync(manifest, "{\"manifest\":true}");
+            await File.WriteAllTextAsync(document, "{\"document\":true}");
+            var source = new FileContentPackSource(root);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+                await source.ReadAsync(new ContentPackTextRequest(manifest, [])));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+                await source.ReadAsync(new ContentPackTextRequest("pack.manifest.json", [document])));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("../outside.json")]
+    [InlineData("..\\outside.json")]
+    [InlineData("nested/..\\../outside.json")]
+    [InlineData("../content-other/outside.json")]
+    public async Task FileContentSource_RejectsPathsThatResolveOutsideTheContentRoot(string traversalPath)
+    {
+        string parent = CreateTempDirectory();
+        string root = Path.Combine(parent, "content");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var source = new FileContentPackSource(root);
+
+            UnauthorizedAccessException exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+                await source.ReadAsync(new ContentPackTextRequest(traversalPath, [])));
+
+            Assert.Contains(traversalPath, exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(parent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FileContentSource_ValidatesEveryPathBeforeReadingAnyFile()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            var source = new FileContentPackSource(root);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+                await source.ReadAsync(new ContentPackTextRequest(
+                    "missing.manifest.json",
+                    ["../outside.json"])));
         }
         finally
         {

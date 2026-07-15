@@ -10,6 +10,15 @@ Fusion content uses typed parent selectors and result operations. Repository and
 
 Planning is deterministic for the same content, parent snapshots, policies, and random source. Parent-pair matching is symmetric where the recipe says it is, and result statistics do not depend accidentally on caller parent order.
 
+### Provisional Rank-Offset Contract
+
+The current generic `RankOffset` operation is under pre-release semantic review
+and must not be treated as stable catalyst behavior. The approved future
+catalyst rule will transform the non-catalyst entity by an authored shift within
+that entity's own race chart. The catalyst does not contribute its rank, and a
+missing exact target rank produces no fusion rather than clamping to a boundary.
+This correction is tracked in the active roadmap and framework code review.
+
 ## Inheritance
 
 The receiving entity's typed inheritance rules determine whether a candidate skill may be selected. The evaluator applies this precedence:

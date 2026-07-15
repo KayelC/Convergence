@@ -6,10 +6,20 @@ namespace Convergence.DemoHost;
 internal sealed class FileContentPackSource : IContentPackTextSource
 {
     private readonly string _root;
+    private readonly string _rootPrefix;
+    private readonly StringComparison _pathComparison;
 
     public FileContentPackSource(string root)
     {
-        _root = root ?? throw new ArgumentNullException(nameof(root));
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+
+        _root = Path.GetFullPath(root);
+        _rootPrefix = Path.EndsInDirectorySeparator(_root)
+            ? _root
+            : _root + Path.DirectorySeparatorChar;
+        _pathComparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
     }
 
     public async ValueTask<ContentPackTextBundle> ReadAsync(
@@ -19,19 +29,54 @@ internal sealed class FileContentPackSource : IContentPackTextSource
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        string manifestFile = Path.Combine(_root, request.ManifestPath);
+        string manifestFile = ResolveContentFile(request.ManifestPath);
+        (string LogicalPath, string FilePath)[] resolvedDocuments = request.DocumentPaths
+            .Select(path => (path, ResolveContentFile(path)))
+            .ToArray();
+
         string manifestText = await File.ReadAllTextAsync(manifestFile, cancellationToken).ConfigureAwait(false);
-        var documents = new List<ContentDocumentText>(request.DocumentPaths.Count);
-        foreach (string path in request.DocumentPaths)
+        var documents = new List<ContentDocumentText>(resolvedDocuments.Length);
+        foreach ((string logicalPath, string filePath) in resolvedDocuments)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string file = Path.Combine(_root, path);
-            string text = await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false);
-            documents.Add(new ContentDocumentText(path, file, text));
+            string text = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+            documents.Add(new ContentDocumentText(logicalPath, filePath, text));
         }
 
         return new ContentPackTextBundle(manifestFile, manifestText, documents);
     }
+
+    private string ResolveContentFile(string logicalPath)
+    {
+        if (string.IsNullOrWhiteSpace(logicalPath))
+        {
+            throw new ArgumentException("A content logical path is required.", nameof(logicalPath));
+        }
+
+        string normalizedPath = logicalPath
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+        if (IsRootedLogicalPath(logicalPath, normalizedPath))
+        {
+            throw OutsideContentRoot(logicalPath);
+        }
+
+        string resolvedPath = Path.GetFullPath(normalizedPath, _root);
+        if (!resolvedPath.StartsWith(_rootPrefix, _pathComparison))
+        {
+            throw OutsideContentRoot(logicalPath);
+        }
+
+        return resolvedPath;
+    }
+
+    private static bool IsRootedLogicalPath(string logicalPath, string normalizedPath) =>
+        Path.IsPathRooted(normalizedPath) ||
+        logicalPath[0] is '/' or '\\' ||
+        (logicalPath.Length >= 2 && char.IsAsciiLetter(logicalPath[0]) && logicalPath[1] == ':');
+
+    private static UnauthorizedAccessException OutsideContentRoot(string logicalPath) =>
+        new($"Content logical path '{logicalPath}' is outside the configured content root.");
 }
 
 internal sealed class TextWriterEventSink : IHostEventSink<string>
