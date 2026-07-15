@@ -110,7 +110,7 @@ public sealed class CleanSaveDemoHostTests
                 ]),
             original.BaseResourceValues,
             original.VitalResourceId,
-            [ContentId.Parse("analyze"), ContentId.Parse("switch_form")]);
+            [ContentId.Parse("analyze"), ContentId.Parse("swap_hosted_entity")]);
         RuntimeSaveGameSnapshot snapshot = CleanSaveTestFixture.CreateSaveSnapshot(actors: [actor]);
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(CleanSaveJsonCodec.Serialize(snapshot));
@@ -125,7 +125,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.True(restoredActor.BattleStatus.IsGuarding);
         Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);
         Assert.Equal(
-            [ContentId.Parse("analyze"), ContentId.Parse("switch_form")],
+            [ContentId.Parse("analyze"), ContentId.Parse("swap_hosted_entity")],
             restoredActor.CapabilityIds);
         Assert.False(Assert.Single(restoredActor.BattleActivations.PassiveSkillStates).IsEnabled);
     }

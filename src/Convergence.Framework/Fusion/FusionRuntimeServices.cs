@@ -1379,7 +1379,7 @@ public interface ICompendiumService
         ContentId speciesId,
         int availableCurrency,
         bool alreadyOwned,
-        bool hasOpenStockSlot,
+        bool hasOpenRosterSlot,
         int? basePrice = null);
 }
 
@@ -1445,7 +1445,7 @@ public sealed class CompendiumService : ICompendiumService
         ContentId speciesId,
         int availableCurrency,
         bool alreadyOwned,
-        bool hasOpenStockSlot,
+        bool hasOpenRosterSlot,
         int? basePrice = null)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -1471,9 +1471,9 @@ public sealed class CompendiumService : ICompendiumService
         {
             return RecallRejected(CompendiumRecallCode.DuplicateOwned, "The Compendium entry is already owned.", speciesId, entry, cost);
         }
-        if (!hasOpenStockSlot)
+        if (!hasOpenRosterSlot)
         {
-            return RecallRejected(CompendiumRecallCode.RosterFull, "There is no open stock slot for the recalled entry.", speciesId, entry, cost);
+            return RecallRejected(CompendiumRecallCode.RosterFull, "There is no open roster slot for the recalled entry.", speciesId, entry, cost);
         }
         if (availableCurrency < cost)
         {

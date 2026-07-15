@@ -190,7 +190,7 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
-    public void TurnAndBattleEvents_DispatchRegenerateAndAutoTarukaja()
+    public void TurnAndBattleEvents_DispatchRegenerateAndOpeningFocus()
     {
         ContentId turnEnd = ContentId.Parse("owner_turn_end");
         ContentId battleStart = ContentId.Parse("battle_start");
@@ -203,8 +203,8 @@ public sealed class PassiveSkillRuntimeTests
                     turnEnd,
                     [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
             ]);
-        SkillDefinition autoTarukaja = PassiveSkill(
-            "auto_taru",
+        SkillDefinition openingFocus = PassiveSkill(
+            "opening_focus",
             triggers:
             [
                 new PassiveTriggerDefinition(
@@ -215,7 +215,7 @@ public sealed class PassiveSkillRuntimeTests
             "actor",
             PlayerTeam,
             hp: 50,
-            passiveSkills: [regenerate, autoTarukaja]);
+            passiveSkills: [regenerate, openingFocus]);
         BattleExecutionServices services = Services();
 
         PassiveTriggerDispatchResult turnResult = Dispatch(turnEnd, actor, [actor], [actor], services);
@@ -224,7 +224,7 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(60, actor.GetRequiredResource(Hp).Current);
         Assert.Equal(1, actor.StatStages[attack].Stage);
         Assert.Equal(regenerate.Id, Assert.Single(turnResult.Activations).SkillId);
-        Assert.Equal(autoTarukaja.Id, Assert.Single(startResult.Activations).SkillId);
+        Assert.Equal(openingFocus.Id, Assert.Single(startResult.Activations).SkillId);
     }
 
     [Fact]
@@ -387,10 +387,10 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
-    public void Endure_RestoresAfterFirstLethalHitButSecondLethalHitDefeatsOwner()
+    public void LastStand_RestoresAfterFirstLethalHitButSecondLethalHitDefeatsOwner()
     {
-        SkillDefinition endure = PassiveSkill(
-            "endure",
+        SkillDefinition lastStand = PassiveSkill(
+            "last_stand",
             triggers:
             [
                 new PassiveTriggerDefinition(
@@ -398,7 +398,7 @@ public sealed class PassiveSkillRuntimeTests
                     [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
             ]);
         RuntimeActorState actor = Actor("actor", PlayerTeam);
-        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [endure]);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [lastStand]);
         BattleExecutionServices services = Services(damage: _ => [new DamageHitResolution(true, 20)]);
         var executor = new SkillExecutor(services);
         SkillDefinition attack = ActiveDamageSkill("attack", DamageElement.Physical);

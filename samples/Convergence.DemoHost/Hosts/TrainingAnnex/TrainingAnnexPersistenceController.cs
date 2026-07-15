@@ -483,14 +483,14 @@ internal sealed class TrainingAnnexPersistenceController
         if (partyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
             ValidateTrainingAnnexPartyTeam(
-                "active form",
+                "active hosted entity",
                 [activeHostedEntity],
                 owner.Ownership.TeamId,
                 actors,
                 diagnostics);
         }
 
-        ValidateTrainingAnnexPartyTeam("HostedEntity roster", partyRoster.HostedEntityRoster, owner.Ownership.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("Hosted Entity roster", partyRoster.HostedEntityRoster, owner.Ownership.TeamId, actors, diagnostics);
         ValidateTrainingAnnexPartyTeam("Companion roster", partyRoster.CompanionRoster, owner.Ownership.TeamId, actors, diagnostics);
     }
 

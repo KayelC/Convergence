@@ -12,7 +12,7 @@ public sealed class RuntimeStateSnapshotTests
     [Theory]
     [InlineData(" HERO-0001 ", "hero-0001")]
     [InlineData("battle:hero.0001", "battle:hero.0001")]
-    [InlineData("save_slot_1:orpheus-2", "save_slot_1:orpheus-2")]
+    [InlineData("save_slot_1:annex_mentor-2", "save_slot_1:annex_mentor-2")]
     public void RuntimeInstanceId_NormalizesStableNonContentIdentity(string input, string expected)
     {
         var id = RuntimeInstanceId.Parse(input);
@@ -113,8 +113,8 @@ public sealed class RuntimeStateSnapshotTests
             new(Id("hp"), 72, 120),
             new(Id("sp"), 18, 44)
         ];
-        List<ContentId> learnedSkills = [Id("agi"), Id("ice_boost")];
-        List<ContentId> capabilityIds = [Id("analyze"), Id("switch_form")];
+        List<ContentId> learnedSkills = [Id("ember_dart"), Id("ice_boost")];
+        List<ContentId> capabilityIds = [Id("analyze"), Id("swap_hosted_entity")];
         List<RuntimeActorReferenceSnapshot> hostedEntityRoster =
         [
             new(
@@ -142,9 +142,9 @@ public sealed class RuntimeStateSnapshotTests
 
         Assert.Equal(RuntimeInstanceId.Parse("actor:hero_0001"), roundTrip.Identity.InstanceId);
         Assert.Equal(Id("convergence.demo:hero"), roundTrip.Identity.EntityDefinitionId);
-        Assert.Equal(Id("wild_card"), roundTrip.Identity.ActorKindId);
+        Assert.Equal(Id("vessel"), roundTrip.Identity.ActorKindId);
         Assert.Equal("Hero", roundTrip.Identity.DisplayName);
-        Assert.Equal("SEES", roundTrip.Identity.DisplaySubtitle);
+        Assert.Equal("Training Team", roundTrip.Identity.DisplaySubtitle);
         Assert.Equal(Id("player"), roundTrip.Ownership.ControllerId);
         Assert.Equal(Id("party"), roundTrip.Ownership.TeamId);
         Assert.Equal(RuntimeInstanceId.Parse("save:player_profile"), roundTrip.Ownership.OwnerInstanceId);
@@ -161,12 +161,12 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(120, roundTrip.Resources[0].Maximum);
         Assert.Equal(10, roundTrip.Stats.BaseStats[Id("strength")]);
         Assert.Equal(13, roundTrip.Stats.EffectiveStats[Id("strength")]);
-        Assert.Equal([Id("agi"), Id("ice_boost")], roundTrip.Skills.LearnedSkillIds);
-        Assert.Equal([Id("agi")], roundTrip.Skills.EquippedSkillIds);
-        Assert.Equal([Id("analyze"), Id("switch_form")], roundTrip.CapabilityIds);
+        Assert.Equal([Id("ember_dart"), Id("ice_boost")], roundTrip.Skills.LearnedSkillIds);
+        Assert.Equal([Id("ember_dart")], roundTrip.Skills.EquippedSkillIds);
+        Assert.Equal([Id("analyze"), Id("swap_hosted_entity")], roundTrip.CapabilityIds);
         Assert.True(restoredState.HasCapability(Id("analyze")));
         Assert.False(restoredState.HasCapability(Id("late_capability")));
-        Assert.Equal(RuntimeInstanceId.Parse("hostedEntity:orpheus_1"), roundTrip.Rosters.ActiveHostedEntity!.InstanceId);
+        Assert.Equal(RuntimeInstanceId.Parse("hosted_entity:annex_mentor_1"), roundTrip.Rosters.ActiveHostedEntity!.InstanceId);
         Assert.Single(roundTrip.Rosters.HostedEntityRoster);
         Assert.Single(roundTrip.Rosters.CompanionRoster);
         Assert.Equal(Id("convergence.demo:practice_sword"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
@@ -188,7 +188,7 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(1, Assert.Single(roundTrip.BattleActivations.PassiveActivations).ActivationCount);
         RuntimePassiveSkillStateSnapshot passiveState =
             Assert.Single(roundTrip.BattleActivations.PassiveSkillStates);
-        Assert.Equal(Id("endure"), passiveState.SkillId);
+        Assert.Equal(Id("last_stand"), passiveState.SkillId);
         Assert.False(passiveState.IsEnabled);
         Assert.False(Assert.Single(restoredState.Passives.Entries).IsEnabled);
     }
@@ -360,17 +360,17 @@ public sealed class RuntimeStateSnapshotTests
         IEnumerable<ContentId>? capabilityIds = null)
     {
         RuntimeActorReferenceSnapshot activeHostedEntity = new(
-            RuntimeInstanceId.Parse("hostedEntity:orpheus_1"),
-            Id("convergence.demo:orpheus"),
-            "Orpheus");
+            RuntimeInstanceId.Parse("hosted_entity:annex_mentor_1"),
+            Id("convergence.demo:annex_mentor"),
+            "Annex Mentor");
 
         return new RuntimeActorSnapshot(
             new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse("actor:hero_0001"),
                 Id("convergence.demo:hero"),
-                Id("wild_card"),
+                Id("vessel"),
                 "Hero",
-                "SEES"),
+                "Training Team"),
             new RuntimeActorOwnershipSnapshot(
                 Id("player"),
                 Id("party"),
@@ -385,15 +385,15 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeStatBlockSnapshot(
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 10)],
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 13)]),
-            new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("agi"), Id("ice_boost")], [Id("agi")]),
+            new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("ember_dart"), Id("ice_boost")], [Id("ember_dart")]),
             new RuntimeActorRosterSnapshot(
                 activeHostedEntity,
                 hostedEntityRoster ?? [],
                 [
                     new RuntimeActorReferenceSnapshot(
-                        RuntimeInstanceId.Parse("companion:pixie_1"),
-                        Id("convergence.demo:pixie"),
-                        "Pixie")
+                        RuntimeInstanceId.Parse("companion:glow_wisp_1"),
+                        Id("convergence.demo:glow_wisp"),
+                        "Glow Wisp")
                 ]),
             new RuntimeEquipmentSnapshot(
             [
@@ -417,12 +417,12 @@ public sealed class RuntimeStateSnapshotTests
                 ]),
             new RuntimeBattleActivationSnapshot(
                 [
-                    new RuntimePassiveActivationSnapshot(Id("endure"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)
+                    new RuntimePassiveActivationSnapshot(Id("last_stand"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)
                 ],
-                [new RuntimePassiveSkillStateSnapshot(Id("endure"), IsEnabled: false)]),
+                [new RuntimePassiveSkillStateSnapshot(Id("last_stand"), IsEnabled: false)]),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 120)],
             Id("hp"),
-            capabilityIds ?? [Id("analyze"), Id("switch_form")]);
+            capabilityIds ?? [Id("analyze"), Id("swap_hosted_entity")]);
     }
 
     private static RuntimeActorState Restore(RuntimeActorSnapshot snapshot) =>
@@ -430,8 +430,8 @@ public sealed class RuntimeStateSnapshotTests
             snapshot,
             CombatDefenseProfile.Empty,
             [new SkillDefinition(
-                Id("endure"),
-                "Endure",
+                Id("last_stand"),
+                "Last Stand",
                 "Test passive.",
                 SkillActivation.Passive,
                 null,

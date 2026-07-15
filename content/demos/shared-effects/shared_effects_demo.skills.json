@@ -3,7 +3,7 @@
   "skills": [
     {
       "id": "field_recovery_demo",
-      "displayName": "Dia",
+      "displayName": "Recovery Pulse",
       "description": "Restores one ally's HP in battle or in the field.",
       "activation": "active",
       "menuGroup": "recovery",

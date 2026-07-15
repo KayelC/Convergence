@@ -27,13 +27,13 @@ public sealed class CatalogSurfaceTests
         EquipmentDefinition weapon = catalog.GetRequiredEquipment(
             Id("convergence.catalog_surface_sample:shortsword_sample"));
         ShopCatalogDefinition shop = catalog.GetRequiredShop(
-            Id("convergence.catalog_surface_sample:paulownia_blacksmith_sample"));
+            Id("convergence.catalog_surface_sample:sample_outfitter"));
         NegotiationDefinition negotiation = catalog.GetRequiredNegotiation(
-            Id("convergence.catalog_surface_sample:childlike_sample"));
+            Id("convergence.catalog_surface_sample:playful_sample"));
         EncounterDefinition encounter = catalog.GetRequiredEncounter(
-            Id("convergence.catalog_surface_sample:thebel_training_sample"));
+            Id("convergence.catalog_surface_sample:entry_block_training_sample"));
         DungeonDefinition dungeon = catalog.GetRequiredDungeon(
-            Id("convergence.catalog_surface_sample:tartarus_sample"));
+            Id("convergence.catalog_surface_sample:sample_depths"));
         FusionRecipeDefinition fusion = catalog.GetRequiredFusionRecipe(
             Id("convergence.catalog_surface_sample:demo_spirit_binary_sample"));
         RulesetDefinition ruleset = catalog.GetRequiredRuleset(
@@ -44,11 +44,11 @@ public sealed class CatalogSurfaceTests
         Assert.Equal(Id("field"), Assert.Single(shop.AvailabilityContextIds));
         Assert.Equal(Id("convergence.catalog_surface_sample:shortsword_sample"), shop.Offers[0].ContentId);
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), shop.Offers[1].ContentId);
-        Assert.Equal(Id("childlike"), negotiation.PersonalityId);
+        Assert.Equal(Id("playful"), negotiation.PersonalityId);
         Assert.Equal(Id("convergence.clean_battle_demo:demo_spirit"), Assert.Single(negotiation.DefaultRaceIds));
         Assert.Equal(Id("convergence.clean_battle_demo:ember_duelist_demo"),
             Assert.Single(Assert.Single(encounter.Formations).Members).EntityId);
-        Assert.Equal(Id("convergence.catalog_surface_sample:thebel_training_sample"),
+        Assert.Equal(Id("convergence.catalog_surface_sample:entry_block_training_sample"),
             Assert.Single(Assert.Single(dungeon.Blocks).EncounterPoolIds));
         Assert.Equal(Id("convergence.clean_battle_demo:frost_duelist_demo"),
             fusion.Result.ResultEntityId);
@@ -545,9 +545,9 @@ public sealed class CatalogSurfaceTests
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", EmptyParameterValidator.Instance)
             .RegisterShopCategory("weapon_shop")
-            .RegisterNegotiationPersonality("childlike")
-            .RegisterNegotiationDemand("macca")
-            .RegisterEncounterEnvironment("thebel")
+            .RegisterNegotiationPersonality("playful")
+            .RegisterNegotiationDemand("credits")
+            .RegisterEncounterEnvironment("entry_block")
             .RegisterPolicy(
                 "standard_damage",
                 "standard_reward",

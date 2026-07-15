@@ -861,7 +861,7 @@ public sealed class CatalogBattleRuntimeTests
 
     [Theory]
     [InlineData(BattleTurnStartOutcome.FleeBattle, RuntimeActorDeployment.Active, "fled the battle")]
-    [InlineData(BattleTurnStartOutcome.RecallToRoster, RuntimeActorDeployment.Reserve, "returned to stock")]
+    [InlineData(BattleTurnStartOutcome.RecallToRoster, RuntimeActorDeployment.Reserve, "recalled to its roster")]
     public void Runner_ExitRestrictionsRemoveTheActorAndPreserveDistinctDeploymentMeaning(
         BattleTurnStartOutcome outcome,
         RuntimeActorDeployment expectedDeployment,

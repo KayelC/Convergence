@@ -171,11 +171,11 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                 BattleTurnStartOutcome.Skip => Skip(request),
                 BattleTurnStartOutcome.FleeBattle => LeaveBattle(
                     request,
-                    returnToStock: false,
+                    recallToRoster: false,
                     cancellationToken),
                 BattleTurnStartOutcome.RecallToRoster => LeaveBattle(
                     request,
-                    returnToStock: true,
+                    recallToRoster: true,
                     cancellationToken),
                 BattleTurnStartOutcome.LimitedAction or
                     BattleTurnStartOutcome.ForcedPhysical or
@@ -212,18 +212,18 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
 
     private static BattleEncounterCommandResult LeaveBattle(
         AutomatedBattleTurnRestrictionRequest request,
-        bool returnToStock,
+        bool recallToRoster,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         RuntimeActorState actor = request.Actor.State;
-        RuntimeActorDeployment deployment = returnToStock
+        RuntimeActorDeployment deployment = recallToRoster
             ? RuntimeActorDeployment.Reserve
             : actor.Deployment.Deployment;
         actor.SetDeployment(deployment, isActive: false);
 
-        string message = returnToStock
-            ? $"{actor.InstanceId} returned to stock."
+        string message = recallToRoster
+            ? $"{actor.InstanceId} was recalled to its roster."
             : $"{actor.InstanceId} fled the battle.";
         return BattleEncounterCommandResult.Executed(
             ActionTurnConsumption.Normal,

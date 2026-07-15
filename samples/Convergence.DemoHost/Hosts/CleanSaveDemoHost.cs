@@ -190,9 +190,9 @@ internal sealed class CleanSaveDemoHost
             ]),
             new RuntimeWalletSnapshot(1234),
             new RuntimeFieldSnapshot(
-                new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:tartarus_floor_5")),
+                new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:sample_depths_floor_5")),
                 new RuntimeDungeonTraversalSnapshot(
-                    ContentId.Parse("convergence.catalog_surface_sample:tartarus_sample"),
+                    ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
                     ContentId.Parse("convergence.catalog_surface_sample:floor_5"),
                     visitedNodeIds:
                     [
@@ -204,7 +204,7 @@ internal sealed class CleanSaveDemoHost
                         ContentId.Parse("convergence.catalog_surface_sample:terminal_1"),
                         ContentId.Parse("convergence.catalog_surface_sample:terminal_5")
                     ],
-                    defeatedBossIds: [ContentId.Parse("convergence.catalog_surface_sample:thebel_training_sample")])),
+                    defeatedBossIds: [ContentId.Parse("convergence.catalog_surface_sample:entry_block_training_sample")])),
             new CompendiumStateSnapshot(
             [
                 new CompendiumEntrySnapshot(
@@ -296,9 +296,9 @@ internal sealed class CleanSaveDemoHost
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", new AcceptAnyParametersValidator())
             .RegisterShopCategory("weapon_shop")
-            .RegisterNegotiationPersonality("childlike")
-            .RegisterNegotiationDemand("macca")
-            .RegisterEncounterEnvironment("thebel")
+            .RegisterNegotiationPersonality("playful")
+            .RegisterNegotiationDemand("credits")
+            .RegisterEncounterEnvironment("entry_block")
             .RegisterPolicy(
                 "standard_damage",
                 "standard_reward",
@@ -389,7 +389,7 @@ internal static class CleanSaveJsonCodec
             FromDto(dto.PartyRoster),
             FromDto(dto.Inventory),
             FromDto(dto.Equipment),
-            new RuntimeWalletSnapshot(dto.Macca),
+            new RuntimeWalletSnapshot(dto.Credits),
             FromDto(dto.Field),
             FromDto(dto.Compendium),
             FromDto(dto.Knowledge),
@@ -692,7 +692,7 @@ internal static class CleanSaveJsonCodec
         HostPartyRosterDto PartyRoster,
         HostInventoryDto Inventory,
         HostEquipmentDto Equipment,
-        int Macca,
+        int Credits,
         HostFieldDto? Field,
         HostCompendiumDto Compendium,
         HostKnowledgeDto Knowledge,

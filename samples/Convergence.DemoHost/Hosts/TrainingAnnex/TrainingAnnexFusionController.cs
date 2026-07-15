@@ -89,7 +89,7 @@ internal sealed class TrainingAnnexFusionController
         var repository = new CatalogFusionContentRepository(catalog);
         FusionPolicyRegistry policies = CreatePolicyRegistry();
         var resolver = new FusionResultResolver(repository, new TrainingAnnexFusionRandomSource(), policies);
-        TrainingAnnexRuntimeActor ashling = FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance);
+        TrainingAnnexRuntimeActor ashling = FindActor(roster, TrainingAnnexHostSupport.CompanionAshlingInstance);
         TrainingAnnexRuntimeActor bramble = FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
 
         TrainingAnnexFusionResultEvidence direct = await ResolveAsync(
@@ -143,7 +143,7 @@ internal sealed class TrainingAnnexFusionController
 
         TrainingAnnexRuntimeActor first = roster.Player;
         TrainingAnnexRuntimeActor second = FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
-        TrainingAnnexRuntimeActor sacrifice = FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance);
+        TrainingAnnexRuntimeActor sacrifice = FindActor(roster, TrainingAnnexHostSupport.CompanionAshlingInstance);
         FusionParticipantSnapshot firstParent = ToFusionParticipant(first);
         FusionParticipantSnapshot secondParent = ToFusionParticipant(second);
         FusionParticipantSnapshot sacrificeParent = ToFusionParticipant(sacrifice);
@@ -286,7 +286,7 @@ internal sealed class TrainingAnnexFusionController
             new TrainingAnnexFusionNoAccidentRandomSource(),
             policies);
         FusionParticipantSnapshot firstParent = ToFusionParticipant(
-            FindActor(roster, TrainingAnnexHostSupport.DemonAshlingInstance));
+            FindActor(roster, TrainingAnnexHostSupport.CompanionAshlingInstance));
         FusionParticipantSnapshot secondParent = ToFusionParticipant(
             FindActor(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance));
         FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(

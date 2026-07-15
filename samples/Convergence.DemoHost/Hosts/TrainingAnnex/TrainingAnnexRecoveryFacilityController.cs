@@ -56,7 +56,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         var evidence = new List<TrainingAnnexHospitalRestorationEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet {wallet.Balance} M.",
+            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet {wallet.Balance} C.",
             cancellationToken).ConfigureAwait(false);
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
             await _commandSource.ReadAsync(
@@ -94,7 +94,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         HospitalRestorationResult assessment)
     {
         string treatmentLabel =
-            $"Treat {displayName} - {assessment.Cost} M{TreatmentLabel(assessment)}";
+            $"Treat {displayName} - {assessment.Cost} C{TreatmentLabel(assessment)}";
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
             "Recovery Facility",
             [
@@ -113,7 +113,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         result.Code switch
         {
             ResourceTransactionCode.Applied => string.Empty,
-            ResourceTransactionCode.InsufficientCurrency => " [Not enough Macca]",
+            ResourceTransactionCode.InsufficientCurrency => " [Not enough Credits]",
             ResourceTransactionCode.NoRestorationNeeded => " [No restoration needed]",
             _ => $" [{result.Code}]"
         };

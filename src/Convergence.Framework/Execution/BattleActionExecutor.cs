@@ -487,8 +487,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     turnConsumption: ActionTurnConsumption.Pass),
                 HostedEntitySwapBattleActionCommand hostedEntity => AssessPartyRoster(request, hostedEntity.Kind, _partyRoster.SwapActiveHostedEntity(
                     new SwapActiveHostedEntityRequest(hostedEntity.Snapshot, hostedEntity.HostedEntityInstanceId))),
-                CompanionDeployBattleActionCommand summon => AssessPartyRoster(request, summon.Kind, _partyRoster.DeployCompanion(
-                    new DeployCompanionRequest(summon.Snapshot, summon.CompanionInstanceId))),
+                CompanionDeployBattleActionCommand deploy => AssessPartyRoster(request, deploy.Kind, _partyRoster.DeployCompanion(
+                    new DeployCompanionRequest(deploy.Snapshot, deploy.CompanionInstanceId))),
                 CompanionRecallBattleActionCommand returned => AssessPartyRoster(request, returned.Kind, _partyRoster.RecallCompanion(
                     new RecallCompanionRequest(returned.Snapshot, returned.CompanionInstanceId))),
                 CompanionSwapBattleActionCommand swap => AssessPartyRoster(request, swap.Kind, _partyRoster.SwapDeployedCompanion(
@@ -587,7 +587,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 ActionTurnConsumption.Pass,
                 events: [new BattleActionEvent(BattleActionEventKind.Executed, "Action passed.", request.Actor.InstanceId)]),
             HostedEntitySwapBattleActionCommand hostedEntity => ExecutePartyRoster(hostedEntity.Kind, assessment.PartyRosterTransition),
-            CompanionDeployBattleActionCommand summon => ExecutePartyRoster(summon.Kind, assessment.PartyRosterTransition),
+            CompanionDeployBattleActionCommand deploy => ExecutePartyRoster(deploy.Kind, assessment.PartyRosterTransition),
             CompanionRecallBattleActionCommand returned => ExecutePartyRoster(returned.Kind, assessment.PartyRosterTransition),
             CompanionSwapBattleActionCommand swap => ExecutePartyRoster(swap.Kind, assessment.PartyRosterTransition),
             HostMediatedBattleActionCommand mediated => ExecuteHostMediated(request, mediated),
@@ -1007,7 +1007,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     {
         if (transition is null)
         {
-            return InvalidAssessment(kind, "The prepared party/stock transition is missing.");
+            return InvalidAssessment(kind, "The prepared party/roster transition is missing.");
         }
 
         if (!transition.Applied)
@@ -1024,7 +1024,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             partyRosterTransition: transition,
             events: [new BattleActionEvent(
                 BattleActionEventKind.PartyRosterTransitioned,
-                $"Party stock transition applied: {kind}.")]);
+                $"Party roster transition applied: {kind}.")]);
     }
 
     private static BattleActionExecutionResult ExecuteHostMediated(

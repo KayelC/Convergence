@@ -4,7 +4,7 @@
     {
       "id": "poison",
       "displayName": "Poison",
-      "description": "Legacy-parity poison: acts normally, deals lethal turn-end damage, and can recover naturally.",
+      "description": "Reference poison: acts normally, deals lethal turn-end damage, and can recover naturally.",
       "groupIds": ["major_ailment", "poison"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -32,7 +32,7 @@
               "resourceId": "hp",
               "amount": {
                 "type": "formula",
-                "formulaId": "legacy_poison_damage"
+                "formulaId": "reference_poison_damage"
               },
               "canReduceToZero": true
             }
@@ -51,7 +51,7 @@
     {
       "id": "freeze",
       "displayName": "Freeze",
-      "description": "Legacy-parity freeze: skips a turn, grants rigid-body handling, and expires after one turn-end.",
+      "description": "Reference freeze: skips a turn, grants rigid-body handling, and expires after one turn-end.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -77,7 +77,7 @@
     {
       "id": "shock",
       "displayName": "Shock",
-      "description": "Legacy-parity shock: skips a turn, grants rigid-body handling, and expires after one turn-end.",
+      "description": "Reference shock: skips a turn, grants rigid-body handling, and expires after one turn-end.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -103,7 +103,7 @@
     {
       "id": "fear",
       "displayName": "Fear",
-      "description": "Legacy-parity fear: may flee or skip, otherwise acts normally.",
+      "description": "Reference fear: may flee or skip, otherwise acts normally.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -137,7 +137,7 @@
     {
       "id": "panic",
       "displayName": "Panic",
-      "description": "Legacy-parity panic: 50 percent chance to skip the turn.",
+      "description": "Reference panic: 50 percent chance to skip the turn.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -169,7 +169,7 @@
     {
       "id": "charm",
       "displayName": "Charm",
-      "description": "Legacy-parity charm: forces confused action selection.",
+      "description": "Reference charm: forces confused action selection.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -200,7 +200,7 @@
     {
       "id": "rage",
       "displayName": "Rage",
-      "description": "Legacy-parity rage: forces physical attacks and changes damage taken/dealt.",
+      "description": "Reference rage: forces physical attacks and changes damage taken/dealt.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -231,7 +231,7 @@
     {
       "id": "distress",
       "displayName": "Distress",
-      "description": "Legacy-parity distress: action is available, but evasion and incoming critical pressure are altered.",
+      "description": "Reference distress: action is available, but evasion and incoming critical pressure are altered.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -262,7 +262,7 @@
     {
       "id": "sleep",
       "displayName": "Sleep",
-      "description": "Legacy-parity sleep: skips turns and restores HP/SP at turn end.",
+      "description": "Reference sleep: skips turns and restores HP/SP at turn end.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -316,7 +316,7 @@
     {
       "id": "bind",
       "displayName": "Bind",
-      "description": "Legacy-parity bind: limits action choices and marks the body rigid.",
+      "description": "Reference bind: limits action choices and marks the body rigid.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {
@@ -348,7 +348,7 @@
     {
       "id": "stun",
       "displayName": "Stun",
-      "description": "Legacy-parity stun: skips a turn and marks the body rigid.",
+      "description": "Reference stun: skips a turn and marks the body rigid.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
       "defaultDuration": {

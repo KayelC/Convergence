@@ -13,7 +13,7 @@ internal sealed record TrainingAnnexNegotiationEvidence(
     NegotiationOutcomeKind Outcome,
     NegotiationOutcomeReason Reason,
     int MoodScore,
-    int MaccaSpent,
+    int CreditsSpent,
     string? ItemSpentId,
     RecruitmentTransactionStatus? RecruitmentStatus,
     RecruitmentTransactionErrorCode? RecruitmentErrorCode,
@@ -86,7 +86,7 @@ internal sealed class TrainingAnnexNegotiationController
         }
 
         await _eventSink.PublishAsync(
-            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Balance} M.",
+            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Balance} C.",
             cancellationToken).ConfigureAwait(false);
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
@@ -147,18 +147,18 @@ internal sealed class TrainingAnnexNegotiationController
                 Evidence(target, session, party, party, wallet, wallet, recruitment, null, false));
         }
 
-        PartyRosterTransitionResult stock = _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(
+        PartyRosterTransitionResult rosterTransition = _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(
             party,
             TrainingAnnexHostSupport.Reference(target)));
-        if (!stock.Applied)
+        if (!rosterTransition.Applied)
         {
             await _eventSink.PublishAsync(
-                $"Recruitment stock update rejected: {stock.Code}; wallet and Companion roster are unchanged.",
+                $"Recruitment roster update rejected: {rosterTransition.Code}; wallet and Companion roster are unchanged.",
                 cancellationToken).ConfigureAwait(false);
             return Result(
                 party,
                 wallet,
-                Evidence(target, session, party, party, wallet, wallet, recruitment, stock, false));
+                Evidence(target, session, party, party, wallet, wallet, recruitment, rosterTransition, false));
         }
 
         RuntimeWalletSnapshot nextWallet = wallet;
@@ -173,7 +173,7 @@ internal sealed class TrainingAnnexNegotiationController
                 return Result(
                     party,
                     wallet,
-                    Evidence(target, session, party, party, wallet, wallet, recruitment, stock, false));
+                    Evidence(target, session, party, party, wallet, wallet, recruitment, rosterTransition, false));
             }
 
             nextWallet = spend.After;
@@ -181,12 +181,12 @@ internal sealed class TrainingAnnexNegotiationController
 
         recruitedThisSession.Add(target.Actor.Entity.Id);
         await _eventSink.PublishAsync(
-            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Companion roster; wallet {wallet.Balance}->{nextWallet.Balance} M; Companion roster {party.CompanionRoster.Count}->{stock.After.CompanionRoster.Count}.",
+            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Companion roster; wallet {wallet.Balance}->{nextWallet.Balance} C; Companion roster {party.CompanionRoster.Count}->{rosterTransition.After.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return Result(
-            stock.After,
+            rosterTransition.After,
             nextWallet,
-            Evidence(target, session, party, stock.After, wallet, nextWallet, recruitment, stock, true));
+            Evidence(target, session, party, rosterTransition.After, wallet, nextWallet, recruitment, rosterTransition, true));
     }
 
     private static TrainingAnnexNegotiationInteractionResult Result(
@@ -229,7 +229,7 @@ internal sealed class TrainingAnnexNegotiationController
     private static IReadOnlyList<TrainingAnnexRuntimeActor> FindRecruitmentCandidates(
         NegotiationDefinition negotiation,
         TrainingAnnexActorRoster roster) =>
-        roster.StockMembers
+        roster.OwnedActors
             .Where(IsHostRecruitmentCandidate)
             .Where(actor => actor.Actor.Entity.Capabilities.Recruitable)
             .Where(actor => MatchesNegotiationDefaults(negotiation, actor))
@@ -271,7 +271,7 @@ internal sealed class TrainingAnnexNegotiationController
 
     private static NegotiationRuntimeDemand MapDemand(NegotiationDemandDefinition demand)
     {
-        if (demand.DemandId == TrainingAnnexHostSupport.SampleMaccaDemand)
+        if (demand.DemandId == TrainingAnnexHostSupport.SampleCreditsDemand)
         {
             return new NegotiationRuntimeDemand(
                 demand.DemandId,
@@ -326,7 +326,7 @@ internal sealed class TrainingAnnexNegotiationController
                             ? $"{target.Actor.Entity.DisplayName} [Familiar]"
                             : target.Actor.Entity.DisplayName,
                         Description: alreadyOwned
-                            ? "Runs the familiar-companion negotiation path without adding stock."
+                            ? "Runs the familiar-companion negotiation path without changing the roster."
                             : "Starts a clean negotiation session for this recruitable sample.",
                         SelectionIdentity: HostCommandSelectionIdentity.ForRuntimeInstance(
                             target.Actor.State.InstanceId));
@@ -345,7 +345,7 @@ internal sealed class TrainingAnnexNegotiationController
         RuntimeWalletSnapshot beforeWallet,
         RuntimeWalletSnapshot afterWallet,
         RecruitmentTransactionResult? recruitment,
-        PartyRosterTransitionResult? stock,
+        PartyRosterTransitionResult? rosterTransition,
         bool recruited) =>
         new(
             target.Actor.Entity.Id,
@@ -357,7 +357,7 @@ internal sealed class TrainingAnnexNegotiationController
             session.ItemSpentId,
             recruitment?.Status,
             recruitment?.ErrorCode,
-            stock?.Code,
+            rosterTransition?.Code,
             beforeWallet.Balance,
             afterWallet.Balance,
             beforeParty.CompanionRoster.Count,
@@ -370,11 +370,11 @@ internal sealed class TrainingAnnexNegotiationController
 
     private static string PresentationReasonLabel(NegotiationOutcomeReason reason) => reason switch
     {
-        NegotiationOutcomeReason.PolicyBlocked => "MoonBlocked",
-        NegotiationOutcomeReason.FamiliarTarget => "FamiliarDemon",
+        NegotiationOutcomeReason.PolicyBlocked => "PolicyBlocked",
+        NegotiationOutcomeReason.FamiliarTarget => "FamiliarCompanion",
         NegotiationOutcomeReason.CapacityUnavailable => "RosterFull",
-        NegotiationOutcomeReason.InsufficientCurrency => "InsufficientMacca",
-        NegotiationOutcomeReason.CurrencyRefused => "MaccaRefused",
+        NegotiationOutcomeReason.InsufficientCurrency => "InsufficientCredits",
+        NegotiationOutcomeReason.CurrencyRefused => "CreditsRefused",
         _ => reason.ToString()
     };
 
@@ -425,7 +425,7 @@ internal sealed class TrainingAnnexNegotiationController
             string header = prompt.Kind switch
             {
                 NegotiationDemandKind.Currency =>
-                    $"{targetName}: \"A gift of {prompt.Demand.CurrencyAmount} Macca should suffice.\"",
+                    $"{targetName}: \"A gift of {prompt.Demand.CurrencyAmount} Credits should suffice.\"",
                 NegotiationDemandKind.Item =>
                     $"{targetName}: \"A {prompt.Demand.Item!.DisplayName} would be useful.\"",
                 _ => prompt.Prompt
@@ -438,7 +438,7 @@ internal sealed class TrainingAnnexNegotiationController
                             option.Decision switch
                             {
                                 NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Currency =>
-                                    $"Give {prompt.Demand.CurrencyAmount} Macca",
+                                    $"Give {prompt.Demand.CurrencyAmount} Credits",
                                 NegotiationDemandDecision.Accept when prompt.Kind == NegotiationDemandKind.Item =>
                                     $"Give {prompt.Demand.Item!.DisplayName}",
                                 _ => "Refuse"
@@ -480,7 +480,7 @@ internal sealed class TrainingAnnexNegotiationController
         private string Present(NegotiationEvent value) => value.Code switch
         {
             NegotiationEventCode.PolicyBlocked =>
-                $"The {targetName} is agitated due to the Full Moon and cannot be reasoned with!",
+                $"A host policy currently prevents negotiation with {targetName}.",
             NegotiationEventCode.CapacityUnavailable => "Your Companion roster is full!",
             NegotiationEventCode.OpeningRefused => $"{targetName} is on guard and refuses to talk!",
             NegotiationEventCode.MissingQuestions => $"{targetName} seems unresponsive...",
@@ -493,7 +493,7 @@ internal sealed class TrainingAnnexNegotiationController
             NegotiationEventCode.DemandIntro =>
                 $"{targetName}: \"Your words are intriguing. But talk is cheap.\"",
             NegotiationEventCode.InsufficientCurrency =>
-                $"The required donation of {value.Amount} Macca is missing.",
+                $"The required donation of {value.Amount} Credits is missing.",
             NegotiationEventCode.DemandlessRejected => $"{targetName}: \"Hmph. You waste my time.\"",
             _ => value.Message
         };

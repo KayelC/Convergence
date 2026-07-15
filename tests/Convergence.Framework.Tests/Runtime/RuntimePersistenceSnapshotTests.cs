@@ -29,7 +29,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(Id("convergence.clean_battle_demo:frost_duelist_demo"), restored.Identity.EntityDefinitionId);
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), valid.Inventory.ItemQuantities.Keys.Single());
         Assert.Equal(
-            Id("convergence.catalog_surface_sample:tartarus_sample"),
+            Id("convergence.catalog_surface_sample:sample_depths"),
             valid.Field!.DungeonTraversal!.DungeonId);
         Assert.Equal(2, valid.Checkpoints.Entries.Count);
     }
@@ -568,7 +568,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_RejectsMalformedActorFormsAndEquipmentOwnership()
+    public void RuntimeSaveValidator_RejectsMalformedActorRostersAndEquipmentOwnership()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
@@ -583,9 +583,9 @@ public sealed class RuntimePersistenceSnapshotTests
             frost,
             rosters: new RuntimeActorRosterSnapshot(
                 activeHostedEntity: new RuntimeActorReferenceSnapshot(
-                    RuntimeInstanceId.Parse("missing_form"),
+                    RuntimeInstanceId.Parse("missing_hosted_entity"),
                     frost.Identity.EntityDefinitionId,
-                    "Missing Form"),
+                    "Missing Hosted Entity"),
                 hostedEntityRoster: [wrongEmberReference, wrongEmberReference]),
             equipment: new RuntimeEquipmentSnapshot(
             [
@@ -659,7 +659,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("ghost_owner"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Ghost Owner"),
                 5,
                 activeParty: [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("ghost"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Ghost")],
-                activeHostedEntity: new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("missing_form"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Missing"),
+                activeHostedEntity: new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("missing_hosted_entity"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Missing"),
                 hostedEntityRoster: [],
                 companionRoster: []),
             inventory: new RuntimeInventorySnapshot(
@@ -1021,7 +1021,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_AllowsIntentionalActiveDemonOwnedStockOverlap()
+    public void RuntimeSaveValidator_AllowsIntentionalActiveCompanionOwnedStockOverlap()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
@@ -1035,38 +1035,38 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_RejectsIllegalCrossRoleReuseButAllowsOwnerAndActiveDemonOverlap()
+    public void RuntimeSaveValidator_RejectsIllegalCrossRoleReuseButAllowsOwnerAndActiveCompanionOverlap()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeActorSnapshot owner = CreateActor(
             RuntimeInstanceId.Parse("frost"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
-        RuntimeActorSnapshot activeDemon = CreateActor(
-            RuntimeInstanceId.Parse("active_demon"),
+        RuntimeActorSnapshot activeCompanion = CreateActor(
+            RuntimeInstanceId.Parse("active_companion"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"));
         RuntimeActorSnapshot reserve = CreateActor(
             RuntimeInstanceId.Parse("reserve"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
-        RuntimeActorSnapshot form = CreateActor(
-            RuntimeInstanceId.Parse("form"),
+        RuntimeActorSnapshot activeHostedEntity = CreateActor(
+            RuntimeInstanceId.Parse("active_hosted_entity"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"));
         RuntimeActorSnapshot hostedEntity = CreateActor(
-            RuntimeInstanceId.Parse("hostedEntity"),
+            RuntimeInstanceId.Parse("hosted_entity_roster_entry"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
         RuntimeActorReferenceSnapshot ownerRef = Reference(owner);
-        RuntimeActorReferenceSnapshot activeDemonRef = Reference(activeDemon);
+        RuntimeActorReferenceSnapshot activeCompanionRef = Reference(activeCompanion);
         RuntimeActorReferenceSnapshot reserveRef = Reference(reserve);
-        RuntimeActorReferenceSnapshot formRef = Reference(form);
-        RuntimeActorReferenceSnapshot personaRef = Reference(hostedEntity);
-        RuntimeActorSnapshot[] actors = [owner, activeDemon, reserve, form, hostedEntity];
+        RuntimeActorReferenceSnapshot activeHostedEntityRef = Reference(activeHostedEntity);
+        RuntimeActorReferenceSnapshot hostedEntityRef = Reference(hostedEntity);
+        RuntimeActorSnapshot[] actors = [owner, activeCompanion, reserve, activeHostedEntity, hostedEntity];
         RuntimePartyRosterSnapshot validParty = new(
             ownerRef,
             ownerLevel: 40,
-            activeParty: [ownerRef, activeDemonRef],
+            activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
-            activeHostedEntity: formRef,
-            hostedEntityRoster: [personaRef],
-            companionRoster: [activeDemonRef]);
+            activeHostedEntity: activeHostedEntityRef,
+            hostedEntityRoster: [hostedEntityRef],
+            companionRoster: [activeCompanionRef]);
 
         RuntimeSaveValidationResult valid = new RuntimeSaveValidator().Validate(
             CreateSaveSnapshot(actors: actors, partyRoster: validParty),
@@ -1077,11 +1077,11 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimePartyRosterSnapshot invalidParty = new(
             ownerRef,
             ownerLevel: 40,
-            activeParty: [ownerRef, activeDemonRef],
+            activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
             activeHostedEntity: ownerRef,
-            hostedEntityRoster: [activeDemonRef, reserveRef],
-            companionRoster: [activeDemonRef, reserveRef]);
+            hostedEntityRoster: [activeCompanionRef, reserveRef],
+            companionRoster: [activeCompanionRef, reserveRef]);
         RuntimeSaveValidationResult invalid = new RuntimeSaveValidator().Validate(
             CreateSaveSnapshot(actors: actors, partyRoster: invalidParty),
             catalog);
@@ -1094,7 +1094,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Contains(invalid.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.PartyRosterIdentityCollision &&
             diagnostic.Path == "$.partyRoster.hostedEntityRoster[0]" &&
-            diagnostic.InstanceId == activeDemonRef.InstanceId);
+            diagnostic.InstanceId == activeCompanionRef.InstanceId);
         Assert.Contains(invalid.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.PartyRosterIdentityCollision &&
             diagnostic.Path == "$.partyRoster.hostedEntityRoster[1]" &&
@@ -1208,17 +1208,17 @@ public sealed class RuntimePersistenceSnapshotTests
             RuntimeInstanceId.Parse("frost"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
         RuntimeActorSnapshot first = CreateActor(
-            RuntimeInstanceId.Parse("persona_1"),
+            RuntimeInstanceId.Parse("hosted_entity_1"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
         RuntimeActorSnapshot second = CreateActor(
-            RuntimeInstanceId.Parse("persona_2"),
+            RuntimeInstanceId.Parse("hosted_entity_2"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"),
             learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
         RuntimeActorSnapshot third = CreateActor(
-            RuntimeInstanceId.Parse("persona_3"),
+            RuntimeInstanceId.Parse("hosted_entity_3"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"));
         RuntimeActorSnapshot fourth = CreateActor(
-            RuntimeInstanceId.Parse("persona_4"),
+            RuntimeInstanceId.Parse("hosted_entity_4"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"),
             learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
         RuntimeActorReferenceSnapshot ownerRef = Reference(owner);
@@ -1520,9 +1520,9 @@ public sealed class RuntimePersistenceSnapshotTests
             new RuntimeWalletSnapshot(1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
-                    new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:tartarus_floor_5")),
+                    new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),
                     new RuntimeDungeonTraversalSnapshot(
-                        Id("convergence.catalog_surface_sample:tartarus_sample"),
+                        Id("convergence.catalog_surface_sample:sample_depths"),
                         Id("convergence.catalog_surface_sample:floor_5"),
                         visitedNodeIds:
                         [
@@ -1534,7 +1534,7 @@ public sealed class RuntimePersistenceSnapshotTests
                             Id("convergence.catalog_surface_sample:terminal_1"),
                             Id("convergence.catalog_surface_sample:terminal_5")
                         ],
-                        defeatedBossIds: [Id("convergence.catalog_surface_sample:thebel_training_sample")]))
+                        defeatedBossIds: [Id("convergence.catalog_surface_sample:entry_block_training_sample")]))
                 : null),
             compendium ?? new CompendiumStateSnapshot(
             [
@@ -1722,9 +1722,9 @@ public sealed class RuntimePersistenceSnapshotTests
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", EmptyParameterValidator.Instance)
             .RegisterShopCategory("weapon_shop")
-            .RegisterNegotiationPersonality("childlike")
-            .RegisterNegotiationDemand("macca")
-            .RegisterEncounterEnvironment("thebel")
+            .RegisterNegotiationPersonality("playful")
+            .RegisterNegotiationDemand("credits")
+            .RegisterEncounterEnvironment("entry_block")
             .RegisterPolicy(
                 "standard_damage",
                 "standard_reward",

@@ -839,7 +839,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 diagnostics,
                 "$.partyRoster.activeHostedEntity",
                 RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
-                "Active form");
+                "Active Hosted Entity");
 
             for (int index = 0; index < partyRoster.HostedEntityRoster.Count; index++)
             {
@@ -989,7 +989,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                     RuntimeSaveValidationCode.PartyRosterIdentityCollision,
                     $"Runtime instance '{group.Key}' is referenced as both '{conflicting.Role}' and " +
-                    $"'{current.Role}', which is not an allowed party/stock overlap.",
+                    $"'{current.Role}', which is not an allowed party/roster overlap.",
                     group.Key,
                     Path: current.Path));
             }

@@ -6,9 +6,9 @@ namespace Convergence.DemoHost.TrainingAnnex;
 internal enum TrainingAnnexPartyOperation
 {
     SwapActiveHostedEntity,
-    SummonAshling,
+    DeployAshling,
     SwapDeployedCompanionToWardShell,
-    ReturnActiveDemon,
+    RecallActiveCompanion,
     ReplaceWardShellWithBrambleRunner,
     DismissAshling,
     ConsumeBrambleRunner
@@ -71,15 +71,15 @@ internal sealed class TrainingAnnexPartyController
         ArgumentNullException.ThrowIfNull(roster);
 
         RuntimeActorReferenceSnapshot player = TrainingAnnexHostSupport.Reference(roster.Player);
-        RuntimeActorReferenceSnapshot? activeHostedEntity = roster.StockMembers
-            .Where(member => member.Role == "Active Form")
+        RuntimeActorReferenceSnapshot? activeHostedEntity = roster.OwnedActors
+            .Where(member => member.Role == "Active Hosted Entity")
             .Select(TrainingAnnexHostSupport.Reference)
             .FirstOrDefault();
-        RuntimeActorReferenceSnapshot[] hostedEntityRoster = roster.StockMembers
-            .Where(member => member.Role == "HostedEntity Stock")
+        RuntimeActorReferenceSnapshot[] hostedEntityRoster = roster.OwnedActors
+            .Where(member => member.Role == "Hosted Entity roster")
             .Select(TrainingAnnexHostSupport.Reference)
             .ToArray();
-        RuntimeActorReferenceSnapshot[] companionRoster = roster.StockMembers
+        RuntimeActorReferenceSnapshot[] companionRoster = roster.OwnedActors
             .Where(member => member.Role == "Companion roster")
             .Select(TrainingAnnexHostSupport.Reference)
             .ToArray();
@@ -109,22 +109,22 @@ internal sealed class TrainingAnnexPartyController
         return operation switch
         {
             TrainingAnnexPartyOperation.SwapActiveHostedEntity => _transitions.SwapActiveHostedEntity(
-                new SwapActiveHostedEntityRequest(party, TrainingAnnexHostSupport.PersonaBrambleRunnerInstance)),
-            TrainingAnnexPartyOperation.SummonAshling => _transitions.DeployCompanion(
-                new DeployCompanionRequest(party, TrainingAnnexHostSupport.DemonAshlingInstance)),
+                new SwapActiveHostedEntityRequest(party, TrainingAnnexHostSupport.HostedBrambleRunnerInstance)),
+            TrainingAnnexPartyOperation.DeployAshling => _transitions.DeployCompanion(
+                new DeployCompanionRequest(party, TrainingAnnexHostSupport.CompanionAshlingInstance)),
             TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => _transitions.SwapDeployedCompanion(
                 new SwapDeployedCompanionRequest(
                     party,
-                    TrainingAnnexHostSupport.DemonAshlingInstance,
-                    TrainingAnnexHostSupport.DemonWardShellInstance)),
-            TrainingAnnexPartyOperation.ReturnActiveDemon => ReturnActiveDemon(party),
+                    TrainingAnnexHostSupport.CompanionAshlingInstance,
+                    TrainingAnnexHostSupport.CompanionWardShellInstance)),
+            TrainingAnnexPartyOperation.RecallActiveCompanion => RecallActiveCompanion(party),
             TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => _transitions.ReplaceCompanion(
                 new ReplaceCompanionRequest(
                     party,
-                    TrainingAnnexHostSupport.DemonWardShellInstance,
+                    TrainingAnnexHostSupport.CompanionWardShellInstance,
                     FindRosterReference(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance))),
             TrainingAnnexPartyOperation.DismissAshling => _transitions.DismissCompanion(
-                new DismissCompanionRequest(party, TrainingAnnexHostSupport.DemonAshlingInstance)),
+                new DismissCompanionRequest(party, TrainingAnnexHostSupport.CompanionAshlingInstance)),
             TrainingAnnexPartyOperation.ConsumeBrambleRunner => _transitions.ConsumeCompanion(
                 new ConsumeCompanionRequest(party, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unsupported party operation.")
@@ -144,7 +144,7 @@ internal sealed class TrainingAnnexPartyController
             cancellationToken).ConfigureAwait(false);
     }
 
-    public async ValueTask PrintStockAsync(
+    public async ValueTask PrintRosterAsync(
         RuntimePartyRosterSnapshot party,
         IHostEventSink<string> eventSink,
         CancellationToken cancellationToken)
@@ -153,7 +153,7 @@ internal sealed class TrainingAnnexPartyController
         ArgumentNullException.ThrowIfNull(eventSink);
 
         await eventSink.PublishAsync(
-            $"Stock: active form [{FormatActor(party.ActiveHostedEntity)}]; HostedEntity roster [{FormatActors(party.HostedEntityRoster)}]; Companion roster [{FormatActors(party.CompanionRoster)}].",
+            $"Roster: active hosted entity [{FormatActor(party.ActiveHostedEntity)}]; Hosted Entity roster [{FormatActors(party.HostedEntityRoster)}]; Companion roster [{FormatActors(party.CompanionRoster)}].",
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -173,21 +173,21 @@ internal sealed class TrainingAnnexPartyController
                 "; ",
                 result.Diagnostics.Select(diagnostic => $"[{diagnostic.Code}] {diagnostic.Message}"));
             await eventSink.PublishAsync(
-                $"Party stock operation rejected: {operation}; {diagnostics}",
+                $"Party roster operation rejected: {operation}; {diagnostics}",
                 cancellationToken).ConfigureAwait(false);
             return;
         }
 
         await eventSink.PublishAsync(
-            $"Party stock operation applied: {operation}; active {result.Before.ActiveParty.Count}->{result.After.ActiveParty.Count}; reserve {result.Before.ReserveMembers.Count}->{result.After.ReserveMembers.Count}; active form {FormatInstance(result.Before.ActiveHostedEntity)}->{FormatInstance(result.After.ActiveHostedEntity)}; HostedEntity roster {result.Before.HostedEntityRoster.Count}->{result.After.HostedEntityRoster.Count}; Companion roster {result.Before.CompanionRoster.Count}->{result.After.CompanionRoster.Count}.",
+            $"Party roster operation applied: {operation}; active {result.Before.ActiveParty.Count}->{result.After.ActiveParty.Count}; reserve {result.Before.ReserveMembers.Count}->{result.After.ReserveMembers.Count}; active hosted entity {FormatInstance(result.Before.ActiveHostedEntity)}->{FormatInstance(result.After.ActiveHostedEntity)}; Hosted Entity roster {result.Before.HostedEntityRoster.Count}->{result.After.HostedEntityRoster.Count}; Companion roster {result.Before.CompanionRoster.Count}->{result.After.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
     }
 
-    private PartyRosterTransitionResult ReturnActiveDemon(RuntimePartyRosterSnapshot party)
+    private PartyRosterTransitionResult RecallActiveCompanion(RuntimePartyRosterSnapshot party)
     {
-        RuntimeActorReferenceSnapshot? activeDemon = party.ActiveParty.FirstOrDefault(actor =>
+        RuntimeActorReferenceSnapshot? activeCompanion = party.ActiveParty.FirstOrDefault(actor =>
             party.CompanionRoster.Any(companion => companion.InstanceId == actor.InstanceId));
-        if (activeDemon is null)
+        if (activeCompanion is null)
         {
             return new PartyRosterTransitionResult(
                 PartyRosterTransitionCode.NotActive,
@@ -201,7 +201,7 @@ internal sealed class TrainingAnnexPartyController
                 ]);
         }
 
-        return _transitions.RecallCompanion(new RecallCompanionRequest(party, activeDemon.InstanceId));
+        return _transitions.RecallCompanion(new RecallCompanionRequest(party, activeCompanion.InstanceId));
     }
 
     private static RuntimeActorReferenceSnapshot FindRosterReference(

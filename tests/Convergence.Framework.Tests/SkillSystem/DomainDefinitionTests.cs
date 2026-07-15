@@ -215,7 +215,7 @@ public sealed class DomainDefinitionTests
             ContentId.Parse("fairy"),
             "Fairy",
             [ContentId.Parse("neutral")],
-            ContentId.Parse("childlike"));
+            ContentId.Parse("playful"));
         var poison = new AilmentDefinition(
             ContentId.Parse("poison"),
             "Poison",
@@ -238,7 +238,7 @@ public sealed class DomainDefinitionTests
                     ])
             ]);
 
-        Assert.Equal(ContentId.Parse("childlike"), race.NegotiationPersonalityId);
+        Assert.Equal(ContentId.Parse("playful"), race.NegotiationPersonalityId);
         Assert.Equal(ContentId.Parse("major_ailment"), poison.ExclusivityGroupId);
         Assert.IsType<NormalAilmentTurnBehaviorDefinition>(poison.TurnBehavior);
         Assert.IsType<ReduceResourceEffectDefinition>(Assert.Single(Assert.Single(poison.Triggers).Effects));

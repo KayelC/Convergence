@@ -75,7 +75,7 @@ internal sealed class TrainingAnnexShopController
         var equipmentEvidence = new List<TrainingAnnexEquipmentChangeEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Shop opened: {shop.DisplayName}; wallet {wallet.Balance} M.",
+            $"Shop opened: {shop.DisplayName}; wallet {wallet.Balance} C.",
             cancellationToken).ConfigureAwait(false);
         foreach (RuntimeShopOfferResolutionDiagnostic diagnostic in offerDiagnostics)
         {
@@ -433,7 +433,7 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop,
         RuntimeWalletSnapshot wallet) =>
         new(
-            $"{shop.DisplayName} - Wallet {wallet.Balance} M",
+            $"{shop.DisplayName} - Wallet {wallet.Balance} C",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ShopBuy,
@@ -461,7 +461,7 @@ internal sealed class TrainingAnnexShopController
                 int price = shopTransactions.CalculateBuyPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectShopOffer,
-                    $"{offer.DisplayName} - {price} M{StockLabel(offer.Runtime)}{TransactionLabel(assessment)}",
+                    $"{offer.DisplayName} - {price} C{StockLabel(offer.Runtime)}{TransactionLabel(assessment)}",
                     assessment.Applied,
                     offer.Description,
                     HostCommandSelectionIdentity.ForContent(offer.Runtime.ContentId));
@@ -506,7 +506,7 @@ internal sealed class TrainingAnnexShopController
                 int price = shopTransactions.CalculateSellPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectSellOffer,
-                    $"{offer.DisplayName} - {price} M{OwnedLabel(inventory, offer.Runtime)}{TransactionLabel(assessment)}",
+                    $"{offer.DisplayName} - {price} C{OwnedLabel(inventory, offer.Runtime)}{TransactionLabel(assessment)}",
                     assessment.Applied,
                     offer.Description,
                     HostCommandSelectionIdentity.ForContent(offer.Runtime.ContentId));
@@ -574,7 +574,7 @@ internal sealed class TrainingAnnexShopController
     private static string TransactionReason(ResourceTransactionCode code) =>
         code switch
         {
-            ResourceTransactionCode.InsufficientCurrency => "Not enough Macca",
+            ResourceTransactionCode.InsufficientCurrency => "Not enough Credits",
             ResourceTransactionCode.EquipmentDuplicate => "Already owned",
             ResourceTransactionCode.EquippedItemCannotBeRemoved => "Equipped",
             ResourceTransactionCode.ItemStackExceeded => "Stack full",
@@ -635,7 +635,7 @@ internal sealed class TrainingAnnexShopController
             ? $"quantity {result.BeforeInventory.GetQuantity(offer.Runtime.ContentId)}->{inventory.GetQuantity(offer.Runtime.ContentId)}"
             : $"owned {OwnedCount(result.BeforeInventory, offer.Runtime)}->{OwnedCount(inventory, offer.Runtime)}";
         await _eventSink.PublishAsync(
-            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} M; wallet {result.BeforeWallet.Balance}->{result.AfterWallet.Balance}; {owned}.",
+            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} C; wallet {result.BeforeWallet.Balance}->{result.AfterWallet.Balance}; {owned}.",
             cancellationToken).ConfigureAwait(false);
     }
 }

@@ -25,7 +25,7 @@ public enum CompendiumRuntimeDiagnosticCode
     RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
-    StockPlacementRejected,
+    RosterPlacementRejected,
     WalletRejected,
     InvalidRecallCost,
     InvalidIdentifier
@@ -80,7 +80,7 @@ public enum CompendiumRecallTransactionCode
     RecallUnavailable,
     InsufficientCurrency,
     ActorCreationFailed,
-    StockPlacementRejected,
+    RosterPlacementRejected,
     WalletRejected,
     InvalidRecallCost
 }
@@ -372,7 +372,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 request,
                 CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId,
                 CompendiumRuntimeDiagnosticCode.DuplicateRuntimeInstanceId,
-                $"Runtime instance ID '{request.RecalledInstanceId}' is already used by the party or stock graph.",
+                $"Runtime instance ID '{request.RecalledInstanceId}' is already used by the party or roster graph.",
                 entry);
         }
 
@@ -388,7 +388,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 new AddCompanionToRosterRequest(request.PartyRoster, recalledReference)),
             CompendiumRecallRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(
                 new AddHostedEntityToRosterRequest(request.PartyRoster, recalledReference)),
-            _ => throw new ArgumentOutOfRangeException(nameof(request), "Unknown Compendium recall stock kind.")
+            _ => throw new ArgumentOutOfRangeException(nameof(request), "Unknown Compendium recall roster kind.")
         };
 
         CompendiumRecallAssessment assessment;
@@ -426,7 +426,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                     request,
                     CompendiumRecallTransactionCode.RosterFull,
                     CompendiumRuntimeDiagnosticCode.RosterFull,
-                    assessment.Diagnostics.FirstOrDefault()?.Message ?? "The destination stock is full.",
+                    assessment.Diagnostics.FirstOrDefault()?.Message ?? "The destination roster is full.",
                     entry,
                     assessment.Cost),
                 CompendiumRecallCode.RecallUnavailable => RecallRejected(
@@ -457,9 +457,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         {
             return RecallRejected(
                 request,
-                CompendiumRecallTransactionCode.StockPlacementRejected,
-                CompendiumRuntimeDiagnosticCode.StockPlacementRejected,
-                placement.Diagnostics.FirstOrDefault()?.Message ?? "The recalled actor could not be placed in stock.",
+                CompendiumRecallTransactionCode.RosterPlacementRejected,
+                CompendiumRuntimeDiagnosticCode.RosterPlacementRejected,
+                placement.Diagnostics.FirstOrDefault()?.Message ?? "The recalled actor could not be placed in the selected roster.",
                 entry,
                 assessment.Cost);
         }

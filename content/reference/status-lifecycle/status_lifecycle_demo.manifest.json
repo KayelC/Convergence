@@ -3,7 +3,7 @@
   "id": "convergence.status_lifecycle_demo",
   "version": "0.2.0",
   "displayName": "Status Lifecycle Demo",
-  "description": "Clean ailment lifecycle pack reauthoring the legacy 11-ailment set for Track I parity tests.",
+  "description": "Clean reference pack covering eleven ailment lifecycle profiles.",
   "dependencies": [],
   "documents": [
     {

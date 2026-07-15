@@ -4,7 +4,7 @@
     {
       "id": "cinder_fodder_sample",
       "displayName": "Cinder Fodder Sample",
-      "description": "Reference fusion-fodder demon that cannot inherit active Ice skills.",
+      "description": "Reference fusion candidate that cannot inherit active Ice skills.",
       "entityKind": "companion",
       "raceId": "sample_spirit",
       "rank": 1,

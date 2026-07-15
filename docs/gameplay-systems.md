@@ -12,7 +12,7 @@ Catalog actor factories hydrate identity, level, stats, defenses, resources, lea
 
 ## Actions And Effects
 
-Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape, stock/form transitions, and host-mediated actions. Skills and items share targeting, condition evaluation, ordered effects, diagnostics, and transaction-safe inventory decisions. Behavior comes from typed definitions, not display text.
+Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape, Hosted Entity swaps, Companion deployment/recall, and host-mediated actions. Skills and items share targeting, condition evaluation, ordered effects, diagnostics, and transaction-safe inventory decisions. Behavior comes from typed definitions, not display text.
 
 ## Combat And Turn Economy
 
@@ -26,9 +26,9 @@ The lifecycle service handles battle start, turn restrictions, turn end, duratio
 
 The encounter runner owns initiative, phases, turns, lifecycle dispatch, command execution, liveness, cancellation, outcomes, and ordered events. Strategy ports allow deterministic or host-defined action selection. Player knowledge can persist through snapshots, while encounter AI knowledge may be scoped to one battle. Negotiation and reward services return immutable outcomes without owning presentation.
 
-## Party, Stock, Inventory, And Economy
+## Party, Rosters, Inventory, And Economy
 
-Transition services enforce runtime-ID uniqueness, active/reserve roles, form and stock capacity, summon/return/swap/consume behavior, item stacks, unique equipment ownership, equip compatibility, wallet arithmetic, shop transactions, and restoration transactions. Hosts own UI and durable inventory storage.
+Transition services enforce runtime-ID uniqueness, active/reserve roles, Hosted Entity and Companion roster capacity, deploy/recall/swap/consume behavior, item stacks, unique equipment ownership, equip compatibility, wallet arithmetic, shop transactions, and restoration transactions. Hosts own UI and durable inventory storage.
 
 ## Navigation, Traversal, And Encounter Preparation
 
@@ -40,7 +40,7 @@ Fusion services resolve typed recipes and strategy policies, build deterministic
 
 ## Persistence
 
-Versioned snapshots cover actors, party/stock, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Hosts own serialization, slots, suspend-save storage, and UI.
+Versioned snapshots cover actors, party and rosters, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Hosts own serialization, slots, suspend-save storage, and UI.
 
 ## Demonstration Coverage
 

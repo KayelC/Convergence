@@ -405,7 +405,7 @@ public sealed class ProgressionPolicyTests
     [InlineData(1, 1)]
     [InlineData(2, 12)]
     [InlineData(10, 1500)]
-    public void ExperienceCurve_PreservesLegacyCubicRequirement(int level, int expected)
+    public void ExperienceCurve_PreservesConfiguredCubicRequirement(int level, int expected)
     {
         Assert.Equal(expected, _curve.GetRequiredExperience(level));
     }

@@ -11,7 +11,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 `RuntimeSaveGameSnapshot` can include:
 
 - runtime actors;
-- party, reserve, form, and stock references;
+- party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory and equipped items;
 - wallet;
 - optional navigation and dungeon traversal progress;
@@ -54,4 +54,3 @@ A common one-use flow is:
 Checkpoint breadcrumbs are ordered diagnostic entries. They can help identify where a session snapshot was created, but they are not a deterministic replay log.
 
 Cross-version save migration is deferred until a released save contract requires it. The current contract version is an active-development contract and should not be treated as a permanent public wire guarantee yet.
-

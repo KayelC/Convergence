@@ -4,7 +4,7 @@
 
 Ailments are content records identified by `ContentId`. Their behavior is authored explicitly through turn behavior, resistance, duration, recovery, modifiers, triggers, and exclusivity groups.
 
-**Framework rule:** ailment behavior is never inferred from the ailment's name. A game can author poison-like damage, sleep-like recovery, action restrictions, forced actions, fleeing, stock return, or custom behavior without reserving a display label.
+**Framework rule:** ailment behavior is never inferred from the ailment's name. A game can author poison-like damage, sleep-like recovery, action restrictions, forced actions, fleeing, roster recall, or custom behavior without reserving a display label.
 
 An exclusivity group can enforce that only one major ailment in that group is active. Other groups may coexist if content and policy allow it.
 
@@ -18,7 +18,7 @@ The lifecycle can return these typed turn-start outcomes:
 - use a forced physical action;
 - use a forced confusion action;
 - flee the battle;
-- return to stock.
+- recall to roster.
 
 Manual and automated encounters consume these outcomes through the same command path. AI does not bypass an authored restriction.
 
@@ -61,4 +61,3 @@ Bosses or special encounters may receive preloaded knowledge because the host ow
 ## Presentation
 
 A Godot host can use player knowledge to annotate target cursors, element icons, analysis panels, or bestiary pages. The host reads typed knowledge entries. It does not infer a weakness from damage text or an animation.
-

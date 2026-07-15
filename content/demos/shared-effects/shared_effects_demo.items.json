@@ -83,8 +83,8 @@
       }
     },
     {
-      "id": "traesto_gem_demo",
-      "displayName": "Traesto Gem",
+      "id": "battle_exit_charm_demo",
+      "displayName": "Battle Exit Charm",
       "description": "Requests escape from battle.",
       "itemKind": "consumable",
       "stackLimit": 10,
@@ -108,8 +108,8 @@
       }
     },
     {
-      "id": "goho_m_demo",
-      "displayName": "Goho-M",
+      "id": "return_beacon_demo",
+      "displayName": "Return Beacon",
       "description": "Requests a host-owned dungeon exit.",
       "itemKind": "consumable",
       "stackLimit": 10,

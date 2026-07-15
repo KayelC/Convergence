@@ -213,13 +213,13 @@ public sealed class FusionStrategyPolicyTests
     }
 
     [Fact]
-    public void Resolver_DoesNotInferLegacyCatalystRacesWithoutAnExplicitPolicy()
+    public void Resolver_DoesNotInferUnregisteredCatalystRacesWithoutAnExplicitPolicy()
     {
         TestFusionRepository repository = Repository(recipes: []);
         var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
 
         FusionResolvedResult result = resolver.Resolve(new FusionResultRequest(
-            Participant("ara_mitama", "mitama"),
+            Participant("ember_catalyst", "catalyst"),
             Participant("target", "fairy")));
 
         Assert.False(result.IsSuccessful);
@@ -314,7 +314,7 @@ public sealed class FusionStrategyPolicyTests
                 new FusionRecipeSnapshot(
                     EntityParent("parent_a"),
                     EntityParent("parent_b"),
-                    CompatibilityResultToken: "legacy_race_token")
+                    CompatibilityResultToken: "reference_race_token")
             ]);
         var resolver = new FusionResultResolver(repository, new ThrowingRandomSource(), Policies());
 
@@ -798,7 +798,7 @@ public sealed class FusionStrategyPolicyTests
                 Entity("child", "race_child"),
                 Entity("target", "construct"),
                 Entity("catalyst_core", "material"),
-                Entity("ara_mitama", "mitama")
+                Entity("ember_catalyst", "catalyst")
             ],
             recipes,
             skills ?? []);

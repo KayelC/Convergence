@@ -384,7 +384,7 @@ public sealed class BattleActionExecutorTests
         BattleActionExecutor executor = Executor(escapeRules: [new(escapeRule, new AlwaysEscapeRule())]);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
-        RuntimePartyRosterSnapshot stock = PartyRoster();
+        RuntimePartyRosterSnapshot roster = PartyRoster();
 
         BattleActionExecutionResult analyze = await Execute(
             executor,
@@ -401,9 +401,9 @@ public sealed class BattleActionExecutorTests
             new HostMediatedBattleActionCommand(BattleActionKind.TacticsChange, Id("change_strategy"), ActionTurnConsumption.None),
             actor,
             [actor]);
-        BattleActionExecutionResult summon = await Execute(
+        BattleActionExecutionResult deploy = await Execute(
             executor,
-            new CompanionDeployBattleActionCommand(stock, RuntimeInstanceId.Parse("companion:pixie")),
+            new CompanionDeployBattleActionCommand(roster, RuntimeInstanceId.Parse("companion:glow_wisp")),
             actor,
             [actor]);
 
@@ -411,8 +411,8 @@ public sealed class BattleActionExecutorTests
         Assert.True(escape.EscapeRequested);
         Assert.Equal(ActionTurnConsumptionKind.None, escape.TurnConsumption.Kind);
         Assert.Equal([Id("change_strategy")], host.HostActionRequestIds);
-        Assert.NotNull(summon.PartyRosterTransition);
-        Assert.True(summon.PartyRosterTransition.Applied);
+        Assert.NotNull(deploy.PartyRosterTransition);
+        Assert.True(deploy.PartyRosterTransition.Applied);
     }
 
     private static BattleActionExecutionRequest Request(
@@ -536,7 +536,7 @@ public sealed class BattleActionExecutorTests
             [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero")],
             companionRoster:
             [
-                new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("companion:pixie"), Id("pixie"), "Pixie")
+                new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("companion:glow_wisp"), Id("glow_wisp"), "Glow Wisp")
             ]);
 
     private static ContentId Id(string value) => ContentId.Parse(value);

@@ -36,7 +36,7 @@ Application-host contracts such as `IHostCommandSource<T>` retain their names. I
 
 ## Vessel Stat Authority
 
-The old weighted actor-plus-form calculation is removed. Stat sourcing becomes an explicit request rather than an inference from actor-kind names.
+The former percentage-weighted actor and owned-entity calculation is removed. Stat sourcing becomes an explicit request rather than an inference from actor-kind names.
 
 - Actor sourcing uses actor base stats.
 - Active Hosted Entity sourcing uses the hosted entity's base stats and ignores Vessel base stats.

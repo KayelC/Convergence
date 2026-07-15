@@ -26,7 +26,7 @@ Candidate order follows parent and loadout order with first-occurrence deduplica
 
 ## Fusion Transactions
 
-Preparation validates parents, result identity, ownership, selection, capacity, and the expected before-state. Commit rejects a stale preparation and applies stock changes atomically. No parent is consumed before confirmation.
+Preparation validates parents, result identity, ownership, selection, capacity, and the expected before-state. Commit rejects a stale preparation and applies roster changes atomically. No parent is consumed before confirmation.
 
 Fusion produces an acquired runtime actor. Fusion itself does not depend on the Compendium module.
 
@@ -36,7 +36,7 @@ If a game enables a Compendium, every successful mechanic that grants ownership 
 
 `ICompendiumRuntimeService.RecordAcquisition(currentCompendium, acquiredActor)`
 
-This includes fusion, negotiation recruitment, scripted grants, rewards, summons that create permanent ownership, and future acquisition systems.
+This includes fusion, negotiation recruitment, scripted grants, rewards that create permanent ownership, and future acquisition systems.
 
 The acquisition rule is:
 
@@ -64,11 +64,11 @@ This separation gives the Compendium a meaningful loop:
 
 ## Recall
 
-Recall checks that the entry and catalog entity exist, the entity is eligible, the player does not already own it, a destination stock slot is available, the runtime ID is unique, and the wallet can pay the configured price.
+Recall checks that the entry and catalog entity exist, the entity is eligible, the player does not already own it, a destination roster slot is available, the runtime ID is unique, and the wallet can pay the configured price.
 
 Pricing is an injected policy. Recall can be free, unavailable, fixed-price, linear, or game-specific. Convergence does not require a currency name or formula.
 
-On success, recall rebuilds an actor from the saved level, progression, base stats, learned/equipped skills, and catalog defaults for other state. It places the actor in the selected stock and debits the wallet atomically. Battle status and temporary effects are not copied into the entry.
+On success, recall rebuilds an actor from the saved level, progression, base stats, learned/equipped skills, and catalog defaults for other state. It places the actor in the selected roster and debits the wallet atomically. Battle status and temporary effects are not copied into the entry.
 
 ## Familiar Knowledge
 
@@ -84,4 +84,3 @@ DemoHost imports familiar knowledge after first acquisition, explicit registrati
 - Never call `RegisterActor` implicitly from acquisition code.
 - Use `RegisterActor` only for an explicit registrar/update workflow.
 - Keep Compendium composition outside fusion and recruitment core services so all three modules remain optional.
-

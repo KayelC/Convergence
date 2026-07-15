@@ -207,7 +207,7 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
-    public void EconomyService_AppliesAtomicMaccaTransactions()
+    public void EconomyService_AppliesAtomicCreditTransactions()
     {
         var service = new EconomyTransactionService();
         var empty = new RuntimeWalletSnapshot(0);

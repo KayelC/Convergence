@@ -17,7 +17,7 @@ public sealed class FusionTransactionServiceTests
     private const string Pack = "convergence.training_annex_slice";
 
     [Fact]
-    public void Prepare_IsPureAndCommitAppliesOneAtomicDemonTransaction()
+    public void Prepare_IsPureAndCommitAppliesOneAtomicCompanionTransaction()
     {
         TransactionContext context = CreateContext();
         RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
@@ -86,7 +86,7 @@ public sealed class FusionTransactionServiceTests
     }
 
     [Fact]
-    public void Prepare_HonorsPersonaOwnershipForConsumptionAndPlacement()
+    public void Prepare_HonorsHostedEntityOwnershipForConsumptionAndPlacement()
     {
         TransactionContext context = CreateContext();
         RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.HostedEntity);
@@ -98,16 +98,16 @@ public sealed class FusionTransactionServiceTests
             context,
             party,
             FusionParticipantRosterKind.HostedEntity,
-            "persona_result"));
+            "hosted_entity_result"));
 
         Assert.True(assessment.CanCommit);
         Assert.Empty(assessment.AfterPartyRoster.CompanionRoster);
         RuntimeActorReferenceSnapshot hostedEntity = Assert.Single(assessment.AfterPartyRoster.HostedEntityRoster);
-        Assert.Equal(RuntimeInstanceId.Parse("persona_result"), hostedEntity.InstanceId);
+        Assert.Equal(RuntimeInstanceId.Parse("hosted_entity_result"), hostedEntity.InstanceId);
         Assert.Equal(Qualified("ward_shell"), hostedEntity.EntityDefinitionId);
         Assert.Equal(3, assessment.RosterTransitions.Count);
         Assert.Equal(
-            [context.FirstParent.InstanceId, context.SecondParent.InstanceId, RuntimeInstanceId.Parse("persona_result")],
+            [context.FirstParent.InstanceId, context.SecondParent.InstanceId, RuntimeInstanceId.Parse("hosted_entity_result")],
             assessment.RosterTransitions.SelectMany(transition => transition.AffectedInstanceIds));
     }
 
@@ -248,7 +248,7 @@ public sealed class FusionTransactionServiceTests
     }
 
     [Fact]
-    public void Prepare_ValidatesEveryIntentionalDemonOverlapReference()
+    public void Prepare_ValidatesEveryIntentionalCompanionOverlapReference()
     {
         TransactionContext context = CreateContext();
         RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);

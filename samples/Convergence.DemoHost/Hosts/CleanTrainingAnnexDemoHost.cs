@@ -25,7 +25,7 @@ internal sealed record CleanTrainingAnnexDemoSummary(
     AutomatedBattleOutcome BattleOutcome,
     ContentId? WinningTeamId,
     int RewardExperience,
-    int RewardMacca,
+    int RewardCredits,
     long ExperienceAfter,
     long LifetimeExperienceAfter,
     int LevelAfter,
@@ -307,7 +307,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         await PrintAsync(
             sequence++,
             "reward",
-            $"Awarded {reward.TotalExperience} EXP and {reward.TotalCurrency} Macca; level {growth.Progression.Level}.",
+            $"Awarded {reward.TotalExperience} EXP and {reward.TotalCurrency} Credits; level {growth.Progression.Level}.",
             cancellationToken).ConfigureAwait(false);
 
         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(

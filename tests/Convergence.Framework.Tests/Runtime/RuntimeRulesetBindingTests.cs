@@ -58,14 +58,14 @@ public sealed class RuntimeRulesetBindingTests
         Assert.IsType<StandardLevelGrowthPolicy>(growth.LevelGrowthPolicy);
         Assert.IsType<StatAllocationService>(growth.StatAllocationService);
 
-        IRosterCapacityPolicy stock = resolver.BindRosterCapacityPolicy(
+        IRosterCapacityPolicy roster = resolver.BindRosterCapacityPolicy(
             catalog,
             Qualified("standard_roster_capacity_sample"))
             .RequireService();
-        Assert.Equal(3, stock.GetCapacity(RuntimeRosterKind.HostedEntity, 1));
-        Assert.Equal(12, stock.GetCapacity(RuntimeRosterKind.HostedEntity, 40));
-        Assert.Equal(3, stock.GetCapacity(RuntimeRosterKind.Companion, 1));
-        Assert.Equal(12, stock.GetCapacity(RuntimeRosterKind.Companion, 40));
+        Assert.Equal(3, roster.GetCapacity(RuntimeRosterKind.HostedEntity, 1));
+        Assert.Equal(12, roster.GetCapacity(RuntimeRosterKind.HostedEntity, 40));
+        Assert.Equal(3, roster.GetCapacity(RuntimeRosterKind.Companion, 1));
+        Assert.Equal(12, roster.GetCapacity(RuntimeRosterKind.Companion, 40));
 
         ResourceManagementRulesetServices resources = resolver.BindResourceManagementServices(
             catalog,
@@ -193,7 +193,7 @@ public sealed class RuntimeRulesetBindingTests
                 "Invalid authored policy.",
                 RulesetCategory.RosterCapacity,
                 StandardRulesetPolicyIds.StandardRosterCapacity,
-                [new KeyValuePair<string, object?>("tiers", "legacy defaults")])),
+                [new KeyValuePair<string, object?>("tiers", "reference defaults")])),
             malformedTiersId);
 
         Assert.False(missing.IsSuccess);

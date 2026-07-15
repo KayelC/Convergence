@@ -2,24 +2,24 @@
   "schemaVersion": 2,
   "dungeons": [
     {
-      "id": "tartarus_sample",
-      "displayName": "Tartarus",
+      "id": "sample_depths",
+      "displayName": "Sample Depths",
       "description": "A minimal dungeon/block/fixed-floor sample.",
       "blocks": [
         {
-          "id": "thebel",
-          "displayName": "Block 1: Thebel",
+          "id": "entry_block",
+          "displayName": "Entry Block",
           "startFloor": 2,
           "endFloor": 20,
           "encounterPoolIds": [
-            "thebel_training_sample"
+            "entry_block_training_sample"
           ],
           "fixedFloors": [
             {
               "floor": 5,
               "kind": "boss",
               "description": "Gatekeeper sample.",
-              "encounterId": "thebel_training_sample"
+              "encounterId": "entry_block_training_sample"
             },
             {
               "floor": 10,

@@ -17,8 +17,8 @@
       }
     },
     {
-      "id": "school_uniform_sample",
-      "displayName": "School Uniform",
+      "id": "training_coat_sample",
+      "displayName": "Training Coat",
       "description": "A light armor sample.",
       "slot": "armor",
       "baseValue": 500,

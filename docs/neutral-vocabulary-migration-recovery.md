@@ -24,7 +24,7 @@ The active branch must not consider the migration complete until every finding b
 ## Remaining Planned Checkpoints
 
 - **Checkpoint 4 audit (complete):** creation, growth, battle, equipment, roster changes, and restore now use one explicit Vessel stat-composition model. Public restore cannot bypass recomposition; roster invariants guard live and restored state; standard core-stat composition preserves registered non-core effective stats; and level growth plus recomposition stages on a clone before one live commit. End-to-end host regressions prove a Hosted Entity swap survives growth and save restoration, while rejected recomposition leaves progression, resources, stats, and roster state unchanged.
-- **Checkpoint 5:** neutralize active example content, fixture IDs, messages, and documentation while preserving approved generic terms `Almighty` and `Ice Boost`.
+- **Checkpoint 5 (complete):** active example content, fixture IDs, ownership diagnostics, DemoHost messages, and mechanics documentation now use Credits, Sample Depths, Battle Exit Charm, Return Beacon, Recovery Pulse, Catalyst, Last Stand, Vessel, Hosted Entity, Companion, and roster vocabulary. Retail shop stock remains intentionally named stock. `Almighty` and `Ice Boost` remain the approved generic exceptions. Superseded readiness and interrupted-run reports moved into the non-built archive. The checkpoint passed 722 tests (570 Framework and 152 DemoHost), with no failures or skips; the nonincremental .NET 8 build reported zero warnings and zero errors; all five DemoHost modes exited successfully.
 - **Checkpoint 6:** add a token-aware terminology boundary over active source, tests, content, and documentation. Exclude `ArchiveDocs`, `bin`, and `obj`.
 
 ## Commit Discipline

@@ -331,7 +331,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
             return Rejected(
                 request.PartyRoster,
                 FusionRuntimeDiagnosticCode.RosterTransitionRejected,
-                "The party/stock owner cannot be consumed by a fusion transaction.",
+                "The party/roster owner cannot be consumed by a fusion transaction.",
                 instanceId: request.PartyRoster.Owner.InstanceId);
         }
 
@@ -345,7 +345,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 return Rejected(
                     request.PartyRoster,
                     FusionRuntimeDiagnosticCode.RosterTransitionRejected,
-                    $"Fusion participant '{participant.InstanceId}' is not owned in the selected stock.",
+                    $"Fusion participant '{participant.InstanceId}' is not owned in the selected roster.",
                     participant.EntityId,
                     participant.InstanceId);
             }
@@ -447,7 +447,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 [
                     new FusionRuntimeDiagnostic(
                         FusionRuntimeDiagnosticCode.TransactionStateChanged,
-                        "The party/stock or retained actor state changed after fusion preparation; prepare the transaction again.",
+                        "The party/roster or retained actor state changed after fusion preparation; prepare the transaction again.",
                         prepared.Preview.EntityId,
                         prepared.ResultInstanceId)
                 ]);
@@ -780,7 +780,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         };
         return new FusionRuntimeDiagnostic(
             code,
-            source?.Message ?? $"Party/stock transition '{result.Code}' rejected the fusion transaction.",
+            source?.Message ?? $"Party/roster transition '{result.Code}' rejected the fusion transaction.",
             InstanceId: source?.SubjectInstanceId ?? instanceId);
     }
 

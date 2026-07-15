@@ -383,7 +383,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Contains(accessory.Accessory!.StatModifiers, modifier => modifier.StatId == Id("magic") && modifier.Value == 1);
 
         NegotiationDemandDefinition demand = Assert.Single(negotiation.Demands);
-        Assert.Equal(Id("sample_macca"), demand.DemandId);
+        Assert.Equal(Id("sample_credits"), demand.DemandId);
         Assert.Equal(1, demand.Weight);
         Assert.Equal(50L, demand.Parameters["amount"]);
         Assert.Equal(2, negotiation.Questions.Count);
@@ -763,7 +763,7 @@ public sealed class OriginalCleanContentSliceTests
             .RegisterAilmentGroup("major_ailment", "toxin", "rest", "immobilize")
             .RegisterEvent("owner_turn_end")
             .RegisterShopCategory("training_supply")
-            .RegisterNegotiationDemand("sample_macca")
+            .RegisterNegotiationDemand("sample_credits")
             .RegisterEncounterEnvironment("training_annex")
             .RegisterPolicy(
                 "standard_damage",

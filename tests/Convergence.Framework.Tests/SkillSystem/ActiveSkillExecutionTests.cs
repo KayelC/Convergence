@@ -925,7 +925,7 @@ public sealed class ActiveSkillExecutionTests
     public void RuntimeActorState_DefensivelyCopiesAuthoredRuntimeInputs()
     {
         var hp = new BattleResourceState(Hp, 80, 100);
-        var skills = new List<ContentId> { ContentId.Parse("agi") };
+        var skills = new List<ContentId> { ContentId.Parse("ember_dart") };
         var capabilities = new List<ContentId> { ContentId.Parse("can_cast") };
         var actor = new RuntimeActorState(
             RuntimeInstanceId.Parse("actor"),
@@ -942,7 +942,7 @@ public sealed class ActiveSkillExecutionTests
 
         Assert.Equal(80, actor.GetRequiredResource(Hp).Current);
         Assert.NotSame(hp, actor.GetRequiredResource(Hp));
-        Assert.True(actor.HasSkill(ContentId.Parse("agi")));
+        Assert.True(actor.HasSkill(ContentId.Parse("ember_dart")));
         Assert.True(actor.HasCapability(ContentId.Parse("can_cast")));
         Assert.Throws<NotSupportedException>(() =>
             ((IDictionary<ContentId, BattleResourceState>)actor.Resources).Add(

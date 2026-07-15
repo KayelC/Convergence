@@ -754,7 +754,7 @@ public sealed record RecruitmentTransactionRequest(
     ContentId TargetId,
     bool AlreadyRecruitedThisBattle,
     bool AlreadyOwned,
-    bool HasOpenStockSlot,
+    bool HasOpenRosterSlot,
     bool IsValidTarget = true);
 
 public sealed record RecruitmentTransactionResult(
@@ -786,7 +786,7 @@ public sealed class RecruitmentTransactionService : IRecruitmentTransactionServi
         {
             return Rejected(request.TargetId, RecruitmentTransactionErrorCode.AlreadyOwned);
         }
-        if (!request.HasOpenStockSlot)
+        if (!request.HasOpenRosterSlot)
         {
             return Rejected(request.TargetId, RecruitmentTransactionErrorCode.RosterFull);
         }

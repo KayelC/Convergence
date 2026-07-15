@@ -14,7 +14,7 @@ Phase 8 establishes the breaking pre-release namespace identity for Convergence.
 | `Convergence.Encounters` | encounter participants, orchestration, automation, lifecycle ports, negotiation, and rewards. |
 | `Convergence.Knowledge` | elemental, ailment, and instant-death knowledge stores. |
 | `Convergence.TurnEconomy` | Action Token and action turn-consumption rules. |
-| `Convergence.Runtime` | actor snapshots, progression, party/stock, resources, navigation, traversal, and persistence. |
+| `Convergence.Runtime` | actor snapshots, progression, party and rosters, resources, navigation, traversal, and persistence. |
 | `Convergence.Fusion` | fusion planning, strategies, transactions, and Compendium services. |
 | `Convergence.Inheritance` | typed fusion inheritance decisions, plans, and validated selections. |
 

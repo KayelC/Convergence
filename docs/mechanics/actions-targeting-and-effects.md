@@ -2,7 +2,7 @@
 
 ## Action Types
 
-The clean battle action surface includes basic attack, skill, item, guard, pass, analyze, form swap, demon summon, demon return, demon swap, escape attempt, tactics change, negotiation, and host-special actions.
+The clean battle action surface includes basic attack, skill, item, guard, pass, analyze, Hosted Entity swap, Companion deploy, Companion recall, Companion swap, escape attempt, tactics change, negotiation, and host-special actions.
 
 **Framework rule:** every action is assessed before execution. Assessment and execution use the same typed command and resolved targets. A rejected or cancelled assessment causes no cost, inventory consumption, effect mutation, or turn consumption.
 
@@ -50,4 +50,3 @@ Battle-only conditions evaluate false when field execution does not provide batt
 ## Atomicity
 
 Effect execution uses transaction boundaries. If an execution path is rejected or interrupted before commitment, live state is restored. Custom-handler failures cannot leave earlier changes partially applied. Ordered effect results remain available for presentation even when the host renders them later.
-

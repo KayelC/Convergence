@@ -15,7 +15,7 @@ public sealed class FusionInheritanceTests
     public void Evaluator_ReturnsAllowedForUnlistedDenyPolicyGroup()
     {
         EntityDefinition entity = Entity("child", InheritanceGroupPolicyMode.DenyList, [InheritanceGroup.Ice]);
-        SkillDefinition skill = Skill("agi", InheritanceGroup.Fire);
+        SkillDefinition skill = Skill("ember_dart", InheritanceGroup.Fire);
 
         FusionInheritanceDecision decision = _evaluator.Evaluate(entity, skill);
 
@@ -93,7 +93,7 @@ public sealed class FusionInheritanceTests
     [Fact]
     public void Evaluator_ExplicitBlockWinsOverExplicitAllow()
     {
-        SkillDefinition skill = Skill("bufu", InheritanceGroup.Ice);
+        SkillDefinition skill = Skill("frost_shard", InheritanceGroup.Ice);
         EntityDefinition entity = Entity(
             "child",
             InheritanceGroupPolicyMode.DenyList,
@@ -111,7 +111,7 @@ public sealed class FusionInheritanceTests
     [Fact]
     public void Evaluator_ExplicitAllowOverridesGroupPolicyOnly()
     {
-        SkillDefinition skill = Skill("bufu", InheritanceGroup.Ice);
+        SkillDefinition skill = Skill("frost_shard", InheritanceGroup.Ice);
         EntityDefinition entity = Entity(
             "child",
             InheritanceGroupPolicyMode.DenyList,
@@ -135,7 +135,7 @@ public sealed class FusionInheritanceTests
         string expectedReason)
     {
         EntityDefinition entity = Entity("child", mode, [listedGroup]);
-        SkillDefinition skill = Skill("bufu", InheritanceGroup.Ice);
+        SkillDefinition skill = Skill("frost_shard", InheritanceGroup.Ice);
 
         FusionInheritanceDecision decision = _evaluator.Evaluate(entity, skill);
 
@@ -148,7 +148,7 @@ public sealed class FusionInheritanceTests
     public void Evaluator_AllowsListedAllowPolicyGroup()
     {
         EntityDefinition entity = Entity("child", InheritanceGroupPolicyMode.AllowList, [InheritanceGroup.Ice]);
-        SkillDefinition skill = Skill("bufu", InheritanceGroup.Ice);
+        SkillDefinition skill = Skill("frost_shard", InheritanceGroup.Ice);
 
         FusionInheritanceDecision decision = _evaluator.Evaluate(entity, skill);
 
@@ -159,7 +159,7 @@ public sealed class FusionInheritanceTests
     [Fact]
     public void PassiveFusionFodder_CanCarryIceBoostAcrossTwoGenerations()
     {
-        SkillDefinition bufu = Skill("bufu", InheritanceGroup.Ice);
+        SkillDefinition frostShard = Skill("frost_shard", InheritanceGroup.Ice);
         SkillDefinition iceBoost = Skill(
             "ice_boost",
             InheritanceGroup.Passive,
@@ -175,10 +175,12 @@ public sealed class FusionInheritanceTests
 
         FusionInheritancePlan fodderPlan = _planner.CreatePlan(new FusionInheritancePlanRequest(
             fodder,
-            [bufu, iceBoost],
+            [frostShard, iceBoost],
             [],
             1));
-        FusionInheritanceCandidate activeIce = Assert.Single(fodderPlan.Candidates, candidate => candidate.Skill.Id == bufu.Id);
+        FusionInheritanceCandidate activeIce = Assert.Single(
+            fodderPlan.Candidates,
+            candidate => candidate.Skill.Id == frostShard.Id);
         FusionInheritanceCandidate passiveBoost = Assert.Single(fodderPlan.Candidates, candidate => candidate.Skill.Id == iceBoost.Id);
         FusionInheritanceSelectionResult fodderSelection = _selectionValidator.Validate(fodderPlan, [iceBoost.Id]);
         FusionInheritancePlan childPlan = _planner.CreatePlan(new FusionInheritancePlanRequest(
@@ -296,8 +298,8 @@ public sealed class FusionInheritanceTests
     public void PreviewAndSelectionUseTheSameTypedPolicyRegardlessOfDisplayText()
     {
         EntityDefinition entity = Entity("child", InheritanceGroupPolicyMode.DenyList, [InheritanceGroup.Ice]);
-        SkillDefinition original = Skill("bufu", InheritanceGroup.Ice, displayName: "Bufu");
-        SkillDefinition renamed = Skill("bufu", InheritanceGroup.Ice, displayName: "A Completely Different Label");
+        SkillDefinition original = Skill("frost_shard", InheritanceGroup.Ice, displayName: "Frost Shard");
+        SkillDefinition renamed = Skill("frost_shard", InheritanceGroup.Ice, displayName: "A Completely Different Label");
 
         FusionInheritanceDecision originalDecision = _evaluator.Evaluate(entity, original);
         FusionInheritanceDecision renamedDecision = _evaluator.Evaluate(entity, renamed);
@@ -320,7 +322,7 @@ public sealed class FusionInheritanceTests
     {
         var evaluator = new CountingInheritanceEvaluator();
         var planner = new FusionInheritancePlanner(evaluator);
-        SkillDefinition skill = Skill("agi", InheritanceGroup.Fire);
+        SkillDefinition skill = Skill("ember_dart", InheritanceGroup.Fire);
         FusionInheritancePlan plan = planner.CreatePlan(new FusionInheritancePlanRequest(
             Entity("child", InheritanceGroupPolicyMode.DenyList, []),
             [skill],

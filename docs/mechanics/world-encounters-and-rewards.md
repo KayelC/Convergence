@@ -30,7 +30,7 @@ Negotiation content defines personalities, questions, answers, scores, demands, 
 
 **Configured rule:** mood thresholds, demand selection, currency/item amounts, familiarity behavior, and randomness come from content and policy. The host supplies answers and applies approved payments or rewards through atomic economy/inventory services.
 
-Negotiation success does not silently mutate stock. Recruitment is a separate validated transaction that checks recruitability, duplicate ownership, previous recruitment constraints, stock capacity, and runtime identity.
+Negotiation success does not silently mutate a roster. Recruitment is a separate validated transaction that checks recruitability, duplicate ownership, previous recruitment constraints, roster capacity, and runtime identity.
 
 When recruitment succeeds and the game enables a Compendium, the host should pass the acquired actor to `RecordAcquisition`. See [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md).
 
@@ -41,4 +41,3 @@ Reward services calculate immutable experience and currency totals from defeated
 **Framework rule:** aggregate arithmetic cannot wrap on extreme input. Application uses progression and wallet services, allowing the host to present a preview before committing.
 
 **Configured rule:** reward formulas, participating recipients, reserve sharing, bonus conditions, and terminology belong to the selected ruleset or host composition.
-

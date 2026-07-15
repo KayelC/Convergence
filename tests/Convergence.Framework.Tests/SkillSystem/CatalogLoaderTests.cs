@@ -50,7 +50,7 @@ public sealed class CatalogLoaderTests
     }
 
     [Fact]
-    public void Manifest_MapsTypedDependencyObjectsAndRejectsLegacyStrings()
+    public void Manifest_MapsTypedDependencyObjectsAndRejectsObsoleteStrings()
     {
         var deserializer = new SkillSystemJsonDeserializer();
         ContentPackManifest manifest = deserializer.DeserializeManifest(
@@ -62,7 +62,7 @@ public sealed class CatalogLoaderTests
         Assert.Equal(SemanticVersion.Parse("1.2.3-beta+7"), dependency.Version);
         Assert.Throws<ContentDeserializationException>(() => deserializer.DeserializeManifest(
             Manifest("addon.pack", dependencies: "[\"core.pack\"]"),
-            "legacy.manifest.json"));
+            "obsolete.manifest.json"));
     }
 
     [Fact]

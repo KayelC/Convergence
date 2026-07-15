@@ -210,14 +210,14 @@ public sealed class SharedEffectsRuntimeTests
         ItemExecutionResult cure = Execute(executor, catalog, "dis_poison_demo", Field, actor, target);
         target.SetResource(Hp, 0);
         ItemExecutionResult revive = Execute(executor, catalog, "revival_bead_demo", Field, actor, target);
-        ItemExecutionResult escape = Execute(executor, catalog, "traesto_gem_demo", Battle, actor, null);
-        ItemExecutionResult goho = Execute(executor, catalog, "goho_m_demo", Field, actor, null);
+        ItemExecutionResult escape = Execute(executor, catalog, "battle_exit_charm_demo", Battle, actor, null);
+        ItemExecutionResult returnBeacon = Execute(executor, catalog, "return_beacon_demo", Field, actor, null);
 
         Assert.False(target.HasAilment(Id("convergence.shared_effects_demo:poison_demo")));
         Assert.False(target.IsDefeated);
         Assert.True(escape.EscapeRequested);
-        Assert.Equal(Id("request_dungeon_exit"), Assert.Single(goho.HostActionRequestIds));
-        Assert.All([cure, revive, escape, goho], result => Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.Consumption));
+        Assert.Equal(Id("request_dungeon_exit"), Assert.Single(returnBeacon.HostActionRequestIds));
+        Assert.All([cure, revive, escape, returnBeacon], result => Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.Consumption));
     }
 
     [Fact]

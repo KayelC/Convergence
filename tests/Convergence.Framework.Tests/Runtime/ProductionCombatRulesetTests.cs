@@ -161,7 +161,7 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
-    public void RewardPoliciesPreserveLegacyExperienceAndMaccaVectors()
+    public void RewardPoliciesPreserveEstablishedExperienceAndCurrencyVectors()
     {
         ProductionCombatRuleset ruleset = Rules(0.5m);
         ProductionCombatantProfile enemy = Actor(

@@ -1,18 +1,18 @@
-# Party, Stock, Inventory, Equipment, And Economy
+# Party, Rosters, Inventory, Equipment, And Economy
 
 ## Party And Ownership Graph
 
-Framework party state distinguishes active party members, reserve members, an active form, Persona-like form stock, and demon-like owned stock. These are generic runtime roles; a game may use only the roles it needs.
+Framework party state distinguishes active party members, reserve members, an Active Hosted Entity, a Hosted Entity Roster, and a Companion Roster. These are generic runtime roles; a game may use only the roles it needs.
 
-**Framework rule:** one runtime instance ID cannot occupy incompatible ownership roles or appear as a duplicate entry. Active/reserve membership, form ownership, and stock identity are validated on transitions and restore.
+**Framework rule:** one runtime instance ID cannot occupy incompatible ownership roles or appear as a duplicate entry. Active/reserve membership, Hosted Entity ownership, and Companion roster identity are validated on transitions and restore.
 
-## Party And Stock Commands
+## Party And Roster Commands
 
-Transition services support adding a member, swapping active and reserve positions, summoning an owned actor, swapping active actors, returning an actor to stock, dismissing, replacing, and consuming stock entries, plus active-form swap/consume/replace operations.
+Transition services support adding a party member; swapping active and reserve positions; deploying, swapping, recalling, dismissing, replacing, and consuming owned Companions; and swapping, consuming, or replacing an Active Hosted Entity.
 
 Each request returns `Before`, `After`, a stable code, diagnostics, and ordered affected IDs. Rejection preserves `Before` exactly.
 
-**Configured rule:** maximum party size and stock capacity come from a policy. Capacity may be unlimited or tiered by level. Convergence does not require a particular number of party or stock slots.
+**Configured rule:** maximum party size and roster capacity come from policies. Capacity may be unlimited or tiered by level. Convergence does not require a particular number of party, Hosted Entity, or Companion slots.
 
 ## Inventory
 
@@ -30,7 +30,7 @@ Basic attack profiles may come from equipped weapon data, but a host can supply 
 
 Currency is represented by a nonnegative wallet balance. Credit and debit operations are atomic, checked for overflow, and reject insufficient funds or negative transaction values.
 
-The Framework does not require the term Macca, gold, credits, or any other player-facing currency name. DemoHost labels its sample currency; a game owns its terminology.
+The Framework treats currency as an unnamed numeric resource. DemoHost labels its sample currency Credits; each game owns its player-facing terminology.
 
 ## Shops
 
@@ -43,4 +43,3 @@ Buy and sell prices are policy outcomes. The supplied standard/example policies 
 Hospital/restoration services assess a cost, payment, resource restoration, ailment removal, and encounter-persistence cleanup as one transaction. A host decides which actors can be selected and how the facility is presented.
 
 An ailment-only treatment may be valid even when HP/SP are full if the selected policy permits it. A game should not duplicate eligibility logic in its UI; it should present the assessment result.
-

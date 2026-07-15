@@ -47,7 +47,7 @@
       ],
       "demands": [
         {
-          "demandId": "sample_macca",
+          "demandId": "sample_credits",
           "weight": 1,
           "parameters": {
             "amount": 50

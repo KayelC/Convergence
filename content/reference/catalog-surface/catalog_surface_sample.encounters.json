@@ -2,10 +2,10 @@
   "schemaVersion": 2,
   "encounters": [
     {
-      "id": "thebel_training_sample",
-      "displayName": "Thebel Training Encounter",
+      "id": "entry_block_training_sample",
+      "displayName": "Entry Block Training Encounter",
       "description": "A one-enemy encounter sample.",
-      "environmentId": "thebel",
+      "environmentId": "entry_block",
       "formations": [
         {
           "weight": 1,

@@ -2,9 +2,9 @@
 
 ## Actor Identity
 
-**Framework rule:** every live actor has a `RuntimeInstanceId`, while its authored entity uses a `ContentId`. Multiple runtime actors may share one entity definition, but runtime instance IDs must be unique throughout the active party, forms, stocks, encounters, and saves.
+**Framework rule:** every live actor has a `RuntimeInstanceId`, while its authored entity uses a `ContentId`. Multiple runtime actors may share one entity definition, but runtime instance IDs must be unique throughout the active party, Hosted Entity and Companion rosters, encounters, and saves.
 
-An actor snapshot can contain identity, ownership, team, deployment, progression, resources, stats, skills, forms, equipment, battle status, passive activations, base resource values, vital-resource identity, and capabilities. Snapshots are immutable boundaries. Runtime actor state is mutable only through validated services or explicit state methods.
+An actor snapshot can contain identity, ownership, team, deployment, progression, resources, stats, skills, owned-actor rosters, equipment, battle status, passive activations, base resource values, vital-resource identity, and capabilities. Snapshots are immutable boundaries. Runtime actor state is mutable only through validated services or explicit state methods.
 
 ## Catalog Hydration
 
@@ -16,7 +16,9 @@ Creation fails with typed diagnostics when the entity, level, skills, initializa
 
 The standard stat vocabulary is Strength, Magic, Vitality, Agility, and Luck. Games may register their own typed stat IDs where the consuming policy supports them.
 
-**Configured rule:** stat calculation belongs to `IStatResolutionPolicy`. The supplied standard policy supports base stats, equipment contributions, active-form contributions, caps, and stage modifiers. A host may bind a catalog ruleset or inject another policy.
+**Configured rule:** stat calculation belongs to `IStatResolutionPolicy`. `RuntimeStatSourceKind` explicitly selects either the actor or its Active Hosted Entity as the stat source. The supplied standard policy then applies implemented equipment contributions, caps, and the acting Vessel's stage modifiers. A host may bind a catalog ruleset or inject another policy.
+
+`IRuntimeActorStatCompositionService` validates the selected Hosted Entity and roster graph, resolves all registered core stats, recalculates resources while preserving valid current values, and commits atomically. Missing Hosted Entity behavior is explicit: reject composition or use actor base stats. The framework never infers stat sourcing from display names or actor-kind text.
 
 Battle stage aliases map to typed stat tracks. A generic attack stage can affect both physical and magical offense, while defense and agility affect their corresponding calculations. Luck has no implicit buff/debuff alias unless a game adds one deliberately.
 
@@ -37,7 +39,6 @@ Negative experience and invalid allocations are rejected without mutation. Stat 
 ## Player-Facing Expectations
 
 - A displayed level or stat comes from the current runtime snapshot, not from descriptive text.
-- Equipment, forms, stages, and policies may change effective stats without rewriting base stats.
+- Equipment, an Active Hosted Entity, stages, and policies may change effective stats without rewriting base stats.
 - Resource and growth formulas are game configuration. Training Annex values demonstrate one binding only.
 - Save restoration validates numeric ranges and catalog references before a runtime actor is rebuilt.
-

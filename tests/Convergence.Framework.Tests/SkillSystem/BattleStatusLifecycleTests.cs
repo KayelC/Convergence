@@ -19,7 +19,7 @@ public sealed class BattleStatusLifecycleTests
     private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
     private static readonly ContentId NormalBattle = ContentId.Parse("normal_battle");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
-    private static readonly ContentId PoisonFormula = ContentId.Parse("legacy_poison_damage");
+    private static readonly ContentId PoisonFormula = ContentId.Parse("reference_poison_damage");
     private static readonly ContentId PlayerTeam = ContentId.Parse("player_team");
     private static readonly ContentId Poison = ContentId.Parse("poison");
     private static readonly ContentId Sleep = ContentId.Parse("sleep");
@@ -56,8 +56,8 @@ public sealed class BattleStatusLifecycleTests
         RuntimeActorState panicAct = Actor("panic_act");
         panicAct.ApplyAilment(Ailment("panic", new ChanceSkipAilmentTurnBehaviorDefinition(50)), Turns(3));
         var fear = new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(40, 15, CompanionFleeOutcome.RecallToRoster);
-        RuntimeActorState demonFear = Actor("demon_fear");
-        demonFear.ApplyAilment(Ailment("fear", fear), Turns(3));
+        RuntimeActorState companionFear = Actor("companion_fear");
+        companionFear.ApplyAilment(Ailment("fear", fear), Turns(3));
         RuntimeActorState humanFear = Actor("human_fear");
         humanFear.ApplyAilment(Ailment("fear", fear), Turns(3));
         RuntimeActorState skipFear = Actor("skip_fear");
@@ -67,7 +67,7 @@ public sealed class BattleStatusLifecycleTests
 
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(panicSkip)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(panicAct)).Outcome);
-        Assert.Equal(BattleTurnStartOutcome.RecallToRoster, service.ProcessTurnStart(new(demonFear, true)).Outcome);
+        Assert.Equal(BattleTurnStartOutcome.RecallToRoster, service.ProcessTurnStart(new(companionFear, true)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.FleeBattle, service.ProcessTurnStart(new(humanFear)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(skipFear, true)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(actFear, true)).Outcome);
@@ -637,7 +637,7 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
-    public void StatusLifecycleDemoPack_LoadsTheElevenLegacyAilments()
+    public void StatusLifecycleDemoPack_LoadsTheElevenReferenceAilments()
     {
         string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         string manifestName = "status_lifecycle_demo.manifest.json";
@@ -819,7 +819,7 @@ public sealed class BattleStatusLifecycleTests
             .RegisterEvent("owner_turn_end")
             .RegisterAction("basic_attack", "guard", "pass")
             .RegisterAilmentGroup("major_ailment", "poison", "immobilize", "mental")
-            .RegisterFormula("legacy_poison_damage", new AcceptingParameterValidator())
+            .RegisterFormula("reference_poison_damage", new AcceptingParameterValidator())
             .SupportEffect<ReduceResourceEffectDefinition>()
             .SupportEffect<RestoreResourceEffectDefinition>()
             .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()

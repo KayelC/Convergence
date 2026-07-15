@@ -193,9 +193,9 @@ public sealed class GodotIntegrationContractTests
 
         RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(frost, level: 5);
         var fieldSnapshot = new RuntimeFieldSnapshot(
-            new RuntimeNavigationSnapshot(Id("tartarus_floor_7")),
+            new RuntimeNavigationSnapshot(Id("sample_depths_floor_7")),
             new RuntimeDungeonTraversalSnapshot(
-                Id("tartarus"),
+                Id("sample_depths"),
                 Id("floor_7"),
                 visitedNodeIds: [Id("floor_1"), Id("floor_5"), Id("floor_7")],
                 unlockedCheckpointIds: [Id("terminal_1"), Id("terminal_5"), Id("terminal_7")],

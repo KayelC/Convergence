@@ -70,9 +70,9 @@ internal static class CleanSaveTestFixture
             new RuntimeWalletSnapshot(1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
-                    new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:tartarus_floor_5")),
+                    new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),
                     new RuntimeDungeonTraversalSnapshot(
-                        Id("convergence.catalog_surface_sample:tartarus_sample"),
+                        Id("convergence.catalog_surface_sample:sample_depths"),
                         Id("convergence.catalog_surface_sample:floor_5"),
                         visitedNodeIds:
                         [
@@ -84,7 +84,7 @@ internal static class CleanSaveTestFixture
                             Id("convergence.catalog_surface_sample:terminal_1"),
                             Id("convergence.catalog_surface_sample:terminal_5")
                         ],
-                        defeatedBossIds: [Id("convergence.catalog_surface_sample:thebel_training_sample")]))
+                        defeatedBossIds: [Id("convergence.catalog_surface_sample:entry_block_training_sample")]))
                 : null),
             compendium ?? new CompendiumStateSnapshot(
             [
@@ -227,9 +227,9 @@ internal static class CleanSaveTestFixture
             .RegisterEscapeRule("standard_escape")
             .RegisterCustomEffect("request_dungeon_exit", EmptyParameterValidator.Instance)
             .RegisterShopCategory("weapon_shop")
-            .RegisterNegotiationPersonality("childlike")
-            .RegisterNegotiationDemand("macca")
-            .RegisterEncounterEnvironment("thebel")
+            .RegisterNegotiationPersonality("playful")
+            .RegisterNegotiationDemand("credits")
+            .RegisterEncounterEnvironment("entry_block")
             .RegisterPolicy(
                 "standard_damage",
                 "standard_reward",

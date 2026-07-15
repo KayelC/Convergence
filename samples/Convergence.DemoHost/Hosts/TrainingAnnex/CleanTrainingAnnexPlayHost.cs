@@ -16,12 +16,12 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectSession,
     InspectActor,
     InspectParty,
-    InspectStock,
+    InspectRoster,
     OpenPartyRosterOperations,
     PartySwapActiveHostedEntity,
-    PartySummonAshling,
+    PartyDeployAshling,
     PartySwapDeployedCompanion,
-    PartyReturnActiveDemon,
+    PartyRecallActiveCompanion,
     PartyReplaceWardShell,
     PartyDismissAshling,
     PartyConsumeBrambleRunner,
@@ -487,7 +487,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Party setup: {partyRoster.ActiveParty.Count} active, {partyRoster.ReserveMembers.Count} reserve.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Stock setup: active form {(partyRoster.ActiveHostedEntity is null ? 0 : 1)}, HostedEntity roster {partyRoster.HostedEntityRoster.Count}, Companion roster {partyRoster.CompanionRoster.Count}.",
+            $"Roster setup: active hosted entity {(partyRoster.ActiveHostedEntity is null ? 0 : 1)}, Hosted Entity roster {partyRoster.HostedEntityRoster.Count}, Companion roster {partyRoster.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync("Field location: Staging Area.", cancellationToken)
             .ConfigureAwait(false);
@@ -585,15 +585,15 @@ internal sealed class CleanTrainingAnnexPlayHost
                     await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
-                case CleanTrainingAnnexPlayCommand.InspectStock:
-                    await partyController.PrintStockAsync(partyRoster, _eventSink, cancellationToken)
+                case CleanTrainingAnnexPlayCommand.InspectRoster:
+                    await partyController.PrintRosterAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations:
                 {
                     await partyController.PrintPartyAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
-                    await partyController.PrintStockAsync(partyRoster, _eventSink, cancellationToken)
+                    await partyController.PrintRosterAsync(partyRoster, _eventSink, cancellationToken)
                         .ConfigureAwait(false);
                     HostCommandReadResult<CleanTrainingAnnexPlayCommand> operationSelection =
                         await _commandSource.ReadAsync(
@@ -631,7 +631,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         else
                         {
                             await _eventSink.PublishAsync(
-                                $"Party stock operation not committed: {operationName}; player stat composition was rejected.",
+                                $"Party roster operation not committed: {operationName}; player stat composition was rejected.",
                                 cancellationToken).ConfigureAwait(false);
                         }
                     }
@@ -1451,11 +1451,11 @@ internal sealed class CleanTrainingAnnexPlayHost
             CleanTrainingAnnexPlayCommand.InspectParty,
             "Inspect Party"));
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-            CleanTrainingAnnexPlayCommand.InspectStock,
-            "Inspect Stock"));
+            CleanTrainingAnnexPlayCommand.InspectRoster,
+            "Inspect Roster"));
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenPartyRosterOperations,
-            "Party / Stock Operations"));
+            "Party / Roster Operations"));
         options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
             CleanTrainingAnnexPlayCommand.OpenNegotiation,
             "Negotiate / Recruit"));
@@ -1484,31 +1484,31 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimePartyRosterSnapshot party)
     {
         bool hasHostedEntityRoster = party.HostedEntityRoster.Any(hostedEntity =>
-            hostedEntity.InstanceId == TrainingAnnexHostSupport.PersonaBrambleRunnerInstance);
+            hostedEntity.InstanceId == TrainingAnnexHostSupport.HostedBrambleRunnerInstance);
         bool ashlingOwned = party.CompanionRoster.Any(companion =>
-            companion.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
+            companion.InstanceId == TrainingAnnexHostSupport.CompanionAshlingInstance);
         bool ashlingActive = party.ActiveParty.Any(actor =>
-            actor.InstanceId == TrainingAnnexHostSupport.DemonAshlingInstance);
+            actor.InstanceId == TrainingAnnexHostSupport.CompanionAshlingInstance);
         bool wardOwned = party.CompanionRoster.Any(companion =>
-            companion.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
+            companion.InstanceId == TrainingAnnexHostSupport.CompanionWardShellInstance);
         bool wardActive = party.ActiveParty.Any(actor =>
-            actor.InstanceId == TrainingAnnexHostSupport.DemonWardShellInstance);
+            actor.InstanceId == TrainingAnnexHostSupport.CompanionWardShellInstance);
         bool brambleOwned = party.CompanionRoster.Any(companion =>
             companion.InstanceId == TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance);
-        bool activeDemon = party.ActiveParty.Any(actor =>
+        bool activeCompanion = party.ActiveParty.Any(actor =>
             party.CompanionRoster.Any(companion => companion.InstanceId == actor.InstanceId));
 
         return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
-            "Clean Party / Stock Operations",
+            "Clean Party / Roster Operations",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity,
-                    "Swap Active Form",
+                    "Swap Active Hosted Entity",
                     hasHostedEntityRoster,
-                    "Exchanges the active form with the HostedEntity roster entry."),
+                    "Exchanges the active hosted entity with the Hosted Entity roster entry."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.PartySummonAshling,
-                    "Summon Ashling",
+                    CleanTrainingAnnexPlayCommand.PartyDeployAshling,
+                    "Deploy Ashling",
                     ashlingOwned && !ashlingActive && party.ActiveParty.Count < party.MaxActivePartySize,
                     "Adds the owned Ashling to the active party while keeping it in Companion roster."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
@@ -1517,9 +1517,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                     ashlingActive && wardOwned && !wardActive,
                     "Replaces the active Ashling with owned Ward Shell."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon,
+                    CleanTrainingAnnexPlayCommand.PartyRecallActiveCompanion,
                     "Return Active Companion",
-                    activeDemon,
+                    activeCompanion,
                     "Removes the active companion from the party while keeping it owned."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.PartyReplaceWardShell,
@@ -1546,9 +1546,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         command switch
         {
             CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity => TrainingAnnexPartyOperation.SwapActiveHostedEntity,
-            CleanTrainingAnnexPlayCommand.PartySummonAshling => TrainingAnnexPartyOperation.SummonAshling,
+            CleanTrainingAnnexPlayCommand.PartyDeployAshling => TrainingAnnexPartyOperation.DeployAshling,
             CleanTrainingAnnexPlayCommand.PartySwapDeployedCompanion => TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell,
-            CleanTrainingAnnexPlayCommand.PartyReturnActiveDemon => TrainingAnnexPartyOperation.ReturnActiveDemon,
+            CleanTrainingAnnexPlayCommand.PartyRecallActiveCompanion => TrainingAnnexPartyOperation.RecallActiveCompanion,
             CleanTrainingAnnexPlayCommand.PartyReplaceWardShell => TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner,
             CleanTrainingAnnexPlayCommand.PartyDismissAshling => TrainingAnnexPartyOperation.DismissAshling,
             CleanTrainingAnnexPlayCommand.PartyConsumeBrambleRunner => TrainingAnnexPartyOperation.ConsumeBrambleRunner,
@@ -1558,13 +1558,13 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static string PartyOperationName(TrainingAnnexPartyOperation operation) =>
         operation switch
         {
-            TrainingAnnexPartyOperation.SwapActiveHostedEntity => "swap_active_form",
-            TrainingAnnexPartyOperation.SummonAshling => "summon_demon",
-            TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => "swap_active_demon",
-            TrainingAnnexPartyOperation.ReturnActiveDemon => "return_active_demon",
-            TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => "replace_demon",
-            TrainingAnnexPartyOperation.DismissAshling => "dismiss_demon",
-            TrainingAnnexPartyOperation.ConsumeBrambleRunner => "consume_demon",
+            TrainingAnnexPartyOperation.SwapActiveHostedEntity => "swap_active_hosted_entity",
+            TrainingAnnexPartyOperation.DeployAshling => "deploy_companion",
+            TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => "swap_deployed_companion",
+            TrainingAnnexPartyOperation.RecallActiveCompanion => "recall_active_companion",
+            TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => "replace_companion",
+            TrainingAnnexPartyOperation.DismissAshling => "dismiss_companion",
+            TrainingAnnexPartyOperation.ConsumeBrambleRunner => "consume_companion",
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unsupported party operation.")
         };
 

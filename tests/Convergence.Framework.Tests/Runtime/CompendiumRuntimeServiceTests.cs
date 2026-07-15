@@ -239,7 +239,7 @@ public sealed class CompendiumRuntimeServiceTests
     [InlineData(false, 0, CompendiumRecallTransactionCode.InsufficientCurrency)]
     public void Recall_RejectionsPreservePartyAndWallet(
         bool alreadyOwned,
-        int macca,
+        int credits,
         CompendiumRecallTransactionCode expected)
     {
         TestContext context = CreateContext();
@@ -252,7 +252,7 @@ public sealed class CompendiumRuntimeServiceTests
             companionRoster: alreadyOwned
                 ? [Reference(source)]
                 : []);
-        RuntimeWalletSnapshot wallet = new(macca);
+        RuntimeWalletSnapshot wallet = new(credits);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,

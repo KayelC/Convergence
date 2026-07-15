@@ -984,7 +984,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
         private static ActionTokenTurnEconomySnapshot TurnEconomyState(BattleEncounterTurnRequest request) =>
             request.TurnEconomyState as ActionTokenTurnEconomySnapshot
-            ?? throw new InvalidOperationException("Training Annex received a non-Press-Turn economy state.");
+            ?? throw new InvalidOperationException("Training Annex received a non-Action-Token economy state.");
 
         private IReadOnlyList<SkillDefinition> KnownBattleSkills(CatalogBattleActor actor)
         {

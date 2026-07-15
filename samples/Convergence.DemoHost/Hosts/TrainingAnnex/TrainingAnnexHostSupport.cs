@@ -22,23 +22,23 @@ internal sealed record TrainingAnnexActorRoster
     public TrainingAnnexActorRoster(
         TrainingAnnexRuntimeActor player,
         IEnumerable<TrainingAnnexRuntimeActor> supportMembers,
-        IEnumerable<TrainingAnnexRuntimeActor> stockMembers,
+        IEnumerable<TrainingAnnexRuntimeActor> ownedActors,
         IEnumerable<TrainingAnnexRuntimeActor> enemies,
         IEnumerable<TrainingAnnexRuntimeActor>? dynamicMembers = null)
     {
         Player = player ?? throw new ArgumentNullException(nameof(player));
         SupportMembers = Array.AsReadOnly(
             (supportMembers ?? throw new ArgumentNullException(nameof(supportMembers))).ToArray());
-        StockMembers = Array.AsReadOnly(
-            (stockMembers ?? throw new ArgumentNullException(nameof(stockMembers))).ToArray());
+        OwnedActors = Array.AsReadOnly(
+            (ownedActors ?? throw new ArgumentNullException(nameof(ownedActors))).ToArray());
         Enemies = Array.AsReadOnly((enemies ?? throw new ArgumentNullException(nameof(enemies))).ToArray());
         DynamicMembers = Array.AsReadOnly((dynamicMembers ?? []).ToArray());
-        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. StockMembers, .. DynamicMembers, .. Enemies]);
+        AllActors = Array.AsReadOnly([Player, .. SupportMembers, .. OwnedActors, .. DynamicMembers, .. Enemies]);
     }
 
     public TrainingAnnexRuntimeActor Player { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> SupportMembers { get; }
-    public IReadOnlyList<TrainingAnnexRuntimeActor> StockMembers { get; }
+    public IReadOnlyList<TrainingAnnexRuntimeActor> OwnedActors { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> DynamicMembers { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> Enemies { get; }
     public IReadOnlyList<TrainingAnnexRuntimeActor> AllActors { get; }
@@ -47,7 +47,7 @@ internal sealed record TrainingAnnexActorRoster
         new(
             Player,
             SupportMembers,
-            StockMembers,
+            OwnedActors,
             Enemies,
             [.. DynamicMembers, dynamicMember ?? throw new ArgumentNullException(nameof(dynamicMember))]);
 }
@@ -99,7 +99,7 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId PracticeBlade = Qualified("practice_blade");
     public static readonly ContentId FocusCharm = Qualified("focus_charm");
     public static readonly ContentId SteadySampleNegotiation = Qualified("steady_sample");
-    public static readonly ContentId SampleMaccaDemand = ContentId.Parse("sample_macca");
+    public static readonly ContentId SampleCreditsDemand = ContentId.Parse("sample_credits");
     public static readonly ContentId NegotiationAcquisitionSource = ContentId.Parse("negotiation");
     public static readonly ContentId FusionAcquisitionSource = ContentId.Parse("fusion");
     public static readonly ContentId FrostTip = Qualified("frost_tip");
@@ -109,10 +109,10 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId ClearToxin = Qualified("clear_toxin");
     public static readonly RuntimeInstanceId EchoAdeptInstance = RuntimeInstanceId.Parse("echo_adept");
     public static readonly RuntimeInstanceId SupportAnnexMentorInstance = RuntimeInstanceId.Parse("support_annex_mentor");
-    public static readonly RuntimeInstanceId FormAnnexMentorInstance = RuntimeInstanceId.Parse("form_annex_mentor");
-    public static readonly RuntimeInstanceId PersonaBrambleRunnerInstance = RuntimeInstanceId.Parse("persona_bramble_runner");
-    public static readonly RuntimeInstanceId DemonAshlingInstance = RuntimeInstanceId.Parse("demon_ashling");
-    public static readonly RuntimeInstanceId DemonWardShellInstance = RuntimeInstanceId.Parse("demon_ward_shell");
+    public static readonly RuntimeInstanceId HostedAnnexMentorInstance = RuntimeInstanceId.Parse("hosted_annex_mentor");
+    public static readonly RuntimeInstanceId HostedBrambleRunnerInstance = RuntimeInstanceId.Parse("hosted_bramble_runner");
+    public static readonly RuntimeInstanceId CompanionAshlingInstance = RuntimeInstanceId.Parse("companion_ashling");
+    public static readonly RuntimeInstanceId CompanionWardShellInstance = RuntimeInstanceId.Parse("companion_ward_shell");
     public static readonly RuntimeInstanceId ReplacementBrambleRunnerInstance = RuntimeInstanceId.Parse("replacement_bramble_runner");
     public static readonly RuntimeNavigationTransition EnterTrainingAnnexTransition = new(
         ContentId.Parse("enter_training_annex"),
@@ -184,7 +184,7 @@ internal static class TrainingAnnexHostSupport
             .RegisterEvent("battle_start", "owner_turn_end")
             .RegisterBattleKind("normal_battle")
             .RegisterShopCategory("training_supply")
-            .RegisterNegotiationDemand("sample_macca")
+            .RegisterNegotiationDemand("sample_credits")
             .RegisterEncounterEnvironment("training_annex")
             .RegisterPolicy(
                 "standard_damage",
@@ -269,7 +269,7 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActorCreationResult activeHostedEntityResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("annex_mentor"),
-            FormAnnexMentorInstance,
+            HostedAnnexMentorInstance,
             PlayerTeam,
             5,
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
@@ -278,12 +278,12 @@ internal static class TrainingAnnexHostSupport
             IsActive: false));
         if (!activeHostedEntityResult.IsSuccess)
         {
-            AddActorDiagnostics("active_form", activeHostedEntityResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("active_hosted_entity", activeHostedEntityResult.Diagnostics, diagnostics);
         }
 
         CatalogBattleActorCreationResult hostedEntityRosterResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("bramble_runner"),
-            PersonaBrambleRunnerInstance,
+            HostedBrambleRunnerInstance,
             PlayerTeam,
             3,
             new RuntimeProgressionSnapshot(3, 0, 0, 0),
@@ -292,35 +292,35 @@ internal static class TrainingAnnexHostSupport
             IsActive: false));
         if (!hostedEntityRosterResult.IsSuccess)
         {
-            AddActorDiagnostics("persona_stock", hostedEntityRosterResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("hosted_entity_roster", hostedEntityRosterResult.Diagnostics, diagnostics);
         }
 
-        CatalogBattleActorCreationResult demonAshlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+        CatalogBattleActorCreationResult companionAshlingResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("ashling"),
-            DemonAshlingInstance,
+            CompanionAshlingInstance,
             PlayerTeam,
             2,
             new RuntimeProgressionSnapshot(2, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
-        if (!demonAshlingResult.IsSuccess)
+        if (!companionAshlingResult.IsSuccess)
         {
-            AddActorDiagnostics("demon_stock", demonAshlingResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("companion_roster", companionAshlingResult.Diagnostics, diagnostics);
         }
 
-        CatalogBattleActorCreationResult demonWardShellResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
+        CatalogBattleActorCreationResult companionWardShellResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("ward_shell"),
-            DemonWardShellInstance,
+            CompanionWardShellInstance,
             PlayerTeam,
             4,
             new RuntimeProgressionSnapshot(4, 0, 0, 0),
             ContentId.Parse("clean_training_annex"),
             RuntimeActorDeployment.Reserve,
             IsActive: false));
-        if (!demonWardShellResult.IsSuccess)
+        if (!companionWardShellResult.IsSuccess)
         {
-            AddActorDiagnostics("demon_stock", demonWardShellResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("companion_roster", companionWardShellResult.Diagnostics, diagnostics);
         }
 
         CatalogBattleActorCreationResult replacementBrambleResult = actorFactory.Create(new CatalogBattleActorCreationRequest(
@@ -334,7 +334,7 @@ internal static class TrainingAnnexHostSupport
             IsActive: false));
         if (!replacementBrambleResult.IsSuccess)
         {
-            AddActorDiagnostics("demon_replacement_candidate", replacementBrambleResult.Diagnostics, diagnostics);
+            AddActorDiagnostics("companion_replacement_candidate", replacementBrambleResult.Diagnostics, diagnostics);
         }
 
         IReadOnlyList<CatalogBattleActorCreationRequest> enemyRequests = CreateEnemyActorRequests(catalog, diagnostics);
@@ -356,8 +356,8 @@ internal static class TrainingAnnexHostSupport
             mentorResult.Actor is null ||
             activeHostedEntityResult.Actor is null ||
             hostedEntityRosterResult.Actor is null ||
-            demonAshlingResult.Actor is null ||
-            demonWardShellResult.Actor is null ||
+            companionAshlingResult.Actor is null ||
+            companionWardShellResult.Actor is null ||
             replacementBrambleResult.Actor is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
@@ -370,8 +370,8 @@ internal static class TrainingAnnexHostSupport
             hostedEntityRoster: [Reference(hostedEntityRosterResult.RequireActor().State.ToSnapshot())],
             companionRoster:
             [
-                Reference(demonAshlingResult.RequireActor().State.ToSnapshot()),
-                Reference(demonWardShellResult.RequireActor().State.ToSnapshot()),
+                Reference(companionAshlingResult.RequireActor().State.ToSnapshot()),
+                Reference(companionWardShellResult.RequireActor().State.ToSnapshot()),
                 Reference(replacementBrambleResult.RequireActor().State.ToSnapshot())
             ]);
         RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService(
@@ -403,10 +403,10 @@ internal static class TrainingAnnexHostSupport
                 new TrainingAnnexRuntimeActor("Player", player),
                 [new TrainingAnnexRuntimeActor("Reserve", mentorResult.RequireActor())],
                 [
-                    new TrainingAnnexRuntimeActor("Active Form", activeHostedEntityResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("HostedEntity Stock", hostedEntityRosterResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Companion roster", demonAshlingResult.RequireActor()),
-                    new TrainingAnnexRuntimeActor("Companion roster", demonWardShellResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Active Hosted Entity", activeHostedEntityResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Hosted Entity roster", hostedEntityRosterResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Companion roster", companionAshlingResult.RequireActor()),
+                    new TrainingAnnexRuntimeActor("Companion roster", companionWardShellResult.RequireActor()),
                     new TrainingAnnexRuntimeActor("Companion Replacement Candidate", replacementBrambleResult.RequireActor())
                 ],
                 enemies));

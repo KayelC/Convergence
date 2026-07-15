@@ -22,18 +22,18 @@ public sealed class FusionCompendiumRuntimeTests
         var repository = new TestFusionRepository(
             entities:
             [
-                Entity("pixie", "fairy", rank: 1, level: 2),
-                Entity("high_pixie", "fairy", rank: 2, level: 10),
-                Entity("slime", "foul", rank: 1, level: 4),
-                Entity("aeros", "element", rank: 1, level: 8),
+                Entity("glow_wisp", "fairy", rank: 1, level: 2),
+                Entity("greater_glow_wisp", "fairy", rank: 2, level: 10),
+                Entity("mire_blob", "foul", rank: 1, level: 4),
+                Entity("gale_catalyst", "element", rank: 1, level: 8),
                 Entity("catalyst", "material", rank: 1, level: 12),
                 Entity("direct_child", "beast", rank: 1, level: 6)
             ],
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    EntityParent("pixie"),
-                    EntityParent("slime"),
+                    EntityParent("glow_wisp"),
+                    EntityParent("mire_blob"),
                     new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("direct_child")),
                     AccidentPolicyId: Id("accident")),
                 new FusionRecipeSnapshot(
@@ -45,7 +45,7 @@ public sealed class FusionCompendiumRuntimeTests
                         RankOffset: 1)),
                 new FusionRecipeSnapshot(
                     EntityParent("catalyst"),
-                    EntityParent("pixie"),
+                    EntityParent("glow_wisp"),
                     new FusionRecipeResultSnapshot(
                         FusionResultOperationKind.StatBoost,
                         PolicyId: Id("stat_boost")))
@@ -65,21 +65,21 @@ public sealed class FusionCompendiumRuntimeTests
         var resolver = new FusionResultResolver(repository, new SequenceRandomSource(), policies);
 
         FusionResolvedResult direct = resolver.Resolve(new FusionResultRequest(
-            Participant("pixie", "fairy", rank: 1, level: 2),
-            Participant("slime", "foul", rank: 1, level: 4)));
+            Participant("glow_wisp", "fairy", rank: 1, level: 2),
+            Participant("mire_blob", "foul", rank: 1, level: 4)));
         Assert.Equal(FusionRuntimeOperation.CreateNewEntity, direct.Operation);
         Assert.Equal(Id("direct_child"), direct.ResultEntityId);
         Assert.False(direct.IsAccident);
 
         FusionResolvedResult rank = resolver.Resolve(new FusionResultRequest(
-            Participant("pixie", "fairy", rank: 1, level: 2),
-            Participant("aeros", "element", rank: 1, level: 8)));
+            Participant("glow_wisp", "fairy", rank: 1, level: 2),
+            Participant("gale_catalyst", "element", rank: 1, level: 8)));
         Assert.Equal(FusionRuntimeOperation.RankUpParent, rank.Operation);
-        Assert.Equal(Id("high_pixie"), rank.ResultEntityId);
+        Assert.Equal(Id("greater_glow_wisp"), rank.ResultEntityId);
 
         FusionResolvedResult accident = resolver.Resolve(new FusionResultRequest(
-            Participant("pixie", "fairy", rank: 1, level: 2),
-            Participant("slime", "foul", rank: 1, level: 4),
+            Participant("glow_wisp", "fairy", rank: 1, level: 2),
+            Participant("mire_blob", "foul", rank: 1, level: 4),
             new FusionPolicyContext(numericValues:
             [
                 new KeyValuePair<ContentId, decimal>(Id("danger_level"), 1)
@@ -88,9 +88,9 @@ public sealed class FusionCompendiumRuntimeTests
 
         FusionResolvedResult statBoost = resolver.Resolve(new FusionResultRequest(
             Participant("catalyst", "material", rank: 1, level: 12),
-            Participant("pixie", "fairy", rank: 1, level: 2)));
+            Participant("glow_wisp", "fairy", rank: 1, level: 2)));
         Assert.Equal(FusionRuntimeOperation.StatBoost, statBoost.Operation);
-        Assert.Equal(Id("pixie"), statBoost.ResultEntityId);
+        Assert.Equal(Id("glow_wisp"), statBoost.ResultEntityId);
         Assert.Equal(Id("stat_boost"), statBoost.ResultPolicyId);
         Assert.Equal(2, statBoost.ResultStats[Id("strength")]);
     }
@@ -108,12 +108,12 @@ public sealed class FusionCompendiumRuntimeTests
             inheritanceRules: new EntityInheritanceRulesDefinition(
                 new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList, [InheritanceGroup.Ice])));
         var repository = new TestFusionRepository(
-            entities: [Entity("pixie", "fairy", 1, 2), Entity("slime", "foul", 1, 4), child],
+            entities: [Entity("glow_wisp", "fairy", 1, 2), Entity("mire_blob", "foul", 1, 4), child],
             recipes:
             [
                 new FusionRecipeSnapshot(
-                    EntityParent("pixie"),
-                    EntityParent("slime"),
+                    EntityParent("glow_wisp"),
+                    EntityParent("mire_blob"),
                     new FusionRecipeResultSnapshot(FusionResultOperationKind.CreateEntity, Id("child")))
             ],
             skills: [frostLance, iceBoost]);
@@ -123,8 +123,8 @@ public sealed class FusionCompendiumRuntimeTests
         var planner = new FusionPlanningService(repository, resolver, random, policies, new FusionInheritancePlanner());
 
         FusionPlanningResult plan = planner.CreatePlan(new FusionPlanningRequest(
-            Participant("pixie", "fairy", 1, 2, ["frost_lance", "ice_boost"]),
-            Participant("slime", "foul", 1, 4),
+            Participant("glow_wisp", "fairy", 1, 2, ["frost_lance", "ice_boost"]),
+            Participant("mire_blob", "foul", 1, 4),
             Sacrifice: null,
             IsSacrificial: false));
 
@@ -135,17 +135,17 @@ public sealed class FusionCompendiumRuntimeTests
     }
 
     [Fact]
-    public void MutationAndSlots_PreserveLegacyPolicies()
+    public void MutationAndSlots_PreserveEstablishedPolicies()
     {
-        SkillDefinition agi = Skill("agi", InheritanceGroup.Fire, mutationFamily: "fire", mutationTier: 1);
-        SkillDefinition maragi = Skill("maragi", InheritanceGroup.Fire, mutationFamily: "fire", mutationTier: 2);
+        SkillDefinition emberDart = Skill("ember_dart", InheritanceGroup.Fire, mutationFamily: "fire", mutationTier: 1);
+        SkillDefinition emberWave = Skill("ember_wave", InheritanceGroup.Fire, mutationFamily: "fire", mutationTier: 2);
         var repository = new TestFusionRepository(
-            entities: [Entity("pixie", "fairy", 1, 2)],
+            entities: [Entity("glow_wisp", "fairy", 1, 2)],
             recipes: [],
             skills:
             [
-                agi,
-                maragi,
+                emberDart,
+                emberWave,
                 Skill("s1", InheritanceGroup.Physical),
                 Skill("s2", InheritanceGroup.Physical),
                 Skill("s3", InheritanceGroup.Physical),
@@ -163,7 +163,7 @@ public sealed class FusionCompendiumRuntimeTests
             policies);
 
         Assert.Equal(2, planner.GetInheritanceSlotCount(repository.GetSkills().Take(7)));
-        Assert.Equal(Id("maragi"), planner.MutateSkill(Id("agi"), Id("mutation")));
+        Assert.Equal(Id("ember_wave"), planner.MutateSkill(Id("ember_dart"), Id("mutation")));
     }
 
     [Fact]
@@ -175,42 +175,42 @@ public sealed class FusionCompendiumRuntimeTests
             statPointFactor: 50,
             skillFactor: 200));
         var empty = new CompendiumStateSnapshot();
-        var pixie = new CompendiumEntrySnapshot(
-            Id("pixie"),
-            "Pixie",
+        var glowWisp = new CompendiumEntrySnapshot(
+            Id("glow_wisp"),
+            "Glow Wisp",
             level: 10,
             stats: [new KeyValuePair<ContentId, int>(Id("magic"), 7)],
-            skillIds: [Id("dia"), Id("agi")]);
+            skillIds: [Id("recovery_pulse"), Id("ember_dart")]);
 
-        CompendiumRegistrationResult added = service.Register(empty, pixie);
-        CompendiumRegistrationResult updated = service.Register(added.After, pixie with { });
+        CompendiumRegistrationResult added = service.Register(empty, glowWisp);
+        CompendiumRegistrationResult updated = service.Register(added.After, glowWisp with { });
 
         Assert.Equal(CompendiumRegistrationCode.Added, added.Code);
         Assert.Equal(CompendiumRegistrationCode.Updated, updated.Code);
-        Assert.Equal(2000 + 1000 + 350 + 400, service.GetRecallPricing(pixie).Cost);
+        Assert.Equal(2000 + 1000 + 350 + 400, service.GetRecallPricing(glowWisp).Cost);
 
         var customPricing = new LinearCompendiumRecallPricingPolicy(
             defaultBasePrice: 17,
             levelFactor: 3,
             statPointFactor: 5,
             skillFactor: 7);
-        Assert.Equal(17 + 30 + 35 + 14, customPricing.GetPricing(new(pixie)).Cost);
-        Assert.Equal(23 + 30 + 35 + 14, customPricing.GetPricing(new(pixie, basePrice: 23)).Cost);
+        Assert.Equal(17 + 30 + 35 + 14, customPricing.GetPricing(new(glowWisp)).Cost);
+        Assert.Equal(23 + 30 + 35 + 14, customPricing.GetPricing(new(glowWisp, basePrice: 23)).Cost);
 
         CompendiumRecallAssessment duplicate = service.AssessRecall(
             updated.After,
-            Id("pixie"),
+            Id("glow_wisp"),
             availableCurrency: 99999,
             alreadyOwned: true,
-            hasOpenStockSlot: true);
+            hasOpenRosterSlot: true);
         Assert.Equal(CompendiumRecallCode.DuplicateOwned, duplicate.Code);
 
         CompendiumRecallAssessment valid = service.AssessRecall(
             updated.After,
-            Id("pixie"),
+            Id("glow_wisp"),
             availableCurrency: 99999,
             alreadyOwned: false,
-            hasOpenStockSlot: true);
+            hasOpenRosterSlot: true);
         Assert.True(valid.CanRecall);
     }
 
@@ -232,24 +232,24 @@ public sealed class FusionCompendiumRuntimeTests
             entry.EntityId,
             availableCurrency: 0,
             alreadyOwned: false,
-            hasOpenStockSlot: true);
+            hasOpenRosterSlot: true);
         CompendiumRecallAssessment free = freeRecall.AssessRecall(
             state,
             entry.EntityId,
             availableCurrency: 0,
             alreadyOwned: false,
-            hasOpenStockSlot: true);
+            hasOpenRosterSlot: true);
         CompendiumRecallAssessment gated = gatedRecall.AssessRecall(
             state,
             entry.EntityId,
             availableCurrency: 0,
             alreadyOwned: false,
-            hasOpenStockSlot: true);
+            hasOpenRosterSlot: true);
 
         Assert.Equal(CompendiumRegistrationCode.Added, registration.Code);
         Assert.False(unavailablePricing.IsAvailable);
         Assert.Equal(CompendiumRecallCode.RecallUnavailable, unavailable.Code);
-        Assert.DoesNotContain("Macca", Assert.Single(unavailable.Diagnostics).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Credits", Assert.Single(unavailable.Diagnostics).Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(free.CanRecall);
         Assert.Equal(0, free.Cost);
         Assert.Equal(CompendiumRecallCode.RecallUnavailable, gated.Code);

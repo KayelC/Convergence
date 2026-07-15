@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "shops": [
     {
-      "id": "paulownia_blacksmith_sample",
-      "displayName": "Paulownia Blacksmith",
+      "id": "sample_outfitter",
+      "displayName": "Sample Outfitter",
       "description": "A minimal shop catalog sample.",
       "categoryId": "weapon_shop",
       "availabilityContexts": ["field"],

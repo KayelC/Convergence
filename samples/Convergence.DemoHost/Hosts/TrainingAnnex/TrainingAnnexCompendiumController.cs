@@ -218,7 +218,7 @@ internal sealed class TrainingAnnexCompendiumController
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
         await _eventSink.PublishAsync(
-            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} M; Companion roster {recall.BeforePartyRoster.CompanionRoster.Count}->{recall.AfterPartyRoster.CompanionRoster.Count}.",
+            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} C; Companion roster {recall.BeforePartyRoster.CompanionRoster.Count}->{recall.AfterPartyRoster.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexCompendiumInteractionResult(
             compendium,
@@ -339,7 +339,7 @@ internal sealed class TrainingAnnexCompendiumController
     {
         CompendiumRecallPricingDecision pricing = _compendium.GetRecallPricing(entry);
         return pricing.IsAvailable
-            ? $"{entry.DisplayName} - {pricing.Cost} M"
+            ? $"{entry.DisplayName} - {pricing.Cost} C"
             : $"{entry.DisplayName} - [Recall unavailable]";
     }
 

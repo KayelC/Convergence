@@ -16,7 +16,7 @@ The documents describe the current supported contracts, not every possible JRPG 
 2. [Actions, Targeting, And Effects](actions-targeting-and-effects.md)
 3. [Combat, Defenses, And Turn Economy](combat-defenses-and-turns.md)
 4. [Ailments, Statuses, Passives, And Knowledge](status-passives-and-knowledge.md)
-5. [Party, Stock, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
+5. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
 6. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
 7. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
 8. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
@@ -35,5 +35,4 @@ The host applies or presents accepted results. Rejected operations preserve the 
 
 ## Optionality
 
-Navigation, traversal, Action Token, ailments, passives, party stock, economy, negotiation, fusion, Compendium, and persistence are optional modules. A developer enables a module by composing its service and supplying the required policy or content. No Moon Phase mechanic is required; a nullable moon-phase ID exists only for games that choose to use one.
-
+Navigation, traversal, Action Token, ailments, passives, party rosters, economy, negotiation, fusion, Compendium, and persistence are optional modules. A developer enables a module by composing its service and supplying the required policy or content. No Moon Phase mechanic is required; a nullable moon-phase ID exists only for games that choose to use one.

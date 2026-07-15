@@ -177,7 +177,7 @@ internal sealed class CleanFieldDemoHost
             cancellationToken: cancellationToken);
 
         sequence = await ExecuteItemAsync(
-            "traesto_gem_demo",
+            "battle_exit_charm_demo",
             Battle,
             null,
             actionExecutor,
@@ -189,7 +189,7 @@ internal sealed class CleanFieldDemoHost
             moonPhaseId: null,
             cancellationToken: cancellationToken);
         sequence = await ExecuteItemAsync(
-            "goho_m_demo", Field, null, actionExecutor, catalog, participants, inventory, sequence,
+            "return_beacon_demo", Field, null, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);
 
         await PrintAsync(sequence, "outcome", "Shared field effects demo completed successfully.", cancellationToken);

@@ -34,7 +34,7 @@ public sealed class NegotiationRewardRuntimeTests
 
         NegotiationSessionResult result = await service.RunAsync(
             new NegotiationSessionRequest(
-                "Pixie",
+                "Glow Wisp",
                 actorLevel: 50,
                 targetLevel: 2,
                 actorLuck: 0,
@@ -63,7 +63,7 @@ public sealed class NegotiationRewardRuntimeTests
     }
 
     [Fact]
-    public async Task NegotiationSession_UsesAuthoredDemandInsteadOfCalculatedMaccaFormula()
+    public async Task NegotiationSession_UsesAuthoredDemandInsteadOfCalculatedCurrencyFormula()
     {
         var random = new SequenceRandomSource(ints: [0, 0, 0]);
         var policy = new TestNegotiationPolicy(
@@ -82,7 +82,7 @@ public sealed class NegotiationRewardRuntimeTests
 
         NegotiationSessionResult result = await service.RunAsync(
             new NegotiationSessionRequest(
-                "Pixie",
+                "Glow Wisp",
                 actorLevel: 50,
                 targetLevel: 9,
                 actorLuck: 0,
@@ -127,7 +127,7 @@ public sealed class NegotiationRewardRuntimeTests
 
         NegotiationSessionResult result = await service.RunAsync(
             new NegotiationSessionRequest(
-                "Pixie",
+                "Glow Wisp",
                 actorLevel: 50,
                 targetLevel: 9,
                 actorLuck: 0,
@@ -174,7 +174,7 @@ public sealed class NegotiationRewardRuntimeTests
 
         NegotiationSessionResult result = await service.RunAsync(
             new NegotiationSessionRequest(
-                "Pixie",
+                "Glow Wisp",
                 actorLevel: 50,
                 targetLevel: 3,
                 actorLuck: 0,
@@ -197,21 +197,21 @@ public sealed class NegotiationRewardRuntimeTests
     public void RecruitmentTransaction_ValidatesSessionOwnershipStockAndTarget()
     {
         var service = new RecruitmentTransactionService();
-        ContentId pixie = ContentId.Parse("pixie");
+        ContentId glowWisp = ContentId.Parse("glow_wisp");
 
         Assert.True(service.Validate(new RecruitmentTransactionRequest(
-            pixie,
+            glowWisp,
             AlreadyRecruitedThisBattle: false,
             AlreadyOwned: false,
-            HasOpenStockSlot: true)).Applied);
+            HasOpenRosterSlot: true)).Applied);
         Assert.Equal(RecruitmentTransactionErrorCode.AlreadyRecruitedThisBattle, service.Validate(
-            new RecruitmentTransactionRequest(pixie, true, false, true)).ErrorCode);
+            new RecruitmentTransactionRequest(glowWisp, true, false, true)).ErrorCode);
         Assert.Equal(RecruitmentTransactionErrorCode.AlreadyOwned, service.Validate(
-            new RecruitmentTransactionRequest(pixie, false, true, true)).ErrorCode);
+            new RecruitmentTransactionRequest(glowWisp, false, true, true)).ErrorCode);
         Assert.Equal(RecruitmentTransactionErrorCode.RosterFull, service.Validate(
-            new RecruitmentTransactionRequest(pixie, false, false, false)).ErrorCode);
+            new RecruitmentTransactionRequest(glowWisp, false, false, false)).ErrorCode);
         Assert.Equal(RecruitmentTransactionErrorCode.InvalidTarget, service.Validate(
-            new RecruitmentTransactionRequest(pixie, false, false, true, IsValidTarget: false)).ErrorCode);
+            new RecruitmentTransactionRequest(glowWisp, false, false, true, IsValidTarget: false)).ErrorCode);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public sealed class NegotiationRewardRuntimeTests
             enemies:
             [
                 new BattleRewardEnemySnapshot(
-                    ContentId.Parse("pixie"),
+                    ContentId.Parse("glow_wisp"),
                     Level: 10,
                     Strength: 20,
                     Magic: 20,

@@ -113,7 +113,7 @@
       "knownGaps": []
     },
     {
-      "id": "party_and_stock",
+      "id": "party_and_rosters",
       "implementationState": "complete",
       "frameworkTests": ["PartyRosterTransitionTests"],
       "demoCoverage": "focused",

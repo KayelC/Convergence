@@ -67,7 +67,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
 
         RuntimeActorSnapshot after = progressionMutation.After;
         await _eventSink.PublishAsync(
-            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalCurrency} Macca.",
+            $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalCurrency} Credits.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
             $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Balance}->{walletMutation.After.Balance}.",
@@ -83,7 +83,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
         var counters = before.Counters.ToDictionary(pair => pair.Key, pair => pair.Value);
         AddCounter(counters, ContentId.Parse("training_annex_victories"), 1);
         AddCounter(counters, ContentId.Parse("training_annex_exp"), reward.TotalExperience);
-        AddCounter(counters, ContentId.Parse("training_annex_macca"), reward.TotalCurrency);
+        AddCounter(counters, ContentId.Parse("training_annex_credits"), reward.TotalCurrency);
         return new RuntimeSessionProgressSnapshot(
             before.MoonPhaseId,
             before.ElapsedTicks,

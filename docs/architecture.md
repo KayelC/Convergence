@@ -32,13 +32,13 @@ Hosts provide all JSON text and diagnostic source names. The framework validates
 
 ## Runtime Flow
 
-Runtime actors are identified by `RuntimeInstanceId` and content records by `ContentId`. Actor state, party/stock, inventory, equipment, wallet, navigation, traversal, Compendium, knowledge, and session state have immutable snapshot boundaries.
+Runtime actors are identified by `RuntimeInstanceId` and content records by `ContentId`. Actor state, party and rosters, inventory, equipment, wallet, navigation, traversal, Compendium, knowledge, and session state have immutable snapshot boundaries.
 
 Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
 ## Optional Modules
 
-Navigation, dungeon traversal, Action Token, ailments/passives, party/stock, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
+Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
 Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. DemoHost does not require or bind a moon-phase system.
 

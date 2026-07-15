@@ -49,13 +49,13 @@ public sealed class PartyRosterTransitionTests
     public void DefaultTransitionService_DoesNotImposeARosterCapacityCurve()
     {
         var service = new PartyRosterTransitionService();
-        RuntimeActorReferenceSnapshot[] stock = Enumerable.Range(0, 20)
-            .Select(index => Actor($"demon_{index}"))
+        RuntimeActorReferenceSnapshot[] roster = Enumerable.Range(0, 20)
+            .Select(index => Actor($"companion_{index}"))
             .ToArray();
-        RuntimePartyRosterSnapshot snapshot = Snapshot(companionRoster: stock);
+        RuntimePartyRosterSnapshot snapshot = Snapshot(companionRoster: roster);
 
         PartyRosterTransitionResult result = service.AddCompanionToRoster(
-            new AddCompanionToRosterRequest(snapshot, Actor("demon_20")));
+            new AddCompanionToRosterRequest(snapshot, Actor("companion_20")));
 
         Assert.True(result.Applied);
         Assert.Equal(21, result.After.CompanionRoster.Count);
@@ -103,7 +103,7 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void AddPartyMember_RejectsRuntimeIdsUsedByFormOrStockRoles()
+    public void AddPartyMember_RejectsRuntimeIdsUsedByHostedEntityOrRosterRoles()
     {
         RuntimeActorReferenceSnapshot collision = Actor("collision");
         RuntimePartyRosterSnapshot[] snapshots =
@@ -136,61 +136,62 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void AddPartyMember_RejectsOwnedDemonIdWhileSummonPreservesIntentionalOverlap()
+    public void AddPartyMember_RejectsOwnedCompanionIdWhileDeploymentPreservesIntentionalOverlap()
     {
-        RuntimeActorReferenceSnapshot companion = Actor("owned_demon");
+        RuntimeActorReferenceSnapshot companion = Actor("owned_companion");
         RuntimePartyRosterSnapshot snapshot = Snapshot(companionRoster: [companion]);
 
         PartyRosterTransitionResult add = _service.AddPartyMember(new AddPartyMemberRequest(snapshot, companion));
-        PartyRosterTransitionResult summon = _service.DeployCompanion(new DeployCompanionRequest(snapshot, companion.InstanceId));
+        PartyRosterTransitionResult deploy = _service.DeployCompanion(new DeployCompanionRequest(snapshot, companion.InstanceId));
 
         AssertIdentityCollision(snapshot, add, companion.InstanceId);
-        Assert.True(summon.Applied);
-        Assert.Contains(summon.After.ActiveParty, actor => actor.InstanceId == companion.InstanceId);
-        Assert.Contains(summon.After.CompanionRoster, actor => actor.InstanceId == companion.InstanceId);
+        Assert.True(deploy.Applied);
+        Assert.Contains(deploy.After.ActiveParty, actor => actor.InstanceId == companion.InstanceId);
+        Assert.Contains(deploy.After.CompanionRoster, actor => actor.InstanceId == companion.InstanceId);
     }
 
     [Fact]
-    public void DemonCommands_PreserveUnifiedActiveAndOwnedStock()
+    public void CompanionCommands_PreserveUnifiedActiveAndOwnedRoster()
     {
-        RuntimeActorReferenceSnapshot pixie = Actor("pixie");
-        RuntimeActorReferenceSnapshot jack = Actor("jack");
+        RuntimeActorReferenceSnapshot glowWisp = Actor("glow_wisp");
+        RuntimeActorReferenceSnapshot sparkShell = Actor("spark_shell");
         RuntimePartyRosterSnapshot snapshot = Snapshot(
             activeParty: [Actor("hero")],
-            companionRoster: [pixie, jack]);
+            companionRoster: [glowWisp, sparkShell]);
 
-        PartyRosterTransitionResult summon = _service.DeployCompanion(new DeployCompanionRequest(snapshot, pixie.InstanceId));
+        PartyRosterTransitionResult deploy = _service.DeployCompanion(new DeployCompanionRequest(snapshot, glowWisp.InstanceId));
 
-        Assert.True(summon.Applied);
-        Assert.Equal(["hero", "pixie"], summon.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
-        Assert.Equal(["pixie", "jack"], summon.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.True(deploy.Applied);
+        Assert.Equal(["hero", "glow_wisp"], deploy.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["glow_wisp", "spark_shell"], deploy.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
 
-        PartyRosterTransitionResult swap = _service.SwapDeployedCompanion(new SwapDeployedCompanionRequest(summon.After, pixie.InstanceId, jack.InstanceId));
+        PartyRosterTransitionResult swap = _service.SwapDeployedCompanion(
+            new SwapDeployedCompanionRequest(deploy.After, glowWisp.InstanceId, sparkShell.InstanceId));
 
         Assert.True(swap.Applied);
-        Assert.Equal(["hero", "jack"], swap.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
-        Assert.Equal(["pixie", "jack"], swap.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["hero", "spark_shell"], swap.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["glow_wisp", "spark_shell"], swap.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
 
-        PartyRosterTransitionResult returned = _service.RecallCompanion(new RecallCompanionRequest(swap.After, jack.InstanceId));
+        PartyRosterTransitionResult returned = _service.RecallCompanion(new RecallCompanionRequest(swap.After, sparkShell.InstanceId));
 
         Assert.True(returned.Applied);
         Assert.Equal(["hero"], returned.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
-        Assert.Equal(["pixie", "jack"], returned.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["glow_wisp", "spark_shell"], returned.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
 
-        PartyRosterTransitionResult dismissed = _service.DismissCompanion(new DismissCompanionRequest(returned.After, jack.InstanceId));
+        PartyRosterTransitionResult dismissed = _service.DismissCompanion(new DismissCompanionRequest(returned.After, sparkShell.InstanceId));
 
         Assert.True(dismissed.Applied);
-        Assert.Equal(["pixie"], dismissed.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["glow_wisp"], dismissed.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
     }
 
     [Theory]
     [InlineData("owner")]
     [InlineData("ally")]
-    public void DemonCommands_RejectActiveActorsWithoutCompanionRosterOwnership(string subjectId)
+    public void CompanionCommands_RejectActiveActorsWithoutCompanionRosterOwnership(string subjectId)
     {
         RuntimeActorReferenceSnapshot owner = Actor("owner");
         RuntimeActorReferenceSnapshot ally = Actor("ally");
-        RuntimeActorReferenceSnapshot standby = Actor("owned_demon");
+        RuntimeActorReferenceSnapshot standby = Actor("owned_companion");
         RuntimeActorReferenceSnapshot subject = subjectId == "owner" ? owner : ally;
         var snapshot = new RuntimePartyRosterSnapshot(
             owner,
@@ -219,7 +220,7 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void DemonDeploymentCommands_RequireBothOwnershipAndActiveMembership()
+    public void CompanionDeploymentCommands_RequireBothOwnershipAndActiveMembership()
     {
         RuntimeActorReferenceSnapshot standby = Actor("standby");
         RuntimeActorReferenceSnapshot replacement = Actor("replacement");
@@ -240,42 +241,44 @@ public sealed class PartyRosterTransitionTests
     [Fact]
     public void CompanionRosterReplacementAndConsumption_DoNotRequireActiveDeployment()
     {
-        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
-        RuntimeActorReferenceSnapshot consumedDemon = Actor("consumed_demon");
-        RuntimeActorReferenceSnapshot newCompanion = Actor("new_demon");
-        RuntimePartyRosterSnapshot snapshot = Snapshot(companionRoster: [oldDemon, consumedDemon]);
+        RuntimeActorReferenceSnapshot oldCompanion = Actor("old_companion");
+        RuntimeActorReferenceSnapshot consumedCompanion = Actor("consumed_companion");
+        RuntimeActorReferenceSnapshot newCompanion = Actor("new_companion");
+        RuntimePartyRosterSnapshot snapshot = Snapshot(companionRoster: [oldCompanion, consumedCompanion]);
 
         PartyRosterTransitionResult replaced = _service.ReplaceCompanion(new ReplaceCompanionRequest(
             snapshot,
-            oldDemon.InstanceId,
+            oldCompanion.InstanceId,
             newCompanion));
         PartyRosterTransitionResult consumed = _service.ConsumeCompanion(new ConsumeCompanionRequest(
             replaced.After,
-            consumedDemon.InstanceId));
+            consumedCompanion.InstanceId));
 
         Assert.True(replaced.Applied);
-        Assert.Equal(["new_demon", "consumed_demon"], replaced.After.CompanionRoster.Select(DemonId));
-        Assert.Equal(["hero"], replaced.After.ActiveParty.Select(DemonId));
+        Assert.Equal(["new_companion", "consumed_companion"], replaced.After.CompanionRoster.Select(ActorId));
+        Assert.Equal(["hero"], replaced.After.ActiveParty.Select(ActorId));
         Assert.True(consumed.Applied);
-        Assert.Equal(["new_demon"], consumed.After.CompanionRoster.Select(DemonId));
-        Assert.Equal(["hero"], consumed.After.ActiveParty.Select(DemonId));
+        Assert.Equal(["new_companion"], consumed.After.CompanionRoster.Select(ActorId));
+        Assert.Equal(["hero"], consumed.After.ActiveParty.Select(ActorId));
     }
 
     [Fact]
-    public void AddCompanionToRoster_AppendsOwnedDemonAndRejectsDuplicateOrFullStock()
+    public void AddCompanionToRoster_AppendsOwnedCompanionAndRejectsDuplicateOrFullRoster()
     {
-        RuntimeActorReferenceSnapshot pixie = Actor("pixie");
+        RuntimeActorReferenceSnapshot glowWisp = Actor("glow_wisp");
         RuntimePartyRosterSnapshot snapshot = Snapshot(
             activeParty: [Actor("hero")],
-            companionRoster: [Actor("jack"), Actor("angel")]);
+            companionRoster: [Actor("spark_shell"), Actor("winged_sentinel")]);
 
-        PartyRosterTransitionResult added = _service.AddCompanionToRoster(new AddCompanionToRosterRequest(snapshot, pixie));
+        PartyRosterTransitionResult added = _service.AddCompanionToRoster(
+            new AddCompanionToRosterRequest(snapshot, glowWisp));
 
         Assert.True(added.Applied);
-        Assert.Equal(["jack", "angel", "pixie"], added.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
-        Assert.Equal(["pixie"], added.AffectedInstanceIds.Select(id => id.ToString()));
+        Assert.Equal(["spark_shell", "winged_sentinel", "glow_wisp"], added.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["glow_wisp"], added.AffectedInstanceIds.Select(id => id.ToString()));
 
-        PartyRosterTransitionResult duplicate = _service.AddCompanionToRoster(new AddCompanionToRosterRequest(added.After, pixie));
+        PartyRosterTransitionResult duplicate = _service.AddCompanionToRoster(
+            new AddCompanionToRosterRequest(added.After, glowWisp));
 
         Assert.False(duplicate.Applied);
         Assert.Equal(PartyRosterTransitionCode.DuplicateOwned, duplicate.Code);
@@ -296,22 +299,22 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void DemonReplacementAndConsumption_UpdateActiveAndStockReferencesAtomically()
+    public void CompanionReplacementAndConsumption_UpdateActiveAndRosterReferencesAtomically()
     {
-        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
-        RuntimeActorReferenceSnapshot newCompanion = Actor("new_demon");
+        RuntimeActorReferenceSnapshot oldCompanion = Actor("old_companion");
+        RuntimeActorReferenceSnapshot newCompanion = Actor("new_companion");
         RuntimePartyRosterSnapshot snapshot = Snapshot(
-            activeParty: [Actor("hero"), oldDemon],
-            companionRoster: [oldDemon]);
+            activeParty: [Actor("hero"), oldCompanion],
+            companionRoster: [oldCompanion]);
 
         PartyRosterTransitionResult replaced = _service.ReplaceCompanion(new ReplaceCompanionRequest(
             snapshot,
-            oldDemon.InstanceId,
+            oldCompanion.InstanceId,
             newCompanion));
 
         Assert.True(replaced.Applied);
-        Assert.Equal(["hero", "new_demon"], replaced.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
-        Assert.Equal(["new_demon"], replaced.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["hero", "new_companion"], replaced.After.ActiveParty.Select(actor => actor.InstanceId.ToString()));
+        Assert.Equal(["new_companion"], replaced.After.CompanionRoster.Select(actor => actor.InstanceId.ToString()));
 
         PartyRosterTransitionResult consumed = _service.ConsumeCompanion(new ConsumeCompanionRequest(replaced.After, newCompanion.InstanceId));
 
@@ -321,18 +324,18 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void PersonaCommands_ExchangeConsumeAndReplaceActiveHostedEntityAndStock()
+    public void HostedEntityCommands_ExchangeConsumeAndReplaceActiveHostedEntityAndRoster()
     {
-        RuntimeActorReferenceSnapshot active = Actor("orpheus");
-        RuntimeActorReferenceSnapshot stock = Actor("pixie");
-        RuntimeActorReferenceSnapshot replacement = Actor("jack_frost");
-        RuntimePartyRosterSnapshot snapshot = Snapshot(activeHostedEntity: active, hostedEntityRoster: [stock]);
+        RuntimeActorReferenceSnapshot active = Actor("annex_mentor");
+        RuntimeActorReferenceSnapshot rosterEntry = Actor("glow_wisp");
+        RuntimeActorReferenceSnapshot replacement = Actor("frostling");
+        RuntimePartyRosterSnapshot snapshot = Snapshot(activeHostedEntity: active, hostedEntityRoster: [rosterEntry]);
 
-        PartyRosterTransitionResult swapped = _service.SwapActiveHostedEntity(new SwapActiveHostedEntityRequest(snapshot, stock.InstanceId));
+        PartyRosterTransitionResult swapped = _service.SwapActiveHostedEntity(new SwapActiveHostedEntityRequest(snapshot, rosterEntry.InstanceId));
 
         Assert.True(swapped.Applied);
-        Assert.Equal("pixie", swapped.After.ActiveHostedEntity?.InstanceId.ToString());
-        Assert.Equal(["orpheus"], swapped.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
+        Assert.Equal("glow_wisp", swapped.After.ActiveHostedEntity?.InstanceId.ToString());
+        Assert.Equal(["annex_mentor"], swapped.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
         PartyRosterTransitionResult replaced = _service.ReplaceHostedEntity(new ReplaceHostedEntityRequest(
             swapped.After,
@@ -340,30 +343,30 @@ public sealed class PartyRosterTransitionTests
             replacement));
 
         Assert.True(replaced.Applied);
-        Assert.Equal(["jack_frost"], replaced.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
+        Assert.Equal(["frostling"], replaced.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
-        PartyRosterTransitionResult consumed = _service.ConsumeHostedEntity(new ConsumeHostedEntityRequest(replaced.After, stock.InstanceId));
+        PartyRosterTransitionResult consumed = _service.ConsumeHostedEntity(new ConsumeHostedEntityRequest(replaced.After, rosterEntry.InstanceId));
 
         Assert.True(consumed.Applied);
         Assert.Null(consumed.After.ActiveHostedEntity);
-        Assert.Equal(["jack_frost"], consumed.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
+        Assert.Equal(["frostling"], consumed.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
     }
 
     [Fact]
-    public void AddHostedEntityToRoster_AppendsAndRejectsDuplicateOrFullStockWithoutMutation()
+    public void AddHostedEntityToRoster_AppendsAndRejectsDuplicateOrFullRosterWithoutMutation()
     {
         RuntimePartyRosterSnapshot snapshot = Snapshot(
             ownerLevel: 1,
-            activeHostedEntity: Actor("orpheus"),
-            hostedEntityRoster: [Actor("pixie"), Actor("angel")]);
-        RuntimeActorReferenceSnapshot candidate = Actor("jack_frost");
+            activeHostedEntity: Actor("annex_mentor"),
+            hostedEntityRoster: [Actor("glow_wisp"), Actor("winged_sentinel")]);
+        RuntimeActorReferenceSnapshot candidate = Actor("frostling");
 
         PartyRosterTransitionResult added = _service.AddHostedEntityToRoster(
             new AddHostedEntityToRosterRequest(snapshot, candidate));
 
         Assert.True(added.Applied);
         Assert.Equal(
-            ["pixie", "angel", "jack_frost"],
+            ["glow_wisp", "winged_sentinel", "frostling"],
             added.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
         PartyRosterTransitionResult duplicate = _service.AddHostedEntityToRoster(
@@ -378,17 +381,17 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void StockAdditions_RejectRuntimeIdsUsedByAnyOtherOwnershipRole()
+    public void RosterAdditions_RejectRuntimeIdsUsedByAnyOtherOwnershipRole()
     {
         RuntimeActorReferenceSnapshot collision = Actor("collision");
-        RuntimePartyRosterSnapshot[] demonCollisions =
+        RuntimePartyRosterSnapshot[] companionCollisions =
         [
             new RuntimePartyRosterSnapshot(collision, 40),
             Snapshot(reserveMembers: [collision]),
             Snapshot(activeHostedEntity: collision),
             Snapshot(hostedEntityRoster: [collision])
         ];
-        RuntimePartyRosterSnapshot[] personaCollisions =
+        RuntimePartyRosterSnapshot[] hostedEntityCollisions =
         [
             new RuntimePartyRosterSnapshot(collision, 40),
             Snapshot(activeParty: [Actor("hero"), collision]),
@@ -396,7 +399,7 @@ public sealed class PartyRosterTransitionTests
             Snapshot(companionRoster: [collision])
         ];
 
-        foreach (RuntimePartyRosterSnapshot snapshot in demonCollisions)
+        foreach (RuntimePartyRosterSnapshot snapshot in companionCollisions)
         {
             AssertIdentityCollision(
                 snapshot,
@@ -404,7 +407,7 @@ public sealed class PartyRosterTransitionTests
                 collision.InstanceId);
         }
 
-        foreach (RuntimePartyRosterSnapshot snapshot in personaCollisions)
+        foreach (RuntimePartyRosterSnapshot snapshot in hostedEntityCollisions)
         {
             AssertIdentityCollision(
                 snapshot,
@@ -414,29 +417,29 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void StockReplacements_RejectRuntimeIdsUsedByTheOppositeStockFamily()
+    public void RosterReplacements_RejectRuntimeIdsUsedByTheOppositeRosterFamily()
     {
-        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
-        RuntimeActorReferenceSnapshot oldPersona = Actor("old_persona");
+        RuntimeActorReferenceSnapshot oldCompanion = Actor("old_companion");
+        RuntimeActorReferenceSnapshot oldHostedEntity = Actor("old_hosted_entity");
         RuntimeActorReferenceSnapshot collision = Actor("collision");
-        RuntimePartyRosterSnapshot demonSnapshot = Snapshot(
+        RuntimePartyRosterSnapshot companionSnapshot = Snapshot(
             hostedEntityRoster: [collision],
-            companionRoster: [oldDemon]);
-        RuntimePartyRosterSnapshot personaSnapshot = Snapshot(
-            hostedEntityRoster: [oldPersona],
+            companionRoster: [oldCompanion]);
+        RuntimePartyRosterSnapshot hostedEntitySnapshot = Snapshot(
+            hostedEntityRoster: [oldHostedEntity],
             companionRoster: [collision]);
 
         PartyRosterTransitionResult companion = _service.ReplaceCompanion(new ReplaceCompanionRequest(
-            demonSnapshot,
-            oldDemon.InstanceId,
+            companionSnapshot,
+            oldCompanion.InstanceId,
             collision));
         PartyRosterTransitionResult hostedEntity = _service.ReplaceHostedEntity(new ReplaceHostedEntityRequest(
-            personaSnapshot,
-            oldPersona.InstanceId,
+            hostedEntitySnapshot,
+            oldHostedEntity.InstanceId,
             collision));
 
-        AssertIdentityCollision(demonSnapshot, companion, collision.InstanceId);
-        AssertIdentityCollision(personaSnapshot, hostedEntity, collision.InstanceId);
+        AssertIdentityCollision(companionSnapshot, companion, collision.InstanceId);
+        AssertIdentityCollision(hostedEntitySnapshot, hostedEntity, collision.InstanceId);
     }
 
     [Fact]
@@ -458,7 +461,7 @@ public sealed class PartyRosterTransitionTests
     [Fact]
     public void DuplicateOwnershipAndMalformedOverCapacityFailures_DoNotMutate()
     {
-        RuntimeActorReferenceSnapshot companion = Actor("pixie");
+        RuntimeActorReferenceSnapshot companion = Actor("glow_wisp");
         RuntimePartyRosterSnapshot duplicateSnapshot = Snapshot(activeParty: [Actor("hero")], companionRoster: [companion]);
 
         PartyRosterTransitionResult duplicate = _service.ReplaceCompanion(new ReplaceCompanionRequest(
@@ -469,15 +472,15 @@ public sealed class PartyRosterTransitionTests
         Assert.Equal(PartyRosterTransitionCode.DuplicateOwned, duplicate.Code);
         Assert.Equal(duplicateSnapshot, duplicate.After);
 
-        RuntimeActorReferenceSnapshot oldDemon = Actor("old_demon");
+        RuntimeActorReferenceSnapshot oldCompanion = Actor("old_companion");
         RuntimePartyRosterSnapshot fullSnapshot = Snapshot(
             ownerLevel: 1,
             activeParty: [Actor("hero")],
-            companionRoster: [oldDemon, Actor("a"), Actor("b"), Actor("c")]);
+            companionRoster: [oldCompanion, Actor("a"), Actor("b"), Actor("c")]);
 
         PartyRosterTransitionResult full = _service.ReplaceCompanion(new ReplaceCompanionRequest(
             fullSnapshot,
-            oldDemon.InstanceId,
+            oldCompanion.InstanceId,
             Actor("overflow")));
 
         Assert.Equal(PartyRosterTransitionCode.RosterFull, full.Code);
@@ -543,5 +546,5 @@ public sealed class PartyRosterTransitionTests
         Assert.Equal(instanceId, diagnostic.SubjectInstanceId);
     }
 
-    private static string DemonId(RuntimeActorReferenceSnapshot actor) => actor.InstanceId.ToString();
+    private static string ActorId(RuntimeActorReferenceSnapshot actor) => actor.InstanceId.ToString();
 }

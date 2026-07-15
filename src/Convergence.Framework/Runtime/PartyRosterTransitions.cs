@@ -534,15 +534,15 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
             return Rejected(before, PartyRosterTransitionCode.ActiveHostedEntityMissing, "No active HostedEntity is equipped.", request.HostedEntityInstanceId);
         }
 
-        int stockIndex = IndexOf(before.HostedEntityRoster, request.HostedEntityInstanceId);
-        if (stockIndex < 0)
+        int rosterIndex = IndexOf(before.HostedEntityRoster, request.HostedEntityInstanceId);
+        if (rosterIndex < 0)
         {
-            return Rejected(before, PartyRosterTransitionCode.RosterEntryNotFound, "HostedEntity is not in stock.", request.HostedEntityInstanceId);
+            return Rejected(before, PartyRosterTransitionCode.RosterEntryNotFound, "Hosted Entity is not in its roster.", request.HostedEntityInstanceId);
         }
 
         RuntimeActorReferenceSnapshot[] hostedEntityRoster = before.HostedEntityRoster.ToArray();
-        RuntimeActorReferenceSnapshot newActive = hostedEntityRoster[stockIndex];
-        hostedEntityRoster[stockIndex] = before.ActiveHostedEntity;
+        RuntimeActorReferenceSnapshot newActive = hostedEntityRoster[rosterIndex];
+        hostedEntityRoster[rosterIndex] = before.ActiveHostedEntity;
         RuntimePartyRosterSnapshot after = before.With(
             activeHostedEntity: newActive,
             replaceActiveHostedEntity: true,
@@ -555,8 +555,8 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
         bool activeMatch = before.ActiveHostedEntity?.InstanceId == request.HostedEntityInstanceId;
-        bool stockMatch = Contains(before.HostedEntityRoster, request.HostedEntityInstanceId);
-        if (!activeMatch && !stockMatch)
+        bool rosterMatch = Contains(before.HostedEntityRoster, request.HostedEntityInstanceId);
+        if (!activeMatch && !rosterMatch)
         {
             return Rejected(before, PartyRosterTransitionCode.NotOwned, "HostedEntity is not present.", request.HostedEntityInstanceId);
         }
@@ -573,8 +573,8 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
         bool activeMatch = before.ActiveHostedEntity?.InstanceId == request.OldHostedEntityInstanceId;
-        int stockIndex = IndexOf(before.HostedEntityRoster, request.OldHostedEntityInstanceId);
-        if (!activeMatch && stockIndex < 0)
+        int rosterIndex = IndexOf(before.HostedEntityRoster, request.OldHostedEntityInstanceId);
+        if (!activeMatch && rosterIndex < 0)
         {
             return Rejected(before, PartyRosterTransitionCode.NotOwned, "HostedEntity to replace is not present.", request.OldHostedEntityInstanceId);
         }
@@ -601,7 +601,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
                 request.NewHostedEntity.InstanceId);
         }
 
-        hostedEntityRoster[stockIndex] = request.NewHostedEntity;
+        hostedEntityRoster[rosterIndex] = request.NewHostedEntity;
         return Applied(
             before,
             before.With(hostedEntityRoster: hostedEntityRoster),

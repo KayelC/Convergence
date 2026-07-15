@@ -2,13 +2,13 @@
   "schemaVersion": 2,
   "negotiations": [
     {
-      "id": "childlike_sample",
-      "displayName": "Childlike Negotiation",
+      "id": "playful_sample",
+      "displayName": "Playful Negotiation",
       "description": "A compact negotiation sample based on a playful personality.",
-      "personalityId": "childlike",
+      "personalityId": "playful",
       "questions": [
         {
-          "text": "Hee-ho! You wanna be my friend?",
+          "text": "You seem interesting. Want to team up?",
           "answers": [
             {
               "text": "Of course.",
@@ -26,11 +26,11 @@
         }
       ],
       "familiarDialogueLines": [
-        "Hee-ho! I already know you!"
+        "We already know each other."
       ],
       "demands": [
         {
-          "demandId": "macca",
+          "demandId": "credits",
           "weight": 1,
           "parameters": {
             "amount": 100

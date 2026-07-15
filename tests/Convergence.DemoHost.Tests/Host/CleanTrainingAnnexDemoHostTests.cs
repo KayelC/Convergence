@@ -55,7 +55,7 @@ public sealed class CleanTrainingAnnexDemoHostTests
         Assert.Equal(AutomatedBattleOutcome.Victory, summary.BattleOutcome);
         Assert.Equal(ContentId.Parse("player_team"), summary.WinningTeamId);
         Assert.True(summary.RewardExperience > 0);
-        Assert.True(summary.RewardMacca > 0);
+        Assert.True(summary.RewardCredits > 0);
         Assert.True(summary.LifetimeExperienceAfter > 0);
         Assert.True(summary.LevelAfter >= 3);
         Assert.True(summary.SaveValid);
