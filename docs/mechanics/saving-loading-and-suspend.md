@@ -27,13 +27,13 @@ Catalog definitions are not copied into a save. Saves retain qualified content I
 
 The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers.
 
-An invalid snapshot cannot produce a valid restore token. The host should present diagnostics or reject the slot rather than partially loading it.
+An invalid snapshot cannot produce a valid restore token. `IRuntimeSessionRestoreService` first runs an explicit migration service, validates the complete aggregate, resolves a host-supplied stat profile for every actor, restores Hosted Entity dependencies before their Vessels, and returns either one complete `RuntimeRestoredSession` or typed diagnostics with no partial session. The host should present diagnostics or reject the slot rather than partially loading it.
 
 ## Manual Saves
 
 **Configured rule:** a save policy decides which contexts permit manual saving. The host asks the policy, captures the current snapshots, validates them, serializes them, and writes the selected slot.
 
-Loading reads the host format, reconstructs the Framework snapshot, validates it against the current catalog and policies, then rebuilds runtime state. Presentation objects such as Godot Nodes are reattached by `RuntimeInstanceId` after restore.
+Loading reads the host format, reconstructs the Framework snapshot, and passes it to the aggregate restore service with the current catalog, actor factory, restore-profile resolver, capacity-aware validator, and optional migration steps. Presentation objects such as Godot Nodes and host context are applied only after Framework returns a complete session, then reattached by `RuntimeInstanceId`.
 
 ## Suspend Saves
 
@@ -53,4 +53,4 @@ A common one-use flow is:
 
 Checkpoint breadcrumbs are ordered diagnostic entries. They can help identify where a session snapshot was created, but they are not a deterministic replay log.
 
-Cross-version save migration is deferred until a released save contract requires it. The current contract version is an active-development contract and should not be treated as a permanent public wire guarantee yet.
+`IRuntimeSaveMigrationService` and ordered `IRuntimeSaveMigrationStep` contracts provide the extension seam for future released save formats. Convergence ships no fictitious migration for unreleased formats: an older or newer version is rejected unless the host explicitly supplies a valid path to the current contract.

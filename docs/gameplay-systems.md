@@ -44,7 +44,7 @@ Fusion services resolve typed recipes and strategy policies, build deterministic
 
 ## Persistence
 
-Versioned snapshots cover actors, party and rosters, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Hosts own serialization, slots, suspend-save storage, and UI.
+Versioned snapshots cover actors, party and rosters, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Aggregate restoration resolves actor profiles, restores Hosted Entity dependencies before Vessels, and exposes no partial session on rejection. Hosts own serialization, slots, suspend-save storage, scene reconstruction, and UI.
 
 ## Demonstration Coverage
 

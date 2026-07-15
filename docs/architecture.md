@@ -6,6 +6,8 @@
 
 `Convergence.DemoHost` is an optional reference consumer. It demonstrates how a host supplies content, commands, events, randomness, inventory reservations, and save serialization. It is not required by Framework and is not a compatibility layer.
 
+Session restore is aggregate and framework-owned. Hosts decode their save envelope, then supply the snapshot, catalog, actor factory, actor-profile resolver, validator, and any real version-migration steps. Framework restores dependencies in order and returns no live session until every actor and aggregate invariant succeeds; scene/node reconstruction and host-context application happen afterward.
+
 ## Core Principles
 
 - Framework first: reusable rules are designed without console or engine assumptions.

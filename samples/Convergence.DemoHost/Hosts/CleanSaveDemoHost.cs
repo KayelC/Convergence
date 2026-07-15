@@ -4,6 +4,7 @@ using Convergence.Catalog;
 using Convergence.Validation;
 using Convergence.Hosting;
 using Convergence.Fusion;
+using Convergence.Encounters;
 using Convergence.Runtime;
 
 namespace Convergence.DemoHost;
@@ -114,14 +115,30 @@ internal sealed class CleanSaveDemoHost
             return 5;
         }
 
-        RuntimeSaveValidationResult after = validator.Validate(restored, catalog);
-        if (!after.IsValid)
+        var actorFactory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new DemoBattleActorInitializationPolicy(),
+            catalog);
+        RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
+                validator,
+                actorFactory,
+                ActorStatRestoreProfileResolver.Instance)
+            .Restore(restored, catalog);
+        if (!aggregate.IsSuccess)
         {
-            await PublishDiagnosticsAsync(after.Diagnostics, cancellationToken);
+            foreach (RuntimeSessionRestoreDiagnostic diagnostic in aggregate.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
+                    cancellationToken);
+            }
             return 4;
         }
 
-        RuntimeActorSnapshot[] restoredActors = restored.Actors.ToArray();
+        RuntimeRestoredSession restoredSession = aggregate.RequireSession();
+        restored = restoredSession.Snapshot;
+        CatalogBattleActor[] restoredActors = restoredSession.Actors.ToArray();
 
         await _eventSink.PublishAsync(
             $"001 [save] Created runtime save snapshot v{restored.ContractVersion} with {restoredActors.Length} actor(s).",
@@ -130,7 +147,7 @@ internal sealed class CleanSaveDemoHost
             $"002 [serialize] Host-owned JSON round-trip completed with {json.Length} character(s).",
             cancellationToken);
         await _eventSink.PublishAsync(
-            $"003 [validate] Restored snapshot validated with {after.Diagnostics.Count} diagnostic(s).",
+            $"003 [validate] Restored snapshot validated with {aggregate.Diagnostics.Count} diagnostic(s).",
             cancellationToken);
         string fieldSummary = restored.Field?.DungeonTraversal is RuntimeDungeonTraversalSnapshot dungeonTraversal
             ? $"dungeon node {dungeonTraversal.CurrentNodeId}"
@@ -320,6 +337,14 @@ internal sealed class CleanSaveDemoHost
             .SupportCondition<EffectElementConditionDefinition>()
             .SupportAilmentBehavior<NormalAilmentTurnBehaviorDefinition>()
             .Build();
+}
+
+internal sealed class ActorStatRestoreProfileResolver : IRuntimeActorRestoreProfileResolver
+{
+    public static ActorStatRestoreProfileResolver Instance { get; } = new();
+
+    public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request) =>
+        new(RuntimeStatSourceKind.Actor, MissingHostedEntityBehavior.UseActorBaseStats);
 }
 
 internal static class CleanSaveJsonCodec

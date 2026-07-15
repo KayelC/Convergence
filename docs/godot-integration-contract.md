@@ -39,7 +39,7 @@ Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes,
 
 ## Save Boundary
 
-The framework exposes serializer-neutral runtime snapshots and validates them against a `GameDataCatalog`. A Godot save may wrap those snapshots with scene paths, transforms, camera state, UI state, and asset references.
+The framework exposes serializer-neutral runtime snapshots and restores them against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. A Godot save may wrap those snapshots with scene paths, transforms, camera state, UI state, and asset references. Godot recreates Nodes and applies host context only after the aggregate restore result succeeds, using `RuntimeInstanceId` to reconnect scene objects.
 
 The framework does not prescribe JSON, binary data, Godot `Resource`, save slots, cloud storage, or migration UI. `Convergence.DemoHost` uses host-owned `System.Text.Json` only as a portability example.
 

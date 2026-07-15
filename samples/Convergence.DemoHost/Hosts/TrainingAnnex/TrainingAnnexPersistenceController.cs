@@ -227,7 +227,7 @@ internal sealed class TrainingAnnexPersistenceController
             compendium);
     }
 
-    private static TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
+    private TrainingAnnexSessionRestoreResult RestoreTrainingAnnexSession(
         RuntimeSaveGameSnapshot snapshot,
         TrainingAnnexActorRoster currentRoster,
         RuntimePartyRosterSnapshot currentPartyRoster,
@@ -241,21 +241,16 @@ internal sealed class TrainingAnnexPersistenceController
         Dictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors = snapshot.Actors
             .ToDictionary(actor => actor.Identity.InstanceId, actor => actor);
         ValidateTrainingAnnexParty(snapshot.PartyRoster, currentPartyRoster, actors, diagnostics);
+        foreach (TrainingAnnexRuntimeActor current in currentRoster.AllActors)
+        {
+            if (!TryGetCompatibleSnapshot(current, actors, out _, out string? diagnostic))
+            {
+                diagnostics.Add(diagnostic ?? $"Saved actor '{current.Actor.State.InstanceId}' is incompatible.");
+            }
+        }
         if (diagnostics.Count > 0)
         {
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
-        }
-
-        var supportMembers = new List<TrainingAnnexRuntimeActor>();
-        foreach (TrainingAnnexRuntimeActor support in currentRoster.SupportMembers)
-        {
-            if (!TryRestoreActor(support, actors, actorFactory, out TrainingAnnexRuntimeActor restoredSupport, out string? supportDiagnostic))
-            {
-                diagnostics.Add(supportDiagnostic ?? $"Saved support actor '{support.Actor.State.InstanceId}' could not be restored.");
-                continue;
-            }
-
-            supportMembers.Add(restoredSupport);
         }
 
         HashSet<RuntimeInstanceId> dynamicActorIds = currentRoster.DynamicMembers
@@ -264,59 +259,9 @@ internal sealed class TrainingAnnexPersistenceController
         HashSet<RuntimeInstanceId> ownedActorIds = OwnedActorReferences(currentPartyRoster)
             .Select(reference => reference.InstanceId)
             .ToHashSet();
-        var ownedActors = new List<TrainingAnnexRuntimeActor>();
-        foreach (TrainingAnnexRuntimeActor ownedActor in currentRoster.AllActors.Where(member =>
-                     ownedActorIds.Contains(member.Actor.State.InstanceId) &&
-                     !dynamicActorIds.Contains(member.Actor.State.InstanceId)))
-        {
-            if (!TryRestoreActor(
-                    ownedActor,
-                    actors,
-                    actorFactory,
-                    out TrainingAnnexRuntimeActor restoredOwnedActor,
-                    out string? ownedActorDiagnostic))
-            {
-                diagnostics.Add(
-                    ownedActorDiagnostic ??
-                    $"Saved owned actor '{ownedActor.Actor.State.InstanceId}' could not be restored.");
-                continue;
-            }
-
-            ownedActors.Add(restoredOwnedActor);
-        }
-
-        var enemies = new List<TrainingAnnexRuntimeActor>();
-        foreach (TrainingAnnexRuntimeActor enemy in currentRoster.Enemies)
-        {
-            if (!TryRestoreActor(enemy, actors, actorFactory, out TrainingAnnexRuntimeActor restoredEnemy, out string? enemyDiagnostic))
-            {
-                diagnostics.Add(enemyDiagnostic ?? $"Saved enemy actor '{enemy.Actor.State.InstanceId}' could not be restored.");
-                continue;
-            }
-
-            enemies.Add(restoredEnemy);
-        }
-
-        var dynamicMembers = new List<TrainingAnnexRuntimeActor>();
         var knownActorIds = currentRoster.AllActors
             .Select(actor => actor.Actor.State.InstanceId)
             .ToHashSet();
-        foreach (TrainingAnnexRuntimeActor dynamic in currentRoster.DynamicMembers)
-        {
-            if (!actors.ContainsKey(dynamic.Actor.State.InstanceId))
-            {
-                continue;
-            }
-
-            if (!TryRestoreActor(dynamic, actors, actorFactory, out TrainingAnnexRuntimeActor restoredDynamic, out string? dynamicDiagnostic))
-            {
-                diagnostics.Add(dynamicDiagnostic ?? $"Saved dynamic actor '{dynamic.Actor.State.InstanceId}' could not be restored.");
-                continue;
-            }
-
-            dynamicMembers.Add(restoredDynamic);
-        }
-
         foreach (RuntimeActorSnapshot savedActor in actors.Values.OrderBy(actor => actor.Identity.InstanceId.ToString(), StringComparer.Ordinal))
         {
             if (knownActorIds.Contains(savedActor.Identity.InstanceId))
@@ -331,75 +276,63 @@ internal sealed class TrainingAnnexPersistenceController
             if (!fusionActor && !recalledActor)
             {
                 diagnostics.Add($"Saved session contains unexpected actor '{savedActor.Identity.InstanceId}'.");
-                continue;
-            }
-
-            CatalogBattleActorCreationResult restored = actorFactory.Restore(
-                ActorStatRestoreRequest(savedActor));
-            if (!restored.IsSuccess)
-            {
-                string restoreDiagnostics = string.Join("; ", restored.Diagnostics.Select(item => item.Message));
-                diagnostics.Add($"Saved dynamic actor '{savedActor.Identity.InstanceId}' could not be restored: {restoreDiagnostics}");
-                continue;
-            }
-
-            dynamicMembers.Add(new TrainingAnnexRuntimeActor(
-                fusionActor ? "Fused Result" : "Compendium Recall",
-                restored.RequireActor()));
-        }
-
-        TrainingAnnexRuntimeActor player = currentRoster.Player;
-        if (!TryGetCompatibleSnapshot(
-                currentRoster.Player,
-                actors,
-                out RuntimeActorSnapshot playerSnapshot,
-                out string? playerDiagnostic))
-        {
-            diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
-        }
-        else
-        {
-            RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
-                playerSnapshot.Equipment,
-                catalog);
-            foreach (RuntimeEquipmentProfileDiagnostic diagnostic in equipmentProfile.Diagnostics)
-            {
-                diagnostics.Add($"Player equipment [{diagnostic.Code}]: {diagnostic.Message}");
-            }
-
-            RuntimeActorReferenceSnapshot? activeReference = snapshot.PartyRoster.ActiveHostedEntity;
-            RuntimeActorState? activeHostedEntity = activeReference is null
-                ? null
-                : supportMembers
-                    .Concat(ownedActors)
-                    .Concat(enemies)
-                    .Concat(dynamicMembers)
-                    .Select(member => member.Actor.State)
-                    .FirstOrDefault(state =>
-                        state.InstanceId == activeReference.InstanceId &&
-                        state.EntityId == activeReference.EntityDefinitionId);
-
-            if (equipmentProfile.Diagnostics.Count == 0 &&
-                !TryRestoreValidatedActor(
-                    currentRoster.Player,
-                    playerSnapshot,
-                    actorFactory,
-                    new CatalogBattleActorRestoreRequest(
-                        playerSnapshot,
-                        RuntimeStatSourceKind.ActiveHostedEntity,
-                        MissingHostedEntityBehavior.RejectStatResolution,
-                        activeHostedEntity,
-                        equipmentProfile.StatModifiers),
-                    out player,
-                    out playerDiagnostic))
-            {
-                diagnostics.Add(playerDiagnostic ?? "Saved player actor could not be restored.");
             }
         }
-
         if (diagnostics.Count > 0)
         {
             return new TrainingAnnexSessionRestoreResult(null, diagnostics);
+        }
+
+        var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
+            currentRoster.Player.Actor.State.InstanceId,
+            equipmentProfileResolver);
+        RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
+                new RuntimeSaveValidator(_rosterCapacityPolicy),
+                actorFactory,
+                profileResolver)
+            .Restore(snapshot, catalog);
+        if (!aggregate.IsSuccess)
+        {
+            diagnostics.AddRange(aggregate.Diagnostics.Select(diagnostic => diagnostic.Message));
+            return new TrainingAnnexSessionRestoreResult(null, diagnostics);
+        }
+
+        IReadOnlyDictionary<RuntimeInstanceId, CatalogBattleActor> restoredActors =
+            aggregate.RequireSession().ActorsByInstanceId;
+        TrainingAnnexRuntimeActor Wrap(TrainingAnnexRuntimeActor current) =>
+            new(current.Role, restoredActors[current.Actor.State.InstanceId]);
+
+        TrainingAnnexRuntimeActor player = Wrap(currentRoster.Player);
+        TrainingAnnexRuntimeActor[] supportMembers = currentRoster.SupportMembers
+            .Select(Wrap)
+            .ToArray();
+        TrainingAnnexRuntimeActor[] ownedActors = currentRoster.AllActors
+            .Where(member =>
+                ownedActorIds.Contains(member.Actor.State.InstanceId) &&
+                !dynamicActorIds.Contains(member.Actor.State.InstanceId))
+            .Select(Wrap)
+            .ToArray();
+        TrainingAnnexRuntimeActor[] enemies = currentRoster.Enemies
+            .Select(Wrap)
+            .ToArray();
+        var dynamicMembers = currentRoster.DynamicMembers
+            .Where(member => actors.ContainsKey(member.Actor.State.InstanceId))
+            .Select(Wrap)
+            .ToList();
+        foreach (RuntimeActorSnapshot savedActor in actors.Values.OrderBy(
+                     actor => actor.Identity.InstanceId.ToString(),
+                     StringComparer.Ordinal))
+        {
+            if (knownActorIds.Contains(savedActor.Identity.InstanceId))
+            {
+                continue;
+            }
+
+            bool fusionActor = savedActor.Identity.InstanceId.ToString()
+                .StartsWith("fusion_", StringComparison.Ordinal);
+            dynamicMembers.Add(new TrainingAnnexRuntimeActor(
+                fusionActor ? "Fused Result" : "Compendium Recall",
+                restoredActors[savedActor.Identity.InstanceId]));
         }
 
         TrainingAnnexActorRoster roster = new(player, supportMembers, ownedActors, enemies, dynamicMembers);
@@ -581,28 +514,6 @@ internal sealed class TrainingAnnexPersistenceController
         }
     }
 
-    private static bool TryRestoreActor(
-        TrainingAnnexRuntimeActor current,
-        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
-        ICatalogBattleActorFactory actorFactory,
-        out TrainingAnnexRuntimeActor restored,
-        out string? diagnostic)
-    {
-        if (!TryGetCompatibleSnapshot(current, actors, out RuntimeActorSnapshot snapshot, out diagnostic))
-        {
-            restored = current;
-            return false;
-        }
-
-        return TryRestoreValidatedActor(
-            current,
-            snapshot,
-            actorFactory,
-            ActorStatRestoreRequest(snapshot),
-            out restored,
-            out diagnostic);
-    }
-
     private static bool TryGetCompatibleSnapshot(
         TrainingAnnexRuntimeActor current,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
@@ -642,34 +553,6 @@ internal sealed class TrainingAnnexPersistenceController
         diagnostic = null;
         return true;
     }
-
-    private static bool TryRestoreValidatedActor(
-        TrainingAnnexRuntimeActor current,
-        RuntimeActorSnapshot snapshot,
-        ICatalogBattleActorFactory actorFactory,
-        CatalogBattleActorRestoreRequest request,
-        out TrainingAnnexRuntimeActor restored,
-        out string? diagnostic)
-    {
-        CatalogBattleActorCreationResult result = actorFactory.Restore(request);
-        if (!result.IsSuccess)
-        {
-            restored = current;
-            diagnostic = string.Join("; ", result.Diagnostics.Select(item => item.Message));
-            return false;
-        }
-
-        restored = new TrainingAnnexRuntimeActor(current.Role, result.RequireActor());
-        diagnostic = null;
-        return true;
-    }
-
-    private static CatalogBattleActorRestoreRequest ActorStatRestoreRequest(
-        RuntimeActorSnapshot snapshot) =>
-        new(
-            snapshot,
-            RuntimeStatSourceKind.Actor,
-            MissingHostedEntityBehavior.UseActorBaseStats);
 
     private async ValueTask PublishSavePolicyDiagnosticsAsync(
         string actionLabel,
@@ -724,6 +607,37 @@ internal sealed class TrainingAnnexPersistenceController
 internal sealed record TrainingAnnexSaveActionResult(
     bool Applied,
     int DiagnosticCount);
+
+internal sealed class TrainingAnnexActorRestoreProfileResolver(
+    RuntimeInstanceId playerInstanceId,
+    IRuntimeEquipmentProfileResolver equipmentProfileResolver) : IRuntimeActorRestoreProfileResolver
+{
+    public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request)
+    {
+        if (request.Actor.Identity.InstanceId != playerInstanceId)
+        {
+            return new RuntimeActorRestoreProfile(
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats);
+        }
+
+        RuntimeEquipmentProfile equipment = equipmentProfileResolver.Resolve(
+            request.Actor.Equipment,
+            request.Catalog);
+        if (equipment.Diagnostics.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(
+                "; ",
+                equipment.Diagnostics.Select(diagnostic => $"[{diagnostic.Code}] {diagnostic.Message}")));
+        }
+
+        return new RuntimeActorRestoreProfile(
+            RuntimeStatSourceKind.ActiveHostedEntity,
+            MissingHostedEntityBehavior.RejectStatResolution,
+            request.Session.PartyRoster.ActiveHostedEntity?.InstanceId,
+            equipment.StatModifiers);
+    }
+}
 
 internal sealed record TrainingAnnexLoadActionResult(
     TrainingAnnexRestoredSession? Restored,

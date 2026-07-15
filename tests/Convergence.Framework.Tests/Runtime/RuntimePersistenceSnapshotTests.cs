@@ -66,6 +66,176 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSessionRestoreService_RestoresHostedEntityBeforeVesselAndReturnsSnapshotOrder()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot ember = baseline.Actors.Single(actor =>
+            actor.Identity.InstanceId == RuntimeInstanceId.Parse("ember"));
+        RuntimeActorSnapshot vessel = CopyActor(
+            baseline.Actors.Single(actor => actor.Identity.InstanceId == RuntimeInstanceId.Parse("frost")),
+            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(ember)));
+        RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [vessel, ember]);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var profiles = new DelegateActorRestoreProfileResolver(request =>
+            request.Actor.Identity.InstanceId == vessel.Identity.InstanceId
+                ? new RuntimeActorRestoreProfile(
+                    RuntimeStatSourceKind.ActiveHostedEntity,
+                    MissingHostedEntityBehavior.RejectStatResolution,
+                    ember.Identity.InstanceId)
+                : ActorProfile());
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            profiles);
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        Assert.Equal([ember.Identity.InstanceId, vessel.Identity.InstanceId], factory.RestoreOrder);
+        RuntimeRestoredSession session = result.RequireSession();
+        Assert.Equal(
+            [vessel.Identity.InstanceId, ember.Identity.InstanceId],
+            session.Actors.Select(actor => actor.State.InstanceId));
+        Assert.Same(session.Actors[0], session.ActorsByInstanceId[vessel.Identity.InstanceId]);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<CatalogBattleActor>)session.Actors).Add(session.Actors[0]));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<RuntimeInstanceId, CatalogBattleActor>)session.ActorsByInstanceId)
+            .Add(RuntimeInstanceId.Parse("late_actor"), session.Actors[0]));
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_RejectsDependencyCyclesWithoutCallingActorFactory()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        RuntimeActorSnapshot cyclicFrost = CopyActor(
+            frost,
+            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(ember)));
+        RuntimeActorSnapshot cyclicEmber = CopyActor(
+            ember,
+            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(frost)));
+        RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [cyclicFrost, cyclicEmber]);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(request => new RuntimeActorRestoreProfile(
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                request.Actor.Identity.InstanceId == frost.Identity.InstanceId
+                    ? ember.Identity.InstanceId
+                    : frost.Identity.InstanceId)));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyCycle);
+        Assert.Empty(factory.RestoreOrder);
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_RejectsMissingHostedEntityDependencyWithoutPartialRestore()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+        RuntimeInstanceId vesselId = snapshot.Actors[0].Identity.InstanceId;
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(request =>
+                request.Actor.Identity.InstanceId == vesselId
+                    ? new RuntimeActorRestoreProfile(
+                        RuntimeStatSourceKind.ActiveHostedEntity,
+                        MissingHostedEntityBehavior.RejectStatResolution,
+                        RuntimeInstanceId.Parse("missing_hosted_entity"))
+                    : ActorProfile()));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        RuntimeSessionRestoreDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing, diagnostic.Code);
+        Assert.Equal(vesselId, diagnostic.ActorId);
+        Assert.Null(result.Session);
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_ExposesNoPartialSessionWhenAnActorRestoreFails()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+        RuntimeInstanceId failingId = snapshot.Actors[1].Identity.InstanceId;
+        var factory = new RecordingActorFactory(
+            new CatalogBattleActorFactory(catalog, catalog, new RestoreOnlyInitializationPolicy(), catalog),
+            failingId);
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Equal(snapshot.Actors.Select(actor => actor.Identity.InstanceId), factory.RestoreOrder);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.ActorRestoreFailed &&
+            diagnostic.ActorId == failingId);
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_UsesExplicitMigrationSeamAndRejectsMissingPath()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot oldSnapshot = CreateSaveSnapshot(contractVersion: 6);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var profiles = new DelegateActorRestoreProfileResolver(_ => ActorProfile());
+
+        RuntimeSessionRestoreResult missingPath = new RuntimeSessionRestoreService(
+                new RuntimeSaveValidator(),
+                factory,
+                profiles)
+            .Restore(oldSnapshot, catalog);
+        Assert.False(missingPath.IsSuccess);
+        Assert.Equal(RuntimeSessionRestoreDiagnosticCode.MigrationRejected, Assert.Single(missingPath.Diagnostics).Code);
+        Assert.Empty(factory.RestoreOrder);
+
+        RuntimeSaveGameSnapshot migratedSnapshot = CreateSaveSnapshot();
+        RuntimeSessionRestoreResult migrated = new RuntimeSessionRestoreService(
+                new RuntimeSaveValidator(),
+                factory,
+                profiles,
+                new RuntimeSaveMigrationService([new FixedMigrationStep(6, 7, migratedSnapshot)]))
+            .Restore(oldSnapshot, catalog);
+
+        Assert.True(migrated.IsSuccess, string.Join(Environment.NewLine, migrated.Diagnostics.Select(item => item.Message)));
+        Assert.Same(migratedSnapshot, migrated.RequireSession().Snapshot);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_AndActorRestoreShareStructuralIntegrityRules()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -1750,6 +1920,9 @@ public sealed class RuntimePersistenceSnapshotTests
 
     private static ContentId Id(string value) => ContentId.Parse(value);
 
+    private static RuntimeActorRestoreProfile ActorProfile() =>
+        new(RuntimeStatSourceKind.Actor, MissingHostedEntityBehavior.UseActorBaseStats);
+
     private static CatalogBattleActorRestoreRequest ActorRestore(RuntimeActorSnapshot snapshot) =>
         new(
             snapshot,
@@ -1807,6 +1980,49 @@ public sealed class RuntimePersistenceSnapshotTests
     private sealed class FixedRosterCapacityPolicy(int capacity) : IRosterCapacityPolicy
     {
         public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => capacity;
+    }
+
+    private sealed class DelegateActorRestoreProfileResolver(
+        Func<RuntimeActorRestoreProfileRequest, RuntimeActorRestoreProfile> resolve)
+        : IRuntimeActorRestoreProfileResolver
+    {
+        public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request) => resolve(request);
+    }
+
+    private sealed class RecordingActorFactory(
+        ICatalogBattleActorFactory inner,
+        RuntimeInstanceId? throwingActorId = null) : ICatalogBattleActorFactory
+    {
+        private readonly List<RuntimeInstanceId> _restoreOrder = [];
+
+        public IReadOnlyList<RuntimeInstanceId> RestoreOrder => _restoreOrder.ToArray();
+
+        public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request) =>
+            inner.Create(request);
+
+        public CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request)
+        {
+            RuntimeInstanceId actorId = request.Snapshot.Identity.InstanceId;
+            _restoreOrder.Add(actorId);
+            if (throwingActorId is RuntimeInstanceId rejected && actorId == rejected)
+            {
+                throw new InvalidOperationException("Deliberate actor restore failure.");
+            }
+
+            return inner.Restore(request);
+        }
+    }
+
+    private sealed class FixedMigrationStep(
+        int sourceVersion,
+        int targetVersion,
+        RuntimeSaveGameSnapshot migratedSnapshot) : IRuntimeSaveMigrationStep
+    {
+        public int SourceContractVersion => sourceVersion;
+        public int TargetContractVersion => targetVersion;
+
+        public RuntimeSaveGameSnapshot Migrate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog) =>
+            migratedSnapshot;
     }
 
     private sealed class RestoreOnlyInitializationPolicy : IBattleActorInitializationPolicy

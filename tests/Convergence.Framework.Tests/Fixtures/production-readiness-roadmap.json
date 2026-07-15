@@ -142,11 +142,11 @@
       "id": "PR-M6",
       "title": "Aggregate runtime session restoration",
       "severity": "medium",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 5,
       "plannedCommit": "runtime: add aggregate session restoration",
       "evidence": ["RuntimePersistenceSnapshotTests"],
-      "remainingWork": ["aggregate restore service", "save migration seam"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {
