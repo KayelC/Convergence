@@ -170,6 +170,43 @@ Correction verification:
 - active framework forbidden-reference search: clean;
 - active content: unchanged.
 
+### M4 corrected on 2026-07-15
+
+Status: Corrected after reviewed commit `c6b24d7`
+
+Negotiation now treats host/menu cancellation as control flow rather than a
+gameplay loss:
+
+- cancelling an answer or either demand kind returns
+  `NegotiationOutcomeKind.Cancelled` with `NegotiationOutcomeReason.Cancelled`;
+- cancellation publishes an informational `Cancelled` event instead of a
+  failure event;
+- explicit currency and item refusal remain gameplay failures with their
+  existing `CurrencyRefused` and `ItemRefused` reasons;
+- cancellation after an earlier accepted demand clears all staged currency and
+  item concessions from the returned result;
+- a pre-cancelled token throws before policy evaluation;
+- token cancellation is rechecked before and after random, policy, command, and
+  event-sink boundaries, so token cancellation cannot be misreported as an
+  ordinary menu cancellation.
+
+Thirteen permanent regression cases cover answer cancellation, both demand
+kinds, a later cancellation after a staged concession, explicit refusal parity,
+pre-session token cancellation, token cancellation during answer and demand
+selection, event-publication cancellation, and the scripted Training Annex menu
+adapter with unchanged wallet and roster state.
+
+Correction verification:
+
+- focused negotiation runtime tests: 21 passed;
+- focused Training Annex negotiation tests: 7 passed;
+- full solution: 758 passed, 0 failed, 0 skipped;
+- nonincremental solution build: 0 warnings and 0 errors;
+- battle, field, save, and Training Annex demos: successful;
+- `git diff --check`: clean;
+- active framework forbidden-reference search: clean;
+- active content: unchanged.
+
 ## Findings
 
 ### H1. Rejected resource recalculation can partially mutate the live actor
@@ -318,6 +355,9 @@ Required correction:
 Severity: Medium
 
 Affected boundary: host cancellation and negotiation outcomes
+
+Correction status: Corrected on 2026-07-15; original finding retained below as
+review evidence.
 
 The negotiation model defines a `Cancelled` outcome, but an ordinary answer-menu
 cancellation returns `Failure` with a cancelled reason. Demand cancellation is
@@ -523,15 +563,16 @@ This is an ordered correction set, not a new feature roadmap:
 1. Resource boundary: H1 and M2 corrected.
 2. Prepared assessment freshness: M1 corrected.
 3. Enum and persisted-domain validation: M3 corrected.
-4. Negotiation cancellation semantics: M4.
+4. Negotiation cancellation semantics: M4 corrected.
 5. Encounter injected-port containment: M5.
 6. Fusion rank arithmetic: M6.
 7. DemoHost root confinement, formatting, and CI: L1 and L2.
 
-The H1 atomicity, M1 stale-assessment, M2 resource-overflow, and M3 enum-domain
-defects are corrected. M4 and M5 should be resolved before a public Godot
-integration is described as production-ready. M6 should be resolved before
-arbitrary developer-authored fusion ranks are treated as supported.
+The H1 atomicity, M1 stale-assessment, M2 resource-overflow, M3 enum-domain, and
+M4 negotiation-cancellation defects are corrected. M5 should be resolved before
+a public Godot integration is described as production-ready. M6 should be
+resolved before arbitrary developer-authored fusion ranks are treated as
+supported.
 
 ## Readiness Decision
 

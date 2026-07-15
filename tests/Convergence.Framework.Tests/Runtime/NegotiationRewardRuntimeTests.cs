@@ -194,6 +194,214 @@ public sealed class NegotiationRewardRuntimeTests
     }
 
     [Fact]
+    public async Task NegotiationSession_AnswerMenuCancellationReturnsCancelledOutcome()
+    {
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0]),
+            new TestNegotiationPolicy());
+        var commands = new CancellationNegotiationCommands(cancelAnswer: true);
+        var events = new RecordingEventSink<NegotiationEvent>();
+
+        NegotiationSessionResult result = await service.RunAsync(
+            PositiveNegotiationRequest(CreateDemand(NegotiationDemandKind.Currency)),
+            commands,
+            events);
+
+        Assert.Equal(NegotiationOutcomeKind.Cancelled, result.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.Cancelled, result.Reason);
+        Assert.Equal(0, result.CurrencySpent);
+        Assert.Null(result.ItemSpentId);
+        Assert.Equal(1, commands.AnswerCalls);
+        Assert.Equal(0, commands.DemandCalls);
+        NegotiationEvent cancellation = Assert.Single(
+            result.Events,
+            negotiationEvent => negotiationEvent.Code == NegotiationEventCode.Cancelled);
+        Assert.Equal(NegotiationEventKind.Information, cancellation.Kind);
+        Assert.Equal(result.Events, events.Events);
+    }
+
+    [Theory]
+    [InlineData(NegotiationDemandKind.Currency)]
+    [InlineData(NegotiationDemandKind.Item)]
+    public async Task NegotiationSession_DemandMenuCancellationReturnsCancelledWithoutStagedMutation(
+        NegotiationDemandKind demandKind)
+    {
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0, 0]),
+            new TestNegotiationPolicy());
+        var commands = new CancellationNegotiationCommands(cancelDemand: true);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            PositiveNegotiationRequest(CreateDemand(demandKind)),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Cancelled, result.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.Cancelled, result.Reason);
+        Assert.Equal(0, result.CurrencySpent);
+        Assert.Null(result.ItemSpentId);
+        Assert.Equal(2, commands.AnswerCalls);
+        Assert.Equal(1, commands.DemandCalls);
+        NegotiationEvent cancellation = Assert.Single(
+            result.Events,
+            negotiationEvent => negotiationEvent.Code == NegotiationEventCode.Cancelled);
+        Assert.Equal(NegotiationEventKind.Information, cancellation.Kind);
+    }
+
+    [Fact]
+    public async Task NegotiationSession_LaterDemandCancellationClearsEarlierStagedConcessions()
+    {
+        var policy = new TestNegotiationPolicy(
+            fallbackDemands:
+            [
+                CreateDemand(NegotiationDemandKind.Currency),
+                CreateDemand(NegotiationDemandKind.Item)
+            ]);
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0]),
+            policy);
+        var commands = new CancellationNegotiationCommands(
+            cancelDemand: true,
+            cancelDemandOnCall: 2);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            PositiveNegotiationRequestWithoutAuthoredDemands(),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Cancelled, result.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.Cancelled, result.Reason);
+        Assert.Equal(0, result.CurrencySpent);
+        Assert.Null(result.ItemSpentId);
+        Assert.Equal(2, commands.DemandCalls);
+    }
+
+    [Theory]
+    [InlineData(NegotiationDemandKind.Currency, NegotiationOutcomeReason.CurrencyRefused)]
+    [InlineData(NegotiationDemandKind.Item, NegotiationOutcomeReason.ItemRefused)]
+    public async Task NegotiationSession_ExplicitDemandRefusalRemainsGameplayFailure(
+        NegotiationDemandKind demandKind,
+        NegotiationOutcomeReason expectedReason)
+    {
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0, 0]),
+            new TestNegotiationPolicy());
+        var commands = new QueueNegotiationCommands(
+            answers: [0, 0],
+            demands: [NegotiationDemandDecision.Refuse]);
+
+        NegotiationSessionResult result = await service.RunAsync(
+            PositiveNegotiationRequest(CreateDemand(demandKind)),
+            commands);
+
+        Assert.Equal(NegotiationOutcomeKind.Failure, result.Outcome);
+        Assert.Equal(expectedReason, result.Reason);
+        Assert.DoesNotContain(
+            result.Events,
+            negotiationEvent => negotiationEvent.Code == NegotiationEventCode.Cancelled);
+    }
+
+    [Fact]
+    public async Task NegotiationSession_PreCancelledTokenStopsBeforePolicyEvaluation()
+    {
+        var policy = new TestNegotiationPolicy();
+        var service = new NegotiationSessionService(new SequenceRandomSource(), policy);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await service.RunAsync(
+                PositiveNegotiationRequest(CreateDemand(NegotiationDemandKind.Currency)),
+                new CancellationNegotiationCommands(),
+                cancellationToken: cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(0, policy.GateCalls);
+        Assert.Equal(0, policy.CanBeginCalls);
+    }
+
+    [Fact]
+    public async Task NegotiationSession_TokenCancellationDuringAnswerSelectionThrows()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0]),
+            new TestNegotiationPolicy());
+        var commands = new CancellationNegotiationCommands(
+            cancelAnswer: true,
+            cancellationSource: cancellation);
+        var events = new RecordingEventSink<NegotiationEvent>();
+
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await service.RunAsync(
+                PositiveNegotiationRequest(CreateDemand(NegotiationDemandKind.Currency)),
+                commands,
+                events,
+                cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(1, commands.AnswerCalls);
+        Assert.Empty(events.Events);
+    }
+
+    [Theory]
+    [InlineData(NegotiationDemandKind.Currency)]
+    [InlineData(NegotiationDemandKind.Item)]
+    public async Task NegotiationSession_TokenCancellationDuringDemandSelectionThrows(
+        NegotiationDemandKind demandKind)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var service = new NegotiationSessionService(
+            new SequenceRandomSource(ints: [0, 0, 0]),
+            new TestNegotiationPolicy());
+        var commands = new CancellationNegotiationCommands(
+            cancelDemand: true,
+            cancellationSource: cancellation);
+        var events = new RecordingEventSink<NegotiationEvent>();
+
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await service.RunAsync(
+                PositiveNegotiationRequest(CreateDemand(demandKind)),
+                commands,
+                events,
+                cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(2, commands.AnswerCalls);
+        Assert.Equal(1, commands.DemandCalls);
+        Assert.DoesNotContain(
+            events.Events,
+            negotiationEvent => negotiationEvent.Code == NegotiationEventCode.Cancelled);
+    }
+
+    [Fact]
+    public async Task NegotiationSession_TokenCancellationDuringEventPublicationStopsBeforeNextPolicyCall()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var policy = new TestNegotiationPolicy();
+        var service = new NegotiationSessionService(new SequenceRandomSource(), policy);
+        var events = new CancellingEventSink<NegotiationEvent>(cancellation);
+
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await service.RunAsync(
+                new NegotiationSessionRequest(
+                    "Familiar Target",
+                    actorLevel: 1,
+                    targetLevel: 1,
+                    actorLuck: 0,
+                    activeOpponentCount: 1,
+                    contextIds: [],
+                    isTargetFamiliar: true,
+                    hasRecruitmentCapacity: true,
+                    currentCurrency: 0),
+                new CancellationNegotiationCommands(),
+                events,
+                cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Single(events.Events);
+        Assert.Equal(0, policy.FamiliarGiftCalls);
+    }
+
+    [Fact]
     public void RecruitmentTransaction_ValidatesSessionOwnershipStockAndTarget()
     {
         var service = new RecruitmentTransactionService();
@@ -387,6 +595,57 @@ public sealed class NegotiationRewardRuntimeTests
     private static NegotiationQuestionPrompt Question(string text, int score) =>
         new(text, [new NegotiationAnswerOption("Yes", score)]);
 
+    private static NegotiationSessionRequest PositiveNegotiationRequest(
+        NegotiationRuntimeDemand demand) =>
+        new(
+            "Glow Wisp",
+            actorLevel: 50,
+            targetLevel: 9,
+            actorLuck: 0,
+            activeOpponentCount: 1,
+            contextIds: [],
+            isTargetFamiliar: false,
+            hasRecruitmentCapacity: true,
+            currentCurrency: 100,
+            questions:
+            [
+                Question("Do you like me?", 2),
+                Question("Do you trust me?", 2)
+            ],
+            demands: [demand]);
+
+    private static NegotiationSessionRequest PositiveNegotiationRequestWithoutAuthoredDemands() =>
+        new(
+            "Glow Wisp",
+            actorLevel: 50,
+            targetLevel: 9,
+            actorLuck: 0,
+            activeOpponentCount: 1,
+            contextIds: [],
+            isTargetFamiliar: false,
+            hasRecruitmentCapacity: true,
+            currentCurrency: 100,
+            questions:
+            [
+                Question("Do you like me?", 2),
+                Question("Do you trust me?", 2)
+            ]);
+
+    private static NegotiationRuntimeDemand CreateDemand(NegotiationDemandKind kind) => kind switch
+    {
+        NegotiationDemandKind.Currency => new NegotiationRuntimeDemand(
+            ContentId.Parse("sample_currency"),
+            kind,
+            weight: 1,
+            currencyAmount: 25),
+        NegotiationDemandKind.Item => new NegotiationRuntimeDemand(
+            ContentId.Parse("sample_item"),
+            kind,
+            weight: 1,
+            item: new NegotiationAvailableItem("sample_item", "Sample Item")),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported test demand kind.")
+    };
+
     private sealed class QueueNegotiationCommands : INegotiationCommandSource
     {
         private readonly Queue<int> _answers;
@@ -421,6 +680,47 @@ public sealed class NegotiationRewardRuntimeTests
         }
     }
 
+    private sealed class CancellationNegotiationCommands(
+        bool cancelAnswer = false,
+        bool cancelDemand = false,
+        int cancelDemandOnCall = 1,
+        CancellationTokenSource? cancellationSource = null) : INegotiationCommandSource
+    {
+        public int AnswerCalls { get; private set; }
+        public int DemandCalls { get; private set; }
+
+        public ValueTask<NegotiationAnswerSelection> ReadAnswerAsync(
+            NegotiationQuestionPrompt prompt,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AnswerCalls++;
+            if (!cancelAnswer)
+            {
+                return ValueTask.FromResult(NegotiationAnswerSelection.Selected(0));
+            }
+
+            cancellationSource?.Cancel();
+            return ValueTask.FromResult(NegotiationAnswerSelection.Cancel());
+        }
+
+        public ValueTask<NegotiationDemandSelection> ReadDemandAsync(
+            NegotiationDemandPrompt prompt,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DemandCalls++;
+            if (!cancelDemand || DemandCalls != cancelDemandOnCall)
+            {
+                return ValueTask.FromResult(
+                    NegotiationDemandSelection.Selected(NegotiationDemandDecision.Accept));
+            }
+
+            cancellationSource?.Cancel();
+            return ValueTask.FromResult(NegotiationDemandSelection.Cancel());
+        }
+    }
+
     private sealed class RecordingEventSink<TEvent> : IHostEventSink<TEvent>
     {
         private readonly List<TEvent> _events = [];
@@ -431,6 +731,22 @@ public sealed class NegotiationRewardRuntimeTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             _events.Add(hostEvent);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CancellingEventSink<TEvent>(CancellationTokenSource cancellationSource)
+        : IHostEventSink<TEvent>
+    {
+        private readonly List<TEvent> _events = [];
+
+        public IReadOnlyList<TEvent> Events => _events;
+
+        public ValueTask PublishAsync(TEvent hostEvent, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _events.Add(hostEvent);
+            cancellationSource.Cancel();
             return ValueTask.CompletedTask;
         }
     }
@@ -451,15 +767,30 @@ public sealed class NegotiationRewardRuntimeTests
         public int QuestionLimit => 3;
         public int PositiveMoodThreshold => 4;
         public int NeutralMoodThreshold => 1;
+        public int GateCalls { get; private set; }
+        public int CanBeginCalls { get; private set; }
+        public int FamiliarGiftCalls { get; private set; }
         public int FallbackDemandCalls { get; private set; }
 
-        public NegotiationGateDecision EvaluateGate(NegotiationSessionRequest request) => new(true);
+        public NegotiationGateDecision EvaluateGate(NegotiationSessionRequest request)
+        {
+            GateCalls++;
+            return new NegotiationGateDecision(true);
+        }
 
-        public bool CanBegin(NegotiationSessionRequest request, IRandomSource random) => true;
+        public bool CanBegin(NegotiationSessionRequest request, IRandomSource random)
+        {
+            CanBeginCalls++;
+            return true;
+        }
 
         public NegotiationFamiliarGift SelectFamiliarGift(
             NegotiationSessionRequest request,
-            IRandomSource random) => _familiarGift;
+            IRandomSource random)
+        {
+            FamiliarGiftCalls++;
+            return _familiarGift;
+        }
 
         public IReadOnlyList<NegotiationRuntimeDemand> CreateFallbackDemands(
             NegotiationSessionRequest request,

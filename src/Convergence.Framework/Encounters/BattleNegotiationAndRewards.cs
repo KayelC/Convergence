@@ -363,18 +363,25 @@ public sealed class NegotiationSessionService : INegotiationSessionService
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(commands);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var emitted = new List<NegotiationEvent>();
         async ValueTask EmitAsync(NegotiationEvent negotiationEvent)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             emitted.Add(negotiationEvent);
+            cancellationToken.ThrowIfCancellationRequested();
             if (events is not null)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await events.PublishAsync(negotiationEvent, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         NegotiationGateDecision gate = _policy.EvaluateGate(request);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!gate.IsAllowed)
         {
             await EmitAsync(new NegotiationEvent(
@@ -386,7 +393,8 @@ public sealed class NegotiationSessionService : INegotiationSessionService
 
         if (request.IsTargetFamiliar)
         {
-            return await ResolveFamiliarAsync(request, emitted, EmitAsync).ConfigureAwait(false);
+            return await ResolveFamiliarAsync(request, emitted, EmitAsync, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         if (!request.HasRecruitmentCapacity)
@@ -398,7 +406,10 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.CapacityUnavailable);
         }
 
-        if (!_policy.CanBegin(request, _random))
+        cancellationToken.ThrowIfCancellationRequested();
+        bool canBegin = _policy.CanBegin(request, _random);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!canBegin)
         {
             await EmitAsync(new NegotiationEvent(
                 NegotiationEventKind.Failure,
@@ -422,18 +433,17 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         {
             cancellationToken.ThrowIfCancellationRequested();
             int questionIndex = _random.NextInt32(0, questions.Count);
+            cancellationToken.ThrowIfCancellationRequested();
             NegotiationQuestionPrompt question = questions[questionIndex];
             questions.RemoveAt(questionIndex);
 
             NegotiationAnswerSelection answer = await commands.ReadAnswerAsync(question, cancellationToken)
                 .ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             if (answer.Cancelled)
             {
-                await EmitAsync(new NegotiationEvent(
-                    NegotiationEventKind.Failure,
-                    NegotiationEventCode.Cancelled,
-                    "Negotiation was cancelled."));
-                return Result(NegotiationOutcomeKind.Failure, NegotiationOutcomeReason.Cancelled, moodScore);
+                await EmitAsync(CreateCancellationEvent());
+                return Result(NegotiationOutcomeKind.Cancelled, NegotiationOutcomeReason.Cancelled, moodScore);
             }
 
             if (answer.SelectedIndex < 0 || answer.SelectedIndex >= question.Answers.Count)
@@ -484,8 +494,10 @@ public sealed class NegotiationSessionService : INegotiationSessionService
     private async ValueTask<NegotiationSessionResult> ResolveFamiliarAsync(
         NegotiationSessionRequest request,
         List<NegotiationEvent> emitted,
-        Func<NegotiationEvent, ValueTask> emit)
+        Func<NegotiationEvent, ValueTask> emit,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string dialogue = $"{request.TargetName} looks at you with a sense of familiarity...";
         if (!string.IsNullOrWhiteSpace(request.SpecificFamiliarDialogue))
         {
@@ -493,7 +505,9 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         }
         else if (request.FamiliarDialogueLines.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             dialogue = $"{request.TargetName}: \"{request.FamiliarDialogueLines[_random.NextInt32(0, request.FamiliarDialogueLines.Count)]}\"";
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         await emit(new NegotiationEvent(
@@ -501,7 +515,9 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             NegotiationEventCode.FamiliarDialogue,
             dialogue)).ConfigureAwait(false);
 
+        cancellationToken.ThrowIfCancellationRequested();
         NegotiationFamiliarGift gift = _policy.SelectFamiliarGift(request, _random);
+        cancellationToken.ThrowIfCancellationRequested();
         string giftMessage = gift.Kind switch
         {
             NegotiationFamiliarGiftKind.Item => "The familiar target provided an item and departed.",
@@ -530,6 +546,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         int moodScore,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (request.TargetLevel > request.ActorLevel)
         {
             await emit(new NegotiationEvent(
@@ -544,9 +561,11 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 events: emitted);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<NegotiationRuntimeDemand> demands = request.Demands.Count > 0
             ? [SelectAuthoredDemand(request.Demands)]
             : _policy.CreateFallbackDemands(request, _random);
+        cancellationToken.ThrowIfCancellationRequested();
         if (demands.Count > 0)
         {
             await emit(new NegotiationEvent(
@@ -559,6 +578,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             string? itemSpentId = null;
             foreach (NegotiationRuntimeDemand demand in demands)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 NegotiationSessionResult resolution = demand.Kind switch
                 {
                     NegotiationDemandKind.Currency => await ResolveCurrencyDemandAsync(
@@ -573,13 +593,23 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                     NegotiationDemandKind.Item => await ResolveItemDemandAsync(
                         request,
                         commands,
+                        emit,
                         emitted,
                         demand,
                         moodScore,
                         cancellationToken).ConfigureAwait(false),
                     _ => throw new InvalidOperationException($"Unsupported negotiation demand kind '{demand.Kind}'.")
                 };
+                cancellationToken.ThrowIfCancellationRequested();
 
+                if (resolution.Outcome == NegotiationOutcomeKind.Cancelled)
+                {
+                    return new NegotiationSessionResult(
+                        NegotiationOutcomeKind.Cancelled,
+                        NegotiationOutcomeReason.Cancelled,
+                        moodScore,
+                        events: emitted);
+                }
                 currencySpent = checked(currencySpent + resolution.CurrencySpent);
                 itemSpentId = resolution.ItemSpentId ?? itemSpentId;
                 if (resolution.Outcome != NegotiationOutcomeKind.Success)
@@ -603,7 +633,10 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 events: emitted);
         }
 
-        if (_policy.ResolveDemandlessSuccess(request, _random))
+        cancellationToken.ThrowIfCancellationRequested();
+        bool demandlessSuccess = _policy.ResolveDemandlessSuccess(request, _random);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (demandlessSuccess)
         {
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Success,
@@ -634,6 +667,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         int alreadyCommittedCurrency,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         int currencyDemand = demand.CurrencyAmount!.Value;
         if (currencyDemand > request.CurrentCurrency - alreadyCommittedCurrency)
         {
@@ -658,7 +692,18 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             ]);
         NegotiationDemandSelection choice = await commands.ReadDemandAsync(prompt, cancellationToken)
             .ConfigureAwait(false);
-        if (choice.Cancelled || choice.Decision != NegotiationDemandDecision.Accept)
+        cancellationToken.ThrowIfCancellationRequested();
+        if (choice.Cancelled)
+        {
+            await emit(CreateCancellationEvent()).ConfigureAwait(false);
+            return new NegotiationSessionResult(
+                NegotiationOutcomeKind.Cancelled,
+                NegotiationOutcomeReason.Cancelled,
+                moodScore,
+                events: emitted);
+        }
+
+        if (choice.Decision != NegotiationDemandDecision.Accept)
         {
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Failure,
@@ -678,11 +723,13 @@ public sealed class NegotiationSessionService : INegotiationSessionService
     private async ValueTask<NegotiationSessionResult> ResolveItemDemandAsync(
         NegotiationSessionRequest request,
         INegotiationCommandSource commands,
+        Func<NegotiationEvent, ValueTask> emit,
         IReadOnlyList<NegotiationEvent> emitted,
         NegotiationRuntimeDemand demand,
         int moodScore,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         NegotiationAvailableItem itemDemand = demand.Item!;
         var prompt = new NegotiationDemandPrompt(
             demand,
@@ -693,7 +740,18 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             ]);
         NegotiationDemandSelection choice = await commands.ReadDemandAsync(prompt, cancellationToken)
             .ConfigureAwait(false);
-        if (choice.Cancelled || choice.Decision != NegotiationDemandDecision.Accept)
+        cancellationToken.ThrowIfCancellationRequested();
+        if (choice.Cancelled)
+        {
+            await emit(CreateCancellationEvent()).ConfigureAwait(false);
+            return new NegotiationSessionResult(
+                NegotiationOutcomeKind.Cancelled,
+                NegotiationOutcomeReason.Cancelled,
+                moodScore,
+                events: emitted);
+        }
+
+        if (choice.Decision != NegotiationDemandDecision.Accept)
         {
             return new NegotiationSessionResult(
                 NegotiationOutcomeKind.Failure,
@@ -709,6 +767,11 @@ public sealed class NegotiationSessionService : INegotiationSessionService
             itemSpentId: itemDemand.ItemId,
             events: emitted);
     }
+
+    private static NegotiationEvent CreateCancellationEvent() => new(
+        NegotiationEventKind.Information,
+        NegotiationEventCode.Cancelled,
+        "Negotiation was cancelled.");
 
     private NegotiationRuntimeDemand SelectAuthoredDemand(IReadOnlyList<NegotiationRuntimeDemand> demands)
     {

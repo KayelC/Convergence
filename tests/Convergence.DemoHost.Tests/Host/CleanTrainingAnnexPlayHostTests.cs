@@ -1275,6 +1275,67 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationAnswerCancellationIsNotGameplayFailure()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, -1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(NegotiationOutcomeKind.Cancelled, negotiation.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.Cancelled, negotiation.Reason);
+        Assert.Equal(0, negotiation.CreditsSpent);
+        Assert.False(negotiation.Recruited);
+        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
+        Assert.Contains(
+            "Negotiation event: Information; Bramble Runner seems disappointed...",
+            output.ToString(),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Negotiation ended: Cancelled (Cancelled); wallet and Companion roster are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_NegotiationDemandCancellationIsNotExplicitRefusal()
+    {
+        var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, -1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialWallet: new RuntimeWalletSnapshot(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
+        Assert.Equal(NegotiationOutcomeKind.Cancelled, negotiation.Outcome);
+        Assert.Equal(NegotiationOutcomeReason.Cancelled, negotiation.Reason);
+        Assert.Equal(0, negotiation.CreditsSpent);
+        Assert.False(negotiation.Recruited);
+        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
+        Assert.DoesNotContain("CreditsRefused", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains(
+            "Negotiation ended: Cancelled (Cancelled); wallet and Companion roster are unchanged.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_NegotiationInsufficientAuthoredDemandDoesNotSpendOrMutateRoster()
     {
         var io = new ScriptedGameIO().QueueMenu(16, 0, 0, 0, 9);
