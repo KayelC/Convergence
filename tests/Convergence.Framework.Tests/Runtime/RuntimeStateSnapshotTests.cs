@@ -227,6 +227,27 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal("$.resources", missing.Diagnostics[0].Path);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RuntimeResourceTransactions_ExtremeAdditionReturnsTypedRejectionWithoutMutation(bool positive)
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        decimal delta = positive ? decimal.MaxValue : decimal.MinValue;
+
+        RuntimeMutationResult result =
+            new RuntimeResourceTransactionService().AddResource(actor, Id("hp"), delta);
+
+        Assert.False(result.Applied);
+        RuntimeMutationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeMutationErrorCode.ResourceValueOutOfRange, diagnostic.Code);
+        Assert.Equal("$.resources[0].current", diagnostic.Path);
+        Assert.Same(result.Before, result.After);
+        AssertResourcesEqual(before, result.Before);
+        AssertResourcesEqual(before, actor.ToSnapshot());
+    }
+
     [Fact]
     public void RuntimeResourceTransactions_ApplyRecalculationReplacesCurrentAndMaximumValues()
     {

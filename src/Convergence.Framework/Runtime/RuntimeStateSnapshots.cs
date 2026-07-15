@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Execution;
 
@@ -575,10 +576,28 @@ public sealed class RuntimeResourceTransactionService
     {
         ArgumentNullException.ThrowIfNull(actor);
         RuntimeActorSnapshot before = actor.ToSnapshot();
-        RuntimeResourceSnapshot? resource = before.Resources.FirstOrDefault(candidate => candidate.ResourceId == resourceId);
-        return resource is null
-            ? Rejected(before, RuntimeMutationErrorCode.MissingResource, $"Actor '{before.Identity.InstanceId}' has no resource '{resourceId}'.", "$.resources")
-            : SetResource(actor, resourceId, resource.Current + delta);
+        RuntimeResourceSnapshot[] resources = before.Resources.ToArray();
+        int index = Array.FindIndex(resources, candidate => candidate.ResourceId == resourceId);
+        if (index < 0)
+        {
+            return Rejected(
+                before,
+                RuntimeMutationErrorCode.MissingResource,
+                $"Actor '{before.Identity.InstanceId}' has no resource '{resourceId}'.",
+                "$.resources");
+        }
+
+        RuntimeResourceSnapshot resource = resources[index];
+        if (!CombatArithmetic.TryAdd(resource.Current, delta, out decimal requested))
+        {
+            return Rejected(
+                before,
+                RuntimeMutationErrorCode.ResourceValueOutOfRange,
+                $"Resource '{resourceId}' cannot represent current value {resource.Current} plus delta {delta}.",
+                $"$.resources[{index}].current");
+        }
+
+        return SetResource(actor, resourceId, requested);
     }
 
     public RuntimeMutationResult SetResource(RuntimeActorState actor, ContentId resourceId, decimal current)

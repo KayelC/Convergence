@@ -110,6 +110,32 @@ Correction verification:
 - touched-file formatting verification: successful;
 - active content: unchanged.
 
+### M2 corrected on 2026-07-15
+
+Status: Corrected after reviewed commit `0109dc8`
+
+Public resource addition now routes through `CombatArithmetic.TryAdd` before a
+new resource value reaches `SetResource`:
+
+- decimal arithmetic overflow becomes a typed `ResourceValueOutOfRange`
+  rejection at the affected resource path;
+- representable but invalid extreme values continue through the existing
+  resource-domain validation and receive the same stable rejection;
+- both rejection paths retain identical before/after snapshots and leave the
+  live actor unchanged.
+
+Two permanent theory cases cover positive and negative decimal extremes.
+
+Correction verification:
+
+- focused runtime snapshot tests: 22 passed;
+- full solution: 738 passed, 0 failed, 0 skipped;
+- nonincremental solution build: 0 warnings and 0 errors;
+- battle, field, save, and Training Annex demos: successful;
+- touched-file formatting verification: successful;
+- active framework forbidden-reference search: clean;
+- active content: unchanged.
+
 ## Findings
 
 ### H1. Rejected resource recalculation can partially mutate the live actor
@@ -191,6 +217,9 @@ Required correction:
   assess/execute state dependencies are introduced.
 
 ### M2. Public resource addition can escape through decimal overflow
+
+Correction status: Corrected on 2026-07-15; the original finding is retained
+below as review evidence.
 
 Severity: Medium
 
@@ -454,7 +483,7 @@ still required at every public mutation boundary.
 
 This is an ordered correction set, not a new feature roadmap:
 
-1. Resource boundary: H1 corrected; M2 overflow handling remains.
+1. Resource boundary: H1 and M2 corrected.
 2. Prepared assessment freshness: M1 corrected.
 3. Enum and persisted-domain validation: M3.
 4. Negotiation cancellation semantics: M4.
@@ -462,10 +491,10 @@ This is an ordered correction set, not a new feature roadmap:
 6. Fusion rank arithmetic: M6.
 7. DemoHost root confinement, formatting, and CI: L1 and L2.
 
-The H1 atomicity and M1 stale-assessment defects are corrected. M2 through M5
-should be resolved before a public Godot integration is described as
-production-ready. M6 should be resolved before arbitrary developer-authored
-fusion ranks are treated as supported.
+The H1 atomicity, M1 stale-assessment, and M2 resource-overflow defects are
+corrected. M3 through M5 should be resolved before a public Godot integration
+is described as production-ready. M6 should be resolved before arbitrary
+developer-authored fusion ranks are treated as supported.
 
 ## Readiness Decision
 
@@ -473,8 +502,8 @@ fusion ranks are treated as supported.
 - Continue controlled Godot prototyping: Yes, with trusted content and known
   integration inputs.
 - Call the architecture stable enough to build on: Yes.
-- Publish a stable production release: No, not before the confirmed H1 and
-  medium findings are fixed and regression-tested.
+- Publish a stable production release: No, not before the remaining medium
+  findings are fixed and regression-tested.
 - Reopen or restore the legacy product: No. None of these findings invalidates
   the clean product boundary.
 
