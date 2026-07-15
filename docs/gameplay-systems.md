@@ -6,6 +6,10 @@ This document summarizes the reusable systems currently implemented by `Converge
 
 The framework provides immutable definitions for skills, entities, races, ailments, items, equipment, shops, negotiation, encounters, dungeons, fusion recipes, and rulesets. Strict `System.Text.Json` DTOs are mapped into serializer-neutral definitions, semantically validated with explicit registrations, dependency-checked, qualified, and exposed through immutable repositories.
 
+Runtime rulesets resolve through a host-supplied typed policy-factory registry.
+The standard composition is explicit and replaceable; unknown policy IDs fail
+without selecting a fallback. See [Ruleset Policy Contracts](ruleset-policy-contracts.md).
+
 ## Actors, Stats, Resources, And Growth
 
 Catalog actor factories hydrate identity, level, stats, defenses, resources, learned skills, active skills, and passives. Runtime snapshots preserve canonical actor state. Progression services own stat resolution, experience curves, level growth, resource recalculation, allocation, and rollback through injected policies.

@@ -1,11 +1,10 @@
-using Convergence.Content;
-using Convergence.Catalog;
-using Convergence.Hosting;
 using Convergence.Battle;
-using Convergence.Knowledge;
-using Convergence.TurnEconomy;
-using Convergence.Execution;
+using Convergence.Catalog;
+using Convergence.Content;
 using Convergence.Encounters;
+using Convergence.Execution;
+using Convergence.Hosting;
+using Convergence.TurnEconomy;
 
 namespace Convergence.Runtime;
 
@@ -18,7 +17,6 @@ public static class StandardRulesetPolicyIds
     public static ContentId StandardActionToken { get; } = ContentId.Parse("standard_action_token");
     public static ContentId StandardRosterCapacity { get; } = ContentId.Parse("standard_roster_capacity");
     public static ContentId StandardEconomy { get; } = ContentId.Parse("standard_economy");
-    public static ContentId StandardMoonPhase { get; } = ContentId.Parse("standard_moon_phase");
 }
 
 public enum RulesetBindingDiagnosticCode
@@ -30,7 +28,8 @@ public enum RulesetBindingDiagnosticCode
     UnknownParameter,
     InvalidParameterType,
     InvalidParameterValue,
-    InvalidIdentifier
+    InvalidIdentifier,
+    PolicyFactoryFailure
 }
 
 public sealed record RulesetBindingDiagnostic(
@@ -122,27 +121,29 @@ public interface IRuntimeRulesetBindingResolver
     RulesetBindingResult<BattleTurnEconomyRuleset> BindTurnEconomy(
         GameDataCatalog catalog,
         ContentId rulesetId);
-
-    RulesetBindingResult<RulesetDefinition> BindMoonPhaseRuleset(
-        GameDataCatalog catalog,
-        ContentId rulesetId);
 }
 
 public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolver
 {
+    private readonly RuntimeRulesetPolicyFactoryRegistry _factories;
+
+    public RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry factories)
+    {
+        _factories = factories ?? throw new ArgumentNullException(nameof(factories));
+    }
+
     public RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
         GameDataCatalog catalog,
         ContentId rulesetId,
         IRandomSource random)
     {
         ArgumentNullException.ThrowIfNull(random);
-        return Bind(
+        return Bind<IRuntimeDamageRulesetPolicyFactory, ProductionCombatRuleset>(
             catalog,
             rulesetId,
             RulesetCategory.Damage,
-            StandardRulesetPolicyIds.StandardDamage,
-            (definition, diagnostics) =>
-                new ProductionCombatRuleset(random, CreateCombatConfig(definition, diagnostics)));
+            _factories.FindDamage,
+            (factory, definition) => factory.Create(definition, random));
     }
 
     public RulesetBindingResult<IBattleRewardService> BindBattleRewardService(
@@ -151,149 +152,96 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         ProductionCombatRuleset combatRuleset)
     {
         ArgumentNullException.ThrowIfNull(combatRuleset);
-        return Bind<IBattleRewardService>(
+        return Bind<IRuntimeRewardRulesetPolicyFactory, IBattleRewardService>(
             catalog,
             rulesetId,
             RulesetCategory.Reward,
-            StandardRulesetPolicyIds.StandardReward,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                return new BattleRewardService(combatRuleset);
-            });
+            _factories.FindReward,
+            (factory, definition) => factory.Create(definition, combatRuleset));
     }
 
     public RulesetBindingResult<IStatResolutionPolicy> BindStatResolutionPolicy(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<IStatResolutionPolicy>(
+        Bind<IRuntimeStatRulesetPolicyFactory, IStatResolutionPolicy>(
             catalog,
             rulesetId,
             RulesetCategory.Stat,
-            StandardRulesetPolicyIds.StandardStat,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                return new StandardStatResolutionPolicy();
-            });
+            _factories.FindStat,
+            static (factory, definition) => factory.Create(definition));
 
     public RulesetBindingResult<GrowthRulesetServices> BindGrowthServices(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<GrowthRulesetServices>(
+        Bind<IRuntimeGrowthRulesetPolicyFactory, GrowthRulesetServices>(
             catalog,
             rulesetId,
             RulesetCategory.Growth,
-            StandardRulesetPolicyIds.StandardGrowth,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                var resourceGrowth = new StandardResourceGrowthPolicy();
-                var experienceCurve = new CubicExperienceCurve();
-                return new GrowthRulesetServices(
-                    resourceGrowth,
-                    experienceCurve,
-                    new StandardLevelGrowthPolicy(experienceCurve, resourceGrowth),
-                    new StatAllocationService(resourceGrowth));
-            });
+            _factories.FindGrowth,
+            static (factory, definition) => factory.Create(definition));
 
     public RulesetBindingResult<IRosterCapacityPolicy> BindRosterCapacityPolicy(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<IRosterCapacityPolicy>(
+        Bind<IRuntimeRosterCapacityRulesetPolicyFactory, IRosterCapacityPolicy>(
             catalog,
             rulesetId,
             RulesetCategory.RosterCapacity,
-            StandardRulesetPolicyIds.StandardRosterCapacity,
-            CreateRosterCapacityPolicy);
+            _factories.FindRosterCapacity,
+            static (factory, definition) => factory.Create(definition));
 
     public RulesetBindingResult<ResourceManagementRulesetServices> BindResourceManagementServices(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<ResourceManagementRulesetServices>(
+        Bind<IRuntimeEconomyRulesetPolicyFactory, ResourceManagementRulesetServices>(
             catalog,
             rulesetId,
             RulesetCategory.Economy,
-            StandardRulesetPolicyIds.StandardEconomy,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                var inventory = new InventoryTransitionService();
-                var equipment = new EquipmentTransitionService();
-                var economy = new EconomyTransactionService();
-                return new ResourceManagementRulesetServices(
-                    inventory,
-                    equipment,
-                    economy,
-                    new ShopTransactionService(inventory, economy),
-                    new HospitalRestorationService(economy));
-            });
+            _factories.FindEconomy,
+            static (factory, definition) => factory.Create(definition));
 
     public RulesetBindingResult<BattleTurnEconomyRuleset> BindTurnEconomy(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<BattleTurnEconomyRuleset>(
+        Bind<IRuntimeTurnEconomyRulesetPolicyFactory, BattleTurnEconomyRuleset>(
             catalog,
             rulesetId,
             RulesetCategory.TurnEconomy,
-            StandardRulesetPolicyIds.StandardActionToken,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                return new BattleTurnEconomyRuleset(
-                    () => new ActionTokenTurnEconomy(),
-                    new BattlePhaseProgressPolicy(
-                        maximumCommands: 256,
-                        maximumConsecutiveFreeActions: 32));
-            });
+            _factories.FindTurnEconomy,
+            static (factory, definition) => factory.Create(definition));
 
-    public RulesetBindingResult<RulesetDefinition> BindMoonPhaseRuleset(
-        GameDataCatalog catalog,
-        ContentId rulesetId) =>
-        Bind(
-            catalog,
-            rulesetId,
-            RulesetCategory.MoonPhase,
-            StandardRulesetPolicyIds.StandardMoonPhase,
-            (definition, diagnostics) =>
-            {
-                RequireNoParameters(definition, diagnostics);
-                return definition;
-            });
-
-    private static RulesetBindingResult<TService> Bind<TService>(
+    private static RulesetBindingResult<TService> Bind<TFactory, TService>(
         GameDataCatalog catalog,
         ContentId rulesetId,
         RulesetCategory expectedCategory,
-        ContentId expectedPolicyId,
-        Func<RulesetDefinition, List<RulesetBindingDiagnostic>, TService> factory)
+        Func<ContentId, TFactory?> findFactory,
+        Func<TFactory, RulesetDefinition, RulesetBindingResult<TService>> create)
+        where TFactory : class
         where TService : class
     {
         ArgumentNullException.ThrowIfNull(catalog);
-        ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(findFactory);
+        ArgumentNullException.ThrowIfNull(create);
 
-        var diagnostics = new List<RulesetBindingDiagnostic>();
         if (!rulesetId.IsValid)
         {
-            diagnostics.Add(new RulesetBindingDiagnostic(
+            return Failure<TService>(new RulesetBindingDiagnostic(
                 RulesetBindingDiagnosticCode.InvalidIdentifier,
                 rulesetId,
                 "Ruleset ID cannot be empty."));
-            return new RulesetBindingResult<TService>(null, diagnostics);
         }
 
         if (!catalog.TryGetRuleset(rulesetId, out RulesetDefinition? definition) || definition is null)
         {
-            diagnostics.Add(new RulesetBindingDiagnostic(
+            return Failure<TService>(new RulesetBindingDiagnostic(
                 RulesetBindingDiagnosticCode.MissingRuleset,
                 rulesetId,
                 $"Ruleset '{rulesetId}' was not found."));
-            return new RulesetBindingResult<TService>(null, diagnostics);
         }
 
         if (definition.Category != expectedCategory)
         {
-            diagnostics.Add(new RulesetBindingDiagnostic(
+            return Failure<TService>(new RulesetBindingDiagnostic(
                 RulesetBindingDiagnosticCode.CategoryMismatch,
                 rulesetId,
                 $"Ruleset '{rulesetId}' has category '{definition.Category}', but '{expectedCategory}' was required.",
@@ -302,264 +250,36 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                 PolicyId: definition.PolicyId));
         }
 
-        if (definition.PolicyId != expectedPolicyId)
+        TFactory? factory = findFactory(definition.PolicyId);
+        if (factory is null)
         {
-            diagnostics.Add(new RulesetBindingDiagnostic(
+            return Failure<TService>(new RulesetBindingDiagnostic(
                 RulesetBindingDiagnosticCode.UnsupportedPolicy,
                 rulesetId,
-                $"Ruleset '{rulesetId}' uses unsupported policy '{definition.PolicyId}'. Expected '{expectedPolicyId}'.",
+                $"Ruleset '{rulesetId}' uses unregistered {expectedCategory} policy '{definition.PolicyId}'.",
                 ExpectedCategory: expectedCategory,
                 ActualCategory: definition.Category,
                 PolicyId: definition.PolicyId));
         }
 
-        if (diagnostics.Count > 0)
+        RulesetBindingResult<TService>? result = create(factory, definition);
+        if (result is null || (result.Service is null && result.Diagnostics.Count == 0))
         {
-            return new RulesetBindingResult<TService>(null, diagnostics);
-        }
-
-        TService service = factory(definition, diagnostics);
-        return diagnostics.Count == 0
-            ? new RulesetBindingResult<TService>(service)
-            : new RulesetBindingResult<TService>(null, diagnostics);
-    }
-
-    private static ProductionCombatRulesetConfig CreateCombatConfig(
-        RulesetDefinition definition,
-        List<RulesetBindingDiagnostic> diagnostics)
-    {
-        var config = new ProductionCombatRulesetConfig();
-        foreach ((string key, object? value) in definition.Parameters)
-        {
-            switch (key)
-            {
-                case "weakMultiplier":
-                    if (TryReadPositiveDecimal(definition, key, value, diagnostics, out decimal weak))
-                    {
-                        config = config with { WeakDamageMultiplier = weak };
-                    }
-                    break;
-                case "resistMultiplier":
-                    if (TryReadPositiveDecimal(definition, key, value, diagnostics, out decimal resist))
-                    {
-                        config = config with { ResistDamageMultiplier = resist };
-                    }
-                    break;
-                default:
-                    diagnostics.Add(new RulesetBindingDiagnostic(
-                        RulesetBindingDiagnosticCode.UnknownParameter,
-                        definition.Id,
-                        $"Ruleset '{definition.Id}' parameter '{key}' is not supported by policy '{definition.PolicyId}'.",
-                        ParameterName: key,
-                        ActualCategory: definition.Category,
-                        PolicyId: definition.PolicyId));
-                    break;
-            }
-        }
-
-        return config;
-    }
-
-    private static IRosterCapacityPolicy CreateRosterCapacityPolicy(
-        RulesetDefinition definition,
-        List<RulesetBindingDiagnostic> diagnostics)
-    {
-        foreach (string key in definition.Parameters.Keys.Where(key => key != "tiers"))
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.UnknownParameter,
-                definition.Id,
-                $"Ruleset '{definition.Id}' parameter '{key}' is not supported by policy '{definition.PolicyId}'.",
-                ParameterName: key,
+            return Failure<TService>(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.PolicyFactoryFailure,
+                rulesetId,
+                $"Ruleset policy factory '{definition.PolicyId}' returned no service or diagnostic.",
+                ExpectedCategory: expectedCategory,
                 ActualCategory: definition.Category,
                 PolicyId: definition.PolicyId));
         }
 
-        if (!definition.Parameters.TryGetValue("tiers", out object? value))
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.MissingParameter,
-                definition.Id,
-                $"Ruleset '{definition.Id}' requires a 'tiers' parameter.",
-                ParameterName: "tiers",
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-            return NoLimitRosterCapacityPolicy.Instance;
-        }
-
-        if (value is not IReadOnlyList<object?> authoredTiers || authoredTiers.Count == 0)
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.InvalidParameterType,
-                definition.Id,
-                $"Ruleset '{definition.Id}' parameter 'tiers' must be a nonempty list.",
-                ParameterName: "tiers",
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-            return NoLimitRosterCapacityPolicy.Instance;
-        }
-
-        var tiers = new List<RosterCapacityTier>();
-        for (int index = 0; index < authoredTiers.Count; index++)
-        {
-            if (authoredTiers[index] is not IReadOnlyDictionary<string, object?> tier ||
-                !TryReadRosterKind(tier, "rosterKind", out RuntimeRosterKind rosterKind) ||
-                !TryReadInt(tier, "minimumLevel", out int minimumLevel) ||
-                !TryReadInt(tier, "capacity", out int capacity) ||
-                tier.Keys.Any(key => key is not ("rosterKind" or "minimumLevel" or "capacity")) ||
-                minimumLevel <= 0 ||
-                capacity < 0)
-            {
-                diagnostics.Add(new RulesetBindingDiagnostic(
-                    RulesetBindingDiagnosticCode.InvalidParameterValue,
-                    definition.Id,
-                    $"Ruleset '{definition.Id}' roster-capacity tier {index} must contain a supported 'rosterKind', a positive 'minimumLevel', and a nonnegative 'capacity'.",
-                    ParameterName: $"tiers[{index}]",
-                    ActualCategory: definition.Category,
-                    PolicyId: definition.PolicyId));
-                continue;
-            }
-
-            tiers.Add(new RosterCapacityTier(rosterKind, minimumLevel, capacity));
-        }
-
-        if (diagnostics.Count > 0)
-        {
-            return NoLimitRosterCapacityPolicy.Instance;
-        }
-
-        try
-        {
-            return new TieredRosterCapacityPolicy(tiers);
-        }
-        catch (ArgumentException exception)
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.InvalidParameterValue,
-                definition.Id,
-                exception.Message,
-                ParameterName: "tiers",
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-            return NoLimitRosterCapacityPolicy.Instance;
-        }
+        return result.Diagnostics.Count == 0
+            ? result
+            : new RulesetBindingResult<TService>(null, result.Diagnostics);
     }
 
-    private static bool TryReadRosterKind(
-        IReadOnlyDictionary<string, object?> values,
-        string key,
-        out RuntimeRosterKind rosterKind)
-    {
-        rosterKind = default;
-        return values.TryGetValue(key, out object? value) &&
-               value is string text &&
-               text switch
-               {
-                   "hosted_entity" => Assign(RuntimeRosterKind.HostedEntity, out rosterKind),
-                   "companion" => Assign(RuntimeRosterKind.Companion, out rosterKind),
-                   _ => false
-               };
-    }
-
-    private static bool TryReadInt(
-        IReadOnlyDictionary<string, object?> values,
-        string key,
-        out int result)
-    {
-        result = 0;
-        if (!values.TryGetValue(key, out object? value))
-        {
-            return false;
-        }
-
-        return value switch
-        {
-            int intValue => Assign(intValue, out result),
-            long longValue when longValue is >= int.MinValue and <= int.MaxValue => Assign((int)longValue, out result),
-            decimal decimalValue when decimalValue == decimal.Truncate(decimalValue) &&
-                                      decimalValue is >= int.MinValue and <= int.MaxValue => Assign((int)decimalValue, out result),
-            _ => false
-        };
-    }
-
-    private static bool Assign(int value, out int destination)
-    {
-        destination = value;
-        return true;
-    }
-
-    private static bool Assign(RuntimeRosterKind value, out RuntimeRosterKind destination)
-    {
-        destination = value;
-        return true;
-    }
-
-    private static void RequireNoParameters(
-        RulesetDefinition definition,
-        List<RulesetBindingDiagnostic> diagnostics)
-    {
-        foreach (string key in definition.Parameters.Keys)
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.UnknownParameter,
-                definition.Id,
-                $"Ruleset '{definition.Id}' parameter '{key}' is not supported by policy '{definition.PolicyId}'.",
-                ParameterName: key,
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-        }
-    }
-
-    private static bool TryReadPositiveDecimal(
-        RulesetDefinition definition,
-        string key,
-        object? value,
-        List<RulesetBindingDiagnostic> diagnostics,
-        out decimal number)
-    {
-        if (!TryReadDecimal(value, out number))
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.InvalidParameterType,
-                definition.Id,
-                $"Ruleset '{definition.Id}' parameter '{key}' must be numeric.",
-                ParameterName: key,
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-            return false;
-        }
-
-        if (number <= 0m)
-        {
-            diagnostics.Add(new RulesetBindingDiagnostic(
-                RulesetBindingDiagnosticCode.InvalidParameterValue,
-                definition.Id,
-                $"Ruleset '{definition.Id}' parameter '{key}' must be positive.",
-                ParameterName: key,
-                ActualCategory: definition.Category,
-                PolicyId: definition.PolicyId));
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool TryReadDecimal(object? value, out decimal number)
-    {
-        switch (value)
-        {
-            case decimal decimalValue:
-                number = decimalValue;
-                return true;
-            case long longValue:
-                number = longValue;
-                return true;
-            case int intValue:
-                number = intValue;
-                return true;
-            default:
-                number = 0m;
-                return false;
-        }
-    }
+    private static RulesetBindingResult<TService> Failure<TService>(RulesetBindingDiagnostic diagnostic)
+        where TService : class =>
+        new(null, [diagnostic]);
 }

@@ -160,7 +160,7 @@ public sealed class OriginalCleanContentSliceTests
     public void TrainingAnnexSlice_RulesetsBindToStandardFrameworkServices()
     {
         GameDataCatalog catalog = LoadCatalog();
-        var resolver = new RuntimeRulesetBindingResolver();
+        var resolver = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
 
         ProductionCombatRuleset damage = resolver.BindProductionCombatRuleset(
             catalog,

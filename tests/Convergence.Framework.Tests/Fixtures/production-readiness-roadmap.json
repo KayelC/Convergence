@@ -120,11 +120,11 @@
       "id": "PR-M4",
       "title": "Authored ruleset policy authority",
       "severity": "medium",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 3,
       "plannedCommit": "runtime: register authored ruleset policies",
       "evidence": ["RuntimeRulesetBindingTests"],
-      "remainingWork": ["host policy-factory registry", "complete supplied parameter contracts"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {

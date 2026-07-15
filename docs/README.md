@@ -14,10 +14,11 @@ This directory is the active documentation authority for Convergence Framework.
 8. [Godot Integration Contract](godot-integration-contract.md): how an engine host consumes the framework.
 9. [Public API Namespaces](public-api-namespaces.md): namespace ownership.
 10. [Content Contract](content-contract.md): clean content organization and loading authority.
-11. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
-12. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
-13. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
-14. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
+11. [Ruleset Policy Contracts](ruleset-policy-contracts.md): typed factory composition and supplied parameter contracts.
+12. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
+13. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
+14. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
+15. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
 
 ## Authority Rules
 

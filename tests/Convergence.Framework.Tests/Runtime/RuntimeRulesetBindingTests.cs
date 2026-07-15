@@ -5,6 +5,7 @@ using Convergence.Battle;
 using Convergence.Execution;
 using Convergence.Encounters;
 using Convergence.Runtime;
+using Convergence.TurnEconomy;
 using Xunit;
 
 namespace Convergence.Framework.Tests.Runtime;
@@ -17,7 +18,7 @@ public sealed class RuntimeRulesetBindingTests
     public void CatalogRulesets_BindStandardPoliciesToFrameworkServices()
     {
         GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
-        var resolver = new RuntimeRulesetBindingResolver();
+        var resolver = CreateResolver();
 
         ProductionCombatRuleset damage = resolver.BindProductionCombatRuleset(
             catalog,
@@ -92,26 +93,143 @@ public sealed class RuntimeRulesetBindingTests
         turnEconomy.ConsumeAction(new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false));
         Assert.Equal(1, turnEconomy.FullTokens);
         Assert.Equal(1, turnEconomy.PartialTokens);
-        Assert.True(turnEconomyRuleset.PhaseProgress.MaximumCommands > 0);
-
+        Assert.Equal(256, turnEconomyRuleset.PhaseProgress.MaximumCommands);
+        Assert.Equal(32, turnEconomyRuleset.PhaseProgress.MaximumConsecutiveFreeActions);
     }
 
     [Fact]
-    public void MoonPhaseBinding_RemainsAvailableAsAnOptionalExtension()
+    public void StandardFactoryRegistry_DoesNotRegisterMoonPhasePolicy()
     {
-        ContentId rulesetId = Id("test.pack:optional_moon_phase");
-        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+        RuntimeRulesetPolicyFactoryRegistry registry = RuntimeRulesetPolicyFactoryRegistry.CreateStandard();
+        ContentId[] policyIds = registry.DamagePolicyIds
+            .Concat(registry.RewardPolicyIds)
+            .Concat(registry.StatPolicyIds)
+            .Concat(registry.GrowthPolicyIds)
+            .Concat(registry.RosterCapacityPolicyIds)
+            .Concat(registry.EconomyPolicyIds)
+            .Concat(registry.TurnEconomyPolicyIds)
+            .ToArray();
+
+        Assert.Equal(7, policyIds.Length);
+        Assert.DoesNotContain(policyIds, id => id.Value.Contains("moon_phase", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void HostRegistry_ReplacesEveryRuntimeRulesetCategoryWithTypedFactories()
+    {
+        ContentId damagePolicyId = Id("host_damage");
+        ContentId rewardPolicyId = Id("host_reward");
+        ContentId statPolicyId = Id("host_stat");
+        ContentId growthPolicyId = Id("host_growth");
+        ContentId rosterPolicyId = Id("host_roster");
+        ContentId economyPolicyId = Id("host_economy");
+        ContentId turnPolicyId = Id("host_turn");
+
+        var combat = new ProductionCombatRuleset(new SequenceRandomSource());
+        IBattleRewardService reward = new BattleRewardService(combat);
+        IStatResolutionPolicy stat = new StandardStatResolutionPolicy();
+        var resourceGrowth = new StandardResourceGrowthPolicy();
+        var experience = new CubicExperienceCurve();
+        var growth = new GrowthRulesetServices(
+            resourceGrowth,
+            experience,
+            new StandardLevelGrowthPolicy(experience, resourceGrowth),
+            new StatAllocationService(resourceGrowth));
+        IRosterCapacityPolicy roster = NoLimitRosterCapacityPolicy.Instance;
+        var inventory = new InventoryTransitionService();
+        var equipment = new EquipmentTransitionService();
+        var economyTransactions = new EconomyTransactionService();
+        var economy = new ResourceManagementRulesetServices(
+            inventory,
+            equipment,
+            economyTransactions,
+            new ShopTransactionService(inventory, economyTransactions),
+            new HospitalRestorationService(economyTransactions));
+        var turn = new BattleTurnEconomyRuleset(
+            () => new Convergence.TurnEconomy.ActionTokenTurnEconomy(),
+            new BattlePhaseProgressPolicy(20, 4));
+
+        var registry = new RuntimeRulesetPolicyFactoryRegistry(
+            damage: [new FixedDamageFactory(damagePolicyId, combat)],
+            reward: [new FixedRewardFactory(rewardPolicyId, reward)],
+            stat: [new FixedStatFactory(statPolicyId, stat)],
+            growth: [new FixedGrowthFactory(growthPolicyId, growth)],
+            rosterCapacity: [new FixedRosterFactory(rosterPolicyId, roster)],
+            economy: [new FixedEconomyFactory(economyPolicyId, economy)],
+            turnEconomy: [new FixedTurnFactory(turnPolicyId, turn)]);
+        var resolver = new RuntimeRulesetBindingResolver(registry);
+        GameDataCatalog catalog = Catalog(
+            Ruleset("damage", RulesetCategory.Damage, damagePolicyId),
+            Ruleset("reward", RulesetCategory.Reward, rewardPolicyId),
+            Ruleset("stat", RulesetCategory.Stat, statPolicyId),
+            Ruleset("growth", RulesetCategory.Growth, growthPolicyId),
+            Ruleset("roster", RulesetCategory.RosterCapacity, rosterPolicyId),
+            Ruleset("economy", RulesetCategory.Economy, economyPolicyId),
+            Ruleset("turn", RulesetCategory.TurnEconomy, turnPolicyId));
+
+        Assert.Same(combat, resolver.BindProductionCombatRuleset(
+            catalog, Id("test.pack:damage"), new SequenceRandomSource()).RequireService());
+        Assert.Same(reward, resolver.BindBattleRewardService(
+            catalog, Id("test.pack:reward"), combat).RequireService());
+        Assert.Same(stat, resolver.BindStatResolutionPolicy(
+            catalog, Id("test.pack:stat")).RequireService());
+        Assert.Same(growth, resolver.BindGrowthServices(
+            catalog, Id("test.pack:growth")).RequireService());
+        Assert.Same(roster, resolver.BindRosterCapacityPolicy(
+            catalog, Id("test.pack:roster")).RequireService());
+        Assert.Same(economy, resolver.BindResourceManagementServices(
+            catalog, Id("test.pack:economy")).RequireService());
+        Assert.Same(turn, resolver.BindTurnEconomy(
+            catalog, Id("test.pack:turn")).RequireService());
+    }
+
+    [Fact]
+    public void HostRegistry_SnapshotsFactoriesAndRejectsDuplicateOrQualifiedPolicyIds()
+    {
+        ContentId policyId = Id("host_damage");
+        var combat = new ProductionCombatRuleset(new SequenceRandomSource());
+        var factories = new List<IRuntimeDamageRulesetPolicyFactory>
+        {
+            new FixedDamageFactory(policyId, combat)
+        };
+        var registry = new RuntimeRulesetPolicyFactoryRegistry(damage: factories);
+        factories.Clear();
+
+        Assert.Equal([policyId], registry.DamagePolicyIds);
+        Assert.Throws<ArgumentException>(() => new RuntimeRulesetPolicyFactoryRegistry(
+            damage:
+            [
+                new FixedDamageFactory(policyId, combat),
+                new FixedDamageFactory(policyId, combat)
+            ]));
+        Assert.Throws<ArgumentException>(() => new RuntimeRulesetPolicyFactoryRegistry(
+            damage: [new FixedDamageFactory(Id("test.pack:qualified"), combat)]));
+    }
+
+    [Fact]
+    public void Resolver_DoesNotExposeAFactoryServiceWhenTheFactoryReportsDiagnostics()
+    {
+        ContentId policyId = Id("host_rejected_damage");
+        ContentId rulesetId = Id("test.pack:rejected_damage");
+        var factory = new DiagnosticDamageFactory(
+            policyId,
+            new ProductionCombatRuleset(new SequenceRandomSource()));
+        var resolver = new RuntimeRulesetBindingResolver(
+            new RuntimeRulesetPolicyFactoryRegistry(damage: [factory]));
+
+        RulesetBindingResult<ProductionCombatRuleset> result = resolver.BindProductionCombatRuleset(
+            Catalog(new RulesetDefinition(
+                rulesetId,
+                "Rejected Damage",
+                "The host factory rejects this authored policy.",
+                RulesetCategory.Damage,
+                policyId)),
             rulesetId,
-            "Optional Moon Phase",
-            "An opt-in host policy.",
-            RulesetCategory.MoonPhase,
-            StandardRulesetPolicyIds.StandardMoonPhase));
+            new SequenceRandomSource());
 
-        RulesetDefinition ruleset = new RuntimeRulesetBindingResolver()
-            .BindMoonPhaseRuleset(catalog, rulesetId)
-            .RequireService();
-
-        Assert.Equal(StandardRulesetPolicyIds.StandardMoonPhase, ruleset.PolicyId);
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Service);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterValue, Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]
@@ -125,16 +243,91 @@ public sealed class RuntimeRulesetBindingTests
             RulesetCategory.Damage,
             StandardRulesetPolicyIds.StandardDamage,
             [
-                new KeyValuePair<string, object?>("weakMultiplier", 2m),
-                new KeyValuePair<string, object?>("resistMultiplier", 0.25m)
+                new KeyValuePair<string, object?>("weakDamageMultiplier", 2m),
+                new KeyValuePair<string, object?>("resistDamageMultiplier", 0.25m)
             ]));
 
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+        ProductionCombatRuleset ruleset = CreateResolver()
             .BindProductionCombatRuleset(catalog, rulesetId, new SequenceRandomSource())
             .RequireService();
 
         Assert.Equal(2m, ruleset.Config.WeakDamageMultiplier);
         Assert.Equal(0.25m, ruleset.Config.ResistDamageMultiplier);
+    }
+
+    [Fact]
+    public void DamageBinding_ExposesEveryProductionCombatConfigurationValue()
+    {
+        ContentId rulesetId = Id("test.pack:complete_damage");
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Complete Damage",
+            "Every standard combat input is authored.",
+            RulesetCategory.Damage,
+            StandardRulesetPolicyIds.StandardDamage,
+            Parameters(
+                ("damageFormulaScalar", 6m),
+                ("damageVarianceMinimum", 0.8m),
+                ("damageVarianceMaximum", 1.2m),
+                ("chargeMultiplier", 2m),
+                ("criticalDamageMultiplier", 1.7m),
+                ("weakDamageMultiplier", 1.8m),
+                ("resistDamageMultiplier", 0.4m),
+                ("guardDamageMultiplier", 0.3m),
+                ("defaultHitAccuracy", 88),
+                ("hitChanceMinimum", 3),
+                ("hitChanceMaximum", 97),
+                ("criticalChanceMinimum", 1),
+                ("criticalChanceMaximum", 45),
+                ("criticalChanceBase", 7),
+                ("instantDeathChanceMinimum", 4),
+                ("instantDeathChanceMaximum", 90),
+                ("defaultInstantDeathChance", 35),
+                ("enemiesPerLevelForExperience", 60m),
+                ("expectedStatLevelMultiplier", 4m),
+                ("expectedStatBase", 20m),
+                ("statDensityDivisor", 120m),
+                ("maximumStatDensityMultiplier", 3m),
+                ("currencyBaseMultiplier", 0.3m),
+                ("currencyLuckMultiplier", 6m),
+                ("currencyVarianceMinimum", 0.85m),
+                ("currencyVarianceMaximum", 1.15m),
+                ("initiativeVarianceMinimum", 0.8m),
+                ("initiativeVarianceMaximum", 1.2m))));
+
+        ProductionCombatRulesetConfig config = CreateResolver()
+            .BindProductionCombatRuleset(catalog, rulesetId, new SequenceRandomSource())
+            .RequireService()
+            .Config;
+
+        Assert.Equal(6m, config.DamageFormulaScalar);
+        Assert.Equal(0.8m, config.DamageVarianceMinimum);
+        Assert.Equal(1.2m, config.DamageVarianceMaximum);
+        Assert.Equal(2m, config.ChargeMultiplier);
+        Assert.Equal(1.7m, config.CriticalDamageMultiplier);
+        Assert.Equal(1.8m, config.WeakDamageMultiplier);
+        Assert.Equal(0.4m, config.ResistDamageMultiplier);
+        Assert.Equal(0.3m, config.GuardDamageMultiplier);
+        Assert.Equal(88, config.DefaultHitAccuracy);
+        Assert.Equal(3, config.HitChanceMinimum);
+        Assert.Equal(97, config.HitChanceMaximum);
+        Assert.Equal(1, config.CriticalChanceMinimum);
+        Assert.Equal(45, config.CriticalChanceMaximum);
+        Assert.Equal(7, config.CriticalChanceBase);
+        Assert.Equal(4, config.InstantDeathChanceMinimum);
+        Assert.Equal(90, config.InstantDeathChanceMaximum);
+        Assert.Equal(35, config.DefaultInstantDeathChance);
+        Assert.Equal(60m, config.EnemiesPerLevelForExperience);
+        Assert.Equal(4m, config.ExpectedStatLevelMultiplier);
+        Assert.Equal(20m, config.ExpectedStatBase);
+        Assert.Equal(120m, config.StatDensityDivisor);
+        Assert.Equal(3m, config.MaximumStatDensityMultiplier);
+        Assert.Equal(0.3m, config.CurrencyBaseMultiplier);
+        Assert.Equal(6m, config.CurrencyLuckMultiplier);
+        Assert.Equal(0.85m, config.CurrencyVarianceMinimum);
+        Assert.Equal(1.15m, config.CurrencyVarianceMaximum);
+        Assert.Equal(0.8m, config.InitiativeVarianceMinimum);
+        Assert.Equal(1.2m, config.InitiativeVarianceMaximum);
     }
 
     [Fact]
@@ -148,11 +341,11 @@ public sealed class RuntimeRulesetBindingTests
             RulesetCategory.Damage,
             StandardRulesetPolicyIds.StandardDamage,
             [
-                new KeyValuePair<string, object?>("weakMultiplier", decimal.MaxValue),
-                new KeyValuePair<string, object?>("resistMultiplier", decimal.MaxValue)
+                new KeyValuePair<string, object?>("weakDamageMultiplier", decimal.MaxValue),
+                new KeyValuePair<string, object?>("resistDamageMultiplier", decimal.MaxValue)
             ]));
 
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+        ProductionCombatRuleset ruleset = CreateResolver()
             .BindProductionCombatRuleset(catalog, rulesetId, new SequenceRandomSource())
             .RequireService();
         var target = new ProductionCombatantProfile(
@@ -176,7 +369,7 @@ public sealed class RuntimeRulesetBindingTests
     {
         ContentId missingTiersId = Id("test.pack:missing_tiers");
         ContentId malformedTiersId = Id("test.pack:malformed_tiers");
-        var resolver = new RuntimeRulesetBindingResolver();
+        var resolver = CreateResolver();
 
         RulesetBindingResult<IRosterCapacityPolicy> missing = resolver.BindRosterCapacityPolicy(
             Catalog(new RulesetDefinition(
@@ -205,9 +398,43 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
+    public void ActionTokenBinding_RequiresAuthoredFiniteLivenessLimits()
+    {
+        ContentId missingId = Id("test.pack:missing_action_limits");
+        ContentId invalidId = Id("test.pack:invalid_action_limits");
+        RuntimeRulesetBindingResolver resolver = CreateResolver();
+
+        RulesetBindingResult<BattleTurnEconomyRuleset> missing = resolver.BindTurnEconomy(
+            Catalog(new RulesetDefinition(
+                missingId,
+                "Missing Limits",
+                "No hidden liveness defaults.",
+                RulesetCategory.TurnEconomy,
+                StandardRulesetPolicyIds.StandardActionToken)),
+            missingId);
+        RulesetBindingResult<BattleTurnEconomyRuleset> invalid = resolver.BindTurnEconomy(
+            Catalog(new RulesetDefinition(
+                invalidId,
+                "Invalid Limits",
+                "The free-action limit cannot consume the entire command budget.",
+                RulesetCategory.TurnEconomy,
+                StandardRulesetPolicyIds.StandardActionToken,
+                Parameters(
+                    ("maximumCommands", 8),
+                    ("maximumConsecutiveFreeActions", 8)))),
+            invalidId);
+
+        Assert.False(missing.IsSuccess);
+        Assert.Equal(2, missing.Diagnostics.Count(diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.MissingParameter));
+        Assert.False(invalid.IsSuccess);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterValue, Assert.Single(invalid.Diagnostics).Code);
+    }
+
+    [Fact]
     public void Binding_ReportsMissingWrongCategoryUnsupportedPolicyAndBadParameters()
     {
-        var resolver = new RuntimeRulesetBindingResolver();
+        var resolver = CreateResolver();
         GameDataCatalog empty = Catalog();
 
         RulesetBindingResult<ProductionCombatRuleset> missing = resolver.BindProductionCombatRuleset(
@@ -250,8 +477,8 @@ public sealed class RuntimeRulesetBindingTests
                 RulesetCategory.Damage,
                 StandardRulesetPolicyIds.StandardDamage,
                 [
-                    new KeyValuePair<string, object?>("weakMultiplier", "loud"),
-                    new KeyValuePair<string, object?>("resistMultiplier", 0m),
+                    new KeyValuePair<string, object?>("weakDamageMultiplier", "loud"),
+                    new KeyValuePair<string, object?>("resistDamageMultiplier", -1m),
                     new KeyValuePair<string, object?>("criticalMultiplier", 3m)
                 ])),
             badParametersId,
@@ -260,10 +487,10 @@ public sealed class RuntimeRulesetBindingTests
         Assert.False(badParameters.IsSuccess);
         Assert.Contains(badParameters.Diagnostics, diagnostic =>
             diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterType &&
-            diagnostic.ParameterName == "weakMultiplier");
+            diagnostic.ParameterName == "weakDamageMultiplier");
         Assert.Contains(badParameters.Diagnostics, diagnostic =>
             diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterValue &&
-            diagnostic.ParameterName == "resistMultiplier");
+            diagnostic.ParameterName is null);
         Assert.Contains(badParameters.Diagnostics, diagnostic =>
             diagnostic.Code == RulesetBindingDiagnosticCode.UnknownParameter &&
             diagnostic.ParameterName == "criticalMultiplier");
@@ -274,7 +501,7 @@ public sealed class RuntimeRulesetBindingTests
     public void Binding_DefaultRulesetIdReturnsTypedDiagnosticBeforeCatalogLookup()
     {
         RulesetBindingResult<ProductionCombatRuleset> result =
-            new RuntimeRulesetBindingResolver().BindProductionCombatRuleset(
+            CreateResolver().BindProductionCombatRuleset(
                 Catalog(),
                 default,
                 new SequenceRandomSource());
@@ -298,6 +525,119 @@ public sealed class RuntimeRulesetBindingTests
     private static ContentId Qualified(string localId) => ContentId.Parse($"{CatalogPack}:{localId}");
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static IEnumerable<KeyValuePair<string, object?>> Parameters(
+        params (string Key, object? Value)[] parameters) =>
+        parameters.Select(parameter => KeyValuePair.Create(parameter.Key, parameter.Value));
+
+    private static RulesetDefinition Ruleset(
+        string localId,
+        RulesetCategory category,
+        ContentId policyId) =>
+        new(
+            Id($"test.pack:{localId}"),
+            localId,
+            "Host-registered policy fixture.",
+            category,
+            policyId);
+
+    private static RuntimeRulesetBindingResolver CreateResolver() =>
+        new(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+
+    private sealed class FixedDamageFactory(
+        ContentId policyId,
+        ProductionCombatRuleset service) : IRuntimeDamageRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ProductionCombatRuleset> Create(
+            RulesetDefinition definition,
+            IRandomSource random) =>
+            new(service);
+    }
+
+    private sealed class FixedRewardFactory(
+        ContentId policyId,
+        IBattleRewardService service) : IRuntimeRewardRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<IBattleRewardService> Create(
+            RulesetDefinition definition,
+            ProductionCombatRuleset combatRuleset) =>
+            new(service);
+    }
+
+    private sealed class DiagnosticDamageFactory(
+        ContentId policyId,
+        ProductionCombatRuleset service) : IRuntimeDamageRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ProductionCombatRuleset> Create(
+            RulesetDefinition definition,
+            IRandomSource random) =>
+            new(
+                service,
+                [
+                    new RulesetBindingDiagnostic(
+                        RulesetBindingDiagnosticCode.InvalidParameterValue,
+                        definition.Id,
+                        "Rejected by the host factory.",
+                        ActualCategory: definition.Category,
+                        PolicyId: definition.PolicyId)
+                ]);
+    }
+
+    private sealed class FixedStatFactory(
+        ContentId policyId,
+        IStatResolutionPolicy service) : IRuntimeStatRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<IStatResolutionPolicy> Create(RulesetDefinition definition) =>
+            new(service);
+    }
+
+    private sealed class FixedGrowthFactory(
+        ContentId policyId,
+        GrowthRulesetServices service) : IRuntimeGrowthRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<GrowthRulesetServices> Create(RulesetDefinition definition) =>
+            new(service);
+    }
+
+    private sealed class FixedRosterFactory(
+        ContentId policyId,
+        IRosterCapacityPolicy service) : IRuntimeRosterCapacityRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<IRosterCapacityPolicy> Create(RulesetDefinition definition) =>
+            new(service);
+    }
+
+    private sealed class FixedEconomyFactory(
+        ContentId policyId,
+        ResourceManagementRulesetServices service) : IRuntimeEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ResourceManagementRulesetServices> Create(RulesetDefinition definition) =>
+            new(service);
+    }
+
+    private sealed class FixedTurnFactory(
+        ContentId policyId,
+        BattleTurnEconomyRuleset service) : IRuntimeTurnEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<BattleTurnEconomyRuleset> Create(RulesetDefinition definition) =>
+            new(service);
+    }
 
     private sealed class SequenceRandomSource(
         IReadOnlyList<int>? integers = null,

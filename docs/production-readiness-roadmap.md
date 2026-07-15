@@ -46,7 +46,7 @@ This roadmap remains active while any finding is `open` or
 | PR-M1 | Resource addition can escape typed diagnostics | `verified` | Checked arithmetic returns typed rejection without live mutation. |
 | PR-M2 | Stat allocation can exceed runtime domains | `verified` | Allocation validates inputs and calculated snapshots before atomic commit. |
 | PR-M3 | Navigation/traversal can apply invalid IDs | `verified` | Runtime services reject invalid IDs before policy evaluation or mutation. |
-| PR-M4 | Authored rulesets are mostly fixed labels | `open` | Add host-registered typed policy factories and complete supported built-in parameters. |
+| PR-M4 | Authored rulesets are mostly fixed labels | `implemented_pending_review` | Hosts supply a typed factory registry; standard damage exposes all combat settings; roster tiers and Action Token liveness are authored; fixed supplied policies remain replaceable. |
 | PR-M5 | Encounter events leak presentation and omit data | `open` | Replace message-authoritative events with typed payloads. |
 | PR-M6 | Aggregate save restoration is host-reimplemented | `open` | Add framework session restoration and a version-migration seam. |
 | PR-L1 | Runtime random targeting has an ordered fallback | `implemented_pending_review` | Both targeting policies are mandatory; ordered behavior requires explicit injection. |
@@ -82,7 +82,8 @@ resulting corrections are complete.
 | Checkpoint | Commit/result | Verification |
 |---|---|---|
 | 1 | `44960bc` (`runtime: require explicit random targeting`) | 789 tests passed; 0 skipped; strict build produced 0 warnings; all noninteractive demos passed. |
-| 2 | `fusion: enforce catalyst rank shifts` | 794 tests passed; 0 skipped; schema v3 active packs at `0.3.0`; rank up/down, parent order, stale rank, both boundaries, ambiguity, and retired-shape rejection covered. |
+| 2 | `d8047e7` (`fusion: enforce catalyst rank shifts`) | 794 tests passed; 0 skipped; schema v3 active packs at `0.3.0`; rank up/down, parent order, stale rank, both boundaries, ambiguity, and retired-shape rejection covered. |
+| 3 | `runtime: register authored ruleset policies` | 799 tests passed; 0 skipped; all seven typed factory categories, 28 combat settings, authored roster tiers, authored Action Token liveness, custom replacement, and absent standard moon-phase composition covered. |
 
 ## Review Evidence Standard
 

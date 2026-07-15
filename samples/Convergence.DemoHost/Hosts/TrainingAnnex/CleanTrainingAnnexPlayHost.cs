@@ -246,7 +246,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         GameDataCatalog catalog = load.Catalog;
-        var rulesetResolver = new RuntimeRulesetBindingResolver();
+        var rulesetResolver = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         RulesetBindingResult<ProductionCombatRuleset> combatBinding =
             rulesetResolver.BindProductionCombatRuleset(
                 catalog,

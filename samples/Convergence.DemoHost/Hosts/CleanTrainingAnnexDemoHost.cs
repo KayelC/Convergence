@@ -102,7 +102,8 @@ internal sealed class CleanTrainingAnnexDemoHost
             cancellationToken)
             .ConfigureAwait(false);
 
-        var resolver = new RuntimeRulesetBindingResolver();
+        var resolver = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         var random = new TrainingAnnexMinimumRandomSource();
         ProductionCombatRuleset damageRuleset = resolver.BindProductionCombatRuleset(
             catalog,

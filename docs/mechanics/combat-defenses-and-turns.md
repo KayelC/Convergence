@@ -4,7 +4,7 @@
 
 **Configured rule:** combat arithmetic is supplied through policies. The included `ProductionCombatRuleset` handles damage, accuracy, criticals, chance rolls, ailment application, instant death, initiative support, and reward calculations. A game may bind authored ruleset records or inject another implementation.
 
-The exact formula and multipliers are therefore not universal Convergence rules. They are part of the selected ruleset. Training Annex binds the supplied standard ruleset for repeatable examples.
+The exact formula and multipliers are therefore not universal Convergence rules. They are part of the selected ruleset. Training Annex binds the supplied standard ruleset for repeatable examples. A host explicitly supplies the factory registry used to resolve authored policy IDs; no unregistered policy falls back to a built-in. The full standard parameter surface is documented in [Ruleset Policy Contracts](../ruleset-policy-contracts.md).
 
 ## Damage Flow
 
@@ -47,6 +47,11 @@ Guard is executable runtime state and may reduce damage or normalize weakness ac
 `IBattleTurnEconomy` is the reusable turn interface. Action Token is one optional implementation, not a mandatory battle model.
 
 In ruleset content, `turn_economy` is the generic category and `standard_action_token` is the supplied policy ID. The category is intentionally not named `action_token`, because another host may bind a different implementation of the same turn-economy contract.
+
+The standard Action Token ruleset requires authored phase-liveness limits for
+maximum commands and consecutive free actions. They prevent a malformed or
+hostile command source from keeping one phase alive forever; the resolver does
+not hide default limits.
 
 The supplied Action Token behavior is:
 

@@ -16,7 +16,7 @@ Creation fails with typed diagnostics when the entity, level, skills, initializa
 
 The standard stat vocabulary is Strength, Magic, Vitality, Agility, and Luck. Games may register their own typed stat IDs where the consuming policy supports them.
 
-**Configured rule:** stat calculation belongs to `IStatResolutionPolicy`. `RuntimeStatSourceKind` explicitly selects either the actor or its Active Hosted Entity as the stat source. The supplied standard policy then applies implemented equipment contributions, caps, and the acting Vessel's stage modifiers. A host may bind a catalog ruleset or inject another policy.
+**Configured rule:** stat calculation belongs to `IStatResolutionPolicy`. `RuntimeStatSourceKind` explicitly selects either the actor or its Active Hosted Entity as the stat source. The supplied standard policy then applies implemented equipment contributions, caps, and the acting Vessel's stage modifiers. A host may bind a catalog ruleset through its typed factory registry or inject another policy. The supplied stat and growth factories are fixed for `0.1.0`, while alternate registered policy IDs may replace them.
 
 `IRuntimeActorStatCompositionService` validates the selected Hosted Entity and roster graph, resolves all registered core stats, recalculates resources while preserving valid current values, and commits atomically. Missing Hosted Entity behavior is explicit: reject composition or use actor base stats. The framework never infers stat sourcing from display names or actor-kind text.
 

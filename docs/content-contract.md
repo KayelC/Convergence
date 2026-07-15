@@ -22,7 +22,14 @@ The active pre-release authoring contract is schema version `3`. Versions `1` an
 
 Definitions and catalogs retain no serializer-owned values. Hosts may use another source format by mapping it into the same domain contracts or by supplying compatible JSON text.
 
-Ruleset categories identify generic service families. In particular, `turn_economy` is the category for any `IBattleTurnEconomy` implementation; `standard_action_token` is the policy ID for the optional Action Token implementation supplied by Convergence.
+Ruleset categories identify generic service families. Policy IDs are validated
+as host vocabulary, then resolved through a host-supplied typed policy-factory
+registry. Content registration alone does not install runtime behavior, and the
+resolver never substitutes an unregistered policy. In particular,
+`turn_economy` is the category for any `IBattleTurnEconomy` implementation;
+`standard_action_token` is the policy ID for the optional Action Token
+implementation supplied by Convergence. The supported built-in parameters are
+normatively listed in [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
 ## Generic Content Policy
 

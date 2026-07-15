@@ -7,7 +7,7 @@ expands that finite correction sequence; they do not replace its unresolved
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 20 complete capabilities, two partial capabilities, and three deferred capabilities.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 21 complete capabilities, one partial capability, and three deferred capabilities.
 
 The [Terminology Boundary](terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
 
@@ -18,6 +18,12 @@ moves the target by an exact offset within that target's catalog race, rejects
 stale participant rank data, and returns a typed no-fusion result when an exact
 destination does not exist. Schema v3 removes the provisional generic
 rank-offset shape before the public API baseline is established.
+
+Authored rulesets now resolve through an explicit host-supplied typed factory
+registry. The standard damage factory exposes every existing combat setting,
+roster tiers and Action Token liveness are authored, and the supplied fixed
+growth/stat/reward/economy policies can be replaced by registering another
+factory. Moon phase remains absent from the standard composition.
 
 ## Priority 1: Authoring Contract Completion
 

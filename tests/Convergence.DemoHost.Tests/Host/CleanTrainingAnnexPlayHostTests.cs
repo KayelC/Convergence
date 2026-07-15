@@ -2260,7 +2260,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task TrainingAnnexExecutionServices_UseOneCatalogBoundProductionCombatRuleset()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindProductionCombatRuleset(
                 catalog,
                 Qualified("standard_damage"),
@@ -2283,7 +2283,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task TrainingAnnexBoundRuleset_UsesStrengthForPhysicalAndMagicForMagicalDamage()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver()
+        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindProductionCombatRuleset(
                 catalog,
                 Qualified("standard_damage"),
@@ -3798,7 +3798,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
-        GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver()
+        GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
         RuntimeActorSnapshot before = roster.Player.Actor.State.ToSnapshot();

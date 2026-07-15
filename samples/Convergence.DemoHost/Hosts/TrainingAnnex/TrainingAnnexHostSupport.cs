@@ -659,7 +659,8 @@ internal static class TrainingAnnexHostSupport
 
     private static GrowthRulesetServices? BindGrowthServices(GameDataCatalog catalog, List<string> diagnostics)
     {
-        RulesetBindingResult<GrowthRulesetServices> growth = new RuntimeRulesetBindingResolver()
+        RulesetBindingResult<GrowthRulesetServices> growth = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindGrowthServices(catalog, Qualified("standard_growth"));
         if (growth.IsSuccess)
         {
@@ -678,7 +679,8 @@ internal static class TrainingAnnexHostSupport
         GameDataCatalog catalog,
         List<string> diagnostics)
     {
-        RulesetBindingResult<IStatResolutionPolicy> stats = new RuntimeRulesetBindingResolver()
+        RulesetBindingResult<IStatResolutionPolicy> stats = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindStatResolutionPolicy(catalog, Qualified("standard_stat"));
         if (stats.IsSuccess)
         {
