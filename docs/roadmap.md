@@ -1,5 +1,10 @@
 # Product Roadmap
 
+The [Production-Readiness Completion Roadmap](production-readiness-roadmap.md)
+is the active release gate. The priorities below describe what follows or
+expands that finite correction sequence; they do not replace its unresolved
+`Blocker`, `High`, `Medium`, or `Low` findings.
+
 ## Current State
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The executable capability matrix currently records 20 complete capabilities, two partial capabilities, and three deferred capabilities.

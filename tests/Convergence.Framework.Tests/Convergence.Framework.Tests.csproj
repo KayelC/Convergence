@@ -35,6 +35,9 @@
     <Content Include="Fixtures\framework-capability-matrix.json" Link="Fixtures\framework-capability-matrix.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Fixtures\production-readiness-roadmap.json" Link="Fixtures\production-readiness-roadmap.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="SkillSystem\Fixtures\Validation\*.json" Link="Fixtures\Validation\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

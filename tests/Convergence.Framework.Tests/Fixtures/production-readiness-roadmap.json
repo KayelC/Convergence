@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "product": "Convergence.Framework",
+  "branch": "main",
+  "startingCommit": "8db20fe",
+  "sourceAudit": "convergence-framework-production-readiness-audit-2026-07-14",
+  "allowedStatuses": ["open", "implemented_pending_review", "verified"],
+  "findings": [
+    {
+      "id": "PR-B1",
+      "title": "Repository product boundary",
+      "severity": "blocker",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "Structure Promotions and Retired Legacy Concepts",
+      "evidence": ["ProductBoundaryTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-B2",
+      "title": "Software and content licensing boundary",
+      "severity": "blocker",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "legal: adopt PolyForm licensing and contribution guidelines",
+      "evidence": ["ProductBoundaryTests.PublicLicensing_DefinesNoncommercialScopesAndProtectsArchiveOwnership"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-B3",
+      "title": "Public and authoring contract stabilization",
+      "severity": "blocker",
+      "status": "open",
+      "plannedCheckpoint": 7,
+      "plannedCommit": "api: establish convergence 0.1 contract",
+      "evidence": ["FrameworkBoundaryTests", "SchemaDeserializationTests"],
+      "remainingWork": ["API classification and baseline", "XML documentation", "JSON Schema v3", "authoring validator CLI"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-B4",
+      "title": "Real Godot reference consumer",
+      "severity": "blocker",
+      "status": "open",
+      "plannedCheckpoint": 8,
+      "plannedCommit": "host: add godot 4.7 reference consumer",
+      "evidence": ["GodotIntegrationContractTests"],
+      "remainingWork": ["Godot 4.7.1 project", "headless engine smoke test"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-B5",
+      "title": "Repeatable repository release gate",
+      "severity": "blocker",
+      "status": "open",
+      "plannedCheckpoint": 9,
+      "plannedCommit": "quality: complete production release gate",
+      "evidence": ["ProductBoundaryTests.ActiveQualityWorkflow_EnforcesTheCleanProductGate"],
+      "remainingWork": ["coverage threshold", "API and schema gates", "Godot smoke gate", "documentation link gate", "security policy"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-H1",
+      "title": "Encounter turn atomicity and cancellation",
+      "severity": "high",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "fix: contain encounter port failures",
+      "evidence": ["BattleEncounterRunnerTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-H2",
+      "title": "Generic ownership and roster roles",
+      "severity": "high",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "refactor: generalize actor ownership roles",
+      "evidence": ["PartyRosterTransitionTests", "TerminologyBoundaryTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M1",
+      "title": "Typed resource-addition overflow boundary",
+      "severity": "medium",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "fix: m2",
+      "evidence": ["RuntimeStateSnapshotTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M2",
+      "title": "Stat-allocation numeric domain",
+      "severity": "medium",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "Review-Whole-6: Atomic execution and boundary arithmetic",
+      "evidence": ["ProgressionPolicyTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M3",
+      "title": "Navigation and traversal identifier validity",
+      "severity": "medium",
+      "status": "verified",
+      "plannedCheckpoint": 0,
+      "plannedCommit": "Review-Whole-7: Definition immutability and runtime condition consistency",
+      "evidence": ["RuntimeNavigationTests", "RuntimeDungeonTraversalTests"],
+      "remainingWork": [],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M4",
+      "title": "Authored ruleset policy authority",
+      "severity": "medium",
+      "status": "open",
+      "plannedCheckpoint": 3,
+      "plannedCommit": "runtime: register authored ruleset policies",
+      "evidence": ["RuntimeRulesetBindingTests"],
+      "remainingWork": ["host policy-factory registry", "complete supplied parameter contracts"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M5",
+      "title": "Structured localization-safe encounter events",
+      "severity": "medium",
+      "status": "open",
+      "plannedCheckpoint": 4,
+      "plannedCommit": "battle: structure encounter event contracts",
+      "evidence": ["BattleEncounterRunnerTests"],
+      "remainingWork": ["typed event payloads", "non-authoritative debug messages"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-M6",
+      "title": "Aggregate runtime session restoration",
+      "severity": "medium",
+      "status": "open",
+      "plannedCheckpoint": 5,
+      "plannedCommit": "runtime: add aggregate session restoration",
+      "evidence": ["RuntimePersistenceSnapshotTests"],
+      "remainingWork": ["aggregate restore service", "save migration seam"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-L1",
+      "title": "Explicit runtime random-target policy",
+      "severity": "low",
+      "status": "open",
+      "plannedCheckpoint": 1,
+      "plannedCommit": "runtime: require explicit random targeting",
+      "evidence": ["ActiveSkillExecutionTests"],
+      "remainingWork": ["remove ordered fallback", "require explicit host policy"],
+      "archiveEligible": false
+    },
+    {
+      "id": "PR-L2",
+      "title": "Collision-safe DemoHost content layout",
+      "severity": "low",
+      "status": "open",
+      "plannedCheckpoint": 6,
+      "plannedCommit": "host: preserve content pack paths",
+      "evidence": ["ProductBoundaryTests"],
+      "remainingWork": ["pack-relative output paths", "duplicate-basename regression"],
+      "archiveEligible": false
+    },
+    {
+      "id": "CR-M6",
+      "title": "Catalyst rank-shift semantics",
+      "severity": "medium",
+      "status": "open",
+      "plannedCheckpoint": 2,
+      "plannedCommit": "fusion: enforce catalyst rank shifts",
+      "evidence": ["FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests"],
+      "remainingWork": ["authored catalyst roles", "exact same-race target rank", "schema v3 operation"],
+      "archiveEligible": false
+    }
+  ]
+}
