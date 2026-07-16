@@ -756,6 +756,37 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             return InvalidAssessment(command.Kind, "The prepared item assessment is missing.");
         }
 
+        if (command.Item.Usage is null ||
+            !assessment.HasResolvedTargets ||
+            !PreparedTargetResolver.TryRebind(
+                request.Participants,
+                assessment.TargetIds,
+                assessment.IsUntargeted,
+                out ResolvedRuntimeTargetSet? liveTargets) ||
+            liveTargets is null)
+        {
+            return InvalidAssessment(
+                command.Kind,
+                "The prepared item targets no longer match the execution request.");
+        }
+
+        if (!RuntimeTargetResolver.TryValidatePreparedTargets(
+                new EffectActionExecutionRequest(
+                    command.Item.Id,
+                    request.Actor,
+                    request.Participants,
+                    request.Environment,
+                    command.Item.Usage.Targeting,
+                    command.SelectedTargetIds,
+                    item: command.Item),
+                liveTargets,
+                out string? targetingDiagnostic))
+        {
+            return InvalidAssessment(
+                command.Kind,
+                targetingDiagnostic ?? "The prepared item targets are no longer eligible.");
+        }
+
         IItemActionReservation? reservation = null;
         List<BattleActionEvent> events = [];
         RuntimeActorExecutionTransaction transaction;
@@ -939,6 +970,23 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             targets is null)
         {
             return InvalidAssessment(kind, "The prepared action targets no longer match the execution request.");
+        }
+
+        var currentAction = new EffectActionExecutionRequest(
+            sourceId,
+            request.Actor,
+            request.Participants,
+            request.Environment,
+            targeting,
+            selectedTargetIds);
+        if (!RuntimeTargetResolver.TryValidatePreparedTargets(
+                currentAction,
+                targets,
+                out string? targetingDiagnostic))
+        {
+            return InvalidAssessment(
+                kind,
+                targetingDiagnostic ?? "The prepared action targets are no longer eligible.");
         }
 
         OrderedEffectExecution execution;

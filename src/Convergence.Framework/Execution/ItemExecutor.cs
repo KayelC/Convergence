@@ -262,6 +262,26 @@ public sealed class ItemExecutor : IItemExecutor
                 : "The item assessment was not created by this executor.");
         }
 
+        EffectActionExecutionRequest currentAction = CreateActionRequest(request, request.Item.Usage);
+        if (!RuntimeTargetResolver.TryValidatePreparedTargets(
+                currentAction,
+                preparedTargets,
+                out string? targetingDiagnostic))
+        {
+            return InvalidAssessment(
+                targetingDiagnostic ?? "The prepared item targets are no longer eligible.");
+        }
+
+        if (!request.Item.Usage.Effects.Any(effect => IsApplicable(effect, preparedTargets, request.Actor)))
+        {
+            return ItemExecutionResult.Rejected(
+            [
+                new ItemExecutionDiagnostic(
+                    ItemExecutionDiagnosticCode.NoApplicableEffect,
+                    $"Item '{request.Item.Id}' would no longer affect the prepared target(s).")
+            ]);
+        }
+
         OrderedEffectExecution execution;
         RuntimeActorExecutionTransaction transaction;
         try

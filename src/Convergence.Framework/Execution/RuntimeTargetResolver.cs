@@ -27,14 +27,7 @@ internal static class RuntimeTargetResolver
             return true;
         }
 
-        RuntimeActorState[] eligible = request.Participants
-            .Where(candidate => candidate.IsActive)
-            .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
-            .Where(candidate => targeting.Relation == TargetRelation.Self ||
-                                targeting.AllowSelf ||
-                                candidate.InstanceId != request.Actor.InstanceId)
-            .Where(candidate => LifeStateMatches(candidate, targeting.LifeState))
-            .ToArray();
+        RuntimeActorState[] eligible = GetEligibleTargets(request, targeting);
 
         IReadOnlyList<RuntimeActorState> targets;
         switch (targeting.Selection)
@@ -84,6 +77,78 @@ internal static class RuntimeTargetResolver
         return true;
     }
 
+    public static bool TryValidatePreparedTargets(
+        EffectActionExecutionRequest request,
+        ResolvedRuntimeTargetSet prepared,
+        out string? diagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(prepared);
+
+        if (request.Participants.Select(participant => participant.InstanceId).Distinct().Count() !=
+            request.Participants.Count)
+        {
+            diagnostic = "Runtime participant instance IDs must be unique.";
+            return false;
+        }
+
+        TargetingDefinition targeting = request.Targeting;
+        if (targeting.Relation == TargetRelation.None && targeting.Selection == TargetSelection.None)
+        {
+            bool validUntargeted = prepared.IsUntargeted && prepared.Targets.Count == 0;
+            diagnostic = validUntargeted
+                ? null
+                : "The prepared targets no longer match the untargeted action rules.";
+            return validUntargeted;
+        }
+
+        if (prepared.IsUntargeted)
+        {
+            diagnostic = "A targeted action cannot execute with an untargeted assessment.";
+            return false;
+        }
+
+        RuntimeInstanceId[] eligibleIds = GetEligibleTargets(request, targeting)
+            .Select(target => target.InstanceId)
+            .ToArray();
+        RuntimeInstanceId[] preparedIds = prepared.Targets
+            .Select(target => target.InstanceId)
+            .ToArray();
+        if (preparedIds.Distinct().Count() != preparedIds.Length ||
+            preparedIds.Any(targetId => !eligibleIds.Contains(targetId)))
+        {
+            diagnostic = "One or more prepared targets are no longer eligible for the action's targeting rules.";
+            return false;
+        }
+
+        bool selectionMatches = targeting.Selection switch
+        {
+            TargetSelection.Single => preparedIds.SequenceEqual(request.SelectedTargetIds),
+            TargetSelection.All => preparedIds.SequenceEqual(eligibleIds),
+            TargetSelection.Random => true,
+            _ => false
+        };
+        if (!selectionMatches)
+        {
+            diagnostic = "The prepared targets no longer match the authored selection rule.";
+            return false;
+        }
+
+        TargetCountDefinition expected = targeting.Count ?? new TargetCountDefinition(
+            1,
+            targeting.Selection == TargetSelection.All ? int.MaxValue : 1);
+        if (preparedIds.Length < expected.Minimum || preparedIds.Length > expected.Maximum)
+        {
+            diagnostic =
+                $"Prepared target selection contains {preparedIds.Length} target(s); " +
+                $"expected {expected.Minimum} through {expected.Maximum}.";
+            return false;
+        }
+
+        diagnostic = null;
+        return true;
+    }
+
     private static IReadOnlyList<RuntimeActorState> ResolveSelected(
         IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<RuntimeActorState> eligible)
@@ -101,6 +166,18 @@ internal static class RuntimeTargetResolver
 
         return Array.AsReadOnly(targets.ToArray());
     }
+
+    private static RuntimeActorState[] GetEligibleTargets(
+        EffectActionExecutionRequest request,
+        TargetingDefinition targeting) =>
+        request.Participants
+            .Where(candidate => candidate.IsActive)
+            .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
+            .Where(candidate => targeting.Relation == TargetRelation.Self ||
+                                targeting.AllowSelf ||
+                                candidate.InstanceId != request.Actor.InstanceId)
+            .Where(candidate => LifeStateMatches(candidate, targeting.LifeState))
+            .ToArray();
 
     private static bool RelationMatches(RuntimeActorState actor, RuntimeActorState candidate, TargetRelation relation) =>
         relation switch

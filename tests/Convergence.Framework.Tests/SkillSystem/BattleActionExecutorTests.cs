@@ -193,6 +193,109 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task RandomBasicAttack_RejectsAStalePreparedTargetWithoutRerolling()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            RandomEnemy());
+        BattleActionExecutionRequest request = Request(command, actor, [actor, first, second]);
+        BattleActionAssessment assessment = executor.Assess(request);
+        first.SetResource(Hp, 0m);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal([first.InstanceId], assessment.TargetIds);
+        Assert.Equal(1, randomTargets.CallCount);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(result.Diagnostics).Code);
+        Assert.Empty(result.Effects);
+        Assert.Equal(100m, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task PreparedItem_RejectsAStaleTargetBeforeInventoryReservation()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20m);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20m)));
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine, [target.InstanceId]),
+            actor,
+            [actor, target],
+            inventory);
+        BattleActionAssessment assessment = executor.Assess(request);
+        target.SetResource(Hp, 0m);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.AssessmentInvalid, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
+    public void ItemExecutor_RejectsPreparedTargetsThatBecomeIneligible()
+    {
+        BattleExecutionServices services = ExecutionServices();
+        var executor = new ItemExecutor(services);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20m);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20m)));
+        var request = new ItemExecutionRequest(
+            medicine,
+            actor,
+            [actor, target],
+            new EffectExecutionEnvironment(Battle),
+            [target.InstanceId]);
+        ItemExecutionAssessment assessment = executor.Assess(request);
+        target.SetResource(Hp, 0m);
+
+        ItemExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.Equal(ItemExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ItemExecutionDiagnosticCode.AssessmentInvalid, Assert.Single(result.Diagnostics).Code);
+        Assert.Empty(result.Effects);
+    }
+
+    [Fact]
+    public void ItemExecutor_RejectsPreparedUseThatNoLongerHasAMeaningfulEffect()
+    {
+        var executor = new ItemExecutor(ExecutionServices());
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20m);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20m)));
+        var request = new ItemExecutionRequest(
+            medicine,
+            actor,
+            [actor, target],
+            new EffectExecutionEnvironment(Battle),
+            [target.InstanceId]);
+        ItemExecutionAssessment assessment = executor.Assess(request);
+        target.SetResource(Hp, 100m);
+
+        ItemExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.Equal(ItemExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ItemExecutionDiagnosticCode.NoApplicableEffect, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(ItemConsumptionDecision.None, result.Consumption);
+        Assert.Empty(result.Effects);
+    }
+
+    [Fact]
     public async Task Analyze_PreparedAssessmentExecutesItsDisplayedTargetWithoutRandomSelection()
     {
         var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
@@ -461,7 +564,20 @@ public sealed class BattleActionExecutorTests
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
     {
-        var services = new BattleExecutionServices(
+        BattleExecutionServices services = ExecutionServices(
+            escapeRules,
+            customEffects,
+            randomTargetPolicy,
+            runtimeRandomTargetPolicy);
+        return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
+    }
+
+    private static BattleExecutionServices ExecutionServices(
+        IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
+        IRandomTargetSelectionPolicy? randomTargetPolicy = null,
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null) =>
+        new(
             EmptyAilments.Instance,
             new FixedDamagePolicy(),
             new NeverInstantDeathPolicy(),
@@ -472,8 +588,6 @@ public sealed class BattleActionExecutorTests
             runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy(),
             escapeRuleHandlers: escapeRules,
             customEffectHandlers: customEffects);
-        return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
-    }
 
     private static RuntimeActorState Actor(
         string id,
