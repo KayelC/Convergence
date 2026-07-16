@@ -179,6 +179,7 @@ public sealed class RuntimeActorGrowthCompositionTests
                 new BattleResourceState(StandardProgressionIds.Sp, 20m, 30m)
             ],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("player_team")),
             effectiveStats,
             identity: new RuntimeActorIdentitySnapshot(
                 instanceId,

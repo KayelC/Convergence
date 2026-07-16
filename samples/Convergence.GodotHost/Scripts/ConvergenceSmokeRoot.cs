@@ -84,13 +84,15 @@ public partial class ConvergenceSmokeRoot : Node
             RuntimeInstanceId.Parse("godot_echo_adept"),
             PlayerTeam,
             3,
-            IsDeployed: true)).RequireActor();
+            IsDeployed: true,
+            ContentId.Parse("godot_player"))).RequireActor();
         CatalogBattleActor enemy = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("ashling"),
             RuntimeInstanceId.Parse("godot_ashling"),
             EnemyTeam,
             2,
-            IsDeployed: true)).RequireActor();
+            IsDeployed: true,
+            ContentId.Parse("godot_ai"))).RequireActor();
 
         Node actorRoot = GetNode<Node>("ActorScenes");
         var playerNode = new Node { Name = "EchoAdept" };

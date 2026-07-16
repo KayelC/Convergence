@@ -659,6 +659,7 @@ public sealed class PassiveSkillRuntimeTests
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), team),
             passiveSkills: passiveSkills);
 
     private static AilmentDefinition PoisonDefinition() =>

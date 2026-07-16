@@ -666,6 +666,7 @@ public sealed class ProgressionPolicyTests
                 new BattleResourceState(StandardProgressionIds.Sp, 20m, 30m)
             ],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("player_team")),
             stats: BaseStats(statValue),
             identity: new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse(id),
@@ -708,7 +709,7 @@ public sealed class ProgressionPolicyTests
         RuntimeActorSnapshot actual)
     {
         Assert.Equal(expected.Identity, actual.Identity);
-        Assert.Equal(expected.Ownership, actual.Ownership);
+        Assert.Equal(expected.Affiliation, actual.Affiliation);
         Assert.Equal(expected.EncounterPresence, actual.EncounterPresence);
         Assert.Equal(expected.Progression, actual.Progression);
         Assert.Equal(expected.VitalResourceId, actual.VitalResourceId);

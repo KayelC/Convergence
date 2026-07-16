@@ -157,6 +157,10 @@ public sealed class FusionTransactionServiceTests
         Assert.Equal(
             RuntimeInstanceId.Parse("rank_result_reversed"),
             reversed.ResultActorSnapshot!.Identity.InstanceId);
+        Assert.Equal(
+            Id("test_controller"),
+            forward.ResultActorSnapshot.Affiliation.CommandAuthorityId);
+        Assert.Equal(Id("player_team"), forward.ResultActorSnapshot.Affiliation.TeamId);
         AssertCatalogDecimalStats(forward.ResultActorSnapshot!.Stats.BaseStats);
         AssertCatalogDecimalStats(reversed.ResultActorSnapshot!.Stats.BaseStats);
         Assert.Equal([target.InstanceId, catalyst.InstanceId], forward.ConsumedParticipantIds);
@@ -421,7 +425,7 @@ public sealed class FusionTransactionServiceTests
                 target.InstanceId,
                 Id("player_team"),
                 target.Level,
-                ControllerId: Id("test_controller"),
+                CommandAuthorityId: Id("test_controller"),
                 IsDeployed: false))
             .RequireActor()
             .State
@@ -785,7 +789,7 @@ public sealed class FusionTransactionServiceTests
         IEnumerable<ContentId> equippedSkillIds) =>
         new(
             snapshot.Identity,
-            snapshot.Ownership,
+            snapshot.Affiliation,
             snapshot.EncounterPresence,
             snapshot.Progression,
             snapshot.Resources,

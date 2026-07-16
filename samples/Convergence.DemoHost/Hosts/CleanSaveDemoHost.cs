@@ -269,7 +269,7 @@ internal sealed class CleanSaveDemoHost
     private static RuntimeActorSnapshot CreateActor(RuntimeInstanceId instanceId, ContentId entityId, IEnumerable<ContentId> skillIds) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, ContentId.Parse("companion"), entityId.ToString()),
-            new RuntimeActorOwnershipSnapshot(ContentId.Parse("host"), ContentId.Parse("player_team")),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("host"), ContentId.Parse("player_team")),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
             [
@@ -430,9 +430,8 @@ internal static class CleanSaveJsonCodec
             actor.Identity.ActorKindId.ToString(),
             actor.Identity.DisplayName,
             actor.Identity.DisplaySubtitle,
-            actor.Ownership.ControllerId.ToString(),
-            actor.Ownership.TeamId.ToString(),
-            actor.Ownership.OwnerInstanceId?.ToString(),
+            actor.Affiliation.CommandAuthorityId.ToString(),
+            actor.Affiliation.TeamId.ToString(),
             actor.EncounterPresence.IsDeployed,
             actor.EncounterPresence.HasSwappedThisTurn,
             actor.Progression.Level,
@@ -471,7 +470,7 @@ internal static class CleanSaveJsonCodec
     private static RuntimeActorSnapshot FromDto(HostActorDto dto) =>
         new(
             new RuntimeActorIdentitySnapshot(Instance(dto.InstanceId), Id(dto.EntityDefinitionId), Id(dto.ActorKindId), dto.DisplayName, dto.DisplaySubtitle),
-            new RuntimeActorOwnershipSnapshot(Id(dto.ControllerId), Id(dto.TeamId), dto.OwnerInstanceId is null ? null : Instance(dto.OwnerInstanceId)),
+            new RuntimeActorAffiliationSnapshot(Id(dto.CommandAuthorityId), Id(dto.TeamId)),
             new RuntimeEncounterPresenceSnapshot(dto.IsDeployed, dto.HasSwappedThisTurn),
             new RuntimeProgressionSnapshot(dto.Level, dto.Experience, dto.LifetimeExperience, dto.UnspentStatPoints),
             dto.Resources.Select(resource => new RuntimeResourceSnapshot(Id(resource.ResourceId), resource.Current, resource.Maximum)),
@@ -725,9 +724,8 @@ internal static class CleanSaveJsonCodec
         string ActorKindId,
         string DisplayName,
         string? DisplaySubtitle,
-        string ControllerId,
+        string CommandAuthorityId,
         string TeamId,
-        string? OwnerInstanceId,
         bool IsDeployed,
         bool HasSwappedThisTurn,
         int Level,

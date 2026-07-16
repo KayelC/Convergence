@@ -310,6 +310,7 @@ public sealed class StatStageScalingTests
             CombatDefenseProfile.Empty,
             [new BattleResourceState(StandardProgressionIds.Hp, 100m, 100m)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("team")),
             stats:
             [
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10m),

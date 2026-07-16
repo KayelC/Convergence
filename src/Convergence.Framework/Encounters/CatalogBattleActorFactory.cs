@@ -7,14 +7,26 @@ using Convergence.Runtime;
 
 namespace Convergence.Encounters;
 
+/// <summary>
+/// Describes one catalog-backed runtime actor that a host or encounter planner intends to create.
+/// </summary>
+/// <param name="EntityId">The pack-qualified entity definition to instantiate.</param>
+/// <param name="InstanceId">The unique runtime identity assigned by the host or planner.</param>
+/// <param name="TeamId">The battle team used by targeting and encounter rules.</param>
+/// <param name="Level">The actor's initial runtime level.</param>
+/// <param name="IsDeployed">Whether the actor initially participates in an encounter.</param>
+/// <param name="CommandAuthorityId">
+/// An opaque host-routing key identifying the command source responsible for the actor.
+/// </param>
+/// <param name="Progression">Optional complete progression state matching <paramref name="Level"/>.</param>
 public sealed record CatalogBattleActorCreationRequest(
     ContentId EntityId,
     RuntimeInstanceId InstanceId,
     ContentId TeamId,
     int Level,
     bool IsDeployed,
-    RuntimeProgressionSnapshot? Progression = null,
-    ContentId? ControllerId = null);
+    ContentId CommandAuthorityId,
+    RuntimeProgressionSnapshot? Progression = null);
 
 public sealed record CatalogBattleActorRestoreRequest
 {
@@ -242,11 +254,11 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 "Runtime actor team ID cannot be empty.",
                 request.EntityId));
         }
-        if (request.ControllerId is ContentId controllerId && !controllerId.IsValid)
+        if (!request.CommandAuthorityId.IsValid)
         {
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.IdentifierInvalid,
-                "Runtime actor controller ID cannot be empty.",
+                "Runtime actor command-authority ID cannot be empty.",
                 request.EntityId));
         }
         if (diagnostics.Count > 0)
@@ -416,6 +428,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 CombatDefenseProfile.FromEntityDefinition(entity),
                 initialization.Resources,
                 new RuntimeEncounterPresenceSnapshot(request.IsDeployed),
+                new RuntimeActorAffiliationSnapshot(
+                    request.CommandAuthorityId,
+                    request.TeamId),
                 stats: entity.Stats.Select(pair =>
                     new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
                 skillIds: loadout.Select(skill => skill.Id),
@@ -426,9 +441,6 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                     entity.Id,
                     entity.EntityKindId,
                     entity.DisplayName),
-                ownership: new RuntimeActorOwnershipSnapshot(
-                    request.ControllerId ?? ContentId.Parse("runtime"),
-                    request.TeamId),
                 progression: progression,
                 baseResourceValues: initialization.BaseResourceValues.Select(pair =>
                     new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
@@ -457,12 +469,14 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         var diagnostics = new List<CatalogBattleActorDiagnostic>();
         ContentId entityId = snapshot.Identity.EntityDefinitionId;
         if (!entityId.IsValid || !snapshot.Identity.InstanceId.IsValid ||
-            !snapshot.Identity.ActorKindId.IsValid || !snapshot.Ownership.ControllerId.IsValid ||
-            !snapshot.Ownership.TeamId.IsValid || !snapshot.VitalResourceId.IsValid)
+            !snapshot.Identity.ActorKindId.IsValid ||
+            !snapshot.Affiliation.CommandAuthorityId.IsValid ||
+            !snapshot.Affiliation.TeamId.IsValid ||
+            !snapshot.VitalResourceId.IsValid)
         {
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.SnapshotInvalid,
-                "Saved actor identity and ownership IDs must be non-empty.",
+                "Saved actor identity and affiliation IDs must be non-empty.",
                 entityId));
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }

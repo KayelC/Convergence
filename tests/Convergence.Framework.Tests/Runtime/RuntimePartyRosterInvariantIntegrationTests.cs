@@ -54,6 +54,7 @@ public sealed class RuntimePartyRosterInvariantIntegrationTests
             CombatDefenseProfile.Empty,
             [new BattleResourceState(ContentId.Parse("hp"), 10m, 10m)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("player_team")),
             StandardProgressionIds.CoreStats.Select(stat =>
                 new KeyValuePair<ContentId, decimal>(stat, 5m)),
             identity: new RuntimeActorIdentitySnapshot(

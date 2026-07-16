@@ -14,7 +14,7 @@ public sealed record FusionTransactionPreparationRequest
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeInstanceId proposedResultInstanceId,
         ContentId resultTeamId,
-        ContentId? resultControllerId = null,
+        ContentId resultCommandAuthorityId,
         RuntimeActorSnapshot? existingResultActor = null)
     {
         if (!Enum.IsDefined(ownerKind))
@@ -28,7 +28,7 @@ public sealed record FusionTransactionPreparationRequest
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         ProposedResultInstanceId = proposedResultInstanceId;
         ResultTeamId = resultTeamId;
-        ResultControllerId = resultControllerId;
+        ResultCommandAuthorityId = resultCommandAuthorityId;
         ExistingResultActor = existingResultActor;
     }
 
@@ -38,7 +38,7 @@ public sealed record FusionTransactionPreparationRequest
     public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeInstanceId ProposedResultInstanceId { get; }
     public ContentId ResultTeamId { get; }
-    public ContentId? ResultControllerId { get; }
+    public ContentId ResultCommandAuthorityId { get; }
     public RuntimeActorSnapshot? ExistingResultActor { get; }
 }
 
@@ -51,7 +51,7 @@ public sealed record PreparedFusionTransaction
         FusionPreviewSnapshot preview,
         RuntimeInstanceId resultInstanceId,
         ContentId resultTeamId,
-        ContentId? resultControllerId,
+        ContentId resultCommandAuthorityId,
         RuntimeActorSnapshot? existingResultActor,
         RuntimePartyRosterSnapshot beforePartyRoster,
         RuntimePartyRosterSnapshot afterPartyRoster,
@@ -66,7 +66,7 @@ public sealed record PreparedFusionTransaction
         Preview = preview;
         ResultInstanceId = resultInstanceId;
         ResultTeamId = resultTeamId;
-        ResultControllerId = resultControllerId;
+        ResultCommandAuthorityId = resultCommandAuthorityId;
         ExistingResultActor = existingResultActor;
         BeforePartyRoster = beforePartyRoster;
         AfterPartyRoster = afterPartyRoster;
@@ -82,7 +82,7 @@ public sealed record PreparedFusionTransaction
     public FusionPreviewSnapshot Preview { get; }
     public RuntimeInstanceId ResultInstanceId { get; }
     public ContentId ResultTeamId { get; }
-    public ContentId? ResultControllerId { get; }
+    public ContentId ResultCommandAuthorityId { get; }
     public RuntimeActorSnapshot? ExistingResultActor { get; }
     public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
     public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
@@ -288,9 +288,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
             if (request.ExistingResultActor is not RuntimeActorSnapshot existingResultActor ||
                 existingResultActor.Identity.InstanceId != transformedParent.InstanceId ||
                 existingResultActor.Identity.EntityDefinitionId != preview.EntityId ||
-                existingResultActor.Ownership.TeamId != request.ResultTeamId ||
-                (request.ResultControllerId is ContentId resultControllerId &&
-                 existingResultActor.Ownership.ControllerId != resultControllerId))
+                existingResultActor.Affiliation.TeamId != request.ResultTeamId ||
+                existingResultActor.Affiliation.CommandAuthorityId != request.ResultCommandAuthorityId)
             {
                 return Rejected(
                     request.PartyRoster,
@@ -413,7 +412,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
             preview,
             resultInstanceId,
             request.ResultTeamId,
-            request.ResultControllerId,
+            request.ResultCommandAuthorityId,
             request.ExistingResultActor,
             request.PartyRoster,
             current,
@@ -544,12 +543,12 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 prepared.ResultTeamId,
                 preview.Level,
                 IsDeployed: false,
+                prepared.ResultCommandAuthorityId,
                 new RuntimeProgressionSnapshot(
                     preview.Level,
                     preview.Experience,
                     preview.LifetimeExperience,
-                    0),
-                prepared.ResultControllerId));
+                    0)));
             if (!created.IsSuccess)
             {
                 return created;
@@ -564,7 +563,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
             .ToArray();
         var resultSnapshot = new RuntimeActorSnapshot(
             baseline.Identity,
-            baseline.Ownership,
+            baseline.Affiliation,
             baseline.EncounterPresence,
             new RuntimeProgressionSnapshot(
                 preview.Level,
@@ -595,9 +594,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
         if (actor.Entity.Id != preview.EntityId ||
             snapshot.Identity.InstanceId != prepared.ResultInstanceId ||
             snapshot.Identity.EntityDefinitionId != preview.EntityId ||
-            snapshot.Ownership.TeamId != prepared.ResultTeamId ||
-            (prepared.ResultControllerId is ContentId controllerId &&
-             snapshot.Ownership.ControllerId != controllerId) ||
+            snapshot.Affiliation.TeamId != prepared.ResultTeamId ||
+            snapshot.Affiliation.CommandAuthorityId != prepared.ResultCommandAuthorityId ||
             snapshot.Progression.Level != preview.Level ||
             snapshot.Progression.Experience != preview.Experience ||
             snapshot.Progression.LifetimeExperience != preview.LifetimeExperience ||

@@ -66,7 +66,7 @@ public sealed record BattleEncounterParticipantSnapshot
     public string DisplayName { get; }
     public RuntimeInstanceId InstanceId => State.Identity.InstanceId;
     public ContentId EntityId => State.Identity.EntityDefinitionId;
-    public ContentId TeamId => State.Ownership.TeamId;
+    public ContentId TeamId => State.Affiliation.TeamId;
     public bool IsDeployed => State.EncounterPresence.IsDeployed;
     public bool IsDefeated => State.Resources
         .Single(resource => resource.ResourceId == State.VitalResourceId)

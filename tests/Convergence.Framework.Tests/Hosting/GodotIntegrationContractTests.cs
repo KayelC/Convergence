@@ -250,7 +250,8 @@ public sealed class GodotIntegrationContractTests
                 RuntimeInstanceId.Parse(instanceId),
                 teamId,
                 5,
-                IsDeployed: true)).RequireActor();
+                IsDeployed: true,
+                ContentId.Parse("godot_test_host"))).RequireActor();
 
     private static BattleExecutionServices Services(GameDataCatalog catalog) => new(
         catalog,
@@ -275,7 +276,7 @@ public sealed class GodotIntegrationContractTests
                 actor.Entity.Id,
                 actor.Entity.EntityKindId,
                 actor.Entity.DisplayName),
-            new RuntimeActorOwnershipSnapshot(ContentId.Parse("godot_host"), state.TeamId),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("godot_host"), state.TeamId),
             new RuntimeEncounterPresenceSnapshot(state.IsDeployed),
             new RuntimeProgressionSnapshot(level, experience: 0, lifetimeExperience: 0, unspentStatPoints: 0),
             resources,

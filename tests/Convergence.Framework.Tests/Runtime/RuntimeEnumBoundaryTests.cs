@@ -312,7 +312,7 @@ public sealed class RuntimeEnumBoundaryTests
         RuntimeBattleStatusSnapshot battleStatus) =>
         new(
             source.Identity,
-            source.Ownership,
+            source.Affiliation,
             source.EncounterPresence,
             source.Progression,
             source.Resources,

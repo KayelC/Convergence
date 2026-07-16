@@ -315,12 +315,11 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidateRuntimeInstanceId(snapshot.Identity.InstanceId, "$.identity.instanceId", diagnostics);
         ValidateContentId(snapshot.Identity.EntityDefinitionId, "$.identity.entityDefinitionId", diagnostics);
         ValidateContentId(snapshot.Identity.ActorKindId, "$.identity.actorKindId", diagnostics);
-        ValidateContentId(snapshot.Ownership.ControllerId, "$.ownership.controllerId", diagnostics);
-        ValidateContentId(snapshot.Ownership.TeamId, "$.ownership.teamId", diagnostics);
-        if (snapshot.Ownership.OwnerInstanceId is RuntimeInstanceId ownerId)
-        {
-            ValidateRuntimeInstanceId(ownerId, "$.ownership.ownerInstanceId", diagnostics);
-        }
+        ValidateContentId(
+            snapshot.Affiliation.CommandAuthorityId,
+            "$.affiliation.commandAuthorityId",
+            diagnostics);
+        ValidateContentId(snapshot.Affiliation.TeamId, "$.affiliation.teamId", diagnostics);
 
         ValidateContentId(snapshot.VitalResourceId, "$.vitalResourceId", diagnostics);
         for (int index = 0; index < snapshot.Resources.Count; index++)

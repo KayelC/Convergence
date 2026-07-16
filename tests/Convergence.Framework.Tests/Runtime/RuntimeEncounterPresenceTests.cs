@@ -85,7 +85,8 @@ public sealed class RuntimeEncounterPresenceTests
             ContentId.Parse("hp"),
             CombatDefenseProfile.Empty,
             [new BattleResourceState(ContentId.Parse("hp"), 10m, 10m)],
-            encounterPresence: new RuntimeEncounterPresenceSnapshot(isDeployed));
+            new RuntimeEncounterPresenceSnapshot(isDeployed),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("player_team")));
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
         new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);

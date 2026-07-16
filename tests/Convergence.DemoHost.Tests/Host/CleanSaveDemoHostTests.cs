@@ -56,7 +56,7 @@ public sealed class CleanSaveDemoHostTests
             ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"));
         var actor = new RuntimeActorSnapshot(
             original.Identity,
-            original.Ownership,
+            original.Affiliation,
             original.EncounterPresence,
             original.Progression,
             original.Resources,

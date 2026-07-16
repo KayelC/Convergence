@@ -107,7 +107,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 string.Join(Environment.NewLine, restored.Diagnostics.Select(item => item.Message)));
             RuntimeActorSnapshot roundTrip = restored.RequireActor().State.ToSnapshot();
             Assert.Equal(actor.Identity, roundTrip.Identity);
-            Assert.Equal(actor.Ownership, roundTrip.Ownership);
+            Assert.Equal(actor.Affiliation, roundTrip.Affiliation);
             Assert.Equal(actor.Progression, roundTrip.Progression);
             Assert.All(roundTrip.Resources, resource =>
                 Assert.InRange(resource.Current, 0m, resource.Maximum));
@@ -1837,7 +1837,7 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<ContentId>? capabilityIds = null) =>
         new(
             identity ?? snapshot.Identity,
-            snapshot.Ownership,
+            snapshot.Affiliation,
             snapshot.EncounterPresence,
             snapshot.Progression,
             resources ?? snapshot.Resources,
@@ -1857,7 +1857,7 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
-            new RuntimeActorOwnershipSnapshot(Id("host"), Id("player_team")),
+            new RuntimeActorAffiliationSnapshot(Id("host"), Id("player_team")),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
             [

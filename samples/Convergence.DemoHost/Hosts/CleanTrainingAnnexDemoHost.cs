@@ -176,6 +176,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             new EncounterStartRequest(
                 Qualified("ashling_drill"),
                 EnemyTeam,
+                ContentId.Parse("training_annex_ai"),
                 hostTriggerId));
         if (!encounterStart.IsSuccess)
         {

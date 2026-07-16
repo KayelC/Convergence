@@ -113,10 +113,18 @@ public sealed record RuntimeActorIdentitySnapshot
     public string? DisplaySubtitle { get; }
 }
 
-public sealed record RuntimeActorOwnershipSnapshot(
-    ContentId ControllerId,
-    ContentId TeamId,
-    RuntimeInstanceId? OwnerInstanceId = null);
+/// <summary>
+/// Identifies who may issue commands for an actor and which battle team the actor belongs to.
+/// </summary>
+/// <param name="CommandAuthorityId">
+/// An opaque host-routing key. Framework rules preserve this value but never infer behavior from its text.
+/// </param>
+/// <param name="TeamId">
+/// The affiliation interpreted by targeting, initiative, and encounter-completion rules.
+/// </param>
+public sealed record RuntimeActorAffiliationSnapshot(
+    ContentId CommandAuthorityId,
+    ContentId TeamId);
 
 public sealed record RuntimeEncounterPresenceSnapshot(
     bool IsDeployed,
@@ -449,7 +457,7 @@ public sealed record RuntimeActorSnapshot
 {
     public RuntimeActorSnapshot(
         RuntimeActorIdentitySnapshot identity,
-        RuntimeActorOwnershipSnapshot ownership,
+        RuntimeActorAffiliationSnapshot affiliation,
         RuntimeEncounterPresenceSnapshot encounterPresence,
         RuntimeProgressionSnapshot progression,
         IEnumerable<RuntimeResourceSnapshot> resources,
@@ -463,7 +471,7 @@ public sealed record RuntimeActorSnapshot
         IEnumerable<ContentId>? capabilityIds = null)
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
-        Ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
+        Affiliation = affiliation ?? throw new ArgumentNullException(nameof(affiliation));
         EncounterPresence = encounterPresence ?? throw new ArgumentNullException(nameof(encounterPresence));
         Progression = progression ?? throw new ArgumentNullException(nameof(progression));
         Resources = RuntimeSnapshotCollections.List(resources);
@@ -482,7 +490,7 @@ public sealed record RuntimeActorSnapshot
     }
 
     public RuntimeActorIdentitySnapshot Identity { get; }
-    public RuntimeActorOwnershipSnapshot Ownership { get; }
+    public RuntimeActorAffiliationSnapshot Affiliation { get; }
     public RuntimeEncounterPresenceSnapshot EncounterPresence { get; }
     public RuntimeProgressionSnapshot Progression { get; }
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
@@ -498,7 +506,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeActorSnapshot WithResources(IEnumerable<RuntimeResourceSnapshot> resources) =>
         new(
             Identity,
-            Ownership,
+            Affiliation,
             EncounterPresence,
             Progression,
             resources,
@@ -518,7 +526,7 @@ public sealed record RuntimeActorSnapshot
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null) =>
         new(
             Identity,
-            Ownership,
+            Affiliation,
             EncounterPresence,
             progression,
             resources ?? Resources,

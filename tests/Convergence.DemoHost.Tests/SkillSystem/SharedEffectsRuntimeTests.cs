@@ -163,6 +163,7 @@ public sealed class SharedEffectsRuntimeTests
             RuntimeInstanceId.Parse("actor"), Id("entity_actor"), Team, Hp, new CombatDefenseProfile(),
             [new BattleResourceState(Hp, 100, 100), new BattleResourceState(Sp, 20, 20)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), Team),
             passiveSkills: [passive]);
         RuntimeActorState target = Actor("target", 50, 100, 20, 20);
         ItemDefinition item = Consumable(
@@ -330,7 +331,8 @@ public sealed class SharedEffectsRuntimeTests
         new(
             RuntimeInstanceId.Parse(id), Id($"entity_{id}"), Team, Hp, new CombatDefenseProfile(),
             [new BattleResourceState(Hp, hp, maxHp), new BattleResourceState(Sp, sp, maxSp)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), Team));
 
     private static BattleExecutionServices Services(IAilmentDefinitionRepository ailments) =>
         new(

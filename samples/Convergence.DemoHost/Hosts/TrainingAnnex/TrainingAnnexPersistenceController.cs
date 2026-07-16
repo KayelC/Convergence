@@ -411,20 +411,20 @@ internal sealed class TrainingAnnexPersistenceController
             return;
         }
 
-        ValidateTrainingAnnexPartyTeam("active party", partyRoster.ActiveParty, owner.Ownership.TeamId, actors, diagnostics);
-        ValidateTrainingAnnexPartyTeam("reserve party", partyRoster.ReserveMembers, owner.Ownership.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("active party", partyRoster.ActiveParty, owner.Affiliation.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("reserve party", partyRoster.ReserveMembers, owner.Affiliation.TeamId, actors, diagnostics);
         if (partyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
             ValidateTrainingAnnexPartyTeam(
                 "active hosted entity",
                 [activeHostedEntity],
-                owner.Ownership.TeamId,
+                owner.Affiliation.TeamId,
                 actors,
                 diagnostics);
         }
 
-        ValidateTrainingAnnexPartyTeam("Hosted Entity roster", partyRoster.HostedEntityRoster, owner.Ownership.TeamId, actors, diagnostics);
-        ValidateTrainingAnnexPartyTeam("Companion roster", partyRoster.CompanionRoster, owner.Ownership.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("Hosted Entity roster", partyRoster.HostedEntityRoster, owner.Affiliation.TeamId, actors, diagnostics);
+        ValidateTrainingAnnexPartyTeam("Companion roster", partyRoster.CompanionRoster, owner.Affiliation.TeamId, actors, diagnostics);
     }
 
     private static void ValidateTrainingAnnexPartyTeam(
@@ -441,10 +441,10 @@ internal sealed class TrainingAnnexPersistenceController
                 continue;
             }
 
-            if (actor.Ownership.TeamId != expectedTeamId)
+            if (actor.Affiliation.TeamId != expectedTeamId)
             {
                 diagnostics.Add(
-                    $"Saved {listName} actor '{reference.InstanceId}' belongs to team '{actor.Ownership.TeamId}', expected '{expectedTeamId}'.");
+                    $"Saved {listName} actor '{reference.InstanceId}' belongs to team '{actor.Affiliation.TeamId}', expected '{expectedTeamId}'.");
             }
         }
     }
@@ -543,10 +543,10 @@ internal sealed class TrainingAnnexPersistenceController
             return false;
         }
 
-        if (snapshot.Ownership.TeamId != expected.Ownership.TeamId)
+        if (snapshot.Affiliation.TeamId != expected.Affiliation.TeamId)
         {
             diagnostic =
-                $"Saved actor '{snapshot.Identity.InstanceId}' has team '{snapshot.Ownership.TeamId}', expected '{expected.Ownership.TeamId}' for {current.Role}.";
+                $"Saved actor '{snapshot.Identity.InstanceId}' has team '{snapshot.Affiliation.TeamId}', expected '{expected.Affiliation.TeamId}' for {current.Role}.";
             return false;
         }
 

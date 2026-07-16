@@ -4,9 +4,20 @@ using Convergence.Encounters;
 
 namespace Convergence.Runtime;
 
+/// <summary>
+/// Requests actor-construction plans for one authored encounter formation.
+/// </summary>
+/// <param name="EncounterId">The pack-qualified authored encounter ID.</param>
+/// <param name="OpponentTeamId">The team assigned to every planned encounter actor.</param>
+/// <param name="OpponentCommandAuthorityId">
+/// The opaque host-routing key assigned to every actor constructed from the selected formation.
+/// </param>
+/// <param name="InstanceIdPrefix">The host-owned prefix used to create unique runtime actor IDs.</param>
+/// <param name="FormationIndex">The authored formation index to select.</param>
 public sealed record EncounterStartRequest(
     ContentId EncounterId,
     ContentId OpponentTeamId,
+    ContentId OpponentCommandAuthorityId,
     RuntimeInstanceId InstanceIdPrefix,
     int FormationIndex = 0);
 
@@ -111,6 +122,13 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
                 "Opponent team ID cannot be empty.",
                 request.OpponentTeamId));
         }
+        if (!request.OpponentCommandAuthorityId.IsValid)
+        {
+            diagnostics.Add(new EncounterStartDiagnostic(
+                EncounterStartDiagnosticCode.IdentifierInvalid,
+                "Opponent command-authority ID cannot be empty.",
+                request.OpponentCommandAuthorityId));
+        }
         if (!request.InstanceIdPrefix.IsValid)
         {
             diagnostics.Add(new EncounterStartDiagnostic(
@@ -186,7 +204,8 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
                     CreateInstanceId(request.InstanceIdPrefix, member.EntityId, actorIndex++),
                     request.OpponentTeamId,
                     member.Level,
-                    IsDeployed: true));
+                    IsDeployed: true,
+                    request.OpponentCommandAuthorityId));
             }
         }
 

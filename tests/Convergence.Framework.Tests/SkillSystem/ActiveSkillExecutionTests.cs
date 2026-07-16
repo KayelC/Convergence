@@ -64,6 +64,63 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Targeting_UsesTeamAffiliationAndDoesNotInterpretCommandAuthority()
+    {
+        ContentId sharedAuthority = ContentId.Parse("shared_authority");
+        RuntimeActorState actor = Actor(
+            "actor",
+            PlayerTeam,
+            commandAuthorityId: sharedAuthority);
+        RuntimeActorState ally = Actor(
+            "ally",
+            PlayerTeam,
+            hp: 50,
+            commandAuthorityId: ContentId.Parse("different_authority"));
+        RuntimeActorState enemy = Actor(
+            "enemy",
+            EnemyTeam,
+            commandAuthorityId: sharedAuthority);
+        var executor = new SkillExecutor(Services());
+        SkillDefinition restore = ActiveSkill(
+            [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))],
+            targeting: new TargetingDefinition(
+                TargetRelation.Ally,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                AllowSelf: false));
+        SkillDefinition damage = ActiveSkill(
+            [new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())],
+            targeting: new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                AllowSelf: false));
+
+        SkillExecutionResult restored = executor.Execute(Request(
+            restore,
+            actor,
+            [actor, ally, enemy],
+            [ally.InstanceId]));
+        SkillExecutionResult damaged = executor.Execute(Request(
+            damage,
+            actor,
+            [actor, ally, enemy],
+            [enemy.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, restored.Status);
+        Assert.Equal(60m, ally.GetRequiredResource(Hp).Current);
+        Assert.Equal(SkillExecutionStatus.Executed, damaged.Status);
+        Assert.Equal(90m, enemy.GetRequiredResource(Hp).Current);
+        Assert.Equal(sharedAuthority, actor.Affiliation.CommandAuthorityId);
+        Assert.Equal(sharedAuthority, enemy.Affiliation.CommandAuthorityId);
+    }
+
+    [Fact]
     public void Execute_RejectsIndependentPreflightErrorsWithoutSpendingResources()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100, sp: 5);
@@ -136,7 +193,8 @@ public sealed class ActiveSkillExecutionTests
             Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, decimal.MaxValue, decimal.MaxValue)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), EnemyTeam));
         SkillDefinition damageSkill = ActiveSkill(
         [
             new DamageEffectDefinition(
@@ -165,7 +223,8 @@ public sealed class ActiveSkillExecutionTests
             Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, halfMaximum, decimal.MaxValue)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), EnemyTeam));
         SkillDefinition recoverySkill = ActiveSkill(
             [new RestoreResourceEffectDefinition(Hp, new PercentMaximumAmountDefinition(100m))]);
         SkillExecutionResult recovery = new SkillExecutor(Services()).Execute(Request(
@@ -195,7 +254,8 @@ public sealed class ActiveSkillExecutionTests
                 new BattleResourceState(Hp, 100m, 100m),
                 new BattleResourceState(Sp, decimal.MaxValue, decimal.MaxValue)
             ],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam));
         RuntimeActorState target = Actor("target", EnemyTeam);
         SkillDefinition skill = ActiveSkill(
             [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
@@ -1098,6 +1158,7 @@ public sealed class ActiveSkillExecutionTests
             CombatDefenseProfile.Empty,
             [hp],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam),
             skillIds: skills,
             capabilityIds: capabilities);
 
@@ -1269,7 +1330,8 @@ public sealed class ActiveSkillExecutionTests
         decimal sp = 100,
         CombatDefenseProfile? defense = null,
         IEnumerable<ContentId>? skillIds = null,
-        IEnumerable<ContentId>? capabilityIds = null) =>
+        IEnumerable<ContentId>? capabilityIds = null,
+        ContentId? commandAuthorityId = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -1278,6 +1340,9 @@ public sealed class ActiveSkillExecutionTests
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(
+                commandAuthorityId ?? ContentId.Parse("test_host"),
+                team),
             skillIds: skillIds,
             capabilityIds: capabilityIds);
 

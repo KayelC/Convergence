@@ -195,8 +195,8 @@ internal sealed class TrainingAnnexCompendiumController
             wallet,
             selectedId.Value,
             instanceId,
-            owner.Ownership.ControllerId,
-            owner.Ownership.TeamId,
+            owner.Affiliation.CommandAuthorityId,
+            owner.Affiliation.TeamId,
             CompendiumRecallRosterKind.Companion));
         if (!recall.Applied || recall.Actor is null)
         {

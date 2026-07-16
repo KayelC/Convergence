@@ -93,7 +93,7 @@ public sealed record CompendiumRecallTransactionRequest
         RuntimeWalletSnapshot wallet,
         ContentId entityId,
         RuntimeInstanceId recalledInstanceId,
-        ContentId controllerId,
+        ContentId commandAuthorityId,
         ContentId teamId,
         CompendiumRecallRosterKind rosterKind,
         int? basePrice = null)
@@ -108,7 +108,7 @@ public sealed record CompendiumRecallTransactionRequest
         Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
         EntityId = entityId;
         RecalledInstanceId = recalledInstanceId;
-        ControllerId = controllerId;
+        CommandAuthorityId = commandAuthorityId;
         TeamId = teamId;
         RosterKind = rosterKind;
         BasePrice = basePrice;
@@ -119,7 +119,7 @@ public sealed record CompendiumRecallTransactionRequest
     public RuntimeWalletSnapshot Wallet { get; }
     public ContentId EntityId { get; }
     public RuntimeInstanceId RecalledInstanceId { get; }
-    public ContentId ControllerId { get; }
+    public ContentId CommandAuthorityId { get; }
     public ContentId TeamId { get; }
     public CompendiumRecallRosterKind RosterKind { get; }
     public int? BasePrice { get; }
@@ -319,13 +319,13 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         ArgumentNullException.ThrowIfNull(request);
 
         if (!request.EntityId.IsValid || !request.RecalledInstanceId.IsValid ||
-            !request.ControllerId.IsValid || !request.TeamId.IsValid)
+            !request.CommandAuthorityId.IsValid || !request.TeamId.IsValid)
         {
             return RecallRejected(
                 request,
                 CompendiumRecallTransactionCode.InvalidEntry,
                 CompendiumRuntimeDiagnosticCode.InvalidIdentifier,
-                "Compendium recall requires non-empty entity, runtime instance, controller, and team IDs.");
+                "Compendium recall requires non-empty entity, runtime instance, command-authority, and team IDs.");
         }
 
         if (!request.Compendium.TryGet(request.EntityId, out CompendiumEntrySnapshot? entry) || entry is null)
@@ -522,8 +522,8 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.TeamId,
             entry.Level,
             IsDeployed: false,
-            progression,
-            request.ControllerId));
+            request.CommandAuthorityId,
+            progression));
         if (!initialized.IsSuccess)
         {
             return initialized;
@@ -557,7 +557,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 fresh.Identity.ActorKindId,
                 entry.DisplayName,
                 fresh.Identity.DisplaySubtitle),
-            new RuntimeActorOwnershipSnapshot(request.ControllerId, request.TeamId),
+            new RuntimeActorAffiliationSnapshot(request.CommandAuthorityId, request.TeamId),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
             progression,
             fullResources,

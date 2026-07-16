@@ -1142,7 +1142,8 @@ public sealed class BattleEncounterRunnerTests
                 new BattleResourceState(Hp, 10, 10),
                 new BattleResourceState(Sp, 5, 5)
             ],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), teamId));
         return new BattleEncounterParticipant(state, id);
     }
 

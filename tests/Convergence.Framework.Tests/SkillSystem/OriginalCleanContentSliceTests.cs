@@ -254,14 +254,17 @@ public sealed class OriginalCleanContentSliceTests
         EncounterStartPlanResult result = planner.Plan(new EncounterStartRequest(
             Qualified("mixed_drill"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("visible_enemy")));
         EncounterStartPlanResult localLookup = planner.Plan(new EncounterStartRequest(
             Id("mixed_drill"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("visible_enemy")));
         EncounterStartPlanResult qualifiedPrefix = planner.Plan(new EncounterStartRequest(
             Qualified("mixed_drill"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("scene:visible_enemy")));
 
         Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(diagnostic => diagnostic.Message)));
@@ -272,6 +275,7 @@ public sealed class OriginalCleanContentSliceTests
             [Qualified("ashling"), Qualified("bramble_runner")],
             plan.ActorRequests.Select(request => request.EntityId));
         Assert.Equal([2, 3], plan.ActorRequests.Select(request => request.Level));
+        Assert.All(plan.ActorRequests, request => Assert.Equal(Id("enemy_ai"), request.CommandAuthorityId));
         Assert.All(plan.ActorRequests, request => Assert.Equal(Id("enemy_team"), request.TeamId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("visible_enemy_ashling_1"), RuntimeInstanceId.Parse("visible_enemy_bramble_runner_2")],
@@ -830,7 +834,8 @@ public sealed class OriginalCleanContentSliceTests
             Id("hp"),
             new CombatDefenseProfile(),
             [new BattleResourceState(Id("hp"), hp, maxHp), new BattleResourceState(Id("sp"), sp, maxSp)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), Id(teamId)));
 
     private static FusionParticipantSnapshot Participant(EntityDefinition entity, string instanceId) =>
         new(

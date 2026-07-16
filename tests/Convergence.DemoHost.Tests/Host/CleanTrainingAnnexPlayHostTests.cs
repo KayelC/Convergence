@@ -4101,7 +4101,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeActorSnapshot actor,
         ContentId? entityId = null,
         ContentId? actorKindId = null,
-        RuntimeActorOwnershipSnapshot? ownership = null) =>
+        RuntimeActorAffiliationSnapshot? affiliation = null) =>
         new(
             new RuntimeActorIdentitySnapshot(
                 actor.Identity.InstanceId,
@@ -4109,7 +4109,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 actorKindId ?? actor.Identity.ActorKindId,
                 actor.Identity.DisplayName,
                 actor.Identity.DisplaySubtitle),
-            ownership ?? actor.Ownership,
+            affiliation ?? actor.Affiliation,
             actor.EncounterPresence,
             actor.Progression,
             actor.Resources,

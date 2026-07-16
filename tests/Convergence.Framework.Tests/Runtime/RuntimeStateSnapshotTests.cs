@@ -58,7 +58,8 @@ public sealed class RuntimeStateSnapshotTests
             Id("hp"),
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Id("hp"), 1m, 1m)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true)));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), Id("team"))));
         Assert.Throws<ArgumentException>(() => new RuntimeActorState(
             RuntimeInstanceId.Parse("actor_1"),
             Id("entity"),
@@ -67,6 +68,7 @@ public sealed class RuntimeStateSnapshotTests
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Id("hp"), 1m, 1m)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), Id("team")),
             skillIds: [default]));
     }
 
@@ -105,6 +107,9 @@ public sealed class RuntimeStateSnapshotTests
                 CombatDefenseProfile.Empty,
                 [new BattleResourceState(ContentId.Parse("hp"), 1m, 1m)],
                 new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+                new RuntimeActorAffiliationSnapshot(
+                    ContentId.Parse("test_host"),
+                    ContentId.Parse("player_team")),
                 stats,
                 baseResourceValues: baseResourceValues);
     }
@@ -137,9 +142,8 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(Id("vessel"), roundTrip.Identity.ActorKindId);
         Assert.Equal("Hero", roundTrip.Identity.DisplayName);
         Assert.Equal("Training Team", roundTrip.Identity.DisplaySubtitle);
-        Assert.Equal(Id("player"), roundTrip.Ownership.ControllerId);
-        Assert.Equal(Id("party"), roundTrip.Ownership.TeamId);
-        Assert.Equal(RuntimeInstanceId.Parse("save:player_profile"), roundTrip.Ownership.OwnerInstanceId);
+        Assert.Equal(Id("player"), roundTrip.Affiliation.CommandAuthorityId);
+        Assert.Equal(Id("party"), roundTrip.Affiliation.TeamId);
         Assert.True(roundTrip.EncounterPresence.IsDeployed);
         Assert.True(roundTrip.EncounterPresence.HasSwappedThisTurn);
         Assert.Equal(14, roundTrip.Progression.Level);
@@ -432,10 +436,9 @@ public sealed class RuntimeStateSnapshotTests
                 Id("vessel"),
                 "Hero",
                 "Training Team"),
-            new RuntimeActorOwnershipSnapshot(
+            new RuntimeActorAffiliationSnapshot(
                 Id("player"),
-                Id("party"),
-                RuntimeInstanceId.Parse("save:player_profile")),
+                Id("party")),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true, HasSwappedThisTurn: true),
             new RuntimeProgressionSnapshot(level: 14, experience: 230, lifetimeExperience: 880, unspentStatPoints: 3),
             resources ??

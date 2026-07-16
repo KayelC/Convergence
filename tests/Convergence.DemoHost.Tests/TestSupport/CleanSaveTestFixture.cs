@@ -137,7 +137,7 @@ internal static class CleanSaveTestFixture
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
-            new RuntimeActorOwnershipSnapshot(Id("host"), Id("player_team")),
+            new RuntimeActorAffiliationSnapshot(Id("host"), Id("player_team")),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
             [

@@ -21,6 +21,7 @@ public sealed class EncounterPreparationServiceTests
             Id("placed_enemy_01"),
             Qualified("drill"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("placed_enemy_01")));
 
         Assert.True(result.IsSuccess);
@@ -31,6 +32,8 @@ public sealed class EncounterPreparationServiceTests
             [RuntimeInstanceId.Parse("placed_enemy_01_ashling_1"), RuntimeInstanceId.Parse("placed_enemy_01_ashling_2")],
             prepared.Actors.Select(actor => actor.State.InstanceId));
         Assert.All(prepared.Actors, actor => Assert.Equal(Qualified("ashling"), actor.Entity.Id));
+        Assert.All(prepared.Actors, actor =>
+            Assert.Equal(Id("enemy_ai"), actor.State.Affiliation.CommandAuthorityId));
         Assert.Equal(
             [
                 EncounterPreparationEventKind.TriggerReceived,
@@ -69,6 +72,7 @@ public sealed class EncounterPreparationServiceTests
             Id("boss_scene_trigger"),
             Qualified("choice"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("boss_scene"),
             FormationIndex: 1)).RequirePreparedEncounter();
 
@@ -87,6 +91,7 @@ public sealed class EncounterPreparationServiceTests
             Id("missing_trigger"),
             Qualified("missing"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("missing_trigger")));
 
         Assert.False(result.IsSuccess);
@@ -114,6 +119,7 @@ public sealed class EncounterPreparationServiceTests
             Id("mixed_trigger"),
             Qualified("mixed"),
             Id("enemy_team"),
+            Id("enemy_ai"),
             RuntimeInstanceId.Parse("mixed_trigger")));
 
         Assert.False(result.IsSuccess);
@@ -135,10 +141,11 @@ public sealed class EncounterPreparationServiceTests
         EncounterStartPlanResult result = planner.Plan(new EncounterStartRequest(
             default,
             default,
+            default,
             default));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(3, result.Diagnostics.Count);
+        Assert.Equal(4, result.Diagnostics.Count);
         Assert.All(result.Diagnostics, diagnostic =>
             Assert.Equal(EncounterStartDiagnosticCode.IdentifierInvalid, diagnostic.Code));
     }

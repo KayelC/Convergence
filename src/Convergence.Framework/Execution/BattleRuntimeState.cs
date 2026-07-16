@@ -125,12 +125,12 @@ public sealed class RuntimeActorState
         CombatDefenseProfile defenseProfile,
         IEnumerable<BattleResourceState> resources,
         RuntimeEncounterPresenceSnapshot encounterPresence,
+        RuntimeActorAffiliationSnapshot affiliation,
         IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
         IEnumerable<SkillDefinition>? passiveSkills = null,
         RuntimeActorIdentitySnapshot? identity = null,
-        RuntimeActorOwnershipSnapshot? ownership = null,
         RuntimeProgressionSnapshot? progression = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
@@ -150,20 +150,14 @@ public sealed class RuntimeActorState
             entityId,
             ContentId.Parse("actor"),
             entityId.ToString());
-        Ownership = ownership ?? new RuntimeActorOwnershipSnapshot(
-            ContentId.Parse("runtime"),
-            teamId);
+        Affiliation = affiliation ?? throw new ArgumentNullException(nameof(affiliation));
         EncounterPresence = encounterPresence ?? throw new ArgumentNullException(nameof(encounterPresence));
         Progression = progression ?? new RuntimeProgressionSnapshot(1, 0, 0, 0);
         RequireValid(Identity.InstanceId, nameof(identity));
         RequireValid(Identity.EntityDefinitionId, nameof(identity));
         RequireValid(Identity.ActorKindId, nameof(identity));
-        RequireValid(Ownership.ControllerId, nameof(ownership));
-        RequireValid(Ownership.TeamId, nameof(ownership));
-        if (Ownership.OwnerInstanceId is RuntimeInstanceId ownerInstanceId)
-        {
-            RequireValid(ownerInstanceId, nameof(ownership));
-        }
+        RequireValid(Affiliation.CommandAuthorityId, nameof(affiliation));
+        RequireValid(Affiliation.TeamId, nameof(affiliation));
 
         VitalResourceId = vitalResourceId;
         DefenseProfile = defenseProfile;
@@ -229,7 +223,7 @@ public sealed class RuntimeActorState
         var state = new RuntimeActorState(
             snapshot.Identity.InstanceId,
             snapshot.Identity.EntityDefinitionId,
-            snapshot.Ownership.TeamId,
+            snapshot.Affiliation.TeamId,
             snapshot.VitalResourceId,
             defenseProfile,
             snapshot.Resources.Select(resource => new BattleResourceState(
@@ -237,12 +231,12 @@ public sealed class RuntimeActorState
                 resource.Current,
                 resource.Maximum)),
             snapshot.EncounterPresence,
+            snapshot.Affiliation,
             snapshot.Stats.EffectiveStats,
             snapshot.Skills.LearnedSkillIds,
             capabilityIds ?? snapshot.CapabilityIds,
             passiveDefinitions,
             snapshot.Identity,
-            snapshot.Ownership,
             snapshot.Progression,
             snapshot.BaseResourceValues,
             snapshot.Stats.BaseStats,
@@ -257,9 +251,9 @@ public sealed class RuntimeActorState
 
     public RuntimeInstanceId InstanceId => Identity.InstanceId;
     public ContentId EntityId => Identity.EntityDefinitionId;
-    public ContentId TeamId => Ownership.TeamId;
+    public ContentId TeamId => Affiliation.TeamId;
     public RuntimeActorIdentitySnapshot Identity { get; }
-    public RuntimeActorOwnershipSnapshot Ownership { get; }
+    public RuntimeActorAffiliationSnapshot Affiliation { get; }
     public RuntimeEncounterPresenceSnapshot EncounterPresence { get; private set; }
     public RuntimeProgressionSnapshot Progression { get; private set; }
     public RuntimeSkillStateSnapshot Skills { get; private set; }
@@ -772,7 +766,7 @@ public sealed class RuntimeActorState
     public RuntimeActorSnapshot ToSnapshot() =>
         new(
             Identity,
-            Ownership,
+            Affiliation,
             EncounterPresence,
             Progression,
             _resources.Values.Select(resource => new RuntimeResourceSnapshot(
@@ -800,12 +794,12 @@ public sealed class RuntimeActorState
             DefenseProfile,
             _resources.Values,
             EncounterPresence,
+            Affiliation,
             _effectiveStats,
             _skillIds,
             _capabilityIds,
             Passives.Entries.Select(entry => entry.Skill),
             Identity,
-            Ownership,
             Progression,
             _baseResourceValues,
             _baseStats,

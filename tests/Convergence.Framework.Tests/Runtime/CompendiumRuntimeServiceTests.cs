@@ -56,7 +56,7 @@ public sealed class CompendiumRuntimeServiceTests
                 firstActor.Identity.ActorKindId,
                 "Later Acquired Snapshot",
                 firstActor.Identity.DisplaySubtitle),
-            firstActor.Ownership,
+            firstActor.Affiliation,
             firstActor.EncounterPresence,
             firstActor.Progression,
             firstActor.Resources,
@@ -125,7 +125,7 @@ public sealed class CompendiumRuntimeServiceTests
         ContentId missingSkillId = Id("test.pack:missing_skill");
         var malformed = new RuntimeActorSnapshot(
             source.Identity,
-            source.Ownership,
+            source.Affiliation,
             source.EncounterPresence,
             source.Progression,
             source.Resources,
@@ -167,7 +167,7 @@ public sealed class CompendiumRuntimeServiceTests
                 default,
                 source.Identity.ActorKindId,
                 source.Identity.DisplayName),
-            source.Ownership,
+            source.Affiliation,
             source.EncounterPresence,
             source.Progression,
             source.Resources,
@@ -224,6 +224,8 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(sourceSnapshot.Stats.BaseStats, recalledSnapshot.Stats.BaseStats);
         Assert.Equal(sourceSnapshot.Skills.LearnedSkillIds, recalledSnapshot.Skills.LearnedSkillIds);
         Assert.Equal(sourceSnapshot.Skills.EquippedSkillIds, recalledSnapshot.Skills.EquippedSkillIds);
+        Assert.Equal(Id("player_controller"), recalledSnapshot.Affiliation.CommandAuthorityId);
+        Assert.Equal(Id("player_team"), recalledSnapshot.Affiliation.TeamId);
         Assert.All(recalledSnapshot.Resources, resource => Assert.Equal(resource.Maximum, resource.Current));
         Assert.Empty(recalledSnapshot.BattleStatus.Ailments);
         Assert.Empty(recalledSnapshot.Equipment.EquippedItemIds);
@@ -820,8 +822,8 @@ public sealed class CompendiumRuntimeServiceTests
                 Id("player_team"),
                 Entity.BaseLevel,
                 IsDeployed: false,
-                new RuntimeProgressionSnapshot(Entity.BaseLevel, 4, 9, 2),
-                Id("player_controller"))).RequireActor();
+                Id("player_controller"),
+                new RuntimeProgressionSnapshot(Entity.BaseLevel, 4, 9, 2))).RequireActor();
 
         public CompendiumRuntimeService CreateService(IPartyRosterTransitionService? partyRoster = null) =>
             new(

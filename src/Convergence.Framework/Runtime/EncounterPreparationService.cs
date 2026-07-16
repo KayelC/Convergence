@@ -3,10 +3,22 @@ using Convergence.Encounters;
 
 namespace Convergence.Runtime;
 
+/// <summary>
+/// Connects a host-owned encounter trigger to an authored encounter and explicit actor authority.
+/// </summary>
+/// <param name="TriggerId">The host-owned trigger or scene-object ID.</param>
+/// <param name="EncounterId">The pack-qualified encounter selected by the trigger.</param>
+/// <param name="OpponentTeamId">The team assigned to prepared encounter actors.</param>
+/// <param name="OpponentCommandAuthorityId">
+/// The opaque host-routing key assigned to actors prepared for this trigger.
+/// </param>
+/// <param name="InstanceIdPrefix">The host-owned prefix used to create runtime actor IDs.</param>
+/// <param name="FormationIndex">The authored formation index to prepare.</param>
 public sealed record RuntimeEncounterTriggerRequest(
     ContentId TriggerId,
     ContentId EncounterId,
     ContentId OpponentTeamId,
+    ContentId OpponentCommandAuthorityId,
     RuntimeInstanceId InstanceIdPrefix,
     int FormationIndex = 0);
 
@@ -130,6 +142,7 @@ public sealed class CatalogEncounterPreparationService : IEncounterPreparationSe
         EncounterStartPlanResult planning = _planner.Plan(new EncounterStartRequest(
             request.EncounterId,
             request.OpponentTeamId,
+            request.OpponentCommandAuthorityId,
             request.InstanceIdPrefix,
             request.FormationIndex));
         if (!planning.IsSuccess)

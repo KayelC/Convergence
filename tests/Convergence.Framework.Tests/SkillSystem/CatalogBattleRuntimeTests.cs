@@ -69,7 +69,12 @@ public sealed class CatalogBattleRuntimeTests
             new TestInitializationPolicy());
 
         CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
-            entity.Id, RuntimeInstanceId.Parse("instance"), PlayerTeam, 5, IsDeployed: true)).RequireActor();
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            5,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
 
         Assert.Equal([first.Id, second.Id, third.Id], actor.SkillLoadout.Select(skill => skill.Id));
     }
@@ -103,9 +108,19 @@ public sealed class CatalogBattleRuntimeTests
             new TestInitializationPolicy());
 
         CatalogBattleActorCreationResult invalid = factory.Create(new CatalogBattleActorCreationRequest(
-            entity.Id, RuntimeInstanceId.Parse("instance"), PlayerTeam, 0, IsDeployed: true));
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            0,
+            IsDeployed: true,
+            Id("test_host")));
         CatalogBattleActorCreationResult missingEntity = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:unknown"), RuntimeInstanceId.Parse("instance"), PlayerTeam, 1, IsDeployed: true));
+            Id("test.pack:unknown"),
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host")));
 
         Assert.Contains(invalid.Diagnostics, diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.InvalidLevel);
         Assert.Contains(invalid.Diagnostics, diagnostic => diagnostic.Code == CatalogBattleActorDiagnosticCode.SkillMissing);
@@ -130,7 +145,7 @@ public sealed class CatalogBattleRuntimeTests
             default,
             1,
             IsDeployed: true,
-            ControllerId: default(ContentId)));
+            CommandAuthorityId: default(ContentId)));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(4, result.Diagnostics.Count);
@@ -155,6 +170,7 @@ public sealed class CatalogBattleRuntimeTests
             PlayerTeam,
             5,
             IsDeployed: true,
+            Id("test_host"),
             new RuntimeProgressionSnapshot(6, 0, 0, 0)));
 
         CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
@@ -186,12 +202,15 @@ public sealed class CatalogBattleRuntimeTests
             PlayerTeam,
             5,
             IsDeployed: true,
+            Id("player_one"),
             progression)).RequireActor();
 
         Assert.Equal(1, initialization.CallCount);
         Assert.Equal(5, initialization.LastLevel);
         Assert.Same(progression, actor.State.Progression);
         Assert.Equal([unlocked.Id], actor.SkillLoadout.Select(skill => skill.Id));
+        Assert.Equal(Id("player_one"), actor.State.Affiliation.CommandAuthorityId);
+        Assert.Equal(PlayerTeam, actor.State.Affiliation.TeamId);
     }
 
     [Fact]
@@ -208,7 +227,8 @@ public sealed class CatalogBattleRuntimeTests
             RuntimeInstanceId.Parse("instance"),
             PlayerTeam,
             1,
-            IsDeployed: true));
+            IsDeployed: true,
+            Id("test_host")));
 
         CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(CatalogBattleActorDiagnosticCode.InitializationResourceDuplicate, diagnostic.Code);
@@ -230,7 +250,8 @@ public sealed class CatalogBattleRuntimeTests
             RuntimeInstanceId.Parse("instance"),
             PlayerTeam,
             1,
-            IsDeployed: true));
+            IsDeployed: true,
+            Id("test_host")));
 
         Assert.Equal(
             CatalogBattleActorDiagnosticCode.InitializationReturnedNull,
@@ -252,7 +273,7 @@ public sealed class CatalogBattleRuntimeTests
                 entity.Id,
                 entity.EntityKindId,
                 "Saved Actor"),
-            new RuntimeActorOwnershipSnapshot(Id("host"), PlayerTeam),
+            new RuntimeActorAffiliationSnapshot(Id("host"), PlayerTeam),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: false, HasSwappedThisTurn: true),
             new RuntimeProgressionSnapshot(9, 12, 100, 3),
             [
@@ -306,7 +327,7 @@ public sealed class CatalogBattleRuntimeTests
                 entity.Id,
                 entity.EntityKindId,
                 "Saved Actor"),
-            new RuntimeActorOwnershipSnapshot(Id("host"), PlayerTeam),
+            new RuntimeActorAffiliationSnapshot(Id("host"), PlayerTeam),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
             new RuntimeProgressionSnapshot(1, 0, 0, 0),
             [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
@@ -1168,9 +1189,19 @@ public sealed class CatalogBattleRuntimeTests
             Entity("test.pack:enemy", [attack.Id]));
         var factory = new CatalogBattleActorFactory(entities, skills, new TestInitializationPolicy());
         CatalogBattleActor player = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:player"), RuntimeInstanceId.Parse("player"), PlayerTeam, 1, IsDeployed: true)).RequireActor();
+            Id("test.pack:player"),
+            RuntimeInstanceId.Parse("player"),
+            PlayerTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
         CatalogBattleActor enemy = factory.Create(new CatalogBattleActorCreationRequest(
-            Id("test.pack:enemy"), RuntimeInstanceId.Parse("enemy"), EnemyTeam, 1, IsDeployed: true)).RequireActor();
+            Id("test.pack:enemy"),
+            RuntimeInstanceId.Parse("enemy"),
+            EnemyTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
@@ -1317,7 +1348,8 @@ public sealed class CatalogBattleRuntimeTests
                 RuntimeInstanceId.Parse(instanceId),
                 teamId,
                 5,
-                IsDeployed: true)).RequireActor();
+                IsDeployed: true,
+                Id("test_host"))).RequireActor();
 
     private static BattleExecutionServices Services(
         GameDataCatalog catalog,
@@ -1473,7 +1505,8 @@ public sealed class CatalogBattleRuntimeTests
                 new BattleResourceState(Id("hp"), 100, 100),
                 new BattleResourceState(Id("sp"), 20, 20)
             ],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), teamId));
         return new CatalogBattleActor(entity, state, skills);
     }
 
@@ -1551,7 +1584,7 @@ public sealed class CatalogBattleRuntimeTests
                 entity.Id,
                 entity.EntityKindId,
                 instanceId),
-            new RuntimeActorOwnershipSnapshot(Id("runtime"), PlayerTeam),
+            new RuntimeActorAffiliationSnapshot(Id("runtime"), PlayerTeam),
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeProgressionSnapshot(1, 0, 0, 0),
             [

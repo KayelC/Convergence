@@ -678,6 +678,7 @@ public sealed class BattleStatusLifecycleTests
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
             new RuntimeEncounterPresenceSnapshot(isDeployed),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam),
             [new KeyValuePair<ContentId, decimal>(Luck, luck)],
             passiveSkills: passiveSkills);
 

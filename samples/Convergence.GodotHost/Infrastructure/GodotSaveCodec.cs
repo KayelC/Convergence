@@ -14,6 +14,7 @@ internal sealed record GodotSaveActor(
     string InstanceId,
     string EntityId,
     string TeamId,
+    string CommandAuthorityId,
     int Level,
     bool IsDeployed,
     IReadOnlyList<GodotSaveResource> Resources);
@@ -26,7 +27,7 @@ internal sealed record GodotSaveDocument(
     string ContentPackId,
     string ContentPackVersion,
     IReadOnlyList<GodotSaveActor> Actors,
-    string OwnerInstanceId,
+    string PartyOwnerInstanceId,
     IReadOnlyList<GodotSaveSceneInstance> SceneInstances);
 
 internal sealed record GodotSaveRestoreResult(
@@ -59,7 +60,8 @@ internal static class GodotSaveCodec
             return new GodotSaveActor(
                 snapshot.Identity.InstanceId.ToString(),
                 snapshot.Identity.EntityDefinitionId.ToString(),
-                snapshot.Ownership.TeamId.ToString(),
+                snapshot.Affiliation.TeamId.ToString(),
+                snapshot.Affiliation.CommandAuthorityId.ToString(),
                 snapshot.Progression.Level,
                 snapshot.EncounterPresence.IsDeployed,
                 snapshot.Resources
@@ -111,7 +113,8 @@ internal static class GodotSaveCodec
                 RuntimeInstanceId.Parse(actorRecord.InstanceId),
                 ContentId.Parse(actorRecord.TeamId),
                 actorRecord.Level,
-                actorRecord.IsDeployed)).RequireActor();
+                actorRecord.IsDeployed,
+                ContentId.Parse(actorRecord.CommandAuthorityId))).RequireActor();
             foreach (GodotSaveResource resource in actorRecord.Resources)
             {
                 ContentId resourceId = ContentId.Parse(resource.Id);
@@ -128,7 +131,7 @@ internal static class GodotSaveCodec
             actors.Add(actor);
         }
 
-        RuntimeInstanceId ownerId = RuntimeInstanceId.Parse(document.OwnerInstanceId);
+        RuntimeInstanceId ownerId = RuntimeInstanceId.Parse(document.PartyOwnerInstanceId);
         CatalogBattleActor owner = actors.Single(actor => actor.State.InstanceId == ownerId);
         RuntimeActorSnapshot[] actorSnapshots = actors.Select(actor => actor.State.ToSnapshot()).ToArray();
         RuntimeActorSnapshot ownerSnapshot = owner.State.ToSnapshot();
