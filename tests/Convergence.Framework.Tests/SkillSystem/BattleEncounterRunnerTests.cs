@@ -611,6 +611,49 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_PublishesSuccessfulBattleEndLifecycleEventsBeforeTheTerminalEvent()
+    {
+        BattleEncounterParticipant player = Participant("terminal_success_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndEvents = [LifecycleCleanupEvent(player.InstanceId)]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("terminal_success_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterEventKind.ResourceChanged, result.Events[^2].Kind);
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+        Assert.Equal(result.Events.Count, result.Events[^1].Sequence);
+    }
+
+    [Fact]
+    public void Runner_PublishesFaultCleanupEventsBeforeTheTerminalEvent()
+    {
+        BattleEncounterParticipant player = Participant("terminal_fault_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndEvents = [LifecycleCleanupEvent(player.InstanceId)]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("terminal_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new ThrowingTurnHandler(new InvalidOperationException("Deliberate turn-handler failure.")),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterEventKind.ResourceChanged, result.Events[^2].Kind);
+        Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
+        Assert.Equal(result.Events.Count, result.Events[^1].Sequence);
+    }
+
+    [Fact]
     public void Runner_FaultBeforeStartAlsoReturnsDetachedParticipantSnapshots()
     {
         BattleEncounterParticipant player = Participant("fault_snapshot_player", PlayerTeam);
@@ -1067,6 +1110,13 @@ public sealed class BattleEncounterRunnerTests
     private static int Index(BattleEncounterResult result, BattleEncounterEventKind kind) =>
         result.Events.First(battleEvent => battleEvent.Kind == kind).Sequence;
 
+    private static BattleEncounterEvent LifecycleCleanupEvent(RuntimeInstanceId actorId) =>
+        new(
+            0,
+            BattleEncounterEventKind.ResourceChanged,
+            new BattleResourceChangedEventPayload(actorId, actorId, 0m, Hp),
+            "Battle-end cleanup completed.");
+
     private static void AssertPortFault(
         BattleEncounterResult result,
         BattleEncounterFaultCode expectedCode,
@@ -1318,6 +1368,7 @@ public sealed class BattleEncounterRunnerTests
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
         public BattleTurnStartRestriction? Restriction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
+        public IReadOnlyList<BattleEncounterEvent> BattleEndEvents { get; init; } = [];
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
@@ -1364,7 +1415,7 @@ public sealed class BattleEncounterRunnerTests
         {
             BattleEndCalls++;
             BattleEndAction?.Invoke(request);
-            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleEndEvents);
         }
     }
 

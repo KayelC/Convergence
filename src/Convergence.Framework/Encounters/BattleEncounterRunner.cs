@@ -1145,6 +1145,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             string finalMessage = cleanupFailure is null
                 ? primaryMessage
                 : $"{primaryMessage} {cleanupFailure}";
+            foreach (BattleEncounterEvent battleEndEvent in battleEndEvents)
+            {
+                await AppendFinalEventAsync(battleEndEvent).ConfigureAwait(false);
+            }
+
             await AppendFinalEventAsync(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleEnded,
@@ -1155,10 +1160,6 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         resolvedFaultCode),
                     finalMessage))
                 .ConfigureAwait(false);
-            foreach (BattleEncounterEvent battleEndEvent in battleEndEvents)
-            {
-                await AppendFinalEventAsync(battleEndEvent).ConfigureAwait(false);
-            }
 
             return new BattleEncounterResult(
                 BattleEncounterOutcome.Faulted,
@@ -1253,12 +1254,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         : outcome == BattleEncounterOutcome.Faulted
                             ? "Battle faulted."
                             : "Battle ended.");
+            await AddRangeAsync(battleEndEvents).ConfigureAwait(false);
             await AddAsync(
                     BattleEncounterEventKind.BattleEnded,
                     new BattleEndedEventPayload(outcome, winningTeamId, completedRounds, faultCode),
                     endMessage)
                 .ConfigureAwait(false);
-            await AddRangeAsync(battleEndEvents).ConfigureAwait(false);
             return new BattleEncounterResult(
                 outcome,
                 winningTeamId,
