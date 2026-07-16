@@ -1,9 +1,10 @@
 # Product Roadmap
 
 The [Production-Readiness Completion Roadmap](production-readiness-roadmap.md)
-is the active release gate. The priorities below describe what follows or
-expands that finite correction sequence; they do not replace its unresolved
-`Blocker`, `High`, `Medium`, or `Low` findings.
+and its [consolidated source review](convergence-production-readiness-consolidated-review-2026-07-16.md)
+are complete and verified. The priorities below now govern forward development;
+the completed release record remains active evidence for the guarded `0.1.0`
+baseline.
 
 ## Current State
 
@@ -30,10 +31,10 @@ factory. Moon phase remains absent from the standard composition.
 The strict Draft 2020-12 schema-v3 set now covers every implemented content
 family, the authoring validator CLI combines schema and semantic gates, the
 0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
-integration. The consolidated quality gate is implemented and green. The
-remaining active release work is the independent final review in the
-production-readiness roadmap and any corrections that review demonstrates are
-necessary.
+integration. The consolidated quality gate and independent final review are
+complete. The review demonstrated one encounter resource-event defect,
+corrected it with exact signed mutation records, and found no unresolved release
+blocker.
 
 ## Priority 1: Persistence Evolution
 

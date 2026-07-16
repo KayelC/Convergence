@@ -4,6 +4,10 @@
   "branch": "main",
   "startingCommit": "8db20fe",
   "sourceAudit": "convergence-framework-production-readiness-audit-2026-07-14",
+  "consolidatedReview": "docs/convergence-production-readiness-consolidated-review-2026-07-16.md",
+  "reviewedCommit": "4c07ac490b83e84fe387943cda6a9b8c7a7c4580",
+  "reviewDate": "2026-07-16",
+  "reviewVerdict": "verified",
   "allowedStatuses": ["open", "implemented_pending_review", "verified"],
   "findings": [
     {
@@ -32,7 +36,7 @@
       "id": "PR-B3",
       "title": "Public and authoring contract stabilization",
       "severity": "blocker",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 7,
       "plannedCommit": "api: establish convergence 0.1 contract",
       "evidence": [
@@ -42,25 +46,25 @@
         "ContentSchemaContractTests",
         "ContentValidatorApplicationTests"
       ],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-B4",
       "title": "Real Godot reference consumer",
       "severity": "blocker",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 10,
       "plannedCommit": "host: add godot 4.7 reference consumer",
       "evidence": ["GodotIntegrationContractTests", "GodotReferenceConsumerBoundaryTests", "Godot 4.7.1 headless smoke"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-B5",
       "title": "Repeatable repository release gate",
       "severity": "blocker",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 11,
       "plannedCommit": "quality: complete production release gate",
       "evidence": [
@@ -71,7 +75,7 @@
         "Assert-CoberturaCoverage.ps1",
         "Godot 4.7.1 headless smoke"
       ],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
@@ -133,69 +137,69 @@
       "id": "PR-M4",
       "title": "Authored ruleset policy authority",
       "severity": "medium",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 3,
       "plannedCommit": "runtime: register authored ruleset policies",
       "evidence": ["RuntimeRulesetBindingTests"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-M5",
       "title": "Structured localization-safe encounter events",
       "severity": "medium",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 4,
       "plannedCommit": "battle: structure encounter event contracts",
       "evidence": ["BattleEncounterRunnerTests"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-M6",
       "title": "Aggregate runtime session restoration",
       "severity": "medium",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 5,
       "plannedCommit": "runtime: add aggregate session restoration",
       "evidence": ["RuntimePersistenceSnapshotTests"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-L1",
       "title": "Explicit runtime random-target policy",
       "severity": "low",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 1,
       "plannedCommit": "runtime: require explicit random targeting",
       "evidence": ["ActiveSkillExecutionTests.ExecutionServices_RequireExplicitSkillAndRuntimeRandomTargetPolicies", "BattleActionExecutorTests"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "PR-L2",
       "title": "Collision-safe DemoHost content layout",
       "severity": "low",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 6,
       "plannedCommit": "host: preserve content pack paths",
       "evidence": [
         "FrameworkHostAdapterTests.FileContentSource_KeepsIdenticalDocumentNamesIsolatedByManifestDirectory",
         "FrameworkHostAdapterTests.DemoHostContentOutput_PreservesPackRelativeDirectories"
       ],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     },
     {
       "id": "CR-M6",
       "title": "Catalyst rank-shift semantics",
       "severity": "medium",
-      "status": "implemented_pending_review",
+      "status": "verified",
       "plannedCheckpoint": 2,
       "plannedCommit": "fusion: enforce catalyst rank shifts",
       "evidence": ["FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests", "CatalogSurfaceTests", "OriginalCleanContentSliceTests", "FusionTransactionServiceTests"],
-      "remainingWork": ["Final consolidated review"],
+      "remainingWork": [],
       "archiveEligible": false
     }
   ]

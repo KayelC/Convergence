@@ -9,7 +9,7 @@ This directory is the active documentation authority for Convergence Framework.
 3. [Architecture](architecture.md): dependency direction and module responsibilities.
 4. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
 5. [Capability Matrix](framework-capability-matrix.md): executable maturity state and known gaps.
-6. [Production-Readiness Roadmap](production-readiness-roadmap.md): authoritative completion state for every carried-forward audit finding.
+6. [Production-Readiness Record](production-readiness-roadmap.md): verified completion state for every carried-forward audit finding.
 7. [Product Roadmap](roadmap.md): forward priorities after the production-readiness gate.
 8. [Godot Integration Contract](godot-integration-contract.md): how an engine host consumes the framework.
 9. [Release Quality Gate](release-quality-gate.md): locked restore, API/schema checks, coverage, hosts, trimming, and security verification.
@@ -21,7 +21,8 @@ This directory is the active documentation authority for Convergence Framework.
 15. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
 16. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
 17. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
-18. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
+18. [Production-Readiness Consolidated Review](convergence-production-readiness-consolidated-review-2026-07-16.md): source-based checkpoint review, correction evidence, release-gate results, residual constraints, and final `0.1.0` verdict.
+19. [Pre-Roadmap Code Review](convergence-framework-code-review-2026-07-15.md): historical source review and correction log that led into the completed production-readiness roadmap.
 
 ## Authority Rules
 

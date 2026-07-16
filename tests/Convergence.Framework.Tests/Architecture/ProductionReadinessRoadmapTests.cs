@@ -22,6 +22,12 @@ public sealed class ProductionReadinessRoadmapTests
         Assert.Equal("Convergence.Framework", ledger.Product);
         Assert.Equal("main", ledger.Branch);
         Assert.Equal("8db20fe", ledger.StartingCommit);
+        Assert.Equal(
+            "docs/convergence-production-readiness-consolidated-review-2026-07-16.md",
+            ledger.ConsolidatedReview);
+        Assert.Equal("4c07ac490b83e84fe387943cda6a9b8c7a7c4580", ledger.ReviewedCommit);
+        Assert.Equal("2026-07-16", ledger.ReviewDate);
+        Assert.Equal("verified", ledger.ReviewVerdict);
         Assert.Equal(ledger.Findings.Count, ledger.Findings.Select(finding => finding.Id).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(
             OriginalAuditFindingIds.Order(StringComparer.Ordinal),
@@ -30,6 +36,26 @@ public sealed class ProductionReadinessRoadmapTests
                 .Select(finding => finding.Id)
                 .Order(StringComparer.Ordinal));
         Assert.Contains(ledger.Findings, finding => finding.Id == "CR-M6");
+    }
+
+    [Fact]
+    public void Ledger_FinalReviewVerifiesEveryFindingAndRemainsAuditable()
+    {
+        ProductionReadinessLedger ledger = Load();
+
+        Assert.All(ledger.Findings, finding =>
+        {
+            Assert.Equal("verified", finding.Status);
+            Assert.Empty(finding.RemainingWork);
+            Assert.False(finding.ArchiveEligible);
+        });
+
+        string reviewPath = RepositoryPath(ledger.ConsolidatedReview);
+        Assert.True(File.Exists(reviewPath));
+        string review = File.ReadAllText(reviewPath);
+        Assert.Contains(ledger.ReviewedCommit, review, StringComparison.Ordinal);
+        Assert.Contains("ExecutionResourceChange", review, StringComparison.Ordinal);
+        Assert.Contains("No unresolved release blocker remains", review, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -62,14 +88,16 @@ public sealed class ProductionReadinessRoadmapTests
     }
 
     [Fact]
-    public void ActiveDocumentation_KeepsUnfinishedRoadmapAuthoritative()
+    public void ActiveDocumentation_KeepsVerifiedRoadmapAndReviewAuthoritative()
     {
         string roadmap = File.ReadAllText(RepositoryPath("docs", "production-readiness-roadmap.md"));
         string index = File.ReadAllText(RepositoryPath("docs", "README.md"));
         string productRoadmap = File.ReadAllText(RepositoryPath("docs", "roadmap.md"));
 
-        Assert.Contains("This roadmap remains active", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Completion status: `verified`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("convergence-production-readiness-consolidated-review-2026-07-16.md", roadmap, StringComparison.Ordinal);
         Assert.Contains("production-readiness-roadmap.md", index, StringComparison.Ordinal);
+        Assert.Contains("convergence-production-readiness-consolidated-review-2026-07-16.md", index, StringComparison.Ordinal);
         Assert.Contains("production-readiness-roadmap.md", productRoadmap, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "Completed restructuring, migration, and recovery plans are preserved",
@@ -103,6 +131,10 @@ public sealed class ProductionReadinessRoadmapTests
         string Product,
         string Branch,
         string StartingCommit,
+        string ConsolidatedReview,
+        string ReviewedCommit,
+        string ReviewDate,
+        string ReviewVerdict,
         IReadOnlyList<string> AllowedStatuses,
         IReadOnlyList<ProductionReadinessFinding> Findings);
 

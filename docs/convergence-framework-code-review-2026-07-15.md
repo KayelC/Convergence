@@ -1,5 +1,10 @@
 # Convergence Framework Code Review
 
+> Historical review: this report records the pre-roadmap state at `0109dc8`.
+> Its findings were carried into the active completion ledger, corrected, and
+> superseded by the
+> [2026-07-16 consolidated production-readiness review](convergence-production-readiness-consolidated-review-2026-07-16.md).
+
 Date: 2026-07-15
 
 Branch: `main`
