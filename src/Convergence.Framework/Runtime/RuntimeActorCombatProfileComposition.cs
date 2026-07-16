@@ -123,9 +123,14 @@ public sealed class RuntimeActorCombatProfileCompositionService :
     private readonly IStatResolutionPolicy _statResolution;
     private readonly IResourceGrowthPolicy _resourceGrowth;
     private readonly ISkillDefinitionRepository _skills;
+    private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
 
     public RuntimeActorCombatProfileCompositionService(ISkillDefinitionRepository skills)
-        : this(new StandardStatResolutionPolicy(), new StandardResourceGrowthPolicy(), skills)
+        : this(
+            new StandardStatResolutionPolicy(),
+            new StandardResourceGrowthPolicy(),
+            skills,
+            NoLimitRosterCapacityPolicy.Instance)
     {
     }
 
@@ -133,10 +138,25 @@ public sealed class RuntimeActorCombatProfileCompositionService :
         IStatResolutionPolicy statResolution,
         IResourceGrowthPolicy resourceGrowth,
         ISkillDefinitionRepository skills)
+        : this(
+            statResolution,
+            resourceGrowth,
+            skills,
+            NoLimitRosterCapacityPolicy.Instance)
+    {
+    }
+
+    public RuntimeActorCombatProfileCompositionService(
+        IStatResolutionPolicy statResolution,
+        IResourceGrowthPolicy resourceGrowth,
+        ISkillDefinitionRepository skills,
+        IRosterCapacityPolicy rosterCapacityPolicy)
     {
         _statResolution = statResolution ?? throw new ArgumentNullException(nameof(statResolution));
         _resourceGrowth = resourceGrowth ?? throw new ArgumentNullException(nameof(resourceGrowth));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        _rosterCapacityPolicy = rosterCapacityPolicy ??
+            throw new ArgumentNullException(nameof(rosterCapacityPolicy));
     }
 
     public RuntimeActorCombatProfileCompositionResult Compose(
@@ -154,8 +174,18 @@ public sealed class RuntimeActorCombatProfileCompositionService :
         RuntimePartyRosterSnapshot? partyRoster = request.PartyRoster;
         if (partyRoster is not null)
         {
+            RuntimeActorState? rosterOwnerState = request.RuntimeActors
+                .FirstOrDefault(candidate =>
+                    candidate.InstanceId == partyRoster.Owner.InstanceId);
+            RuntimeActorSnapshot? rosterOwner = before.Identity.InstanceId ==
+                partyRoster.Owner.InstanceId
+                ? before
+                : rosterOwnerState?.ToSnapshot();
             IReadOnlyList<RuntimePartyRosterInvariantDiagnostic> rosterDiagnostics =
-                RuntimePartyRosterInvariantRules.Validate(partyRoster);
+                RuntimePartyRosterInvariantRules.Validate(
+                    partyRoster,
+                    rosterOwner,
+                    _rosterCapacityPolicy);
             if (rosterDiagnostics.Count > 0)
             {
                 RuntimePartyRosterInvariantDiagnostic first = rosterDiagnostics[0];

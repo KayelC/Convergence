@@ -581,8 +581,47 @@ public sealed class PartyRosterTransitionTests
             oldCompanion.InstanceId,
             Actor("overflow")));
 
-        Assert.Equal(PartyRosterTransitionCode.RosterFull, full.Code);
+        Assert.Equal(PartyRosterTransitionCode.InvalidSnapshot, full.Code);
         Assert.Equal(fullSnapshot, full.After);
+    }
+
+    [Fact]
+    public void Transitions_RejectMalformedInputAndInvalidProposedStateAtomically()
+    {
+        RuntimeActorReferenceSnapshot hero = Actor("hero");
+        RuntimePartyRosterSnapshot duplicateActive = Snapshot(
+            activeParty: [hero, hero]);
+
+        PartyRosterTransitionResult malformedInput = _service.AddHostedEntityToRoster(
+            new AddHostedEntityToRosterRequest(
+                duplicateActive,
+                OwnerActor(duplicateActive),
+                Actor("valid_hosted_entity")));
+
+        Assert.Equal(PartyRosterTransitionCode.InvalidSnapshot, malformedInput.Code);
+        Assert.Same(duplicateActive, malformedInput.Before);
+        Assert.Same(duplicateActive, malformedInput.After);
+        Assert.Contains("$.activeParty[1]", Assert.Single(malformedInput.Diagnostics).Message);
+
+        RuntimePartyRosterSnapshot valid = Snapshot();
+        var invalidReference = new RuntimeActorReferenceSnapshot(
+            default,
+            default,
+            "Invalid reference");
+
+        PartyRosterTransitionResult invalidProposedState = _service.AddHostedEntityToRoster(
+            new AddHostedEntityToRosterRequest(
+                valid,
+                OwnerActor(valid),
+                invalidReference));
+
+        Assert.Equal(PartyRosterTransitionCode.InvalidSnapshot, invalidProposedState.Code);
+        Assert.Same(valid, invalidProposedState.Before);
+        Assert.Same(valid, invalidProposedState.After);
+        Assert.Contains(
+            "Proposed party roster is invalid",
+            Assert.Single(invalidProposedState.Diagnostics).Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]

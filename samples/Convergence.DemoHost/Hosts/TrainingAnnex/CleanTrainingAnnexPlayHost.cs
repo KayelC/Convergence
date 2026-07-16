@@ -187,6 +187,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         ISkillDefinitionRepository,
         IStatResolutionPolicy,
         IResourceGrowthPolicy,
+        IRosterCapacityPolicy,
         IRuntimeActorCombatProfileCompositionService>
         _combatProfileCompositionFactory;
 
@@ -203,6 +204,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             ISkillDefinitionRepository,
             IStatResolutionPolicy,
             IResourceGrowthPolicy,
+            IRosterCapacityPolicy,
             IRuntimeActorCombatProfileCompositionService>?
             combatProfileCompositionFactory = null)
     {
@@ -215,8 +217,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         _initialEquipment = initialEquipment;
         _initialWallet = initialWallet;
         _combatProfileCompositionFactory = combatProfileCompositionFactory ??
-            ((skills, stats, resources) =>
-                new RuntimeActorCombatProfileCompositionService(stats, resources, skills));
+            ((skills, stats, resources, rosterCapacity) =>
+                new RuntimeActorCombatProfileCompositionService(
+                    stats,
+                    resources,
+                    skills,
+                    rosterCapacity));
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -357,7 +363,11 @@ internal sealed class CleanTrainingAnnexPlayHost
             .RequireService();
         IStatResolutionPolicy statPolicy = statServices.StatResolutionPolicy;
         IRuntimeActorCombatProfileCompositionService combatProfileCompositionService =
-            _combatProfileCompositionFactory(catalog, statPolicy, growthServices.ResourceGrowthPolicy) ??
+            _combatProfileCompositionFactory(
+                catalog,
+                statPolicy,
+                growthServices.ResourceGrowthPolicy,
+                rosterCapacityPolicy) ??
             throw new InvalidOperationException("The combat-profile composition factory returned no service.");
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());

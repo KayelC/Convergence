@@ -405,16 +405,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         RuntimeSaveGameSnapshot snapshot,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.Owner, "$.partyRoster.owner", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.ActiveParty, "$.partyRoster.activeParty", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.ReserveMembers, "$.partyRoster.reserveMembers", diagnostics);
-        if (snapshot.PartyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
-        {
-            ValidateActorReferenceIdentifiers(activeHostedEntity, "$.partyRoster.activeHostedEntity", diagnostics);
-        }
-        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.HostedEntityRoster, "$.partyRoster.hostedEntityRoster", diagnostics);
-        ValidateActorReferenceIdentifiers(snapshot.PartyRoster.CompanionRoster, "$.partyRoster.companionRoster", diagnostics);
-
         ValidateContentIdKeys(snapshot.Inventory.ItemQuantities.Keys, "$.inventory.itemQuantities", diagnostics);
         foreach ((EquipmentSlot slot, IReadOnlyList<ContentId> equipmentIds) in
                  snapshot.Inventory.OwnedEquipmentIds.OrderBy(pair => pair.Key))
@@ -889,15 +879,42 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         IRosterCapacityPolicy rosterCapacityPolicy,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
+        actors.TryGetValue(
+            partyRoster.Owner.InstanceId,
+            out RuntimeActorSnapshot? ownerActor);
         foreach (RuntimePartyRosterInvariantDiagnostic rosterDiagnostic in
-                 RuntimePartyRosterInvariantRules.Validate(partyRoster))
+                 RuntimePartyRosterInvariantRules.Validate(
+                     partyRoster,
+                     ownerActor,
+                     rosterCapacityPolicy))
         {
+            if (rosterDiagnostic.Code == RuntimePartyRosterInvariantCode.PartyRosterOwnerMismatch)
+            {
+                continue;
+            }
+
             RuntimeSaveValidationCode code = rosterDiagnostic.Code switch
             {
+                RuntimePartyRosterInvariantCode.InvalidReferenceInstanceId =>
+                    RuntimeSaveValidationCode.InvalidRuntimeInstanceId,
+                RuntimePartyRosterInvariantCode.InvalidReferenceEntityDefinitionId =>
+                    RuntimeSaveValidationCode.InvalidContentId,
+                RuntimePartyRosterInvariantCode.DuplicateActivePartyReference or
+                RuntimePartyRosterInvariantCode.DuplicateReserveReference or
+                RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference or
+                RuntimePartyRosterInvariantCode.DuplicateCompanionReference or
+                RuntimePartyRosterInvariantCode.ActiveReserveRoleCollision =>
+                    RuntimeSaveValidationCode.DuplicatePartyRosterReference,
                 RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned =>
                     RuntimeSaveValidationCode.ActiveHostedEntityNotOwned,
                 RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch =>
                     RuntimeSaveValidationCode.ActiveHostedEntityReferenceMismatch,
+                RuntimePartyRosterInvariantCode.ActivePartyCapacityExceeded =>
+                    RuntimeSaveValidationCode.ActivePartyCapacityExceeded,
+                RuntimePartyRosterInvariantCode.HostedEntityRosterCapacityExceeded =>
+                    RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded,
+                RuntimePartyRosterInvariantCode.CompanionRosterCapacityExceeded =>
+                    RuntimeSaveValidationCode.CompanionRosterCapacityExceeded,
                 _ => RuntimeSaveValidationCode.PartyRosterIdentityCollision
             };
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -915,53 +932,10 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeSaveValidationCode.MissingActorReference,
             "Party roster owner");
 
-        if (partyRoster.ActiveParty.Count > partyRoster.MaxActivePartySize)
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.ActivePartyCapacityExceeded,
-                $"Active party has {partyRoster.ActiveParty.Count} members, exceeding the maximum of {partyRoster.MaxActivePartySize}.",
-                Path: "$.partyRoster.activeParty"));
-        }
-
-        actors.TryGetValue(
-            partyRoster.Owner.InstanceId,
-            out RuntimeActorSnapshot? ownerActor);
-        if (ownerActor is not null)
-        {
-            int ownerLevel = ownerActor.Progression.Level;
-            int companionCapacity = rosterCapacityPolicy.GetCapacity(
-                RuntimeRosterKind.Companion,
-                ownerLevel);
-            if (partyRoster.CompanionRoster.Count > companionCapacity)
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.CompanionRosterCapacityExceeded,
-                    $"Companion roster has {partyRoster.CompanionRoster.Count} entries, exceeding the capacity of {companionCapacity}.",
-                    Path: "$.partyRoster.companionRoster"));
-            }
-
-            int hostedEntityCapacity = rosterCapacityPolicy.GetCapacity(
-                RuntimeRosterKind.HostedEntity,
-                ownerLevel);
-            if (partyRoster.HostedEntityRoster.Count > hostedEntityCapacity)
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded,
-                    $"Hosted entity roster has {partyRoster.HostedEntityRoster.Count} entries, exceeding the capacity of {hostedEntityCapacity}.",
-                    Path: "$.partyRoster.hostedEntityRoster"));
-            }
-        }
-
         ValidateActorReferenceList(partyRoster.ActiveParty, actors, diagnostics, "$.partyRoster.activeParty");
         ValidateActorReferenceList(partyRoster.ReserveMembers, actors, diagnostics, "$.partyRoster.reserveMembers");
         ValidateActorReferenceList(partyRoster.HostedEntityRoster, actors, diagnostics, "$.partyRoster.hostedEntityRoster");
         ValidateActorReferenceList(partyRoster.CompanionRoster, actors, diagnostics, "$.partyRoster.companionRoster");
-        ValidateNoOverlap(
-            partyRoster.ActiveParty,
-            partyRoster.ReserveMembers,
-            diagnostics,
-            "$.partyRoster.reserveMembers",
-            "Active party and reserve party cannot contain the same actor.");
 
         if (partyRoster.ActiveHostedEntity is not null)
         {
@@ -974,8 +948,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 "Active Hosted Entity");
 
         }
-
-        ValidatePartyRosterIdentityOverlaps(partyRoster, diagnostics);
     }
 
     private static void ValidateActorReferenceList(
@@ -984,7 +956,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         string path)
     {
-        var seen = new HashSet<RuntimeInstanceId>();
         for (int index = 0; index < references.Count; index++)
         {
             RuntimeActorReferenceSnapshot reference = references[index];
@@ -995,15 +966,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 $"{path}[{index}]",
                 RuntimeSaveValidationCode.MissingActorReference,
                 "Actor reference");
-
-            if (!seen.Add(reference.InstanceId))
-            {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.DuplicatePartyRosterReference,
-                    $"Actor reference '{reference.InstanceId}' appears more than once in '{path}'.",
-                    reference.InstanceId,
-                    Path: $"{path}[{index}]"));
-            }
         }
     }
 
@@ -1038,96 +1000,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             reference.EntityDefinitionId,
             path + ".entityDefinitionId"));
     }
-
-    private static void ValidateNoOverlap(
-        IReadOnlyList<RuntimeActorReferenceSnapshot> first,
-        IReadOnlyList<RuntimeActorReferenceSnapshot> second,
-        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
-        string secondPath,
-        string message)
-    {
-        HashSet<RuntimeInstanceId> firstIds = first
-            .Select(reference => reference.InstanceId)
-            .ToHashSet();
-        for (int index = 0; index < second.Count; index++)
-        {
-            RuntimeActorReferenceSnapshot reference = second[index];
-            if (!firstIds.Contains(reference.InstanceId))
-            {
-                continue;
-            }
-
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.DuplicatePartyRosterReference,
-                message,
-                reference.InstanceId,
-                Path: $"{secondPath}[{index}]"));
-        }
-    }
-
-    private static void ValidatePartyRosterIdentityOverlaps(
-        RuntimePartyRosterSnapshot partyRoster,
-        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
-    {
-        foreach (IGrouping<RuntimeInstanceId, RuntimePartyRosterReferenceOccurrence> group in
-                 RuntimePartyRosterIdentityRules.Enumerate(partyRoster)
-                     .GroupBy(occurrence => occurrence.Reference.InstanceId))
-        {
-            RuntimePartyRosterReferenceOccurrence[] occurrences = group.ToArray();
-            if (occurrences.Length < 2)
-            {
-                continue;
-            }
-
-            HashSet<RuntimePartyRosterReferenceRole> roles = occurrences
-                .Select(occurrence => occurrence.Role)
-                .ToHashSet();
-            for (int currentIndex = 1; currentIndex < occurrences.Length; currentIndex++)
-            {
-                RuntimePartyRosterReferenceOccurrence current = occurrences[currentIndex];
-                RuntimePartyRosterReferenceOccurrence? conflict = null;
-                for (int previousIndex = 0; previousIndex < currentIndex; previousIndex++)
-                {
-                    RuntimePartyRosterReferenceOccurrence previous = occurrences[previousIndex];
-                    if (HasDedicatedOverlapDiagnostic(previous.Role, current.Role) ||
-                        RuntimePartyRosterIdentityRules.IsIntentionalOverlap(previous.Role, current.Role, roles))
-                    {
-                        continue;
-                    }
-
-                    conflict = previous;
-                    break;
-                }
-
-                if (conflict is not RuntimePartyRosterReferenceOccurrence conflicting)
-                {
-                    continue;
-                }
-
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.PartyRosterIdentityCollision,
-                    $"Runtime instance '{group.Key}' is referenced as both '{conflicting.Role}' and " +
-                    $"'{current.Role}', which is not an allowed party/roster overlap.",
-                    group.Key,
-                    Path: current.Path));
-            }
-        }
-    }
-
-    private static bool HasDedicatedOverlapDiagnostic(
-        RuntimePartyRosterReferenceRole first,
-        RuntimePartyRosterReferenceRole second) =>
-        first == second ||
-        IsRolePair(first, second, RuntimePartyRosterReferenceRole.ActiveParty, RuntimePartyRosterReferenceRole.ReserveMember) ||
-        IsRolePair(first, second, RuntimePartyRosterReferenceRole.ActiveHostedEntity, RuntimePartyRosterReferenceRole.HostedEntityRoster);
-
-    private static bool IsRolePair(
-        RuntimePartyRosterReferenceRole first,
-        RuntimePartyRosterReferenceRole second,
-        RuntimePartyRosterReferenceRole expectedFirst,
-        RuntimePartyRosterReferenceRole expectedSecond) =>
-        (first == expectedFirst && second == expectedSecond) ||
-        (first == expectedSecond && second == expectedFirst);
 
     private static void ValidateInventory(
         RuntimeInventorySnapshot inventory,

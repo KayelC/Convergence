@@ -140,6 +140,13 @@ party flows that reuse these transitions inherit the inconsistent boundary.
 validator and use it in live transitions, composition, and save validation.
 Validate both incoming state and the proposed result.
 
+**Resolution:** corrected. `RuntimePartyRosterInvariantRules` is now the shared
+owner-aware, capacity-aware validator for live transitions, actor composition,
+and save validation. It covers reference IDs, duplicate and conflicting roles,
+active and roster capacities, ownership, and Active Hosted Entity consistency.
+Every transition validates both its incoming snapshot and proposed result,
+returning the original snapshot on rejection.
+
 ### M3. Move-list capacity is enforced during live growth but not actor creation or restoration
 
 **Invariant:** the selected move-list capacity policy should govern every path

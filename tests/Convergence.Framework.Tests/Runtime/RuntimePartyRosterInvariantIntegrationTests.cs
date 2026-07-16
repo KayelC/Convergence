@@ -45,6 +45,43 @@ public sealed class RuntimePartyRosterInvariantIntegrationTests
             after.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString()).ToArray());
     }
 
+    [Fact]
+    public void StatComposition_UsesTheConfiguredRosterCapacityPolicy()
+    {
+        RuntimeActorState vessel = Actor("vessel", "test.pack:vessel");
+        RuntimeActorState hostedEntity = Actor("hosted_entity", "test.pack:hosted_entity");
+        RuntimeActorReferenceSnapshot owner = Reference(vessel);
+        var overCapacityRoster = new RuntimePartyRosterSnapshot(
+            owner,
+            activeParty: [owner],
+            hostedEntityRoster: [Reference(hostedEntity)]);
+        var capacity = new TieredRosterCapacityPolicy(
+        [
+            new RosterCapacityTier(RuntimeRosterKind.HostedEntity, 1, 0),
+            new RosterCapacityTier(RuntimeRosterKind.Companion, 1, 0)
+        ]);
+        var service = new RuntimeActorCombatProfileCompositionService(
+            new StandardStatResolutionPolicy(),
+            new StandardResourceGrowthPolicy(),
+            new SkillRepository(),
+            capacity);
+
+        RuntimeActorCombatProfileCompositionResult result = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                overCapacityRoster,
+                [hostedEntity]));
+
+        Assert.False(result.Applied);
+        RuntimeActorCombatProfileCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.RosterInvariantViolation,
+            diagnostic.Code);
+        Assert.Contains("exceeding the capacity of 0", diagnostic.Message, StringComparison.Ordinal);
+    }
+
     private static RuntimeActorState Actor(string instanceId, string entityId) =>
         new(
             RuntimeInstanceId.Parse(instanceId),

@@ -495,7 +495,7 @@ public sealed class FusionTransactionServiceTests
     }
 
     [Fact]
-    public void Prepare_UsesInjectedCapacityAndReturnsAtomicRollbackOnRejection()
+    public void Prepare_RejectsAnIncomingRosterThatViolatesInjectedCapacityAtomically()
     {
         TransactionContext context = CreateContext();
         RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.Companion);
@@ -513,11 +513,12 @@ public sealed class FusionTransactionServiceTests
         Assert.False(assessment.CanCommit);
         Assert.Same(party, assessment.BeforePartyRoster);
         Assert.Same(party, assessment.AfterPartyRoster);
-        Assert.Equal(FusionRuntimeDiagnosticCode.RosterFull, Assert.Single(assessment.Diagnostics).Code);
-        Assert.Equal(3, assessment.RosterTransitions.Count);
-        Assert.True(assessment.RosterTransitions[0].Applied);
-        Assert.True(assessment.RosterTransitions[1].Applied);
-        Assert.False(assessment.RosterTransitions[2].Applied);
+        Assert.Equal(
+            FusionRuntimeDiagnosticCode.RosterTransitionRejected,
+            Assert.Single(assessment.Diagnostics).Code);
+        PartyRosterTransitionResult transition = Assert.Single(assessment.RosterTransitions);
+        Assert.False(transition.Applied);
+        Assert.Equal(PartyRosterTransitionCode.InvalidSnapshot, transition.Code);
         Assert.Equal(2, party.CompanionRoster.Count);
         Assert.Equal(0, actorFactory.CreateCount);
         Assert.Equal(0, actorFactory.RestoreCount);

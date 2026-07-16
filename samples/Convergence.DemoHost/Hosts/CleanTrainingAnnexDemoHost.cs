@@ -124,7 +124,9 @@ internal sealed class CleanTrainingAnnexDemoHost
         BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();
-        resolver.BindRosterCapacityPolicy(catalog, Qualified("standard_roster_capacity")).RequireService();
+        IRosterCapacityPolicy rosterCapacityPolicy = resolver
+            .BindRosterCapacityPolicy(catalog, Qualified("standard_roster_capacity"))
+            .RequireService();
         resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
             .ConfigureAwait(false);
@@ -285,7 +287,8 @@ internal sealed class CleanTrainingAnnexDemoHost
         var compositionService = new RuntimeActorCombatProfileCompositionService(
             statPolicy,
             growthServices.ResourceGrowthPolicy,
-            catalog);
+            catalog,
+            rosterCapacityPolicy);
         RuntimeActorGrowthCompositionResult growthTransaction =
             new RuntimeActorGrowthCompositionService(
                 compositionService,

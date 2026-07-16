@@ -28,7 +28,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            combatProfileCompositionFactory: (skills, stats, resources) =>
+            combatProfileCompositionFactory: (skills, stats, resources, _) =>
                 rejectingComposition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
@@ -1057,7 +1057,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            combatProfileCompositionFactory: (skills, stats, resources) =>
+            combatProfileCompositionFactory: (skills, stats, resources, _) =>
                 composition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
@@ -3588,7 +3588,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            combatProfileCompositionFactory: (skills, stats, resources) =>
+            combatProfileCompositionFactory: (skills, stats, resources, _) =>
                 composition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
@@ -4309,6 +4309,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ISkillDefinitionRepository,
             IStatResolutionPolicy,
             IResourceGrowthPolicy,
+            IRosterCapacityPolicy,
             IRuntimeActorCombatProfileCompositionService>?
             combatProfileCompositionFactory = null) =>
         new(

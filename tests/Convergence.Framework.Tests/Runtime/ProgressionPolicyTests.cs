@@ -227,7 +227,10 @@ public sealed class ProgressionPolicyTests
             companionRoster: [reference, reference]);
 
         IReadOnlyList<RuntimePartyRosterInvariantDiagnostic> diagnostics =
-            RuntimePartyRosterInvariantRules.Validate(roster);
+            RuntimePartyRosterInvariantRules.Validate(
+                roster,
+                ownerActor: null,
+                NoLimitRosterCapacityPolicy.Instance);
 
         Assert.Equal(
             [

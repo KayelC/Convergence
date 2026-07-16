@@ -5457,6 +5457,7 @@ Convergence.Runtime.RuntimeActorCombatProfileCompositionService
 Convergence.Runtime.RuntimeActorCombatProfileCompositionService.Compose(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! request) -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionService.RuntimeActorCombatProfileCompositionService(Convergence.Catalog.ISkillDefinitionRepository! skills) -> void
 Convergence.Runtime.RuntimeActorCombatProfileCompositionService.RuntimeActorCombatProfileCompositionService(Convergence.Runtime.IStatResolutionPolicy! statResolution, Convergence.Runtime.IResourceGrowthPolicy! resourceGrowth, Convergence.Catalog.ISkillDefinitionRepository! skills) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionService.RuntimeActorCombatProfileCompositionService(Convergence.Runtime.IStatResolutionPolicy! statResolution, Convergence.Runtime.IResourceGrowthPolicy! resourceGrowth, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Runtime.IRosterCapacityPolicy! rosterCapacityPolicy) -> void
 Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
 Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus.Applied = 0 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
 Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus.Rejected = 1 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
@@ -6009,11 +6010,21 @@ Convergence.Runtime.RuntimeNavigationTransitionCode.Applied = 0 -> Convergence.R
 Convergence.Runtime.RuntimeNavigationTransitionCode.PolicyRejected = 2 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.SourceMismatch = 1 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimePartyRosterInvariantCode
-Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned = 2 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
-Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch = 3 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
-Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateCompanionReference = 1 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
-Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference = 0 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
-Convergence.Runtime.RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision = 4 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned = 8 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch = 9 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActivePartyCapacityExceeded = 12 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveReserveRoleCollision = 7 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.CompanionRosterCapacityExceeded = 14 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateActivePartyReference = 3 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateCompanionReference = 6 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference = 5 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateReserveReference = 4 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision = 10 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.HostedEntityRosterCapacityExceeded = 13 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.InvalidReferenceEntityDefinitionId = 1 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.InvalidReferenceInstanceId = 0 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.PartyRosterIdentityCollision = 11 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.PartyRosterOwnerMismatch = 2 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
 Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic
 Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic!
 Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Code.get -> Convergence.Runtime.RuntimePartyRosterInvariantCode
@@ -9676,7 +9687,7 @@ static Convergence.Runtime.RuntimeNavigationTransition.operator !=(Convergence.R
 static Convergence.Runtime.RuntimeNavigationTransition.operator ==(Convergence.Runtime.RuntimeNavigationTransition? left, Convergence.Runtime.RuntimeNavigationTransition? right) -> bool
 static Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.operator !=(Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.operator ==(Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimePartyRosterInvariantRules.Validate(Convergence.Runtime.RuntimePartyRosterSnapshot! roster) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic!>!
+static Convergence.Runtime.RuntimePartyRosterInvariantRules.Validate(Convergence.Runtime.RuntimePartyRosterSnapshot! roster, Convergence.Runtime.RuntimeActorSnapshot? ownerActor, Convergence.Runtime.IRosterCapacityPolicy! rosterCapacityPolicy) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic!>!
 static Convergence.Runtime.RuntimePartyRosterSnapshot.operator !=(Convergence.Runtime.RuntimePartyRosterSnapshot? left, Convergence.Runtime.RuntimePartyRosterSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePartyRosterSnapshot.operator ==(Convergence.Runtime.RuntimePartyRosterSnapshot? left, Convergence.Runtime.RuntimePartyRosterSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePassiveActivationSnapshot.operator !=(Convergence.Runtime.RuntimePassiveActivationSnapshot? left, Convergence.Runtime.RuntimePassiveActivationSnapshot? right) -> bool

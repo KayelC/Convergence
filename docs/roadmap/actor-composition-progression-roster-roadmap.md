@@ -656,6 +656,12 @@ validation derives capacity from the saved owner actor's progression. The same
 immutable roster therefore observes a level-gated capacity change without
 being reconstructed.
 
+**M2 correction:** one owner-aware, capacity-aware roster validator now serves
+live transitions, actor composition, and save validation. It rejects malformed
+incoming snapshots and invalid proposed results without mutation, including
+invalid IDs, duplicate or conflicting roles, ownership mismatches, and active
+or roster capacity violations.
+
 ## Expected File Ownership
 
 Likely Framework files to change:
