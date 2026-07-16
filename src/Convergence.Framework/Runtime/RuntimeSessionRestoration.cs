@@ -156,7 +156,6 @@ public sealed record RuntimeActorRestoreProfile
     public RuntimeActorRestoreProfile(
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
-        RuntimeInstanceId? activeHostedEntityInstanceId = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
     {
         if (!Enum.IsDefined(statSourceKind))
@@ -167,20 +166,13 @@ public sealed record RuntimeActorRestoreProfile
         {
             throw new ArgumentOutOfRangeException(nameof(missingHostedEntityBehavior));
         }
-        if (activeHostedEntityInstanceId is RuntimeInstanceId instanceId && !instanceId.IsValid)
-        {
-            throw new ArgumentException("Active Hosted Entity instance ID cannot be empty.", nameof(activeHostedEntityInstanceId));
-        }
-
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
-        ActiveHostedEntityInstanceId = activeHostedEntityInstanceId;
         EquipmentStatModifiers = RuntimePersistenceCollections.Dictionary(equipmentStatModifiers);
     }
 
     public RuntimeStatSourceKind StatSourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
-    public RuntimeInstanceId? ActiveHostedEntityInstanceId { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
 }
 
@@ -358,7 +350,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
         CatalogBattleActor[] ordered = current.Actors
             .Select(actor => restored[actor.Identity.InstanceId])
             .ToArray();
-        return new RuntimeSessionRestoreResult(new RuntimeRestoredSession(current, ordered));
+        RuntimeSaveGameSnapshot normalized = NormalizeSnapshot(current, ordered);
+        return new RuntimeSessionRestoreResult(new RuntimeRestoredSession(normalized, ordered));
 
         CatalogBattleActor? RestoreActor(RuntimeInstanceId actorId)
         {
@@ -378,26 +371,60 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
             RuntimeActorSnapshot actor = snapshots[actorId];
             RuntimeActorRestoreProfile profile = profiles[actorId];
             RuntimeActorState? activeHostedEntity = null;
-            if (profile.StatSourceKind == RuntimeStatSourceKind.ActiveHostedEntity &&
-                profile.ActiveHostedEntityInstanceId is RuntimeInstanceId dependencyId)
+            if (profile.StatSourceKind == RuntimeStatSourceKind.ActiveHostedEntity)
             {
-                if (!snapshots.ContainsKey(dependencyId))
+                RuntimeActorReferenceSnapshot? activeReference =
+                    current.PartyRoster.ActiveHostedEntity;
+                if (activeReference is null)
                 {
-                    diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
-                        RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing,
-                        $"Actor '{actorId}' depends on missing Hosted Entity '{dependencyId}'.",
-                        actorId));
-                    visiting.Remove(actorId);
-                    return null;
+                    if (profile.MissingHostedEntityBehavior ==
+                        MissingHostedEntityBehavior.RejectStatResolution)
+                    {
+                        diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                            RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing,
+                            $"Actor '{actorId}' requires the canonical party roster to select an " +
+                            "active Hosted Entity.",
+                            actorId,
+                            "$.partyRoster.activeHostedEntity"));
+                        visiting.Remove(actorId);
+                        return null;
+                    }
                 }
+                else
+                {
+                    if (current.PartyRoster.Owner.InstanceId != actorId)
+                    {
+                        diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                            RuntimeSessionRestoreDiagnosticCode.ActorProfileResolutionFailed,
+                            $"Actor '{actorId}' cannot use the canonical active Hosted Entity " +
+                            $"because party owner is '{current.PartyRoster.Owner.InstanceId}'.",
+                            actorId,
+                            "$.partyRoster.owner"));
+                        visiting.Remove(actorId);
+                        return null;
+                    }
 
-                CatalogBattleActor? dependency = RestoreActor(dependencyId);
-                if (dependency is null)
-                {
-                    visiting.Remove(actorId);
-                    return null;
+                    RuntimeInstanceId dependencyId = activeReference.InstanceId;
+                    if (!snapshots.ContainsKey(dependencyId))
+                    {
+                        diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                            RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing,
+                            $"Actor '{actorId}' depends on missing Hosted Entity " +
+                            $"'{dependencyId}'.",
+                            actorId,
+                            "$.partyRoster.activeHostedEntity"));
+                        visiting.Remove(actorId);
+                        return null;
+                    }
+
+                    CatalogBattleActor? dependency = RestoreActor(dependencyId);
+                    if (dependency is null)
+                    {
+                        visiting.Remove(actorId);
+                        return null;
+                    }
+                    activeHostedEntity = dependency.State;
                 }
-                activeHostedEntity = dependency.State;
             }
 
             CatalogBattleActorCreationResult result;
@@ -443,4 +470,23 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
     private static RuntimeSessionRestoreResult Rejected(
         IEnumerable<RuntimeSessionRestoreDiagnostic> diagnostics) =>
         new(null, diagnostics);
+
+    private static RuntimeSaveGameSnapshot NormalizeSnapshot(
+        RuntimeSaveGameSnapshot source,
+        IEnumerable<CatalogBattleActor> actors) =>
+        new(
+            source.FrameworkVersion,
+            source.ContentPacks,
+            actors.Select(actor => actor.State.ToSnapshot()),
+            source.PartyRoster,
+            source.Inventory,
+            source.Equipment,
+            source.Wallet,
+            source.Field,
+            source.Compendium,
+            source.Knowledge,
+            source.Session,
+            source.Checkpoints,
+            source.HostContext,
+            source.ContractVersion);
 }

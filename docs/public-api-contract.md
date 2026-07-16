@@ -44,6 +44,13 @@ recorded in `PublicAPI.Unshipped.txt` and reviewed.
 - This is a guarded pre-release contract, not a `1.0` stability promise.
 - Content schema and save-contract compatibility are versioned separately.
 
+Save contract v8 removes the actor restore profile's duplicated Active Hosted
+Entity ID. `RuntimeSessionRestoreService` now derives that dependency from
+`RuntimePartyRosterSnapshot`, restores the owned actor first, and returns a
+normalized aggregate whose derived Vessel profile matches the restored source.
+Pending skill choices and their revision are part of the actor snapshot. A v7
+snapshot is rejected unless the host registers an explicit migration step.
+
 ## Documentation And Build Tooling
 
 Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected

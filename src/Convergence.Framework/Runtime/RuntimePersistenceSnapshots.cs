@@ -78,7 +78,12 @@ public enum RuntimeSaveValidationCode
     ActorPhaseDurationPhaseIdInvalid,
     InvalidRuntimeInstanceId,
     InvalidContentId,
-    UndefinedEnumValue
+    UndefinedEnumValue,
+    DuplicateActorPendingSkillChoiceToken,
+    DuplicateActorPendingSkill,
+    ActorPendingSkillAlreadyLearned,
+    ActorPendingSkillUnlockMismatch,
+    ActorPendingSkillLevelUnavailable
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -254,7 +259,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 7;
+    public const int CurrentContractVersion = 8;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -745,6 +750,67 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             diagnostics,
             actor.Identity.InstanceId,
             $"$.actors[{actorIndex}].skills.equippedSkillIds");
+        ValidateActorPendingSkillChoices(
+            actor,
+            catalog,
+            diagnostics,
+            actorIndex);
+    }
+
+    private static void ValidateActorPendingSkillChoices(
+        RuntimeActorSnapshot actor,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        int actorIndex)
+    {
+        if (!catalog.Entities.TryGetValue(
+                actor.Identity.EntityDefinitionId,
+                out EntityDefinition? entity) ||
+            entity is null)
+        {
+            return;
+        }
+
+        for (int index = 0; index < actor.Skills.PendingChoices.Count; index++)
+        {
+            RuntimePendingSkillChoiceSnapshot choice = actor.Skills.PendingChoices[index];
+            string path = $"$.actors[{actorIndex}].skills.pendingChoices[{index}]";
+            if (!catalog.Skills.ContainsKey(choice.SkillId))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.MissingCatalogSkill,
+                    $"Pending skill '{choice.SkillId}' referenced by actor " +
+                    $"'{actor.Identity.InstanceId}' is not present in the catalog.",
+                    actor.Identity.InstanceId,
+                    choice.SkillId,
+                    path + ".skillId"));
+                continue;
+            }
+
+            if (!entity.SkillUnlocks.Any(unlock =>
+                    unlock.Level == choice.UnlockLevel &&
+                    unlock.SkillId == choice.SkillId))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActorPendingSkillUnlockMismatch,
+                    $"Pending skill '{choice.SkillId}' at level {choice.UnlockLevel} is not an " +
+                    $"authored unlock for entity '{entity.Id}'.",
+                    actor.Identity.InstanceId,
+                    choice.SkillId,
+                    path));
+            }
+            if (choice.UnlockLevel > actor.Progression.Level)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActorPendingSkillLevelUnavailable,
+                    $"Pending skill '{choice.SkillId}' unlocks at level {choice.UnlockLevel}, " +
+                    $"but actor '{actor.Identity.InstanceId}' is level " +
+                    $"{actor.Progression.Level}.",
+                    actor.Identity.InstanceId,
+                    choice.SkillId,
+                    path + ".unlockLevel"));
+            }
+        }
     }
 
     private static void ValidateActorSkillCatalogReferences(
@@ -783,6 +849,9 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateLearnedSkill => RuntimeSaveValidationCode.DuplicateActorLearnedSkill,
             RuntimeActorSnapshotIntegrityCode.DuplicateEquippedSkill => RuntimeSaveValidationCode.DuplicateActorEquippedSkill,
             RuntimeActorSnapshotIntegrityCode.EquippedSkillNotLearned => RuntimeSaveValidationCode.ActorEquippedSkillNotLearned,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePendingSkillChoiceToken => RuntimeSaveValidationCode.DuplicateActorPendingSkillChoiceToken,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePendingSkill => RuntimeSaveValidationCode.DuplicateActorPendingSkill,
+            RuntimeActorSnapshotIntegrityCode.PendingSkillAlreadyLearned => RuntimeSaveValidationCode.ActorPendingSkillAlreadyLearned,
             RuntimeActorSnapshotIntegrityCode.DuplicateCapability => RuntimeSaveValidationCode.DuplicateActorCapability,
             RuntimeActorSnapshotIntegrityCode.DuplicateAilment => RuntimeSaveValidationCode.DuplicateActorAilment,
             RuntimeActorSnapshotIntegrityCode.MissingAilmentDefinition => RuntimeSaveValidationCode.MissingCatalogAilment,

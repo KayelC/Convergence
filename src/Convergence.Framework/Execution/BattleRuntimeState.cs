@@ -954,6 +954,7 @@ public sealed class RuntimeActorState
             out RuntimeSkillStateSnapshot nextSkillState,
             out ContentId[] equippedSkillIds,
             out BattlePassiveCollection nextPassives);
+        PreservePassiveRuntimeState(Passives, nextPassives);
 
         _resources.Clear();
         foreach (BattleResourceState resource in nextResources)
@@ -979,6 +980,7 @@ public sealed class RuntimeActorState
             out RuntimeSkillStateSnapshot nextSkillState,
             out ContentId[] equippedSkillIds,
             out BattlePassiveCollection nextPassives);
+        PreservePassiveRuntimeState(Passives, nextPassives);
 
         Skills = nextSkillState;
         _skillIds.Clear();
@@ -1063,6 +1065,19 @@ public sealed class RuntimeActorState
             skills.Revision);
         nextPassives = new BattlePassiveCollection(
             definitions.Where(definition => definition.Activation == SkillActivation.Passive));
+    }
+
+    private static void PreservePassiveRuntimeState(
+        BattlePassiveCollection current,
+        BattlePassiveCollection replacement)
+    {
+        HashSet<ContentId> replacementSkillIds = replacement.Entries
+            .Select(entry => entry.Skill.Id)
+            .ToHashSet();
+        replacement.RestoreStates(current.CaptureStates().Where(state =>
+            replacementSkillIds.Contains(state.SkillId)));
+        replacement.RestoreActivations(current.CaptureActivations().Where(activation =>
+            replacementSkillIds.Contains(activation.SkillId)));
     }
 
     internal void RestoreBattleStatus(

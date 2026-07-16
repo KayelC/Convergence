@@ -49,6 +49,51 @@ public sealed class CleanSaveDemoHostTests
     }
 
     [Fact]
+    public void HostOwnedJsonRoundTrip_PreservesPendingSkillChoicesAndRevision()
+    {
+        RuntimeActorSnapshot original = CleanSaveTestFixture.CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"));
+        ContentId pendingSkillId =
+            ContentId.Parse("convergence.clean_battle_demo:ember_bolt_demo");
+        var actor = new RuntimeActorSnapshot(
+            original.Identity,
+            original.Affiliation,
+            original.EncounterPresence,
+            original.Progression,
+            original.Resources,
+            original.Stats,
+            new RuntimeSkillStateSnapshot(
+                original.Skills.LearnedSkillIds,
+                original.Skills.EquippedSkillIds,
+                [
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(17),
+                        5,
+                        pendingSkillId)
+                ],
+                revision: 9),
+            original.Equipment,
+            original.BattleStatus,
+            original.BattleActivations,
+            original.BaseResourceValues,
+            original.VitalResourceId,
+            original.CapabilityIds);
+        RuntimeSaveGameSnapshot snapshot =
+            CleanSaveTestFixture.CreateSaveSnapshot(actors: [actor]);
+
+        RuntimeSaveGameSnapshot restored =
+            CleanSaveJsonCodec.Deserialize(CleanSaveJsonCodec.Serialize(snapshot));
+
+        RuntimeSkillStateSnapshot skills = Assert.Single(restored.Actors).Skills;
+        Assert.Equal(9, skills.Revision);
+        RuntimePendingSkillChoiceSnapshot choice = Assert.Single(skills.PendingChoices);
+        Assert.Equal(new RuntimeSkillChoiceToken(17), choice.Token);
+        Assert.Equal(5, choice.UnlockLevel);
+        Assert.Equal(pendingSkillId, choice.SkillId);
+    }
+
+    [Fact]
     public void HostOwnedJsonRoundTrip_PreservesCanonicalActorBattleStateAndDurationKinds()
     {
         RuntimeActorSnapshot original = CleanSaveTestFixture.CreateActor(
@@ -137,7 +182,10 @@ public sealed class CleanSaveDemoHostTests
 
         string text = output.ToString();
         Assert.Equal(0, exitCode);
-        Assert.Contains("[save] Created runtime save snapshot v7", text, StringComparison.Ordinal);
+        Assert.Contains(
+            $"[save] Created runtime save snapshot v{RuntimeSaveGameSnapshot.CurrentContractVersion}",
+            text,
+            StringComparison.Ordinal);
         Assert.Contains("[serialize] Host-owned JSON round-trip completed", text, StringComparison.Ordinal);
         Assert.Contains("[validate] Restored snapshot validated with 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("[restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.", text, StringComparison.Ordinal);

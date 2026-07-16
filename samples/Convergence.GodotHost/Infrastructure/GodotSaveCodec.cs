@@ -16,8 +16,20 @@ internal sealed record GodotSaveActor(
     string TeamId,
     string CommandAuthorityId,
     int Level,
+    long Experience,
+    long LifetimeExperience,
+    int UnspentStatPoints,
     bool IsDeployed,
-    IReadOnlyList<GodotSaveResource> Resources);
+    IReadOnlyList<GodotSaveResource> Resources,
+    IReadOnlyList<string> LearnedSkillIds,
+    IReadOnlyList<string> EquippedSkillIds,
+    long SkillRevision,
+    IReadOnlyList<GodotSavePendingSkillChoice> PendingSkillChoices);
+
+internal sealed record GodotSavePendingSkillChoice(
+    long Token,
+    int UnlockLevel,
+    string SkillId);
 
 internal sealed record GodotSaveSceneInstance(string InstanceId, string NodePath);
 
@@ -63,12 +75,23 @@ internal static class GodotSaveCodec
                 snapshot.Affiliation.TeamId.ToString(),
                 snapshot.Affiliation.CommandAuthorityId.ToString(),
                 snapshot.Progression.Level,
+                snapshot.Progression.Experience,
+                snapshot.Progression.LifetimeExperience,
+                snapshot.Progression.UnspentStatPoints,
                 snapshot.EncounterPresence.IsDeployed,
                 snapshot.Resources
                     .Select(resource => new GodotSaveResource(
                         resource.ResourceId.ToString(),
                         resource.Current))
-                    .ToArray());
+                    .ToArray(),
+                snapshot.Skills.LearnedSkillIds.Select(id => id.ToString()).ToArray(),
+                snapshot.Skills.EquippedSkillIds.Select(id => id.ToString()).ToArray(),
+                snapshot.Skills.Revision,
+                snapshot.Skills.PendingChoices.Select(choice =>
+                    new GodotSavePendingSkillChoice(
+                        choice.Token.Value,
+                        choice.UnlockLevel,
+                        choice.SkillId.ToString())).ToArray());
         }).ToArray();
 
         GodotSaveSceneInstance[] sceneRecords = sceneInstances.Snapshot()
@@ -108,27 +131,65 @@ internal static class GodotSaveCodec
         var actors = new List<CatalogBattleActor>(document.Actors.Count);
         foreach (GodotSaveActor actorRecord in document.Actors)
         {
-            CatalogBattleActor actor = actorFactory.Create(new CatalogBattleActorCreationRequest(
+            CatalogBattleActor created = actorFactory.Create(new CatalogBattleActorCreationRequest(
                 ContentId.Parse(actorRecord.EntityId),
                 RuntimeInstanceId.Parse(actorRecord.InstanceId),
                 ContentId.Parse(actorRecord.TeamId),
                 actorRecord.Level,
                 actorRecord.IsDeployed,
-                ContentId.Parse(actorRecord.CommandAuthorityId))).RequireActor();
-            foreach (GodotSaveResource resource in actorRecord.Resources)
+                ContentId.Parse(actorRecord.CommandAuthorityId),
+                new RuntimeProgressionSnapshot(
+                    actorRecord.Level,
+                    actorRecord.Experience,
+                    actorRecord.LifetimeExperience,
+                    actorRecord.UnspentStatPoints))).RequireActor();
+            RuntimeActorSnapshot baseline = created.State.ToSnapshot();
+            var savedResourceValues = actorRecord.Resources.ToDictionary(
+                resource => ContentId.Parse(resource.Id),
+                resource => resource.Current);
+            RuntimeResourceSnapshot[] restoredResources = baseline.Resources.Select(resource =>
             {
-                ContentId resourceId = ContentId.Parse(resource.Id);
-                BattleResourceState runtimeResource = actor.State.GetRequiredResource(resourceId);
-                if (resource.Current < 0 || resource.Current > runtimeResource.Maximum)
+                decimal current = savedResourceValues.GetValueOrDefault(
+                    resource.ResourceId,
+                    resource.Current);
+                if (current < 0 || current > resource.Maximum)
                 {
                     throw new InvalidDataException(
-                        $"Saved resource '{resource.Id}' must satisfy 0 <= current <= {runtimeResource.Maximum}.");
+                        $"Saved resource '{resource.ResourceId}' must satisfy " +
+                        $"0 <= current <= {resource.Maximum}.");
                 }
 
-                actor.State.SetResource(resourceId, resource.Current);
-            }
-
-            actors.Add(actor);
+                return new RuntimeResourceSnapshot(
+                    resource.ResourceId,
+                    current,
+                    resource.Maximum);
+            }).ToArray();
+            var restoredSnapshot = new RuntimeActorSnapshot(
+                baseline.Identity,
+                baseline.Affiliation,
+                baseline.EncounterPresence,
+                baseline.Progression,
+                restoredResources,
+                baseline.Stats,
+                new RuntimeSkillStateSnapshot(
+                    actorRecord.LearnedSkillIds.Select(ContentId.Parse),
+                    actorRecord.EquippedSkillIds.Select(ContentId.Parse),
+                    actorRecord.PendingSkillChoices.Select(choice =>
+                        new RuntimePendingSkillChoiceSnapshot(
+                            new RuntimeSkillChoiceToken(choice.Token),
+                            choice.UnlockLevel,
+                            ContentId.Parse(choice.SkillId))),
+                    actorRecord.SkillRevision),
+                baseline.Equipment,
+                baseline.BattleStatus,
+                baseline.BattleActivations,
+                baseline.BaseResourceValues,
+                baseline.VitalResourceId,
+                baseline.CapabilityIds);
+            actors.Add(actorFactory.Restore(new CatalogBattleActorRestoreRequest(
+                restoredSnapshot,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats)).RequireActor());
         }
 
         RuntimeInstanceId ownerId = RuntimeInstanceId.Parse(document.PartyOwnerInstanceId);

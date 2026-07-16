@@ -120,12 +120,50 @@ public sealed class RuntimePersistenceSnapshotTests
     [Fact]
     public void RuntimeSessionRestoreService_RestoresHostedEntityBeforeVesselAndReturnsSnapshotOrder()
     {
-        GameDataCatalog catalog = LoadCatalog();
+        ContentId pendingSkillId =
+            Id("convergence.clean_battle_demo:frost_lance_demo");
+        GameDataCatalog catalog = WithEntitySkillUnlock(
+            LoadCatalog(),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            new SkillUnlockDefinition(5, pendingSkillId));
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
-        RuntimeActorSnapshot ember = baseline.Actors.Single(actor =>
+        RuntimeActorSnapshot savedEmber = baseline.Actors.Single(actor =>
             actor.Identity.InstanceId == RuntimeInstanceId.Parse("ember"));
-        RuntimeActorSnapshot vessel = baseline.Actors.Single(actor =>
+        RuntimeActorSnapshot savedVessel = baseline.Actors.Single(actor =>
             actor.Identity.InstanceId == RuntimeInstanceId.Parse("frost"));
+        ContentId emberBolt =
+            Id("convergence.clean_battle_demo:ember_bolt_demo");
+        ContentId iceBoost =
+            Id("convergence.skill_system_redesign_sample:ice_boost_sample");
+        RuntimeActorSnapshot ember = CopyActor(
+            savedEmber,
+            stats: new RuntimeStatBlockSnapshot(
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 12)],
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 12)]),
+            skills: new RuntimeSkillStateSnapshot(
+                [emberBolt, iceBoost],
+                [emberBolt, iceBoost],
+                [new RuntimePendingSkillChoiceSnapshot(
+                    new RuntimeSkillChoiceToken(41),
+                    5,
+                    pendingSkillId)],
+                revision: 7));
+        RuntimeActorSnapshot vessel = CopyActor(
+            savedVessel,
+            stats: new RuntimeStatBlockSnapshot(
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 2)],
+                [new KeyValuePair<ContentId, decimal>(Id("magic"), 2)]),
+            skills: new RuntimeSkillStateSnapshot(
+                [pendingSkillId, iceBoost],
+                [pendingSkillId, iceBoost],
+                revision: 2),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                passiveSkillStates:
+                [
+                    new RuntimePassiveSkillStateSnapshot(
+                        iceBoost,
+                        IsEnabled: false)
+                ]));
         RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [vessel, ember]);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
@@ -136,8 +174,7 @@ public sealed class RuntimePersistenceSnapshotTests
             request.Actor.Identity.InstanceId == vessel.Identity.InstanceId
                 ? new RuntimeActorRestoreProfile(
                     RuntimeStatSourceKind.ActiveHostedEntity,
-                    MissingHostedEntityBehavior.RejectStatResolution,
-                    ember.Identity.InstanceId)
+                    MissingHostedEntityBehavior.RejectStatResolution)
                 : ActorProfile());
         var service = new RuntimeSessionRestoreService(
             new RuntimeSaveValidator(),
@@ -153,6 +190,43 @@ public sealed class RuntimePersistenceSnapshotTests
             [vessel.Identity.InstanceId, ember.Identity.InstanceId],
             session.Actors.Select(actor => actor.State.InstanceId));
         Assert.Same(session.Actors[0], session.ActorsByInstanceId[vessel.Identity.InstanceId]);
+        CatalogBattleActor restoredVessel =
+            session.ActorsByInstanceId[vessel.Identity.InstanceId];
+        CatalogBattleActor restoredHostedEntity =
+            session.ActorsByInstanceId[ember.Identity.InstanceId];
+        Assert.Equal(
+            restoredHostedEntity.State.Stats,
+            restoredVessel.State.Stats);
+        Assert.Equal(
+            restoredHostedEntity.State.Skills.LearnedSkillIds,
+            restoredVessel.State.Skills.LearnedSkillIds);
+        Assert.Equal(
+            restoredHostedEntity.State.Skills.EquippedSkillIds,
+            restoredVessel.State.Skills.EquippedSkillIds);
+        Assert.Equal(7, restoredHostedEntity.State.Skills.Revision);
+        Assert.Single(restoredHostedEntity.State.Skills.PendingChoices);
+        Assert.Equal(7, restoredVessel.State.Skills.Revision);
+        Assert.Empty(restoredVessel.State.Skills.PendingChoices);
+        Assert.False(Assert.Single(
+            restoredVessel.State.ToSnapshot()
+                .BattleActivations.PassiveSkillStates).IsEnabled);
+        RuntimeActorSnapshot normalizedVessel = session.Snapshot.Actors.Single(actor =>
+            actor.Identity.InstanceId == vessel.Identity.InstanceId);
+        RuntimeActorSnapshot normalizedHostedEntity =
+            session.Snapshot.Actors.Single(actor =>
+                actor.Identity.InstanceId == ember.Identity.InstanceId);
+        Assert.Equal(
+            restoredVessel.State.Skills.LearnedSkillIds,
+            normalizedVessel.Skills.LearnedSkillIds);
+        Assert.Equal(
+            restoredVessel.State.Stats.OrderBy(pair => pair.Key.ToString()),
+            normalizedVessel.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString()));
+        Assert.Equal(
+            restoredHostedEntity.State.Skills.PendingChoices,
+            normalizedHostedEntity.Skills.PendingChoices);
+        Assert.Equal(
+            restoredHostedEntity.State.Skills.Revision,
+            normalizedHostedEntity.Skills.Revision);
         Assert.Throws<NotSupportedException>(() =>
             ((IList<CatalogBattleActor>)session.Actors).Add(session.Actors[0]));
         Assert.Throws<NotSupportedException>(() =>
@@ -161,7 +235,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSessionRestoreService_RejectsDependencyCyclesWithoutCallingActorFactory()
+    public void RuntimeSessionRestoreService_RejectsActiveHostedEntityProfileForNonOwner()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
@@ -178,17 +252,15 @@ public sealed class RuntimePersistenceSnapshotTests
             factory,
             new DelegateActorRestoreProfileResolver(request => new RuntimeActorRestoreProfile(
                 RuntimeStatSourceKind.ActiveHostedEntity,
-                MissingHostedEntityBehavior.RejectStatResolution,
-                request.Actor.Identity.InstanceId == frost.Identity.InstanceId
-                    ? ember.Identity.InstanceId
-                    : frost.Identity.InstanceId)));
+                MissingHostedEntityBehavior.RejectStatResolution)));
 
         RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Session);
         Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyCycle);
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.ActorProfileResolutionFailed &&
+            diagnostic.ActorId == ember.Identity.InstanceId);
         Assert.Empty(factory.RestoreOrder);
     }
 
@@ -196,8 +268,18 @@ public sealed class RuntimePersistenceSnapshotTests
     public void RuntimeSessionRestoreService_RejectsMissingHostedEntityDependencyWithoutPartialRestore()
     {
         GameDataCatalog catalog = LoadCatalog();
-        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
-        RuntimeInstanceId vesselId = snapshot.Actors[0].Identity.InstanceId;
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeInstanceId vesselId = baseline.Actors[0].Identity.InstanceId;
+        RuntimeActorReferenceSnapshot missing = new(
+            RuntimeInstanceId.Parse("missing_hosted_entity"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            "Missing Hosted Entity");
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            partyRoster: baseline.PartyRoster.With(
+                activeHostedEntity: missing,
+                replaceActiveHostedEntity: true,
+                hostedEntityRoster: [missing]));
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
             catalog,
@@ -210,16 +292,15 @@ public sealed class RuntimePersistenceSnapshotTests
                 request.Actor.Identity.InstanceId == vesselId
                     ? new RuntimeActorRestoreProfile(
                         RuntimeStatSourceKind.ActiveHostedEntity,
-                        MissingHostedEntityBehavior.RejectStatResolution,
-                        RuntimeInstanceId.Parse("missing_hosted_entity"))
+                        MissingHostedEntityBehavior.RejectStatResolution)
                     : ActorProfile()));
 
         RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
 
         Assert.False(result.IsSuccess);
-        RuntimeSessionRestoreDiagnostic diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing, diagnostic.Code);
-        Assert.Equal(vesselId, diagnostic.ActorId);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
+            diagnostic.SaveValidationCode == RuntimeSaveValidationCode.MissingActorReference);
         Assert.Null(result.Session);
     }
 
@@ -251,7 +332,7 @@ public sealed class RuntimePersistenceSnapshotTests
     public void RuntimeSessionRestoreService_UsesExplicitMigrationSeamAndRejectsMissingPath()
     {
         GameDataCatalog catalog = LoadCatalog();
-        RuntimeSaveGameSnapshot oldSnapshot = CreateSaveSnapshot(contractVersion: 6);
+        RuntimeSaveGameSnapshot oldSnapshot = CreateSaveSnapshot(contractVersion: 7);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
             catalog,
@@ -273,11 +354,157 @@ public sealed class RuntimePersistenceSnapshotTests
                 new RuntimeSaveValidator(),
                 factory,
                 profiles,
-                new RuntimeSaveMigrationService([new FixedMigrationStep(6, 7, migratedSnapshot)]))
+                new RuntimeSaveMigrationService([new FixedMigrationStep(7, 8, migratedSnapshot)]))
             .Restore(oldSnapshot, catalog);
 
         Assert.True(migrated.IsSuccess, string.Join(Environment.NewLine, migrated.Diagnostics.Select(item => item.Message)));
-        Assert.Same(migratedSnapshot, migrated.RequireSession().Snapshot);
+        Assert.Equal(
+            RuntimeSaveGameSnapshot.CurrentContractVersion,
+            migrated.RequireSession().Snapshot.ContractVersion);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_AcceptsCatalogBackedPendingSkillChoice()
+    {
+        ContentId entityId =
+            Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId skillId =
+            Id("convergence.clean_battle_demo:regenerate_demo");
+        GameDataCatalog catalog = WithEntitySkillUnlock(
+            LoadCatalog(),
+            entityId,
+            new SkillUnlockDefinition(5, skillId));
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        RuntimeActorSnapshot pending = CopyActor(
+            actor,
+            skills: new RuntimeSkillStateSnapshot(
+                actor.Skills.LearnedSkillIds,
+                actor.Skills.EquippedSkillIds,
+                [new RuntimePendingSkillChoiceSnapshot(
+                    new RuntimeSkillChoiceToken(5),
+                    5,
+                    skillId)],
+                revision: 3));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [pending, baseline.Actors[1]]),
+            catalog);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Diagnostics.Select(diagnostic => diagnostic.Message)));
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsPendingSkillChoiceIntegrityViolations()
+    {
+        ContentId entityId =
+            Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId pendingSkillId =
+            Id("convergence.clean_battle_demo:regenerate_demo");
+        ContentId secondPendingSkillId =
+            Id("convergence.shared_effects_demo:field_recovery_demo");
+        GameDataCatalog catalog = WithEntitySkillUnlock(
+            LoadCatalog(),
+            entityId,
+            new SkillUnlockDefinition(5, pendingSkillId),
+            new SkillUnlockDefinition(5, secondPendingSkillId));
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        RuntimeActorSnapshot malformed = CopyActor(
+            actor,
+            skills: new RuntimeSkillStateSnapshot(
+                actor.Skills.LearnedSkillIds.Append(pendingSkillId),
+                actor.Skills.EquippedSkillIds,
+                [
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(1),
+                        5,
+                        pendingSkillId),
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(1),
+                        5,
+                        secondPendingSkillId),
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(2),
+                        5,
+                        secondPendingSkillId)
+                ]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.DuplicateActorPendingSkillChoiceToken,
+            "$.actors[0].skills.pendingChoices[1]");
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.DuplicateActorPendingSkill,
+            "$.actors[0].skills.pendingChoices[2]");
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.ActorPendingSkillAlreadyLearned,
+            "$.actors[0].skills.pendingChoices[0].skillId");
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsPendingSkillCatalogAndUnlockMismatches()
+    {
+        ContentId entityId =
+            Id("convergence.clean_battle_demo:frost_duelist_demo");
+        ContentId authoredSkillId =
+            Id("convergence.clean_battle_demo:regenerate_demo");
+        ContentId wrongSkillId =
+            Id("convergence.shared_effects_demo:field_recovery_demo");
+        ContentId missingSkillId =
+            Id("missing.pack:missing_skill");
+        GameDataCatalog catalog = WithEntitySkillUnlock(
+            LoadCatalog(),
+            entityId,
+            new SkillUnlockDefinition(6, authoredSkillId));
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = baseline.Actors[0];
+        RuntimeActorSnapshot malformed = CopyActor(
+            actor,
+            skills: new RuntimeSkillStateSnapshot(
+                actor.Skills.LearnedSkillIds,
+                actor.Skills.EquippedSkillIds,
+                [
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(1),
+                        5,
+                        wrongSkillId),
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(2),
+                        5,
+                        missingSkillId),
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(3),
+                        6,
+                        authoredSkillId)
+                ]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.ActorPendingSkillUnlockMismatch,
+            "$.actors[0].skills.pendingChoices[0]");
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.MissingCatalogSkill,
+            "$.actors[0].skills.pendingChoices[1].skillId");
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.ActorPendingSkillLevelUnavailable,
+            "$.actors[0].skills.pendingChoices[2].unlockLevel");
     }
 
     [Fact]
@@ -1506,7 +1733,8 @@ public sealed class RuntimePersistenceSnapshotTests
 
     [Theory]
     [InlineData(6)]
-    [InlineData(8)]
+    [InlineData(7)]
+    [InlineData(9)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -1827,6 +2055,7 @@ public sealed class RuntimePersistenceSnapshotTests
     private static RuntimeActorSnapshot CopyActor(
         RuntimeActorSnapshot snapshot,
         RuntimeActorIdentitySnapshot? identity = null,
+        RuntimeProgressionSnapshot? progression = null,
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         RuntimeStatBlockSnapshot? stats = null,
         RuntimeSkillStateSnapshot? skills = null,
@@ -1839,7 +2068,7 @@ public sealed class RuntimePersistenceSnapshotTests
             identity ?? snapshot.Identity,
             snapshot.Affiliation,
             snapshot.EncounterPresence,
-            snapshot.Progression,
+            progression ?? snapshot.Progression,
             resources ?? snapshot.Resources,
             stats ?? snapshot.Stats,
             skills ?? snapshot.Skills,
@@ -1849,6 +2078,47 @@ public sealed class RuntimePersistenceSnapshotTests
             baseResourceValues ?? snapshot.BaseResourceValues,
             snapshot.VitalResourceId,
             capabilityIds ?? snapshot.CapabilityIds);
+
+    private static GameDataCatalog WithEntitySkillUnlock(
+        GameDataCatalog catalog,
+        ContentId entityId,
+        params SkillUnlockDefinition[] skillUnlocks)
+    {
+        EntityDefinition source = catalog.Entities[entityId];
+        var replacement = new EntityDefinition(
+            source.Id,
+            source.DisplayName,
+            source.Description,
+            source.EntityKindId,
+            source.RaceId,
+            source.Rank,
+            source.BaseLevel,
+            source.Capabilities,
+            source.InheritanceRules,
+            source.Stats,
+            source.ElementalAffinities,
+            source.AilmentResistances,
+            source.InstantDeathResistances,
+            source.BaseSkillIds,
+            skillUnlocks);
+        return new GameDataCatalog(
+            catalog.ContentPacks,
+            catalog.Skills,
+            catalog.Entities.Select(pair => pair.Key == entityId
+                ? new KeyValuePair<ContentId, EntityDefinition>(pair.Key, replacement)
+                : pair),
+            catalog.Races,
+            catalog.Ailments,
+            catalog.Items,
+            catalog.Equipment,
+            catalog.Shops,
+            catalog.Negotiations,
+            catalog.Encounters,
+            catalog.Dungeons,
+            catalog.FusionRecipes,
+            catalog.Rulesets,
+            Registrations());
+    }
 
     internal static RuntimeActorSnapshot CreateActor(
         RuntimeInstanceId instanceId,

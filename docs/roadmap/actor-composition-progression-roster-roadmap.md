@@ -2,8 +2,8 @@
 
 ## Status
 
-**Active implementation authority. D1-D6 approved. Checkpoints 0-6 are
-implemented and verified. Checkpoint 7 is next.**
+**Active implementation authority. D1-D6 approved. Checkpoints 0-7 are
+implemented and verified. Checkpoint 8 is next.**
 
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
@@ -570,6 +570,17 @@ Host updates:
 - update the Godot save codec;
 - keep serialization and filesystem APIs outside Framework;
 - add v8 round-trip, invalid-v7, and dependency-order tests.
+
+**Completion record (2026-07-16):** save contract v8 is active. Pending
+skill-choice tokens, unlock metadata, and revisions round-trip through the
+DemoHost and Godot-owned codecs. Aggregate restoration derives its Hosted
+Entity dependency from the canonical party roster, restores that source before
+the Vessel, preserves retained passive runtime state, and replaces stale saved
+Vessel combat-profile data with the normalized restored state. V7 is rejected
+unless a host supplies an explicit migration step. Verification passed with
+1,014 tests (843 Framework, 164 DemoHost, 7 ContentValidator), zero skipped
+tests, zero build warnings, all DemoHost modes, scripted Training Annex exit,
+content validation, and the Godot 4.7.1 headless smoke reporting contract v8.
 
 ### Checkpoint 8: Documentation, Samples, And Completion Review
 

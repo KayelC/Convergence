@@ -445,6 +445,11 @@ internal static class CleanSaveJsonCodec
             actor.Stats.EffectiveStats.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
             actor.Skills.LearnedSkillIds.Select(id => id.ToString()).ToArray(),
             actor.Skills.EquippedSkillIds.Select(id => id.ToString()).ToArray(),
+            actor.Skills.Revision,
+            actor.Skills.PendingChoices.Select(choice => new HostPendingSkillChoiceDto(
+                choice.Token.Value,
+                choice.UnlockLevel,
+                choice.SkillId.ToString())).ToArray(),
             actor.CapabilityIds.Select(id => id.ToString()).ToArray(),
             actor.Equipment.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
@@ -475,7 +480,15 @@ internal static class CleanSaveJsonCodec
             new RuntimeProgressionSnapshot(dto.Level, dto.Experience, dto.LifetimeExperience, dto.UnspentStatPoints),
             dto.Resources.Select(resource => new RuntimeResourceSnapshot(Id(resource.ResourceId), resource.Current, resource.Maximum)),
             new RuntimeStatBlockSnapshot(ToDecimalDictionary(dto.BaseStats), ToDecimalDictionary(dto.EffectiveStats)),
-            new RuntimeSkillStateSnapshot(dto.LearnedSkillIds.Select(Id), dto.EquippedSkillIds.Select(Id)),
+            new RuntimeSkillStateSnapshot(
+                dto.LearnedSkillIds.Select(Id),
+                dto.EquippedSkillIds.Select(Id),
+                (dto.PendingSkillChoices ?? []).Select(choice =>
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(choice.Token),
+                        choice.UnlockLevel,
+                        Id(choice.SkillId))),
+                dto.SkillRevision),
             new RuntimeEquipmentSnapshot(dto.EquippedItemIds.Select(pair => new KeyValuePair<EquipmentSlot, ContentId>(Enum.Parse<EquipmentSlot>(pair.Key), Id(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
@@ -739,6 +752,8 @@ internal static class CleanSaveJsonCodec
         Dictionary<string, decimal> EffectiveStats,
         string[] LearnedSkillIds,
         string[] EquippedSkillIds,
+        long SkillRevision,
+        HostPendingSkillChoiceDto[]? PendingSkillChoices,
         string[]? CapabilityIds,
         Dictionary<string, string> EquippedItemIds,
         HostTimedStateDto[] Ailments,
@@ -754,6 +769,7 @@ internal static class CleanSaveJsonCodec
         HostPassiveActivationDto[]? PassiveActivations);
 
     private sealed record HostResourceDto(string ResourceId, decimal Current, decimal Maximum);
+    private sealed record HostPendingSkillChoiceDto(long Token, int UnlockLevel, string SkillId);
     private sealed record HostReferenceDto(string InstanceId, string EntityDefinitionId, string DisplayName);
     private sealed record HostTimedStateDto(string Id, HostDurationDto Duration, bool IsRemovable);
     private sealed record HostStatStageDto(string ModifierTrackId, int Stage, HostDurationDto? Duration);

@@ -189,6 +189,13 @@ public partial class ConvergenceSmokeRoot : Node
             actor.State.InstanceId == player.State.InstanceId);
         if (restoredPlayer.State.GetRequiredResource(Sp).Current !=
             player.State.GetRequiredResource(Sp).Current ||
+            !restoredPlayer.State.Skills.LearnedSkillIds.SequenceEqual(
+                player.State.Skills.LearnedSkillIds) ||
+            !restoredPlayer.State.Skills.EquippedSkillIds.SequenceEqual(
+                player.State.Skills.EquippedSkillIds) ||
+            restoredPlayer.State.Skills.Revision != player.State.Skills.Revision ||
+            !restoredPlayer.State.Skills.PendingChoices.SequenceEqual(
+                player.State.Skills.PendingChoices) ||
             restored.SceneInstances.Count != 2)
         {
             throw new InvalidOperationException("The Godot-owned save did not preserve runtime and scene state.");
