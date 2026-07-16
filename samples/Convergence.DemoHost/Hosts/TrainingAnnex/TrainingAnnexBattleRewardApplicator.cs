@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Encounters;
 using Convergence.Runtime;
+using Convergence.Catalog;
 
 namespace Convergence.DemoHost.TrainingAnnex;
 
@@ -19,22 +20,32 @@ internal sealed class TrainingAnnexBattleRewardApplicator
     }
 
     public async ValueTask<TrainingAnnexBattleRewardApplication> ApplyAsync(
-        TrainingAnnexRuntimeActor player,
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         BattleRewardResult reward,
         GrowthRulesetServices growthServices,
+        IRuntimeActorCombatProfileCompositionService combatProfileComposition,
+        GameDataCatalog catalog,
+        RuntimeEquipmentProfile equipmentProfile,
         IEconomyTransactionService economy,
         RuntimeWalletSnapshot wallet,
         CancellationToken cancellationToken)
     {
-        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
+        TrainingAnnexRuntimeActor player = roster.Player;
+        RuntimeActorReferenceSnapshot activeReference = partyRoster.ActiveHostedEntity ??
+            throw new InvalidOperationException(
+                "Training Annex battle rewards require an active Hosted Entity.");
+        TrainingAnnexRuntimeActor growthActor = roster.AllActors.Single(actor =>
+            actor.Actor.State.InstanceId == activeReference.InstanceId);
+        RuntimeActorSnapshot sourceBefore = growthActor.Actor.State.ToSnapshot();
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
-            before.Progression,
-            before.Stats,
-            StandardLevelGrowthProfiles.Vessel,
+            sourceBefore.Progression,
+            sourceBefore.Stats,
+            StandardLevelGrowthProfiles.OwnedEntity,
             reward.TotalExperience,
             _randomSource,
-            resources: before.Resources,
-            baseResourceValues: before.BaseResourceValues));
+            resources: sourceBefore.Resources,
+            baseResourceValues: sourceBefore.BaseResourceValues));
 
         WalletTransactionResult walletMutation = economy.Credit(wallet, reward.TotalCurrency);
 
@@ -50,12 +61,22 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
         }
 
-        RuntimeMutationResult progressionMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            player.Actor.State,
-            growth);
+        RuntimeActorGrowthCompositionResult progressionMutation =
+            new RuntimeActorGrowthCompositionService(
+                combatProfileComposition,
+                catalog).Apply(new RuntimeActorGrowthCompositionRequest(
+                    growthActor.Actor.State,
+                    growthActor.Actor.Entity,
+                    growth,
+                    new SharedRuntimeMoveListCapacityPolicy(),
+                    TrainingAnnexHostSupport.CreatePlayerCombatProfileCompositionRequest(
+                        roster,
+                        partyRoster,
+                        equipmentProfile)));
         if (!progressionMutation.Applied)
         {
-            foreach (RuntimeMutationDiagnostic diagnostic in progressionMutation.Diagnostics)
+            foreach (RuntimeActorGrowthCompositionDiagnostic diagnostic in
+                     progressionMutation.Diagnostics)
             {
                 await _eventSink.PublishAsync(
                     $"[{diagnostic.Code}] {diagnostic.Path}: {diagnostic.Message}",
@@ -65,12 +86,19 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
         }
 
-        RuntimeActorSnapshot after = progressionMutation.After;
+        RuntimeActorSnapshot sourceAfter = progressionMutation.GrowthActorAfter;
+        RuntimeActorSnapshot playerAfter = progressionMutation.ComposedActorAfter;
         await _eventSink.PublishAsync(
             $"Battle rewards applied: +{reward.TotalExperience} EXP, +{reward.TotalCurrency} Credits.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Reward progression: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; wallet {wallet.Balance}->{walletMutation.After.Balance}.",
+            $"Reward progression: {growthActor.Actor.Entity.DisplayName} level " +
+            $"{sourceBefore.Progression.Level}->{sourceAfter.Progression.Level}; exp " +
+            $"{sourceBefore.Progression.Experience}->{sourceAfter.Progression.Experience}; " +
+            $"lifetime {sourceBefore.Progression.LifetimeExperience}->" +
+            $"{sourceAfter.Progression.LifetimeExperience}; Vessel " +
+            $"{player.Actor.Entity.DisplayName} remains level {playerAfter.Progression.Level}; " +
+            $"wallet {wallet.Balance}->{walletMutation.After.Balance}.",
             cancellationToken).ConfigureAwait(false);
 
         return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After, walletMutation);

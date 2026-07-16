@@ -2,8 +2,8 @@
 
 ## Status
 
-**Active implementation authority. D1-D6 approved. Checkpoints 0-5 are
-implemented and verified. Checkpoint 6 is next.**
+**Active implementation authority. D1-D6 approved. Checkpoints 0-6 are
+implemented and verified. Checkpoint 7 is next.**
 
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
@@ -30,7 +30,7 @@ rules to Framework.
 | 3. Encounter presence | complete | `5ede43e` |
 | 4. Authority and affiliation | complete | `979946d` |
 | 5. Vessel combat profiles | complete | `runtime: compose vessel combat profiles` |
-| 6. Runtime skill unlocks | pending | `runtime: add hosted entity skill progression` |
+| 6. Runtime skill unlocks | complete | `runtime: add hosted entity skill progression` |
 | 7. Save v8 and restoration | pending | `runtime: restore canonical actor ownership and composition` |
 | 8. Documentation and review | pending | `docs: document actor composition and progression` |
 

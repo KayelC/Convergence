@@ -108,6 +108,8 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeStatBlockSnapshot PlayerStats,
     RuntimeProgressionSnapshot PlayerProgression,
+    RuntimeProgressionSnapshot? ActiveHostedEntityProgression,
+    RuntimeSkillStateSnapshot? ActiveHostedEntitySkills,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
     int ActiveSkillCount,
     int PassiveSkillCount,
@@ -1078,9 +1080,15 @@ internal sealed class CleanTrainingAnnexPlayHost
                         {
                             TrainingAnnexBattleRewardApplication rewardApplication =
                                 await rewardApplicator.ApplyAsync(
-                                    roster.Player,
+                                    roster,
+                                    partyRoster,
                                     battle.RewardPreview,
                                     growthServices,
+                                    combatProfileCompositionService,
+                                    catalog,
+                                    equipmentProfileResolver.Resolve(
+                                        roster.Player.Actor.State.Equipment,
+                                        catalog),
                                     economy,
                                     wallet,
                                     cancellationToken).ConfigureAwait(false);
@@ -2008,6 +2016,13 @@ internal sealed class CleanTrainingAnnexPlayHost
     {
         CatalogBattleActor player = roster.Player.Actor;
         RuntimeActorSnapshot playerSnapshot = roster.Player.Actor.State.ToSnapshot();
+        RuntimeActorSnapshot? activeHostedEntitySnapshot = partyRoster.ActiveHostedEntity is null
+            ? null
+            : roster.AllActors
+                .First(actor =>
+                    actor.Actor.State.InstanceId ==
+                    partyRoster.ActiveHostedEntity.InstanceId)
+                .Actor.State.ToSnapshot();
         RuntimeEquipmentSnapshot equipment = playerSnapshot.Equipment;
         return new(
             [request.ManifestPath],
@@ -2031,6 +2046,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             playerSnapshot.Resources,
             playerSnapshot.Stats,
             playerSnapshot.Progression,
+            activeHostedEntitySnapshot?.Progression,
+            activeHostedEntitySnapshot?.Skills,
             statPreview.ToArray(),
             player.ActiveSkills.Count,
             player.SkillLoadout.Count(skill => skill.Activation == SkillActivation.Passive),
@@ -2201,24 +2218,31 @@ internal sealed class CleanTrainingAnnexPlayHost
         GrowthRulesetServices growthServices,
         IRuntimeActorCombatProfileCompositionService combatProfileCompositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
-        IEquipmentDefinitionRepository equipmentRepository,
+        GameDataCatalog catalog,
         CancellationToken cancellationToken)
     {
         TrainingAnnexRuntimeActor player = roster.Player;
-        RuntimeActorSnapshot before = player.Actor.State.ToSnapshot();
-        long requiredExperience = growthServices.ExperienceCurve.GetRequiredExperience(before.Progression.Level);
-        long award = Math.Max(0, requiredExperience - before.Progression.Experience);
+        RuntimeActorReferenceSnapshot activeReference = partyRoster.ActiveHostedEntity ??
+            throw new InvalidOperationException(
+                "Training Annex victory growth requires an active Hosted Entity.");
+        TrainingAnnexRuntimeActor growthActor = roster.AllActors.Single(actor =>
+            actor.Actor.State.InstanceId == activeReference.InstanceId);
+        RuntimeActorSnapshot sourceBefore = growthActor.Actor.State.ToSnapshot();
+        RuntimeActorSnapshot playerBefore = player.Actor.State.ToSnapshot();
+        long requiredExperience = growthServices.ExperienceCurve.GetRequiredExperience(
+            sourceBefore.Progression.Level);
+        long award = Math.Max(0, requiredExperience - sourceBefore.Progression.Experience);
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
-            before.Progression,
-            before.Stats,
-            StandardLevelGrowthProfiles.Vessel,
+            sourceBefore.Progression,
+            sourceBefore.Stats,
+            StandardLevelGrowthProfiles.OwnedEntity,
             award,
             new TrainingAnnexMinimumRandomSource(),
-            resources: before.Resources,
-            baseResourceValues: before.BaseResourceValues));
+            resources: sourceBefore.Resources,
+            baseResourceValues: sourceBefore.BaseResourceValues));
         RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
-            before.Equipment,
-            equipmentRepository);
+            playerBefore.Equipment,
+            catalog);
         if (equipmentProfile.Diagnostics.Count > 0)
         {
             foreach (RuntimeEquipmentProfileDiagnostic diagnostic in equipmentProfile.Diagnostics)
@@ -2232,8 +2256,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         RuntimeActorGrowthCompositionResult transaction = new RuntimeActorGrowthCompositionService(
-            combatProfileCompositionService).Apply(new RuntimeActorGrowthCompositionRequest(
+            combatProfileCompositionService,
+            catalog).Apply(new RuntimeActorGrowthCompositionRequest(
+                growthActor.Actor.State,
+                growthActor.Actor.Entity,
                 growth,
+                new SharedRuntimeMoveListCapacityPolicy(),
                 TrainingAnnexHostSupport.CreatePlayerCombatProfileCompositionRequest(
                     roster,
                     partyRoster,
@@ -2250,12 +2278,23 @@ internal sealed class CleanTrainingAnnexPlayHost
             return (growth, false);
         }
 
-        RuntimeActorSnapshot after = transaction.After;
+        RuntimeActorSnapshot sourceAfter = transaction.GrowthActorAfter;
+        RuntimeActorSnapshot playerAfter = transaction.ComposedActorAfter;
         await _eventSink.PublishAsync(
             $"Victory EXP: awarded {award} EXP through standard_growth.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
-            $"Growth result: {player.Actor.Entity.DisplayName} level {before.Progression.Level}->{after.Progression.Level}; exp {before.Progression.Experience}->{after.Progression.Experience}; lifetime {before.Progression.LifetimeExperience}->{after.Progression.LifetimeExperience}; stat points {before.Progression.UnspentStatPoints}->{after.Progression.UnspentStatPoints}.",
+            $"Growth result: {growthActor.Actor.Entity.DisplayName} level " +
+            $"{sourceBefore.Progression.Level}->{sourceAfter.Progression.Level}; exp " +
+            $"{sourceBefore.Progression.Experience}->{sourceAfter.Progression.Experience}; " +
+            $"lifetime {sourceBefore.Progression.LifetimeExperience}->" +
+            $"{sourceAfter.Progression.LifetimeExperience}; Vessel profile source " +
+            $"{transaction.CombatProfileComposition?.SourceActorId}.",
+            cancellationToken).ConfigureAwait(false);
+        await _eventSink.PublishAsync(
+            $"Vessel combat profile: {player.Actor.Entity.DisplayName} remains level " +
+            $"{playerAfter.Progression.Level} and now exposes " +
+            $"{playerAfter.Skills.EquippedSkillIds.Count} equipped skill(s).",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
             $"Level-up events: {(growth.LevelUps.Count == 0 ? "none" : string.Join(", ", growth.LevelUps.Select(levelUp => levelUp.Level.ToString())))}.",

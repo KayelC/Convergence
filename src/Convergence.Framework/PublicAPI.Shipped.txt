@@ -10,6 +10,7 @@
 ~override Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Equals(object obj) -> bool
 ~override Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.ToString() -> string
 ~override Convergence.Runtime.RuntimeInstanceId.Equals(object obj) -> bool
+~override Convergence.Runtime.RuntimeSkillChoiceToken.Equals(object obj) -> bool
 ~static Convergence.Runtime.RulesetBindingResult<TService>.operator !=(Convergence.Runtime.RulesetBindingResult<TService>? left, Convergence.Runtime.RulesetBindingResult<TService>? right) -> bool
 ~static Convergence.Runtime.RulesetBindingResult<TService>.operator ==(Convergence.Runtime.RulesetBindingResult<TService>? left, Convergence.Runtime.RulesetBindingResult<TService>? right) -> bool
 abstract Convergence.Content.AilmentTurnBehaviorDefinition.<Clone>$() -> Convergence.Content.AilmentTurnBehaviorDefinition!
@@ -25,6 +26,8 @@ abstract Convergence.Content.ShopStockDefinition.<Clone>$() -> Convergence.Conte
 abstract Convergence.Encounters.BattleEncounterEventPayload.<Clone>$() -> Convergence.Encounters.BattleEncounterEventPayload!
 abstract Convergence.Execution.BattleActionCommand.<Clone>$() -> Convergence.Execution.BattleActionCommand!
 abstract Convergence.Execution.BattleTurnEconomySnapshot.<Clone>$() -> Convergence.Execution.BattleTurnEconomySnapshot!
+abstract Convergence.Runtime.RuntimeSkillChoiceCommand.<Clone>$() -> Convergence.Runtime.RuntimeSkillChoiceCommand!
+abstract Convergence.Runtime.RuntimeSkillChoiceCommand.Kind.get -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
 const Convergence.Content.NegotiationNumericDomain.MaximumDemandWeightTotal = 2147483647 -> int
 const Convergence.Content.NegotiationNumericDomain.MaximumMoodScore = 2147483647 -> int
 const Convergence.Content.NegotiationNumericDomain.MinimumMoodScore = -2147483648 -> int
@@ -34,6 +37,7 @@ const Convergence.Runtime.RuntimeActorNumericDomain.MaximumStatValue = 214748364
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumBaseResourceValue = 0 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumStatValue = 0 -> decimal
 const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 7 -> int
+const Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.StandardCapacity = 8 -> int
 Convergence.Battle.AilmentResistanceResolver
 Convergence.Battle.CombatDefenseProfile
 Convergence.Battle.CombatDefenseProfile.AilmentResistances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Content.ResistanceLevel>!
@@ -4923,6 +4927,9 @@ Convergence.Runtime.EquipmentTransitionService
 Convergence.Runtime.EquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.ContentId equipmentId, Convergence.Content.EquipmentSlot ownedSlot, Convergence.Content.EquipmentSlot targetSlot) -> Convergence.Runtime.EquipmentTransitionResult!
 Convergence.Runtime.EquipmentTransitionService.EquipmentTransitionService() -> void
 Convergence.Runtime.EquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.EquipmentSlot slot) -> Convergence.Runtime.EquipmentTransitionResult!
+Convergence.Runtime.ForgetPendingSkillCommand
+Convergence.Runtime.ForgetPendingSkillCommand.Equals(Convergence.Runtime.ForgetPendingSkillCommand? other) -> bool
+Convergence.Runtime.ForgetPendingSkillCommand.ForgetPendingSkillCommand(Convergence.Runtime.RuntimeSkillChoiceToken token, int expectedSourceLevel, long expectedSkillRevision) -> void
 Convergence.Runtime.GrowthRulesetServices
 Convergence.Runtime.GrowthRulesetServices.<Clone>$() -> Convergence.Runtime.GrowthRulesetServices!
 Convergence.Runtime.GrowthRulesetServices.Deconstruct(out Convergence.Runtime.IResourceGrowthPolicy! ResourceGrowthPolicy, out Convergence.Runtime.IExperienceCurve! ExperienceCurve, out Convergence.Runtime.ILevelGrowthPolicy! LevelGrowthPolicy, out Convergence.Runtime.IStatAllocationService! StatAllocationService) -> void
@@ -5042,6 +5049,8 @@ Convergence.Runtime.IRuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IRuntimeMoveListCapacityPolicy
+Convergence.Runtime.IRuntimeMoveListCapacityPolicy.Assess(Convergence.Runtime.RuntimeMoveListCapacityRequest! request) -> Convergence.Runtime.RuntimeMoveListCapacityAssessment!
 Convergence.Runtime.IRuntimeNavigationPolicy
 Convergence.Runtime.IRuntimeNavigationPolicy.Evaluate(Convergence.Runtime.RuntimeNavigationPolicyRequest! request) -> Convergence.Runtime.RuntimeNavigationPolicyDecision!
 Convergence.Runtime.IRuntimeNavigationService
@@ -5075,6 +5084,12 @@ Convergence.Runtime.IRuntimeSessionRestoreService
 Convergence.Runtime.IRuntimeSessionRestoreService.Restore(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSessionRestoreResult!
 Convergence.Runtime.IRuntimeShopOfferResolver
 Convergence.Runtime.IRuntimeShopOfferResolver.Resolve(Convergence.Content.ShopOfferDefinition! offer, Convergence.Catalog.IItemDefinitionRepository! itemRepository, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeShopOfferResolutionResult!
+Convergence.Runtime.IRuntimeSkillChoiceTransactionService
+Convergence.Runtime.IRuntimeSkillChoiceTransactionService.Apply(Convergence.Runtime.RuntimeSkillChoiceTransactionRequest! request) -> Convergence.Runtime.RuntimeSkillChoiceTransactionResult!
+Convergence.Runtime.IRuntimeSkillRetentionPolicy
+Convergence.Runtime.IRuntimeSkillRetentionPolicy.Replace(Convergence.Runtime.RuntimeSkillReplacementRequest! request) -> Convergence.Runtime.RuntimeSkillReplacementResult!
+Convergence.Runtime.IRuntimeSkillUnlockPlanner
+Convergence.Runtime.IRuntimeSkillUnlockPlanner.Plan(Convergence.Runtime.RuntimeSkillUnlockPlanRequest! request) -> Convergence.Runtime.RuntimeSkillUnlockPlanResult!
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
@@ -5244,6 +5259,10 @@ Convergence.Runtime.ReplaceHostedEntityRequest.OldHostedEntityInstanceId.init ->
 Convergence.Runtime.ReplaceHostedEntityRequest.ReplaceHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId OldHostedEntityInstanceId, Convergence.Runtime.RuntimeActorReferenceSnapshot! NewHostedEntity) -> void
 Convergence.Runtime.ReplaceHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.ReplaceHostedEntityRequest.Snapshot.init -> void
+Convergence.Runtime.ReplacePendingSkillCommand
+Convergence.Runtime.ReplacePendingSkillCommand.Equals(Convergence.Runtime.ReplacePendingSkillCommand? other) -> bool
+Convergence.Runtime.ReplacePendingSkillCommand.ReplacedSkillId.get -> Convergence.Content.ContentId
+Convergence.Runtime.ReplacePendingSkillCommand.ReplacePendingSkillCommand(Convergence.Runtime.RuntimeSkillChoiceToken token, int expectedSourceLevel, long expectedSkillRevision, Convergence.Content.ContentId replacedSkillId) -> void
 Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceCurrentAdjustmentMode.LevelUpDelta = 1 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceCurrentAdjustmentMode.PreserveCurrent = 0 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
@@ -5306,6 +5325,9 @@ Convergence.Runtime.ResourceTransactionDiagnostic.Message.init -> void
 Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(Convergence.Runtime.ResourceTransactionCode Code, string! Message, Convergence.Content.ContentId? ContentId = null, Convergence.Content.EquipmentSlot? Slot = null) -> void
 Convergence.Runtime.ResourceTransactionDiagnostic.Slot.get -> Convergence.Content.EquipmentSlot?
 Convergence.Runtime.ResourceTransactionDiagnostic.Slot.init -> void
+Convergence.Runtime.RetainLearnedRuntimeSkillPolicy
+Convergence.Runtime.RetainLearnedRuntimeSkillPolicy.Replace(Convergence.Runtime.RuntimeSkillReplacementRequest! request) -> Convergence.Runtime.RuntimeSkillReplacementResult!
+Convergence.Runtime.RetainLearnedRuntimeSkillPolicy.RetainLearnedRuntimeSkillPolicy() -> void
 Convergence.Runtime.RosterCapacityTier
 Convergence.Runtime.RosterCapacityTier.<Clone>$() -> Convergence.Runtime.RosterCapacityTier!
 Convergence.Runtime.RosterCapacityTier.Capacity.get -> int
@@ -5426,34 +5448,43 @@ Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Path.get -> string!
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Path.init -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.RuntimeActorGrowthCompositionDiagnostic(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode Code, string! Message, string! Path) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CommitFailed = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected = 3 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CommitFailed = 4 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.GrowthRejected = 0 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.SkillStateRejected = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.SkillUnlockPlanningRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionRequest!
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.CombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest!
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.Equals(Convergence.Runtime.RuntimeActorGrowthCompositionRequest? other) -> bool
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.Growth.get -> Convergence.Runtime.LevelGrowthResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionRequest.RuntimeActorGrowthCompositionRequest(Convergence.Runtime.LevelGrowthResult! growth, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! combatProfileComposition) -> void
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.GrowthActor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.GrowthEntity.get -> Convergence.Content.EntityDefinition!
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.MoveListCapacityPolicy.get -> Convergence.Runtime.IRuntimeMoveListCapacityPolicy!
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.RuntimeActorGrowthCompositionRequest(Convergence.Execution.RuntimeActorState! growthActor, Convergence.Content.EntityDefinition! growthEntity, Convergence.Runtime.LevelGrowthResult! growth, Convergence.Runtime.IRuntimeMoveListCapacityPolicy! moveListCapacityPolicy, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! combatProfileComposition) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionResult
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Applied.get -> bool
-Convergence.Runtime.RuntimeActorGrowthCompositionResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.CombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult?
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.ComposedActorAfter.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.ComposedActorBefore.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Equals(Convergence.Runtime.RuntimeActorGrowthCompositionResult? other) -> bool
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.GrowthActorAfter.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.GrowthActorBefore.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.GrowthMutation.get -> Convergence.Runtime.RuntimeMutationResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionResult.RuntimeActorGrowthCompositionResult(Convergence.Runtime.RuntimeActorGrowthCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeMutationResult! growthMutation, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? combatProfileComposition = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.RuntimeActorGrowthCompositionResult(Convergence.Runtime.RuntimeActorGrowthCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! growthActorBefore, Convergence.Runtime.RuntimeActorSnapshot! growthActorAfter, Convergence.Runtime.RuntimeActorSnapshot! composedActorBefore, Convergence.Runtime.RuntimeActorSnapshot! composedActorAfter, Convergence.Runtime.RuntimeMutationResult! growthMutation, Convergence.Runtime.RuntimeSkillUnlockPlanResult? skillUnlockPlan = null, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? combatProfileComposition = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.SkillUnlockPlan.get -> Convergence.Runtime.RuntimeSkillUnlockPlanResult?
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Status.get -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionService
 Convergence.Runtime.RuntimeActorGrowthCompositionService.Apply(Convergence.Runtime.RuntimeActorGrowthCompositionRequest! request) -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionService.RuntimeActorGrowthCompositionService(Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! combatProfileComposition) -> void
+Convergence.Runtime.RuntimeActorGrowthCompositionService.RuntimeActorGrowthCompositionService(Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! combatProfileComposition, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Runtime.IRuntimeSkillUnlockPlanner? skillUnlockPlanner = null) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus.Applied = 0 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
-Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
-Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CommitRejected = 3 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
+Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CombatProfileCompositionRejected = 3 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
+Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CommitRejected = 4 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus.GrowthRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
+Convergence.Runtime.RuntimeActorGrowthCompositionStatus.SkillUnlockPlanningRejected = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorIdentitySnapshot
 Convergence.Runtime.RuntimeActorIdentitySnapshot.<Clone>$() -> Convergence.Runtime.RuntimeActorIdentitySnapshot!
 Convergence.Runtime.RuntimeActorIdentitySnapshot.ActorKindId.get -> Convergence.Content.ContentId
@@ -5835,6 +5866,21 @@ Convergence.Runtime.RuntimeLevelGrowthProfile.GrowsBaseResources.get -> bool
 Convergence.Runtime.RuntimeLevelGrowthProfile.ManualStatPointsPerLevel.get -> int
 Convergence.Runtime.RuntimeLevelGrowthProfile.RandomCoreStatIncreasesPerLevel.get -> int
 Convergence.Runtime.RuntimeLevelGrowthProfile.RuntimeLevelGrowthProfile(int manualStatPointsPerLevel, bool growsBaseResources, int randomCoreStatIncreasesPerLevel) -> void
+Convergence.Runtime.RuntimeMoveListCapacityAssessment
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.<Clone>$() -> Convergence.Runtime.RuntimeMoveListCapacityAssessment!
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.Capacity.get -> int
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.CapacityGroupId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.Equals(Convergence.Runtime.RuntimeMoveListCapacityAssessment? other) -> bool
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.HasAvailableSlot.get -> bool
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.OccupiedSlots.get -> int
+Convergence.Runtime.RuntimeMoveListCapacityAssessment.RuntimeMoveListCapacityAssessment(Convergence.Content.ContentId capacityGroupId, int capacity, int occupiedSlots) -> void
+Convergence.Runtime.RuntimeMoveListCapacityRequest
+Convergence.Runtime.RuntimeMoveListCapacityRequest.<Clone>$() -> Convergence.Runtime.RuntimeMoveListCapacityRequest!
+Convergence.Runtime.RuntimeMoveListCapacityRequest.Actor.get -> Convergence.Runtime.RuntimeActorIdentitySnapshot!
+Convergence.Runtime.RuntimeMoveListCapacityRequest.Candidate.get -> Convergence.Content.SkillDefinition!
+Convergence.Runtime.RuntimeMoveListCapacityRequest.Equals(Convergence.Runtime.RuntimeMoveListCapacityRequest? other) -> bool
+Convergence.Runtime.RuntimeMoveListCapacityRequest.EquippedSkills.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
+Convergence.Runtime.RuntimeMoveListCapacityRequest.RuntimeMoveListCapacityRequest(Convergence.Runtime.RuntimeActorIdentitySnapshot! actor, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>! equippedSkills, Convergence.Content.SkillDefinition! candidate) -> void
 Convergence.Runtime.RuntimeMutationDiagnostic
 Convergence.Runtime.RuntimeMutationDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeMutationDiagnostic!
 Convergence.Runtime.RuntimeMutationDiagnostic.Code.get -> Convergence.Runtime.RuntimeMutationErrorCode
@@ -5989,6 +6035,13 @@ Convergence.Runtime.RuntimePassiveSkillStateSnapshot.IsEnabled.init -> void
 Convergence.Runtime.RuntimePassiveSkillStateSnapshot.RuntimePassiveSkillStateSnapshot(Convergence.Content.ContentId SkillId, bool IsEnabled) -> void
 Convergence.Runtime.RuntimePassiveSkillStateSnapshot.SkillId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimePassiveSkillStateSnapshot.SkillId.init -> void
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.<Clone>$() -> Convergence.Runtime.RuntimePendingSkillChoiceSnapshot!
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.Equals(Convergence.Runtime.RuntimePendingSkillChoiceSnapshot? other) -> bool
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.RuntimePendingSkillChoiceSnapshot(Convergence.Runtime.RuntimeSkillChoiceToken token, int unlockLevel, Convergence.Content.ContentId skillId) -> void
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.SkillId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.Token.get -> Convergence.Runtime.RuntimeSkillChoiceToken
+Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.UnlockLevel.get -> int
 Convergence.Runtime.RuntimeProgressionSnapshot
 Convergence.Runtime.RuntimeProgressionSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Runtime.RuntimeProgressionSnapshot.Equals(Convergence.Runtime.RuntimeProgressionSnapshot? other) -> bool
@@ -6345,12 +6398,153 @@ Convergence.Runtime.RuntimeShopOfferSnapshot.ItemStackLimit.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, int BasePrice, Convergence.Content.EquipmentSlot? EquipmentSlot = null, int? ItemStackLimit = null, int? StockAvailable = null) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.StockAvailable.get -> int?
 Convergence.Runtime.RuntimeShopOfferSnapshot.StockAvailable.init -> void
+Convergence.Runtime.RuntimeSkillChoiceCommand
+Convergence.Runtime.RuntimeSkillChoiceCommand.ExpectedSkillRevision.get -> long
+Convergence.Runtime.RuntimeSkillChoiceCommand.ExpectedSourceLevel.get -> int
+Convergence.Runtime.RuntimeSkillChoiceCommand.RuntimeSkillChoiceCommand(Convergence.Runtime.RuntimeSkillChoiceCommand! original) -> void
+Convergence.Runtime.RuntimeSkillChoiceCommand.RuntimeSkillChoiceCommand(Convergence.Runtime.RuntimeSkillChoiceToken token, int expectedSourceLevel, long expectedSkillRevision) -> void
+Convergence.Runtime.RuntimeSkillChoiceCommand.Token.get -> Convergence.Runtime.RuntimeSkillChoiceToken
+Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+Convergence.Runtime.RuntimeSkillChoiceDecisionKind.ForgetNew = 1 -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+Convergence.Runtime.RuntimeSkillChoiceDecisionKind.Replace = 0 -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeSkillChoiceDiagnostic!
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Code.get -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Code.init -> void
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode Code, out string! Message, out Convergence.Content.ContentId? SkillId) -> void
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Equals(Convergence.Runtime.RuntimeSkillChoiceDiagnostic? other) -> bool
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Message.get -> string!
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.RuntimeSkillChoiceDiagnostic(Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode Code, string! Message, Convergence.Content.ContentId? SkillId = null) -> void
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.SkillId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RuntimeSkillChoiceDiagnostic.SkillId.init -> void
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.CombatProfileCompositionRejected = 8 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.CommitFailed = 9 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.PendingChoiceMissing = 0 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.ReplacementSkillInvalid = 4 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.ReplacementSkillMissing = 3 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.RetentionPolicyFailed = 6 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.SkillDefinitionMissing = 5 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.SkillStateInvalid = 7 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.StaleSkillRevision = 2 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode.StaleSourceLevel = 1 -> Convergence.Runtime.RuntimeSkillChoiceDiagnosticCode
+Convergence.Runtime.RuntimeSkillChoiceToken
+Convergence.Runtime.RuntimeSkillChoiceToken.Equals(Convergence.Runtime.RuntimeSkillChoiceToken other) -> bool
+Convergence.Runtime.RuntimeSkillChoiceToken.IsValid.get -> bool
+Convergence.Runtime.RuntimeSkillChoiceToken.RuntimeSkillChoiceToken() -> void
+Convergence.Runtime.RuntimeSkillChoiceToken.RuntimeSkillChoiceToken(long value) -> void
+Convergence.Runtime.RuntimeSkillChoiceToken.Value.get -> long
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.<Clone>$() -> Convergence.Runtime.RuntimeSkillChoiceTransactionRequest!
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.Command.get -> Convergence.Runtime.RuntimeSkillChoiceCommand!
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.DependentCombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest?
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.Equals(Convergence.Runtime.RuntimeSkillChoiceTransactionRequest? other) -> bool
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.RuntimeSkillChoiceTransactionRequest(Convergence.Execution.RuntimeActorState! sourceActor, Convergence.Runtime.RuntimeSkillChoiceCommand! command, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? dependentCombatProfileComposition = null) -> void
+Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.SourceActor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.<Clone>$() -> Convergence.Runtime.RuntimeSkillChoiceTransactionResult!
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.Applied.get -> bool
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.CombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult?
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.DependentActorAfter.get -> Convergence.Runtime.RuntimeActorSnapshot?
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.DependentActorBefore.get -> Convergence.Runtime.RuntimeActorSnapshot?
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSkillChoiceDiagnostic!>!
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.Equals(Convergence.Runtime.RuntimeSkillChoiceTransactionResult? other) -> bool
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.RuntimeSkillChoiceTransactionResult(Convergence.Runtime.RuntimeSkillChoiceTransactionStatus status, Convergence.Runtime.RuntimeActorSnapshot! sourceBefore, Convergence.Runtime.RuntimeActorSnapshot! sourceAfter, Convergence.Runtime.RuntimeActorSnapshot? dependentActorBefore = null, Convergence.Runtime.RuntimeActorSnapshot? dependentActorAfter = null, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? combatProfileComposition = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSkillChoiceDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.SourceAfter.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.SourceBefore.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeSkillChoiceTransactionResult.Status.get -> Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillChoiceTransactionService
+Convergence.Runtime.RuntimeSkillChoiceTransactionService.Apply(Convergence.Runtime.RuntimeSkillChoiceTransactionRequest! request) -> Convergence.Runtime.RuntimeSkillChoiceTransactionResult!
+Convergence.Runtime.RuntimeSkillChoiceTransactionService.RuntimeSkillChoiceTransactionService(Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! composition, Convergence.Runtime.IRuntimeSkillRetentionPolicy? retention = null) -> void
+Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillChoiceTransactionStatus.Applied = 0 -> Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillChoiceTransactionStatus.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillChoiceTransactionStatus.CommitRejected = 3 -> Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillChoiceTransactionStatus.Rejected = 1 -> Convergence.Runtime.RuntimeSkillChoiceTransactionStatus
+Convergence.Runtime.RuntimeSkillReplacementRequest
+Convergence.Runtime.RuntimeSkillReplacementRequest.<Clone>$() -> Convergence.Runtime.RuntimeSkillReplacementRequest!
+Convergence.Runtime.RuntimeSkillReplacementRequest.Current.get -> Convergence.Runtime.RuntimeSkillStateSnapshot!
+Convergence.Runtime.RuntimeSkillReplacementRequest.Current.init -> void
+Convergence.Runtime.RuntimeSkillReplacementRequest.Deconstruct(out Convergence.Runtime.RuntimeSkillStateSnapshot! Current, out Convergence.Content.ContentId ReplacedSkillId, out Convergence.Content.ContentId NewSkillId) -> void
+Convergence.Runtime.RuntimeSkillReplacementRequest.Equals(Convergence.Runtime.RuntimeSkillReplacementRequest? other) -> bool
+Convergence.Runtime.RuntimeSkillReplacementRequest.NewSkillId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeSkillReplacementRequest.NewSkillId.init -> void
+Convergence.Runtime.RuntimeSkillReplacementRequest.ReplacedSkillId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeSkillReplacementRequest.ReplacedSkillId.init -> void
+Convergence.Runtime.RuntimeSkillReplacementRequest.RuntimeSkillReplacementRequest(Convergence.Runtime.RuntimeSkillStateSnapshot! Current, Convergence.Content.ContentId ReplacedSkillId, Convergence.Content.ContentId NewSkillId) -> void
+Convergence.Runtime.RuntimeSkillReplacementResult
+Convergence.Runtime.RuntimeSkillReplacementResult.<Clone>$() -> Convergence.Runtime.RuntimeSkillReplacementResult!
+Convergence.Runtime.RuntimeSkillReplacementResult.Equals(Convergence.Runtime.RuntimeSkillReplacementResult? other) -> bool
+Convergence.Runtime.RuntimeSkillReplacementResult.EquippedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeSkillReplacementResult.LearnedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeSkillReplacementResult.RuntimeSkillReplacementResult(System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! learnedSkillIds, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! equippedSkillIds) -> void
 Convergence.Runtime.RuntimeSkillStateSnapshot
 Convergence.Runtime.RuntimeSkillStateSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeSkillStateSnapshot!
 Convergence.Runtime.RuntimeSkillStateSnapshot.Equals(Convergence.Runtime.RuntimeSkillStateSnapshot? other) -> bool
 Convergence.Runtime.RuntimeSkillStateSnapshot.EquippedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeSkillStateSnapshot.LearnedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
-Convergence.Runtime.RuntimeSkillStateSnapshot.RuntimeSkillStateSnapshot(System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? learnedSkillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equippedSkillIds = null) -> void
+Convergence.Runtime.RuntimeSkillStateSnapshot.PendingChoices.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimePendingSkillChoiceSnapshot!>!
+Convergence.Runtime.RuntimeSkillStateSnapshot.Revision.get -> long
+Convergence.Runtime.RuntimeSkillStateSnapshot.RuntimeSkillStateSnapshot(System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? learnedSkillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equippedSkillIds = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimePendingSkillChoiceSnapshot!>? pendingChoices = null, long revision = 0) -> void
+Convergence.Runtime.RuntimeSkillUnlockDisposition
+Convergence.Runtime.RuntimeSkillUnlockDisposition.AutomaticallyEquipped = 0 -> Convergence.Runtime.RuntimeSkillUnlockDisposition
+Convergence.Runtime.RuntimeSkillUnlockDisposition.PendingChoice = 1 -> Convergence.Runtime.RuntimeSkillUnlockDisposition
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic!
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Code.get -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Code.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode Code, out string! Message, out Convergence.Content.ContentId? SkillId) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Equals(Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic? other) -> bool
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Message.get -> string!
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.RuntimeSkillUnlockPlanDiagnostic(Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode Code, string! Message, Convergence.Content.ContentId? SkillId = null) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.SkillId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.SkillId.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.CapacityPolicyFailed = 4 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.EntityIdentityMismatch = 0 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.InvalidLevelRange = 1 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.InvalidSkillState = 2 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.SkillDefinitionMissing = 3 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode.TokenRangeExceeded = 5 -> Convergence.Runtime.RuntimeSkillUnlockPlanDiagnosticCode
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.<Clone>$() -> Convergence.Runtime.RuntimeSkillUnlockPlanEntry!
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.Deconstruct(out int UnlockLevel, out Convergence.Content.ContentId SkillId, out Convergence.Runtime.RuntimeSkillUnlockDisposition Disposition, out Convergence.Runtime.RuntimeSkillChoiceToken? PendingChoiceToken) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.Disposition.get -> Convergence.Runtime.RuntimeSkillUnlockDisposition
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.Disposition.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.Equals(Convergence.Runtime.RuntimeSkillUnlockPlanEntry? other) -> bool
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.PendingChoiceToken.get -> Convergence.Runtime.RuntimeSkillChoiceToken?
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.PendingChoiceToken.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.RuntimeSkillUnlockPlanEntry(int UnlockLevel, Convergence.Content.ContentId SkillId, Convergence.Runtime.RuntimeSkillUnlockDisposition Disposition, Convergence.Runtime.RuntimeSkillChoiceToken? PendingChoiceToken = null) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.SkillId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.SkillId.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.UnlockLevel.get -> int
+Convergence.Runtime.RuntimeSkillUnlockPlanEntry.UnlockLevel.init -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanner
+Convergence.Runtime.RuntimeSkillUnlockPlanner.Plan(Convergence.Runtime.RuntimeSkillUnlockPlanRequest! request) -> Convergence.Runtime.RuntimeSkillUnlockPlanResult!
+Convergence.Runtime.RuntimeSkillUnlockPlanner.RuntimeSkillUnlockPlanner(Convergence.Catalog.ISkillDefinitionRepository! skills) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.<Clone>$() -> Convergence.Runtime.RuntimeSkillUnlockPlanRequest!
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.Actor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.CapacityPolicy.get -> Convergence.Runtime.IRuntimeMoveListCapacityPolicy!
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.Entity.get -> Convergence.Content.EntityDefinition!
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.Equals(Convergence.Runtime.RuntimeSkillUnlockPlanRequest? other) -> bool
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.PreviousLevel.get -> int
+Convergence.Runtime.RuntimeSkillUnlockPlanRequest.RuntimeSkillUnlockPlanRequest(Convergence.Runtime.RuntimeActorSnapshot! actor, Convergence.Content.EntityDefinition! entity, int previousLevel, Convergence.Runtime.IRuntimeMoveListCapacityPolicy! capacityPolicy) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanResult
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.<Clone>$() -> Convergence.Runtime.RuntimeSkillUnlockPlanResult!
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.After.get -> Convergence.Runtime.RuntimeSkillStateSnapshot!
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Before.get -> Convergence.Runtime.RuntimeSkillStateSnapshot!
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic!>!
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Entries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSkillUnlockPlanEntry!>!
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Equals(Convergence.Runtime.RuntimeSkillUnlockPlanResult? other) -> bool
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Planned.get -> bool
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.RuntimeSkillUnlockPlanResult(Convergence.Runtime.RuntimeSkillUnlockPlanStatus status, Convergence.Runtime.RuntimeSkillStateSnapshot! before, Convergence.Runtime.RuntimeSkillStateSnapshot! after, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSkillUnlockPlanEntry!>? entries = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeSkillUnlockPlanResult.Status.get -> Convergence.Runtime.RuntimeSkillUnlockPlanStatus
+Convergence.Runtime.RuntimeSkillUnlockPlanStatus
+Convergence.Runtime.RuntimeSkillUnlockPlanStatus.Planned = 0 -> Convergence.Runtime.RuntimeSkillUnlockPlanStatus
+Convergence.Runtime.RuntimeSkillUnlockPlanStatus.Rejected = 1 -> Convergence.Runtime.RuntimeSkillUnlockPlanStatus
 Convergence.Runtime.RuntimeStatBlockSnapshot
 Convergence.Runtime.RuntimeStatBlockSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.RuntimeStatBlockSnapshot.BaseStats.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -6391,6 +6585,12 @@ Convergence.Runtime.SelectActiveHostedEntityRequest.HostedEntityInstanceId.init 
 Convergence.Runtime.SelectActiveHostedEntityRequest.SelectActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
 Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.init -> void
+Convergence.Runtime.SeparatedRuntimeMoveListCapacityPolicy
+Convergence.Runtime.SeparatedRuntimeMoveListCapacityPolicy.Assess(Convergence.Runtime.RuntimeMoveListCapacityRequest! request) -> Convergence.Runtime.RuntimeMoveListCapacityAssessment!
+Convergence.Runtime.SeparatedRuntimeMoveListCapacityPolicy.SeparatedRuntimeMoveListCapacityPolicy(int activeCapacity, int passiveCapacity) -> void
+Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy
+Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.Assess(Convergence.Runtime.RuntimeMoveListCapacityRequest! request) -> Convergence.Runtime.RuntimeMoveListCapacityAssessment!
+Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.SharedRuntimeMoveListCapacityPolicy(int capacity = 8) -> void
 Convergence.Runtime.ShopTransactionResult
 Convergence.Runtime.ShopTransactionResult.<Clone>$() -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ShopTransactionResult.AfterInventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
@@ -6418,6 +6618,9 @@ Convergence.Runtime.StandardResourceGrowthPolicy
 Convergence.Runtime.StandardResourceGrowthPolicy.Recalculate(Convergence.Runtime.ResourceRecalculationRequest! request) -> Convergence.Runtime.ResourceRecalculationResult!
 Convergence.Runtime.StandardResourceGrowthPolicy.StandardResourceGrowthPolicy() -> void
 Convergence.Runtime.StandardRulesetPolicyIds
+Convergence.Runtime.StandardRuntimeSkillRetentionPolicy
+Convergence.Runtime.StandardRuntimeSkillRetentionPolicy.Replace(Convergence.Runtime.RuntimeSkillReplacementRequest! request) -> Convergence.Runtime.RuntimeSkillReplacementResult!
+Convergence.Runtime.StandardRuntimeSkillRetentionPolicy.StandardRuntimeSkillRetentionPolicy() -> void
 Convergence.Runtime.StandardStatPolicyConfig
 Convergence.Runtime.StandardStatPolicyConfig.<Clone>$() -> Convergence.Runtime.StandardStatPolicyConfig!
 Convergence.Runtime.StandardStatPolicyConfig.Equals(Convergence.Runtime.StandardStatPolicyConfig? other) -> bool
@@ -7969,6 +8172,11 @@ override Convergence.Runtime.EncounterStartRequest.ToString() -> string!
 override Convergence.Runtime.EquipmentTransitionResult.Equals(object? obj) -> bool
 override Convergence.Runtime.EquipmentTransitionResult.GetHashCode() -> int
 override Convergence.Runtime.EquipmentTransitionResult.ToString() -> string!
+override Convergence.Runtime.ForgetPendingSkillCommand.<Clone>$() -> Convergence.Runtime.ForgetPendingSkillCommand!
+override Convergence.Runtime.ForgetPendingSkillCommand.Equals(object? obj) -> bool
+override Convergence.Runtime.ForgetPendingSkillCommand.GetHashCode() -> int
+override Convergence.Runtime.ForgetPendingSkillCommand.Kind.get -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+override Convergence.Runtime.ForgetPendingSkillCommand.ToString() -> string!
 override Convergence.Runtime.GrowthRulesetServices.Equals(object? obj) -> bool
 override Convergence.Runtime.GrowthRulesetServices.GetHashCode() -> int
 override Convergence.Runtime.GrowthRulesetServices.ToString() -> string!
@@ -8011,6 +8219,11 @@ override Convergence.Runtime.ReplaceCompanionRequest.ToString() -> string!
 override Convergence.Runtime.ReplaceHostedEntityRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.ReplaceHostedEntityRequest.GetHashCode() -> int
 override Convergence.Runtime.ReplaceHostedEntityRequest.ToString() -> string!
+override Convergence.Runtime.ReplacePendingSkillCommand.<Clone>$() -> Convergence.Runtime.ReplacePendingSkillCommand!
+override Convergence.Runtime.ReplacePendingSkillCommand.Equals(object? obj) -> bool
+override Convergence.Runtime.ReplacePendingSkillCommand.GetHashCode() -> int
+override Convergence.Runtime.ReplacePendingSkillCommand.Kind.get -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+override Convergence.Runtime.ReplacePendingSkillCommand.ToString() -> string!
 override Convergence.Runtime.ResourceManagementRulesetServices.Equals(object? obj) -> bool
 override Convergence.Runtime.ResourceManagementRulesetServices.GetHashCode() -> int
 override Convergence.Runtime.ResourceManagementRulesetServices.ToString() -> string!
@@ -8157,6 +8370,12 @@ override Convergence.Runtime.RuntimeKnowledgeSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeLevelGrowthProfile.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeLevelGrowthProfile.GetHashCode() -> int
 override Convergence.Runtime.RuntimeLevelGrowthProfile.ToString() -> string!
+override Convergence.Runtime.RuntimeMoveListCapacityAssessment.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeMoveListCapacityAssessment.GetHashCode() -> int
+override Convergence.Runtime.RuntimeMoveListCapacityAssessment.ToString() -> string!
+override Convergence.Runtime.RuntimeMoveListCapacityRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeMoveListCapacityRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeMoveListCapacityRequest.ToString() -> string!
 override Convergence.Runtime.RuntimeMutationDiagnostic.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeMutationDiagnostic.GetHashCode() -> int
 override Convergence.Runtime.RuntimeMutationDiagnostic.ToString() -> string!
@@ -8193,6 +8412,9 @@ override Convergence.Runtime.RuntimePassiveActivationSnapshot.ToString() -> stri
 override Convergence.Runtime.RuntimePassiveSkillStateSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimePassiveSkillStateSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimePassiveSkillStateSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeProgressionSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeProgressionSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeProgressionSnapshot.ToString() -> string!
@@ -8253,9 +8475,41 @@ override Convergence.Runtime.RuntimeShopOfferResolutionResult.ToString() -> stri
 override Convergence.Runtime.RuntimeShopOfferSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeShopOfferSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeShopOfferSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillChoiceCommand.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillChoiceCommand.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillChoiceCommand.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillChoiceDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillChoiceDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillChoiceDiagnostic.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillChoiceToken.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillChoiceToken.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillChoiceTransactionResult.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillChoiceTransactionResult.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillChoiceTransactionResult.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillReplacementRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillReplacementRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillReplacementRequest.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillReplacementResult.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillReplacementResult.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillReplacementResult.ToString() -> string!
 override Convergence.Runtime.RuntimeSkillStateSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeSkillStateSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeSkillStateSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillUnlockPlanEntry.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillUnlockPlanEntry.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillUnlockPlanEntry.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillUnlockPlanRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillUnlockPlanRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillUnlockPlanRequest.ToString() -> string!
+override Convergence.Runtime.RuntimeSkillUnlockPlanResult.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeSkillUnlockPlanResult.GetHashCode() -> int
+override Convergence.Runtime.RuntimeSkillUnlockPlanResult.ToString() -> string!
 override Convergence.Runtime.RuntimeStatBlockSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeStatBlockSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeStatBlockSnapshot.ToString() -> string!
@@ -8442,6 +8696,8 @@ override sealed Convergence.Execution.PartyRosterBattleActionCommand.Equals(Conv
 override sealed Convergence.Execution.PassBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
 override sealed Convergence.Execution.SkillBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
 override sealed Convergence.Execution.StandardActionTurnEconomySnapshot.Equals(Convergence.Execution.BattleTurnEconomySnapshot? other) -> bool
+override sealed Convergence.Runtime.ForgetPendingSkillCommand.Equals(Convergence.Runtime.RuntimeSkillChoiceCommand? other) -> bool
+override sealed Convergence.Runtime.ReplacePendingSkillCommand.Equals(Convergence.Runtime.RuntimeSkillChoiceCommand? other) -> bool
 override sealed Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.Equals(Convergence.Execution.BattleTurnEconomySnapshot? other) -> bool
 static Convergence.Battle.AilmentResistanceResolver.Resolve(Convergence.Battle.CombatDefenseProfile! defenseProfile, Convergence.Content.ContentId ailmentId) -> Convergence.Content.ResistanceLevel
 static Convergence.Battle.CombatDefenseProfile.Empty.get -> Convergence.Battle.CombatDefenseProfile!
@@ -9232,6 +9488,8 @@ static Convergence.Runtime.EncounterStartRequest.operator !=(Convergence.Runtime
 static Convergence.Runtime.EncounterStartRequest.operator ==(Convergence.Runtime.EncounterStartRequest? left, Convergence.Runtime.EncounterStartRequest? right) -> bool
 static Convergence.Runtime.EquipmentTransitionResult.operator !=(Convergence.Runtime.EquipmentTransitionResult? left, Convergence.Runtime.EquipmentTransitionResult? right) -> bool
 static Convergence.Runtime.EquipmentTransitionResult.operator ==(Convergence.Runtime.EquipmentTransitionResult? left, Convergence.Runtime.EquipmentTransitionResult? right) -> bool
+static Convergence.Runtime.ForgetPendingSkillCommand.operator !=(Convergence.Runtime.ForgetPendingSkillCommand? left, Convergence.Runtime.ForgetPendingSkillCommand? right) -> bool
+static Convergence.Runtime.ForgetPendingSkillCommand.operator ==(Convergence.Runtime.ForgetPendingSkillCommand? left, Convergence.Runtime.ForgetPendingSkillCommand? right) -> bool
 static Convergence.Runtime.GrowthRulesetServices.operator !=(Convergence.Runtime.GrowthRulesetServices? left, Convergence.Runtime.GrowthRulesetServices? right) -> bool
 static Convergence.Runtime.GrowthRulesetServices.operator ==(Convergence.Runtime.GrowthRulesetServices? left, Convergence.Runtime.GrowthRulesetServices? right) -> bool
 static Convergence.Runtime.HospitalRestorationResult.operator !=(Convergence.Runtime.HospitalRestorationResult? left, Convergence.Runtime.HospitalRestorationResult? right) -> bool
@@ -9261,6 +9519,8 @@ static Convergence.Runtime.ReplaceCompanionRequest.operator !=(Convergence.Runti
 static Convergence.Runtime.ReplaceCompanionRequest.operator ==(Convergence.Runtime.ReplaceCompanionRequest? left, Convergence.Runtime.ReplaceCompanionRequest? right) -> bool
 static Convergence.Runtime.ReplaceHostedEntityRequest.operator !=(Convergence.Runtime.ReplaceHostedEntityRequest? left, Convergence.Runtime.ReplaceHostedEntityRequest? right) -> bool
 static Convergence.Runtime.ReplaceHostedEntityRequest.operator ==(Convergence.Runtime.ReplaceHostedEntityRequest? left, Convergence.Runtime.ReplaceHostedEntityRequest? right) -> bool
+static Convergence.Runtime.ReplacePendingSkillCommand.operator !=(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
+static Convergence.Runtime.ReplacePendingSkillCommand.operator ==(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
 static Convergence.Runtime.ResourceManagementRulesetServices.operator !=(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
 static Convergence.Runtime.ResourceManagementRulesetServices.operator ==(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
 static Convergence.Runtime.ResourceRecalculationRequest.operator !=(Convergence.Runtime.ResourceRecalculationRequest? left, Convergence.Runtime.ResourceRecalculationRequest? right) -> bool
@@ -9361,6 +9621,10 @@ static Convergence.Runtime.RuntimeKnowledgeSnapshot.operator !=(Convergence.Runt
 static Convergence.Runtime.RuntimeKnowledgeSnapshot.operator ==(Convergence.Runtime.RuntimeKnowledgeSnapshot? left, Convergence.Runtime.RuntimeKnowledgeSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeLevelGrowthProfile.operator !=(Convergence.Runtime.RuntimeLevelGrowthProfile? left, Convergence.Runtime.RuntimeLevelGrowthProfile? right) -> bool
 static Convergence.Runtime.RuntimeLevelGrowthProfile.operator ==(Convergence.Runtime.RuntimeLevelGrowthProfile? left, Convergence.Runtime.RuntimeLevelGrowthProfile? right) -> bool
+static Convergence.Runtime.RuntimeMoveListCapacityAssessment.operator !=(Convergence.Runtime.RuntimeMoveListCapacityAssessment? left, Convergence.Runtime.RuntimeMoveListCapacityAssessment? right) -> bool
+static Convergence.Runtime.RuntimeMoveListCapacityAssessment.operator ==(Convergence.Runtime.RuntimeMoveListCapacityAssessment? left, Convergence.Runtime.RuntimeMoveListCapacityAssessment? right) -> bool
+static Convergence.Runtime.RuntimeMoveListCapacityRequest.operator !=(Convergence.Runtime.RuntimeMoveListCapacityRequest? left, Convergence.Runtime.RuntimeMoveListCapacityRequest? right) -> bool
+static Convergence.Runtime.RuntimeMoveListCapacityRequest.operator ==(Convergence.Runtime.RuntimeMoveListCapacityRequest? left, Convergence.Runtime.RuntimeMoveListCapacityRequest? right) -> bool
 static Convergence.Runtime.RuntimeMutationDiagnostic.operator !=(Convergence.Runtime.RuntimeMutationDiagnostic? left, Convergence.Runtime.RuntimeMutationDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeMutationDiagnostic.operator ==(Convergence.Runtime.RuntimeMutationDiagnostic? left, Convergence.Runtime.RuntimeMutationDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeMutationResult.operator !=(Convergence.Runtime.RuntimeMutationResult? left, Convergence.Runtime.RuntimeMutationResult? right) -> bool
@@ -9386,6 +9650,8 @@ static Convergence.Runtime.RuntimePassiveActivationSnapshot.operator !=(Converge
 static Convergence.Runtime.RuntimePassiveActivationSnapshot.operator ==(Convergence.Runtime.RuntimePassiveActivationSnapshot? left, Convergence.Runtime.RuntimePassiveActivationSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePassiveSkillStateSnapshot.operator !=(Convergence.Runtime.RuntimePassiveSkillStateSnapshot? left, Convergence.Runtime.RuntimePassiveSkillStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePassiveSkillStateSnapshot.operator ==(Convergence.Runtime.RuntimePassiveSkillStateSnapshot? left, Convergence.Runtime.RuntimePassiveSkillStateSnapshot? right) -> bool
+static Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.operator !=(Convergence.Runtime.RuntimePendingSkillChoiceSnapshot? left, Convergence.Runtime.RuntimePendingSkillChoiceSnapshot? right) -> bool
+static Convergence.Runtime.RuntimePendingSkillChoiceSnapshot.operator ==(Convergence.Runtime.RuntimePendingSkillChoiceSnapshot? left, Convergence.Runtime.RuntimePendingSkillChoiceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeProgressionSnapshot.operator !=(Convergence.Runtime.RuntimeProgressionSnapshot? left, Convergence.Runtime.RuntimeProgressionSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeProgressionSnapshot.operator ==(Convergence.Runtime.RuntimeProgressionSnapshot? left, Convergence.Runtime.RuntimeProgressionSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeResourceSnapshot.operator !=(Convergence.Runtime.RuntimeResourceSnapshot? left, Convergence.Runtime.RuntimeResourceSnapshot? right) -> bool
@@ -9427,8 +9693,30 @@ static Convergence.Runtime.RuntimeShopOfferResolutionResult.operator !=(Converge
 static Convergence.Runtime.RuntimeShopOfferResolutionResult.operator ==(Convergence.Runtime.RuntimeShopOfferResolutionResult? left, Convergence.Runtime.RuntimeShopOfferResolutionResult? right) -> bool
 static Convergence.Runtime.RuntimeShopOfferSnapshot.operator !=(Convergence.Runtime.RuntimeShopOfferSnapshot? left, Convergence.Runtime.RuntimeShopOfferSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeShopOfferSnapshot.operator ==(Convergence.Runtime.RuntimeShopOfferSnapshot? left, Convergence.Runtime.RuntimeShopOfferSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceCommand.operator !=(Convergence.Runtime.RuntimeSkillChoiceCommand? left, Convergence.Runtime.RuntimeSkillChoiceCommand? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceCommand.operator ==(Convergence.Runtime.RuntimeSkillChoiceCommand? left, Convergence.Runtime.RuntimeSkillChoiceCommand? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceDiagnostic.operator !=(Convergence.Runtime.RuntimeSkillChoiceDiagnostic? left, Convergence.Runtime.RuntimeSkillChoiceDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceDiagnostic.operator ==(Convergence.Runtime.RuntimeSkillChoiceDiagnostic? left, Convergence.Runtime.RuntimeSkillChoiceDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceToken.operator !=(Convergence.Runtime.RuntimeSkillChoiceToken left, Convergence.Runtime.RuntimeSkillChoiceToken right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceToken.operator ==(Convergence.Runtime.RuntimeSkillChoiceToken left, Convergence.Runtime.RuntimeSkillChoiceToken right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.operator !=(Convergence.Runtime.RuntimeSkillChoiceTransactionRequest? left, Convergence.Runtime.RuntimeSkillChoiceTransactionRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceTransactionRequest.operator ==(Convergence.Runtime.RuntimeSkillChoiceTransactionRequest? left, Convergence.Runtime.RuntimeSkillChoiceTransactionRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceTransactionResult.operator !=(Convergence.Runtime.RuntimeSkillChoiceTransactionResult? left, Convergence.Runtime.RuntimeSkillChoiceTransactionResult? right) -> bool
+static Convergence.Runtime.RuntimeSkillChoiceTransactionResult.operator ==(Convergence.Runtime.RuntimeSkillChoiceTransactionResult? left, Convergence.Runtime.RuntimeSkillChoiceTransactionResult? right) -> bool
+static Convergence.Runtime.RuntimeSkillReplacementRequest.operator !=(Convergence.Runtime.RuntimeSkillReplacementRequest? left, Convergence.Runtime.RuntimeSkillReplacementRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillReplacementRequest.operator ==(Convergence.Runtime.RuntimeSkillReplacementRequest? left, Convergence.Runtime.RuntimeSkillReplacementRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillReplacementResult.operator !=(Convergence.Runtime.RuntimeSkillReplacementResult? left, Convergence.Runtime.RuntimeSkillReplacementResult? right) -> bool
+static Convergence.Runtime.RuntimeSkillReplacementResult.operator ==(Convergence.Runtime.RuntimeSkillReplacementResult? left, Convergence.Runtime.RuntimeSkillReplacementResult? right) -> bool
 static Convergence.Runtime.RuntimeSkillStateSnapshot.operator !=(Convergence.Runtime.RuntimeSkillStateSnapshot? left, Convergence.Runtime.RuntimeSkillStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeSkillStateSnapshot.operator ==(Convergence.Runtime.RuntimeSkillStateSnapshot? left, Convergence.Runtime.RuntimeSkillStateSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.operator !=(Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic? left, Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic.operator ==(Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic? left, Convergence.Runtime.RuntimeSkillUnlockPlanDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanEntry.operator !=(Convergence.Runtime.RuntimeSkillUnlockPlanEntry? left, Convergence.Runtime.RuntimeSkillUnlockPlanEntry? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanEntry.operator ==(Convergence.Runtime.RuntimeSkillUnlockPlanEntry? left, Convergence.Runtime.RuntimeSkillUnlockPlanEntry? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanRequest.operator !=(Convergence.Runtime.RuntimeSkillUnlockPlanRequest? left, Convergence.Runtime.RuntimeSkillUnlockPlanRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanRequest.operator ==(Convergence.Runtime.RuntimeSkillUnlockPlanRequest? left, Convergence.Runtime.RuntimeSkillUnlockPlanRequest? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanResult.operator !=(Convergence.Runtime.RuntimeSkillUnlockPlanResult? left, Convergence.Runtime.RuntimeSkillUnlockPlanResult? right) -> bool
+static Convergence.Runtime.RuntimeSkillUnlockPlanResult.operator ==(Convergence.Runtime.RuntimeSkillUnlockPlanResult? left, Convergence.Runtime.RuntimeSkillUnlockPlanResult? right) -> bool
 static Convergence.Runtime.RuntimeStatBlockSnapshot.operator !=(Convergence.Runtime.RuntimeStatBlockSnapshot? left, Convergence.Runtime.RuntimeStatBlockSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeStatBlockSnapshot.operator ==(Convergence.Runtime.RuntimeStatBlockSnapshot? left, Convergence.Runtime.RuntimeStatBlockSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeStatStageSnapshot.operator !=(Convergence.Runtime.RuntimeStatStageSnapshot? left, Convergence.Runtime.RuntimeStatStageSnapshot? right) -> bool
@@ -9553,3 +9841,6 @@ virtual Convergence.Execution.BattleTurnEconomySnapshot.EqualityContract.get -> 
 virtual Convergence.Execution.BattleTurnEconomySnapshot.Equals(Convergence.Execution.BattleTurnEconomySnapshot? other) -> bool
 virtual Convergence.Execution.BattleTurnEconomySnapshot.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual Convergence.Execution.PartyRosterBattleActionCommand.Equals(Convergence.Execution.PartyRosterBattleActionCommand? other) -> bool
+virtual Convergence.Runtime.RuntimeSkillChoiceCommand.EqualityContract.get -> System.Type!
+virtual Convergence.Runtime.RuntimeSkillChoiceCommand.Equals(Convergence.Runtime.RuntimeSkillChoiceCommand? other) -> bool
+virtual Convergence.Runtime.RuntimeSkillChoiceCommand.PrintMembers(System.Text.StringBuilder! builder) -> bool

@@ -41,11 +41,16 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         LevelGrowthResult growth = AppliedGrowth(before, customEffectiveStat: 19m);
+        var skills = new SkillRepository();
 
         RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(
-            new RuntimeActorCombatProfileCompositionService(new SkillRepository())).Apply(
+            new RuntimeActorCombatProfileCompositionService(skills),
+            skills).Apply(
             new RuntimeActorGrowthCompositionRequest(
+                vessel,
+                Entity(vessel),
                 growth,
+                new SharedRuntimeMoveListCapacityPolicy(),
                 new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
@@ -63,7 +68,7 @@ public sealed class RuntimeActorGrowthCompositionTests
         Assert.Equal(19m, vessel.Stats[Focus]);
         Assert.Equal(56m, vessel.GetRequiredResource(StandardProgressionIds.Hp).Current);
         Assert.Equal(126m, vessel.GetRequiredResource(StandardProgressionIds.Hp).Maximum);
-        Assert.Equal(vessel.ToSnapshot().Progression, result.After.Progression);
+        Assert.Equal(vessel.ToSnapshot().Progression, result.ComposedActorAfter.Progression);
     }
 
     [Fact]
@@ -74,11 +79,16 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         LevelGrowthResult growth = AppliedGrowth(before, customEffectiveStat: 19m);
-        var service = new RuntimeActorGrowthCompositionService(new RejectingCompositionService());
+        var service = new RuntimeActorGrowthCompositionService(
+            new RejectingCompositionService(),
+            new SkillRepository());
 
         RuntimeActorGrowthCompositionResult result = service.Apply(
             new RuntimeActorGrowthCompositionRequest(
+                vessel,
+                Entity(vessel),
                 growth,
+                new SharedRuntimeMoveListCapacityPolicy(),
                 new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
@@ -95,7 +105,7 @@ public sealed class RuntimeActorGrowthCompositionTests
             RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected,
             Assert.Single(result.Diagnostics).Code);
         AssertActorStateEqual(before, vessel.ToSnapshot());
-        AssertActorStateEqual(before, result.After);
+        AssertActorStateEqual(before, result.ComposedActorAfter);
     }
 
     [Fact]
@@ -114,10 +124,16 @@ public sealed class RuntimeActorGrowthCompositionTests
                     "Rejected for the transaction test.")
             ]);
         var composition = new CountingCompositionService();
+        var skills = new SkillRepository();
 
-        RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(composition).Apply(
+        RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(
+            composition,
+            skills).Apply(
             new RuntimeActorGrowthCompositionRequest(
+                vessel,
+                Entity(vessel),
                 rejectedGrowth,
+                new SharedRuntimeMoveListCapacityPolicy(),
                 new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.Actor,
@@ -216,6 +232,21 @@ public sealed class RuntimeActorGrowthCompositionTests
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
         new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);
+
+    private static EntityDefinition Entity(RuntimeActorState actor) =>
+        new(
+            actor.EntityId,
+            actor.Identity.DisplayName,
+            "Growth composition fixture.",
+            actor.Identity.ActorKindId,
+            ContentId.Parse("test_race"),
+            rank: 1,
+            baseLevel: 1,
+            new EntityCapabilitiesDefinition(false, false, false),
+            new EntityInheritanceRulesDefinition(
+                new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList)),
+            actor.BaseStats.Select(pair =>
+                new KeyValuePair<ContentId, int>(pair.Key, checked((int)pair.Value))));
 
     private static void AssertActorStateEqual(RuntimeActorSnapshot expected, RuntimeActorSnapshot actual)
     {

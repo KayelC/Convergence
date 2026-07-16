@@ -43,6 +43,28 @@ Resources are addressed by `ContentId`; HP and SP are conventional registrations
 
 Negative experience and invalid allocations are rejected without mutation. Stat allocation checks available points and caps before applying. Rollback restores the prior base stats and points, then recalculates resources through the same policy.
 
+Authored skill unlocks are evaluated whenever an owned actor crosses one or
+more levels. `IRuntimeSkillUnlockPlanner` preserves authored order, ignores
+duplicates and already-known skills, and asks an injected
+`IRuntimeMoveListCapacityPolicy` whether each newly available skill can enter
+the equipped move list. The supplied shared policy permits eight active and
+passive skills in one list. Games may inject separate active/passive capacities
+or a role-specific policy.
+
+When capacity is available, the skill is learned and equipped in the same
+growth transaction. When the list is full, the owned actor retains an immutable
+pending choice identified by a typed token. A later transaction either replaces
+an equipped skill or forgets the new skill. Commands carry the expected actor
+level and skill-state revision, so stale menus cannot overwrite newer
+progression. The standard replacement policy removes the old skill from both
+learned and equipped lists; games with loadout editing may inject the supplied
+retention policy or their own implementation.
+
+For a Vessel, growth and skill decisions mutate the owned Hosted Entity first,
+then atomically recompose the acting Vessel's move list and passive collection.
+Pending choices remain owned by the Hosted Entity and are not copied into the
+derived Vessel combat profile.
+
 ## Player-Facing Expectations
 
 - A displayed level or stat comes from the current runtime snapshot, not from descriptive text.

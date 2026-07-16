@@ -209,14 +209,27 @@ public sealed record RuntimeSkillStateSnapshot
 {
     public RuntimeSkillStateSnapshot(
         IEnumerable<ContentId>? learnedSkillIds = null,
-        IEnumerable<ContentId>? equippedSkillIds = null)
+        IEnumerable<ContentId>? equippedSkillIds = null,
+        IEnumerable<RuntimePendingSkillChoiceSnapshot>? pendingChoices = null,
+        long revision = 0)
     {
+        if (revision < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(revision),
+                "Skill-state revision cannot be negative.");
+        }
+
         LearnedSkillIds = RuntimeSnapshotCollections.List(learnedSkillIds);
         EquippedSkillIds = RuntimeSnapshotCollections.List(equippedSkillIds);
+        PendingChoices = RuntimeSnapshotCollections.List(pendingChoices);
+        Revision = revision;
     }
 
     public IReadOnlyList<ContentId> LearnedSkillIds { get; }
     public IReadOnlyList<ContentId> EquippedSkillIds { get; }
+    public IReadOnlyList<RuntimePendingSkillChoiceSnapshot> PendingChoices { get; }
+    public long Revision { get; }
 }
 
 public sealed record RuntimeActorReferenceSnapshot

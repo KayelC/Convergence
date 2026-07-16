@@ -88,7 +88,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(source.DocumentRequests, summary.RequestedDocumentPaths);
         Assert.Equal(Qualified("echo_adept"), summary.PlayerEntityId);
         Assert.Equal(StandardProgressionIds.Vessel, summary.PlayerActorKindId);
-        Assert.Equal(4, summary.PlayerLevel);
+        Assert.Equal(3, summary.PlayerLevel);
+        Assert.Equal(6, summary.ActiveHostedEntityProgression?.Level);
         Assert.Equal(10, summary.ActorCount);
         Assert.Equal(3, summary.EnemyActorCount);
         Assert.Equal(
@@ -148,14 +149,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
             resource.ResourceId == ContentId.Parse("hp"));
         RuntimeResourceSnapshot sp = Assert.Single(summary.PlayerResources, resource =>
             resource.ResourceId == ContentId.Parse("sp"));
-        Assert.Equal(76, hp.Current);
-        Assert.Equal(86, hp.Maximum);
-        Assert.Equal(43, sp.Current);
-        Assert.Equal(43, sp.Maximum);
-        Assert.Equal(4, summary.PlayerProgression.Level);
+        Assert.Equal(70, hp.Current);
+        Assert.Equal(80, hp.Maximum);
+        Assert.Equal(40, sp.Current);
+        Assert.Equal(40, sp.Maximum);
+        Assert.Equal(3, summary.PlayerProgression.Level);
         Assert.Equal(0, summary.PlayerProgression.Experience);
-        Assert.Equal(40, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(0, summary.PlayerProgression.UnspentStatPoints);
+        Assert.Equal(6, summary.ActiveHostedEntityProgression?.Level);
         Assert.True(summary.StatResolutionPreviewed);
         Assert.Equal(3, Resolved(summary, "strength").FinalValue);
         Assert.Equal(8, Resolved(summary, "magic").FinalValue);
@@ -163,7 +165,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(4, Resolved(summary, "agility").FinalValue);
         Assert.Equal(6, Resolved(summary, "luck").FinalValue);
         Assert.Equal(6m, summary.PlayerStats.BaseStats[StandardProgressionIds.Strength]);
-        Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
+        Assert.Equal(4m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
         Assert.Equal(8m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Magic]);
         Assert.Equal(activeHostedEntity, summary.PartyRoster.ActiveHostedEntity);
         Assert.True(summary.ResourceRecalculationApplied);
@@ -322,9 +324,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Stage policy: attack +1 resolves physical x1.25 and magical x1.25.", text, StringComparison.Ordinal);
         Assert.Contains("Resource recalculation: Echo Adept hp 80/80 -> 70/80.", text, StringComparison.Ordinal);
         Assert.Contains("Resource policy: standard_growth preserved current hp and recalculated maximum 80.", text, StringComparison.Ordinal);
-        Assert.Contains("Victory EXP: awarded 40 EXP through standard_growth.", text, StringComparison.Ordinal);
-        Assert.Contains("Growth result: Echo Adept level 3->4; exp 0->0; lifetime 0->40; stat points 0->0.", text, StringComparison.Ordinal);
-        Assert.Contains("Level-up events: 4.", text, StringComparison.Ordinal);
+        Assert.Contains("Victory EXP: awarded 187 EXP through standard_growth.", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Growth result: Annex Mentor level 5->6; exp 0->0; lifetime 0->187; " +
+            "Vessel profile source hosted_annex_mentor.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Vessel combat profile: Echo Adept remains level 3 and now exposes 6 equipped skill(s).",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains("Level-up events: 6.", text, StringComparison.Ordinal);
         Assert.Contains("Startup snapshot validation: 0 diagnostic(s).", text, StringComparison.Ordinal);
         Assert.Contains("Clean Training Annex session exited.", text, StringComparison.Ordinal);
     }
@@ -1626,8 +1636,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(14, walletTransaction.After.Balance);
         Assert.True(summary.GrowthApplied);
         Assert.Equal(0, summary.LevelUpCount);
-        Assert.Equal(1, summary.PlayerProgression.Experience);
-        Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(1, summary.ActiveHostedEntityProgression?.Experience);
+        Assert.Equal(1, summary.ActiveHostedEntityProgression?.LifetimeExperience);
         Assert.Equal(14, summary.Wallet.Balance);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_exp")]);
@@ -1643,7 +1655,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Battle action executed: Ashling used Ash Spark.", text, StringComparison.Ordinal);
         Assert.Contains("Clean battle ended: Victory; winner player_team.", text, StringComparison.Ordinal);
         Assert.Contains("Battle rewards applied: +1 EXP, +14 Credits.", text, StringComparison.Ordinal);
-        Assert.Contains("Reward progression: Echo Adept level 3->3; exp 0->1; lifetime 0->1; wallet 0->14.", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Reward progression: Annex Mentor level 5->5; exp 0->1; lifetime 0->1; " +
+            "Vessel Echo Adept remains level 3; wallet 0->14.",
+            text,
+            StringComparison.Ordinal);
         Assert.Equal("Start Prepared Battle", io.Menus[3].Options[10]);
         Assert.Equal("Prepared Battle (Resolved)", io.Menus[^1].Options[10]);
         Assert.True(io.Menus[^1].DisabledOptions[10]);
@@ -3254,14 +3270,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.Inventory.GetQuantity(annexTonic));
         Assert.Equal(0, summary.Inventory.GetQuantity(focusTea));
         Assert.Equal([Qualified("mend"), focusTea], summary.ExecutedFieldActionIds);
-        Assert.Equal(86, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
-        Assert.Equal(43, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
+        Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
+        Assert.Equal(40, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
         GameIoMenuCall itemMenu = Assert.Single(io.Menus, menu => menu.Header == "Clean Inventory");
         Assert.Equal(["Annex Tonic x1", "Focus Tea x1", "Back"], itemMenu.Options);
         string text = output.ToString();
         Assert.Contains("Inventory: Annex Tonic x1, Focus Tea x1.", text, StringComparison.Ordinal);
         Assert.Contains(
-            "Field action executed: Focus Tea; HP 86->86/86; SP 41->43/43; inventory convergence.training_annex_slice:focus_tea x0.",
+            "Field action executed: Focus Tea; HP 80->80/80; SP 38->40/40; inventory convergence.training_annex_slice:focus_tea x0.",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -3344,10 +3360,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal([Qualified("mend")], summary.ExecutedFieldActionIds);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(86, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
-        Assert.Equal(41, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
+        Assert.Equal(80, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("hp")).Current);
+        Assert.Equal(38, Assert.Single(summary.PlayerResources, resource => resource.ResourceId == ContentId.Parse("sp")).Current);
         Assert.Contains(
-            "Field action executed: Mend; HP 76->86/86; SP 43->41/43; inventory unchanged.",
+            "Field action executed: Mend; HP 70->80/80; SP 40->38/40; inventory unchanged.",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -3836,10 +3852,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
+        RuntimePartyRosterSnapshot partyRoster =
+            new TrainingAnnexPartyController().CreateInitialParty(roster).Snapshot;
         GrowthRulesetServices growthServices = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
-        RuntimeActorSnapshot before = roster.Player.Actor.State.ToSnapshot();
+        TrainingAnnexRuntimeActor growthActor = roster.OwnedActors.Single(actor =>
+            actor.Actor.State.InstanceId == partyRoster.ActiveHostedEntity?.InstanceId);
+        RuntimeActorSnapshot before = growthActor.Actor.State.ToSnapshot();
         var reward = new BattleRewardResult(100, 50);
         using var output = new StringWriter();
         var applicator = new TrainingAnnexBattleRewardApplicator(
@@ -3847,15 +3867,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new TrainingAnnexMinimumRandomSource());
 
         TrainingAnnexBattleRewardApplication result = await applicator.ApplyAsync(
-            roster.Player,
+            roster,
+            partyRoster,
             reward,
             growthServices,
+            new RuntimeActorCombatProfileCompositionService(catalog),
+            catalog,
+            new RuntimeEquipmentProfile(),
             new RejectingEconomyTransactionService(),
             new RuntimeWalletSnapshot(0),
             CancellationToken.None);
 
         Assert.False(result.Applied);
-        Assert.Equal(before.Progression, roster.Player.Actor.State.ToSnapshot().Progression);
+        Assert.Equal(before.Progression, growthActor.Actor.State.ToSnapshot().Progression);
         Assert.Equal(0, result.Wallet.Balance);
         Assert.False(result.WalletTransaction.Applied);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.WalletTransaction.Code);
@@ -3919,8 +3943,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.ManualLoadCount);
         Assert.True(summary.HasManualSave);
         Assert.Equal(BattleEncounterOutcome.Victory, summary.PreparedBattleOutcome);
-        Assert.Equal(1, summary.PlayerProgression.Experience);
-        Assert.Equal(1, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(0, summary.PlayerProgression.Experience);
+        Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
+        Assert.Equal(1, summary.ActiveHostedEntityProgression?.Experience);
+        Assert.Equal(1, summary.ActiveHostedEntityProgression?.LifetimeExperience);
         Assert.Equal(14, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(70, Resource(summary, "hp").Current);

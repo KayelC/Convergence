@@ -12,6 +12,9 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateLearnedSkill,
     DuplicateEquippedSkill,
     EquippedSkillNotLearned,
+    DuplicatePendingSkillChoiceToken,
+    DuplicatePendingSkill,
+    PendingSkillAlreadyLearned,
     DuplicateCapability,
     DuplicateAilment,
     MissingAilmentDefinition,
@@ -112,6 +115,37 @@ internal static class RuntimeActorSnapshotIntegrity
                 $"Equipped skill '{skillId}' is not present in the actor's learned skills.",
                 $"$.skills.equippedSkillIds[{index}]",
                 skillId));
+        }
+
+        ValidateUnique(
+            snapshot.Skills.PendingChoices,
+            choice => choice.Token,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePendingSkillChoiceToken,
+            "$.skills.pendingChoices",
+            "pending skill-choice token",
+            _ => null,
+            diagnostics);
+        ValidateUnique(
+            snapshot.Skills.PendingChoices,
+            choice => choice.SkillId,
+            RuntimeActorSnapshotIntegrityCode.DuplicatePendingSkill,
+            "$.skills.pendingChoices",
+            "pending skill",
+            key => key,
+            diagnostics);
+        for (int index = 0; index < snapshot.Skills.PendingChoices.Count; index++)
+        {
+            RuntimePendingSkillChoiceSnapshot choice = snapshot.Skills.PendingChoices[index];
+            if (!learnedSkillIds.Contains(choice.SkillId))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                RuntimeActorSnapshotIntegrityCode.PendingSkillAlreadyLearned,
+                $"Pending skill '{choice.SkillId}' is already learned.",
+                $"$.skills.pendingChoices[{index}].skillId",
+                choice.SkillId));
         }
 
         ValidateUnique(
@@ -332,6 +366,13 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidateContentIdKeys(snapshot.Stats.EffectiveStats.Keys, "$.stats.effectiveStats", diagnostics);
         ValidateContentIds(snapshot.Skills.LearnedSkillIds, "$.skills.learnedSkillIds", diagnostics);
         ValidateContentIds(snapshot.Skills.EquippedSkillIds, "$.skills.equippedSkillIds", diagnostics);
+        for (int index = 0; index < snapshot.Skills.PendingChoices.Count; index++)
+        {
+            ValidateContentId(
+                snapshot.Skills.PendingChoices[index].SkillId,
+                $"$.skills.pendingChoices[{index}].skillId",
+                diagnostics);
+        }
         ValidateContentIds(snapshot.CapabilityIds, "$.capabilityIds", diagnostics);
 
         foreach ((EquipmentSlot slot, ContentId equipmentId) in snapshot.Equipment.EquippedItemIds)

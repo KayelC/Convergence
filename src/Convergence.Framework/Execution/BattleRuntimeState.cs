@@ -194,6 +194,22 @@ public sealed class RuntimeActorState
         Equipment = equipment ?? new RuntimeEquipmentSnapshot();
         RequireValid(Skills.LearnedSkillIds, nameof(skillState));
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
+        if (Skills.LearnedSkillIds.Distinct().Count() != Skills.LearnedSkillIds.Count ||
+            Skills.EquippedSkillIds.Distinct().Count() != Skills.EquippedSkillIds.Count ||
+            Skills.EquippedSkillIds.Except(Skills.LearnedSkillIds).Any() ||
+            Skills.PendingChoices.Any(choice =>
+                !choice.Token.IsValid || !choice.SkillId.IsValid) ||
+            Skills.PendingChoices.Select(choice => choice.Token).Distinct().Count() !=
+            Skills.PendingChoices.Count ||
+            Skills.PendingChoices.Select(choice => choice.SkillId).Distinct().Count() !=
+            Skills.PendingChoices.Count ||
+            Skills.PendingChoices.Any(choice =>
+                Skills.LearnedSkillIds.Contains(choice.SkillId)))
+        {
+            throw new ArgumentException(
+                "Runtime skill state contains duplicate, unlearned, or invalid pending entries.",
+                nameof(skillState));
+        }
         RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
         Passives = new BattlePassiveCollection(passiveSkills);
     }
@@ -932,32 +948,12 @@ public sealed class RuntimeActorState
                 resource.Current,
                 resource.Maximum))
             .ToArray();
-        ContentId[] learnedSkillIds = skills.LearnedSkillIds.ToArray();
-        ContentId[] equippedSkillIds = skills.EquippedSkillIds.ToArray();
-        RequireValid(learnedSkillIds, nameof(skills));
-        RequireValid(equippedSkillIds, nameof(skills));
-        if (learnedSkillIds.Distinct().Count() != learnedSkillIds.Length ||
-            equippedSkillIds.Distinct().Count() != equippedSkillIds.Length ||
-            equippedSkillIds.Except(learnedSkillIds).Any())
-        {
-            throw new ArgumentException(
-                "Composed skill state must contain unique learned skills and unique equipped skills that are learned.",
-                nameof(skills));
-        }
-
-        SkillDefinition[] definitions =
-            (equippedSkillDefinitions ?? throw new ArgumentNullException(nameof(equippedSkillDefinitions)))
-            .ToArray();
-        if (definitions.Any(definition => definition is null) ||
-            !definitions.Select(definition => definition.Id).SequenceEqual(equippedSkillIds))
-        {
-            throw new ArgumentException(
-                "Equipped skill definitions must match the composed equipped-skill order.",
-                nameof(equippedSkillDefinitions));
-        }
-        var nextPassives = new BattlePassiveCollection(
-            definitions.Where(definition => definition.Activation == SkillActivation.Passive));
-        var nextSkillState = new RuntimeSkillStateSnapshot(learnedSkillIds, equippedSkillIds);
+        PrepareSkillState(
+            skills,
+            equippedSkillDefinitions,
+            out RuntimeSkillStateSnapshot nextSkillState,
+            out ContentId[] equippedSkillIds,
+            out BattlePassiveCollection nextPassives);
 
         _resources.Clear();
         foreach (BattleResourceState resource in nextResources)
@@ -967,6 +963,23 @@ public sealed class RuntimeActorState
 
         _effectiveStats = nextEffectiveStats;
         DefenseProfile = defenseProfile;
+        Skills = nextSkillState;
+        _skillIds.Clear();
+        _skillIds.UnionWith(equippedSkillIds);
+        Passives.ReplaceFrom(nextPassives);
+    }
+
+    internal void ApplySkillState(
+        RuntimeSkillStateSnapshot skills,
+        IEnumerable<SkillDefinition> equippedSkillDefinitions)
+    {
+        PrepareSkillState(
+            skills,
+            equippedSkillDefinitions,
+            out RuntimeSkillStateSnapshot nextSkillState,
+            out ContentId[] equippedSkillIds,
+            out BattlePassiveCollection nextPassives);
+
         Skills = nextSkillState;
         _skillIds.Clear();
         _skillIds.UnionWith(equippedSkillIds);
@@ -999,6 +1012,57 @@ public sealed class RuntimeActorState
         {
             _resources.Add(resource.Id, resource);
         }
+    }
+
+    private static void PrepareSkillState(
+        RuntimeSkillStateSnapshot skills,
+        IEnumerable<SkillDefinition> equippedSkillDefinitions,
+        out RuntimeSkillStateSnapshot nextSkillState,
+        out ContentId[] equippedSkillIds,
+        out BattlePassiveCollection nextPassives)
+    {
+        ArgumentNullException.ThrowIfNull(skills);
+        ContentId[] learnedSkillIds = skills.LearnedSkillIds.ToArray();
+        equippedSkillIds = skills.EquippedSkillIds.ToArray();
+        RuntimePendingSkillChoiceSnapshot[] pendingChoices =
+            skills.PendingChoices.ToArray();
+        RequireValid(learnedSkillIds, nameof(skills));
+        RequireValid(equippedSkillIds, nameof(skills));
+        if (learnedSkillIds.Distinct().Count() != learnedSkillIds.Length ||
+            equippedSkillIds.Distinct().Count() != equippedSkillIds.Length ||
+            equippedSkillIds.Except(learnedSkillIds).Any() ||
+            pendingChoices.Any(choice => !choice.Token.IsValid || !choice.SkillId.IsValid) ||
+            pendingChoices.Select(choice => choice.Token).Distinct().Count() !=
+            pendingChoices.Length ||
+            pendingChoices.Select(choice => choice.SkillId).Distinct().Count() !=
+            pendingChoices.Length ||
+            pendingChoices.Any(choice => learnedSkillIds.Contains(choice.SkillId)))
+        {
+            throw new ArgumentException(
+                "Skill state must contain unique learned and equipped skills, equipped skills " +
+                "must be learned, and pending choices must be unique and unlearned.",
+                nameof(skills));
+        }
+
+        SkillDefinition[] definitions =
+            (equippedSkillDefinitions ??
+             throw new ArgumentNullException(nameof(equippedSkillDefinitions)))
+            .ToArray();
+        if (definitions.Any(definition => definition is null) ||
+            !definitions.Select(definition => definition.Id).SequenceEqual(equippedSkillIds))
+        {
+            throw new ArgumentException(
+                "Equipped skill definitions must match the equipped-skill order.",
+                nameof(equippedSkillDefinitions));
+        }
+
+        nextSkillState = new RuntimeSkillStateSnapshot(
+            learnedSkillIds,
+            equippedSkillIds,
+            pendingChoices,
+            skills.Revision);
+        nextPassives = new BattlePassiveCollection(
+            definitions.Where(definition => definition.Activation == SkillActivation.Passive));
     }
 
     internal void RestoreBattleStatus(

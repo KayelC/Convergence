@@ -268,21 +268,40 @@ internal sealed class CleanTrainingAnnexDemoHost
         BattleRewardResult reward = rewardService.Calculate(new BattleRewardRequest(
             [EnemyRewardSnapshot(ashling.Entity, ashlingRequest.Level)],
             [new BattleRewardRecipientSnapshot(echo.Entity.Id, IsAlive: !echo.State.IsDefeated, HasActiveHostedEntity: true)]));
-        RuntimeActorSnapshot beforeGrowth = echo.State.ToSnapshot();
+        RuntimeActorReferenceSnapshot activeReference = partyRoster.ActiveHostedEntity ??
+            throw new InvalidOperationException(
+                "Training Annex demo requires an active Hosted Entity.");
+        TrainingAnnexRuntimeActor growthActor = roster.AllActors.Single(actor =>
+            actor.Actor.State.InstanceId == activeReference.InstanceId);
+        RuntimeActorSnapshot beforeGrowth = growthActor.Actor.State.ToSnapshot();
         LevelGrowthResult growth = growthServices.LevelGrowthPolicy.ApplyExperience(new LevelGrowthRequest(
             beforeGrowth.Progression,
             beforeGrowth.Stats,
-            StandardLevelGrowthProfiles.Vessel,
+            StandardLevelGrowthProfiles.OwnedEntity,
             reward.TotalExperience,
             random,
             resources: beforeGrowth.Resources,
             baseResourceValues: beforeGrowth.BaseResourceValues));
-        RuntimeMutationResult growthMutation = new RuntimeProgressionTransactionService().ApplyLevelGrowth(
-            echo.State,
-            growth);
-        if (!growthMutation.Applied)
+        var compositionService = new RuntimeActorCombatProfileCompositionService(
+            statPolicy,
+            growthServices.ResourceGrowthPolicy,
+            catalog);
+        RuntimeActorGrowthCompositionResult growthTransaction =
+            new RuntimeActorGrowthCompositionService(
+                compositionService,
+                catalog).Apply(new RuntimeActorGrowthCompositionRequest(
+                    growthActor.Actor.State,
+                    growthActor.Actor.Entity,
+                    growth,
+                    new SharedRuntimeMoveListCapacityPolicy(),
+                    TrainingAnnexHostSupport.CreatePlayerCombatProfileCompositionRequest(
+                        roster,
+                        partyRoster,
+                        new RuntimeEquipmentProfile())));
+        if (!growthTransaction.Applied)
         {
-            foreach (RuntimeMutationDiagnostic diagnostic in growthMutation.Diagnostics)
+            foreach (RuntimeActorGrowthCompositionDiagnostic diagnostic in
+                     growthTransaction.Diagnostics)
             {
                 await _eventSink.PublishAsync(
                     $"[growth:{diagnostic.Code}] {diagnostic.Message}",
@@ -291,30 +310,11 @@ internal sealed class CleanTrainingAnnexDemoHost
 
             return 5;
         }
-
-        RuntimeActorCombatProfileCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerCombatProfile(
-            roster,
-            partyRoster,
-            new RuntimeActorCombatProfileCompositionService(
-                statPolicy,
-                growthServices.ResourceGrowthPolicy,
-                catalog),
-            new RuntimeEquipmentProfile());
-        if (!composition.Applied)
-        {
-            foreach (RuntimeActorCombatProfileCompositionDiagnostic diagnostic in composition.Diagnostics)
-            {
-                await _eventSink.PublishAsync(
-                    $"[combat_profile_composition:{diagnostic.Code}] {diagnostic.Message}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return 5;
-        }
         await PrintAsync(
             sequence++,
             "reward",
-            $"Awarded {reward.TotalExperience} EXP and {reward.TotalCurrency} Credits; level {growth.Progression.Level}.",
+            $"Awarded {reward.TotalExperience} EXP and {reward.TotalCurrency} Credits; " +
+            $"{growthActor.Actor.Entity.DisplayName} level {growth.Progression.Level}.",
             cancellationToken).ConfigureAwait(false);
 
         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(

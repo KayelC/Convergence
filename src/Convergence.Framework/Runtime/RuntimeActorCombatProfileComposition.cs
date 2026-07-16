@@ -354,13 +354,20 @@ public sealed class RuntimeActorCombatProfileCompositionService :
             resolvedSkills.Add(skill);
         }
 
+        RuntimeSkillStateSnapshot composedSkills = sourceActor.InstanceId == actor.InstanceId
+            ? sourceSkills
+            : new RuntimeSkillStateSnapshot(
+                sourceSkills.LearnedSkillIds,
+                sourceSkills.EquippedSkillIds,
+                revision: sourceSkills.Revision);
+
         try
         {
             actor.ApplyCombatProfile(
                 effectiveStats,
                 resources.Resources,
                 sourceActor.DefenseProfile,
-                sourceSkills,
+                composedSkills,
                 resolvedSkills);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
@@ -421,6 +428,32 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                     message,
                     InstanceId: sourceActorId,
                     SkillId: skillId));
+            }
+        }
+
+        var pendingTokens = new HashSet<RuntimeSkillChoiceToken>();
+        var pendingSkills = new HashSet<ContentId>();
+        for (int index = 0; index < skills.PendingChoices.Count; index++)
+        {
+            RuntimePendingSkillChoiceSnapshot choice = skills.PendingChoices[index];
+            string? message = !choice.Token.IsValid
+                ? $"Pending choice at index {index} has an invalid token."
+                : !choice.SkillId.IsValid
+                    ? $"Pending choice at index {index} has an empty skill ID."
+                    : !pendingTokens.Add(choice.Token)
+                        ? $"Pending choice token '{choice.Token}' appears more than once."
+                        : !pendingSkills.Add(choice.SkillId)
+                            ? $"Pending skill '{choice.SkillId}' appears more than once."
+                            : learned.Contains(choice.SkillId)
+                                ? $"Pending skill '{choice.SkillId}' is already learned."
+                                : null;
+            if (message is not null)
+            {
+                diagnostics.Add(new RuntimeActorCombatProfileCompositionDiagnostic(
+                    RuntimeActorCombatProfileCompositionDiagnosticCode.InvalidSkillState,
+                    message,
+                    InstanceId: sourceActorId,
+                    SkillId: choice.SkillId));
             }
         }
 
