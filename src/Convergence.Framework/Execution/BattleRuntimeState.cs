@@ -138,7 +138,6 @@ public sealed class RuntimeActorState
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
         RuntimeSkillStateSnapshot? skillState = null,
-        RuntimeActorRosterSnapshot? rosters = null,
         RuntimeEquipmentSnapshot? equipment = null)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
@@ -198,12 +197,10 @@ public sealed class RuntimeActorState
         RequireValid(_skillIds, nameof(skillIds));
         RequireValid(_capabilityIds, nameof(capabilityIds));
         Skills = skillState ?? new RuntimeSkillStateSnapshot(_skillIds, _skillIds);
-        Rosters = rosters ?? new RuntimeActorRosterSnapshot();
         Equipment = equipment ?? new RuntimeEquipmentSnapshot();
         RequireValid(Skills.LearnedSkillIds, nameof(skillState));
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
         RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
-        RequireValidRoster(Rosters, nameof(rosters));
         Passives = new BattlePassiveCollection(passiveSkills);
         _isActive = Deployment.IsActive;
     }
@@ -258,7 +255,6 @@ public sealed class RuntimeActorState
             snapshot.BaseResourceValues,
             snapshot.Stats.BaseStats,
             snapshot.Skills,
-            snapshot.Rosters,
             snapshot.Equipment);
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
@@ -275,7 +271,6 @@ public sealed class RuntimeActorState
     public RuntimeActorDeploymentSnapshot Deployment { get; private set; }
     public RuntimeProgressionSnapshot Progression { get; private set; }
     public RuntimeSkillStateSnapshot Skills { get; private set; }
-    public RuntimeActorRosterSnapshot Rosters { get; private set; }
     public RuntimeEquipmentSnapshot Equipment { get; private set; }
     public ContentId VitalResourceId { get; }
     public CombatDefenseProfile DefenseProfile { get; }
@@ -808,7 +803,6 @@ public sealed class RuntimeActorState
                 resource.Maximum)),
             new RuntimeStatBlockSnapshot(_baseStats, _effectiveStats),
             Skills,
-            Rosters,
             Equipment,
             CaptureBattleStatus(),
             new RuntimeBattleActivationSnapshot(
@@ -839,7 +833,6 @@ public sealed class RuntimeActorState
             _baseResourceValues,
             _baseStats,
             Skills,
-            Rosters,
             Equipment);
         clone.ApplyExecutionStateFrom(this);
         return clone;
@@ -905,7 +898,6 @@ public sealed class RuntimeActorState
         Deployment = source.Deployment;
         Progression = source.Progression;
         Skills = source.Skills;
-        Rosters = source.Rosters;
         Equipment = source.Equipment;
         _isActive = source._isActive;
         IsGuarding = source.IsGuarding;
@@ -936,14 +928,11 @@ public sealed class RuntimeActorState
     }
 
     internal void ApplyStatComposition(
-        RuntimeActorRosterSnapshot rosters,
         IEnumerable<KeyValuePair<ContentId, decimal>> effectiveStats,
         IEnumerable<RuntimeResourceSnapshot> resources)
     {
-        ArgumentNullException.ThrowIfNull(rosters);
         IReadOnlyDictionary<ContentId, decimal> nextEffectiveStats = Snapshot(effectiveStats);
         RuntimeActorNumericDomain.RequireValidStatValues(nextEffectiveStats, nameof(effectiveStats));
-        RequireValidRoster(rosters, nameof(rosters));
 
         RuntimeResourceSnapshot[] resourceSnapshots =
             (resources ?? throw new ArgumentNullException(nameof(resources))).ToArray();
@@ -969,7 +958,6 @@ public sealed class RuntimeActorState
         }
 
         _effectiveStats = nextEffectiveStats;
-        Rosters = rosters;
     }
 
     internal void ReplaceResources(IEnumerable<RuntimeResourceSnapshot> resources)
@@ -1303,24 +1291,6 @@ public sealed class RuntimeActorState
         {
             RequireValid(reference, parameterName);
         }
-    }
-
-    private static void RequireValidRoster(RuntimeActorRosterSnapshot roster, string parameterName)
-    {
-        RequireValid(roster.ActiveHostedEntity, parameterName);
-        RequireValid(roster.HostedEntityRoster, parameterName);
-        RequireValid(roster.CompanionRoster, parameterName);
-        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> diagnostics =
-            RuntimeActorRosterInvariantRules.Validate(roster);
-        if (diagnostics.Count == 0)
-        {
-            return;
-        }
-
-        RuntimeActorRosterInvariantDiagnostic first = diagnostics[0];
-        throw new ArgumentException(
-            $"Actor roster is invalid at '{first.Path}': {first.Message}",
-            parameterName);
     }
 
     private sealed class ReadOnlySet<T>(IEnumerable<T> values) : IReadOnlySet<T>

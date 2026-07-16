@@ -17,6 +17,7 @@ public enum RuntimeActorStatCompositionDiagnosticCode
     ActiveHostedEntityIdentityMismatch,
     StatResolutionFailed,
     ResourceRecalculationFailed,
+    MissingPartyRoster,
     RosterInvariantViolation,
     CommitFailed
 }
@@ -34,7 +35,7 @@ public sealed record RuntimeActorStatCompositionRequest
         RuntimeStatSourceKind sourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimeActorState? activeHostedEntity = null,
-        RuntimeActorRosterSnapshot? rosters = null,
+        RuntimePartyRosterSnapshot? partyRoster = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
     {
         if (!Enum.IsDefined(sourceKind))
@@ -52,7 +53,7 @@ public sealed record RuntimeActorStatCompositionRequest
         SourceKind = sourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
         ActiveHostedEntity = activeHostedEntity;
-        Rosters = rosters;
+        PartyRoster = partyRoster;
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
     }
 
@@ -60,7 +61,7 @@ public sealed record RuntimeActorStatCompositionRequest
     public RuntimeStatSourceKind SourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
     public RuntimeActorState? ActiveHostedEntity { get; }
-    public RuntimeActorRosterSnapshot? Rosters { get; }
+    public RuntimePartyRosterSnapshot? PartyRoster { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
 }
 
@@ -115,27 +116,40 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
 
         RuntimeActorState actor = request.Actor;
         RuntimeActorSnapshot before = actor.ToSnapshot();
-        RuntimeActorRosterSnapshot rosters = request.Rosters ?? actor.Rosters;
         RuntimeStatSourceKind resolvedSource = request.SourceKind;
         IReadOnlyDictionary<ContentId, decimal> hostedStats =
             RuntimeSnapshotCollections.Dictionary<ContentId, decimal>();
 
-        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> rosterDiagnostics =
-            RuntimeActorRosterInvariantRules.Validate(rosters);
-        if (rosterDiagnostics.Count > 0)
+        RuntimePartyRosterSnapshot? partyRoster = request.PartyRoster;
+        if (partyRoster is not null)
         {
-            RuntimeActorRosterInvariantDiagnostic first = rosterDiagnostics[0];
-            return Rejected(
-                before,
-                resolvedSource,
-                RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
-                $"Actor roster is invalid at '{first.Path}': {first.Message}",
-                instanceId: first.InstanceId);
+            IReadOnlyList<RuntimePartyRosterInvariantDiagnostic> rosterDiagnostics =
+                RuntimePartyRosterInvariantRules.Validate(partyRoster);
+            if (rosterDiagnostics.Count > 0)
+            {
+                RuntimePartyRosterInvariantDiagnostic first = rosterDiagnostics[0];
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
+                    $"Party roster is invalid at '{first.Path}': {first.Message}",
+                    instanceId: first.InstanceId);
+            }
         }
 
         if (request.SourceKind == RuntimeStatSourceKind.ActiveHostedEntity)
         {
-            RuntimeActorReferenceSnapshot? activeReference = rosters.ActiveHostedEntity;
+            if (partyRoster is null)
+            {
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    RuntimeActorStatCompositionDiagnosticCode.MissingPartyRoster,
+                    "Active hosted-entity stat composition requires the canonical party roster.",
+                    instanceId: actor.InstanceId);
+            }
+
+            RuntimeActorReferenceSnapshot? activeReference = partyRoster.ActiveHostedEntity;
             if (activeReference is null)
             {
                 if (request.ActiveHostedEntity is not null)
@@ -237,7 +251,7 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
 
         try
         {
-            actor.ApplyStatComposition(rosters, effectiveStats, resources.Resources);
+            actor.ApplyStatComposition(effectiveStats, resources.Resources);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {

@@ -62,7 +62,6 @@ public sealed class CompendiumRuntimeServiceTests
             firstActor.Resources,
             firstActor.Stats,
             firstActor.Skills,
-            firstActor.Rosters,
             firstActor.Equipment,
             firstActor.BattleStatus,
             firstActor.BattleActivations,
@@ -134,7 +133,6 @@ public sealed class CompendiumRuntimeServiceTests
             new RuntimeSkillStateSnapshot(
                 [missingSkillId, missingSkillId],
                 [missingSkillId, missingSkillId]),
-            source.Rosters,
             source.Equipment,
             source.BattleStatus,
             source.BattleActivations,
@@ -175,7 +173,6 @@ public sealed class CompendiumRuntimeServiceTests
             source.Resources,
             source.Stats,
             source.Skills,
-            source.Rosters,
             source.Equipment,
             source.BattleStatus,
             source.BattleActivations,

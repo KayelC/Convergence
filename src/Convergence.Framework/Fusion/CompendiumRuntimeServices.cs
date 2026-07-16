@@ -564,7 +564,6 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             fullResources,
             statBlock,
             new RuntimeSkillStateSnapshot(learnedSkills, equippedSkills),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),

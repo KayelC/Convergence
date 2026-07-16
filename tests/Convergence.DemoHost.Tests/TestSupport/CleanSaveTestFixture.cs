@@ -52,7 +52,7 @@ internal static class CleanSaveTestFixture
                 5,
                 activeParty: [frostRef],
                 activeHostedEntity: emberRef,
-                hostedEntityRoster: [],
+                hostedEntityRoster: [emberRef],
                 companionRoster: [frostRef]),
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
@@ -150,7 +150,6 @@ internal static class CleanSaveTestFixture
             new RuntimeSkillStateSnapshot(
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")],
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
             new RuntimeBattleActivationSnapshot(),

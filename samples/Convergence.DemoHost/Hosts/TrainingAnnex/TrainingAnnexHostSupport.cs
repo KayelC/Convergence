@@ -366,15 +366,27 @@ internal static class TrainingAnnexHostSupport
 
         CatalogBattleActor player = playerResult.RequireActor();
         CatalogBattleActor activeHostedEntity = activeHostedEntityResult.RequireActor();
-        var playerRosters = new RuntimeActorRosterSnapshot(
-            activeHostedEntity: Reference(activeHostedEntity.State.ToSnapshot()),
-            hostedEntityRoster: [Reference(hostedEntityRosterResult.RequireActor().State.ToSnapshot())],
+        RuntimeActorReferenceSnapshot playerReference = Reference(player.State.ToSnapshot());
+        RuntimeActorReferenceSnapshot activeHostedEntityReference =
+            Reference(activeHostedEntity.State.ToSnapshot());
+        var partyRoster = new RuntimePartyRosterSnapshot(
+            playerReference,
+            player.State.Progression.Level,
+            activeParty: [playerReference],
+            reserveMembers: [Reference(mentorResult.RequireActor().State.ToSnapshot())],
+            activeHostedEntity: activeHostedEntityReference,
+            hostedEntityRoster:
+            [
+                activeHostedEntityReference,
+                Reference(hostedEntityRosterResult.RequireActor().State.ToSnapshot())
+            ],
             companionRoster:
             [
                 Reference(companionAshlingResult.RequireActor().State.ToSnapshot()),
                 Reference(companionWardShellResult.RequireActor().State.ToSnapshot()),
                 Reference(replacementBrambleResult.RequireActor().State.ToSnapshot())
-            ]);
+            ],
+            maxActivePartySize: 2);
         RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService(
                 statServices.StatResolutionPolicy,
                 growthServices.ResourceGrowthPolicy)
@@ -383,7 +395,7 @@ internal static class TrainingAnnexHostSupport
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
                 activeHostedEntity.State,
-                playerRosters));
+                partyRoster));
         if (!composition.Applied)
         {
             foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
@@ -437,7 +449,6 @@ internal static class TrainingAnnexHostSupport
             new RuntimeSkillStateSnapshot(
                 actor.SkillLoadout.Select(skill => skill.Id),
                 actor.ActiveSkills.Select(skill => skill.Id)),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
@@ -636,17 +647,12 @@ internal static class TrainingAnnexHostSupport
                 .FirstOrDefault(state =>
                     state.InstanceId == activeReference.InstanceId &&
                     state.EntityId == activeReference.EntityDefinitionId);
-        var actorRosters = new RuntimeActorRosterSnapshot(
-            partyRoster.ActiveHostedEntity,
-            partyRoster.HostedEntityRoster,
-            partyRoster.CompanionRoster);
-
         return new RuntimeActorStatCompositionRequest(
             roster.Player.Actor.State,
             RuntimeStatSourceKind.ActiveHostedEntity,
             MissingHostedEntityBehavior.RejectStatResolution,
             activeState,
-            actorRosters,
+            partyRoster,
             equipmentProfile.StatModifiers);
     }
 

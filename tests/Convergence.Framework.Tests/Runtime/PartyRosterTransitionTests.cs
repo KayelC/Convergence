@@ -324,26 +324,33 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
-    public void HostedEntityCommands_ExchangeConsumeAndReplaceActiveHostedEntityAndRoster()
+    public void HostedEntityCommands_SelectConsumeAndReplaceOwnedHostedEntitiesAtomically()
     {
         RuntimeActorReferenceSnapshot active = Actor("annex_mentor");
         RuntimeActorReferenceSnapshot rosterEntry = Actor("glow_wisp");
         RuntimeActorReferenceSnapshot replacement = Actor("frostling");
-        RuntimePartyRosterSnapshot snapshot = Snapshot(activeHostedEntity: active, hostedEntityRoster: [rosterEntry]);
+        RuntimePartyRosterSnapshot snapshot = Snapshot(
+            activeHostedEntity: active,
+            hostedEntityRoster: [active, rosterEntry]);
 
-        PartyRosterTransitionResult swapped = _service.SwapActiveHostedEntity(new SwapActiveHostedEntityRequest(snapshot, rosterEntry.InstanceId));
+        PartyRosterTransitionResult selected = _service.SelectActiveHostedEntity(
+            new SelectActiveHostedEntityRequest(snapshot, rosterEntry.InstanceId));
 
-        Assert.True(swapped.Applied);
-        Assert.Equal("glow_wisp", swapped.After.ActiveHostedEntity?.InstanceId.ToString());
-        Assert.Equal(["annex_mentor"], swapped.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
+        Assert.True(selected.Applied);
+        Assert.Equal("glow_wisp", selected.After.ActiveHostedEntity?.InstanceId.ToString());
+        Assert.Equal(
+            ["annex_mentor", "glow_wisp"],
+            selected.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
         PartyRosterTransitionResult replaced = _service.ReplaceHostedEntity(new ReplaceHostedEntityRequest(
-            swapped.After,
+            selected.After,
             active.InstanceId,
             replacement));
 
         Assert.True(replaced.Applied);
-        Assert.Equal(["frostling"], replaced.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
+        Assert.Equal(
+            ["frostling", "glow_wisp"],
+            replaced.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
         PartyRosterTransitionResult consumed = _service.ConsumeHostedEntity(new ConsumeHostedEntityRequest(replaced.After, rosterEntry.InstanceId));
 
@@ -353,10 +360,52 @@ public sealed class PartyRosterTransitionTests
     }
 
     [Fact]
+    public void HostedEntitySelectionAndClear_ChangeOnlyTheActiveReference()
+    {
+        RuntimeActorReferenceSnapshot first = Actor("annex_mentor");
+        RuntimeActorReferenceSnapshot second = Actor("glow_wisp");
+        RuntimePartyRosterSnapshot snapshot = Snapshot(
+            activeHostedEntity: first,
+            hostedEntityRoster: [first, second]);
+
+        PartyRosterTransitionResult selected = _service.SelectActiveHostedEntity(
+            new SelectActiveHostedEntityRequest(snapshot, second.InstanceId));
+        PartyRosterTransitionResult cleared = _service.ClearActiveHostedEntity(
+            new ClearActiveHostedEntityRequest(selected.After));
+
+        Assert.True(selected.Applied);
+        Assert.Equal(second, selected.After.ActiveHostedEntity);
+        Assert.Equal(snapshot.HostedEntityRoster, selected.After.HostedEntityRoster);
+        Assert.True(cleared.Applied);
+        Assert.Null(cleared.After.ActiveHostedEntity);
+        Assert.Equal(snapshot.HostedEntityRoster, cleared.After.HostedEntityRoster);
+    }
+
+    [Fact]
+    public void InvalidCanonicalRoster_IsRejectedWithoutMutation()
+    {
+        RuntimeActorReferenceSnapshot owner = Actor("hero");
+        RuntimeActorReferenceSnapshot unownedActive = Actor("unowned");
+        var invalid = new RuntimePartyRosterSnapshot(
+            owner,
+            ownerLevel: 40,
+            activeParty: [owner],
+            activeHostedEntity: unownedActive);
+
+        PartyRosterTransitionResult result = _service.ClearActiveHostedEntity(
+            new ClearActiveHostedEntityRequest(invalid));
+
+        Assert.False(result.Applied);
+        Assert.Equal(PartyRosterTransitionCode.InvalidSnapshot, result.Code);
+        Assert.Same(invalid, result.Before);
+        Assert.Same(invalid, result.After);
+    }
+
+    [Fact]
     public void AddHostedEntityToRoster_AppendsAndRejectsDuplicateOrFullRosterWithoutMutation()
     {
         RuntimePartyRosterSnapshot snapshot = Snapshot(
-            ownerLevel: 1,
+            ownerLevel: 10,
             activeHostedEntity: Actor("annex_mentor"),
             hostedEntityRoster: [Actor("glow_wisp"), Actor("winged_sentinel")]);
         RuntimeActorReferenceSnapshot candidate = Actor("frostling");
@@ -366,7 +415,7 @@ public sealed class PartyRosterTransitionTests
 
         Assert.True(added.Applied);
         Assert.Equal(
-            ["glow_wisp", "winged_sentinel", "frostling"],
+            ["annex_mentor", "glow_wisp", "winged_sentinel", "frostling"],
             added.After.HostedEntityRoster.Select(hostedEntity => hostedEntity.InstanceId.ToString()));
 
         PartyRosterTransitionResult duplicate = _service.AddHostedEntityToRoster(
@@ -374,10 +423,13 @@ public sealed class PartyRosterTransitionTests
         Assert.Equal(PartyRosterTransitionCode.DuplicateOwned, duplicate.Code);
         Assert.Same(added.After, duplicate.After);
 
+        PartyRosterTransitionResult filled = _service.AddHostedEntityToRoster(
+            new AddHostedEntityToRosterRequest(added.After, Actor("final_slot")));
+        Assert.True(filled.Applied);
         PartyRosterTransitionResult full = _service.AddHostedEntityToRoster(
-            new AddHostedEntityToRosterRequest(added.After, Actor("overflow")));
+            new AddHostedEntityToRosterRequest(filled.After, Actor("overflow")));
         Assert.Equal(PartyRosterTransitionCode.RosterFull, full.Code);
-        Assert.Same(added.After, full.After);
+        Assert.Same(filled.After, full.After);
     }
 
     [Fact]
@@ -504,15 +556,24 @@ public sealed class PartyRosterTransitionTests
         IEnumerable<RuntimeActorReferenceSnapshot>? reserveMembers = null,
         RuntimeActorReferenceSnapshot? activeHostedEntity = null,
         IEnumerable<RuntimeActorReferenceSnapshot>? hostedEntityRoster = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null) =>
-        new(
+        IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null)
+    {
+        RuntimeActorReferenceSnapshot[] hosted = (hostedEntityRoster ?? []).ToArray();
+        if (activeHostedEntity is not null &&
+            !hosted.Any(actor => actor.InstanceId == activeHostedEntity.InstanceId))
+        {
+            hosted = [activeHostedEntity, .. hosted];
+        }
+
+        return new(
             Actor("hero"),
             ownerLevel,
             activeParty ?? [Actor("hero")],
             reserveMembers,
             activeHostedEntity,
-            hostedEntityRoster,
+            hosted,
             companionRoster);
+    }
 
     private static RuntimeActorReferenceSnapshot Actor(string id) =>
         new(RuntimeInstanceId.Parse(id), ContentId.Parse(id), id);

@@ -18,7 +18,7 @@ internal enum CleanTrainingAnnexPlayCommand
     InspectParty,
     InspectRoster,
     OpenPartyRosterOperations,
-    PartySwapActiveHostedEntity,
+    PartySelectActiveHostedEntity,
     PartyDeployAshling,
     PartySwapDeployedCompanion,
     PartyRecallActiveCompanion,
@@ -107,7 +107,6 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexCompendiumEvidence> CompendiumEvidence,
     IReadOnlyList<RuntimeResourceSnapshot> PlayerResources,
     RuntimeStatBlockSnapshot PlayerStats,
-    RuntimeActorRosterSnapshot PlayerRosters,
     RuntimeProgressionSnapshot PlayerProgression,
     IReadOnlyList<StatResolutionResult> PlayerResolvedStats,
     int ActiveSkillCount,
@@ -1515,7 +1514,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             "Clean Party / Roster Operations",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
-                    CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity,
+                    CleanTrainingAnnexPlayCommand.PartySelectActiveHostedEntity,
                     "Swap Active Hosted Entity",
                     hasHostedEntityRoster,
                     "Exchanges the active hosted entity with the Hosted Entity roster entry."),
@@ -1558,7 +1557,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static TrainingAnnexPartyOperation ToPartyOperation(CleanTrainingAnnexPlayCommand command) =>
         command switch
         {
-            CleanTrainingAnnexPlayCommand.PartySwapActiveHostedEntity => TrainingAnnexPartyOperation.SwapActiveHostedEntity,
+            CleanTrainingAnnexPlayCommand.PartySelectActiveHostedEntity => TrainingAnnexPartyOperation.SelectActiveHostedEntity,
             CleanTrainingAnnexPlayCommand.PartyDeployAshling => TrainingAnnexPartyOperation.DeployAshling,
             CleanTrainingAnnexPlayCommand.PartySwapDeployedCompanion => TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell,
             CleanTrainingAnnexPlayCommand.PartyRecallActiveCompanion => TrainingAnnexPartyOperation.RecallActiveCompanion,
@@ -1571,7 +1570,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static string PartyOperationName(TrainingAnnexPartyOperation operation) =>
         operation switch
         {
-            TrainingAnnexPartyOperation.SwapActiveHostedEntity => "swap_active_hosted_entity",
+            TrainingAnnexPartyOperation.SelectActiveHostedEntity => "select_active_hosted_entity",
             TrainingAnnexPartyOperation.DeployAshling => "deploy_companion",
             TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => "swap_deployed_companion",
             TrainingAnnexPartyOperation.RecallActiveCompanion => "recall_active_companion",
@@ -2022,7 +2021,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             compendiumEvidence.ToArray(),
             playerSnapshot.Resources,
             playerSnapshot.Stats,
-            playerSnapshot.Rosters,
             playerSnapshot.Progression,
             statPreview.ToArray(),
             player.ActiveSkills.Count,

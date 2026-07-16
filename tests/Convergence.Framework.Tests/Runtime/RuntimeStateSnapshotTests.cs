@@ -115,28 +115,16 @@ public sealed class RuntimeStateSnapshotTests
             new(Id("sp"), 18, 44)
         ];
         List<ContentId> learnedSkills = [Id("ember_dart"), Id("ice_boost")];
-        List<ContentId> capabilityIds = [Id("analyze"), Id("swap_hosted_entity")];
-        List<RuntimeActorReferenceSnapshot> hostedEntityRoster =
-        [
-            new(
-                RuntimeInstanceId.Parse("hosted_entity:secondary_1"),
-                Id("convergence.demo:secondary_hosted_entity"),
-                "Secondary Hosted Entity")
-        ];
+        List<ContentId> capabilityIds = [Id("analyze"), Id("select_hosted_entity")];
 
         RuntimeActorSnapshot snapshot = CreateCompleteSnapshot(
             resources,
             learnedSkills,
-            hostedEntityRoster,
             capabilityIds);
 
         resources.Add(new RuntimeResourceSnapshot(Id("extra"), 1, 1));
         learnedSkills.Add(Id("late_mutation"));
         capabilityIds.Add(Id("late_capability"));
-        hostedEntityRoster.Add(new RuntimeActorReferenceSnapshot(
-            RuntimeInstanceId.Parse("hostedEntity:late_1"),
-            Id("convergence.demo:late"),
-            "Late"));
 
         RuntimeActorState restoredState = Restore(snapshot);
         RuntimeActorSnapshot roundTrip = restoredState.ToSnapshot();
@@ -164,12 +152,9 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(13, roundTrip.Stats.EffectiveStats[Id("strength")]);
         Assert.Equal([Id("ember_dart"), Id("ice_boost")], roundTrip.Skills.LearnedSkillIds);
         Assert.Equal([Id("ember_dart")], roundTrip.Skills.EquippedSkillIds);
-        Assert.Equal([Id("analyze"), Id("swap_hosted_entity")], roundTrip.CapabilityIds);
+        Assert.Equal([Id("analyze"), Id("select_hosted_entity")], roundTrip.CapabilityIds);
         Assert.True(restoredState.HasCapability(Id("analyze")));
         Assert.False(restoredState.HasCapability(Id("late_capability")));
-        Assert.Equal(RuntimeInstanceId.Parse("hosted_entity:annex_mentor_1"), roundTrip.Rosters.ActiveHostedEntity!.InstanceId);
-        Assert.Single(roundTrip.Rosters.HostedEntityRoster);
-        Assert.Single(roundTrip.Rosters.CompanionRoster);
         Assert.Equal(Id("convergence.demo:practice_sword"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
         Assert.Equal(Id("convergence.demo:kevlar_vest"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
 
@@ -436,14 +421,8 @@ public sealed class RuntimeStateSnapshotTests
     private static RuntimeActorSnapshot CreateCompleteSnapshot(
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         IEnumerable<ContentId>? learnedSkillIds = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? hostedEntityRoster = null,
         IEnumerable<ContentId>? capabilityIds = null)
     {
-        RuntimeActorReferenceSnapshot activeHostedEntity = new(
-            RuntimeInstanceId.Parse("hosted_entity:annex_mentor_1"),
-            Id("convergence.demo:annex_mentor"),
-            "Annex Mentor");
-
         return new RuntimeActorSnapshot(
             new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse("actor:hero_0001"),
@@ -466,15 +445,6 @@ public sealed class RuntimeStateSnapshotTests
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 10)],
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 13)]),
             new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("ember_dart"), Id("ice_boost")], [Id("ember_dart")]),
-            new RuntimeActorRosterSnapshot(
-                activeHostedEntity,
-                hostedEntityRoster ?? [],
-                [
-                    new RuntimeActorReferenceSnapshot(
-                        RuntimeInstanceId.Parse("companion:glow_wisp_1"),
-                        Id("convergence.demo:glow_wisp"),
-                        "Glow Wisp")
-                ]),
             new RuntimeEquipmentSnapshot(
             [
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, Id("convergence.demo:practice_sword")),

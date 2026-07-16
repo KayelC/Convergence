@@ -28,12 +28,14 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimeActorState? activeHostedEntity = null,
+        RuntimePartyRosterSnapshot? partyRoster = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
         : this(
             snapshot,
             statSourceKind,
             missingHostedEntityBehavior,
             activeHostedEntity,
+            partyRoster,
             equipmentStatModifiers,
             preserveValidatedSnapshot: false)
     {
@@ -44,6 +46,7 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimeActorState? activeHostedEntity,
+        RuntimePartyRosterSnapshot? partyRoster,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
         bool preserveValidatedSnapshot)
     {
@@ -61,6 +64,7 @@ public sealed record CatalogBattleActorRestoreRequest
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
         ActiveHostedEntity = activeHostedEntity;
+        PartyRoster = partyRoster;
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
         PreserveValidatedSnapshot = preserveValidatedSnapshot;
     }
@@ -69,6 +73,7 @@ public sealed record CatalogBattleActorRestoreRequest
     public RuntimeStatSourceKind StatSourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
     public RuntimeActorState? ActiveHostedEntity { get; }
+    public RuntimePartyRosterSnapshot? PartyRoster { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
     internal bool PreserveValidatedSnapshot { get; }
 
@@ -79,6 +84,7 @@ public sealed record CatalogBattleActorRestoreRequest
             RuntimeStatSourceKind.Actor,
             MissingHostedEntityBehavior.UseActorBaseStats,
             activeHostedEntity: null,
+            partyRoster: null,
             equipmentStatModifiers: null,
             preserveValidatedSnapshot: true);
 }
@@ -573,7 +579,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                         request.StatSourceKind,
                         request.MissingHostedEntityBehavior,
                         request.ActiveHostedEntity,
-                        snapshot.Rosters,
+                        request.PartyRoster,
                         request.EquipmentStatModifiers));
                 if (!composition.Applied)
                 {

@@ -11,7 +11,7 @@ public enum BattleActionKind
     Guard,
     Pass,
     Analyze,
-    HostedEntitySwap,
+    HostedEntitySelect,
     CompanionDeploy,
     CompanionRecall,
     CompanionSwap,
@@ -199,10 +199,10 @@ public abstract record PartyRosterBattleActionCommand : BattleActionCommand
     public RuntimePartyRosterSnapshot Snapshot { get; }
 }
 
-public sealed record HostedEntitySwapBattleActionCommand : PartyRosterBattleActionCommand
+public sealed record HostedEntitySelectBattleActionCommand : PartyRosterBattleActionCommand
 {
-    public HostedEntitySwapBattleActionCommand(RuntimePartyRosterSnapshot snapshot, RuntimeInstanceId hostedEntityInstanceId)
-        : base(BattleActionKind.HostedEntitySwap, snapshot)
+    public HostedEntitySelectBattleActionCommand(RuntimePartyRosterSnapshot snapshot, RuntimeInstanceId hostedEntityInstanceId)
+        : base(BattleActionKind.HostedEntitySelect, snapshot)
     {
         HostedEntityInstanceId = hostedEntityInstanceId;
     }
@@ -490,8 +490,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     request,
                     BattleActionKind.Pass,
                     turnConsumption: ActionTurnConsumption.Pass),
-                HostedEntitySwapBattleActionCommand hostedEntity => AssessPartyRoster(request, hostedEntity.Kind, _partyRoster.SwapActiveHostedEntity(
-                    new SwapActiveHostedEntityRequest(hostedEntity.Snapshot, hostedEntity.HostedEntityInstanceId))),
+                HostedEntitySelectBattleActionCommand hostedEntity => AssessPartyRoster(request, hostedEntity.Kind, _partyRoster.SelectActiveHostedEntity(
+                    new SelectActiveHostedEntityRequest(hostedEntity.Snapshot, hostedEntity.HostedEntityInstanceId))),
                 CompanionDeployBattleActionCommand deploy => AssessPartyRoster(request, deploy.Kind, _partyRoster.DeployCompanion(
                     new DeployCompanionRequest(deploy.Snapshot, deploy.CompanionInstanceId))),
                 CompanionRecallBattleActionCommand returned => AssessPartyRoster(request, returned.Kind, _partyRoster.RecallCompanion(
@@ -591,7 +591,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 BattleActionKind.Pass,
                 ActionTurnConsumption.Pass,
                 events: [new BattleActionEvent(BattleActionEventKind.Executed, "Action passed.", request.Actor.InstanceId)]),
-            HostedEntitySwapBattleActionCommand hostedEntity => ExecutePartyRoster(hostedEntity.Kind, assessment.PartyRosterTransition),
+            HostedEntitySelectBattleActionCommand hostedEntity => ExecutePartyRoster(hostedEntity.Kind, assessment.PartyRosterTransition),
             CompanionDeployBattleActionCommand deploy => ExecutePartyRoster(deploy.Kind, assessment.PartyRosterTransition),
             CompanionRecallBattleActionCommand returned => ExecutePartyRoster(returned.Kind, assessment.PartyRosterTransition),
             CompanionSwapBattleActionCommand swap => ExecutePartyRoster(swap.Kind, assessment.PartyRosterTransition),

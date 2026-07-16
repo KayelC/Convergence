@@ -90,6 +90,9 @@ public sealed class FusionTransactionServiceTests
     {
         TransactionContext context = CreateContext();
         RuntimePartyRosterSnapshot party = Party(context, FusionParticipantRosterKind.HostedEntity);
+        party = party.With(
+            activeHostedEntity: party.HostedEntityRoster[0],
+            replaceActiveHostedEntity: true);
         var service = new FusionTransactionService(
             context.ActorFactory,
             new PartyRosterTransitionService(new FixedCapacityPolicy(12)));
@@ -101,6 +104,7 @@ public sealed class FusionTransactionServiceTests
             "hosted_entity_result"));
 
         Assert.True(assessment.CanCommit);
+        Assert.Null(assessment.AfterPartyRoster.ActiveHostedEntity);
         Assert.Empty(assessment.AfterPartyRoster.CompanionRoster);
         RuntimeActorReferenceSnapshot hostedEntity = Assert.Single(assessment.AfterPartyRoster.HostedEntityRoster);
         Assert.Equal(RuntimeInstanceId.Parse("hosted_entity_result"), hostedEntity.InstanceId);
@@ -788,7 +792,6 @@ public sealed class FusionTransactionServiceTests
             snapshot.Resources,
             snapshot.Stats,
             new RuntimeSkillStateSnapshot(learnedSkillIds, equippedSkillIds),
-            snapshot.Rosters,
             snapshot.Equipment,
             snapshot.BattleStatus,
             snapshot.BattleActivations,

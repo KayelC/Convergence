@@ -37,7 +37,8 @@ public enum RuntimeSaveValidationCode
     DuplicatePartyRosterReference,
     ActivePartyCapacityExceeded,
     CompanionRosterCapacityExceeded,
-    ActiveHostedEntityDuplicatedInRoster,
+    ActiveHostedEntityNotOwned,
+    ActiveHostedEntityReferenceMismatch,
     PartyRosterIdentityCollision,
     ActorReferenceEntityMismatch,
     HostedEntityRosterCapacityExceeded,
@@ -64,7 +65,6 @@ public enum RuntimeSaveValidationCode
     PassiveStateSkillNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
-    DuplicateActorRosterReference,
     EquippedEquipmentNotOwned,
     EquipmentSlotMismatch,
     EquipmentAssignedToMultipleActors,
@@ -373,11 +373,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             }
 
             ValidateActorRestoreContract(actor, catalog, diagnostics, index);
-        }
-
-        for (int index = 0; index < snapshot.Actors.Count; index++)
-        {
-            ValidateActorRosterReferences(snapshot.Actors[index], actors, diagnostics, index);
         }
 
         ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
@@ -819,75 +814,30 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private static string ActorPath(int actorIndex, string relativePath) =>
         $"$.actors[{actorIndex}]" + relativePath[1..];
 
-    private static void ValidateActorRosterReferences(
-        RuntimeActorSnapshot actor,
-        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
-        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
-        int actorIndex)
-    {
-        string rostersPath = $"$.actors[{actorIndex}].rosters";
-        foreach (RuntimeActorRosterInvariantDiagnostic rosterDiagnostic in
-                 RuntimeActorRosterInvariantRules.Validate(actor.Rosters))
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.DuplicateActorRosterReference,
-                rosterDiagnostic.Message,
-                rosterDiagnostic.InstanceId,
-                Path: rostersPath + rosterDiagnostic.Path[1..]));
-        }
-
-        if (actor.Rosters.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
-        {
-            ValidateActorReference(
-                activeHostedEntity,
-                actors,
-                diagnostics,
-                rostersPath + ".activeHostedEntity",
-                RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
-                $"Actor '{actor.Identity.InstanceId}' active hosted entity");
-        }
-
-        ValidateActorRosterReferenceList(
-            actor,
-            actor.Rosters.HostedEntityRoster,
-            actors,
-            diagnostics,
-            rostersPath + ".hostedEntityRoster");
-        ValidateActorRosterReferenceList(
-            actor,
-            actor.Rosters.CompanionRoster,
-            actors,
-            diagnostics,
-            rostersPath + ".companionRoster");
-    }
-
-    private static void ValidateActorRosterReferenceList(
-        RuntimeActorSnapshot owner,
-        IReadOnlyList<RuntimeActorReferenceSnapshot> references,
-        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
-        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
-        string path)
-    {
-        for (int index = 0; index < references.Count; index++)
-        {
-            RuntimeActorReferenceSnapshot reference = references[index];
-            string referencePath = $"{path}[{index}]";
-            ValidateActorReference(
-                reference,
-                actors,
-                diagnostics,
-                referencePath,
-                RuntimeSaveValidationCode.MissingActorReference,
-                $"Actor '{owner.Identity.InstanceId}' owned-actor roster reference");
-        }
-    }
-
     private static void ValidatePartyReferences(
         RuntimePartyRosterSnapshot partyRoster,
         IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
         IRosterCapacityPolicy rosterCapacityPolicy,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
+        foreach (RuntimePartyRosterInvariantDiagnostic rosterDiagnostic in
+                 RuntimePartyRosterInvariantRules.Validate(partyRoster))
+        {
+            RuntimeSaveValidationCode code = rosterDiagnostic.Code switch
+            {
+                RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned =>
+                    RuntimeSaveValidationCode.ActiveHostedEntityNotOwned,
+                RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch =>
+                    RuntimeSaveValidationCode.ActiveHostedEntityReferenceMismatch,
+                _ => RuntimeSaveValidationCode.PartyRosterIdentityCollision
+            };
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                code,
+                rosterDiagnostic.Message,
+                rosterDiagnostic.InstanceId,
+                Path: "$.partyRoster" + rosterDiagnostic.Path[1..]));
+        }
+
         ValidateActorReference(
             partyRoster.Owner,
             actors,
@@ -943,20 +893,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 RuntimeSaveValidationCode.MissingActiveHostedEntityReference,
                 "Active Hosted Entity");
 
-            for (int index = 0; index < partyRoster.HostedEntityRoster.Count; index++)
-            {
-                RuntimeActorReferenceSnapshot hostedEntity = partyRoster.HostedEntityRoster[index];
-                if (hostedEntity.InstanceId != partyRoster.ActiveHostedEntity.InstanceId)
-                {
-                    continue;
-                }
-
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.ActiveHostedEntityDuplicatedInRoster,
-                    $"Active hosted entity '{hostedEntity.InstanceId}' also appears in the hosted-entity roster.",
-                    hostedEntity.InstanceId,
-                    Path: $"$.partyRoster.hostedEntityRoster[{index}]"));
-            }
         }
 
         ValidatePartyRosterIdentityOverlaps(partyRoster, diagnostics);

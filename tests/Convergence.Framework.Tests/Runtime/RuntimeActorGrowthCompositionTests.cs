@@ -14,15 +14,16 @@ public sealed class RuntimeActorGrowthCompositionTests
     public void StatComposition_PreservesRegisteredNonCoreEffectiveStats()
     {
         RuntimeActorState hostedEntity = CreateActor("hosted_custom", 20m, customEffectiveStat: 31m);
-        RuntimeActorRosterSnapshot rosters = new(activeHostedEntity: Reference(hostedEntity));
-        RuntimeActorState vessel = CreateActor("vessel_custom", 5m, rosters, customEffectiveStat: 17m);
+        RuntimeActorState vessel = CreateActor("vessel_custom", 5m, customEffectiveStat: 17m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
 
         RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
             new RuntimeActorStatCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity));
+                hostedEntity,
+                partyRoster));
 
         Assert.True(result.Applied);
         Assert.Equal(20m, vessel.Stats[StandardProgressionIds.Strength]);
@@ -34,8 +35,8 @@ public sealed class RuntimeActorGrowthCompositionTests
     public void GrowthComposition_CommitsGrowthAndCanonicalStatsTogether()
     {
         RuntimeActorState hostedEntity = CreateActor("hosted_growth", 20m);
-        RuntimeActorRosterSnapshot rosters = new(activeHostedEntity: Reference(hostedEntity));
-        RuntimeActorState vessel = CreateActor("vessel_growth", 5m, rosters, customEffectiveStat: 17m);
+        RuntimeActorState vessel = CreateActor("vessel_growth", 5m, customEffectiveStat: 17m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         LevelGrowthResult growth = AppliedGrowth(before, customEffectiveStat: 19m);
 
@@ -46,7 +47,8 @@ public sealed class RuntimeActorGrowthCompositionTests
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    hostedEntity)));
+                    hostedEntity,
+                    partyRoster)));
 
         Assert.True(result.Applied);
         Assert.Equal(RuntimeActorGrowthCompositionStatus.Applied, result.Status);
@@ -65,8 +67,8 @@ public sealed class RuntimeActorGrowthCompositionTests
     public void GrowthComposition_CompositionRejectionLeavesLiveActorUnchanged()
     {
         RuntimeActorState hostedEntity = CreateActor("hosted_rejected", 20m);
-        RuntimeActorRosterSnapshot rosters = new(activeHostedEntity: Reference(hostedEntity));
-        RuntimeActorState vessel = CreateActor("vessel_rejected", 5m, rosters, customEffectiveStat: 17m);
+        RuntimeActorState vessel = CreateActor("vessel_rejected", 5m, customEffectiveStat: 17m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         LevelGrowthResult growth = AppliedGrowth(before, customEffectiveStat: 19m);
         var service = new RuntimeActorGrowthCompositionService(new RejectingCompositionService());
@@ -78,7 +80,8 @@ public sealed class RuntimeActorGrowthCompositionTests
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    hostedEntity)));
+                    hostedEntity,
+                    partyRoster)));
 
         Assert.False(result.Applied);
         Assert.Equal(RuntimeActorGrowthCompositionStatus.StatCompositionRejected, result.Status);
@@ -149,7 +152,6 @@ public sealed class RuntimeActorGrowthCompositionTests
     private static RuntimeActorState CreateActor(
         string id,
         decimal coreStat,
-        RuntimeActorRosterSnapshot? rosters = null,
         decimal customEffectiveStat = 11m)
     {
         KeyValuePair<ContentId, decimal>[] baseStats =
@@ -188,8 +190,21 @@ public sealed class RuntimeActorGrowthCompositionTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20m),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
-            baseStats: baseStats,
-            rosters: rosters);
+            baseStats: baseStats);
+    }
+
+    private static RuntimePartyRosterSnapshot PartyRoster(
+        RuntimeActorState owner,
+        RuntimeActorState activeHostedEntity)
+    {
+        RuntimeActorReferenceSnapshot ownerReference = Reference(owner);
+        RuntimeActorReferenceSnapshot activeReference = Reference(activeHostedEntity);
+        return new RuntimePartyRosterSnapshot(
+            ownerReference,
+            owner.Progression.Level,
+            activeParty: [ownerReference],
+            activeHostedEntity: activeReference,
+            hostedEntityRoster: [activeReference]);
     }
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
@@ -205,9 +220,6 @@ public sealed class RuntimeActorGrowthCompositionTests
             actual.Stats.BaseStats.OrderBy(pair => pair.Key.ToString()).ToArray());
         Assert.Equal(expected.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString()).ToArray(),
             actual.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString()).ToArray());
-        Assert.Equal(expected.Rosters.ActiveHostedEntity, actual.Rosters.ActiveHostedEntity);
-        Assert.Equal(expected.Rosters.HostedEntityRoster.ToArray(), actual.Rosters.HostedEntityRoster.ToArray());
-        Assert.Equal(expected.Rosters.CompanionRoster.ToArray(), actual.Rosters.CompanionRoster.ToArray());
     }
 
     private sealed class RejectingCompositionService : IRuntimeActorStatCompositionService

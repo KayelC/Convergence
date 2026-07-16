@@ -2377,10 +2377,11 @@ Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.
 Convergence.Encounters.CatalogBattleActorRestoreRequest
 Convergence.Encounters.CatalogBattleActorRestoreRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorRestoreRequest!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.ActiveHostedEntity.get -> Convergence.Execution.RuntimeActorState?
-Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Equals(Convergence.Encounters.CatalogBattleActorRestoreRequest? other) -> bool
 Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
+Convergence.Encounters.CatalogBattleActorRestoreRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Snapshot.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Encounters.DeterministicBattleActionSelector
@@ -2867,7 +2868,7 @@ Convergence.Execution.BattleActionKind.CompanionRecall = 8 -> Convergence.Execut
 Convergence.Execution.BattleActionKind.CompanionSwap = 9 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.EscapeAttempt = 10 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.Guard = 3 -> Convergence.Execution.BattleActionKind
-Convergence.Execution.BattleActionKind.HostedEntitySwap = 6 -> Convergence.Execution.BattleActionKind
+Convergence.Execution.BattleActionKind.HostedEntitySelect = 6 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.HostSpecial = 13 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.Item = 2 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.Negotiation = 12 -> Convergence.Execution.BattleActionKind
@@ -3338,10 +3339,10 @@ Convergence.Execution.ExecutionResourceChange.ResourceId.get -> Convergence.Cont
 Convergence.Execution.GuardBattleActionCommand
 Convergence.Execution.GuardBattleActionCommand.Equals(Convergence.Execution.GuardBattleActionCommand? other) -> bool
 Convergence.Execution.GuardBattleActionCommand.GuardBattleActionCommand() -> void
-Convergence.Execution.HostedEntitySwapBattleActionCommand
-Convergence.Execution.HostedEntitySwapBattleActionCommand.Equals(Convergence.Execution.HostedEntitySwapBattleActionCommand? other) -> bool
-Convergence.Execution.HostedEntitySwapBattleActionCommand.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Execution.HostedEntitySwapBattleActionCommand.HostedEntitySwapBattleActionCommand(Convergence.Runtime.RuntimePartyRosterSnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId hostedEntityInstanceId) -> void
+Convergence.Execution.HostedEntitySelectBattleActionCommand
+Convergence.Execution.HostedEntitySelectBattleActionCommand.Equals(Convergence.Execution.HostedEntitySelectBattleActionCommand? other) -> bool
+Convergence.Execution.HostedEntitySelectBattleActionCommand.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.HostedEntitySelectBattleActionCommand.HostedEntitySelectBattleActionCommand(Convergence.Runtime.RuntimePartyRosterSnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId hostedEntityInstanceId) -> void
 Convergence.Execution.HostMediatedBattleActionCommand
 Convergence.Execution.HostMediatedBattleActionCommand.Equals(Convergence.Execution.HostMediatedBattleActionCommand? other) -> bool
 Convergence.Execution.HostMediatedBattleActionCommand.HostActionId.get -> Convergence.Content.ContentId
@@ -3652,8 +3653,7 @@ Convergence.Execution.RuntimeActorState.RemoveStatuses(System.Collections.Generi
 Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
 Convergence.Execution.RuntimeActorState.Reveal(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
-Convergence.Execution.RuntimeActorState.Rosters.get -> Convergence.Runtime.RuntimeActorRosterSnapshot!
-Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, bool isActive = true, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeActorOwnershipSnapshot? ownership = null, Convergence.Runtime.RuntimeActorDeploymentSnapshot? deployment = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeActorRosterSnapshot? rosters = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null) -> void
+Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, bool isActive = true, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeActorOwnershipSnapshot? ownership = null, Convergence.Runtime.RuntimeActorDeploymentSnapshot? deployment = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null) -> void
 Convergence.Execution.RuntimeActorState.SetGuarding(bool isGuarding) -> void
 Convergence.Execution.RuntimeActorState.SetResource(Convergence.Content.ContentId id, decimal value) -> decimal
 Convergence.Execution.RuntimeActorState.Shields.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ShieldKind, Convergence.Execution.BattleShieldState!>!
@@ -4762,6 +4762,13 @@ Convergence.Runtime.CatalogEncounterPreparationService.Prepare(Convergence.Runti
 Convergence.Runtime.CatalogEncounterStartPlanner
 Convergence.Runtime.CatalogEncounterStartPlanner.CatalogEncounterStartPlanner(Convergence.Catalog.IEncounterDefinitionRepository! encounters) -> void
 Convergence.Runtime.CatalogEncounterStartPlanner.Plan(Convergence.Runtime.EncounterStartRequest! request) -> Convergence.Runtime.EncounterStartPlanResult!
+Convergence.Runtime.ClearActiveHostedEntityRequest
+Convergence.Runtime.ClearActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.ClearActiveHostedEntityRequest!
+Convergence.Runtime.ClearActiveHostedEntityRequest.ClearActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot) -> void
+Convergence.Runtime.ClearActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot) -> void
+Convergence.Runtime.ClearActiveHostedEntityRequest.Equals(Convergence.Runtime.ClearActiveHostedEntityRequest? other) -> bool
+Convergence.Runtime.ClearActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
+Convergence.Runtime.ClearActiveHostedEntityRequest.Snapshot.init -> void
 Convergence.Runtime.ConsumeCompanionRequest
 Convergence.Runtime.ConsumeCompanionRequest.<Clone>$() -> Convergence.Runtime.ConsumeCompanionRequest!
 Convergence.Runtime.ConsumeCompanionRequest.CompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
@@ -4999,6 +5006,7 @@ Convergence.Runtime.IPartyRosterTransitionService
 Convergence.Runtime.IPartyRosterTransitionService.AddCompanionToRoster(Convergence.Runtime.AddCompanionToRosterRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.AddHostedEntityToRoster(Convergence.Runtime.AddHostedEntityToRosterRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.AddPartyMember(Convergence.Runtime.AddPartyMemberRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
+Convergence.Runtime.IPartyRosterTransitionService.ClearActiveHostedEntity(Convergence.Runtime.ClearActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.ConsumeCompanion(Convergence.Runtime.ConsumeCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.ConsumeHostedEntity(Convergence.Runtime.ConsumeHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.DeployCompanion(Convergence.Runtime.DeployCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
@@ -5006,7 +5014,7 @@ Convergence.Runtime.IPartyRosterTransitionService.DismissCompanion(Convergence.R
 Convergence.Runtime.IPartyRosterTransitionService.RecallCompanion(Convergence.Runtime.RecallCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.ReplaceCompanion(Convergence.Runtime.ReplaceCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.ReplaceHostedEntity(Convergence.Runtime.ReplaceHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
-Convergence.Runtime.IPartyRosterTransitionService.SwapActiveHostedEntity(Convergence.Runtime.SwapActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
+Convergence.Runtime.IPartyRosterTransitionService.SelectActiveHostedEntity(Convergence.Runtime.SelectActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.SwapDeployedCompanion(Convergence.Runtime.SwapDeployedCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IPartyRosterTransitionService.SwapPartyMember(Convergence.Runtime.SwapPartyMemberRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.IResourceGrowthPolicy
@@ -5133,6 +5141,7 @@ Convergence.Runtime.PartyRosterTransitionCode.Applied = 0 -> Convergence.Runtime
 Convergence.Runtime.PartyRosterTransitionCode.CapacityExceeded = 13 -> Convergence.Runtime.PartyRosterTransitionCode
 Convergence.Runtime.PartyRosterTransitionCode.DuplicateOwned = 9 -> Convergence.Runtime.PartyRosterTransitionCode
 Convergence.Runtime.PartyRosterTransitionCode.InvalidSlot = 12 -> Convergence.Runtime.PartyRosterTransitionCode
+Convergence.Runtime.PartyRosterTransitionCode.InvalidSnapshot = 14 -> Convergence.Runtime.PartyRosterTransitionCode
 Convergence.Runtime.PartyRosterTransitionCode.NotActive = 5 -> Convergence.Runtime.PartyRosterTransitionCode
 Convergence.Runtime.PartyRosterTransitionCode.NotOwned = 3 -> Convergence.Runtime.PartyRosterTransitionCode
 Convergence.Runtime.PartyRosterTransitionCode.PartyFull = 1 -> Convergence.Runtime.PartyRosterTransitionCode
@@ -5165,6 +5174,7 @@ Convergence.Runtime.PartyRosterTransitionService
 Convergence.Runtime.PartyRosterTransitionService.AddCompanionToRoster(Convergence.Runtime.AddCompanionToRosterRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.AddHostedEntityToRoster(Convergence.Runtime.AddHostedEntityToRosterRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.AddPartyMember(Convergence.Runtime.AddPartyMemberRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
+Convergence.Runtime.PartyRosterTransitionService.ClearActiveHostedEntity(Convergence.Runtime.ClearActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.ConsumeCompanion(Convergence.Runtime.ConsumeCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.ConsumeHostedEntity(Convergence.Runtime.ConsumeHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.DeployCompanion(Convergence.Runtime.DeployCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
@@ -5173,7 +5183,7 @@ Convergence.Runtime.PartyRosterTransitionService.PartyRosterTransitionService(Co
 Convergence.Runtime.PartyRosterTransitionService.RecallCompanion(Convergence.Runtime.RecallCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.ReplaceCompanion(Convergence.Runtime.ReplaceCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.ReplaceHostedEntity(Convergence.Runtime.ReplaceHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
-Convergence.Runtime.PartyRosterTransitionService.SwapActiveHostedEntity(Convergence.Runtime.SwapActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
+Convergence.Runtime.PartyRosterTransitionService.SelectActiveHostedEntity(Convergence.Runtime.SelectActiveHostedEntityRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.SwapDeployedCompanion(Convergence.Runtime.SwapDeployedCompanionRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PartyRosterTransitionService.SwapPartyMember(Convergence.Runtime.SwapPartyMemberRequest! request) -> Convergence.Runtime.PartyRosterTransitionResult!
 Convergence.Runtime.PreparedEncounter
@@ -5442,32 +5452,6 @@ Convergence.Runtime.RuntimeActorRestoreProfileRequest.Equals(Convergence.Runtime
 Convergence.Runtime.RuntimeActorRestoreProfileRequest.RuntimeActorRestoreProfileRequest(Convergence.Runtime.RuntimeActorSnapshot! Actor, Convergence.Runtime.RuntimeSaveGameSnapshot! Session, Convergence.Catalog.GameDataCatalog! Catalog) -> void
 Convergence.Runtime.RuntimeActorRestoreProfileRequest.Session.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
 Convergence.Runtime.RuntimeActorRestoreProfileRequest.Session.init -> void
-Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster = 2 -> Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantCode.DuplicateCompanionReference = 1 -> Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantCode.DuplicateHostedEntityReference = 0 -> Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision = 3 -> Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic!
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorRosterInvariantCode
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Code.init -> void
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorRosterInvariantCode Code, out Convergence.Runtime.RuntimeInstanceId InstanceId, out string! Path, out string! Message) -> void
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Equals(Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic? other) -> bool
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.InstanceId.init -> void
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Message.get -> string!
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Message.init -> void
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Path.get -> string!
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Path.init -> void
-Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.RuntimeActorRosterInvariantDiagnostic(Convergence.Runtime.RuntimeActorRosterInvariantCode Code, Convergence.Runtime.RuntimeInstanceId InstanceId, string! Path, string! Message) -> void
-Convergence.Runtime.RuntimeActorRosterInvariantRules
-Convergence.Runtime.RuntimeActorRosterSnapshot
-Convergence.Runtime.RuntimeActorRosterSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeActorRosterSnapshot!
-Convergence.Runtime.RuntimeActorRosterSnapshot.ActiveHostedEntity.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot?
-Convergence.Runtime.RuntimeActorRosterSnapshot.CompanionRoster.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorReferenceSnapshot!>!
-Convergence.Runtime.RuntimeActorRosterSnapshot.Equals(Convergence.Runtime.RuntimeActorRosterSnapshot? other) -> bool
-Convergence.Runtime.RuntimeActorRosterSnapshot.HostedEntityRoster.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorReferenceSnapshot!>!
-Convergence.Runtime.RuntimeActorRosterSnapshot.RuntimeActorRosterSnapshot(Convergence.Runtime.RuntimeActorReferenceSnapshot? activeHostedEntity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? hostedEntityRoster = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? companionRoster = null) -> void
 Convergence.Runtime.RuntimeActorSnapshot
 Convergence.Runtime.RuntimeActorSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -5481,8 +5465,7 @@ Convergence.Runtime.RuntimeActorSnapshot.Identity.get -> Convergence.Runtime.Run
 Convergence.Runtime.RuntimeActorSnapshot.Ownership.get -> Convergence.Runtime.RuntimeActorOwnershipSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Resources.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeResourceSnapshot!>!
-Convergence.Runtime.RuntimeActorSnapshot.Rosters.get -> Convergence.Runtime.RuntimeActorRosterSnapshot!
-Convergence.Runtime.RuntimeActorSnapshot.RuntimeActorSnapshot(Convergence.Runtime.RuntimeActorIdentitySnapshot! identity, Convergence.Runtime.RuntimeActorOwnershipSnapshot! ownership, Convergence.Runtime.RuntimeActorDeploymentSnapshot! deployment, Convergence.Runtime.RuntimeProgressionSnapshot! progression, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, Convergence.Runtime.RuntimeSkillStateSnapshot! skills, Convergence.Runtime.RuntimeActorRosterSnapshot! rosters, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeBattleStatusSnapshot! battleStatus, Convergence.Runtime.RuntimeBattleActivationSnapshot! battleActivations, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues, Convergence.Content.ContentId vitalResourceId, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null) -> void
+Convergence.Runtime.RuntimeActorSnapshot.RuntimeActorSnapshot(Convergence.Runtime.RuntimeActorIdentitySnapshot! identity, Convergence.Runtime.RuntimeActorOwnershipSnapshot! ownership, Convergence.Runtime.RuntimeActorDeploymentSnapshot! deployment, Convergence.Runtime.RuntimeProgressionSnapshot! progression, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, Convergence.Runtime.RuntimeSkillStateSnapshot! skills, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeBattleStatusSnapshot! battleStatus, Convergence.Runtime.RuntimeBattleActivationSnapshot! battleActivations, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues, Convergence.Content.ContentId vitalResourceId, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null) -> void
 Convergence.Runtime.RuntimeActorSnapshot.Skills.get -> Convergence.Runtime.RuntimeSkillStateSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Stats.get -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.VitalResourceId.get -> Convergence.Content.ContentId
@@ -5505,10 +5488,11 @@ Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch = 3 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityStateMissing = 1 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityStateUnexpected = 2 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.CommitFailed = 7 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.CommitFailed = 8 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.MissingActiveHostedEntity = 0 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.MissingPartyRoster = 6 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ResourceRecalculationFailed = 5 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation = 6 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation = 7 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed = 4 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorStatCompositionRequest
 Convergence.Runtime.RuntimeActorStatCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorStatCompositionRequest!
@@ -5517,8 +5501,8 @@ Convergence.Runtime.RuntimeActorStatCompositionRequest.Actor.get -> Convergence.
 Convergence.Runtime.RuntimeActorStatCompositionRequest.Equals(Convergence.Runtime.RuntimeActorStatCompositionRequest? other) -> bool
 Convergence.Runtime.RuntimeActorStatCompositionRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.RuntimeActorStatCompositionRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
-Convergence.Runtime.RuntimeActorStatCompositionRequest.Rosters.get -> Convergence.Runtime.RuntimeActorRosterSnapshot?
-Convergence.Runtime.RuntimeActorStatCompositionRequest.RuntimeActorStatCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, Convergence.Runtime.RuntimeActorRosterSnapshot? rosters = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Runtime.RuntimeActorStatCompositionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
+Convergence.Runtime.RuntimeActorStatCompositionRequest.RuntimeActorStatCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
 Convergence.Runtime.RuntimeActorStatCompositionRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.RuntimeActorStatCompositionResult
 Convergence.Runtime.RuntimeActorStatCompositionResult.<Clone>$() -> Convergence.Runtime.RuntimeActorStatCompositionResult!
@@ -5956,6 +5940,26 @@ Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.Applied = 0 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.PolicyRejected = 2 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.SourceMismatch = 1 -> Convergence.Runtime.RuntimeNavigationTransitionCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned = 2 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch = 3 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateCompanionReference = 1 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference = 0 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision = 4 -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic!
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Code.get -> Convergence.Runtime.RuntimePartyRosterInvariantCode
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Code.init -> void
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Deconstruct(out Convergence.Runtime.RuntimePartyRosterInvariantCode Code, out Convergence.Runtime.RuntimeInstanceId InstanceId, out string! Path, out string! Message) -> void
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Equals(Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? other) -> bool
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.InstanceId.init -> void
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Message.get -> string!
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Path.get -> string!
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Path.init -> void
+Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.RuntimePartyRosterInvariantDiagnostic(Convergence.Runtime.RuntimePartyRosterInvariantCode Code, Convergence.Runtime.RuntimeInstanceId InstanceId, string! Path, string! Message) -> void
+Convergence.Runtime.RuntimePartyRosterInvariantRules
 Convergence.Runtime.RuntimePartyRosterSnapshot
 Convergence.Runtime.RuntimePartyRosterSnapshot.<Clone>$() -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.RuntimePartyRosterSnapshot.ActiveHostedEntity.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot?
@@ -6149,15 +6153,16 @@ Convergence.Runtime.RuntimeSaveRecord.RuntimeSaveRecord(Convergence.Runtime.Runt
 Convergence.Runtime.RuntimeSaveRecord.Sequence.get -> long
 Convergence.Runtime.RuntimeSaveRecord.Snapshot.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
 Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.ActiveHostedEntityDuplicatedInRoster = 27 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActiveHostedEntityNotOwned = 27 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActiveHostedEntityReferenceMismatch = 28 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActivePartyCapacityExceeded = 25 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange = 61 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorBaseStatOutOfRange = 59 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange = 60 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.ActorEquippedSkillNotLearned = 38 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.ActorKindMismatch = 34 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorEquippedSkillNotLearned = 39 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorKindMismatch = 35 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid = 65 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.ActorReferenceEntityMismatch = 29 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorReferenceEntityMismatch = 30 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid = 62 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorStatStageOutOfRange = 58 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid = 64 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -6167,36 +6172,35 @@ Convergence.Runtime.RuntimeSaveValidationCode.CompendiumEntityNotEligible = 15 -
 Convergence.Runtime.RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned = 21 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ContentPackVersionMismatch = 3 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ContractVersionUnsupported = 0 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityBreak = 45 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityOverride = 47 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAilment = 40 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisLayer = 49 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisTarget = 48 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCapability = 39 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCharge = 43 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorEquippedSkill = 37 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityBreak = 46 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityOverride = 48 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAilment = 41 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisLayer = 50 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisTarget = 49 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCapability = 40 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCharge = 44 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorEquippedSkill = 38 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorInstanceId = 4 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorLearnedSkill = 36 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorResource = 35 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorRosterReference = 54 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorShield = 44 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatStage = 42 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatus = 41 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge = 32 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorLearnedSkill = 37 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorResource = 36 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorShield = 45 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatStage = 43 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatus = 42 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge = 33 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateCompendiumEntity = 14 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateCompendiumEquippedSkill = 17 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateCompendiumLearnedSkill = 16 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateContentPack = 1 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateElementalAffinityKnowledge = 31 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge = 33 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateElementalAffinityKnowledge = 32 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge = 34 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicatePartyRosterReference = 24 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicatePassiveActivation = 52 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicatePassiveSkillState = 50 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicatePassiveActivation = 53 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DuplicatePassiveSkillState = 51 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors = 57 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquipmentSlotMismatch = 56 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquippedEquipmentNotOwned = 55 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded = 30 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.InvalidActorAffinityBreakElement = 46 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded = 31 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.InvalidActorAffinityBreakElement = 47 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.InvalidCheckpoint = 23 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.InvalidCompendiumStatValue = 18 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.InvalidContentId = 67 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -6213,9 +6217,9 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingCatalogSkill = 8 -> Converg
 Convergence.Runtime.RuntimeSaveValidationCode.MissingCompendiumEntity = 13 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.MissingCompendiumStat = 19 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.MissingContentPack = 2 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.PartyRosterIdentityCollision = 28 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded = 53 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.PassiveStateSkillNotLoaded = 51 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.PartyRosterIdentityCollision = 29 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded = 54 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.PassiveStateSkillNotLoaded = 52 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.UndefinedEnumValue = 68 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.UnknownCompendiumStat = 20 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationDiagnostic
@@ -6379,6 +6383,15 @@ Convergence.Runtime.RuntimeWalletSnapshot.<Clone>$() -> Convergence.Runtime.Runt
 Convergence.Runtime.RuntimeWalletSnapshot.Balance.get -> int
 Convergence.Runtime.RuntimeWalletSnapshot.Equals(Convergence.Runtime.RuntimeWalletSnapshot? other) -> bool
 Convergence.Runtime.RuntimeWalletSnapshot.RuntimeWalletSnapshot(int balance) -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest
+Convergence.Runtime.SelectActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.SelectActiveHostedEntityRequest!
+Convergence.Runtime.SelectActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest.Equals(Convergence.Runtime.SelectActiveHostedEntityRequest? other) -> bool
+Convergence.Runtime.SelectActiveHostedEntityRequest.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Runtime.SelectActiveHostedEntityRequest.HostedEntityInstanceId.init -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest.SelectActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
+Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.init -> void
 Convergence.Runtime.ShopTransactionResult
 Convergence.Runtime.ShopTransactionResult.<Clone>$() -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ShopTransactionResult.AfterInventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
@@ -6515,15 +6528,6 @@ Convergence.Runtime.StatStageScalingTable.GetMultiplier(int stage) -> decimal
 Convergence.Runtime.StatStageScalingTable.Multipliers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatStageMultiplier!>!
 Convergence.Runtime.StatStageScalingTable.StatStageScalingTable(Convergence.Content.ContentId trackId, Convergence.Runtime.StatStageScalingChannel channel, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatStageMultiplier!>! multipliers) -> void
 Convergence.Runtime.StatStageScalingTable.TrackId.get -> Convergence.Content.ContentId
-Convergence.Runtime.SwapActiveHostedEntityRequest
-Convergence.Runtime.SwapActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.SwapActiveHostedEntityRequest!
-Convergence.Runtime.SwapActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
-Convergence.Runtime.SwapActiveHostedEntityRequest.Equals(Convergence.Runtime.SwapActiveHostedEntityRequest? other) -> bool
-Convergence.Runtime.SwapActiveHostedEntityRequest.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Runtime.SwapActiveHostedEntityRequest.HostedEntityInstanceId.init -> void
-Convergence.Runtime.SwapActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Runtime.SwapActiveHostedEntityRequest.Snapshot.init -> void
-Convergence.Runtime.SwapActiveHostedEntityRequest.SwapActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
 Convergence.Runtime.SwapDeployedCompanionRequest
 Convergence.Runtime.SwapDeployedCompanionRequest.<Clone>$() -> Convergence.Runtime.SwapDeployedCompanionRequest!
 Convergence.Runtime.SwapDeployedCompanionRequest.ActiveCompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
@@ -7661,10 +7665,10 @@ override Convergence.Execution.GuardBattleActionCommand.<Clone>$() -> Convergenc
 override Convergence.Execution.GuardBattleActionCommand.Equals(object? obj) -> bool
 override Convergence.Execution.GuardBattleActionCommand.GetHashCode() -> int
 override Convergence.Execution.GuardBattleActionCommand.ToString() -> string!
-override Convergence.Execution.HostedEntitySwapBattleActionCommand.<Clone>$() -> Convergence.Execution.HostedEntitySwapBattleActionCommand!
-override Convergence.Execution.HostedEntitySwapBattleActionCommand.Equals(object? obj) -> bool
-override Convergence.Execution.HostedEntitySwapBattleActionCommand.GetHashCode() -> int
-override Convergence.Execution.HostedEntitySwapBattleActionCommand.ToString() -> string!
+override Convergence.Execution.HostedEntitySelectBattleActionCommand.<Clone>$() -> Convergence.Execution.HostedEntitySelectBattleActionCommand!
+override Convergence.Execution.HostedEntitySelectBattleActionCommand.Equals(object? obj) -> bool
+override Convergence.Execution.HostedEntitySelectBattleActionCommand.GetHashCode() -> int
+override Convergence.Execution.HostedEntitySelectBattleActionCommand.ToString() -> string!
 override Convergence.Execution.HostMediatedBattleActionCommand.<Clone>$() -> Convergence.Execution.HostMediatedBattleActionCommand!
 override Convergence.Execution.HostMediatedBattleActionCommand.Equals(object? obj) -> bool
 override Convergence.Execution.HostMediatedBattleActionCommand.GetHashCode() -> int
@@ -7927,6 +7931,9 @@ override Convergence.Runtime.AppliedStatStageMultiplier.ToString() -> string!
 override Convergence.Runtime.BattleTurnEconomyRuleset.Equals(object? obj) -> bool
 override Convergence.Runtime.BattleTurnEconomyRuleset.GetHashCode() -> int
 override Convergence.Runtime.BattleTurnEconomyRuleset.ToString() -> string!
+override Convergence.Runtime.ClearActiveHostedEntityRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.ClearActiveHostedEntityRequest.GetHashCode() -> int
+override Convergence.Runtime.ClearActiveHostedEntityRequest.ToString() -> string!
 override Convergence.Runtime.ConsumeCompanionRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.ConsumeCompanionRequest.GetHashCode() -> int
 override Convergence.Runtime.ConsumeCompanionRequest.ToString() -> string!
@@ -8053,12 +8060,6 @@ override Convergence.Runtime.RuntimeActorRestoreProfile.ToString() -> string!
 override Convergence.Runtime.RuntimeActorRestoreProfileRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorRestoreProfileRequest.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorRestoreProfileRequest.ToString() -> string!
-override Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.ToString() -> string!
-override Convergence.Runtime.RuntimeActorRosterSnapshot.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorRosterSnapshot.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorRosterSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeActorSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorSnapshot.ToString() -> string!
@@ -8181,6 +8182,9 @@ override Convergence.Runtime.RuntimeNavigationSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeNavigationTransition.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeNavigationTransition.GetHashCode() -> int
 override Convergence.Runtime.RuntimeNavigationTransition.ToString() -> string!
+override Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.ToString() -> string!
 override Convergence.Runtime.RuntimePartyRosterSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimePartyRosterSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimePartyRosterSnapshot.ToString() -> string!
@@ -8265,6 +8269,9 @@ override Convergence.Runtime.RuntimeTimedStateSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeWalletSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeWalletSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeWalletSnapshot.ToString() -> string!
+override Convergence.Runtime.SelectActiveHostedEntityRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.SelectActiveHostedEntityRequest.GetHashCode() -> int
+override Convergence.Runtime.SelectActiveHostedEntityRequest.ToString() -> string!
 override Convergence.Runtime.ShopTransactionResult.Equals(object? obj) -> bool
 override Convergence.Runtime.ShopTransactionResult.GetHashCode() -> int
 override Convergence.Runtime.ShopTransactionResult.ToString() -> string!
@@ -8301,9 +8308,6 @@ override Convergence.Runtime.StatStageScalingResult.ToString() -> string!
 override Convergence.Runtime.StatStageScalingTable.Equals(object? obj) -> bool
 override Convergence.Runtime.StatStageScalingTable.GetHashCode() -> int
 override Convergence.Runtime.StatStageScalingTable.ToString() -> string!
-override Convergence.Runtime.SwapActiveHostedEntityRequest.Equals(object? obj) -> bool
-override Convergence.Runtime.SwapActiveHostedEntityRequest.GetHashCode() -> int
-override Convergence.Runtime.SwapActiveHostedEntityRequest.ToString() -> string!
 override Convergence.Runtime.SwapDeployedCompanionRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.SwapDeployedCompanionRequest.GetHashCode() -> int
 override Convergence.Runtime.SwapDeployedCompanionRequest.ToString() -> string!
@@ -8432,7 +8436,7 @@ override sealed Convergence.Execution.CompanionRecallBattleActionCommand.Equals(
 override sealed Convergence.Execution.CompanionSwapBattleActionCommand.Equals(Convergence.Execution.PartyRosterBattleActionCommand? other) -> bool
 override sealed Convergence.Execution.EscapeAttemptBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
 override sealed Convergence.Execution.GuardBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
-override sealed Convergence.Execution.HostedEntitySwapBattleActionCommand.Equals(Convergence.Execution.PartyRosterBattleActionCommand? other) -> bool
+override sealed Convergence.Execution.HostedEntitySelectBattleActionCommand.Equals(Convergence.Execution.PartyRosterBattleActionCommand? other) -> bool
 override sealed Convergence.Execution.HostMediatedBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
 override sealed Convergence.Execution.ItemBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
 override sealed Convergence.Execution.PartyRosterBattleActionCommand.Equals(Convergence.Execution.BattleActionCommand? other) -> bool
@@ -9012,8 +9016,8 @@ static Convergence.Execution.ExecutionResourceChange.operator !=(Convergence.Exe
 static Convergence.Execution.ExecutionResourceChange.operator ==(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
 static Convergence.Execution.GuardBattleActionCommand.operator !=(Convergence.Execution.GuardBattleActionCommand? left, Convergence.Execution.GuardBattleActionCommand? right) -> bool
 static Convergence.Execution.GuardBattleActionCommand.operator ==(Convergence.Execution.GuardBattleActionCommand? left, Convergence.Execution.GuardBattleActionCommand? right) -> bool
-static Convergence.Execution.HostedEntitySwapBattleActionCommand.operator !=(Convergence.Execution.HostedEntitySwapBattleActionCommand? left, Convergence.Execution.HostedEntitySwapBattleActionCommand? right) -> bool
-static Convergence.Execution.HostedEntitySwapBattleActionCommand.operator ==(Convergence.Execution.HostedEntitySwapBattleActionCommand? left, Convergence.Execution.HostedEntitySwapBattleActionCommand? right) -> bool
+static Convergence.Execution.HostedEntitySelectBattleActionCommand.operator !=(Convergence.Execution.HostedEntitySelectBattleActionCommand? left, Convergence.Execution.HostedEntitySelectBattleActionCommand? right) -> bool
+static Convergence.Execution.HostedEntitySelectBattleActionCommand.operator ==(Convergence.Execution.HostedEntitySelectBattleActionCommand? left, Convergence.Execution.HostedEntitySelectBattleActionCommand? right) -> bool
 static Convergence.Execution.HostMediatedBattleActionCommand.operator !=(Convergence.Execution.HostMediatedBattleActionCommand? left, Convergence.Execution.HostMediatedBattleActionCommand? right) -> bool
 static Convergence.Execution.HostMediatedBattleActionCommand.operator ==(Convergence.Execution.HostMediatedBattleActionCommand? left, Convergence.Execution.HostMediatedBattleActionCommand? right) -> bool
 static Convergence.Execution.InstantDeathPolicyRequest.operator !=(Convergence.Execution.InstantDeathPolicyRequest? left, Convergence.Execution.InstantDeathPolicyRequest? right) -> bool
@@ -9203,6 +9207,8 @@ static Convergence.Runtime.AppliedStatStageMultiplier.operator !=(Convergence.Ru
 static Convergence.Runtime.AppliedStatStageMultiplier.operator ==(Convergence.Runtime.AppliedStatStageMultiplier? left, Convergence.Runtime.AppliedStatStageMultiplier? right) -> bool
 static Convergence.Runtime.BattleTurnEconomyRuleset.operator !=(Convergence.Runtime.BattleTurnEconomyRuleset? left, Convergence.Runtime.BattleTurnEconomyRuleset? right) -> bool
 static Convergence.Runtime.BattleTurnEconomyRuleset.operator ==(Convergence.Runtime.BattleTurnEconomyRuleset? left, Convergence.Runtime.BattleTurnEconomyRuleset? right) -> bool
+static Convergence.Runtime.ClearActiveHostedEntityRequest.operator !=(Convergence.Runtime.ClearActiveHostedEntityRequest? left, Convergence.Runtime.ClearActiveHostedEntityRequest? right) -> bool
+static Convergence.Runtime.ClearActiveHostedEntityRequest.operator ==(Convergence.Runtime.ClearActiveHostedEntityRequest? left, Convergence.Runtime.ClearActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.ConsumeCompanionRequest.operator !=(Convergence.Runtime.ConsumeCompanionRequest? left, Convergence.Runtime.ConsumeCompanionRequest? right) -> bool
 static Convergence.Runtime.ConsumeCompanionRequest.operator ==(Convergence.Runtime.ConsumeCompanionRequest? left, Convergence.Runtime.ConsumeCompanionRequest? right) -> bool
 static Convergence.Runtime.ConsumeHostedEntityRequest.operator !=(Convergence.Runtime.ConsumeHostedEntityRequest? left, Convergence.Runtime.ConsumeHostedEntityRequest? right) -> bool
@@ -9288,11 +9294,6 @@ static Convergence.Runtime.RuntimeActorRestoreProfile.operator !=(Convergence.Ru
 static Convergence.Runtime.RuntimeActorRestoreProfile.operator ==(Convergence.Runtime.RuntimeActorRestoreProfile? left, Convergence.Runtime.RuntimeActorRestoreProfile? right) -> bool
 static Convergence.Runtime.RuntimeActorRestoreProfileRequest.operator !=(Convergence.Runtime.RuntimeActorRestoreProfileRequest? left, Convergence.Runtime.RuntimeActorRestoreProfileRequest? right) -> bool
 static Convergence.Runtime.RuntimeActorRestoreProfileRequest.operator ==(Convergence.Runtime.RuntimeActorRestoreProfileRequest? left, Convergence.Runtime.RuntimeActorRestoreProfileRequest? right) -> bool
-static Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.operator !=(Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic.operator ==(Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimeActorRosterInvariantRules.Validate(Convergence.Runtime.RuntimeActorRosterSnapshot! roster) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorRosterInvariantDiagnostic!>!
-static Convergence.Runtime.RuntimeActorRosterSnapshot.operator !=(Convergence.Runtime.RuntimeActorRosterSnapshot? left, Convergence.Runtime.RuntimeActorRosterSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeActorRosterSnapshot.operator ==(Convergence.Runtime.RuntimeActorRosterSnapshot? left, Convergence.Runtime.RuntimeActorRosterSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorSnapshot.operator !=(Convergence.Runtime.RuntimeActorSnapshot? left, Convergence.Runtime.RuntimeActorSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorSnapshot.operator ==(Convergence.Runtime.RuntimeActorSnapshot? left, Convergence.Runtime.RuntimeActorSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.operator !=(Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? right) -> bool
@@ -9377,6 +9378,9 @@ static Convergence.Runtime.RuntimeNavigationSnapshot.operator !=(Convergence.Run
 static Convergence.Runtime.RuntimeNavigationSnapshot.operator ==(Convergence.Runtime.RuntimeNavigationSnapshot? left, Convergence.Runtime.RuntimeNavigationSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeNavigationTransition.operator !=(Convergence.Runtime.RuntimeNavigationTransition? left, Convergence.Runtime.RuntimeNavigationTransition? right) -> bool
 static Convergence.Runtime.RuntimeNavigationTransition.operator ==(Convergence.Runtime.RuntimeNavigationTransition? left, Convergence.Runtime.RuntimeNavigationTransition? right) -> bool
+static Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.operator !=(Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic.operator ==(Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? left, Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimePartyRosterInvariantRules.Validate(Convergence.Runtime.RuntimePartyRosterSnapshot! roster) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimePartyRosterInvariantDiagnostic!>!
 static Convergence.Runtime.RuntimePartyRosterSnapshot.operator !=(Convergence.Runtime.RuntimePartyRosterSnapshot? left, Convergence.Runtime.RuntimePartyRosterSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePartyRosterSnapshot.operator ==(Convergence.Runtime.RuntimePartyRosterSnapshot? left, Convergence.Runtime.RuntimePartyRosterSnapshot? right) -> bool
 static Convergence.Runtime.RuntimePassiveActivationSnapshot.operator !=(Convergence.Runtime.RuntimePassiveActivationSnapshot? left, Convergence.Runtime.RuntimePassiveActivationSnapshot? right) -> bool
@@ -9434,6 +9438,8 @@ static Convergence.Runtime.RuntimeTimedStateSnapshot.operator !=(Convergence.Run
 static Convergence.Runtime.RuntimeTimedStateSnapshot.operator ==(Convergence.Runtime.RuntimeTimedStateSnapshot? left, Convergence.Runtime.RuntimeTimedStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeWalletSnapshot.operator !=(Convergence.Runtime.RuntimeWalletSnapshot? left, Convergence.Runtime.RuntimeWalletSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeWalletSnapshot.operator ==(Convergence.Runtime.RuntimeWalletSnapshot? left, Convergence.Runtime.RuntimeWalletSnapshot? right) -> bool
+static Convergence.Runtime.SelectActiveHostedEntityRequest.operator !=(Convergence.Runtime.SelectActiveHostedEntityRequest? left, Convergence.Runtime.SelectActiveHostedEntityRequest? right) -> bool
+static Convergence.Runtime.SelectActiveHostedEntityRequest.operator ==(Convergence.Runtime.SelectActiveHostedEntityRequest? left, Convergence.Runtime.SelectActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.ShopTransactionResult.operator !=(Convergence.Runtime.ShopTransactionResult? left, Convergence.Runtime.ShopTransactionResult? right) -> bool
 static Convergence.Runtime.ShopTransactionResult.operator ==(Convergence.Runtime.ShopTransactionResult? left, Convergence.Runtime.ShopTransactionResult? right) -> bool
 static Convergence.Runtime.StandardLevelGrowthProfiles.IndependentActor.get -> Convergence.Runtime.RuntimeLevelGrowthProfile!
@@ -9485,8 +9491,6 @@ static Convergence.Runtime.StatStageScalingResult.operator !=(Convergence.Runtim
 static Convergence.Runtime.StatStageScalingResult.operator ==(Convergence.Runtime.StatStageScalingResult? left, Convergence.Runtime.StatStageScalingResult? right) -> bool
 static Convergence.Runtime.StatStageScalingTable.operator !=(Convergence.Runtime.StatStageScalingTable? left, Convergence.Runtime.StatStageScalingTable? right) -> bool
 static Convergence.Runtime.StatStageScalingTable.operator ==(Convergence.Runtime.StatStageScalingTable? left, Convergence.Runtime.StatStageScalingTable? right) -> bool
-static Convergence.Runtime.SwapActiveHostedEntityRequest.operator !=(Convergence.Runtime.SwapActiveHostedEntityRequest? left, Convergence.Runtime.SwapActiveHostedEntityRequest? right) -> bool
-static Convergence.Runtime.SwapActiveHostedEntityRequest.operator ==(Convergence.Runtime.SwapActiveHostedEntityRequest? left, Convergence.Runtime.SwapActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.SwapDeployedCompanionRequest.operator !=(Convergence.Runtime.SwapDeployedCompanionRequest? left, Convergence.Runtime.SwapDeployedCompanionRequest? right) -> bool
 static Convergence.Runtime.SwapDeployedCompanionRequest.operator ==(Convergence.Runtime.SwapDeployedCompanionRequest? left, Convergence.Runtime.SwapDeployedCompanionRequest? right) -> bool
 static Convergence.Runtime.SwapPartyMemberRequest.operator !=(Convergence.Runtime.SwapPartyMemberRequest? left, Convergence.Runtime.SwapPartyMemberRequest? right) -> bool

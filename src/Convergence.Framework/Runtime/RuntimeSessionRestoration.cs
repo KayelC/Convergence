@@ -408,6 +408,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     profile.StatSourceKind,
                     profile.MissingHostedEntityBehavior,
                     activeHostedEntity,
+                    current.PartyRoster,
                     profile.EquipmentStatModifiers));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)

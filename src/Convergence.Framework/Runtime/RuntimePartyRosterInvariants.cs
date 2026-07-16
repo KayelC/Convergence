@@ -1,40 +1,42 @@
 namespace Convergence.Runtime;
 
-public enum RuntimeActorRosterInvariantCode
+public enum RuntimePartyRosterInvariantCode
 {
     DuplicateHostedEntityReference,
     DuplicateCompanionReference,
-    ActiveHostedEntityDuplicatedInRoster,
+    ActiveHostedEntityNotOwned,
+    ActiveHostedEntityReferenceMismatch,
     HostedEntityCompanionRoleCollision
 }
 
-public sealed record RuntimeActorRosterInvariantDiagnostic(
-    RuntimeActorRosterInvariantCode Code,
+public sealed record RuntimePartyRosterInvariantDiagnostic(
+    RuntimePartyRosterInvariantCode Code,
     RuntimeInstanceId InstanceId,
     string Path,
     string Message);
 
-public static class RuntimeActorRosterInvariantRules
+public static class RuntimePartyRosterInvariantRules
 {
-    public static IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> Validate(
-        RuntimeActorRosterSnapshot roster)
+    public static IReadOnlyList<RuntimePartyRosterInvariantDiagnostic> Validate(
+        RuntimePartyRosterSnapshot roster)
     {
         ArgumentNullException.ThrowIfNull(roster);
 
-        var diagnostics = new List<RuntimeActorRosterInvariantDiagnostic>();
+        var diagnostics = new List<RuntimePartyRosterInvariantDiagnostic>();
         HashSet<RuntimeInstanceId> hostedEntityIds = ValidateDuplicates(
             roster.HostedEntityRoster,
             "$.hostedEntityRoster",
-            RuntimeActorRosterInvariantCode.DuplicateHostedEntityReference,
+            RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference,
             diagnostics);
         ValidateDuplicates(
             roster.CompanionRoster,
             "$.companionRoster",
-            RuntimeActorRosterInvariantCode.DuplicateCompanionReference,
+            RuntimePartyRosterInvariantCode.DuplicateCompanionReference,
             diagnostics);
 
         if (roster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity)
         {
+            int ownedIndex = -1;
             for (int index = 0; index < roster.HostedEntityRoster.Count; index++)
             {
                 RuntimeActorReferenceSnapshot reference = roster.HostedEntityRoster[index];
@@ -43,11 +45,26 @@ public static class RuntimeActorRosterInvariantRules
                     continue;
                 }
 
-                diagnostics.Add(new RuntimeActorRosterInvariantDiagnostic(
-                    RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster,
-                    reference.InstanceId,
-                    $"$.hostedEntityRoster[{index}]",
-                    $"Active hosted entity '{reference.InstanceId}' cannot also appear in the hosted-entity roster."));
+                ownedIndex = index;
+                if (reference != activeHostedEntity)
+                {
+                    diagnostics.Add(new RuntimePartyRosterInvariantDiagnostic(
+                        RuntimePartyRosterInvariantCode.ActiveHostedEntityReferenceMismatch,
+                        reference.InstanceId,
+                        "$.activeHostedEntity",
+                        $"Active hosted entity '{reference.InstanceId}' does not match its owned roster reference."));
+                }
+
+                break;
+            }
+
+            if (ownedIndex < 0)
+            {
+                diagnostics.Add(new RuntimePartyRosterInvariantDiagnostic(
+                    RuntimePartyRosterInvariantCode.ActiveHostedEntityNotOwned,
+                    activeHostedEntity.InstanceId,
+                    "$.activeHostedEntity",
+                    $"Active hosted entity '{activeHostedEntity.InstanceId}' must exist in the hosted-entity roster."));
             }
         }
 
@@ -59,8 +76,8 @@ public static class RuntimeActorRosterInvariantRules
                 continue;
             }
 
-            diagnostics.Add(new RuntimeActorRosterInvariantDiagnostic(
-                RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision,
+            diagnostics.Add(new RuntimePartyRosterInvariantDiagnostic(
+                RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision,
                 reference.InstanceId,
                 $"$.companionRoster[{index}]",
                 $"Runtime actor '{reference.InstanceId}' cannot occupy hosted-entity and companion roster roles simultaneously."));
@@ -72,8 +89,8 @@ public static class RuntimeActorRosterInvariantRules
     private static HashSet<RuntimeInstanceId> ValidateDuplicates(
         IReadOnlyList<RuntimeActorReferenceSnapshot> references,
         string path,
-        RuntimeActorRosterInvariantCode code,
-        ICollection<RuntimeActorRosterInvariantDiagnostic> diagnostics)
+        RuntimePartyRosterInvariantCode code,
+        ICollection<RuntimePartyRosterInvariantDiagnostic> diagnostics)
     {
         var seen = new HashSet<RuntimeInstanceId>();
         for (int index = 0; index < references.Count; index++)
@@ -84,7 +101,7 @@ public static class RuntimeActorRosterInvariantRules
                 continue;
             }
 
-            diagnostics.Add(new RuntimeActorRosterInvariantDiagnostic(
+            diagnostics.Add(new RuntimePartyRosterInvariantDiagnostic(
                 code,
                 reference.InstanceId,
                 $"{path}[{index}]",

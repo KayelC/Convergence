@@ -79,9 +79,8 @@ public sealed class ProgressionPolicyTests
     public void ActorComposition_UsesHostedStatsEquipmentStagesAndPreservesCurrentResources()
     {
         RuntimeActorState hostedEntity = CreateActor("hosted", 20m);
-        RuntimeActorReferenceSnapshot hostedReference = Reference(hostedEntity);
-        RuntimeActorRosterSnapshot rosters = new(activeHostedEntity: hostedReference);
-        RuntimeActorState vessel = CreateActor("vessel", 5m, rosters, hpCurrent: 90m);
+        RuntimeActorState vessel = CreateActor("vessel", 5m, hpCurrent: 90m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         vessel.ChangeStatStage(StandardProgressionIds.Attack, 1, duration: null);
         var service = new RuntimeActorStatCompositionService(_stats, _resources);
 
@@ -91,6 +90,7 @@ public sealed class ProgressionPolicyTests
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
                 hostedEntity,
+                partyRoster,
                 equipmentStatModifiers:
                 [
                     new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 2m),
@@ -105,13 +105,14 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(125m, vessel.Resources[StandardProgressionIds.Hp].Maximum);
         Assert.Equal(20m, vessel.Resources[StandardProgressionIds.Sp].Current);
         Assert.Equal(66m, vessel.Resources[StandardProgressionIds.Sp].Maximum);
-        Assert.Equal(rosters.ActiveHostedEntity, vessel.Rosters.ActiveHostedEntity);
+        Assert.Equal(hostedEntity.InstanceId, partyRoster.ActiveHostedEntity!.InstanceId);
     }
 
     [Fact]
     public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
     {
         RuntimeActorState rejectedActor = CreateActor("rejected_vessel", 7m);
+        RuntimePartyRosterSnapshot rejectedRoster = PartyRoster(rejectedActor);
         RuntimeActorSnapshot rejectedBefore = rejectedActor.ToSnapshot();
         var service = new RuntimeActorStatCompositionService(_stats, _resources);
 
@@ -119,7 +120,8 @@ public sealed class ProgressionPolicyTests
             new RuntimeActorStatCompositionRequest(
                 rejectedActor,
                 RuntimeStatSourceKind.ActiveHostedEntity,
-                MissingHostedEntityBehavior.RejectStatResolution));
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster: rejectedRoster));
 
         Assert.False(rejected.Applied);
         Assert.Equal(
@@ -128,11 +130,13 @@ public sealed class ProgressionPolicyTests
         AssertCompositionStateUnchanged(rejectedBefore, rejectedActor.ToSnapshot());
 
         RuntimeActorState fallbackActor = CreateActor("fallback_vessel", 7m, hpCurrent: 80m);
+        RuntimePartyRosterSnapshot fallbackRoster = PartyRoster(fallbackActor);
         RuntimeActorStatCompositionResult fallback = service.Compose(
             new RuntimeActorStatCompositionRequest(
                 fallbackActor,
                 RuntimeStatSourceKind.ActiveHostedEntity,
-                MissingHostedEntityBehavior.UseActorBaseStats));
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                partyRoster: fallbackRoster));
 
         Assert.True(fallback.Applied);
         Assert.Equal(RuntimeStatSourceKind.Actor, fallback.ResolvedSourceKind);
@@ -146,10 +150,8 @@ public sealed class ProgressionPolicyTests
     {
         RuntimeActorState expected = CreateActor("expected_hosted", 20m);
         RuntimeActorState supplied = CreateActor("supplied_hosted", 30m);
-        RuntimeActorState vessel = CreateActor(
-            "mismatched_vessel",
-            5m,
-            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(expected)));
+        RuntimeActorState vessel = CreateActor("mismatched_vessel", 5m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, expected);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
 
         RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
@@ -157,7 +159,8 @@ public sealed class ProgressionPolicyTests
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                supplied));
+                supplied,
+                partyRoster));
 
         Assert.False(result.Applied);
         Assert.Equal(
@@ -167,24 +170,22 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
-    public void ActorComposition_RejectsEveryActorRosterInvariantWithoutMutation()
+    public void ActorComposition_RejectsEveryPartyRosterInvariantWithoutMutation()
     {
+        RuntimeActorState actor = CreateActor("roster_owner", 5m);
+        RuntimeActorReferenceSnapshot owner = Reference(actor);
         RuntimeActorReferenceSnapshot first = ActorReference("owned_first");
         RuntimeActorReferenceSnapshot second = ActorReference("owned_second");
-        RuntimeActorRosterSnapshot[] invalidRosters =
+        RuntimePartyRosterSnapshot[] invalidRosters =
         [
-            new(hostedEntityRoster: [first, first]),
-            new(companionRoster: [first, first]),
-            new(hostedEntityRoster: [first], companionRoster: [first]),
-            new(activeHostedEntity: second, hostedEntityRoster: [second])
+            new(owner, 1, hostedEntityRoster: [first, first]),
+            new(owner, 1, companionRoster: [first, first]),
+            new(owner, 1, hostedEntityRoster: [first], companionRoster: [first]),
+            new(owner, 1, activeHostedEntity: second, hostedEntityRoster: [first])
         ];
-
-        Assert.Throws<ArgumentException>(() =>
-            CreateActor("invalid_constructor_roster", 5m, invalidRosters[0]));
 
         for (int index = 0; index < invalidRosters.Length; index++)
         {
-            RuntimeActorState actor = CreateActor($"invalid_roster_{index}", 5m);
             RuntimeActorSnapshot before = actor.ToSnapshot();
 
             RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
@@ -192,7 +193,7 @@ public sealed class ProgressionPolicyTests
                     actor,
                     RuntimeStatSourceKind.Actor,
                     MissingHostedEntityBehavior.UseActorBaseStats,
-                    rosters: invalidRosters[index]));
+                    partyRoster: invalidRosters[index]));
 
             Assert.False(result.Applied);
             Assert.Equal(
@@ -203,28 +204,29 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
-    public void ActorRosterInvariantRules_ReturnOrderedImmutableDiagnostics()
+    public void PartyRosterInvariantRules_ReturnOrderedImmutableDiagnostics()
     {
+        RuntimeActorReferenceSnapshot owner = ActorReference("owner");
         RuntimeActorReferenceSnapshot reference = ActorReference("repeated_actor");
-        var roster = new RuntimeActorRosterSnapshot(
+        var roster = new RuntimePartyRosterSnapshot(
+            owner,
+            1,
             activeHostedEntity: reference,
             hostedEntityRoster: [reference, reference],
             companionRoster: [reference, reference]);
 
-        IReadOnlyList<RuntimeActorRosterInvariantDiagnostic> diagnostics =
-            RuntimeActorRosterInvariantRules.Validate(roster);
+        IReadOnlyList<RuntimePartyRosterInvariantDiagnostic> diagnostics =
+            RuntimePartyRosterInvariantRules.Validate(roster);
 
         Assert.Equal(
             [
-                RuntimeActorRosterInvariantCode.DuplicateHostedEntityReference,
-                RuntimeActorRosterInvariantCode.DuplicateCompanionReference,
-                RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster,
-                RuntimeActorRosterInvariantCode.ActiveHostedEntityDuplicatedInRoster,
-                RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision,
-                RuntimeActorRosterInvariantCode.HostedEntityCompanionRoleCollision
+                RuntimePartyRosterInvariantCode.DuplicateHostedEntityReference,
+                RuntimePartyRosterInvariantCode.DuplicateCompanionReference,
+                RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision,
+                RuntimePartyRosterInvariantCode.HostedEntityCompanionRoleCollision
             ],
             diagnostics.Select(diagnostic => diagnostic.Code));
-        Assert.IsAssignableFrom<System.Collections.ObjectModel.ReadOnlyCollection<RuntimeActorRosterInvariantDiagnostic>>(
+        Assert.IsAssignableFrom<System.Collections.ObjectModel.ReadOnlyCollection<RuntimePartyRosterInvariantDiagnostic>>(
             diagnostics);
     }
 
@@ -232,10 +234,8 @@ public sealed class ProgressionPolicyTests
     public void ActorComposition_ResolutionFailureIsAtomic()
     {
         RuntimeActorState hostedEntity = CreateActor("atomic_hosted", 20m);
-        RuntimeActorState vessel = CreateActor(
-            "atomic_vessel",
-            5m,
-            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(hostedEntity)));
+        RuntimeActorState vessel = CreateActor("atomic_vessel", 5m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         var service = new RuntimeActorStatCompositionService(
             new ThrowingStatResolutionPolicy(StandardProgressionIds.Magic),
@@ -246,7 +246,8 @@ public sealed class ProgressionPolicyTests
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity));
+                hostedEntity,
+                partyRoster));
 
         Assert.False(result.Applied);
         Assert.Equal(
@@ -259,10 +260,8 @@ public sealed class ProgressionPolicyTests
     public void ActorComposition_DrivesBattleDamageFromTheHostedEntityStats()
     {
         RuntimeActorState hostedEntity = CreateActor("damage_hosted", 20m);
-        RuntimeActorState vessel = CreateActor(
-            "damage_vessel",
-            5m,
-            new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(hostedEntity)));
+        RuntimeActorState vessel = CreateActor("damage_vessel", 5m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorState actorSourced = CreateActor("damage_actor_source", 5m);
         RuntimeActorState target = CreateActor("damage_target", 5m);
         RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService().Compose(
@@ -270,7 +269,8 @@ public sealed class ProgressionPolicyTests
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity));
+                hostedEntity,
+                partyRoster));
         Assert.True(composition.Applied);
 
         var ruleset = new ProductionCombatRuleset(new MinimumRandomSource());
@@ -654,7 +654,6 @@ public sealed class ProgressionPolicyTests
     private static RuntimeActorState CreateActor(
         string id,
         decimal statValue,
-        RuntimeActorRosterSnapshot? rosters = null,
         decimal hpCurrent = 50m) =>
         new(
             RuntimeInstanceId.Parse(id),
@@ -677,8 +676,22 @@ public sealed class ProgressionPolicyTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20m),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
-            baseStats: BaseStats(statValue),
-            rosters: rosters);
+            baseStats: BaseStats(statValue));
+
+    private static RuntimePartyRosterSnapshot PartyRoster(
+        RuntimeActorState owner,
+        RuntimeActorState? activeHostedEntity = null)
+    {
+        RuntimeActorReferenceSnapshot ownerReference = Reference(owner);
+        RuntimeActorReferenceSnapshot? activeReference =
+            activeHostedEntity is null ? null : Reference(activeHostedEntity);
+        return new RuntimePartyRosterSnapshot(
+            ownerReference,
+            owner.Progression.Level,
+            activeParty: [ownerReference],
+            activeHostedEntity: activeReference,
+            hostedEntityRoster: activeReference is null ? [] : [activeReference]);
+    }
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
         new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);
@@ -708,13 +721,6 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(
             expected.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray(),
             actual.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray());
-        Assert.Equal(expected.Rosters.ActiveHostedEntity, actual.Rosters.ActiveHostedEntity);
-        Assert.Equal(
-            expected.Rosters.HostedEntityRoster.ToArray(),
-            actual.Rosters.HostedEntityRoster.ToArray());
-        Assert.Equal(
-            expected.Rosters.CompanionRoster.ToArray(),
-            actual.Rosters.CompanionRoster.ToArray());
         Assert.Equal(
             expected.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray(),
             actual.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray());

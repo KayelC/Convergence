@@ -129,7 +129,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeActorReferenceSnapshot activeHostedEntity = summary.PartyRoster.ActiveHostedEntity!;
         Assert.Equal(RuntimeInstanceId.Parse("hosted_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
-            [RuntimeInstanceId.Parse("hosted_bramble_runner")],
+            [
+                RuntimeInstanceId.Parse("hosted_annex_mentor"),
+                RuntimeInstanceId.Parse("hosted_bramble_runner")
+            ],
             summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("companion_ashling"), RuntimeInstanceId.Parse("companion_ward_shell")],
@@ -162,7 +165,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(6m, summary.PlayerStats.BaseStats[StandardProgressionIds.Strength]);
         Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
         Assert.Equal(8m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Magic]);
-        Assert.Equal(activeHostedEntity, summary.PlayerRosters.ActiveHostedEntity);
+        Assert.Equal(activeHostedEntity, summary.PartyRoster.ActiveHostedEntity);
         Assert.True(summary.ResourceRecalculationApplied);
         Assert.True(summary.GrowthApplied);
         Assert.Equal(1, summary.LevelUpCount);
@@ -290,7 +293,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Hydrated Echo Adept at level 3.", text, StringComparison.Ordinal);
         Assert.Contains("Hydrated clean actor roster with 10 actor(s): 3 enemy model(s).", text, StringComparison.Ordinal);
         Assert.Contains("Party setup: 1 active, 1 reserve.", text, StringComparison.Ordinal);
-        Assert.Contains("Roster setup: active hosted entity 1, Hosted Entity roster 1, Companion roster 2.", text, StringComparison.Ordinal);
+        Assert.Contains("Roster setup: active hosted entity 1, Hosted Entity roster 2, Companion roster 2.", text, StringComparison.Ordinal);
         Assert.Contains("Field location: Staging Area.", text, StringComparison.Ordinal);
         Assert.Contains("Session: convergence.training_annex_slice; 7 entities, 10 skills, 5 items, 3 encounters, 1 dungeons. Location: Staging Area (convergence.training_annex_slice:staging_area); dungeon state: not active.", text, StringComparison.Ordinal);
         Assert.Contains("Field navigation: entered Training Annex; location Training Annex Entrance (convergence.training_annex_slice:training_annex_entrance).", text, StringComparison.Ordinal);
@@ -365,7 +368,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeActorReferenceSnapshot activeHostedEntity = summary.PartyRoster.ActiveHostedEntity!;
         Assert.Equal(RuntimeInstanceId.Parse("hosted_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
-            [RuntimeInstanceId.Parse("hosted_bramble_runner")],
+            [
+                RuntimeInstanceId.Parse("hosted_annex_mentor"),
+                RuntimeInstanceId.Parse("hosted_bramble_runner")
+            ],
             summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("companion_ashling"), RuntimeInstanceId.Parse("companion_ward_shell")],
@@ -373,7 +379,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         string text = output.ToString();
         Assert.Contains(
-            "Roster: active hosted entity [Annex Mentor (hosted_annex_mentor)]; Hosted Entity roster [Bramble Runner (hosted_bramble_runner)]; Companion roster [Ashling (companion_ashling), Ward Shell (companion_ward_shell)].",
+            "Roster: active hosted entity [Annex Mentor (hosted_annex_mentor)]; Hosted Entity roster [Annex Mentor (hosted_annex_mentor), Bramble Runner (hosted_bramble_runner)]; Companion roster [Ashling (companion_ashling), Ward Shell (companion_ward_shell)].",
             text,
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -400,7 +406,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(
             [
-                "swap_active_hosted_entity",
+                "select_active_hosted_entity",
                 "deploy_companion",
                 "swap_deployed_companion",
                 "recall_active_companion",
@@ -421,12 +427,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.NotNull(summary.PartyRoster.ActiveHostedEntity);
         Assert.Equal(RuntimeInstanceId.Parse("hosted_bramble_runner"), summary.PartyRoster.ActiveHostedEntity!.InstanceId);
         Assert.Equal(
-            [RuntimeInstanceId.Parse("hosted_annex_mentor")],
+            [
+                RuntimeInstanceId.Parse("hosted_annex_mentor"),
+                RuntimeInstanceId.Parse("hosted_bramble_runner")
+            ],
             summary.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Empty(summary.PartyRoster.CompanionRoster);
         Assert.Equal(
             RuntimeInstanceId.Parse("hosted_bramble_runner"),
-            summary.PlayerRosters.ActiveHostedEntity?.InstanceId);
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
         Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
         Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Magic]);
         Assert.Equal(4m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Vitality]);
@@ -446,7 +455,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, consumed.CompanionRosterCountAfter);
 
         string text = output.ToString();
-        Assert.Contains("Party roster operation applied: swap_active_hosted_entity", text, StringComparison.Ordinal);
+        Assert.Contains("Party roster operation applied: select_active_hosted_entity", text, StringComparison.Ordinal);
         Assert.Contains("Party roster operation applied: deploy_companion; active 1->2", text, StringComparison.Ordinal);
         Assert.Contains("Party roster operation applied: swap_deployed_companion", text, StringComparison.Ordinal);
         Assert.Contains("Party roster operation applied: recall_active_companion; active 2->1", text, StringComparison.Ordinal);
@@ -1034,14 +1043,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.PartyRoster.ActiveHostedEntity?.InstanceId);
         Assert.Equal(
             RuntimeInstanceId.Parse("hosted_annex_mentor"),
-            summary.PlayerRosters.ActiveHostedEntity?.InstanceId);
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
         Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
         Assert.Contains(
-            "Party roster operation not committed: swap_active_hosted_entity; player stat composition was rejected.",
+            "Party roster operation not committed: select_active_hosted_entity; player stat composition was rejected.",
             output.ToString(),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "Party roster operation applied: swap_active_hosted_entity",
+            "Party roster operation applied: select_active_hosted_entity",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -3379,7 +3388,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_HostedEntitySwapGrowthAndRestoreShareCanonicalPlayerState()
+    public async Task CleanTrainingAnnexPlay_HostedEntitySelectionGrowthAndRestoreShareCanonicalPlayerState()
     {
         var io = new ScriptedGameIO().QueueMenu(15, 0, 10, 0, 4, 10, 1, 9);
         using var output = new StringWriter();
@@ -3397,7 +3406,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             summary.PartyRoster.ActiveHostedEntity?.InstanceId);
         Assert.Equal(
             RuntimeInstanceId.Parse("hosted_bramble_runner"),
-            summary.PlayerRosters.ActiveHostedEntity?.InstanceId);
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
         Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
         Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Magic]);
         Assert.Equal(4m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Vitality]);
@@ -3761,7 +3770,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeActorReferenceSnapshot activeHostedEntity = snapshot.PartyRoster.ActiveHostedEntity!;
         Assert.Equal(RuntimeInstanceId.Parse("hosted_annex_mentor"), activeHostedEntity.InstanceId);
         Assert.Equal(
-            [RuntimeInstanceId.Parse("hosted_bramble_runner")],
+            [
+                RuntimeInstanceId.Parse("hosted_annex_mentor"),
+                RuntimeInstanceId.Parse("hosted_bramble_runner")
+            ],
             snapshot.PartyRoster.HostedEntityRoster.Select(actor => actor.InstanceId));
         Assert.Equal(
             [RuntimeInstanceId.Parse("companion_ashling"), RuntimeInstanceId.Parse("companion_ward_shell")],
@@ -4103,7 +4115,6 @@ public sealed class CleanTrainingAnnexPlayHostTests
             actor.Resources,
             actor.Stats,
             actor.Skills,
-            actor.Rosters,
             actor.Equipment,
             actor.BattleStatus,
             actor.BattleActivations,

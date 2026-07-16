@@ -345,7 +345,6 @@ public sealed class RuntimeEnumBoundaryTests
             source.Resources,
             source.Stats,
             source.Skills,
-            source.Rosters,
             equipment,
             battleStatus,
             source.BattleActivations,

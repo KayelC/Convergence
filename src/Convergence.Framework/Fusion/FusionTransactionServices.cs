@@ -577,7 +577,6 @@ public sealed class FusionTransactionService : IFusionTransactionService
             new RuntimeSkillStateSnapshot(
                 prepared.ResultLearnedSkillIds,
                 prepared.ResultEquippedSkillIds),
-            baseline.Rosters,
             baseline.Equipment,
             baseline.BattleStatus,
             baseline.BattleActivations,
@@ -719,10 +718,8 @@ public sealed class FusionTransactionService : IFusionTransactionService
         FusionParticipantRosterKind ownerKind) =>
         ownerKind switch
         {
-            FusionParticipantRosterKind.Companion => partyRoster.ActiveParty.Concat(partyRoster.CompanionRoster),
-            FusionParticipantRosterKind.HostedEntity => partyRoster.ActiveHostedEntity is RuntimeActorReferenceSnapshot activeHostedEntity
-                ? partyRoster.HostedEntityRoster.Append(activeHostedEntity)
-                : partyRoster.HostedEntityRoster,
+            FusionParticipantRosterKind.Companion => partyRoster.CompanionRoster,
+            FusionParticipantRosterKind.HostedEntity => partyRoster.HostedEntityRoster,
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 

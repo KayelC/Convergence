@@ -116,7 +116,7 @@ public sealed class RuntimeActorGrowthCompositionService : IRuntimeActorGrowthCo
             compositionRequest.SourceKind,
             compositionRequest.MissingHostedEntityBehavior,
             compositionRequest.ActiveHostedEntity,
-            compositionRequest.Rosters,
+            compositionRequest.PartyRoster,
             compositionRequest.EquipmentStatModifiers);
         RuntimeActorStatCompositionResult composition = _statComposition.Compose(
             stagedCompositionRequest);

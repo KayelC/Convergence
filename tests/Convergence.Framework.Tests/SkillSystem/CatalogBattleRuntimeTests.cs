@@ -294,7 +294,6 @@ public sealed class CatalogBattleRuntimeTests
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 5)],
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 8)]),
             new RuntimeSkillStateSnapshot(),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
                 statStages: [new RuntimeStatStageSnapshot(Id("attack"), 2, new PhaseDurationDefinition(Id("phase_end")))],
@@ -344,7 +343,6 @@ public sealed class CatalogBattleRuntimeTests
             [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
             new RuntimeStatBlockSnapshot(),
             new RuntimeSkillStateSnapshot([default], [default]),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
                 ailments: [new RuntimeTimedStateSnapshot(default, new BattleDurationDefinition())]),
@@ -383,15 +381,16 @@ public sealed class CatalogBattleRuntimeTests
             "saved_vessel",
             vesselEntity,
             CoreStats(5m),
-            effectiveStats: CoreStats(999m),
-            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: hostedReference));
+            effectiveStats: CoreStats(999m));
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vesselSnapshot, hostedReference);
 
         CatalogBattleActorCreationResult vesselRestore = factory.Restore(
             new CatalogBattleActorRestoreRequest(
                 vesselSnapshot,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedState));
+                hostedState,
+                partyRoster));
 
         Assert.True(
             vesselRestore.IsSuccess,
@@ -439,14 +438,15 @@ public sealed class CatalogBattleRuntimeTests
         RuntimeActorSnapshot vesselSnapshot = RestorableActorSnapshot(
             "saved_vessel",
             vesselEntity,
-            CoreStats(5m),
-            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: hostedReference));
+            CoreStats(5m));
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vesselSnapshot, hostedReference);
 
         CatalogBattleActorCreationResult result = factory.Restore(
             new CatalogBattleActorRestoreRequest(
                 vesselSnapshot,
                 RuntimeStatSourceKind.ActiveHostedEntity,
-                MissingHostedEntityBehavior.RejectStatResolution));
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster: partyRoster));
 
         Assert.False(result.IsSuccess);
         CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
@@ -1573,8 +1573,7 @@ public sealed class CatalogBattleRuntimeTests
         string instanceId,
         EntityDefinition entity,
         IReadOnlyDictionary<ContentId, decimal> baseStats,
-        IReadOnlyDictionary<ContentId, decimal>? effectiveStats = null,
-        RuntimeActorRosterSnapshot? rosters = null) =>
+        IReadOnlyDictionary<ContentId, decimal>? effectiveStats = null) =>
         new(
             new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse(instanceId),
@@ -1590,7 +1589,6 @@ public sealed class CatalogBattleRuntimeTests
             ],
             new RuntimeStatBlockSnapshot(baseStats, effectiveStats ?? baseStats),
             new RuntimeSkillStateSnapshot(),
-            rosters ?? new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
@@ -1599,6 +1597,22 @@ public sealed class CatalogBattleRuntimeTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
             StandardProgressionIds.Hp);
+
+    private static RuntimePartyRosterSnapshot PartyRoster(
+        RuntimeActorSnapshot owner,
+        RuntimeActorReferenceSnapshot activeHostedEntity)
+    {
+        RuntimeActorReferenceSnapshot ownerReference = new(
+            owner.Identity.InstanceId,
+            owner.Identity.EntityDefinitionId,
+            owner.Identity.DisplayName);
+        return new RuntimePartyRosterSnapshot(
+            ownerReference,
+            owner.Progression.Level,
+            activeParty: [ownerReference],
+            activeHostedEntity: activeHostedEntity,
+            hostedEntityRoster: [activeHostedEntity]);
+    }
 
     private static IReadOnlyDictionary<ContentId, decimal> CoreStats(decimal value) =>
         StandardProgressionIds.CoreStats.ToDictionary(statId => statId, _ => value);

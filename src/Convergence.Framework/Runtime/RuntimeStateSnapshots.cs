@@ -245,23 +245,6 @@ public sealed record RuntimeActorReferenceSnapshot
     public string DisplayName { get; }
 }
 
-public sealed record RuntimeActorRosterSnapshot
-{
-    public RuntimeActorRosterSnapshot(
-        RuntimeActorReferenceSnapshot? activeHostedEntity = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? hostedEntityRoster = null,
-        IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null)
-    {
-        ActiveHostedEntity = activeHostedEntity;
-        HostedEntityRoster = RuntimeSnapshotCollections.List(hostedEntityRoster);
-        CompanionRoster = RuntimeSnapshotCollections.List(companionRoster);
-    }
-
-    public RuntimeActorReferenceSnapshot? ActiveHostedEntity { get; }
-    public IReadOnlyList<RuntimeActorReferenceSnapshot> HostedEntityRoster { get; }
-    public IReadOnlyList<RuntimeActorReferenceSnapshot> CompanionRoster { get; }
-}
-
 public sealed record RuntimeEquipmentSnapshot
 {
     public RuntimeEquipmentSnapshot(IEnumerable<KeyValuePair<EquipmentSlot, ContentId>>? equippedItemIds = null)
@@ -484,7 +467,6 @@ public sealed record RuntimeActorSnapshot
         IEnumerable<RuntimeResourceSnapshot> resources,
         RuntimeStatBlockSnapshot stats,
         RuntimeSkillStateSnapshot skills,
-        RuntimeActorRosterSnapshot rosters,
         RuntimeEquipmentSnapshot equipment,
         RuntimeBattleStatusSnapshot battleStatus,
         RuntimeBattleActivationSnapshot battleActivations,
@@ -500,7 +482,6 @@ public sealed record RuntimeActorSnapshot
         BaseResourceValues = RuntimeSnapshotCollections.Dictionary(baseResourceValues);
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
         Skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        Rosters = rosters ?? throw new ArgumentNullException(nameof(rosters));
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         BattleStatus = battleStatus ?? throw new ArgumentNullException(nameof(battleStatus));
         BattleActivations = battleActivations ?? throw new ArgumentNullException(nameof(battleActivations));
@@ -520,7 +501,6 @@ public sealed record RuntimeActorSnapshot
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
     public RuntimeStatBlockSnapshot Stats { get; }
     public RuntimeSkillStateSnapshot Skills { get; }
-    public RuntimeActorRosterSnapshot Rosters { get; }
     public RuntimeEquipmentSnapshot Equipment { get; }
     public RuntimeBattleStatusSnapshot BattleStatus { get; }
     public RuntimeBattleActivationSnapshot BattleActivations { get; }
@@ -536,7 +516,6 @@ public sealed record RuntimeActorSnapshot
             resources,
             Stats,
             Skills,
-            Rosters,
             Equipment,
             BattleStatus,
             BattleActivations,
@@ -557,7 +536,6 @@ public sealed record RuntimeActorSnapshot
             resources ?? Resources,
             stats,
             Skills,
-            Rosters,
             Equipment,
             BattleStatus,
             BattleActivations,

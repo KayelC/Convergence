@@ -45,7 +45,10 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Throws<ArgumentException>(() => Copy(
             baseline,
             actors: new RuntimeActorSnapshot[] { null! }));
-        Assert.Throws<ArgumentException>(() => new RuntimeActorRosterSnapshot(
+        RuntimeActorReferenceSnapshot owner = Reference(baseline.Actors[0]);
+        Assert.Throws<ArgumentException>(() => new RuntimePartyRosterSnapshot(
+            owner,
+            1,
             hostedEntityRoster: new RuntimeActorReferenceSnapshot[] { null! }));
         Assert.Throws<ArgumentException>(() => new RuntimeKnowledgeSnapshot(
             elementalAffinities: new RuntimeElementalAffinityKnowledgeSnapshot[] { null! }));
@@ -121,9 +124,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
         RuntimeActorSnapshot ember = baseline.Actors.Single(actor =>
             actor.Identity.InstanceId == RuntimeInstanceId.Parse("ember"));
-        RuntimeActorSnapshot vessel = CopyActor(
-            baseline.Actors.Single(actor => actor.Identity.InstanceId == RuntimeInstanceId.Parse("frost")),
-            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(ember)));
+        RuntimeActorSnapshot vessel = baseline.Actors.Single(actor =>
+            actor.Identity.InstanceId == RuntimeInstanceId.Parse("frost"));
         RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [vessel, ember]);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
@@ -165,13 +167,7 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
         RuntimeActorSnapshot frost = baseline.Actors[0];
         RuntimeActorSnapshot ember = baseline.Actors[1];
-        RuntimeActorSnapshot cyclicFrost = CopyActor(
-            frost,
-            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(ember)));
-        RuntimeActorSnapshot cyclicEmber = CopyActor(
-            ember,
-            rosters: new RuntimeActorRosterSnapshot(activeHostedEntity: Reference(frost)));
-        RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [cyclicFrost, cyclicEmber]);
+        RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [frost, ember]);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
             catalog,
@@ -787,7 +783,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_RejectsMalformedActorRostersAndEquipmentOwnership()
+    public void RuntimeSaveValidator_RejectsMalformedCanonicalRosterAndEquipmentOwnership()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
@@ -800,12 +796,6 @@ public sealed class RuntimePersistenceSnapshotTests
             ember.Identity.DisplayName);
         RuntimeActorSnapshot malformedFrost = CopyActor(
             frost,
-            rosters: new RuntimeActorRosterSnapshot(
-                activeHostedEntity: new RuntimeActorReferenceSnapshot(
-                    RuntimeInstanceId.Parse("missing_hosted_entity"),
-                    frost.Identity.EntityDefinitionId,
-                    "Missing Hosted Entity"),
-                hostedEntityRoster: [wrongEmberReference, wrongEmberReference]),
             equipment: new RuntimeEquipmentSnapshot(
             [
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, shortsword)
@@ -816,16 +806,31 @@ public sealed class RuntimePersistenceSnapshotTests
             [
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, shortsword)
             ]));
+        var missingHostedEntity = new RuntimeActorReferenceSnapshot(
+            RuntimeInstanceId.Parse("missing_hosted_entity"),
+            frost.Identity.EntityDefinitionId,
+            "Missing Hosted Entity");
+        var malformedPartyRoster = new RuntimePartyRosterSnapshot(
+            Reference(frost),
+            frost.Progression.Level,
+            activeParty: [Reference(frost)],
+            activeHostedEntity: missingHostedEntity,
+            hostedEntityRoster: [wrongEmberReference, wrongEmberReference],
+            companionRoster: [Reference(frost)]);
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
-            Copy(baseline, actors: [malformedFrost, malformedEmber]),
+            Copy(
+                baseline,
+                actors: [malformedFrost, malformedEmber],
+                partyRoster: malformedPartyRoster),
             catalog);
 
         Assert.False(validation.IsValid);
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.MissingActiveHostedEntityReference, "$.actors[0].rosters.activeHostedEntity");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.ActiveHostedEntityNotOwned, "$.partyRoster.activeHostedEntity");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.MissingActiveHostedEntityReference, "$.partyRoster.activeHostedEntity");
         Assert.Contains(validation.Diagnostics, item =>
             item.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch &&
-            item.Path == "$.actors[0].rosters.hostedEntityRoster[0].entityDefinitionId");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorRosterReference, "$.actors[0].rosters.hostedEntityRoster[1]");
+            item.Path == "$.partyRoster.hostedEntityRoster[0].entityDefinitionId");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePartyRosterReference, "$.partyRoster.hostedEntityRoster[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentSlotMismatch, "$.actors[0].equipment.equippedItemIds.armor");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquippedEquipmentNotOwned, "$.actors[0].equipment.equippedItemIds.armor");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors, "$.actors[1].equipment.equippedItemIds.weapon");
@@ -1130,10 +1135,6 @@ public sealed class RuntimePersistenceSnapshotTests
             diagnostic.Path == "$.partyRoster.reserveMembers[0]" &&
             diagnostic.InstanceId == emberRef.InstanceId);
         Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.Code == RuntimeSaveValidationCode.ActiveHostedEntityDuplicatedInRoster &&
-            diagnostic.Path == "$.partyRoster.hostedEntityRoster[0]" &&
-            diagnostic.InstanceId == frostRef.InstanceId);
-        Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.DuplicatePartyRosterReference &&
             diagnostic.Path == "$.partyRoster.hostedEntityRoster[2]" &&
             diagnostic.InstanceId == emberRef.InstanceId);
@@ -1284,7 +1285,7 @@ public sealed class RuntimePersistenceSnapshotTests
             activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
             activeHostedEntity: activeHostedEntityRef,
-            hostedEntityRoster: [hostedEntityRef],
+            hostedEntityRoster: [activeHostedEntityRef, hostedEntityRef],
             companionRoster: [activeCompanionRef]);
 
         RuntimeSaveValidationResult valid = new RuntimeSaveValidator().Validate(
@@ -1299,7 +1300,7 @@ public sealed class RuntimePersistenceSnapshotTests
             activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
             activeHostedEntity: ownerRef,
-            hostedEntityRoster: [activeCompanionRef, reserveRef],
+            hostedEntityRoster: [ownerRef, activeCompanionRef, reserveRef],
             companionRoster: [activeCompanionRef, reserveRef]);
         RuntimeSaveValidationResult invalid = new RuntimeSaveValidator().Validate(
             CreateSaveSnapshot(actors: actors, partyRoster: invalidParty),
@@ -1312,11 +1313,11 @@ public sealed class RuntimePersistenceSnapshotTests
             diagnostic.InstanceId == ownerRef.InstanceId);
         Assert.Contains(invalid.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.PartyRosterIdentityCollision &&
-            diagnostic.Path == "$.partyRoster.hostedEntityRoster[0]" &&
+            diagnostic.Path == "$.partyRoster.hostedEntityRoster[1]" &&
             diagnostic.InstanceId == activeCompanionRef.InstanceId);
         Assert.Contains(invalid.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.PartyRosterIdentityCollision &&
-            diagnostic.Path == "$.partyRoster.hostedEntityRoster[1]" &&
+            diagnostic.Path == "$.partyRoster.hostedEntityRoster[2]" &&
             diagnostic.InstanceId == reserveRef.InstanceId);
         Assert.Contains(invalid.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.PartyRosterIdentityCollision &&
@@ -1351,7 +1352,7 @@ public sealed class RuntimePersistenceSnapshotTests
             activeParty: [mismatches[1]],
             reserveMembers: [mismatches[2]],
             activeHostedEntity: mismatches[3],
-            hostedEntityRoster: [mismatches[4]],
+            hostedEntityRoster: [mismatches[3], mismatches[4]],
             companionRoster: [mismatches[5]]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
@@ -1361,7 +1362,7 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeSaveValidationDiagnostic[] mismatchedReferences = result.Diagnostics
             .Where(diagnostic => diagnostic.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch)
             .ToArray();
-        Assert.Equal(6, mismatchedReferences.Length);
+        Assert.Equal(7, mismatchedReferences.Length);
         string[] expectedPaths =
         [
             "$.partyRoster.owner.entityDefinitionId",
@@ -1369,6 +1370,7 @@ public sealed class RuntimePersistenceSnapshotTests
             "$.partyRoster.reserveMembers[0].entityDefinitionId",
             "$.partyRoster.activeHostedEntity.entityDefinitionId",
             "$.partyRoster.hostedEntityRoster[0].entityDefinitionId",
+            "$.partyRoster.hostedEntityRoster[1].entityDefinitionId",
             "$.partyRoster.companionRoster[0].entityDefinitionId"
         ];
         Assert.Equal(
@@ -1721,7 +1723,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 5,
                 activeParty: [frostRef],
                 activeHostedEntity: emberRef,
-                hostedEntityRoster: [],
+                hostedEntityRoster: [emberRef],
                 companionRoster: [frostRef]),
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
@@ -1828,7 +1830,6 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
         RuntimeStatBlockSnapshot? stats = null,
         RuntimeSkillStateSnapshot? skills = null,
-        RuntimeActorRosterSnapshot? rosters = null,
         RuntimeEquipmentSnapshot? equipment = null,
         RuntimeBattleStatusSnapshot? battleStatus = null,
         RuntimeBattleActivationSnapshot? battleActivations = null,
@@ -1842,7 +1843,6 @@ public sealed class RuntimePersistenceSnapshotTests
             resources ?? snapshot.Resources,
             stats ?? snapshot.Stats,
             skills ?? snapshot.Skills,
-            rosters ?? snapshot.Rosters,
             equipment ?? snapshot.Equipment,
             battleStatus ?? snapshot.BattleStatus,
             battleActivations ?? snapshot.BattleActivations,
@@ -1868,7 +1868,6 @@ public sealed class RuntimePersistenceSnapshotTests
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 8)],
                 [new KeyValuePair<ContentId, decimal>(Id("magic"), 8)]),
             new RuntimeSkillStateSnapshot(learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")], learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
             new RuntimeBattleActivationSnapshot(),

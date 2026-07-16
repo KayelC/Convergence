@@ -5,7 +5,7 @@ namespace Convergence.DemoHost.TrainingAnnex;
 
 internal enum TrainingAnnexPartyOperation
 {
-    SwapActiveHostedEntity,
+    SelectActiveHostedEntity,
     DeployAshling,
     SwapDeployedCompanionToWardShell,
     RecallActiveCompanion,
@@ -76,7 +76,7 @@ internal sealed class TrainingAnnexPartyController
             .Select(TrainingAnnexHostSupport.Reference)
             .FirstOrDefault();
         RuntimeActorReferenceSnapshot[] hostedEntityRoster = roster.OwnedActors
-            .Where(member => member.Role == "Hosted Entity roster")
+            .Where(member => member.Role is "Active Hosted Entity" or "Hosted Entity roster")
             .Select(TrainingAnnexHostSupport.Reference)
             .ToArray();
         RuntimeActorReferenceSnapshot[] companionRoster = roster.OwnedActors
@@ -108,8 +108,8 @@ internal sealed class TrainingAnnexPartyController
 
         return operation switch
         {
-            TrainingAnnexPartyOperation.SwapActiveHostedEntity => _transitions.SwapActiveHostedEntity(
-                new SwapActiveHostedEntityRequest(party, TrainingAnnexHostSupport.HostedBrambleRunnerInstance)),
+            TrainingAnnexPartyOperation.SelectActiveHostedEntity => _transitions.SelectActiveHostedEntity(
+                new SelectActiveHostedEntityRequest(party, TrainingAnnexHostSupport.HostedBrambleRunnerInstance)),
             TrainingAnnexPartyOperation.DeployAshling => _transitions.DeployCompanion(
                 new DeployCompanionRequest(party, TrainingAnnexHostSupport.CompanionAshlingInstance)),
             TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => _transitions.SwapDeployedCompanion(

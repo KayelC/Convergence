@@ -62,7 +62,6 @@ public sealed class CleanSaveDemoHostTests
             original.Resources,
             original.Stats,
             original.Skills,
-            original.Rosters,
             original.Equipment,
             new RuntimeBattleStatusSnapshot(
                 statuses:

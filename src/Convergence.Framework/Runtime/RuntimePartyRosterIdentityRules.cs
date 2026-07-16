@@ -79,7 +79,8 @@ internal static class RuntimePartyRosterIdentityRules
         IReadOnlySet<RuntimePartyRosterReferenceRole> roles)
     {
         if (IsPair(first, second, RuntimePartyRosterReferenceRole.Owner, RuntimePartyRosterReferenceRole.ActiveParty) ||
-            IsPair(first, second, RuntimePartyRosterReferenceRole.ActiveParty, RuntimePartyRosterReferenceRole.CompanionRoster))
+            IsPair(first, second, RuntimePartyRosterReferenceRole.ActiveParty, RuntimePartyRosterReferenceRole.CompanionRoster) ||
+            IsPair(first, second, RuntimePartyRosterReferenceRole.ActiveHostedEntity, RuntimePartyRosterReferenceRole.HostedEntityRoster))
         {
             return true;
         }

@@ -280,7 +280,6 @@ public sealed class GodotIntegrationContractTests
             resources,
             new RuntimeStatBlockSnapshot(state.Stats, state.Stats),
             new RuntimeSkillStateSnapshot(state.SkillIds, state.SkillIds),
-            new RuntimeActorRosterSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
