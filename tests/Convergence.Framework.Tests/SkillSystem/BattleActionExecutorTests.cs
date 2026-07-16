@@ -582,8 +582,8 @@ public sealed class BattleActionExecutorTests
 
     private sealed class FixedDamagePolicy : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) =>
-            [new DamageHitResolution(true, 10)];
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([new DamageHitResolution(true, 10)], request.Affinity);
     }
 
     private sealed class NeverInstantDeathPolicy : IInstantDeathExecutionPolicy

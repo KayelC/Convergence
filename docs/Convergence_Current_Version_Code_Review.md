@@ -56,7 +56,7 @@ Release configuration or build entries back to Debug.
 ### R2. The canonical damage contract loses effective affinity state
 
 **Severity:** Medium
-**Status:** Open
+**Status:** Implemented pending final review
 
 The external review correctly identified an ambiguous relationship among
 `ResolveDamage`, `CalculateRawDamage`, and `ApplyDamage`, but static inspection
@@ -77,10 +77,14 @@ the alternative `ApplyDamage` method rather than the canonical execution path.
 their public composition is also unsafe because both can apply critical or
 affinity stages already applied elsewhere.
 
-**Required correction:** expose one unambiguous policy resolution containing
-hits and the effective affinity, make the executor consume that typed result,
-remove the unused alternative public damage stages, and prove modifiers and
-turn outcomes are applied exactly once.
+**Implemented correction:** `IDamageExecutionPolicy.Resolve` now returns one
+immutable `DamagePolicyResolution` containing both hit results and the
+effective affinity. `DamageEffectExecutor` uses that effective affinity for
+Null, Repel, Absorb, weakness, and normal turn outcomes. The unused public
+`CalculateRawDamage` and `ApplyDamage` stages were removed so consumers cannot
+accidentally reapply critical, guard, affinity, or stage logic. Focused tests
+cover guard normalization through the supplied ruleset, executor consumption
+of a policy-normalized affinity, result immutability, and saturating arithmetic.
 
 ### R3. Framework lifecycle events are mapped repeatedly
 

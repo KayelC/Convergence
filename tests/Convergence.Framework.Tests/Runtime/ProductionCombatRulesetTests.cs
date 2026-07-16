@@ -19,12 +19,12 @@ public sealed class ProductionCombatRulesetTests
 
     public static IEnumerable<object[]> AffinityDamageCases()
     {
-        yield return [ElementalAffinity.Weak, 75m, TurnEconomyOutcome.Weakness];
-        yield return [ElementalAffinity.Normal, 50m, TurnEconomyOutcome.Normal];
-        yield return [ElementalAffinity.Resist, 25m, TurnEconomyOutcome.Normal];
-        yield return [ElementalAffinity.Null, 0m, TurnEconomyOutcome.Null];
-        yield return [ElementalAffinity.Repel, 0m, TurnEconomyOutcome.Repel];
-        yield return [ElementalAffinity.Absorb, 0m, TurnEconomyOutcome.Absorb];
+        yield return [ElementalAffinity.Weak, 75m];
+        yield return [ElementalAffinity.Normal, 50m];
+        yield return [ElementalAffinity.Resist, 25m];
+        yield return [ElementalAffinity.Null, 50m];
+        yield return [ElementalAffinity.Repel, 50m];
+        yield return [ElementalAffinity.Absorb, 50m];
     }
 
     [Theory]
@@ -51,23 +51,25 @@ public sealed class ProductionCombatRulesetTests
 
     [Theory]
     [MemberData(nameof(AffinityDamageCases))]
-    public void DamageApplication_UsesApprovedAffinityMultipliersAndOutcomes(
+    public void DamagePolicy_UsesApprovedAffinityMultipliers(
         ElementalAffinity affinity,
-        decimal expectedDamage,
-        TurnEconomyOutcome expectedOutcome)
+        decimal expectedDamage)
     {
         ProductionCombatRuleset ruleset = Rules();
 
-        ProductionDamageApplicationResult result = ruleset.ApplyDamage(
-            new ProductionDamageApplicationRequest(
+        ProductionDamageResolutionResult result = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
                 Actor(),
-                50,
+                Actor(),
                 DamageElement.Fire,
                 affinity,
-                Critical: false));
+                100,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1)));
 
-        Assert.Equal(expectedDamage, result.DamageDealt);
-        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.Equal(expectedDamage, Assert.Single(result.Hits).Damage);
+        Assert.Equal(affinity, result.ResolvedAffinity);
     }
 
     [Fact]
@@ -75,18 +77,38 @@ public sealed class ProductionCombatRulesetTests
     {
         ProductionCombatRuleset ruleset = Rules();
 
-        ProductionDamageApplicationResult result = ruleset.ApplyDamage(
-            new ProductionDamageApplicationRequest(
+        ProductionDamageResolutionResult result = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                Actor(),
                 Actor(status: new ProductionCombatStatus(IsGuarding: true)),
-                50,
                 DamageElement.Physical,
                 ElementalAffinity.Weak,
-                Critical: true));
+                100,
+                100,
+                new ChanceCriticalDefinition(100),
+                new HitCountDefinition(1, 1)));
 
-        Assert.Equal(25, result.DamageDealt);
-        Assert.Equal(ElementalAffinity.Normal, result.Affinity);
-        Assert.False(result.Critical);
-        Assert.Equal(TurnEconomyOutcome.Normal, result.Outcome);
+        ProductionDamageResolutionHit hit = Assert.Single(result.Hits);
+        Assert.Equal(25, hit.Damage);
+        Assert.Equal(ElementalAffinity.Normal, result.ResolvedAffinity);
+        Assert.False(hit.Critical);
+    }
+
+    [Fact]
+    public void DamagePolicyResolution_IsImmutableAndRequiresADefinedAffinity()
+    {
+        var source = new List<DamageHitResolution>
+        {
+            new(true, 12m)
+        };
+        var result = new DamagePolicyResolution(source, ElementalAffinity.Resist);
+
+        source.Add(new DamageHitResolution(true, 99m));
+
+        Assert.Single(result.Hits);
+        Assert.Equal(ElementalAffinity.Resist, result.ResolvedAffinity);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new DamagePolicyResolution([], (ElementalAffinity)int.MaxValue));
     }
 
     [Fact]
@@ -306,19 +328,11 @@ public sealed class ProductionCombatRulesetTests
                 100,
                 new ChanceCriticalDefinition(100),
                 new HitCountDefinition(1, 1)));
-        ProductionDamageApplicationResult applied = ruleset.ApplyDamage(
-            new ProductionDamageApplicationRequest(
-                target,
-                decimal.MaxValue,
-                DamageElement.Fire,
-                ElementalAffinity.Weak,
-                Critical: true));
         ProductionHitCheckResult lowestHitChance = ruleset.CheckHit(
             new ProductionHitCheckRequest(target, attacker, 0));
 
         Assert.Equal(decimal.MaxValue, Assert.Single(damage.Hits).Damage);
         Assert.Equal(decimal.MaxValue, damage.TotalDamage);
-        Assert.Equal(decimal.MaxValue, applied.DamageDealt);
         Assert.Equal(config.HitChanceMinimum, lowestHitChance.Chance);
         Assert.Equal(
             config.CriticalChanceMaximum,

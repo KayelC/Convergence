@@ -454,8 +454,8 @@ public sealed class SharedEffectsRuntimeTests
 
     private sealed class ZeroDamagePolicy : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) =>
-            [new DamageHitResolution(true, 0)];
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([new DamageHitResolution(true, 0)], request.Affinity);
     }
 
     private sealed class NeverInstantDeathPolicy : IInstantDeathExecutionPolicy

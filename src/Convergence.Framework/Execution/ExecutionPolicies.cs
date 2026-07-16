@@ -13,9 +13,35 @@ public sealed record DamagePolicyRequest(
 
 public sealed record DamageHitResolution(bool Hit, decimal Damage, bool Critical = false);
 
+/// <summary>
+/// Contains the complete authoritative result of resolving one typed damage effect.
+/// </summary>
+public sealed class DamagePolicyResolution
+{
+    public DamagePolicyResolution(
+        IEnumerable<DamageHitResolution> hits,
+        ElementalAffinity resolvedAffinity)
+    {
+        ArgumentNullException.ThrowIfNull(hits);
+        if (!Enum.IsDefined(resolvedAffinity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(resolvedAffinity),
+                resolvedAffinity,
+                "The resolved affinity must be a defined affinity value.");
+        }
+
+        Hits = Array.AsReadOnly(hits.ToArray());
+        ResolvedAffinity = resolvedAffinity;
+    }
+
+    public IReadOnlyList<DamageHitResolution> Hits { get; }
+    public ElementalAffinity ResolvedAffinity { get; }
+}
+
 public interface IDamageExecutionPolicy
 {
-    IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request);
+    DamagePolicyResolution Resolve(DamagePolicyRequest request);
 }
 
 public sealed record InstantDeathPolicyRequest(

@@ -106,9 +106,10 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             target,
             definition.Element,
             new RuleModifierContext(defenseConditionContext, context.Request.Skill));
-        IReadOnlyList<DamageHitResolution> hits = context.Services.DamagePolicy.Resolve(
+        DamagePolicyResolution resolution = context.Services.DamagePolicy.Resolve(
             new DamagePolicyRequest(context.Actor, target, definition, affinity));
-        DamageHitResolution[] landed = hits.Where(hit => hit.Hit).ToArray();
+        affinity = resolution.ResolvedAffinity;
+        DamageHitResolution[] landed = resolution.Hits.Where(hit => hit.Hit).ToArray();
         if (landed.Length == 0)
         {
             return Failure(context, TurnEconomyOutcome.Miss, "All damage hits missed.");

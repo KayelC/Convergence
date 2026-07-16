@@ -477,6 +477,28 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_DamageUsesThePolicyResolvedAffinityForTurnEconomy()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 100);
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            hp: 50,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
+        SkillDefinition skill = ActiveSkill(
+            [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damagePolicy: new NormalizingDamagePolicy())).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(ElementalAffinity.Normal, effect.ResolvedAffinity);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
+        Assert.Equal(40, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Execute_ResolvesFormulaCostOnceBeforeCommit()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
@@ -1272,6 +1294,7 @@ public sealed class ActiveSkillExecutionTests
 
     private static BattleExecutionServices Services(
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>>? damage = null,
+        IDamageExecutionPolicy? damagePolicy = null,
         Func<InstantDeathPolicyRequest, bool>? instantDeath = null,
         IAilmentDefinitionRepository? ailments = null,
         Func<IReadOnlyList<RuntimeActorState>, TargetCountDefinition, SkillExecutionRequest, IReadOnlyList<RuntimeActorState>>? randomTargets = null,
@@ -1282,7 +1305,7 @@ public sealed class ActiveSkillExecutionTests
         IBattleAilmentApplicationService? ailmentApplications = null) =>
         new(
             ailments ?? new TestAilmentRepository([Ailment(Poison)]),
-            new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
+            damagePolicy ?? new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
             new DelegateInstantDeathPolicy(instantDeath ?? (_ => true)),
             new AlwaysApplyAilmentPolicy(),
             new AlwaysChancePolicy(),
@@ -1343,7 +1366,14 @@ public sealed class ActiveSkillExecutionTests
     private sealed class DelegateDamagePolicy(
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>> resolve) : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) => resolve(request);
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new(resolve(request), request.Affinity);
+    }
+
+    private sealed class NormalizingDamagePolicy : IDamageExecutionPolicy
+    {
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([new DamageHitResolution(true, 10)], ElementalAffinity.Normal);
     }
 
     private sealed class DelegateInstantDeathPolicy(Func<InstantDeathPolicyRequest, bool> resolve)

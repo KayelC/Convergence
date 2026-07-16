@@ -36,7 +36,7 @@ internal sealed class DemoDamageExecutionPolicy : IDamageExecutionPolicy
     private static readonly ContentId Magic = ContentId.Parse("magic");
     private static readonly ContentId Vitality = ContentId.Parse("vitality");
 
-    public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request)
+    public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
         decimal damage = Math.Max(
             1,
@@ -49,7 +49,9 @@ internal sealed class DemoDamageExecutionPolicy : IDamageExecutionPolicy
             ElementalAffinity.Resist => 0.5m,
             _ => 1m
         };
-        return [new DamageHitResolution(true, damage)];
+        return new DamagePolicyResolution(
+            [new DamageHitResolution(true, damage)],
+            request.Affinity);
     }
 }
 

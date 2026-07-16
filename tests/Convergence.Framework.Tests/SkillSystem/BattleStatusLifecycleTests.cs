@@ -875,7 +875,8 @@ public sealed class BattleStatusLifecycleTests
 
     private sealed class NoDamagePolicy : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) => [];
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([], request.Affinity);
     }
 
     private sealed class NoInstantDeathPolicy : IInstantDeathExecutionPolicy

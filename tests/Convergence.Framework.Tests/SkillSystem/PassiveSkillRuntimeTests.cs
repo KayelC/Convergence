@@ -700,7 +700,8 @@ public sealed class PassiveSkillRuntimeTests
     private sealed class DelegateDamagePolicy(
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>> resolve) : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) => resolve(request);
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new(resolve(request), request.Affinity);
     }
 
     private sealed class AlwaysInstantDeathPolicy : IInstantDeathExecutionPolicy

@@ -1653,7 +1653,7 @@ public sealed class CatalogBattleRuntimeTests
 
     private sealed class TestDamagePolicy : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request)
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request)
         {
             decimal damage = Math.Max(1,
                 request.Effect.Power + request.Actor.Stats.GetValueOrDefault(Id("magic")) -
@@ -1664,7 +1664,9 @@ public sealed class CatalogBattleRuntimeTests
                 ElementalAffinity.Resist => 0.5m,
                 _ => 1m
             };
-            return [new DamageHitResolution(true, damage)];
+            return new DamagePolicyResolution(
+                [new DamageHitResolution(true, damage)],
+                request.Affinity);
         }
     }
 

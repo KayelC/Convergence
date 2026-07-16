@@ -228,30 +228,6 @@ public sealed record ProductionCriticalCheckRequest(
 
 public sealed record ProductionCriticalCheckResult(bool Critical, int Chance);
 
-public sealed record ProductionRawDamageRequest(
-    ProductionCombatantProfile Attacker,
-    ProductionCombatantProfile Target,
-    int Power,
-    DamageElement Element,
-    bool AllowCritical = true);
-
-public sealed record ProductionRawDamageResult(decimal Damage, bool Critical);
-
-public sealed record ProductionDamageApplicationRequest(
-    ProductionCombatantProfile Target,
-    decimal Damage,
-    DamageElement Element,
-    ElementalAffinity Affinity,
-    bool Critical);
-
-public sealed record ProductionDamageApplicationResult(
-    decimal DamageDealt,
-    decimal Recovered,
-    ElementalAffinity Affinity,
-    bool Critical,
-    TurnEconomyOutcome Outcome,
-    string Message);
-
 public sealed record ProductionDamageResolutionRequest(
     ProductionCombatantProfile Attacker,
     ProductionCombatantProfile Target,
@@ -273,14 +249,14 @@ public sealed record ProductionDamageResolutionResult
 {
     public ProductionDamageResolutionResult(
         IEnumerable<ProductionDamageResolutionHit> hits,
-        ElementalAffinity affinity)
+        ElementalAffinity resolvedAffinity)
     {
         Hits = Array.AsReadOnly((hits ?? throw new ArgumentNullException(nameof(hits))).ToArray());
-        Affinity = affinity;
+        ResolvedAffinity = resolvedAffinity;
     }
 
     public IReadOnlyList<ProductionDamageResolutionHit> Hits { get; }
-    public ElementalAffinity Affinity { get; }
+    public ElementalAffinity ResolvedAffinity { get; }
     public decimal TotalDamage => CombatArithmetic.SaturatingSum(
         Hits.Where(hit => hit.Hit).Select(hit => hit.Damage));
     public bool AnyCritical => Hits.Any(hit => hit.Critical);
@@ -324,7 +300,7 @@ public sealed class ProductionCombatRuleset :
 
     public ProductionCombatRulesetConfig Config => _config;
 
-    public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request)
+    public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -338,9 +314,9 @@ public sealed class ProductionCombatRuleset :
             request.Effect.Critical,
             request.Effect.Hits));
 
-        return Array.AsReadOnly(result.Hits
-            .Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical))
-            .ToArray());
+        return new DamagePolicyResolution(
+            result.Hits.Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical)),
+            result.ResolvedAffinity);
     }
 
     public bool ShouldDefeat(InstantDeathPolicyRequest request)
@@ -382,6 +358,9 @@ public sealed class ProductionCombatRuleset :
 
         int hitCount = ResolveHitCount(request.Hits);
         List<ProductionDamageResolutionHit> hits = new(hitCount);
+        ElementalAffinity resolvedAffinity = NormalizeGuardedAffinity(
+            request.Affinity,
+            request.Target.Status.IsGuarding);
         for (int i = 0; i < hitCount; i++)
         {
             ProductionHitCheckResult hit = CheckHit(new ProductionHitCheckRequest(
@@ -416,9 +395,7 @@ public sealed class ProductionCombatRuleset :
                 damage = CombatArithmetic.SaturatingMultiply(damage, _config.GuardDamageMultiplier);
             }
 
-            damage = ApplyAffinityMultiplier(damage, NormalizeGuardedAffinity(
-                request.Affinity,
-                request.Target.Status.IsGuarding));
+            damage = ApplyAffinityMultiplier(damage, resolvedAffinity);
             hits.Add(new ProductionDamageResolutionHit(
                 true,
                 Math.Floor(CombatArithmetic.SaturatingMultiply(
@@ -429,114 +406,7 @@ public sealed class ProductionCombatRuleset :
                 critical.Chance));
         }
 
-        return new ProductionDamageResolutionResult(hits, request.Affinity);
-    }
-
-    public ProductionRawDamageResult CalculateRawDamage(ProductionRawDamageRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentOutOfRangeException.ThrowIfNegative(request.Power);
-
-        bool critical = false;
-        decimal damage = CalculateBaseDamage(
-            request.Attacker,
-            request.Target,
-            request.Power,
-            request.Element);
-        damage = CombatArithmetic.SaturatingMultiply(
-            damage,
-            request.Target.Modifiers.DamageTakenMultiplier);
-
-        if (request.AllowCritical)
-        {
-            ProductionCriticalCheckResult criticalResult = CheckCritical(new ProductionCriticalCheckRequest(
-                request.Attacker,
-                request.Target,
-                request.Element,
-                new ChanceCriticalDefinition(_config.CriticalChanceBase)));
-            critical = criticalResult.Critical;
-            if (critical)
-            {
-                damage = CombatArithmetic.SaturatingMultiply(damage, _config.CriticalDamageMultiplier);
-            }
-        }
-
-        damage = CombatArithmetic.SaturatingMultiply(
-            damage,
-            RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum));
-        return new ProductionRawDamageResult(Math.Floor(damage), critical);
-    }
-
-    public ProductionDamageApplicationResult ApplyDamage(ProductionDamageApplicationRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentOutOfRangeException.ThrowIfNegative(request.Damage);
-
-        ElementalAffinity affinity = NormalizeGuardedAffinity(
-            request.Affinity,
-            request.Target.Status.IsGuarding);
-        decimal damage = request.Damage;
-        bool critical = request.Critical;
-        if (request.Target.Status.IsGuarding)
-        {
-            damage = CombatArithmetic.SaturatingMultiply(damage, _config.GuardDamageMultiplier);
-            critical = false;
-        }
-        if (request.Target.Status.IsRigidBody && IsPhysical(request.Element))
-        {
-            critical = true;
-        }
-        if (critical)
-        {
-            damage = CombatArithmetic.SaturatingMultiply(damage, _config.CriticalDamageMultiplier);
-        }
-
-        damage = Math.Floor(damage);
-        return affinity switch
-        {
-            ElementalAffinity.Weak => new ProductionDamageApplicationResult(
-                Math.Floor(CombatArithmetic.SaturatingMultiply(damage, _config.WeakDamageMultiplier)),
-                0m,
-                affinity,
-                critical,
-                TurnEconomyOutcome.Weakness,
-                "WEAKNESS STRUCK!"),
-            ElementalAffinity.Resist => new ProductionDamageApplicationResult(
-                Math.Floor(CombatArithmetic.SaturatingMultiply(damage, _config.ResistDamageMultiplier)),
-                0m,
-                affinity,
-                critical,
-                TurnEconomyOutcome.Normal,
-                critical ? "CRITICAL (Resisted)!" : "Resisted."),
-            ElementalAffinity.Null => new ProductionDamageApplicationResult(
-                0m,
-                0m,
-                affinity,
-                critical,
-                TurnEconomyOutcome.Null,
-                "Blocked!"),
-            ElementalAffinity.Repel => new ProductionDamageApplicationResult(
-                0m,
-                0m,
-                affinity,
-                critical,
-                TurnEconomyOutcome.Repel,
-                "Repelled!"),
-            ElementalAffinity.Absorb => new ProductionDamageApplicationResult(
-                0m,
-                damage,
-                affinity,
-                critical,
-                TurnEconomyOutcome.Absorb,
-                $"Absorbed {damage} HP!"),
-            _ => new ProductionDamageApplicationResult(
-                damage,
-                0m,
-                affinity,
-                critical,
-                critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal,
-                critical ? "CRITICAL HIT!" : string.Empty)
-        };
+        return new ProductionDamageResolutionResult(hits, resolvedAffinity);
     }
 
     public ProductionHitCheckResult CheckHit(ProductionHitCheckRequest request)

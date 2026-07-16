@@ -13,12 +13,19 @@ Typed damage identifies power, accuracy, damage element, critical mode, and hit 
 A damage attempt resolves in this order at a high level:
 
 1. Resolve legal targets and effect conditions.
-2. Resolve hit count and accuracy for each hit.
-3. Resolve critical eligibility and chance.
-4. Calculate raw damage through the active policy.
-5. Apply guard, modifiers, shields, Break, and elemental affinity rules.
-6. Mutate the target resource atomically.
-7. Return typed effect and turn-economy outcomes.
+2. Resolve shields, Break, passive overrides, and the target's starting
+   elemental affinity.
+3. Ask the active damage policy to resolve hit count, accuracy, critical state,
+   arithmetic, guard, and the effective affinity in one operation.
+4. Apply typed outgoing and incoming effect modifiers once.
+5. Apply damage, reflection, absorption, or nullification to runtime resources.
+6. Return typed effect and turn-economy outcomes from the policy's effective
+   affinity and hit results.
+
+`IDamageExecutionPolicy.Resolve` returns an immutable
+`DamagePolicyResolution`. Its `Hits` and `ResolvedAffinity` form one
+authoritative result; hosts should not split damage into separate raw and
+application passes.
 
 Arithmetic is checked or saturating at public boundaries so extreme authored/runtime values do not wrap into negative damage or rewards.
 

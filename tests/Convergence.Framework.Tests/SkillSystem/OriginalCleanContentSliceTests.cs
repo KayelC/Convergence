@@ -908,8 +908,8 @@ public sealed class OriginalCleanContentSliceTests
 
     private sealed class TestDamagePolicy : IDamageExecutionPolicy
     {
-        public IReadOnlyList<DamageHitResolution> Resolve(DamagePolicyRequest request) =>
-            [new DamageHitResolution(true, request.Effect.Power)];
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([new DamageHitResolution(true, request.Effect.Power)], request.Affinity);
     }
 
     private sealed class NeverInstantDeathPolicy : IInstantDeathExecutionPolicy

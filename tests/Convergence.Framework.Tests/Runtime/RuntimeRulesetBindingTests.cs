@@ -415,7 +415,9 @@ public sealed class RuntimeRulesetBindingTests
             StandardRulesetPolicyIds.StandardDamage,
             [
                 new KeyValuePair<string, object?>("weakDamageMultiplier", decimal.MaxValue),
-                new KeyValuePair<string, object?>("resistDamageMultiplier", decimal.MaxValue)
+                new KeyValuePair<string, object?>("resistDamageMultiplier", decimal.MaxValue),
+                new KeyValuePair<string, object?>("damageVarianceMinimum", 1m),
+                new KeyValuePair<string, object?>("damageVarianceMaximum", 1m)
             ]));
 
         ProductionCombatRuleset ruleset = CreateResolver()
@@ -425,16 +427,19 @@ public sealed class RuntimeRulesetBindingTests
             1,
             new ProductionCombatStats(1m, 1m, 1m, 1m, 1m));
 
-        ProductionDamageApplicationResult result = ruleset.ApplyDamage(
-            new ProductionDamageApplicationRequest(
+        ProductionDamageResolutionResult result = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
                 target,
-                2m,
+                target,
                 DamageElement.Fire,
                 ElementalAffinity.Weak,
-                Critical: false));
+                1,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1)));
 
         Assert.Equal(decimal.MaxValue, ruleset.Config.WeakDamageMultiplier);
-        Assert.Equal(decimal.MaxValue, result.DamageDealt);
+        Assert.Equal(decimal.MaxValue, Assert.Single(result.Hits).Damage);
     }
 
     [Fact]

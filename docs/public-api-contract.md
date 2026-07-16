@@ -26,6 +26,11 @@ The complete namespace ownership map is in
 [Public API Namespaces](public-api-namespaces.md). DemoHost types are examples,
 not part of this contract.
 
+Damage policy implementations return one `DamagePolicyResolution` containing
+immutable hit results and the effective affinity. The effect pipeline consumes
+that result directly, which prevents hosts from composing separate damage
+stages that reapply guard, critical, affinity, or stat modifiers.
+
 ## Compatibility Policy
 
 The checked-in `PublicAPI.Shipped.txt` file is the textual `0.1.0` baseline.
