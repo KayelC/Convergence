@@ -40,7 +40,7 @@ reconciled form follows the active documentation and terminology boundaries.
 ### R1. GodotHost Release configuration builds Debug
 
 **Severity:** Medium
-**Status:** Implemented pending final review
+**Status:** Verified
 
 `Convergence.sln` maps the GodotHost project's solution-level Release
 configuration to the project's Debug configuration. A live command confirmed
@@ -56,7 +56,7 @@ Release configuration or build entries back to Debug.
 ### R2. The canonical damage contract loses effective affinity state
 
 **Severity:** Medium
-**Status:** Implemented pending final review
+**Status:** Verified
 
 The external review correctly identified an ambiguous relationship among
 `ResolveDamage`, `CalculateRawDamage`, and `ApplyDamage`, but static inspection
@@ -89,7 +89,7 @@ of a policy-normalized affinity, result immutability, and saturating arithmetic.
 ### R3. Framework lifecycle events are mapped repeatedly
 
 **Severity:** Low
-**Status:** Implemented pending final review
+**Status:** Verified
 
 `BattleEncounterRunner` and `BattleStatusEncounterLifecyclePort` contain nearly
 identical Framework transformations from `BattleStatusLifecycleEvent` to
@@ -108,7 +108,7 @@ detail. No public event abstraction or host-presentation rule was introduced.
 ### R4. Active documentation reports inconsistent capability totals
 
 **Severity:** Medium for project ownership
-**Status:** Implemented pending final review
+**Status:** Verified
 
 The executable capability matrix originally recorded 25 capabilities: 22
 complete, one partial, and two deferred. `framework-capability-matrix.md`
@@ -129,7 +129,7 @@ either roadmap stale.
 ### R5. Public API discoverability is weaker than its compatibility guard
 
 **Severity:** Medium
-**Status:** Implemented pending final review
+**Status:** Verified
 
 The public API baseline is useful and the `0.1` compatibility policy explicitly
 allows reviewed changes in a minor pre-release. The baseline is therefore not a
@@ -221,3 +221,9 @@ without source-code knowledge.
 The playable Godot vertical slice and comprehensive three-audience documentation
 system follow this correction sequence. They should inform API reduction before
 Convergence declares a stable `1.0` surface.
+
+## Final Verification
+
+All five accepted findings were re-read against the corrected source and passed
+the complete Release gate. The fresh review record is
+[`convergence-framework-post-correction-review-2026-07-16.md`](convergence-framework-post-correction-review-2026-07-16.md).
