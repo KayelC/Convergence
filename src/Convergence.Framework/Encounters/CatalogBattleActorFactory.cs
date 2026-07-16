@@ -95,7 +95,7 @@ public sealed record BattleActorInitialization
             (resources ?? throw new ArgumentNullException(nameof(resources)))
             .Select(resource => resource.Copy())
             .ToArray());
-        BaseResourceValues = new Dictionary<ContentId, decimal>(baseResourceValues ?? []);
+        BaseResourceValues = RuntimeSnapshotCollections.Dictionary(baseResourceValues);
     }
 
     public ContentId VitalResourceId { get; }

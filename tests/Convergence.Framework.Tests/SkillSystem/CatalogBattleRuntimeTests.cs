@@ -75,6 +75,25 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorInitialization_DetachesAndProtectsBaseResourceValues()
+    {
+        var source = new Dictionary<ContentId, decimal>
+        {
+            [Id("hp")] = 24m
+        };
+        var initialization = new BattleActorInitialization(
+            Id("hp"),
+            [new BattleResourceState(Id("hp"), 24m, 24m)],
+            source);
+
+        source[Id("hp")] = 99m;
+
+        Assert.Equal(24m, initialization.BaseResourceValues[Id("hp")]);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<ContentId, decimal>)initialization.BaseResourceValues).Add(Id("sp"), 12m));
+    }
+
+    [Fact]
     public void ActorFactory_ReturnsTypedDiagnosticsForInvalidRequestsAndMissingSkills()
     {
         EntityDefinition entity = Entity("test.pack:entity", [Id("test.pack:missing")]);
