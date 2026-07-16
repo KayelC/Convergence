@@ -110,18 +110,21 @@ detail. No public event abstraction or host-presentation rule was introduced.
 **Severity:** Medium for project ownership
 **Status:** Implemented pending final review
 
-The executable capability matrix records 25 capabilities: 22 complete, one
-partial, and two deferred. `framework-capability-matrix.md` reports those values,
-while `roadmap.md` still reports 21 complete, one partial, and three deferred.
+The executable capability matrix originally recorded 25 capabilities: 22
+complete, one partial, and two deferred. `framework-capability-matrix.md`
+reported those values, while `roadmap.md` still reported 21 complete, one
+partial, and three deferred.
 
 This does not change runtime behavior, but it directly undermines the active
 documentation authority intended to help maintainers understand the product.
 
-**Implemented correction:** both active documents now report the same numeric
-summary: 25 capabilities, 22 complete, one partial, and two deferred. The
-architecture suite derives that sentence from the JSON matrix and requires it
-in both documents, so adding or reclassifying a capability cannot silently
-leave either roadmap stale.
+**Implemented correction:** both active documents derive the same numeric
+summary from the tested matrix. Fresh review also corrected the matrix itself:
+strict schema v3 covers every currently implemented document family, so
+hypothetical future families do not make `authored_schema_contracts` partial.
+The final summary is 25 capabilities, 23 complete, zero partial, and two
+explicitly deferred. Adding or reclassifying a capability cannot silently leave
+either roadmap stale.
 
 ### R5. Public API discoverability is weaker than its compatibility guard
 

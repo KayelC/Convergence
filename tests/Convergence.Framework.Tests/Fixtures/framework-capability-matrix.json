@@ -195,12 +195,12 @@
     },
     {
       "id": "authored_schema_contracts",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["SchemaDeserializationTests", "CatalogSurfaceTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": ["Checked-in JSON Schema artifacts do not yet cover every future content family."]
+      "knownGaps": []
     },
     {
       "id": "godot_adapter",
