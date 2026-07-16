@@ -34,15 +34,15 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeActorSnapshot snapshot,
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
-        RuntimeActorState? activeHostedEntity = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
+        IEnumerable<RuntimeActorState>? runtimeActors = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
         : this(
             snapshot,
             statSourceKind,
             missingHostedEntityBehavior,
-            activeHostedEntity,
             partyRoster,
+            runtimeActors,
             equipmentStatModifiers,
             preserveValidatedSnapshot: false)
     {
@@ -52,8 +52,8 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeActorSnapshot snapshot,
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
-        RuntimeActorState? activeHostedEntity,
         RuntimePartyRosterSnapshot? partyRoster,
+        IEnumerable<RuntimeActorState>? runtimeActors,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
         bool preserveValidatedSnapshot)
     {
@@ -70,8 +70,8 @@ public sealed record CatalogBattleActorRestoreRequest
         Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
-        ActiveHostedEntity = activeHostedEntity;
         PartyRoster = partyRoster;
+        RuntimeActors = Array.AsReadOnly((runtimeActors ?? []).ToArray());
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
         PreserveValidatedSnapshot = preserveValidatedSnapshot;
     }
@@ -79,8 +79,8 @@ public sealed record CatalogBattleActorRestoreRequest
     public RuntimeActorSnapshot Snapshot { get; }
     public RuntimeStatSourceKind StatSourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
-    public RuntimeActorState? ActiveHostedEntity { get; }
     public RuntimePartyRosterSnapshot? PartyRoster { get; }
+    public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
     internal bool PreserveValidatedSnapshot { get; }
 
@@ -90,8 +90,8 @@ public sealed record CatalogBattleActorRestoreRequest
             snapshot,
             RuntimeStatSourceKind.Actor,
             MissingHostedEntityBehavior.UseActorBaseStats,
-            activeHostedEntity: null,
             partyRoster: null,
+            runtimeActors: null,
             equipmentStatModifiers: null,
             preserveValidatedSnapshot: true);
 }
@@ -136,7 +136,7 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotActorKindMismatch,
     SnapshotSkillMissing,
     SnapshotAilmentMissing,
-    SnapshotStatCompositionFailed,
+    SnapshotCombatProfileCompositionFailed,
     SnapshotInvalid,
     IdentifierInvalid,
 }
@@ -150,22 +150,24 @@ public sealed record CatalogBattleActorDiagnostic(
 
 public sealed class CatalogBattleActor
 {
+    private readonly ISkillDefinitionRepository _skills;
+
     internal CatalogBattleActor(
         EntityDefinition entity,
         RuntimeActorState state,
-        IEnumerable<SkillDefinition> loadout)
+        ISkillDefinitionRepository skills)
     {
-        Entity = entity;
-        State = state;
-        SkillLoadout = Array.AsReadOnly(loadout.ToArray());
-        ActiveSkills = Array.AsReadOnly(
-            SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
+        Entity = entity ?? throw new ArgumentNullException(nameof(entity));
+        State = state ?? throw new ArgumentNullException(nameof(state));
+        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
     }
 
     public EntityDefinition Entity { get; }
     public RuntimeActorState State { get; }
-    public IReadOnlyList<SkillDefinition> SkillLoadout { get; }
-    public IReadOnlyList<SkillDefinition> ActiveSkills { get; }
+    public IReadOnlyList<SkillDefinition> SkillLoadout => Array.AsReadOnly(
+        State.Skills.EquippedSkillIds.Select(_skills.GetRequiredSkill).ToArray());
+    public IReadOnlyList<SkillDefinition> ActiveSkills => Array.AsReadOnly(
+        SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
 }
 
 public sealed class CatalogBattleActorCreationResult
@@ -210,14 +212,14 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
     private readonly IAilmentDefinitionRepository? _ailments;
     private readonly IBattleActorInitializationPolicy _initialization;
     private readonly IDurationVocabularyRepository? _durationVocabulary;
-    private readonly IRuntimeActorStatCompositionService _statComposition;
+    private readonly IRuntimeActorCombatProfileCompositionService _combatProfileComposition;
 
     public CatalogBattleActorFactory(
         IEntityDefinitionRepository entities,
         ISkillDefinitionRepository skills,
         IBattleActorInitializationPolicy initialization,
         IAilmentDefinitionRepository? ailments = null,
-        IRuntimeActorStatCompositionService? statComposition = null)
+        IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
@@ -226,7 +228,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         _durationVocabulary = entities as IDurationVocabularyRepository ??
             skills as IDurationVocabularyRepository ??
             _ailments as IDurationVocabularyRepository;
-        _statComposition = statComposition ?? new RuntimeActorStatCompositionService();
+        _combatProfileComposition = combatProfileComposition ??
+            new RuntimeActorCombatProfileCompositionService(skills);
     }
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
@@ -450,7 +453,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                     loadout.Select(skill => skill.Id),
                     loadout.Select(skill => skill.Id)));
 
-            return new CatalogBattleActorCreationResult(new CatalogBattleActor(entity, state, loadout), diagnostics);
+            return new CatalogBattleActorCreationResult(
+                new CatalogBattleActor(entity, state, _skills),
+                diagnostics);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or KeyNotFoundException)
         {
@@ -574,19 +579,20 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
 
             if (!request.PreserveValidatedSnapshot)
             {
-                RuntimeActorStatCompositionResult composition = _statComposition.Compose(
-                    new RuntimeActorStatCompositionRequest(
+                RuntimeActorCombatProfileCompositionResult composition =
+                    _combatProfileComposition.Compose(
+                    new RuntimeActorCombatProfileCompositionRequest(
                         state,
                         request.StatSourceKind,
                         request.MissingHostedEntityBehavior,
-                        request.ActiveHostedEntity,
                         request.PartyRoster,
+                        request.RuntimeActors,
                         request.EquipmentStatModifiers));
                 if (!composition.Applied)
                 {
                     diagnostics.AddRange(composition.Diagnostics.Select(diagnostic =>
                         new CatalogBattleActorDiagnostic(
-                            CatalogBattleActorDiagnosticCode.SnapshotStatCompositionFailed,
+                            CatalogBattleActorDiagnosticCode.SnapshotCombatProfileCompositionFailed,
                             diagnostic.Message,
                             entityId)));
                     return new CatalogBattleActorCreationResult(null, diagnostics);
@@ -594,7 +600,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             }
 
             return new CatalogBattleActorCreationResult(
-                new CatalogBattleActor(entity, state, loadout),
+                new CatalogBattleActor(entity, state, _skills),
                 diagnostics);
         }
         catch (Exception exception) when (exception is ArgumentException or KeyNotFoundException)

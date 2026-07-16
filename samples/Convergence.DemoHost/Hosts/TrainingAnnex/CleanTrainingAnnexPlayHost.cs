@@ -178,8 +178,12 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly RuntimeInventorySnapshot? _initialInventory;
     private readonly RuntimeEquipmentSnapshot? _initialEquipment;
     private readonly RuntimeWalletSnapshot? _initialWallet;
-    private readonly Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>
-        _statCompositionFactory;
+    private readonly Func<
+        ISkillDefinitionRepository,
+        IStatResolutionPolicy,
+        IResourceGrowthPolicy,
+        IRuntimeActorCombatProfileCompositionService>
+        _combatProfileCompositionFactory;
 
     internal CleanTrainingAnnexPlayHost(
         IContentPackTextSource contentSource,
@@ -190,8 +194,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
         RuntimeWalletSnapshot? initialWallet = null,
-        Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>?
-            statCompositionFactory = null)
+        Func<
+            ISkillDefinitionRepository,
+            IStatResolutionPolicy,
+            IResourceGrowthPolicy,
+            IRuntimeActorCombatProfileCompositionService>?
+            combatProfileCompositionFactory = null)
     {
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
@@ -201,8 +209,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         _initialInventory = initialInventory;
         _initialEquipment = initialEquipment;
         _initialWallet = initialWallet;
-        _statCompositionFactory = statCompositionFactory ??
-            ((stats, resources) => new RuntimeActorStatCompositionService(stats, resources));
+        _combatProfileCompositionFactory = combatProfileCompositionFactory ??
+            ((skills, stats, resources) =>
+                new RuntimeActorCombatProfileCompositionService(stats, resources, skills));
     }
 
     internal CleanTrainingAnnexPlaySummary? LastSummary { get; private set; }
@@ -342,9 +351,9 @@ internal sealed class CleanTrainingAnnexPlayHost
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
         IStatResolutionPolicy statPolicy = statServices.StatResolutionPolicy;
-        IRuntimeActorStatCompositionService statCompositionService =
-            _statCompositionFactory(statPolicy, growthServices.ResourceGrowthPolicy) ??
-            throw new InvalidOperationException("The stat-composition factory returned no service.");
+        IRuntimeActorCombatProfileCompositionService combatProfileCompositionService =
+            _combatProfileCompositionFactory(catalog, statPolicy, growthServices.ResourceGrowthPolicy) ??
+            throw new InvalidOperationException("The combat-profile composition factory returned no service.");
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
         var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
         var actorFactory = new CatalogBattleActorFactory(
@@ -352,7 +361,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             catalog,
             new TrainingAnnexResourceInitializationPolicy(growthServices.ResourceGrowthPolicy),
             catalog,
-            statCompositionService);
+            combatProfileCompositionService);
         var encounterPreparation = new CatalogEncounterPreparationService(
             new CatalogEncounterStartPlanner(catalog),
             actorFactory);
@@ -409,7 +418,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         if (!await ComposePlayerStateAsync(
                 roster,
                 partyRoster,
-                statCompositionService,
+                combatProfileCompositionService,
                 equipmentProfileResolver,
                 catalog,
                 cancellationToken,
@@ -630,7 +639,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             committed = await ComposePlayerStateAsync(
                                     roster,
                                     operationResult.After,
-                                    statCompositionService,
+                                    combatProfileCompositionService,
                                     equipmentProfileResolver,
                                     catalog,
                                     cancellationToken)
@@ -807,7 +816,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         roster,
                         partyRoster,
                         growthServices,
-                        statCompositionService,
+                        combatProfileCompositionService,
                         equipmentProfileResolver,
                         catalog,
                         cancellationToken).ConfigureAwait(false);
@@ -1345,7 +1354,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             if (composeAfterCommand && !await ComposePlayerStateAsync(
                     roster,
                     partyRoster,
-                    statCompositionService,
+                    combatProfileCompositionService,
                     equipmentProfileResolver,
                     catalog,
                     cancellationToken).ConfigureAwait(false))
@@ -2097,7 +2106,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private async ValueTask<bool> ComposePlayerStateAsync(
         TrainingAnnexActorRoster roster,
         RuntimePartyRosterSnapshot partyRoster,
-        IRuntimeActorStatCompositionService compositionService,
+        IRuntimeActorCombatProfileCompositionService compositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         IEquipmentDefinitionRepository equipmentRepository,
         CancellationToken cancellationToken,
@@ -2118,7 +2127,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             return false;
         }
 
-        RuntimeActorStatCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerStats(
+        RuntimeActorCombatProfileCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerCombatProfile(
             roster,
             partyRoster,
             compositionService,
@@ -2136,10 +2145,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             return true;
         }
 
-        foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
+        foreach (RuntimeActorCombatProfileCompositionDiagnostic diagnostic in composition.Diagnostics)
         {
             await _eventSink.PublishAsync(
-                $"[stat_composition:{diagnostic.Code}] {diagnostic.Message}",
+                $"[combat_profile_composition:{diagnostic.Code}] {diagnostic.Message}",
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -2190,7 +2199,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexActorRoster roster,
         RuntimePartyRosterSnapshot partyRoster,
         GrowthRulesetServices growthServices,
-        IRuntimeActorStatCompositionService statCompositionService,
+        IRuntimeActorCombatProfileCompositionService combatProfileCompositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         IEquipmentDefinitionRepository equipmentRepository,
         CancellationToken cancellationToken)
@@ -2223,9 +2232,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         RuntimeActorGrowthCompositionResult transaction = new RuntimeActorGrowthCompositionService(
-            statCompositionService).Apply(new RuntimeActorGrowthCompositionRequest(
+            combatProfileCompositionService).Apply(new RuntimeActorGrowthCompositionRequest(
                 growth,
-                TrainingAnnexHostSupport.CreatePlayerStatCompositionRequest(
+                TrainingAnnexHostSupport.CreatePlayerCombatProfileCompositionRequest(
                     roster,
                     partyRoster,
                     equipmentProfile)));

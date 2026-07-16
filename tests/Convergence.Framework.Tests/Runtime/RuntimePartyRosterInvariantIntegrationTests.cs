@@ -1,4 +1,5 @@
 using Convergence.Battle;
+using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Runtime;
@@ -21,19 +22,19 @@ public sealed class RuntimePartyRosterInvariantIntegrationTests
             activeHostedEntity: Reference(hostedEntity));
         RuntimeActorSnapshot before = vessel.ToSnapshot();
 
-        RuntimeActorStatCompositionResult result =
-            new RuntimeActorStatCompositionService().Compose(
-                new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult result =
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+                new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    hostedEntity,
-                    invalidRoster));
+                    invalidRoster,
+                    [hostedEntity]));
 
         Assert.False(result.Applied);
-        RuntimeActorStatCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        RuntimeActorCombatProfileCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(
-            RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
+            RuntimeActorCombatProfileCompositionDiagnosticCode.RosterInvariantViolation,
             diagnostic.Code);
         Assert.Contains("must exist in the hosted-entity roster", diagnostic.Message, StringComparison.Ordinal);
         Assert.Same(result.Before, result.After);
@@ -71,4 +72,16 @@ public sealed class RuntimePartyRosterInvariantIntegrationTests
 
     private static RuntimeActorReferenceSnapshot Reference(RuntimeActorState actor) =>
         new(actor.InstanceId, actor.EntityId, actor.Identity.DisplayName);
+
+    private sealed class SkillRepository : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            definition = null;
+            return false;
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
+    }
 }

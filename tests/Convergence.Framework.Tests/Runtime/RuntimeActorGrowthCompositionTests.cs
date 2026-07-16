@@ -1,4 +1,5 @@
 using Convergence.Battle;
+using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Runtime;
@@ -17,13 +18,14 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorState vessel = CreateActor("vessel_custom", 5m, customEffectiveStat: 17m);
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
 
-        RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult result =
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity,
-                partyRoster));
+                partyRoster,
+                [hostedEntity]));
 
         Assert.True(result.Applied);
         Assert.Equal(20m, vessel.Stats[StandardProgressionIds.Strength]);
@@ -40,21 +42,22 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         LevelGrowthResult growth = AppliedGrowth(before, customEffectiveStat: 19m);
 
-        RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService().Apply(
+        RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository())).Apply(
             new RuntimeActorGrowthCompositionRequest(
                 growth,
-                new RuntimeActorStatCompositionRequest(
+                new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    hostedEntity,
-                    partyRoster)));
+                    partyRoster,
+                    [hostedEntity])));
 
         Assert.True(result.Applied);
         Assert.Equal(RuntimeActorGrowthCompositionStatus.Applied, result.Status);
         Assert.True(result.GrowthMutation.Applied);
-        Assert.NotNull(result.StatComposition);
-        Assert.True(result.StatComposition!.Applied);
+        Assert.NotNull(result.CombatProfileComposition);
+        Assert.True(result.CombatProfileComposition!.Applied);
         Assert.Equal(2, vessel.Progression.Level);
         Assert.Equal(20m, vessel.Stats[StandardProgressionIds.Strength]);
         Assert.Equal(19m, vessel.Stats[Focus]);
@@ -76,18 +79,20 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorGrowthCompositionResult result = service.Apply(
             new RuntimeActorGrowthCompositionRequest(
                 growth,
-                new RuntimeActorStatCompositionRequest(
+                new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    hostedEntity,
-                    partyRoster)));
+                    partyRoster,
+                    [hostedEntity])));
 
         Assert.False(result.Applied);
-        Assert.Equal(RuntimeActorGrowthCompositionStatus.StatCompositionRejected, result.Status);
+        Assert.Equal(
+            RuntimeActorGrowthCompositionStatus.CombatProfileCompositionRejected,
+            result.Status);
         Assert.True(result.GrowthMutation.Applied);
         Assert.Equal(
-            RuntimeActorGrowthCompositionDiagnosticCode.StatCompositionRejected,
+            RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected,
             Assert.Single(result.Diagnostics).Code);
         AssertActorStateEqual(before, vessel.ToSnapshot());
         AssertActorStateEqual(before, result.After);
@@ -113,7 +118,7 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(composition).Apply(
             new RuntimeActorGrowthCompositionRequest(
                 rejectedGrowth,
-                new RuntimeActorStatCompositionRequest(
+                new RuntimeActorCombatProfileCompositionRequest(
                     vessel,
                     RuntimeStatSourceKind.Actor,
                     MissingHostedEntityBehavior.UseActorBaseStats)));
@@ -121,7 +126,7 @@ public sealed class RuntimeActorGrowthCompositionTests
         Assert.False(result.Applied);
         Assert.Equal(RuntimeActorGrowthCompositionStatus.GrowthRejected, result.Status);
         Assert.Equal(0, composition.CallCount);
-        Assert.Null(result.StatComposition);
+        Assert.Null(result.CombatProfileComposition);
         AssertActorStateEqual(before, vessel.ToSnapshot());
     }
 
@@ -224,33 +229,46 @@ public sealed class RuntimeActorGrowthCompositionTests
             actual.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString()).ToArray());
     }
 
-    private sealed class RejectingCompositionService : IRuntimeActorStatCompositionService
+    private sealed class RejectingCompositionService : IRuntimeActorCombatProfileCompositionService
     {
-        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        public RuntimeActorCombatProfileCompositionResult Compose(RuntimeActorCombatProfileCompositionRequest request)
         {
             RuntimeActorSnapshot before = request.Actor.ToSnapshot();
-            return new RuntimeActorStatCompositionResult(
-                RuntimeActorStatCompositionStatus.Rejected,
+            return new RuntimeActorCombatProfileCompositionResult(
+                RuntimeActorCombatProfileCompositionStatus.Rejected,
                 before,
                 before,
                 request.SourceKind,
+                request.Actor.InstanceId,
                 diagnostics:
                 [
-                    new RuntimeActorStatCompositionDiagnostic(
-                        RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+                    new RuntimeActorCombatProfileCompositionDiagnostic(
+                        RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed,
                         "Rejected for the transaction test.")
                 ]);
         }
     }
 
-    private sealed class CountingCompositionService : IRuntimeActorStatCompositionService
+    private sealed class CountingCompositionService : IRuntimeActorCombatProfileCompositionService
     {
         public int CallCount { get; private set; }
 
-        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        public RuntimeActorCombatProfileCompositionResult Compose(RuntimeActorCombatProfileCompositionRequest request)
         {
             CallCount++;
-            return new RuntimeActorStatCompositionService().Compose(request);
+            return new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(request);
         }
+    }
+
+    private sealed class SkillRepository : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            definition = null;
+            return false;
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
     }
 }

@@ -2362,22 +2362,22 @@ Convergence.Encounters.CatalogBattleActorDiagnosticCode.RuntimeStateConstruction
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillMissing = 4 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotActorKindMismatch = 10 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotAilmentMissing = 12 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotCombatProfileCompositionFailed = 13 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotInvalid = 14 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotSkillMissing = 11 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
-Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotStatCompositionFailed = 13 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.VitalResourceMissing = 8 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorFactory
-Convergence.Encounters.CatalogBattleActorFactory.CatalogBattleActorFactory(Convergence.Catalog.IEntityDefinitionRepository! entities, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Encounters.IBattleActorInitializationPolicy! initialization, Convergence.Catalog.IAilmentDefinitionRepository? ailments = null, Convergence.Runtime.IRuntimeActorStatCompositionService? statComposition = null) -> void
+Convergence.Encounters.CatalogBattleActorFactory.CatalogBattleActorFactory(Convergence.Catalog.IEntityDefinitionRepository! entities, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Encounters.IBattleActorInitializationPolicy! initialization, Convergence.Catalog.IAilmentDefinitionRepository? ailments = null, Convergence.Runtime.IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null) -> void
 Convergence.Encounters.CatalogBattleActorFactory.Create(Convergence.Encounters.CatalogBattleActorCreationRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.CatalogBattleActorRestoreRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorRestoreRequest
 Convergence.Encounters.CatalogBattleActorRestoreRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorRestoreRequest!
-Convergence.Encounters.CatalogBattleActorRestoreRequest.ActiveHostedEntity.get -> Convergence.Execution.RuntimeActorState?
-Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Equals(Convergence.Encounters.CatalogBattleActorRestoreRequest? other) -> bool
 Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
 Convergence.Encounters.CatalogBattleActorRestoreRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
+Convergence.Encounters.CatalogBattleActorRestoreRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Snapshot.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Encounters.DeterministicBattleActionSelector
@@ -5019,12 +5019,12 @@ Convergence.Runtime.IResourceGrowthPolicy
 Convergence.Runtime.IResourceGrowthPolicy.Recalculate(Convergence.Runtime.ResourceRecalculationRequest! request) -> Convergence.Runtime.ResourceRecalculationResult!
 Convergence.Runtime.IRosterCapacityPolicy
 Convergence.Runtime.IRosterCapacityPolicy.GetCapacity(Convergence.Runtime.RuntimeRosterKind rosterKind, int ownerLevel) -> int
+Convergence.Runtime.IRuntimeActorCombatProfileCompositionService
+Convergence.Runtime.IRuntimeActorCombatProfileCompositionService.Compose(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! request) -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult!
 Convergence.Runtime.IRuntimeActorGrowthCompositionService
 Convergence.Runtime.IRuntimeActorGrowthCompositionService.Apply(Convergence.Runtime.RuntimeActorGrowthCompositionRequest! request) -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
 Convergence.Runtime.IRuntimeActorRestoreProfileResolver
 Convergence.Runtime.IRuntimeActorRestoreProfileResolver.Resolve(Convergence.Runtime.RuntimeActorRestoreProfileRequest! request) -> Convergence.Runtime.RuntimeActorRestoreProfile!
-Convergence.Runtime.IRuntimeActorStatCompositionService
-Convergence.Runtime.IRuntimeActorStatCompositionService.Compose(Convergence.Runtime.RuntimeActorStatCompositionRequest! request) -> Convergence.Runtime.RuntimeActorStatCompositionResult!
 Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory
 Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
@@ -5357,6 +5357,63 @@ Convergence.Runtime.RuntimeActorAffiliationSnapshot.Equals(Convergence.Runtime.R
 Convergence.Runtime.RuntimeActorAffiliationSnapshot.RuntimeActorAffiliationSnapshot(Convergence.Content.ContentId CommandAuthorityId, Convergence.Content.ContentId TeamId) -> void
 Convergence.Runtime.RuntimeActorAffiliationSnapshot.TeamId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeActorAffiliationSnapshot.TeamId.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Code.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode Code, out string! Message, out Convergence.Content.ContentId? StatId, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? SkillId) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Equals(Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic? other) -> bool
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.InstanceId.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Message.get -> string!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.RuntimeActorCombatProfileCompositionDiagnostic(Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode Code, string! Message, Convergence.Content.ContentId? StatId = null, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? SkillId = null) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.SkillId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.SkillId.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.StatId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.StatId.init -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch = 2 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.ActiveHostedEntityStateMissing = 1 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.CommitFailed = 11 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.DuplicateRuntimeActorState = 3 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.InvalidSkillState = 8 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.MissingActiveHostedEntity = 0 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.MissingPartyRoster = 9 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.PartyRosterOwnerMismatch = 4 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.ResourceRecalculationFailed = 6 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.RosterInvariantViolation = 10 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing = 7 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed = 5 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.Equals(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? other) -> bool
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.RuntimeActorCombatProfileCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.<Clone>$() -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Applied.get -> bool
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic!>!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Equals(Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? other) -> bool
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.ResolvedSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.RuntimeActorCombatProfileCompositionResult(Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeStatSourceKind resolvedSourceKind, Convergence.Runtime.RuntimeInstanceId sourceActorId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatResolutionResult!>? statResolutions = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.SourceActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.StatResolutions.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatResolutionResult!>!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Status.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
+Convergence.Runtime.RuntimeActorCombatProfileCompositionService
+Convergence.Runtime.RuntimeActorCombatProfileCompositionService.Compose(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! request) -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult!
+Convergence.Runtime.RuntimeActorCombatProfileCompositionService.RuntimeActorCombatProfileCompositionService(Convergence.Catalog.ISkillDefinitionRepository! skills) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionService.RuntimeActorCombatProfileCompositionService(Convergence.Runtime.IStatResolutionPolicy! statResolution, Convergence.Runtime.IResourceGrowthPolicy! resourceGrowth, Convergence.Catalog.ISkillDefinitionRepository! skills) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
+Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus.Applied = 0 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
+Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus.Rejected = 1 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
@@ -5369,34 +5426,34 @@ Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Path.get -> string!
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Path.init -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.RuntimeActorGrowthCompositionDiagnostic(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode Code, string! Message, string! Path) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
+Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.CommitFailed = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.GrowthRejected = 0 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode.StatCompositionRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionRequest!
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.CombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest!
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.Equals(Convergence.Runtime.RuntimeActorGrowthCompositionRequest? other) -> bool
 Convergence.Runtime.RuntimeActorGrowthCompositionRequest.Growth.get -> Convergence.Runtime.LevelGrowthResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionRequest.RuntimeActorGrowthCompositionRequest(Convergence.Runtime.LevelGrowthResult! growth, Convergence.Runtime.RuntimeActorStatCompositionRequest! statComposition) -> void
-Convergence.Runtime.RuntimeActorGrowthCompositionRequest.StatComposition.get -> Convergence.Runtime.RuntimeActorStatCompositionRequest!
+Convergence.Runtime.RuntimeActorGrowthCompositionRequest.RuntimeActorGrowthCompositionRequest(Convergence.Runtime.LevelGrowthResult! growth, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest! combatProfileComposition) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionResult
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Applied.get -> bool
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.CombatProfileComposition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult?
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>!
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Equals(Convergence.Runtime.RuntimeActorGrowthCompositionResult? other) -> bool
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.GrowthMutation.get -> Convergence.Runtime.RuntimeMutationResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionResult.RuntimeActorGrowthCompositionResult(Convergence.Runtime.RuntimeActorGrowthCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeMutationResult! growthMutation, Convergence.Runtime.RuntimeActorStatCompositionResult? statComposition = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>? diagnostics = null) -> void
-Convergence.Runtime.RuntimeActorGrowthCompositionResult.StatComposition.get -> Convergence.Runtime.RuntimeActorStatCompositionResult?
+Convergence.Runtime.RuntimeActorGrowthCompositionResult.RuntimeActorGrowthCompositionResult(Convergence.Runtime.RuntimeActorGrowthCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeMutationResult! growthMutation, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? combatProfileComposition = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionResult.Status.get -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionService
 Convergence.Runtime.RuntimeActorGrowthCompositionService.Apply(Convergence.Runtime.RuntimeActorGrowthCompositionRequest! request) -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
-Convergence.Runtime.RuntimeActorGrowthCompositionService.RuntimeActorGrowthCompositionService(Convergence.Runtime.IRuntimeActorStatCompositionService? statComposition = null) -> void
+Convergence.Runtime.RuntimeActorGrowthCompositionService.RuntimeActorGrowthCompositionService(Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! combatProfileComposition) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus.Applied = 0 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
+Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus.CommitRejected = 3 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorGrowthCompositionStatus.GrowthRejected = 1 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
-Convergence.Runtime.RuntimeActorGrowthCompositionStatus.StatCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorGrowthCompositionStatus
 Convergence.Runtime.RuntimeActorIdentitySnapshot
 Convergence.Runtime.RuntimeActorIdentitySnapshot.<Clone>$() -> Convergence.Runtime.RuntimeActorIdentitySnapshot!
 Convergence.Runtime.RuntimeActorIdentitySnapshot.ActorKindId.get -> Convergence.Content.ContentId
@@ -5452,56 +5509,6 @@ Convergence.Runtime.RuntimeActorSnapshot.Stats.get -> Convergence.Runtime.Runtim
 Convergence.Runtime.RuntimeActorSnapshot.VitalResourceId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeActorSnapshot.WithProgression(Convergence.Runtime.RuntimeProgressionSnapshot! progression, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>? resources = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null) -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.WithResources(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources) -> Convergence.Runtime.RuntimeActorSnapshot!
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorStatCompositionDiagnostic!
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Code.init -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode Code, out string! Message, out Convergence.Content.ContentId? StatId, out Convergence.Runtime.RuntimeInstanceId? InstanceId) -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Equals(Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? other) -> bool
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.InstanceId.init -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Message.get -> string!
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Message.init -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.RuntimeActorStatCompositionDiagnostic(Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode Code, string! Message, Convergence.Content.ContentId? StatId = null, Convergence.Runtime.RuntimeInstanceId? InstanceId = null) -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.StatId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.StatId.init -> void
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch = 3 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityStateMissing = 1 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityStateUnexpected = 2 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.CommitFailed = 8 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.MissingActiveHostedEntity = 0 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.MissingPartyRoster = 6 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.ResourceRecalculationFailed = 5 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation = 7 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed = 4 -> Convergence.Runtime.RuntimeActorStatCompositionDiagnosticCode
-Convergence.Runtime.RuntimeActorStatCompositionRequest
-Convergence.Runtime.RuntimeActorStatCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorStatCompositionRequest!
-Convergence.Runtime.RuntimeActorStatCompositionRequest.ActiveHostedEntity.get -> Convergence.Execution.RuntimeActorState?
-Convergence.Runtime.RuntimeActorStatCompositionRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
-Convergence.Runtime.RuntimeActorStatCompositionRequest.Equals(Convergence.Runtime.RuntimeActorStatCompositionRequest? other) -> bool
-Convergence.Runtime.RuntimeActorStatCompositionRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
-Convergence.Runtime.RuntimeActorStatCompositionRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
-Convergence.Runtime.RuntimeActorStatCompositionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
-Convergence.Runtime.RuntimeActorStatCompositionRequest.RuntimeActorStatCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Execution.RuntimeActorState? activeHostedEntity = null, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
-Convergence.Runtime.RuntimeActorStatCompositionRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
-Convergence.Runtime.RuntimeActorStatCompositionResult
-Convergence.Runtime.RuntimeActorStatCompositionResult.<Clone>$() -> Convergence.Runtime.RuntimeActorStatCompositionResult!
-Convergence.Runtime.RuntimeActorStatCompositionResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
-Convergence.Runtime.RuntimeActorStatCompositionResult.Applied.get -> bool
-Convergence.Runtime.RuntimeActorStatCompositionResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
-Convergence.Runtime.RuntimeActorStatCompositionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorStatCompositionDiagnostic!>!
-Convergence.Runtime.RuntimeActorStatCompositionResult.Equals(Convergence.Runtime.RuntimeActorStatCompositionResult? other) -> bool
-Convergence.Runtime.RuntimeActorStatCompositionResult.ResolvedSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
-Convergence.Runtime.RuntimeActorStatCompositionResult.RuntimeActorStatCompositionResult(Convergence.Runtime.RuntimeActorStatCompositionStatus status, Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeStatSourceKind resolvedSourceKind, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatResolutionResult!>? statResolutions = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorStatCompositionDiagnostic!>? diagnostics = null) -> void
-Convergence.Runtime.RuntimeActorStatCompositionResult.StatResolutions.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatResolutionResult!>!
-Convergence.Runtime.RuntimeActorStatCompositionResult.Status.get -> Convergence.Runtime.RuntimeActorStatCompositionStatus
-Convergence.Runtime.RuntimeActorStatCompositionService
-Convergence.Runtime.RuntimeActorStatCompositionService.Compose(Convergence.Runtime.RuntimeActorStatCompositionRequest! request) -> Convergence.Runtime.RuntimeActorStatCompositionResult!
-Convergence.Runtime.RuntimeActorStatCompositionService.RuntimeActorStatCompositionService(Convergence.Runtime.IStatResolutionPolicy? statResolution = null, Convergence.Runtime.IResourceGrowthPolicy? resourceGrowth = null) -> void
-Convergence.Runtime.RuntimeActorStatCompositionStatus
-Convergence.Runtime.RuntimeActorStatCompositionStatus.Applied = 0 -> Convergence.Runtime.RuntimeActorStatCompositionStatus
-Convergence.Runtime.RuntimeActorStatCompositionStatus.Rejected = 1 -> Convergence.Runtime.RuntimeActorStatCompositionStatus
 Convergence.Runtime.RuntimeAffinityBreakSnapshot
 Convergence.Runtime.RuntimeAffinityBreakSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeAffinityBreakSnapshot!
 Convergence.Runtime.RuntimeAffinityBreakSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
@@ -8028,6 +8035,15 @@ override Convergence.Runtime.RulesetBindingResult<TService>.ToString() -> string
 override Convergence.Runtime.RuntimeActorAffiliationSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorAffiliationSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorAffiliationSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.ToString() -> string!
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.ToString() -> string!
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.ToString() -> string!
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.ToString() -> string!
@@ -8052,15 +8068,6 @@ override Convergence.Runtime.RuntimeActorRestoreProfileRequest.ToString() -> str
 override Convergence.Runtime.RuntimeActorSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorSnapshot.ToString() -> string!
-override Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.ToString() -> string!
-override Convergence.Runtime.RuntimeActorStatCompositionRequest.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorStatCompositionRequest.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorStatCompositionRequest.ToString() -> string!
-override Convergence.Runtime.RuntimeActorStatCompositionResult.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorStatCompositionResult.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorStatCompositionResult.ToString() -> string!
 override Convergence.Runtime.RuntimeAffinityBreakSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeAffinityBreakSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeAffinityBreakSnapshot.ToString() -> string!
@@ -9268,6 +9275,12 @@ static Convergence.Runtime.RulesetBindingDiagnostic.operator !=(Convergence.Runt
 static Convergence.Runtime.RulesetBindingDiagnostic.operator ==(Convergence.Runtime.RulesetBindingDiagnostic? left, Convergence.Runtime.RulesetBindingDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeActorAffiliationSnapshot.operator !=(Convergence.Runtime.RuntimeActorAffiliationSnapshot? left, Convergence.Runtime.RuntimeActorAffiliationSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorAffiliationSnapshot.operator ==(Convergence.Runtime.RuntimeActorAffiliationSnapshot? left, Convergence.Runtime.RuntimeActorAffiliationSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.operator !=(Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic.operator ==(Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.operator !=(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.operator ==(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.operator !=(Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? right) -> bool
+static Convergence.Runtime.RuntimeActorCombatProfileCompositionResult.operator ==(Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? left, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.operator !=(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.operator ==(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionRequest.operator !=(Convergence.Runtime.RuntimeActorGrowthCompositionRequest? left, Convergence.Runtime.RuntimeActorGrowthCompositionRequest? right) -> bool
@@ -9286,12 +9299,6 @@ static Convergence.Runtime.RuntimeActorRestoreProfileRequest.operator !=(Converg
 static Convergence.Runtime.RuntimeActorRestoreProfileRequest.operator ==(Convergence.Runtime.RuntimeActorRestoreProfileRequest? left, Convergence.Runtime.RuntimeActorRestoreProfileRequest? right) -> bool
 static Convergence.Runtime.RuntimeActorSnapshot.operator !=(Convergence.Runtime.RuntimeActorSnapshot? left, Convergence.Runtime.RuntimeActorSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorSnapshot.operator ==(Convergence.Runtime.RuntimeActorSnapshot? left, Convergence.Runtime.RuntimeActorSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.operator !=(Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionDiagnostic.operator ==(Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorStatCompositionDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionRequest.operator !=(Convergence.Runtime.RuntimeActorStatCompositionRequest? left, Convergence.Runtime.RuntimeActorStatCompositionRequest? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionRequest.operator ==(Convergence.Runtime.RuntimeActorStatCompositionRequest? left, Convergence.Runtime.RuntimeActorStatCompositionRequest? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionResult.operator !=(Convergence.Runtime.RuntimeActorStatCompositionResult? left, Convergence.Runtime.RuntimeActorStatCompositionResult? right) -> bool
-static Convergence.Runtime.RuntimeActorStatCompositionResult.operator ==(Convergence.Runtime.RuntimeActorStatCompositionResult? left, Convergence.Runtime.RuntimeActorStatCompositionResult? right) -> bool
 static Convergence.Runtime.RuntimeAffinityBreakSnapshot.operator !=(Convergence.Runtime.RuntimeAffinityBreakSnapshot? left, Convergence.Runtime.RuntimeAffinityBreakSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeAffinityBreakSnapshot.operator ==(Convergence.Runtime.RuntimeAffinityBreakSnapshot? left, Convergence.Runtime.RuntimeAffinityBreakSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeAffinityOverrideSnapshot.operator !=(Convergence.Runtime.RuntimeAffinityOverrideSnapshot? left, Convergence.Runtime.RuntimeAffinityOverrideSnapshot? right) -> bool

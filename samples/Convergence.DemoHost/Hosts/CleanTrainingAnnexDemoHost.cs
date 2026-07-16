@@ -292,17 +292,20 @@ internal sealed class CleanTrainingAnnexDemoHost
             return 5;
         }
 
-        RuntimeActorStatCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerStats(
+        RuntimeActorCombatProfileCompositionResult composition = TrainingAnnexHostSupport.ComposePlayerCombatProfile(
             roster,
             partyRoster,
-            new RuntimeActorStatCompositionService(statPolicy, growthServices.ResourceGrowthPolicy),
+            new RuntimeActorCombatProfileCompositionService(
+                statPolicy,
+                growthServices.ResourceGrowthPolicy,
+                catalog),
             new RuntimeEquipmentProfile());
         if (!composition.Applied)
         {
-            foreach (RuntimeActorStatCompositionDiagnostic diagnostic in composition.Diagnostics)
+            foreach (RuntimeActorCombatProfileCompositionDiagnostic diagnostic in composition.Diagnostics)
             {
                 await _eventSink.PublishAsync(
-                    $"[stat_composition:{diagnostic.Code}] {diagnostic.Message}",
+                    $"[combat_profile_composition:{diagnostic.Code}] {diagnostic.Message}",
                     cancellationToken).ConfigureAwait(false);
             }
 

@@ -493,7 +493,7 @@
       "publicSurface": "internal_only"
     },
     {
-      "path": "Runtime/RuntimeActorStatComposition.cs",
+      "path": "Runtime/RuntimeActorCombatProfileComposition.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"
     },

@@ -2,8 +2,8 @@
 
 ## Status
 
-**Active implementation authority. D1-D6 approved. Checkpoint 1 may begin only
-after the isolated Checkpoint 0 documentation commit is green.**
+**Active implementation authority. D1-D6 approved. Checkpoints 0-5 are
+implemented and verified. Checkpoint 6 is next.**
 
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
@@ -19,6 +19,20 @@ reviewable implementation checkpoints. It covers:
 The roadmap does not restore the archived weighted-stat model. It does not make
 Hosted Entities or Companions mandatory modules. It does not add presentation
 rules to Framework.
+
+## Implementation Progress
+
+| Checkpoint | State | Commit or pending commit |
+|---|---|---|
+| 0. Decisions and maturity | complete | `6cb8228` |
+| 1. Policy-driven stages | complete | `34ccdc9` |
+| 2. Canonical owned rosters | complete | `0a43acd` |
+| 3. Encounter presence | complete | `5ede43e` |
+| 4. Authority and affiliation | complete | `979946d` |
+| 5. Vessel combat profiles | complete | `runtime: compose vessel combat profiles` |
+| 6. Runtime skill unlocks | pending | `runtime: add hosted entity skill progression` |
+| 7. Save v8 and restoration | pending | `runtime: restore canonical actor ownership and composition` |
+| 8. Documentation and review | pending | `docs: document actor composition and progression` |
 
 ## Why This Work Exists
 
@@ -596,7 +610,7 @@ Likely Framework files to change:
 
 - `Execution/BattleRuntimeState.cs`
 - `Runtime/ProgressionPolicies.cs`
-- `Runtime/RuntimeActorStatComposition.cs`
+- `Runtime/RuntimeActorCombatProfileComposition.cs`
 - `Runtime/RuntimeActorGrowthComposition.cs`
 - `Runtime/RuntimeStateSnapshots.cs`
 - `Runtime/RuntimeActorRosterInvariants.cs`

@@ -180,11 +180,17 @@ public sealed class RuntimeActorState
         RuntimeActorNumericDomain.RequireValidBaseResourceValues(
             _baseResourceValues,
             nameof(baseResourceValues));
-        _skillIds = new HashSet<ContentId>(skillIds ?? []);
+        Skills = skillState ?? new RuntimeSkillStateSnapshot(skillIds, skillIds);
+        _skillIds = new HashSet<ContentId>(Skills.EquippedSkillIds);
+        if (skillIds is not null && !_skillIds.SetEquals(skillIds))
+        {
+            throw new ArgumentException(
+                "Runtime executable skill IDs must match the equipped skill state.",
+                nameof(skillIds));
+        }
         _capabilityIds = new HashSet<ContentId>(capabilityIds ?? []);
         RequireValid(_skillIds, nameof(skillIds));
         RequireValid(_capabilityIds, nameof(capabilityIds));
-        Skills = skillState ?? new RuntimeSkillStateSnapshot(_skillIds, _skillIds);
         Equipment = equipment ?? new RuntimeEquipmentSnapshot();
         RequireValid(Skills.LearnedSkillIds, nameof(skillState));
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
@@ -233,7 +239,7 @@ public sealed class RuntimeActorState
             snapshot.EncounterPresence,
             snapshot.Affiliation,
             snapshot.Stats.EffectiveStats,
-            snapshot.Skills.LearnedSkillIds,
+            snapshot.Skills.EquippedSkillIds,
             capabilityIds ?? snapshot.CapabilityIds,
             passiveDefinitions,
             snapshot.Identity,
@@ -259,7 +265,7 @@ public sealed class RuntimeActorState
     public RuntimeSkillStateSnapshot Skills { get; private set; }
     public RuntimeEquipmentSnapshot Equipment { get; private set; }
     public ContentId VitalResourceId { get; }
-    public CombatDefenseProfile DefenseProfile { get; }
+    public CombatDefenseProfile DefenseProfile { get; private set; }
     public BattlePassiveCollection Passives { get; }
     public IReadOnlyDictionary<ContentId, decimal> BaseStats => _baseStats;
     public IReadOnlyDictionary<ContentId, decimal> Stats => _effectiveStats;
@@ -870,6 +876,7 @@ public sealed class RuntimeActorState
         Progression = source.Progression;
         Skills = source.Skills;
         Equipment = source.Equipment;
+        DefenseProfile = source.DefenseProfile;
         IsGuarding = source.IsGuarding;
         Passives.ReplaceFrom(source.Passives);
     }
@@ -897,10 +904,15 @@ public sealed class RuntimeActorState
         _baseResourceValues = nextBaseResourceValues;
     }
 
-    internal void ApplyStatComposition(
+    internal void ApplyCombatProfile(
         IEnumerable<KeyValuePair<ContentId, decimal>> effectiveStats,
-        IEnumerable<RuntimeResourceSnapshot> resources)
+        IEnumerable<RuntimeResourceSnapshot> resources,
+        CombatDefenseProfile defenseProfile,
+        RuntimeSkillStateSnapshot skills,
+        IEnumerable<SkillDefinition> equippedSkillDefinitions)
     {
+        ArgumentNullException.ThrowIfNull(defenseProfile);
+        ArgumentNullException.ThrowIfNull(skills);
         IReadOnlyDictionary<ContentId, decimal> nextEffectiveStats = Snapshot(effectiveStats);
         RuntimeActorNumericDomain.RequireValidStatValues(nextEffectiveStats, nameof(effectiveStats));
 
@@ -920,6 +932,32 @@ public sealed class RuntimeActorState
                 resource.Current,
                 resource.Maximum))
             .ToArray();
+        ContentId[] learnedSkillIds = skills.LearnedSkillIds.ToArray();
+        ContentId[] equippedSkillIds = skills.EquippedSkillIds.ToArray();
+        RequireValid(learnedSkillIds, nameof(skills));
+        RequireValid(equippedSkillIds, nameof(skills));
+        if (learnedSkillIds.Distinct().Count() != learnedSkillIds.Length ||
+            equippedSkillIds.Distinct().Count() != equippedSkillIds.Length ||
+            equippedSkillIds.Except(learnedSkillIds).Any())
+        {
+            throw new ArgumentException(
+                "Composed skill state must contain unique learned skills and unique equipped skills that are learned.",
+                nameof(skills));
+        }
+
+        SkillDefinition[] definitions =
+            (equippedSkillDefinitions ?? throw new ArgumentNullException(nameof(equippedSkillDefinitions)))
+            .ToArray();
+        if (definitions.Any(definition => definition is null) ||
+            !definitions.Select(definition => definition.Id).SequenceEqual(equippedSkillIds))
+        {
+            throw new ArgumentException(
+                "Equipped skill definitions must match the composed equipped-skill order.",
+                nameof(equippedSkillDefinitions));
+        }
+        var nextPassives = new BattlePassiveCollection(
+            definitions.Where(definition => definition.Activation == SkillActivation.Passive));
+        var nextSkillState = new RuntimeSkillStateSnapshot(learnedSkillIds, equippedSkillIds);
 
         _resources.Clear();
         foreach (BattleResourceState resource in nextResources)
@@ -928,6 +966,11 @@ public sealed class RuntimeActorState
         }
 
         _effectiveStats = nextEffectiveStats;
+        DefenseProfile = defenseProfile;
+        Skills = nextSkillState;
+        _skillIds.Clear();
+        _skillIds.UnionWith(equippedSkillIds);
+        Passives.ReplaceFrom(nextPassives);
     }
 
     internal void ReplaceResources(IEnumerable<RuntimeResourceSnapshot> resources)

@@ -50,6 +50,39 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void CatalogActor_SkillViewsFollowTheCurrentRuntimeCombatProfile()
+    {
+        SkillDefinition first = Active("test.pack:first_profile_skill", DamageElement.Ice);
+        SkillDefinition second = Active("test.pack:second_profile_skill", DamageElement.Fire);
+        CatalogBattleActor actor = RuntimeCatalogActor(
+            "profile_actor",
+            "profile_actor",
+            PlayerTeam,
+            [first],
+            catalogSkills: [first, second]);
+        RuntimeResourceSnapshot[] resources = actor.State.Resources.Values
+            .Select(resource => new RuntimeResourceSnapshot(
+                resource.Id,
+                resource.Current,
+                resource.Maximum))
+            .ToArray();
+
+        actor.State.ApplyCombatProfile(
+            actor.State.Stats,
+            resources,
+            actor.State.DefenseProfile,
+            new RuntimeSkillStateSnapshot(
+                [first.Id, second.Id],
+                [second.Id]),
+            [second]);
+
+        Assert.Equal([second.Id], actor.SkillLoadout.Select(skill => skill.Id));
+        Assert.Equal([second.Id], actor.ActiveSkills.Select(skill => skill.Id));
+        Assert.True(actor.State.HasSkill(second.Id));
+        Assert.False(actor.State.HasSkill(first.Id));
+    }
+
+    [Fact]
     public void ActorFactory_PreservesSameLevelUnlockOrderAndSuppressesFirstOccurrenceDuplicates()
     {
         SkillDefinition first = Active("test.pack:first", DamageElement.Fire);
@@ -379,8 +412,8 @@ public sealed class CatalogBattleRuntimeTests
                 vesselSnapshot,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedState,
-                partyRoster));
+                partyRoster,
+                [hostedState]));
 
         Assert.True(
             vesselRestore.IsSuccess,
@@ -440,8 +473,8 @@ public sealed class CatalogBattleRuntimeTests
 
         Assert.False(result.IsSuccess);
         CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(CatalogBattleActorDiagnosticCode.SnapshotStatCompositionFailed, diagnostic.Code);
-        Assert.Contains("no supplied runtime state", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.SnapshotCombatProfileCompositionFailed, diagnostic.Code);
+        Assert.Contains("has no runtime state", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1489,7 +1522,8 @@ public sealed class CatalogBattleRuntimeTests
         string instanceId,
         ContentId teamId,
         IEnumerable<SkillDefinition>? loadout = null,
-        CombatDefenseProfile? defense = null)
+        CombatDefenseProfile? defense = null,
+        IEnumerable<SkillDefinition>? catalogSkills = null)
     {
         SkillDefinition[] skills = loadout?.ToArray() ?? [];
         EntityDefinition entity = Entity(
@@ -1506,8 +1540,16 @@ public sealed class CatalogBattleRuntimeTests
                 new BattleResourceState(Id("sp"), 20, 20)
             ],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
-            new RuntimeActorAffiliationSnapshot(Id("test_host"), teamId));
-        return new CatalogBattleActor(entity, state, skills);
+            new RuntimeActorAffiliationSnapshot(Id("test_host"), teamId),
+            skillIds: skills.Select(skill => skill.Id),
+            passiveSkills: skills.Where(skill => skill.Activation == SkillActivation.Passive),
+            skillState: new RuntimeSkillStateSnapshot(
+                skills.Select(skill => skill.Id),
+                skills.Select(skill => skill.Id)));
+        return new CatalogBattleActor(
+            entity,
+            state,
+            new SkillRepository((catalogSkills ?? skills).ToArray()));
     }
 
     private static EntityDefinition Entity(

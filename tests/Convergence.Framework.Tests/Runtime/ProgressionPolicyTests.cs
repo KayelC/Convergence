@@ -1,5 +1,6 @@
 using System.Reflection;
 using Convergence.Battle;
+using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Hosting;
@@ -82,15 +83,18 @@ public sealed class ProgressionPolicyTests
         RuntimeActorState vessel = CreateActor("vessel", 5m, hpCurrent: 90m);
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         vessel.ChangeStatStage(StandardProgressionIds.Attack, 1, duration: null);
-        var service = new RuntimeActorStatCompositionService(_stats, _resources);
+        var service = new RuntimeActorCombatProfileCompositionService(
+            _stats,
+            _resources,
+            new SkillRepository());
 
-        RuntimeActorStatCompositionResult result = service.Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult result = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity,
                 partyRoster,
+                [hostedEntity],
                 equipmentStatModifiers:
                 [
                     new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 2m),
@@ -114,10 +118,13 @@ public sealed class ProgressionPolicyTests
         RuntimeActorState rejectedActor = CreateActor("rejected_vessel", 7m);
         RuntimePartyRosterSnapshot rejectedRoster = PartyRoster(rejectedActor);
         RuntimeActorSnapshot rejectedBefore = rejectedActor.ToSnapshot();
-        var service = new RuntimeActorStatCompositionService(_stats, _resources);
+        var service = new RuntimeActorCombatProfileCompositionService(
+            _stats,
+            _resources,
+            new SkillRepository());
 
-        RuntimeActorStatCompositionResult rejected = service.Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult rejected = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 rejectedActor,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
@@ -125,14 +132,14 @@ public sealed class ProgressionPolicyTests
 
         Assert.False(rejected.Applied);
         Assert.Equal(
-            RuntimeActorStatCompositionDiagnosticCode.MissingActiveHostedEntity,
+            RuntimeActorCombatProfileCompositionDiagnosticCode.MissingActiveHostedEntity,
             Assert.Single(rejected.Diagnostics).Code);
         AssertCompositionStateUnchanged(rejectedBefore, rejectedActor.ToSnapshot());
 
         RuntimeActorState fallbackActor = CreateActor("fallback_vessel", 7m, hpCurrent: 80m);
         RuntimePartyRosterSnapshot fallbackRoster = PartyRoster(fallbackActor);
-        RuntimeActorStatCompositionResult fallback = service.Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult fallback = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 fallbackActor,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.UseActorBaseStats,
@@ -149,22 +156,26 @@ public sealed class ProgressionPolicyTests
     public void ActorComposition_RejectsHostedEntityIdentityMismatchWithoutMutation()
     {
         RuntimeActorState expected = CreateActor("expected_hosted", 20m);
-        RuntimeActorState supplied = CreateActor("supplied_hosted", 30m);
+        RuntimeActorState supplied = CreateActor(
+            "expected_hosted",
+            30m,
+            entityId: "supplied_hosted_entity");
         RuntimeActorState vessel = CreateActor("mismatched_vessel", 5m);
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, expected);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
 
-        RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult result =
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                supplied,
-                partyRoster));
+                partyRoster,
+                [supplied]));
 
         Assert.False(result.Applied);
         Assert.Equal(
-            RuntimeActorStatCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch,
+            RuntimeActorCombatProfileCompositionDiagnosticCode.ActiveHostedEntityIdentityMismatch,
             Assert.Single(result.Diagnostics).Code);
         AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
     }
@@ -188,8 +199,9 @@ public sealed class ProgressionPolicyTests
         {
             RuntimeActorSnapshot before = actor.ToSnapshot();
 
-            RuntimeActorStatCompositionResult result = new RuntimeActorStatCompositionService().Compose(
-                new RuntimeActorStatCompositionRequest(
+            RuntimeActorCombatProfileCompositionResult result =
+                new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+                new RuntimeActorCombatProfileCompositionRequest(
                     actor,
                     RuntimeStatSourceKind.Actor,
                     MissingHostedEntityBehavior.UseActorBaseStats,
@@ -197,7 +209,7 @@ public sealed class ProgressionPolicyTests
 
             Assert.False(result.Applied);
             Assert.Equal(
-                RuntimeActorStatCompositionDiagnosticCode.RosterInvariantViolation,
+                RuntimeActorCombatProfileCompositionDiagnosticCode.RosterInvariantViolation,
                 Assert.Single(result.Diagnostics).Code);
             AssertCompositionStateUnchanged(before, actor.ToSnapshot());
         }
@@ -237,21 +249,22 @@ public sealed class ProgressionPolicyTests
         RuntimeActorState vessel = CreateActor("atomic_vessel", 5m);
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorSnapshot before = vessel.ToSnapshot();
-        var service = new RuntimeActorStatCompositionService(
+        var service = new RuntimeActorCombatProfileCompositionService(
             new ThrowingStatResolutionPolicy(StandardProgressionIds.Magic),
-            _resources);
+            _resources,
+            new SkillRepository());
 
-        RuntimeActorStatCompositionResult result = service.Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult result = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity,
-                partyRoster));
+                partyRoster,
+                [hostedEntity]));
 
         Assert.False(result.Applied);
         Assert.Equal(
-            RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+            RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed,
             Assert.Single(result.Diagnostics).Code);
         AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
     }
@@ -264,13 +277,14 @@ public sealed class ProgressionPolicyTests
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
         RuntimeActorState actorSourced = CreateActor("damage_actor_source", 5m);
         RuntimeActorState target = CreateActor("damage_target", 5m);
-        RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService().Compose(
-            new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionResult composition =
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
                 vessel,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                hostedEntity,
-                partyRoster));
+                partyRoster,
+                [hostedEntity]));
         Assert.True(composition.Applied);
 
         var ruleset = new ProductionCombatRuleset(new MinimumRandomSource());
@@ -293,6 +307,146 @@ public sealed class ProgressionPolicyTests
                 Accuracy: 100,
                 new NeverCriticalDefinition(),
                 new HitCountDefinition(1, 1));
+    }
+
+    [Fact]
+    public void ActorCombatProfileComposition_SwitchesStatsDefensesSkillsAndPassivesTogether()
+    {
+        ContentId ownerTurnEnd = ContentId.Parse("owner_turn_end");
+        SkillDefinition iceSkill = ActiveSkill("test.pack:ice_action", DamageElement.Ice);
+        SkillDefinition fireSkill = ActiveSkill("test.pack:fire_action", DamageElement.Fire);
+        SkillDefinition recoveryPassive = PassiveSkill(
+            "test.pack:recovery_passive",
+            ownerTurnEnd,
+            restoreAmount: 5m);
+        SkillDefinition vesselSkill = ActiveSkill("test.pack:vessel_action", DamageElement.Physical);
+        var skills = new SkillRepository(iceSkill, fireSkill, recoveryPassive, vesselSkill);
+        RuntimeActorState firstHostedEntity = CreateActor(
+            "first_hosted",
+            20m,
+            defenseProfile: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)]),
+            skills: [iceSkill, recoveryPassive]);
+        RuntimeActorState secondHostedEntity = CreateActor(
+            "second_hosted",
+            30m,
+            defenseProfile: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Fire,
+                    ElementalAffinity.Null)]),
+            skills: [fireSkill]);
+        RuntimeEquipmentSnapshot equipment = new(
+        [
+            new KeyValuePair<EquipmentSlot, ContentId>(
+                EquipmentSlot.Weapon,
+                ContentId.Parse("test.pack:practice_weapon"))
+        ]);
+        RuntimeActorState vessel = CreateActor(
+            "profile_vessel",
+            5m,
+            hpCurrent: 90m,
+            skills: [vesselSkill],
+            equipment: equipment);
+        vessel.SetGuarding(true);
+        ContentId focusStatus = ContentId.Parse("focus_status");
+        vessel.AddOtherStatus(focusStatus);
+        RuntimeActorAffiliationSnapshot affiliation = vessel.Affiliation;
+        RuntimeEncounterPresenceSnapshot encounterPresence = vessel.EncounterPresence;
+
+        var service = new RuntimeActorCombatProfileCompositionService(_stats, _resources, skills);
+        RuntimeActorCombatProfileCompositionResult first = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                PartyRoster(vessel, firstHostedEntity),
+                [firstHostedEntity, secondHostedEntity]));
+
+        Assert.True(first.Applied);
+        Assert.Equal(firstHostedEntity.InstanceId, first.SourceActorId);
+        Assert.Equal(20m, vessel.Stats[StandardProgressionIds.Strength]);
+        Assert.Equal(ElementalAffinity.Weak, vessel.GetElementalAffinity(DamageElement.Ice));
+        Assert.Equal(
+            [iceSkill.Id, recoveryPassive.Id],
+            vessel.Skills.EquippedSkillIds);
+        Assert.True(vessel.HasSkill(iceSkill.Id));
+        Assert.False(vessel.HasSkill(vesselSkill.Id));
+        Assert.Equal(recoveryPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
+        Assert.Equal(equipment, vessel.Equipment);
+        Assert.True(vessel.IsGuarding);
+        Assert.Contains(focusStatus, vessel.OtherStatuses);
+        Assert.Equal(affiliation, vessel.Affiliation);
+        Assert.Equal(encounterPresence, vessel.EncounterPresence);
+        Assert.Equal(90m, vessel.GetRequiredResource(StandardProgressionIds.Hp).Current);
+
+        vessel.SetResource(StandardProgressionIds.Hp, 50m);
+        new BattleStatusLifecycleService(new MinimumRandomSource()).ProcessTurnEnd(
+            new BattleTurnEndLifecycleRequest(
+                vessel,
+                [vessel],
+                ContentId.Parse("battle"),
+                ownerTurnEnd),
+            ExecutionServices());
+        Assert.Equal(55m, vessel.GetRequiredResource(StandardProgressionIds.Hp).Current);
+
+        RuntimeActorCombatProfileCompositionResult second = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                PartyRoster(vessel, secondHostedEntity),
+                [firstHostedEntity, secondHostedEntity]));
+
+        Assert.True(second.Applied);
+        Assert.Equal(secondHostedEntity.InstanceId, second.SourceActorId);
+        Assert.Equal(30m, vessel.Stats[StandardProgressionIds.Strength]);
+        Assert.Equal(ElementalAffinity.Null, vessel.GetElementalAffinity(DamageElement.Fire));
+        Assert.Equal([fireSkill.Id], vessel.Skills.EquippedSkillIds);
+        Assert.True(vessel.HasSkill(fireSkill.Id));
+        Assert.False(vessel.HasSkill(iceSkill.Id));
+        Assert.Empty(vessel.Passives.Entries);
+        Assert.Equal(equipment, vessel.Equipment);
+        Assert.True(vessel.IsGuarding);
+        Assert.Contains(focusStatus, vessel.OtherStatuses);
+        Assert.Equal(affiliation, vessel.Affiliation);
+        Assert.Equal(encounterPresence, vessel.EncounterPresence);
+    }
+
+    [Fact]
+    public void ActorCombatProfileComposition_MissingSkillDefinitionRejectsWithoutMutation()
+    {
+        SkillDefinition missing = ActiveSkill("test.pack:missing_profile_skill", DamageElement.Ice);
+        RuntimeActorState hostedEntity = CreateActor(
+            "missing_skill_hosted",
+            20m,
+            defenseProfile: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)]),
+            skills: [missing]);
+        RuntimeActorState vessel = CreateActor("missing_skill_vessel", 5m);
+        RuntimeActorSnapshot before = vessel.ToSnapshot();
+        CombatDefenseProfile defenseBefore = vessel.DefenseProfile;
+
+        RuntimeActorCombatProfileCompositionResult result =
+            new RuntimeActorCombatProfileCompositionService(_stats, _resources, new SkillRepository())
+            .Compose(new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                PartyRoster(vessel, hostedEntity),
+                [hostedEntity]));
+
+        Assert.False(result.Applied);
+        RuntimeActorCombatProfileCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
+            diagnostic.Code);
+        Assert.Equal(missing.Id, diagnostic.SkillId);
+        Assert.Same(defenseBefore, vessel.DefenseProfile);
+        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
     }
 
     [Fact]
@@ -654,13 +808,21 @@ public sealed class ProgressionPolicyTests
     private static RuntimeActorState CreateActor(
         string id,
         decimal statValue,
-        decimal hpCurrent = 50m) =>
+        decimal hpCurrent = 50m,
+        string? entityId = null,
+        CombatDefenseProfile? defenseProfile = null,
+        IEnumerable<SkillDefinition>? skills = null,
+        RuntimeEquipmentSnapshot? equipment = null)
+    {
+        ContentId resolvedEntityId = ContentId.Parse(entityId ?? $"{id}_entity");
+        SkillDefinition[] skillDefinitions = (skills ?? []).ToArray();
+        return
         new(
             RuntimeInstanceId.Parse(id),
-            ContentId.Parse($"{id}_entity"),
+            resolvedEntityId,
             ContentId.Parse("player_team"),
             StandardProgressionIds.Hp,
-            CombatDefenseProfile.Empty,
+            defenseProfile ?? CombatDefenseProfile.Empty,
             [
                 new BattleResourceState(StandardProgressionIds.Hp, hpCurrent, 100m),
                 new BattleResourceState(StandardProgressionIds.Sp, 20m, 30m)
@@ -668,9 +830,11 @@ public sealed class ProgressionPolicyTests
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), ContentId.Parse("player_team")),
             stats: BaseStats(statValue),
+            skillIds: skillDefinitions.Select(skill => skill.Id),
+            passiveSkills: skillDefinitions.Where(skill => skill.Activation == SkillActivation.Passive),
             identity: new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse(id),
-                ContentId.Parse($"{id}_entity"),
+                resolvedEntityId,
                 StandardProgressionIds.Vessel,
                 id),
             baseResourceValues:
@@ -678,7 +842,12 @@ public sealed class ProgressionPolicyTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20m),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
-            baseStats: BaseStats(statValue));
+            baseStats: BaseStats(statValue),
+            skillState: new RuntimeSkillStateSnapshot(
+                skillDefinitions.Select(skill => skill.Id),
+                skillDefinitions.Select(skill => skill.Id)),
+            equipment: equipment);
+    }
 
     private static RuntimePartyRosterSnapshot PartyRoster(
         RuntimeActorState owner,
@@ -726,6 +895,76 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(
             expected.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray(),
             actual.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray());
+        Assert.Equal(expected.Skills.LearnedSkillIds, actual.Skills.LearnedSkillIds);
+        Assert.Equal(expected.Skills.EquippedSkillIds, actual.Skills.EquippedSkillIds);
+        Assert.Equal(expected.BattleStatus, actual.BattleStatus);
+        Assert.Equal(expected.BattleActivations, actual.BattleActivations);
+    }
+
+    private static SkillDefinition ActiveSkill(string id, DamageElement element) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            id,
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            element == DamageElement.Ice
+                ? InheritanceGroup.Ice
+                : element == DamageElement.Fire
+                    ? InheritanceGroup.Fire
+                    : InheritanceGroup.Physical,
+            new SkillInheritanceDefinition(true),
+            targeting: new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                false),
+            effects:
+            [
+                new DamageEffectDefinition(
+                    element,
+                    10,
+                    100,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+            ],
+            availability: new SkillAvailabilityDefinition([ContentId.Parse("battle")]));
+
+    private static SkillDefinition PassiveSkill(
+        string id,
+        ContentId eventId,
+        decimal restoreAmount) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            id,
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [
+                        new RestoreResourceEffectDefinition(
+                            StandardProgressionIds.Hp,
+                            new FlatAmountDefinition(restoreAmount))
+                    ])
+            ]);
+
+    private static BattleExecutionServices ExecutionServices()
+    {
+        var ruleset = new ProductionCombatRuleset(new MinimumRandomSource());
+        return new BattleExecutionServices(
+            new EmptyAilmentRepository(),
+            ruleset,
+            ruleset,
+            ruleset,
+            ruleset,
+            ruleset,
+            new FirstTargetPolicy(),
+            new OrderedRuntimeTargetSelectionPolicy());
     }
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)
@@ -769,6 +1008,39 @@ public sealed class ProgressionPolicyTests
         }
 
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class SkillRepository(params SkillDefinition[] skills) :
+        ISkillDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, SkillDefinition> _skills =
+            skills.ToDictionary(skill => skill.Id);
+
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
+            _skills.TryGetValue(id, out definition);
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class EmptyAilmentRepository : IAilmentDefinitionRepository
+    {
+        public bool TryGetAilment(ContentId id, out AilmentDefinition? definition)
+        {
+            definition = null;
+            return false;
+        }
+
+        public AilmentDefinition GetRequiredAilment(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class FirstTargetPolicy : IRandomTargetSelectionPolicy
+    {
+        public IReadOnlyList<RuntimeActorState> Select(
+            IReadOnlyList<RuntimeActorState> candidates,
+            TargetCountDefinition count,
+            SkillExecutionRequest request) =>
+            Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());
     }
 
     private sealed class ZeroExperienceCurve : IExperienceCurve

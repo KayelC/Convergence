@@ -6,14 +6,14 @@ public enum RuntimeActorGrowthCompositionStatus
 {
     Applied,
     GrowthRejected,
-    StatCompositionRejected,
+    CombatProfileCompositionRejected,
     CommitRejected
 }
 
 public enum RuntimeActorGrowthCompositionDiagnosticCode
 {
     GrowthRejected,
-    StatCompositionRejected,
+    CombatProfileCompositionRejected,
     CommitFailed
 }
 
@@ -26,14 +26,15 @@ public sealed record RuntimeActorGrowthCompositionRequest
 {
     public RuntimeActorGrowthCompositionRequest(
         LevelGrowthResult growth,
-        RuntimeActorStatCompositionRequest statComposition)
+        RuntimeActorCombatProfileCompositionRequest combatProfileComposition)
     {
         Growth = growth ?? throw new ArgumentNullException(nameof(growth));
-        StatComposition = statComposition ?? throw new ArgumentNullException(nameof(statComposition));
+        CombatProfileComposition = combatProfileComposition ??
+            throw new ArgumentNullException(nameof(combatProfileComposition));
     }
 
     public LevelGrowthResult Growth { get; }
-    public RuntimeActorStatCompositionRequest StatComposition { get; }
+    public RuntimeActorCombatProfileCompositionRequest CombatProfileComposition { get; }
 }
 
 public sealed record RuntimeActorGrowthCompositionResult
@@ -43,14 +44,14 @@ public sealed record RuntimeActorGrowthCompositionResult
         RuntimeActorSnapshot before,
         RuntimeActorSnapshot after,
         RuntimeMutationResult growthMutation,
-        RuntimeActorStatCompositionResult? statComposition = null,
+        RuntimeActorCombatProfileCompositionResult? combatProfileComposition = null,
         IEnumerable<RuntimeActorGrowthCompositionDiagnostic>? diagnostics = null)
     {
         Status = status;
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
         GrowthMutation = growthMutation ?? throw new ArgumentNullException(nameof(growthMutation));
-        StatComposition = statComposition;
+        CombatProfileComposition = combatProfileComposition;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
 
@@ -59,7 +60,7 @@ public sealed record RuntimeActorGrowthCompositionResult
     public RuntimeActorSnapshot Before { get; }
     public RuntimeActorSnapshot After { get; }
     public RuntimeMutationResult GrowthMutation { get; }
-    public RuntimeActorStatCompositionResult? StatComposition { get; }
+    public RuntimeActorCombatProfileCompositionResult? CombatProfileComposition { get; }
     public IReadOnlyList<RuntimeActorGrowthCompositionDiagnostic> Diagnostics { get; }
 }
 
@@ -70,20 +71,21 @@ public interface IRuntimeActorGrowthCompositionService
 
 public sealed class RuntimeActorGrowthCompositionService : IRuntimeActorGrowthCompositionService
 {
-    private readonly IRuntimeActorStatCompositionService _statComposition;
+    private readonly IRuntimeActorCombatProfileCompositionService _combatProfileComposition;
     private readonly RuntimeProgressionTransactionService _progression = new();
 
     public RuntimeActorGrowthCompositionService(
-        IRuntimeActorStatCompositionService? statComposition = null)
+        IRuntimeActorCombatProfileCompositionService combatProfileComposition)
     {
-        _statComposition = statComposition ?? new RuntimeActorStatCompositionService();
+        _combatProfileComposition = combatProfileComposition ??
+            throw new ArgumentNullException(nameof(combatProfileComposition));
     }
 
     public RuntimeActorGrowthCompositionResult Apply(RuntimeActorGrowthCompositionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        RuntimeActorState actor = request.StatComposition.Actor;
+        RuntimeActorState actor = request.CombatProfileComposition.Actor;
         RuntimeActorSnapshot before = actor.ToSnapshot();
         RuntimeActorState stagedActor = actor.CreateExecutionClone();
         RuntimeMutationResult growthMutation;
@@ -110,16 +112,20 @@ public sealed class RuntimeActorGrowthCompositionService : IRuntimeActorGrowthCo
             return RejectedGrowth(before, growthMutation);
         }
 
-        RuntimeActorStatCompositionRequest compositionRequest = request.StatComposition;
-        var stagedCompositionRequest = new RuntimeActorStatCompositionRequest(
+        RuntimeActorCombatProfileCompositionRequest compositionRequest =
+            request.CombatProfileComposition;
+        RuntimeActorState[] stagedRuntimeActors = compositionRequest.RuntimeActors
+            .Select(candidate => candidate.InstanceId == actor.InstanceId ? stagedActor : candidate)
+            .ToArray();
+        var stagedCompositionRequest = new RuntimeActorCombatProfileCompositionRequest(
             stagedActor,
             compositionRequest.SourceKind,
             compositionRequest.MissingHostedEntityBehavior,
-            compositionRequest.ActiveHostedEntity,
             compositionRequest.PartyRoster,
+            stagedRuntimeActors,
             compositionRequest.EquipmentStatModifiers);
-        RuntimeActorStatCompositionResult composition = _statComposition.Compose(
-            stagedCompositionRequest);
+        RuntimeActorCombatProfileCompositionResult composition =
+            _combatProfileComposition.Compose(stagedCompositionRequest);
         if (!composition.Applied)
         {
             return RejectedComposition(before, growthMutation, composition);
@@ -170,16 +176,16 @@ public sealed class RuntimeActorGrowthCompositionService : IRuntimeActorGrowthCo
     private static RuntimeActorGrowthCompositionResult RejectedComposition(
         RuntimeActorSnapshot before,
         RuntimeMutationResult growthMutation,
-        RuntimeActorStatCompositionResult composition) =>
+        RuntimeActorCombatProfileCompositionResult composition) =>
         new(
-            RuntimeActorGrowthCompositionStatus.StatCompositionRejected,
+            RuntimeActorGrowthCompositionStatus.CombatProfileCompositionRejected,
             before,
             before,
             growthMutation,
             composition,
             composition.Diagnostics.Select(diagnostic =>
                 new RuntimeActorGrowthCompositionDiagnostic(
-                    RuntimeActorGrowthCompositionDiagnosticCode.StatCompositionRejected,
+                    RuntimeActorGrowthCompositionDiagnosticCode.CombatProfileCompositionRejected,
                     diagnostic.Message,
                     diagnostic.StatId is { } statId
                         ? $"$.stats.effectiveStats['{statId}']"

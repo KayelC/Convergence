@@ -28,8 +28,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            statCompositionFactory: (stats, resources) =>
-                rejectingComposition.Initialize(stats, resources));
+            combatProfileCompositionFactory: (skills, stats, resources) =>
+                rejectingComposition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
 
@@ -42,7 +42,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(6m, summary.PlayerStats.BaseStats[StandardProgressionIds.Strength]);
         Assert.Equal(3m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Strength]);
-        Assert.Contains("[StatCompositionRejected]", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("[CombatProfileCompositionRejected]", output.ToString(), StringComparison.Ordinal);
         Assert.Equal(
             [CleanTrainingAnnexPlayCommand.ApplyVictoryExperience, CleanTrainingAnnexPlayCommand.Exit],
             summary.Commands);
@@ -142,7 +142,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.FusionPlanning);
         Assert.Empty(summary.FusionPreviews);
         Assert.Empty(summary.FusionTransactions);
-        Assert.Equal(2, summary.ActiveSkillCount);
+        Assert.Equal(5, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
             resource.ResourceId == ContentId.Parse("hp"));
@@ -312,7 +312,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Enemy: Ward Shell; instance enemy_ward_shell; level 4; resources: hp 100/100, sp 27/27.", text, StringComparison.Ordinal);
         Assert.Contains("Base stats: strength 6, magic 4, vitality 5, agility 5, luck 4.", text, StringComparison.Ordinal);
         Assert.Contains("Effective stats: strength 3, magic 8, vitality 5, agility 4, luck 6.", text, StringComparison.Ordinal);
-        Assert.Contains("Active skills: Frost Tip, Echo Strike.", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "Active skills: Frost Tip, Echo Strike, Focus Call, Mend, Clear Toxin.",
+            text,
+            StringComparison.Ordinal);
         Assert.Contains("Passive skills: Steady Breath.", text, StringComparison.Ordinal);
         Assert.Contains("Stat policy: standard_stat resolved raw stats for Echo Adept.", text, StringComparison.Ordinal);
         Assert.Contains("Resolved stats: strength 3, magic 8, vitality 5, agility 4, luck 6.", text, StringComparison.Ordinal);
@@ -621,7 +624,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(3, planning.SacrificialMaximumInheritanceSlots);
         Assert.Equal([Qualified("shell_bash"), Qualified("soften_guard")], planning.NaturalSkillIds);
         Assert.Equal(
-            [Qualified("frost_tip"), Qualified("echo_strike"), Qualified("steady_breath")],
+            [
+                Qualified("frost_tip"),
+                Qualified("echo_strike"),
+                Qualified("focus_call"),
+                Qualified("steady_breath")
+            ],
             planning.PickableSkillIds);
         Assert.Contains(planning.DisplaySkills, entry =>
             entry.SkillId == Qualified("shell_bash") &&
@@ -812,7 +820,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_PreviewsFusionThroughValidatedSelectionWithoutMutation()
     {
-        var io = new ScriptedGameIO().QueueMenu(18, 0, 1, 2, 6, 0, 9);
+        var io = new ScriptedGameIO().QueueMenu(18, 0, 1, 3, 9, 0, 9);
         using var output = new StringWriter();
         var host = CreateHost(io, output);
 
@@ -855,8 +863,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
             menu.Options.Contains("Toxin Touch [group_not_allowed]"));
         Assert.Equal("Frost Tip", inheritanceMenu.Options[0]);
         Assert.Equal("Echo Strike", inheritanceMenu.Options[1]);
-        Assert.Equal("Steady Breath", inheritanceMenu.Options[2]);
-        Assert.Equal("Shell Bash [already_known]", inheritanceMenu.Options[3]);
+        Assert.Equal("Focus Call", inheritanceMenu.Options[2]);
+        Assert.Equal("Steady Breath", inheritanceMenu.Options[3]);
+        Assert.Equal("Shell Bash [already_known]", inheritanceMenu.Options[6]);
 
         string text = output.ToString();
         Assert.Contains(
@@ -1028,8 +1037,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            statCompositionFactory: (stats, resources) =>
-                composition.Initialize(stats, resources));
+            combatProfileCompositionFactory: (skills, stats, resources) =>
+                composition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
 
@@ -1778,7 +1787,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         using var output = new StringWriter();
         var source = new TrainingAnnexLifecycleContentPackTextSource(
             ContentRoot(),
-            playerBaseSkillIds: ["frost_tip", "echo_strike", "steady_breath", "focus_call"]);
+            hostedEntityBaseSkillIds: ["frost_tip", "echo_strike", "steady_breath", "focus_call"]);
         var host = CreateHost(io, output, source);
 
         int exitCode = await host.RunAsync();
@@ -2001,7 +2010,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
                 ashlingBaseSkillIds: ["ash_spark", "echo_strike"],
-                affinityEntityId: "echo_adept",
+                affinityEntityId: "annex_mentor",
                 affinityElementId: "fire",
                 affinity: "resist"));
 
@@ -2148,7 +2157,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public async Task CleanTrainingAnnexPlay_BattleBackSelectionDoesNotExecuteSkillOrConsumeItem()
     {
-        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 4, 4, -1, 13);
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 5, -1, 13);
         using var output = new StringWriter();
         var host = CreateHost(io, output);
 
@@ -2167,17 +2176,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
             effect.SourceActionId == Qualified("annex_tonic"));
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(2, summary.CancelledBattleCommandSelections);
-        Assert.Equal(2, summary.ExecutedBattleActionIds.Count(id => id == ContentId.Parse("pass")));
-        Assert.Equal(2, summary.LifecycleEvidence.Count(evidence =>
+        Assert.DoesNotContain(ContentId.Parse("pass"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
             evidence.ActorId == RuntimeInstanceId.Parse("echo_adept") &&
             evidence.EventKind == BattleStatusLifecycleEventKind.PassiveTriggered &&
-            evidence.RelatedContentId == Qualified("steady_breath")));
+            evidence.RelatedContentId == Qualified("steady_breath"));
         Assert.DoesNotContain(summary.TurnEconomyEvidence, evidence =>
             evidence.ActionId == Qualified("frost_tip") ||
             evidence.ActionId == Qualified("echo_strike") ||
             evidence.ActionId == Qualified("annex_tonic"));
-        Assert.Contains(
-            "Battle action executed: Echo Adept used Pass.",
+        Assert.DoesNotContain(
+            "Battle action executed: Echo Adept used",
             output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
@@ -2474,7 +2483,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             output,
             new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
-                playerBaseSkillIds:
+                hostedEntityBaseSkillIds:
                 [
                     "frost_tip",
                     "echo_strike",
@@ -2529,7 +2538,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             output,
             new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
-                playerBaseSkillIds:
+                hostedEntityBaseSkillIds:
                 [
                     "frost_tip",
                     "echo_strike",
@@ -2581,7 +2590,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             output,
             new TrainingAnnexLifecycleContentPackTextSource(
                 ContentRoot(),
-                playerBaseSkillIds:
+                hostedEntityBaseSkillIds:
                 [
                     "frost_tip",
                     "echo_strike",
@@ -3425,8 +3434,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            statCompositionFactory: (stats, resources) =>
-                composition.Initialize(stats, resources));
+            combatProfileCompositionFactory: (skills, stats, resources) =>
+                composition.Initialize(skills, stats, resources));
 
         int exitCode = await host.RunAsync();
 
@@ -4134,8 +4143,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
         RuntimeWalletSnapshot? initialWallet = null,
-        Func<IStatResolutionPolicy, IResourceGrowthPolicy, IRuntimeActorStatCompositionService>?
-            statCompositionFactory = null) =>
+        Func<
+            ISkillDefinitionRepository,
+            IStatResolutionPolicy,
+            IResourceGrowthPolicy,
+            IRuntimeActorCombatProfileCompositionService>?
+            combatProfileCompositionFactory = null) =>
         new(
             source ?? new RecordingContentPackTextSource(ContentRoot()),
             new TextWriterEventSink(output),
@@ -4145,7 +4158,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             initialInventory,
             initialEquipment,
             initialWallet,
-            statCompositionFactory);
+            combatProfileCompositionFactory);
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
@@ -4161,20 +4174,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
                ?? throw new DirectoryNotFoundException("Could not find Convergence.sln.");
     }
 
-    private sealed class RejectNthCompositionService(int rejectCall) : IRuntimeActorStatCompositionService
+    private sealed class RejectNthCompositionService(int rejectCall) : IRuntimeActorCombatProfileCompositionService
     {
-        private IRuntimeActorStatCompositionService? _inner;
+        private IRuntimeActorCombatProfileCompositionService? _inner;
         private int _callCount;
 
-        public IRuntimeActorStatCompositionService Initialize(
+        public IRuntimeActorCombatProfileCompositionService Initialize(
+            ISkillDefinitionRepository skills,
             IStatResolutionPolicy stats,
             IResourceGrowthPolicy resources)
         {
-            _inner = new RuntimeActorStatCompositionService(stats, resources);
+            _inner = new RuntimeActorCombatProfileCompositionService(stats, resources, skills);
             return this;
         }
 
-        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        public RuntimeActorCombatProfileCompositionResult Compose(RuntimeActorCombatProfileCompositionRequest request)
         {
             _callCount++;
             if (_callCount != rejectCall)
@@ -4184,34 +4198,36 @@ public sealed class CleanTrainingAnnexPlayHostTests
             }
 
             RuntimeActorSnapshot before = request.Actor.ToSnapshot();
-            return new RuntimeActorStatCompositionResult(
-                RuntimeActorStatCompositionStatus.Rejected,
+            return new RuntimeActorCombatProfileCompositionResult(
+                RuntimeActorCombatProfileCompositionStatus.Rejected,
                 before,
                 before,
                 request.SourceKind,
+                request.Actor.InstanceId,
                 diagnostics:
                 [
-                    new RuntimeActorStatCompositionDiagnostic(
-                        RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+                    new RuntimeActorCombatProfileCompositionDiagnostic(
+                        RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed,
                         "Rejected by the atomic roster test.")
                 ]);
         }
     }
 
-    private sealed class RejectNthPlayerCompositionService(int rejectCall) : IRuntimeActorStatCompositionService
+    private sealed class RejectNthPlayerCompositionService(int rejectCall) : IRuntimeActorCombatProfileCompositionService
     {
-        private IRuntimeActorStatCompositionService? _inner;
+        private IRuntimeActorCombatProfileCompositionService? _inner;
         private int _matchingCallCount;
 
-        public IRuntimeActorStatCompositionService Initialize(
+        public IRuntimeActorCombatProfileCompositionService Initialize(
+            ISkillDefinitionRepository skills,
             IStatResolutionPolicy stats,
             IResourceGrowthPolicy resources)
         {
-            _inner = new RuntimeActorStatCompositionService(stats, resources);
+            _inner = new RuntimeActorCombatProfileCompositionService(stats, resources, skills);
             return this;
         }
 
-        public RuntimeActorStatCompositionResult Compose(RuntimeActorStatCompositionRequest request)
+        public RuntimeActorCombatProfileCompositionResult Compose(RuntimeActorCombatProfileCompositionRequest request)
         {
             bool isPlayerVesselComposition =
                 request.Actor.InstanceId == TrainingAnnexHostSupport.EchoAdeptInstance &&
@@ -4223,15 +4239,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
             }
 
             RuntimeActorSnapshot before = request.Actor.ToSnapshot();
-            return new RuntimeActorStatCompositionResult(
-                RuntimeActorStatCompositionStatus.Rejected,
+            return new RuntimeActorCombatProfileCompositionResult(
+                RuntimeActorCombatProfileCompositionStatus.Rejected,
                 before,
                 before,
                 request.SourceKind,
+                request.Actor.InstanceId,
                 diagnostics:
                 [
-                    new RuntimeActorStatCompositionDiagnostic(
-                        RuntimeActorStatCompositionDiagnosticCode.StatResolutionFailed,
+                    new RuntimeActorCombatProfileCompositionDiagnostic(
+                        RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed,
                         "Rejected by the restore composition test.")
                 ]);
         }
@@ -4607,7 +4624,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private sealed class TrainingAnnexLifecycleContentPackTextSource(
         string root,
-        IReadOnlyList<string>? playerBaseSkillIds = null,
+        IReadOnlyList<string>? hostedEntityBaseSkillIds = null,
         IReadOnlyList<string>? ashlingBaseSkillIds = null,
         string? toxinAilmentId = null,
         string? steadyBreathEventId = null,
@@ -4661,10 +4678,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 throw new InvalidOperationException("Training Annex entities JSON could not be parsed.");
             JsonArray entities = rootNode["entities"]?.AsArray() ??
                 throw new InvalidOperationException("Training Annex entities document has no entities array.");
-            if (playerBaseSkillIds is not null)
+            if (hostedEntityBaseSkillIds is not null)
             {
-                ReplaceBaseSkills(entities, "echo_adept", playerBaseSkillIds);
+                ReplaceBaseSkills(entities, "annex_mentor", hostedEntityBaseSkillIds);
             }
+            ReplaceAilmentResistance(
+                entities,
+                "annex_mentor",
+                "sample_poison",
+                "normal");
             if (ashlingBaseSkillIds is not null)
             {
                 ReplaceBaseSkills(entities, "ashling", ashlingBaseSkillIds);
@@ -4782,6 +4804,23 @@ public sealed class CleanTrainingAnnexPlayHostTests
             JsonObject affinities = entity["elementalAffinities"]?.AsObject() ??
                 throw new InvalidOperationException($"Training Annex entity '{entityId}' has no elemental affinities.");
             affinities[elementId] = affinity;
+        }
+
+        private static void ReplaceAilmentResistance(
+            JsonArray entities,
+            string entityId,
+            string ailmentId,
+            string resistance)
+        {
+            JsonObject entity = entities
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == entityId) ??
+                throw new InvalidOperationException(
+                    $"Training Annex entity '{entityId}' was not found.");
+            JsonObject resistances = entity["ailmentResistances"]?.AsObject() ??
+                throw new InvalidOperationException(
+                    $"Training Annex entity '{entityId}' has no ailment resistances.");
+            resistances[ailmentId] = resistance;
         }
     }
 

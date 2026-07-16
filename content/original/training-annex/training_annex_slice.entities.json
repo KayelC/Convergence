@@ -216,6 +216,8 @@
         "luck": 6
       },
       "elementalAffinities": {
+        "fire": "normal",
+        "ice": "normal",
         "light": "resist",
         "dark": "weak"
       },
@@ -225,9 +227,12 @@
         "sample_stun": "resistant"
       },
       "baseSkillIds": [
+        "frost_tip",
+        "echo_strike",
+        "focus_call",
+        "steady_breath",
         "mend",
-        "clear_toxin",
-        "focus_call"
+        "clear_toxin"
       ],
       "skillUnlocks": []
     },
