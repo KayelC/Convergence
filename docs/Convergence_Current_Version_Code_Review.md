@@ -126,7 +126,7 @@ leave either roadmap stale.
 ### R5. Public API discoverability is weaker than its compatibility guard
 
 **Severity:** Medium
-**Status:** Open
+**Status:** Implemented pending final review
 
 The public API baseline is useful and the `0.1` compatibility policy explicitly
 allows reviewed changes in a minor pre-release. The baseline is therefore not a
@@ -139,11 +139,14 @@ composition entry points are documented, not that all supported concepts are
 discoverable. No repository-level `AGENTS.md` currently preserves the project's
 engineering rules for future automated work.
 
-**Required correction for this review:** add persistent repository instructions,
-state the documentation coverage honestly, and add an executable inventory that
-accounts for every Framework source file and its public type ownership. Full
-consumer, developer, and technical manuals remain a dedicated documentation
-initiative rather than low-value generated comments.
+**Implemented correction:** root `AGENTS.md` now preserves product boundaries,
+change discipline, review evidence, and the required verification gate. Active
+API documentation states that XML summaries are curated rather than exhaustive.
+A tested source inventory accounts for all 92 Framework C# files, their named
+owners, their exported or internal-only surface, and every reflected exported
+type's namespace ownership. Full consumer, developer, and technical manuals
+remain a concept-driven documentation initiative rather than low-value
+generated comments.
 
 ## Strategic Observations, Not Defects
 

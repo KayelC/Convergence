@@ -77,6 +77,9 @@ Framework has no project reference and no external runtime package dependency. I
 - `Fusion`, `Inheritance`
 
 See [Public API Namespaces](public-api-namespaces.md) for detailed responsibility.
+The tested [Framework Source Ownership](reference/framework-source-ownership.md)
+inventory accounts for each active C# file and its exported or internal-only
+surface.
 
 ## Historical Material
 

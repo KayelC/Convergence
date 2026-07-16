@@ -46,11 +46,13 @@ recorded in `PublicAPI.Unshipped.txt` and reviewed.
 
 ## Documentation And Build Tooling
 
-Framework emits `Convergence.Framework.xml`. XML summaries cover the supported
-composition entry points, while this document explains how those entry points
-fit together. Public API analysis uses pinned, private build-only packages and
-a lock file. Those packages do not become runtime assembly references and do
-not change the .NET 8 or source-project-reference distribution model.
+Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected
+composition entry points, while concept documents explain how those entry
+points fit together. The tested [Framework Source Ownership](reference/framework-source-ownership.md)
+inventory accounts for every source file and exported namespace owner. Public
+API analysis uses pinned, private build-only packages and a lock file. Those
+packages do not become runtime assembly references and do not change the .NET 8
+or source-project-reference distribution model.
 
 The framework remains non-packable. Games integrate it through a source
 `ProjectReference`; no NuGet publication contract is implied by the API

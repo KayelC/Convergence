@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 1,
+  "product": "Convergence.Framework",
+  "publicSurfaceStates": [
+    "exported",
+    "internal_only"
+  ],
+  "owners": [
+    {
+      "id": "combat_rules",
+      "pathPrefix": "Battle/",
+      "responsibility": "Combat arithmetic, defense profiles, affinity, resistance, and the supplied combat ruleset.",
+      "namespacePrefixes": [
+        "Convergence.Battle"
+      ]
+    },
+    {
+      "id": "catalog",
+      "pathPrefix": "Catalog/",
+      "responsibility": "Qualified content loading, catalog construction, repositories, and definition qualification.",
+      "namespacePrefixes": [
+        "Convergence.Catalog"
+      ]
+    },
+    {
+      "id": "content_contracts",
+      "pathPrefix": "Content/",
+      "responsibility": "Immutable authored definitions, IDs, vocabulary, conditions, effects, and deserialization contracts.",
+      "namespacePrefixes": [
+        "Convergence.Content"
+      ]
+    },
+    {
+      "id": "encounter_runtime",
+      "pathPrefix": "Encounters/",
+      "responsibility": "Actor creation, encounter orchestration, lifecycle ports, negotiation, rewards, and ordered events.",
+      "namespacePrefixes": [
+        "Convergence.Encounters"
+      ]
+    },
+    {
+      "id": "effect_execution",
+      "pathPrefix": "Execution/",
+      "responsibility": "Runtime actor state, targeting, assessment, effects, skills, items, passives, actions, and lifecycle execution.",
+      "namespacePrefixes": [
+        "Convergence.Execution"
+      ]
+    },
+    {
+      "id": "fusion_compendium",
+      "pathPrefix": "Fusion/",
+      "responsibility": "Fusion planning and transactions, strategy policies, Compendium integrity, recall, and pricing.",
+      "namespacePrefixes": [
+        "Convergence.Fusion"
+      ]
+    },
+    {
+      "id": "host_boundaries",
+      "pathPrefix": "Hosting/",
+      "responsibility": "Engine-neutral content, command, event, and randomness ports.",
+      "namespacePrefixes": [
+        "Convergence.Hosting"
+      ]
+    },
+    {
+      "id": "inheritance",
+      "pathPrefix": "Inheritance/",
+      "responsibility": "Typed fusion inheritance eligibility, planning, and selection validation.",
+      "namespacePrefixes": [
+        "Convergence.Inheritance"
+      ]
+    },
+    {
+      "id": "internal_shared",
+      "pathPrefix": "Internal/",
+      "responsibility": "Non-exported shared implementation guards.",
+      "namespacePrefixes": [
+        "Convergence.Internal"
+      ]
+    },
+    {
+      "id": "combat_knowledge",
+      "pathPrefix": "Knowledge/",
+      "responsibility": "Elemental, ailment, and instant-death battle knowledge stores.",
+      "namespacePrefixes": [
+        "Convergence.Knowledge"
+      ]
+    },
+    {
+      "id": "assembly_metadata",
+      "pathPrefix": "Properties/",
+      "responsibility": "Assembly-level metadata and test visibility.",
+      "namespacePrefixes": []
+    },
+    {
+      "id": "runtime_services",
+      "pathPrefix": "Runtime/",
+      "responsibility": "Progression, rosters, resources, navigation, traversal, persistence, restoration, and ruleset binding.",
+      "namespacePrefixes": [
+        "Convergence.Runtime"
+      ]
+    },
+    {
+      "id": "internal_serialization",
+      "pathPrefix": "Serialization/",
+      "responsibility": "Non-exported System.Text.Json DTOs, converters, source metadata, and mapping.",
+      "namespacePrefixes": [
+        "Convergence.Serialization"
+      ]
+    },
+    {
+      "id": "turn_economy",
+      "pathPrefix": "TurnEconomy/",
+      "responsibility": "Generic turn-economy contracts and the optional Action Token implementation.",
+      "namespacePrefixes": [
+        "Convergence.Execution",
+        "Convergence.TurnEconomy"
+      ]
+    },
+    {
+      "id": "content_validation",
+      "pathPrefix": "Validation/",
+      "responsibility": "Semantic content validation, diagnostics, and registration snapshots.",
+      "namespacePrefixes": [
+        "Convergence.Validation"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "path": "Battle/CombatArithmetic.cs",
+      "owner": "combat_rules",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Battle/CombatDefenseProfile.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Battle/ElementalAffinityResolver.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Battle/ProductionCombatRuleset.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Battle/ResistanceResolvers.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Catalog/CatalogContracts.cs",
+      "owner": "catalog",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Catalog/DefinitionQualifier.cs",
+      "owner": "catalog",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Catalog/SkillSystemCatalogLoader.cs",
+      "owner": "catalog",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/AilmentDefinition.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/Conditions.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/ContentDeserializationContracts.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/ContentId.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/ContentSurfaceDefinitions.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/DefinitionCollections.cs",
+      "owner": "content_contracts",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Content/Effects.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/EntityDefinition.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/ItemDefinition.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/NegotiationNumericDomain.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/Passives.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/RaceDefinition.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/SemanticVersion.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/SharedPrimitives.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/SkillDefinitions.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/SkillSystemJsonDeserializer.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Content/Vocabulary.cs",
+      "owner": "content_contracts",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/AutomatedBattleRunner.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/AutomatedBattleTurnRestrictionResolver.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/BattleEncounterEvents.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/BattleEncounterLifecycleTransaction.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Encounters/BattleEncounterRunner.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/BattleNegotiationAndRewards.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/BattleStatusEncounterLifecyclePort.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Encounters/BattleStatusLifecycleEventMapper.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Encounters/CatalogBattleActorFactory.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/BattleActionExecutor.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/BattleRuntimeState.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/BattleStatusLifecycle.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/ConditionAndTargetResolution.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/EffectExecutors.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/ExecutionAssessmentToken.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/ExecutionContracts.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/ExecutionPolicies.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/ItemExecutor.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/OrderedEffectExecutor.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/PassiveRuntime.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/RuntimeActorExecutionTransaction.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/RuntimeTargetResolver.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/SkillExecutor.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/CatalogFusionContentRepository.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/CompendiumEntryIntegrity.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Fusion/CompendiumRecallPricingPolicies.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/CompendiumRuntimeServices.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/FusionRuntimeServices.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/FusionStrategyPolicies.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Fusion/FusionTransactionServices.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Hosting/HostContracts.cs",
+      "owner": "host_boundaries",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Inheritance/FusionInheritanceContracts.cs",
+      "owner": "inheritance",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Inheritance/FusionInheritanceServices.cs",
+      "owner": "inheritance",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Internal/EnumDomain.cs",
+      "owner": "internal_shared",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Knowledge/CombatKnowledgeStores.cs",
+      "owner": "combat_knowledge",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Properties/AssemblyInfo.cs",
+      "owner": "assembly_metadata",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Runtime/DungeonTraversal.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/EncounterPreparationService.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/EncounterStartPlanner.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/NavigationTransitions.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/PartyRosterTransitions.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/ProgressionPolicies.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/ResourceManagementServices.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeActorGrowthComposition.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeActorNumericDomain.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeActorRosterInvariants.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeActorSnapshotIntegrity.cs",
+      "owner": "runtime_services",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Runtime/RuntimeActorStatComposition.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeEquipmentProfiles.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeFieldSnapshot.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeKnowledgeIntegrity.cs",
+      "owner": "runtime_services",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Runtime/RuntimePartyRosterIdentityRules.cs",
+      "owner": "runtime_services",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Runtime/RuntimePersistenceSnapshots.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeRulesetBindings.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeRulesetPolicyFactories.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeSavePolicies.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeSessionRestoration.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Runtime/RuntimeStateSnapshots.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Serialization/SchemaConverters.cs",
+      "owner": "internal_serialization",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Serialization/SchemaDtos.cs",
+      "owner": "internal_serialization",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Serialization/SkillSystemDtoMapper.cs",
+      "owner": "internal_serialization",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Serialization/SkillSystemJsonContext.cs",
+      "owner": "internal_serialization",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "TurnEconomy/ActionTokenTurnEconomy.cs",
+      "owner": "turn_economy",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "TurnEconomy/BattleTurnEconomy.cs",
+      "owner": "turn_economy",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Validation/SkillSystemContentValidator.cs",
+      "owner": "content_validation",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Validation/SkillSystemRegistrationSnapshot.cs",
+      "owner": "content_validation",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Validation/ValidationContracts.cs",
+      "owner": "content_validation",
+      "publicSurface": "exported"
+    }
+  ]
+}

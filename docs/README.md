@@ -15,15 +15,16 @@ This directory is the active documentation authority for Convergence Framework.
 9. [Release Quality Gate](release-quality-gate.md): locked restore, API/schema checks, coverage, hosts, trimming, and security verification.
 10. [Public API Contract](public-api-contract.md): supported composition surface and `0.1` compatibility policy.
 11. [Public API Namespaces](public-api-namespaces.md): namespace ownership.
-12. [Content Contract](content-contract.md): clean content organization and loading authority.
-13. [Content Authoring Validator](content-authoring-validator.md): complete schema-to-catalog validation from the command line.
-14. [Ruleset Policy Contracts](ruleset-policy-contracts.md): typed factory composition and supplied parameter contracts.
-15. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
-16. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
-17. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
-18. [Production-Readiness Consolidated Review](convergence-production-readiness-consolidated-review-2026-07-16.md): source-based checkpoint review, correction evidence, release-gate results, residual constraints, and final `0.1.0` verdict.
-19. [Pre-Roadmap Code Review](convergence-framework-code-review-2026-07-15.md): historical source review and correction log that led into the completed production-readiness roadmap.
-20. [Current External Review Reconciliation](Convergence_Current_Version_Code_Review.md): independently supplied observations checked against the live source, accepted corrections, challenged claims, and the current corrective sequence.
+12. [Framework Source Ownership](reference/framework-source-ownership.md): tested file, namespace, and public-surface ownership.
+13. [Content Contract](content-contract.md): clean content organization and loading authority.
+14. [Content Authoring Validator](content-authoring-validator.md): complete schema-to-catalog validation from the command line.
+15. [Ruleset Policy Contracts](ruleset-policy-contracts.md): typed factory composition and supplied parameter contracts.
+16. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
+17. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
+18. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
+19. [Production-Readiness Consolidated Review](convergence-production-readiness-consolidated-review-2026-07-16.md): source-based checkpoint review, correction evidence, release-gate results, residual constraints, and final `0.1.0` verdict.
+20. [Pre-Roadmap Code Review](convergence-framework-code-review-2026-07-15.md): historical source review and correction log that led into the completed production-readiness roadmap.
+21. [Current External Review Reconciliation](Convergence_Current_Version_Code_Review.md): independently supplied observations checked against the live source, accepted corrections, challenged claims, and the current corrective sequence.
 
 ## Authority Rules
 
