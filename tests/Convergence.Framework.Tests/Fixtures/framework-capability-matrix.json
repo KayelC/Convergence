@@ -56,7 +56,7 @@
     },
     {
       "id": "progression_and_resources",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ProgressionPolicyTests",
         "RuntimeActorGrowthCompositionTests",
@@ -65,7 +65,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Prepared level-growth results do not carry a source-state precondition and can overwrite newer actor progression.",
+        "Move-list capacity is enforced during live growth but not consistently during high-level actor creation or restoration."
+      ]
     },
     {
       "id": "typed_action_and_effect_execution",
@@ -123,7 +126,7 @@
     },
     {
       "id": "party_and_rosters",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "PartyRosterTransitionTests",
         "RuntimePartyRosterInvariantIntegrationTests",
@@ -132,7 +135,10 @@
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Roster capacity uses a separately stored owner level that is not synchronized with or validated against owner actor progression.",
+        "Live party transitions validate only a subset of reference, overlap, identifier, party-size, and roster-capacity invariants."
+      ]
     },
     {
       "id": "inventory_equipment_economy",
@@ -190,12 +196,15 @@
     },
     {
       "id": "persistence_snapshots",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["RuntimePersistenceSnapshotTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Save validation does not require the party roster owner level to agree with the saved owner actor progression.",
+        "Direct CatalogBattleActorFactory restoration omits pending-skill catalog and authored-unlock provenance checks performed by aggregate save validation."
+      ]
     },
     {
       "id": "host_contracts",

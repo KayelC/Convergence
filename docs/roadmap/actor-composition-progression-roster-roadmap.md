@@ -641,6 +641,14 @@ Remaining product choices are not defects in this roadmap:
 - documentation for unrelated capabilities remains unreviewed until each
   subsystem completes the collaborative workflow.
 
+**Post-completion review:** the source-based review of revision `7aefd87`
+confirmed the D1-D6 direction but found reachable integration gaps in roster
+owner-level authority, live transition validation, high-level move-list
+capacity, stale prepared growth, and direct pending-skill restore validation.
+The executable capability matrix therefore records 20 complete, 3 partial, and
+2 deferred capabilities until those follow-ups are corrected. See the
+[Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md).
+
 ## Expected File Ownership
 
 Likely Framework files to change:

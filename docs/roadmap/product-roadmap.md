@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 20 complete, 3 partial, and 2 deferred.
 
 The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v8 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
 
@@ -22,9 +22,25 @@ explicit command authority, and meaningful configurable stage magnitude.
 The ordered work and its owner decision lock are recorded in the
 [Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md).
 D1-D6 are approved and all eight checkpoints are implemented. Current source,
-tests, reviewed audience documentation, Training Annex evidence, save contract
-v8, and the completion review establish the corrected contracts. The five
-affected capability entries have returned to `complete`.
+tests, reviewed audience documentation, Training Annex evidence, and save
+contract v8 establish the corrected design direction.
+
+The subsequent
+[Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
+found four medium integration gaps and one low direct-restore inconsistency.
+Progression/resources, party/rosters, and persistence snapshots remain partial
+until those findings are corrected. The review did not invalidate the D1-D6
+design.
+
+## Priority 1: Actor Runtime Review Corrections
+
+Correct the completion-review findings in order:
+
+1. replace or validate the duplicated roster owner level;
+2. unify complete live/save party aggregate validation;
+3. apply move-list capacity consistently during creation, growth, and restore;
+4. add a stale-state precondition to prepared growth;
+5. align direct actor restore with aggregate pending-skill validation.
 
 ## Completed Semantic Correction
 
@@ -50,11 +66,11 @@ complete. The review demonstrated one encounter resource-event defect,
 corrected it with exact signed mutation records, and found no unresolved release
 blocker.
 
-## Priority 1: Persistence Evolution
+## Priority 2: Persistence Evolution
 
 Define save-contract migration only when a released contract actually requires it. Full deterministic replay remains optional; checkpoint breadcrumbs are currently diagnostics rather than replay authority.
 
-## Priority 2: Example Breadth
+## Priority 3: Example Breadth
 
 Expand original example content only when it demonstrates a framework contract or reveals a missing reusable rule. DemoHost remains optional reference software, not the product architecture driver.
 

@@ -11,6 +11,22 @@ It is maintainer documentation. The task-oriented integration path is in
 the approved design is in
 [Actor Composition, Progression, And Rosters](../decisions/actor-composition-progression-and-rosters.md).
 
+## Current Review Status
+
+The source-based
+[Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
+confirmed the composition, skill-choice, stage, and save-v8 transaction design.
+It also found unresolved integration gaps:
+
+- `RuntimePartyRosterSnapshot.OwnerLevel` duplicates owner progression;
+- live transition preflight is narrower than aggregate save validation;
+- move-list capacity is not enforced consistently during creation and restore;
+- `LevelGrowthResult` has no stale-source precondition;
+- direct catalog actor restore omits pending-choice catalog/provenance checks.
+
+These are tracked as partial capability gaps, not changes to the confirmed
+D1-D6 intended behavior.
+
 ## State Authorities
 
 The runtime has deliberately separate authorities:

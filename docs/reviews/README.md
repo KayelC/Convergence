@@ -14,6 +14,7 @@ or implementation authority.
 - [External Current-Version Review Reconciliation](Convergence_Current_Version_Code_Review.md)
 - [Post-Correction Code Health Review](convergence-framework-post-correction-review-2026-07-16.md)
 - [Actors And Runtime State Collaborative Review](actors-runtime-state-collaborative-review-2026-07-16.md)
+- [Actor Runtime Completion Code Review](actor-runtime-completion-code-review-2026-07-16.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
 Current implementation behavior belongs in source and executable tests.

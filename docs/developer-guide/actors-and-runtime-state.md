@@ -13,6 +13,24 @@ and the decision about when each service is called.
 The confirmed rules are recorded in
 [Actor Composition, Progression, And Rosters](../decisions/actor-composition-progression-and-rosters.md).
 
+## Current Review Status
+
+The D1-D6 design is confirmed and the demonstrated paths are green. The
+[completion code review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
+identified remaining integration gaps around roster owner-level
+synchronization, complete live roster validation, capacity-aware high-level
+actor creation/restore, stale prepared growth, and direct pending-skill restore
+validation.
+
+Until those follow-ups are corrected:
+
+- keep party snapshots sourced from validated session state;
+- reconstruct `OwnerLevel` when the owner actor's level changes;
+- do not use direct high-level creation as proof of an eight-slot move list;
+- apply growth results immediately to the state from which they were
+  calculated;
+- prefer aggregate session restoration over direct actor restoration.
+
 ## Runtime Roles
 
 Convergence uses one entity-definition family and assigns runtime roles through
