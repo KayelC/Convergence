@@ -1444,11 +1444,34 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
 internal static class RuntimePersistenceCollections
 {
-    public static IReadOnlyList<T> List<T>(IEnumerable<T>? values) =>
-        Array.AsReadOnly(values?.ToArray() ?? Array.Empty<T>());
+    public static IReadOnlyList<T> List<T>(IEnumerable<T>? values)
+    {
+        T[] snapshot = values?.ToArray() ?? [];
+        if (snapshot.Any(static value => value is null))
+        {
+            throw new ArgumentException("Persistence collections cannot contain null entries.", nameof(values));
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
 
     public static IReadOnlyDictionary<TKey, TValue> Dictionary<TKey, TValue>(
         IEnumerable<KeyValuePair<TKey, TValue>>? values)
-        where TKey : notnull =>
-        new ReadOnlyDictionary<TKey, TValue>(new Dictionary<TKey, TValue>(values ?? []));
+        where TKey : notnull
+    {
+        var snapshot = new Dictionary<TKey, TValue>();
+        foreach ((TKey key, TValue value) in values ?? [])
+        {
+            if (key is null || value is null)
+            {
+                throw new ArgumentException(
+                    "Persistence dictionaries cannot contain null keys or values.",
+                    nameof(values));
+            }
+
+            snapshot.Add(key, value);
+        }
+
+        return new ReadOnlyDictionary<TKey, TValue>(snapshot);
+    }
 }

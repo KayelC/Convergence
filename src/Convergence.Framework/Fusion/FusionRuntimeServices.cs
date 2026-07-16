@@ -1475,7 +1475,10 @@ public sealed record CompendiumStateSnapshot
 {
     public CompendiumStateSnapshot(IEnumerable<CompendiumEntrySnapshot>? entries = null)
     {
-        Entries = Snapshot(entries?.OrderBy(entry => entry.Level).ThenBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase));
+        IReadOnlyList<CompendiumEntrySnapshot> snapshot = Snapshot(entries);
+        Entries = Snapshot(snapshot
+            .OrderBy(entry => entry.Level)
+            .ThenBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase));
     }
 
     public IReadOnlyList<CompendiumEntrySnapshot> Entries { get; }
@@ -1647,11 +1650,34 @@ public sealed class CompendiumService : ICompendiumService
 
 internal static class FusionRuntimeCollections
 {
-    public static IReadOnlyList<T> Snapshot<T>(IEnumerable<T>? values) =>
-        Array.AsReadOnly((values ?? []).ToArray());
+    public static IReadOnlyList<T> Snapshot<T>(IEnumerable<T>? values)
+    {
+        T[] snapshot = (values ?? []).ToArray();
+        if (snapshot.Any(static value => value is null))
+        {
+            throw new ArgumentException("Fusion runtime collections cannot contain null entries.", nameof(values));
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
 
     public static IReadOnlyDictionary<TKey, TValue> SnapshotDictionary<TKey, TValue>(
         IEnumerable<KeyValuePair<TKey, TValue>>? values)
-        where TKey : notnull =>
-        new ReadOnlyDictionary<TKey, TValue>(new Dictionary<TKey, TValue>(values ?? []));
+        where TKey : notnull
+    {
+        var snapshot = new Dictionary<TKey, TValue>();
+        foreach ((TKey key, TValue value) in values ?? [])
+        {
+            if (key is null || value is null)
+            {
+                throw new ArgumentException(
+                    "Fusion runtime dictionaries cannot contain null keys or values.",
+                    nameof(values));
+            }
+
+            snapshot.Add(key, value);
+        }
+
+        return new ReadOnlyDictionary<TKey, TValue>(snapshot);
+    }
 }

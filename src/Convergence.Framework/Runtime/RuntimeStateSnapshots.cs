@@ -724,8 +724,16 @@ public sealed class RuntimeProgressionTransactionService
 
 internal static class RuntimeSnapshotCollections
 {
-    public static IReadOnlyList<T> List<T>(IEnumerable<T>? values = null) =>
-        Array.AsReadOnly((values ?? []).ToArray());
+    public static IReadOnlyList<T> List<T>(IEnumerable<T>? values = null)
+    {
+        T[] snapshot = (values ?? []).ToArray();
+        if (snapshot.Any(static value => value is null))
+        {
+            throw new ArgumentException("Snapshot collections cannot contain null entries.", nameof(values));
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
 
     public static IReadOnlyDictionary<TKey, TValue> Dictionary<TKey, TValue>(
         IEnumerable<KeyValuePair<TKey, TValue>>? values = null)
@@ -734,6 +742,13 @@ internal static class RuntimeSnapshotCollections
         System.Collections.Generic.Dictionary<TKey, TValue> copy = [];
         foreach ((TKey key, TValue value) in values ?? [])
         {
+            if (key is null || value is null)
+            {
+                throw new ArgumentException(
+                    "Snapshot dictionaries cannot contain null keys or values.",
+                    nameof(values));
+            }
+
             copy.Add(key, value);
         }
 

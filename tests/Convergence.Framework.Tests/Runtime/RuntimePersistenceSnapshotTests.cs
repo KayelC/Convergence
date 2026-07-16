@@ -35,6 +35,55 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void PersistenceSnapshots_RejectNullCollectionEntriesBeforeValidation()
+    {
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+
+        Assert.Throws<ArgumentException>(() => Copy(
+            baseline,
+            contentPacks: new ContentPackIdentity[] { null! }));
+        Assert.Throws<ArgumentException>(() => Copy(
+            baseline,
+            actors: new RuntimeActorSnapshot[] { null! }));
+        Assert.Throws<ArgumentException>(() => new RuntimeActorRosterSnapshot(
+            hostedEntityRoster: new RuntimeActorReferenceSnapshot[] { null! }));
+        Assert.Throws<ArgumentException>(() => new RuntimeKnowledgeSnapshot(
+            elementalAffinities: new RuntimeElementalAffinityKnowledgeSnapshot[] { null! }));
+        Assert.Throws<ArgumentException>(() => new RuntimeCheckpointLogSnapshot(
+            new RuntimeCheckpointEntrySnapshot[] { null! }));
+        Assert.Throws<ArgumentException>(() => new CompendiumStateSnapshot(
+            new CompendiumEntrySnapshot[] { null! }));
+    }
+
+    [Fact]
+    public void PersistenceSnapshots_RejectInvalidPackIdentityAndNullDictionaryValues()
+    {
+        SemanticVersion version = SemanticVersion.Parse("0.3.0");
+        Assert.Throws<ArgumentException>(() => new ContentPackIdentity(null!, version));
+        Assert.Throws<ArgumentException>(() => new ContentPackIdentity(" ", version));
+
+        var identity = new ContentPackIdentity("test.pack", version);
+        Assert.Throws<ArgumentException>(() => identity with { Id = null! });
+
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        Assert.Throws<ArgumentException>(() => new RuntimeSaveGameSnapshot(
+            baseline.FrameworkVersion,
+            baseline.ContentPacks,
+            baseline.Actors,
+            baseline.PartyRoster,
+            baseline.Inventory,
+            baseline.Equipment,
+            baseline.Wallet,
+            baseline.Field,
+            baseline.Compendium,
+            baseline.Knowledge,
+            baseline.Session,
+            baseline.Checkpoints,
+            [new KeyValuePair<ContentId, string>(Id("scene"), null!)],
+            baseline.ContractVersion));
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_ApprovedActorsRestoreThroughCatalogFactory()
     {
         GameDataCatalog catalog = LoadCatalog();

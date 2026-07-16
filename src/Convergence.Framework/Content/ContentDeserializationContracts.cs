@@ -23,7 +23,26 @@ public sealed record ContentPackDocumentReference(string Type, string Path);
 
 public sealed record ContentPackDependency(string Id, SemanticVersion Version);
 
-public sealed record ContentPackIdentity(string Id, SemanticVersion Version);
+public sealed record ContentPackIdentity(string Id, SemanticVersion Version)
+{
+    private string _id = RequireId(Id);
+
+    public string Id
+    {
+        get => _id;
+        init => _id = RequireId(value);
+    }
+
+    private static string RequireId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Content pack ID cannot be empty.", nameof(value));
+        }
+
+        return value;
+    }
+}
 
 public sealed record ContentPackManifest
 {
