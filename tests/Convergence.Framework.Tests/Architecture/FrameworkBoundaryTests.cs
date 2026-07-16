@@ -35,6 +35,7 @@ public sealed class FrameworkBoundaryTests
         [
             RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"),
             RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"),
+            RepositoryPath("samples", "Convergence.GodotHost", "Convergence.GodotHost.csproj"),
             RepositoryPath("tests", "Convergence.Framework.Tests", "Convergence.Framework.Tests.csproj"),
             RepositoryPath("tests", "Convergence.DemoHost.Tests", "Convergence.DemoHost.Tests.csproj")
         ];
@@ -67,6 +68,7 @@ public sealed class FrameworkBoundaryTests
     {
         XDocument framework = XDocument.Load(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
         XDocument demoHost = XDocument.Load(RepositoryPath("samples", "Convergence.DemoHost", "Convergence.DemoHost.csproj"));
+        XDocument godotHost = XDocument.Load(RepositoryPath("samples", "Convergence.GodotHost", "Convergence.GodotHost.csproj"));
         XDocument frameworkTests = XDocument.Load(RepositoryPath(
             "tests",
             "Convergence.Framework.Tests",
@@ -80,6 +82,10 @@ public sealed class FrameworkBoundaryTests
         Assert.Contains(
             demoHost.Descendants("ProjectReference"),
             reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
+        Assert.Contains(
+            godotHost.Descendants("ProjectReference"),
+            reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");
+        Assert.Single(godotHost.Descendants("ProjectReference"));
         Assert.Contains(
             frameworkTests.Descendants("ProjectReference"),
             reference => NormalizePath(reference.Attribute("Include")?.Value) == "../../src/convergence.framework/convergence.framework.csproj");

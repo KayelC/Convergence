@@ -45,7 +45,9 @@ The framework does not prescribe JSON, binary data, Godot `Resource`, save slots
 
 ## Verification
 
-`GodotIntegrationContractTests` proves that a Godot-shaped host can:
+Two layers guard the integration boundary.
+
+`GodotIntegrationContractTests` proves without an engine process that a Godot-shaped host can:
 
 - supply content using fake `res://` diagnostic paths;
 - build a catalog without framework filesystem access;
@@ -54,7 +56,14 @@ The framework does not prescribe JSON, binary data, Godot `Resource`, save slots
 - map runtime IDs to host scene handles;
 - round-trip actor and field snapshots through host-owned storage.
 
-The proof intentionally uses no Godot assembly. A real Godot adapter project remains application work and is tracked as deferred in the [capability matrix](framework-capability-matrix.md).
+`samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference consumer. Its noninteractive smoke scene reads the canonical Training Annex pack through `Godot.FileAccess`, maps framework runtime IDs to actual `Node` instances, selects and executes a typed action, consumes an ordered encounter stream, and round-trips a host-owned JSON save before framework validation.
+
+```powershell
+dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj
+godot --headless --path samples/Convergence.GodotHost -- --convergence-smoke
+```
+
+The sample reports `CONVERGENCE_GODOT_SMOKE_OK` and exits `0` on success. Its generated `res://Content` directory is ignored; the build copies from the single canonical pack under `content/original/training-annex`.
 
 ## Forbidden Coupling
 

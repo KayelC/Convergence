@@ -25,27 +25,19 @@ roster tiers and Action Token liveness are authored, and the supplied fixed
 growth/stat/reward/economy policies can be replaced by registering another
 factory. Moon phase remains absent from the standard composition.
 
-## Priority 1: Authoring Contract Completion
+## Completed Release Foundations
 
 The strict Draft 2020-12 schema-v3 set now covers every implemented content
-family, and all active documents declare and pass their family schema. The next
-authoring milestone is the host-side validator CLI, which will combine schema,
-deserialization, semantic, dependency, registration, and catalog diagnostics
-without adding filesystem or schema packages to Framework.
+family, the authoring validator CLI combines schema and semantic gates, the
+0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
+integration. The remaining active release work is the consolidated quality gate
+and final review in the production-readiness roadmap.
 
-## Priority 2: Real Godot Consumer
-
-Create a separate Godot sample that references Framework source and implements resource loading, signal commands, event presentation, scene-instance mapping, and host-owned saves. This work must not move Godot types into Framework.
-
-## Priority 3: Public API Stabilization
-
-Review exported types by namespace, document supported composition paths, establish semantic versioning policy, and decide which APIs are ready for compatibility commitments. Keep Framework non-packable until distribution and support policy are approved.
-
-## Priority 4: Persistence Evolution
+## Priority 1: Persistence Evolution
 
 Define save-contract migration only when a released contract actually requires it. Full deterministic replay remains optional; checkpoint breadcrumbs are currently diagnostics rather than replay authority.
 
-## Priority 5: Example Breadth
+## Priority 2: Example Breadth
 
 Expand original example content only when it demonstrates a framework contract or reveals a missing reusable rule. DemoHost remains optional reference software, not the product architecture driver.
 

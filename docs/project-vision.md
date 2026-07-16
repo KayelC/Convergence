@@ -31,4 +31,4 @@ The framework supplies concepts and neutral examples, not a game world. Original
 
 ## Release Direction
 
-The immediate product is the source-distributed .NET 8 library and its documentation. A real Godot integration sample, broader authored schema contracts, API stabilization, and release versioning are future product work. NuGet packaging is not currently part of the supported distribution model.
+The immediate product is the source-distributed .NET 8 library, its strict content contracts and validator, and its documentation. The checked-in Godot 4.7.1 sample proves the primary host boundary, while DemoHost remains a smaller engine-free reference. NuGet packaging is not currently part of the supported distribution model.

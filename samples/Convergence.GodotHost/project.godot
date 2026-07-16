@@ -1,0 +1,18 @@
+; Convergence Godot 4.7 reference consumer.
+; Edit through Godot when adding visual host behavior.
+
+config_version=5
+
+[application]
+
+config/name="Convergence Godot Host"
+run/main_scene="res://Scenes/Main.tscn"
+
+[dotnet]
+
+project/assembly_name="Convergence.GodotHost"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

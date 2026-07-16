@@ -9,6 +9,7 @@ The framework is under active development and has not reached a stable public re
 ```text
 src/Convergence.Framework/          reusable .NET 8 library
 samples/Convergence.DemoHost/       optional console example
+samples/Convergence.GodotHost/      Godot 4.7.1 .NET reference consumer
 tools/Convergence.ContentValidator/ host-side authoring validator
 tests/Convergence.Framework.Tests/  framework-only tests
 tests/Convergence.DemoHost.Tests/   example-host tests
@@ -24,7 +25,7 @@ Historical prototype material is retained under `ArchiveDocs/LegacyFramework` an
 
 - .NET 8
 - C# 12
-- Godot 4.5 or another .NET 8-compatible host
+- Godot 4.7.1 or another .NET 8-compatible host
 - Framework/API version 0.1.0
 
 `Convergence.Framework` has no runtime package dependency, is intentionally
@@ -70,6 +71,8 @@ MyGameRepository/
 ```
 
 Godot owns nodes, resources, scenes, input, presentation, scheduling, and save-file serialization. Convergence owns serializer-neutral content, rules, runtime state, transitions, diagnostics, and results. See the [Godot integration contract](docs/godot-integration-contract.md).
+
+The checked-in `samples/Convergence.GodotHost` project is a working source-reference example. Its headless smoke mode loads `res://` content, executes a framework action and encounter, maps runtime IDs to Nodes, and validates a host-owned save.
 
 ## Build And Test
 

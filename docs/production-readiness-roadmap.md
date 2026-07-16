@@ -39,7 +39,7 @@ This roadmap remains active while any finding is `open` or
 | PR-B1 | Repository opened as the retired product | `verified` | The Git root contains the clean Convergence solution and product boundary tests. |
 | PR-B2 | License conflicted with the intended audience | `verified` | Active software and content have explicit source-available license scopes and contribution rules. |
 | PR-B3 | Public and authoring contracts are uncontrolled | `implemented_pending_review` | The 0.1 API, schema-v3 contracts, and complete authoring validator CLI are guarded; final review remains. |
-| PR-B4 | Godot compatibility is only simulated | `open` | Add and execute a real Godot 4.7.1 .NET sample. |
+| PR-B4 | Godot compatibility is only simulated | `implemented_pending_review` | The real Godot 4.7.1 .NET sample executes content, commands, actions, encounters, Nodes, events, and host-owned saves; final review remains. |
 | PR-B5 | No complete repository release gate | `open` | Extend the existing CI foundation after all other findings land. |
 | PR-H1 | Encounter cancellation/publication can split a turn | `verified` | Encounter atomicity, cancellation safe points, port containment, and cleanup have direct regression coverage. |
 | PR-H2 | Party/stock contracts hardcode retired roles | `verified` | Active contracts use generic party, Vessel, Hosted Entity, Companion, and roster roles. |
@@ -92,6 +92,7 @@ resulting corrections are complete.
 | 7 | `api: establish convergence 0.1 contract` | Assembly/API version `0.1.0`; 9,531 shipped API signatures guarded by PublicApiAnalyzers 5.6.0; XML documentation emitted for supported composition entry points; implementation namespaces export no public types. |
 | 8 | `schema: publish content schema v3` | 14 Draft 2020-12 schema artifacts cover 13 document families plus shared definitions; all 36 active documents declare the matching URN and pass independent JsonSchema.Net 9.2.2 evaluation; 106 focused contract cases cover valid unions and structural rejection; 914 full-suite tests passed with 0 skipped and 0 build warnings. |
 | 9 | `tool: add content authoring validator` | The .NET 8 host-side CLI validates schema, manifest ownership, root confinement, strict deserialization, semantic registrations, dependencies, and catalog construction; active content resolves to 6 packs, 36 documents, and 94 definitions; 921 full-suite tests passed with 0 skipped and 0 build warnings. |
+| 10 | `host: add godot 4.7 reference consumer` | `Godot.NET.Sdk` 4.7.1 builds with zero warnings; the official 4.7.1 .NET engine headlessly loads one `res://` pack, maps two runtime actors to Nodes, executes a typed skill, consumes 18 ordered encounter events, restores a two-actor host-owned save, and exits 0; 925 full-suite tests passed with 0 skipped and 0 build warnings. |
 
 ## Review Evidence Standard
 

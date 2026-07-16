@@ -9,6 +9,7 @@ public sealed class ProductBoundaryTests
     private static readonly string[] ExpectedProjectPaths =
     [
         "samples/Convergence.DemoHost/Convergence.DemoHost.csproj",
+        "samples/Convergence.GodotHost/Convergence.GodotHost.csproj",
         "src/Convergence.Framework/Convergence.Framework.csproj",
         "tests/Convergence.ContentValidator.Tests/Convergence.ContentValidator.Tests.csproj",
         "tests/Convergence.DemoHost.Tests/Convergence.DemoHost.Tests.csproj",

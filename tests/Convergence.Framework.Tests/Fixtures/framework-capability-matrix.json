@@ -204,12 +204,12 @@
     },
     {
       "id": "godot_adapter",
-      "implementationState": "deferred",
-      "frameworkTests": ["GodotIntegrationContractTests"],
-      "demoCoverage": "none",
+      "implementationState": "complete",
+      "frameworkTests": ["GodotIntegrationContractTests", "GodotReferenceConsumerBoundaryTests"],
+      "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": ["A real Godot project and engine-specific adapters remain host work."]
+      "knownGaps": []
     },
     {
       "id": "save_version_migration",

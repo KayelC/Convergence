@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convergence.ContentValidato
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convergence.ContentValidator.Tests", "tests\Convergence.ContentValidator.Tests\Convergence.ContentValidator.Tests.csproj", "{DD66DB6E-98B5-494E-9040-E14D7BC38354}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convergence.GodotHost", "samples\Convergence.GodotHost\Convergence.GodotHost.csproj", "{03800D50-B6DF-4106-B7D5-D8556AA88F92}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{DD66DB6E-98B5-494E-9040-E14D7BC38354}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD66DB6E-98B5-494E-9040-E14D7BC38354}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD66DB6E-98B5-494E-9040-E14D7BC38354}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03800D50-B6DF-4106-B7D5-D8556AA88F92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03800D50-B6DF-4106-B7D5-D8556AA88F92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03800D50-B6DF-4106-B7D5-D8556AA88F92}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{03800D50-B6DF-4106-B7D5-D8556AA88F92}.Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -63,6 +69,7 @@ Global
 		{7DCFE3D3-F092-4E4F-8829-3D49EC1BC2C5} = {FDC38908-CB26-4775-BC35-A6158AC1DF15}
 		{45C42ECD-3DAD-41D5-BC87-2B02DD0AB410} = {0EFBC71F-A977-4B63-A47C-379A80F9FB2C}
 		{DD66DB6E-98B5-494E-9040-E14D7BC38354} = {FDC38908-CB26-4775-BC35-A6158AC1DF15}
+		{03800D50-B6DF-4106-B7D5-D8556AA88F92} = {97223D16-0B3A-49BB-8FEC-BB6A647D0E61}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BFAD5D8A-CA89-4DE9-9C50-2AF4D421B73C}

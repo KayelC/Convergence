@@ -6,6 +6,8 @@
 
 `Convergence.DemoHost` is an optional reference consumer. It demonstrates how a host supplies content, commands, events, randomness, inventory reservations, and save serialization. It is not required by Framework and is not a compatibility layer.
 
+`Convergence.GodotHost` is a separate Godot 4.7.1 .NET reference consumer. It references Framework source, reads canonical example content through `res://`, maps runtime IDs to Nodes, and keeps engine APIs and JSON save encoding outside the reusable assembly.
+
 Session restore is aggregate and framework-owned. Hosts decode their save envelope, then supply the snapshot, catalog, actor factory, actor-profile resolver, validator, and any real version-migration steps. Framework restores dependencies in order and returns no live session until every actor and aggregate invariant succeeds; scene/node reconstruction and host-context application happen afterward.
 
 ## Core Principles
