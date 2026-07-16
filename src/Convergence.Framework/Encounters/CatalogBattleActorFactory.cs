@@ -190,6 +190,7 @@ public interface ICatalogBattleActorFactory
     CatalogBattleActorCreationResult Restore(CatalogBattleActorRestoreRequest request);
 }
 
+/// <summary>Creates or restores runtime battle actors from qualified catalog definitions.</summary>
 public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
 {
     private readonly IEntityDefinitionRepository _entities;

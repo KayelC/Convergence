@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Convergence.Content;
 
+/// <summary>Identifies a local vocabulary value or a pack-qualified content record.</summary>
 public readonly record struct ContentId
 {
     private readonly string? _value;

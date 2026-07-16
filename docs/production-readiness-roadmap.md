@@ -67,9 +67,11 @@ review as the original audit findings.
 | 4 | PR-M5 | Immutable typed encounter payloads with optional non-authoritative debug text. | `battle: structure encounter event contracts` |
 | 5 | PR-M6 | Validated, dependency-ordered aggregate restoration and migration extension seam. | `runtime: add aggregate session restoration` |
 | 6 | PR-L2 | Collision-safe pack-relative content deployment and loading. | `host: preserve content pack paths` |
-| 7 | PR-B3 | Supported 0.1 API, XML docs, API baseline, schema v3, and validator tool. | `api: establish convergence 0.1 contract`; `schema: publish content schema v3`; `tool: add content authoring validator` |
-| 8 | PR-B4 | Real Godot 4.7.1 source-reference sample and headless smoke run. | `host: add godot 4.7 reference consumer` |
-| 9 | PR-B5 | Repeatable release gate covering every supported product boundary. | `quality: complete production release gate` |
+| 7 | PR-B3 API | Supported 0.1 API, XML documentation, and textual compatibility baseline. | `api: establish convergence 0.1 contract` |
+| 8 | PR-B3 Schema | Strict Draft 2020-12 schemas for every implemented content family. | `schema: publish content schema v3` |
+| 9 | PR-B3 Tooling | Host-side content authoring validator CLI. | `tool: add content authoring validator` |
+| 10 | PR-B4 | Real Godot 4.7.1 source-reference sample and headless smoke run. | `host: add godot 4.7 reference consumer` |
+| 11 | PR-B5 | Repeatable release gate covering every supported product boundary. | `quality: complete production release gate` |
 
 Every checkpoint receives focused tests, the full solution gate, strict
 nonincremental builds, formatting verification, applicable demos, documentation
@@ -87,6 +89,7 @@ resulting corrections are complete.
 | 4 | `battle: structure encounter event contracts` | 800 tests passed; 0 skipped; all event kinds are payload-checked, structural collections are immutable, turn-economy changes include before/after state and consumption, and final outcomes/faults are typed. |
 | 5 | `runtime: add aggregate session restoration` | 805 tests passed; 0 skipped; current-version restore, missing migration paths, explicit migration steps, Hosted Entity ordering, missing dependencies, dependency cycles, immutable aggregate views, and actor failure atomicity covered. |
 | 6 | `host: preserve content pack paths` | 807 tests passed; 0 skipped; all active content retains its pack-relative output path, document lookup is manifest-relative and root-confined, and identical document basenames in separate packs remain isolated. |
+| 7 | `api: establish convergence 0.1 contract` | Assembly/API version `0.1.0`; 9,531 shipped API signatures guarded by PublicApiAnalyzers 5.6.0; XML documentation emitted for supported composition entry points; implementation namespaces export no public types. |
 
 ## Review Evidence Standard
 

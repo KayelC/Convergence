@@ -35,8 +35,12 @@
       "status": "open",
       "plannedCheckpoint": 7,
       "plannedCommit": "api: establish convergence 0.1 contract",
-      "evidence": ["FrameworkBoundaryTests", "SchemaDeserializationTests"],
-      "remainingWork": ["API classification and baseline", "XML documentation", "JSON Schema v3", "authoring validator CLI"],
+      "evidence": [
+        "FrameworkBoundaryTests.FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded",
+        "FrameworkBoundaryTests.FrameworkPublicApi_ExposesNoHostSerializerEngineOrLegacyTypes",
+        "SchemaDeserializationTests"
+      ],
+      "remainingWork": ["JSON Schema v3", "authoring validator CLI", "Final consolidated review"],
       "archiveEligible": false
     },
     {

@@ -58,3 +58,9 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 ## Pre-Release Contract Boundary
 
 The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `3` and runtime save contract version `7` are deliberate pre-release breaks with no compatibility aliases. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+
+Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
+[Public API Contract](public-api-contract.md) identifies the supported
+composition entry points and the pre-release compatibility policy. Build-only
+API analyzers and compiler tooling are private development dependencies; the
+compiled framework retains no runtime package dependency.

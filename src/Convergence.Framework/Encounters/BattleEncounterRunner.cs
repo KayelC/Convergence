@@ -399,6 +399,7 @@ public interface IBattleEncounterRunner
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Orchestrates an encounter through injected command, lifecycle, action, and event ports.</summary>
 public sealed class BattleEncounterRunner : IBattleEncounterRunner
 {
     /// <summary>

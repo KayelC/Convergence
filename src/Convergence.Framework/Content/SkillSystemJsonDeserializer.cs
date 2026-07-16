@@ -7,6 +7,7 @@ using Convergence.Serialization;
 
 namespace Convergence.Content;
 
+/// <summary>Strictly deserializes supported content documents into serializer-neutral definitions.</summary>
 public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializer
 {
     private static readonly JsonSerializerOptions Options = CreateOptions();

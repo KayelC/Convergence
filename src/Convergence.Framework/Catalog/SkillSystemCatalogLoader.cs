@@ -3,6 +3,7 @@ using Convergence.Validation;
 
 namespace Convergence.Catalog;
 
+/// <summary>Builds one dependency-aware, qualified catalog from host-supplied content-pack text.</summary>
 public sealed class SkillSystemCatalogLoader : ISkillSystemCatalogLoader
 {
     private static readonly HashSet<string> SupportedDocumentTypes =

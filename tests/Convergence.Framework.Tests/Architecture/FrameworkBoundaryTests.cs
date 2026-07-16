@@ -10,7 +10,7 @@ namespace Convergence.Framework.Tests.Architecture;
 public sealed class FrameworkBoundaryTests
 {
     [Fact]
-    public void FrameworkAssembly_HasNoConsoleHostDependencyOrExternalPackageReference()
+    public void FrameworkAssembly_HasNoConsoleHostOrRuntimePackageDependency()
     {
         Assembly framework = typeof(ContentId).Assembly;
 
@@ -19,9 +19,13 @@ public sealed class FrameworkBoundaryTests
             framework.GetExportedTypes(),
             type => Assert.StartsWith("Convergence.", type.Namespace, StringComparison.Ordinal));
 
-        string project = File.ReadAllText(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
-        Assert.DoesNotContain("PackageReference", project, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectReference", project, StringComparison.Ordinal);
+        Assert.All(
+            framework.GetReferencedAssemblies(),
+            reference => Assert.StartsWith("System", reference.Name, StringComparison.Ordinal));
+
+        XDocument project = XDocument.Load(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
+        Assert.Empty(project.Descendants("ProjectReference"));
+        AssertPrivateBuildPackages(project);
     }
 
     [Fact]
@@ -44,7 +48,7 @@ public sealed class FrameworkBoundaryTests
 
         XDocument framework = XDocument.Load(projects[0]);
         Assert.Equal("false", RequiredProperty(framework, "IsPackable"));
-        Assert.Empty(framework.Descendants("PackageReference"));
+        AssertPrivateBuildPackages(framework);
     }
 
     [Fact]
@@ -150,6 +154,51 @@ public sealed class FrameworkBoundaryTests
     }
 
     [Fact]
+    public void FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded()
+    {
+        Assembly framework = typeof(ContentId).Assembly;
+        Assert.Equal(new Version(0, 1, 0, 0), framework.GetName().Version);
+        Assert.DoesNotContain(
+            framework.GetExportedTypes(),
+            type => type.Namespace is "Convergence.Internal" or "Convergence.Serialization");
+
+        string projectRoot = RepositoryPath("src", "Convergence.Framework");
+        XDocument project = XDocument.Load(Path.Combine(projectRoot, "Convergence.Framework.csproj"));
+        Assert.Equal("0.1.0", RequiredProperty(project, "Version"));
+        Assert.Equal("true", RequiredProperty(project, "GenerateDocumentationFile"));
+        Assert.Equal("true", RequiredProperty(project, "CodeAnalysisTreatWarningsAsErrors"));
+
+        string[] shipped = File.ReadAllLines(Path.Combine(projectRoot, "PublicAPI.Shipped.txt"));
+        Assert.Equal("#nullable enable", shipped[0]);
+        Assert.True(shipped.Length > 1_000);
+        Assert.Equal(shipped.Length, shipped.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains(shipped, line => line.Contains("Convergence.Content.ContentId", StringComparison.Ordinal));
+        Assert.Equal(
+            ["#nullable enable"],
+            File.ReadAllLines(Path.Combine(projectRoot, "PublicAPI.Unshipped.txt")));
+
+        string documentationPath = Path.Combine(AppContext.BaseDirectory, "Convergence.Framework.xml");
+        XDocument documentation = XDocument.Load(documentationPath);
+        HashSet<string> documentedMembers = documentation
+            .Descendants("member")
+            .Select(member => member.Attribute("name")?.Value ?? string.Empty)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("T:Convergence.Content.ContentId", documentedMembers);
+        Assert.Contains("T:Convergence.Catalog.SkillSystemCatalogLoader", documentedMembers);
+        Assert.Contains("T:Convergence.Encounters.BattleEncounterRunner", documentedMembers);
+        Assert.Contains("T:Convergence.Runtime.RuntimeSessionRestoreService", documentedMembers);
+
+        using JsonDocument lockFile = JsonDocument.Parse(File.ReadAllText(Path.Combine(projectRoot, "packages.lock.json")));
+        JsonElement dependencies = lockFile.RootElement.GetProperty("dependencies").GetProperty("net8.0");
+        Assert.Equal(
+            "5.6.0",
+            dependencies.GetProperty("Microsoft.CodeAnalysis.PublicApiAnalyzers").GetProperty("resolved").GetString());
+        Assert.Equal(
+            "4.12.0",
+            dependencies.GetProperty("Microsoft.Net.Compilers.Toolset").GetProperty("resolved").GetString());
+    }
+
+    [Fact]
     public void FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies()
     {
         string fusionRoot = RepositoryPath("src", "Convergence.Framework", "Fusion");
@@ -235,6 +284,18 @@ public sealed class FrameworkBoundaryTests
         XElement? property = project.Descendants(name).SingleOrDefault();
         Assert.NotNull(property);
         return property!.Value.Trim();
+    }
+
+    private static void AssertPrivateBuildPackages(XDocument project)
+    {
+        XElement[] packages = project.Descendants("PackageReference").ToArray();
+        Assert.Equal(
+            ["Microsoft.CodeAnalysis.PublicApiAnalyzers", "Microsoft.Net.Compilers.Toolset"],
+            packages
+                .Select(package => package.Attribute("Include")?.Value ?? string.Empty)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+        Assert.All(packages, package => Assert.Equal("all", package.Element("PrivateAssets")?.Value));
     }
 
     private static string NormalizePath(string? path) =>

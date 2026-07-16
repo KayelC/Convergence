@@ -22,8 +22,13 @@ Historical prototype material is retained under `ArchiveDocs/LegacyFramework` an
 - .NET 8
 - C# 12
 - Godot 4.5 or another .NET 8-compatible host
+- Framework/API version 0.1.0
 
-`Convergence.Framework` has no external package dependency, is intentionally non-packable, and is distributed as source. A game references the framework project directly.
+`Convergence.Framework` has no runtime package dependency, is intentionally
+non-packable, and is distributed as source. A game references the framework
+project directly. Pinned private analyzer/compiler packages guard the API during
+builds but do not become runtime assembly references. See the
+[public API contract](docs/public-api-contract.md).
 
 ## Licensing
 

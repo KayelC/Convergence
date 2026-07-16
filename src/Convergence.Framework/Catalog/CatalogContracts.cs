@@ -168,6 +168,7 @@ public interface IDurationVocabularyRepository
     IReadOnlySet<ContentId> RegisteredPhaseIds { get; }
 }
 
+/// <summary>Provides immutable, qualified lookup for every validated content family.</summary>
 public sealed class GameDataCatalog :
     ISkillDefinitionRepository,
     IEntityDefinitionRepository,

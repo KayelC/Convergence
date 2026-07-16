@@ -269,6 +269,7 @@ public interface IRuntimeSessionRestoreService
     RuntimeSessionRestoreResult Restore(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog);
 }
 
+/// <summary>Validates and restores an aggregate runtime session without exposing partial live state.</summary>
 public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
 {
     private readonly IRuntimeSaveValidator _validator;

@@ -22,6 +22,7 @@ public sealed record ContentPackTextRequest
     public IReadOnlyList<string> DocumentPaths { get; }
 }
 
+/// <summary>Supplies manifest and document text without exposing a filesystem or engine resource API.</summary>
 public interface IContentPackTextSource
 {
     ValueTask<ContentPackTextBundle> ReadAsync(
@@ -29,6 +30,7 @@ public interface IContentPackTextSource
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Receives ordered framework events for host-owned presentation or animation.</summary>
 public interface IHostEventSink<in TEvent>
 {
     ValueTask PublishAsync(TEvent hostEvent, CancellationToken cancellationToken = default);
@@ -120,6 +122,7 @@ public sealed record HostCommandReadResult<TCommand>
         new(HostCommandReadStatus.Cancelled, default, null);
 }
 
+/// <summary>Reads one typed host command while distinguishing host cancellation from a selection.</summary>
 public interface IHostCommandSource<TCommand>
 {
     ValueTask<HostCommandReadResult<TCommand>> ReadAsync(

@@ -123,6 +123,7 @@ public interface IRuntimeRulesetBindingResolver
         ContentId rulesetId);
 }
 
+/// <summary>Resolves authored ruleset records through host-supplied typed policy factories.</summary>
 public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolver
 {
     private readonly RuntimeRulesetPolicyFactoryRegistry _factories;

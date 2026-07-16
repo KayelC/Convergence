@@ -425,6 +425,7 @@ public interface IBattleActionExecutor
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Assesses and atomically executes typed battle commands through shared effect services.</summary>
 public sealed class BattleActionExecutor : IBattleActionExecutor
 {
     private readonly ISkillExecutor _skills;
