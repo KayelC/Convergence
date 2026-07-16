@@ -18,9 +18,15 @@ internal abstract class TargetedEffectExecutor
         string? detail = null,
         bool escape = false,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
-        ElementalAffinity? resolvedAffinity = null) =>
-        new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
-            turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity);
+        ElementalAffinity? resolvedAffinity = null,
+        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null) =>
+        new EffectExecutionResult(
+            context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
+            turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity,
+            HostActionRequestIds: null)
+        {
+            ResourceChanges = resourceChanges ?? []
+        };
 
     protected static EffectExecutionResult Failure(
         EffectExecutionContext context,
@@ -37,10 +43,28 @@ internal abstract class TargetedEffectExecutor
         decimal? value = null,
         string? detail = null,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
-        ElementalAffinity? resolvedAffinity = null) =>
-        new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
+        ElementalAffinity? resolvedAffinity = null,
+        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null) =>
+        new EffectExecutionResult(
+            context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
             turnEconomy, Value: value, Detail: detail, PassiveActivations: passiveActivations,
-            ResolvedAffinity: resolvedAffinity);
+            ResolvedAffinity: resolvedAffinity)
+        {
+            ResourceChanges = resourceChanges ?? []
+        };
+
+    protected static IReadOnlyList<ExecutionResourceChange> ResourceChanges(
+        RuntimeActorState actor,
+        ContentId resourceId,
+        decimal delta) =>
+        delta == 0
+            ? []
+            : [new ExecutionResourceChange(actor.InstanceId, resourceId, delta)];
+
+    protected static IEnumerable<ExecutionResourceChange> PassiveResourceChanges(
+        IEnumerable<PassiveTriggerExecutionResult> activations) =>
+        activations.SelectMany(activation => activation.Effects)
+            .SelectMany(effect => effect.ResourceChanges);
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
         EffectExecutionContext context,
@@ -117,27 +141,48 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 return Failure(context, TurnEconomyOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
             case ElementalAffinity.Repel:
                 {
-                    decimal reflected = -context.Actor.AddResource(context.Actor.VitalResourceId, -total);
+                    decimal reflectedDelta = context.Actor.AddResource(context.Actor.VitalResourceId, -total);
+                    decimal reflected = -reflectedDelta;
                     IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
+                    ExecutionResourceChange[] resourceChanges = ResourceChanges(
+                            context.Actor,
+                            context.Actor.VitalResourceId,
+                            reflectedDelta)
+                        .Concat(PassiveResourceChanges(activations))
+                        .ToArray();
                     return Interrupted(
                         context,
                         TurnEconomyOutcome.Repel,
                         reflected,
                         "The damage was reflected.",
                         activations,
-                        affinity);
+                        affinity,
+                        resourceChanges);
                 }
             case ElementalAffinity.Absorb:
                 {
                     decimal absorbed = target.AddResource(target.VitalResourceId, total);
                     return Interrupted(context, TurnEconomyOutcome.Absorb, absorbed, "The damage was absorbed.",
-                        resolvedAffinity: affinity);
+                        resolvedAffinity: affinity,
+                        resourceChanges: ResourceChanges(target, target.VitalResourceId, absorbed));
                 }
             default:
                 {
-                    decimal dealt = -target.AddResource(target.VitalResourceId, -total);
+                    decimal damageDelta = target.AddResource(target.VitalResourceId, -total);
+                    decimal dealt = -damageDelta;
                     IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
-                    ApplyDrain(definition.Drain, context.Actor, context.Services, dealt);
+                    IReadOnlyList<ExecutionResourceChange> drainChanges = ApplyDrain(
+                        definition.Drain,
+                        context.Actor,
+                        context.Services,
+                        dealt);
+                    ExecutionResourceChange[] resourceChanges = ResourceChanges(
+                            target,
+                            target.VitalResourceId,
+                            damageDelta)
+                        .Concat(PassiveResourceChanges(activations))
+                        .Concat(drainChanges)
+                        .ToArray();
                     TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
                         ? TurnEconomyOutcome.Weakness
                         : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
@@ -147,12 +192,13 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                         turnEconomy: outcome,
                         critical: critical,
                         passiveActivations: activations,
-                        resolvedAffinity: affinity);
+                        resolvedAffinity: affinity,
+                        resourceChanges: resourceChanges);
                 }
         }
     }
 
-    private static void ApplyDrain(
+    private static IReadOnlyList<ExecutionResourceChange> ApplyDrain(
         DamageDrainMode drain,
         RuntimeActorState actor,
         BattleExecutionServices services,
@@ -160,12 +206,17 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
     {
         if (drain == DamageDrainMode.Hp && actor.TryGetResource(services.HpResourceId, out _))
         {
-            actor.AddResource(services.HpResourceId, amount);
+            decimal delta = actor.AddResource(services.HpResourceId, amount);
+            return ResourceChanges(actor, services.HpResourceId, delta);
         }
-        else if (drain == DamageDrainMode.Sp && actor.TryGetResource(services.SpResourceId, out _))
+
+        if (drain == DamageDrainMode.Sp && actor.TryGetResource(services.SpResourceId, out _))
         {
-            actor.AddResource(services.SpResourceId, amount);
+            decimal delta = actor.AddResource(services.SpResourceId, amount);
+            return ResourceChanges(actor, services.SpResourceId, delta);
         }
+
+        return [];
     }
 }
 
@@ -184,9 +235,20 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             return Failure(context, TurnEconomyOutcome.Miss, "The instant-death attempt failed.");
         }
 
-        decimal removed = -target.SetResource(target.VitalResourceId, 0);
+        decimal resourceDelta = target.SetResource(target.VitalResourceId, 0);
+        decimal removed = -resourceDelta;
         IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
-        return Success(context, removed, passiveActivations: activations);
+        ExecutionResourceChange[] resourceChanges = ResourceChanges(
+                target,
+                target.VitalResourceId,
+                resourceDelta)
+            .Concat(PassiveResourceChanges(activations))
+            .ToArray();
+        return Success(
+            context,
+            removed,
+            passiveActivations: activations,
+            resourceChanges: resourceChanges);
     }
 }
 
@@ -257,7 +319,11 @@ internal sealed class RestoreResourceEffectExecutor : TargetedEffectExecutor, IE
             amount,
             new RuleModifierContext(conditionContext, context.Request.Skill, definition.ResourceId)));
         decimal restored = target.AddResource(definition.ResourceId, amount);
-        return Success(context, restored, definition.ResourceId);
+        return Success(
+            context,
+            restored,
+            definition.ResourceId,
+            resourceChanges: ResourceChanges(target, definition.ResourceId, restored));
     }
 }
 
@@ -310,7 +376,11 @@ internal sealed class ReviveEffectExecutor : TargetedEffectExecutor, IEffectExec
         decimal restored = target.SetResource(definition.ResourceId, amount);
         return target.IsDefeated
             ? Failure(context, detail: "The revival amount did not restore the target.")
-            : Success(context, restored, definition.ResourceId);
+            : Success(
+                context,
+                restored,
+                definition.ResourceId,
+                resourceChanges: ResourceChanges(target, definition.ResourceId, restored));
     }
 }
 
@@ -396,8 +466,15 @@ internal sealed class ReduceResourceEffectExecutor : TargetedEffectExecutor, IEf
             new AmountResolutionContext(context.Actor, target, definition.ResourceId, "reduce_resource"),
             context.Services);
         decimal floor = definition.CanReduceToZero ? 0 : Math.Min(1, resource.Maximum);
-        decimal reduced = -target.SetResource(definition.ResourceId, Math.Max(floor, resource.Current - amount));
-        return Success(context, reduced, definition.ResourceId);
+        decimal resourceDelta = target.SetResource(
+            definition.ResourceId,
+            Math.Max(floor, resource.Current - amount));
+        decimal reduced = -resourceDelta;
+        return Success(
+            context,
+            reduced,
+            definition.ResourceId,
+            resourceChanges: ResourceChanges(target, definition.ResourceId, resourceDelta));
     }
 }
 
@@ -416,7 +493,11 @@ internal sealed class SetResourceEffectExecutor : TargetedEffectExecutor, IEffec
             new AmountResolutionContext(context.Actor, target, definition.ResourceId, "set_resource"),
             context.Services);
         decimal changed = target.SetResource(definition.ResourceId, amount);
-        return Success(context, changed, definition.ResourceId);
+        return Success(
+            context,
+            changed,
+            definition.ResourceId,
+            resourceChanges: ResourceChanges(target, definition.ResourceId, changed));
     }
 }
 

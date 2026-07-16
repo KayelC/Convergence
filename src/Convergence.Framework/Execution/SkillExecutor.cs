@@ -93,6 +93,7 @@ public sealed class SkillExecutor : ISkillExecutor
 
         OrderedEffectExecution execution;
         RuntimeActorExecutionTransaction transaction;
+        IReadOnlyList<ExecutionResourceChange> committedCostChanges;
         try
         {
             transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
@@ -102,7 +103,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 transaction.Participants,
                 request.Environment,
                 request.SelectedTargetIds);
-            CommitCosts(transaction.Actor, assessment.Costs);
+            committedCostChanges = CommitCosts(transaction.Actor, assessment.Costs);
             execution = _orderedEffects.Execute(
                 stagedRequest.ToEffectActionRequest(),
                 request.Skill.Effects,
@@ -123,7 +124,8 @@ public sealed class SkillExecutor : ISkillExecutor
         return new SkillExecutionResult(
             execution.Interrupted ? SkillExecutionStatus.Interrupted : SkillExecutionStatus.Executed,
             execution.Effects,
-            costsCommitted: assessment.Costs.Count > 0);
+            costsCommitted: assessment.Costs.Count > 0,
+            committedCostChanges: committedCostChanges);
     }
 
     public SkillExecutionAssessment Assess(SkillExecutionRequest request)
@@ -375,12 +377,21 @@ public sealed class SkillExecutor : ISkillExecutor
         return diagnostics;
     }
 
-    private static void CommitCosts(RuntimeActorState actor, IEnumerable<ResolvedSkillCost> costs)
+    private static IReadOnlyList<ExecutionResourceChange> CommitCosts(
+        RuntimeActorState actor,
+        IEnumerable<ResolvedSkillCost> costs)
     {
+        var changes = new List<ExecutionResourceChange>();
         foreach (ResolvedSkillCost cost in costs)
         {
-            actor.AddResource(cost.ResourceId, -cost.Amount);
+            decimal delta = actor.AddResource(cost.ResourceId, -cost.Amount);
+            if (delta != 0)
+            {
+                changes.Add(new ExecutionResourceChange(actor.InstanceId, cost.ResourceId, delta));
+            }
         }
+
+        return Array.AsReadOnly(changes.ToArray());
     }
 
     private static bool RequiresTarget(EffectDefinition effect) =>

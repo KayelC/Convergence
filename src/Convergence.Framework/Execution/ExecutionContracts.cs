@@ -54,11 +54,46 @@ public sealed record SkillExecutionDiagnostic(
     int? EffectIndex = null,
     RuntimeInstanceId? TargetId = null);
 
+/// <summary>Describes one committed, signed change to an actor resource.</summary>
+public sealed record ExecutionResourceChange
+{
+    public ExecutionResourceChange(
+        RuntimeInstanceId actorId,
+        ContentId resourceId,
+        decimal delta)
+    {
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Resource changes require a valid actor ID.", nameof(actorId));
+        }
+
+        if (!resourceId.IsValid)
+        {
+            throw new ArgumentException("Resource changes require a valid resource ID.", nameof(resourceId));
+        }
+
+        if (delta == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delta), "Resource changes must be nonzero.");
+        }
+
+        ActorId = actorId;
+        ResourceId = resourceId;
+        Delta = delta;
+    }
+
+    public RuntimeInstanceId ActorId { get; }
+    public ContentId ResourceId { get; }
+    public decimal Delta { get; }
+}
+
 public sealed record EffectExecutionResult
 {
     private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
         Array.Empty<PassiveTriggerExecutionResult>();
     private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
+    private readonly IReadOnlyList<ExecutionResourceChange> _resourceChanges =
+        Array.Empty<ExecutionResourceChange>();
 
     public EffectExecutionResult(
         int EffectIndex,
@@ -86,6 +121,7 @@ public sealed record EffectExecutionResult
         this.PassiveActivations = Array.AsReadOnly(PassiveActivations?.ToArray() ?? []);
         this.ResolvedAffinity = ResolvedAffinity;
         this.HostActionRequestIds = Array.AsReadOnly(HostActionRequestIds?.ToArray() ?? []);
+        this.ResourceChanges = [];
     }
 
     public int EffectIndex { get; init; }
@@ -107,6 +143,12 @@ public sealed record EffectExecutionResult
     {
         get => _hostActionRequestIds;
         init => _hostActionRequestIds = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+    /// <summary>Gets the exact resource mutations committed while resolving this effect.</summary>
+    public IReadOnlyList<ExecutionResourceChange> ResourceChanges
+    {
+        get => _resourceChanges;
+        init => _resourceChanges = Array.AsReadOnly(value?.ToArray() ?? []);
     }
 }
 
@@ -202,12 +244,14 @@ public sealed record SkillExecutionResult
         SkillExecutionStatus status,
         IEnumerable<EffectExecutionResult> effects,
         IEnumerable<SkillExecutionDiagnostic>? diagnostics = null,
-        bool costsCommitted = false)
+        bool costsCommitted = false,
+        IEnumerable<ExecutionResourceChange>? committedCostChanges = null)
     {
         Status = status;
         Effects = Array.AsReadOnly(effects.ToArray());
         Diagnostics = Array.AsReadOnly(diagnostics?.ToArray() ?? []);
         CostsCommitted = costsCommitted;
+        CommittedCostChanges = Array.AsReadOnly(committedCostChanges?.ToArray() ?? []);
         EscapeRequested = Effects.Any(effect => effect.EscapeRequested);
         PassiveActivations = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.PassiveActivations ?? []).ToArray());
@@ -220,6 +264,8 @@ public sealed record SkillExecutionResult
     public IReadOnlyList<EffectExecutionResult> Effects { get; }
     public IReadOnlyList<SkillExecutionDiagnostic> Diagnostics { get; }
     public bool CostsCommitted { get; }
+    /// <summary>Gets the exact resource mutations committed as skill costs before effect execution.</summary>
+    public IReadOnlyList<ExecutionResourceChange> CommittedCostChanges { get; }
     public bool EscapeRequested { get; }
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }

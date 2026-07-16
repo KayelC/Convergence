@@ -211,16 +211,15 @@ public sealed class BattleStatusEncounterLifecyclePort : IBattleEncounterLifecyc
                 actorId,
                 activation.SkillId,
                 Detail: activation.EventId.ToString()));
-            foreach (EffectExecutionResult effect in activation.Effects
-                         .Where(effect => effect.Outcome == EffectExecutionOutcome.Success))
+            foreach (EffectExecutionResult effect in activation.Effects)
             {
-                if (effect.RelatedId is ContentId relatedId && effect.Value is decimal value)
+                foreach (ExecutionResourceChange change in effect.ResourceChanges)
                 {
                     events.Add(new BattleStatusLifecycleEvent(
                         BattleStatusLifecycleEventKind.ResourceChanged,
-                        effect.TargetId ?? actorId,
-                        relatedId,
-                        value,
+                        change.ActorId,
+                        change.ResourceId,
+                        change.Delta,
                         effect.Detail));
                 }
             }

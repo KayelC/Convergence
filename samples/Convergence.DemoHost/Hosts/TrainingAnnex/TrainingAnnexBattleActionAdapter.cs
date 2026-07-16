@@ -1291,6 +1291,11 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     $"{actor.State.InstanceId} selected {actionId}.")
             };
 
+            foreach (ExecutionResourceChange change in execution.CommittedCostChanges)
+            {
+                AddResourceChange(events, actor.State.InstanceId, actionId, change);
+            }
+
             foreach (EffectExecutionResult effect in execution.Effects)
             {
                 events.Add(new BattleEncounterEvent(
@@ -1298,17 +1303,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     BattleEncounterEventKind.EffectResolved,
                     new BattleEffectResolvedEventPayload(actor.State.InstanceId, actionId, effect),
                     $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome})."));
-                if (effect.Value is decimal value)
+                foreach (ExecutionResourceChange change in effect.ResourceChanges)
                 {
-                    events.Add(new BattleEncounterEvent(
-                        0,
-                        BattleEncounterEventKind.ResourceChanged,
-                        new BattleResourceChangedEventPayload(
-                            actor.State.InstanceId,
-                            effect.TargetId ?? actor.State.InstanceId,
-                            value,
-                            SourceId: actionId),
-                        $"Resource changed by {value}."));
+                    AddResourceChange(events, actor.State.InstanceId, actionId, change);
                 }
             }
 
@@ -1328,6 +1325,22 @@ internal sealed class TrainingAnnexBattleActionAdapter
 
             return events;
         }
+
+        private static void AddResourceChange(
+            ICollection<BattleEncounterEvent> events,
+            RuntimeInstanceId sourceActorId,
+            ContentId sourceId,
+            ExecutionResourceChange change) =>
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ResourceChanged,
+                new BattleResourceChangedEventPayload(
+                    sourceActorId,
+                    change.ActorId,
+                    change.Delta,
+                    change.ResourceId,
+                    sourceId),
+                $"Resource {change.ResourceId} changed by {change.Delta}."));
     }
 }
 
@@ -1578,13 +1591,13 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
                 Detail: activation.EventId.ToString()));
             foreach (EffectExecutionResult effect in activation.Effects)
             {
-                if (effect.RelatedId is ContentId relatedId && effect.Value is decimal value)
+                foreach (ExecutionResourceChange change in effect.ResourceChanges)
                 {
                     events.Add(new BattleStatusLifecycleEvent(
                         BattleStatusLifecycleEventKind.ResourceChanged,
-                        effect.TargetId ?? actor.InstanceId,
-                        RelatedId: relatedId,
-                        Value: value,
+                        change.ActorId,
+                        RelatedId: change.ResourceId,
+                        Value: change.Delta,
                         Detail: effect.Detail));
                 }
             }

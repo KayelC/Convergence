@@ -698,7 +698,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                 actor.InstanceId,
                 activation.SkillId,
                 Detail: activation.EventId.ToString()));
-            AddEffectEvents(events, actor.InstanceId, activation.Effects);
+            AddEffectEvents(events, activation.Effects);
         }
 
         ExecuteAilmentTriggers(request, services, participants, events);
@@ -863,17 +863,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                         actionRequest,
                         trigger.Effects,
                         new ResolvedRuntimeTargetSet([actor]));
-                foreach (EffectExecutionResult result in execution.Effects)
-                {
-                    if (result.EffectIndex >= 0 && result.EffectIndex < trigger.Effects.Count)
-                    {
-                        AddEffectEvent(
-                            events,
-                            actor.InstanceId,
-                            result,
-                            trigger.Effects[result.EffectIndex]);
-                    }
-                }
+                AddEffectEvents(events, execution.Effects);
 
                 if (execution.StopsAction)
                 {
@@ -984,42 +974,19 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
 
     private static void AddEffectEvents(
         List<BattleStatusLifecycleEvent> events,
-        RuntimeInstanceId actorId,
         IReadOnlyList<EffectExecutionResult> effects)
     {
-        foreach (EffectExecutionResult effect in effects.Where(effect => effect.Outcome == EffectExecutionOutcome.Success))
+        foreach (EffectExecutionResult effect in effects)
         {
-            if (effect.RelatedId is ContentId relatedId && effect.Value is decimal value)
+            foreach (ExecutionResourceChange change in effect.ResourceChanges)
             {
                 events.Add(new BattleStatusLifecycleEvent(
                     BattleStatusLifecycleEventKind.ResourceChanged,
-                    effect.TargetId ?? actorId,
-                    relatedId,
-                    value,
+                    change.ActorId,
+                    change.ResourceId,
+                    change.Delta,
                     effect.Detail));
             }
         }
-    }
-
-    private static void AddEffectEvent(
-        List<BattleStatusLifecycleEvent> events,
-        RuntimeInstanceId actorId,
-        EffectExecutionResult result,
-        EffectDefinition definition)
-    {
-        if (result.Outcome != EffectExecutionOutcome.Success ||
-            result.RelatedId is not ContentId relatedId ||
-            result.Value is not decimal value)
-        {
-            return;
-        }
-
-        decimal signedValue = definition is ReduceResourceEffectDefinition ? -Math.Abs(value) : value;
-        events.Add(new BattleStatusLifecycleEvent(
-            BattleStatusLifecycleEventKind.ResourceChanged,
-            result.TargetId ?? actorId,
-            relatedId,
-            signedValue,
-            result.Detail));
     }
 }

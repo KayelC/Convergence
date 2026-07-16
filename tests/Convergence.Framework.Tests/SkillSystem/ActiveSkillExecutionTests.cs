@@ -112,6 +112,15 @@ public sealed class ActiveSkillExecutionTests
         Assert.True(target.HasAilment(Poison));
         Assert.Equal(22, actor.GetRequiredResource(Sp).Current);
         Assert.True(result.CostsCommitted);
+        ExecutionResourceChange costChange = Assert.Single(result.CommittedCostChanges);
+        Assert.Equal(actor.InstanceId, costChange.ActorId);
+        Assert.Equal(Sp, costChange.ResourceId);
+        Assert.Equal(-8, costChange.Delta);
+        ExecutionResourceChange damageChange = Assert.Single(result.Effects[0].ResourceChanges);
+        Assert.Equal(target.InstanceId, damageChange.ActorId);
+        Assert.Equal(Hp, damageChange.ResourceId);
+        Assert.Equal(-25, damageChange.Delta);
+        Assert.Empty(result.Effects[1].ResourceChanges);
         Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnEconomy.Outcome);
         Assert.True(result.TurnEconomy.AnyCritical);
     }
@@ -430,6 +439,10 @@ public sealed class ActiveSkillExecutionTests
         Assert.True(result.TurnEconomy.TerminatesPhase);
         Assert.Equal(70, actor.GetRequiredResource(Hp).Current);
         Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+        ExecutionResourceChange reflected = Assert.Single(result.Effects[0].ResourceChanges);
+        Assert.Equal(actor.InstanceId, reflected.ActorId);
+        Assert.Equal(Hp, reflected.ResourceId);
+        Assert.Equal(-30, reflected.Delta);
     }
 
     [Theory]
@@ -768,6 +781,10 @@ public sealed class ActiveSkillExecutionTests
             Assert.Equal(EffectExecutionOutcome.Success, execution.Effects[0].Outcome));
         Assert.Equal(20, restore.Effects[0].Value);
         Assert.Equal(25, revive.Effects[0].Value);
+        Assert.Equal(20, Assert.Single(restore.Effects[0].ResourceChanges).Delta);
+        Assert.Equal(-10, Assert.Single(reduce.Effects[0].ResourceChanges).Delta);
+        Assert.Equal(-35, Assert.Single(set.Effects[0].ResourceChanges).Delta);
+        Assert.Equal(25, Assert.Single(revive.Effects[0].ResourceChanges).Delta);
     }
 
     [Fact]
@@ -779,7 +796,11 @@ public sealed class ActiveSkillExecutionTests
         ContentId attack = ContentId.Parse("attack");
         ContentId mark = ContentId.Parse("marked");
 
-        ExecuteEffect(executor, new ModifyStatStageEffectDefinition([attack], 2), actor, target);
+        SkillExecutionResult stage = ExecuteEffect(
+            executor,
+            new ModifyStatStageEffectDefinition([attack], 2),
+            actor,
+            target);
         ExecuteEffect(executor, new GrantChargeEffectDefinition(ChargeKind.Magical, 2.5m), actor, target);
         ExecuteEffect(executor, new GrantShieldEffectDefinition(ShieldKind.Physical), actor, target);
         ExecuteEffect(
@@ -802,6 +823,7 @@ public sealed class ActiveSkillExecutionTests
         Assert.True(target.Shields.ContainsKey(ShieldKind.Physical));
         Assert.Equal(ElementalAffinity.Null, target.GetElementalAffinity(DamageElement.Fire));
         Assert.DoesNotContain(mark, target.OtherStatuses);
+        Assert.Empty(stage.Effects[0].ResourceChanges);
     }
 
     [Fact]
@@ -1085,38 +1107,68 @@ public sealed class ActiveSkillExecutionTests
             []);
         var originalActivations = new List<PassiveTriggerExecutionResult> { originalActivation };
         var originalHostRequests = new List<ContentId> { ContentId.Parse("original_request") };
+        var originalResourceChanges = new List<ExecutionResourceChange>
+        {
+            new(RuntimeInstanceId.Parse("original_target"), Hp, -5)
+        };
         var replacementActivations = new List<PassiveTriggerExecutionResult> { replacementActivation };
         var replacementHostRequests = new List<ContentId> { ContentId.Parse("replacement_request") };
+        var replacementResourceChanges = new List<ExecutionResourceChange>
+        {
+            new(RuntimeInstanceId.Parse("replacement_target"), Hp, 4)
+        };
         var original = new EffectExecutionResult(
             0,
             RuntimeInstanceId.Parse("target"),
             EffectExecutionOutcome.Success,
             PassiveActivations: originalActivations,
-            HostActionRequestIds: originalHostRequests);
+            HostActionRequestIds: originalHostRequests)
+        {
+            ResourceChanges = originalResourceChanges
+        };
 
         EffectExecutionResult clone = original with
         {
             Detail = "cloned",
             PassiveActivations = replacementActivations,
-            HostActionRequestIds = replacementHostRequests
+            HostActionRequestIds = replacementHostRequests,
+            ResourceChanges = replacementResourceChanges
         };
 
         originalActivations.Clear();
         originalHostRequests.Clear();
+        originalResourceChanges.Clear();
         replacementActivations.Clear();
         replacementHostRequests.Clear();
+        replacementResourceChanges.Clear();
 
         Assert.Equal("cloned", clone.Detail);
         Assert.Equal(originalActivation, Assert.Single(original.PassiveActivations));
         Assert.Equal(ContentId.Parse("original_request"), Assert.Single(original.HostActionRequestIds));
         Assert.Equal(replacementActivation, Assert.Single(clone.PassiveActivations));
         Assert.Equal(ContentId.Parse("replacement_request"), Assert.Single(clone.HostActionRequestIds));
+        Assert.Equal(-5, Assert.Single(original.ResourceChanges).Delta);
+        Assert.Equal(4, Assert.Single(clone.ResourceChanges).Delta);
         Assert.NotSame(replacementActivations, clone.PassiveActivations);
         Assert.NotSame(replacementHostRequests, clone.HostActionRequestIds);
         Assert.Throws<NotSupportedException>(() =>
             ((IList<PassiveTriggerExecutionResult>)clone.PassiveActivations).Add(originalActivation));
         Assert.Throws<NotSupportedException>(() =>
             ((IList<ContentId>)clone.HostActionRequestIds).Add(ContentId.Parse("forged_request")));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ExecutionResourceChange>)clone.ResourceChanges).Add(
+                new ExecutionResourceChange(RuntimeInstanceId.Parse("forged_target"), Hp, 1)));
+    }
+
+    [Fact]
+    public void ExecutionResourceChange_RejectsInvalidIdentityAndZeroDelta()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new ExecutionResourceChange(default, Hp, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new ExecutionResourceChange(RuntimeInstanceId.Parse("actor"), default, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ExecutionResourceChange(RuntimeInstanceId.Parse("actor"), Hp, 0));
     }
 
     [Fact]

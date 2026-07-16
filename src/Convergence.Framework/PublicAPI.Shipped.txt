@@ -2889,6 +2889,7 @@ Convergence.Execution.BattleActionExecutionRequest.ItemInventory.get -> Converge
 Convergence.Execution.BattleActionExecutionRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.BattleActionExecutionResult
 Convergence.Execution.BattleActionExecutionResult.<Clone>$() -> Convergence.Execution.BattleActionExecutionResult!
+Convergence.Execution.BattleActionExecutionResult.CommittedCostChanges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ExecutionResourceChange!>!
 Convergence.Execution.BattleActionExecutionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleActionDiagnostic!>!
 Convergence.Execution.BattleActionExecutionResult.Effects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>!
 Convergence.Execution.BattleActionExecutionResult.Equals(Convergence.Execution.BattleActionExecutionResult? other) -> bool
@@ -3359,12 +3360,26 @@ Convergence.Execution.EffectExecutionResult.RelatedId.get -> Convergence.Content
 Convergence.Execution.EffectExecutionResult.RelatedId.init -> void
 Convergence.Execution.EffectExecutionResult.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity?
 Convergence.Execution.EffectExecutionResult.ResolvedAffinity.init -> void
+Convergence.Execution.EffectExecutionResult.ResourceChanges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ExecutionResourceChange!>!
+Convergence.Execution.EffectExecutionResult.ResourceChanges.init -> void
 Convergence.Execution.EffectExecutionResult.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Execution.EffectExecutionResult.TargetId.init -> void
 Convergence.Execution.EffectExecutionResult.TurnEconomyOutcome.get -> Convergence.Execution.TurnEconomyOutcome
 Convergence.Execution.EffectExecutionResult.TurnEconomyOutcome.init -> void
 Convergence.Execution.EffectExecutionResult.Value.get -> decimal?
 Convergence.Execution.EffectExecutionResult.Value.init -> void
+Convergence.Execution.ExecutionResourceChange
+Convergence.Execution.ExecutionResourceChange.<Clone>$() -> Convergence.Execution.ExecutionResourceChange!
+Convergence.Execution.ExecutionResourceChange.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.ExecutionResourceChange.Delta.get -> decimal
+Convergence.Execution.ExecutionResourceChange.Equals(Convergence.Execution.ExecutionResourceChange? other) -> bool
+override Convergence.Execution.ExecutionResourceChange.Equals(object? obj) -> bool
+Convergence.Execution.ExecutionResourceChange.ExecutionResourceChange(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId resourceId, decimal delta) -> void
+override Convergence.Execution.ExecutionResourceChange.GetHashCode() -> int
+Convergence.Execution.ExecutionResourceChange.ResourceId.get -> Convergence.Content.ContentId
+override Convergence.Execution.ExecutionResourceChange.ToString() -> string!
+static Convergence.Execution.ExecutionResourceChange.operator !=(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
+static Convergence.Execution.ExecutionResourceChange.operator ==(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
 Convergence.Execution.EffectExecutorRegistry
 Convergence.Execution.EffectExecutorRegistry.EffectExecutorRegistry() -> void
 Convergence.Execution.EffectExecutorRegistry.Register<TDefinition>(Convergence.Execution.IEffectExecutor<TDefinition!>! executor) -> Convergence.Execution.EffectExecutorRegistry!
@@ -3761,6 +3776,7 @@ Convergence.Execution.SkillExecutionRequest.SkillExecutionRequest(Convergence.Co
 Convergence.Execution.SkillExecutionRequest.SkillExecutionRequest(Convergence.Content.SkillDefinition! skill, Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Execution.EffectExecutionEnvironment! environment, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>? selectedTargetIds = null) -> void
 Convergence.Execution.SkillExecutionResult
 Convergence.Execution.SkillExecutionResult.<Clone>$() -> Convergence.Execution.SkillExecutionResult!
+Convergence.Execution.SkillExecutionResult.CommittedCostChanges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ExecutionResourceChange!>!
 Convergence.Execution.SkillExecutionResult.CostsCommitted.get -> bool
 Convergence.Execution.SkillExecutionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.SkillExecutionDiagnostic!>!
 Convergence.Execution.SkillExecutionResult.Effects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>!

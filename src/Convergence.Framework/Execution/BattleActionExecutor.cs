@@ -349,7 +349,8 @@ public sealed record BattleActionExecutionResult
         bool itemConsumptionCommitted = false,
         bool escapeRequested = false,
         PartyRosterTransitionResult? partyRosterTransition = null,
-        IEnumerable<ContentId>? hostActionRequestIds = null)
+        IEnumerable<ContentId>? hostActionRequestIds = null,
+        IEnumerable<ExecutionResourceChange>? committedCostChanges = null)
     {
         Status = status;
         Kind = kind;
@@ -363,6 +364,7 @@ public sealed record BattleActionExecutionResult
         PartyRosterTransition = partyRosterTransition;
         HostActionRequestIds = Array.AsReadOnly(
             (hostActionRequestIds ?? Effects.SelectMany(effect => effect.HostActionRequestIds)).ToArray());
+        CommittedCostChanges = Array.AsReadOnly(committedCostChanges?.ToArray() ?? []);
     }
 
     public BattleActionExecutionStatus Status { get; }
@@ -376,6 +378,8 @@ public sealed record BattleActionExecutionResult
     public bool EscapeRequested { get; }
     public PartyRosterTransitionResult? PartyRosterTransition { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
+    /// <summary>Gets resource mutations committed as action costs before effect execution.</summary>
+    public IReadOnlyList<ExecutionResourceChange> CommittedCostChanges { get; }
 }
 
 public interface IItemActionReservation
@@ -737,7 +741,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             skill.Effects,
             events: EffectEvents(request.Actor.InstanceId, command.Skill.Id, skill.Effects),
             escapeRequested: skill.EscapeRequested,
-            hostActionRequestIds: skill.HostActionRequestIds);
+            hostActionRequestIds: skill.HostActionRequestIds,
+            committedCostChanges: skill.CommittedCostChanges);
     }
 
     private BattleActionExecutionResult ExecuteItem(

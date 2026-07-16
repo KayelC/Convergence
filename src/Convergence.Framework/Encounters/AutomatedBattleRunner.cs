@@ -579,6 +579,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         IReadOnlyList<CatalogBattleActor> participants,
         ElementalAffinityKnowledge knowledge)
     {
+        foreach (ExecutionResourceChange change in execution.CommittedCostChanges)
+        {
+            RecordResourceChange(events, actor.State.InstanceId, skill.Id, change);
+        }
+
         foreach (EffectExecutionResult effect in execution.Effects)
         {
             events.Add(new BattleEncounterEvent(
@@ -586,17 +591,9 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterEventKind.EffectResolved,
                 new BattleEffectResolvedEventPayload(actor.State.InstanceId, skill.Id, effect),
                 $"Effect {effect.EffectIndex} resolved as {effect.Outcome} ({effect.TurnEconomyOutcome})."));
-            if (effect.Value is decimal value)
+            foreach (ExecutionResourceChange change in effect.ResourceChanges)
             {
-                events.Add(new BattleEncounterEvent(
-                    0,
-                    BattleEncounterEventKind.ResourceChanged,
-                    new BattleResourceChangedEventPayload(
-                        actor.State.InstanceId,
-                        effect.TargetId ?? actor.State.InstanceId,
-                        value,
-                        SourceId: skill.Id),
-                    $"Resource changed by {value}."));
+                RecordResourceChange(events, actor.State.InstanceId, skill.Id, change);
             }
 
             if (effect.TargetId is RuntimeInstanceId targetId &&
@@ -622,5 +619,21 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             }
         }
     }
+
+    private static void RecordResourceChange(
+        ICollection<BattleEncounterEvent> events,
+        RuntimeInstanceId sourceActorId,
+        ContentId sourceId,
+        ExecutionResourceChange change) =>
+        events.Add(new BattleEncounterEvent(
+            0,
+            BattleEncounterEventKind.ResourceChanged,
+            new BattleResourceChangedEventPayload(
+                sourceActorId,
+                change.ActorId,
+                change.Delta,
+                change.ResourceId,
+                sourceId),
+            $"Resource {change.ResourceId} changed by {change.Delta}."));
 
 }

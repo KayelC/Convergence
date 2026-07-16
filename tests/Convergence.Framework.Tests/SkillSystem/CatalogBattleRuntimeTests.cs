@@ -551,6 +551,55 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_ReportsSignedResourceChangesForCostsDamageAndReflection()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active(
+            "test.pack:reflectable_attack",
+            DamageElement.Fire,
+            costs: [new SkillCostDefinition(Id("sp"), new FlatAmountDefinition(3))]);
+        CatalogBattleActor attacker = RuntimeCatalogActor(
+            "resource_attacker",
+            "resource_attacker",
+            PlayerTeam,
+            [attack]);
+        CatalogBattleActor reflector = RuntimeCatalogActor(
+            "resource_reflector",
+            "resource_reflector",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Fire,
+                    ElementalAffinity.Repel)]));
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        var runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
+
+        AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
+            [attacker, reflector], Battle, NormalBattle, null, 1));
+
+        BattleRuntimeEvent[] resourceChanges = result.Events.Where(battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged).ToArray();
+        Assert.Equal(2, resourceChanges.Length);
+        BattleRuntimeEvent cost = resourceChanges[0];
+        Assert.Equal(attacker.State.InstanceId, cost.ActorId);
+        Assert.Equal(attacker.State.InstanceId, cost.TargetId);
+        Assert.Equal(attack.Id, cost.SkillId);
+        Assert.Equal(-3, cost.Value);
+        BattleRuntimeEvent reflected = resourceChanges[1];
+        Assert.Equal(attacker.State.InstanceId, reflected.ActorId);
+        Assert.Equal(attacker.State.InstanceId, reflected.TargetId);
+        Assert.Equal(attack.Id, reflected.SkillId);
+        Assert.Equal(-1, reflected.Value);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged &&
+            battleEvent.TargetId == reflector.State.InstanceId);
+    }
+
+    [Fact]
     public void Runner_AllowsMissingMoonPhaseWhenContentDoesNotUseMoonConditions()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -1394,7 +1443,8 @@ public sealed class CatalogBattleRuntimeTests
     private static SkillDefinition Active(
         string id,
         DamageElement element,
-        TargetingDefinition? targeting = null) => new(
+        TargetingDefinition? targeting = null,
+        IEnumerable<SkillCostDefinition>? costs = null) => new(
         Id(id), id, id, SkillActivation.Active, SkillMenuGroup.Offense,
         element switch
         {
@@ -1410,13 +1460,15 @@ public sealed class CatalogBattleRuntimeTests
             TargetLifeState.Alive,
             false),
         effects: [new DamageEffectDefinition(element, 1, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1))],
-        availability: new SkillAvailabilityDefinition([Battle]));
+        availability: new SkillAvailabilityDefinition([Battle]),
+        costs: costs);
 
     private static CatalogBattleActor RuntimeCatalogActor(
         string entityId,
         string instanceId,
         ContentId teamId,
-        IEnumerable<SkillDefinition>? loadout = null)
+        IEnumerable<SkillDefinition>? loadout = null,
+        CombatDefenseProfile? defense = null)
     {
         SkillDefinition[] skills = loadout?.ToArray() ?? [];
         EntityDefinition entity = Entity(
@@ -1427,8 +1479,11 @@ public sealed class CatalogBattleRuntimeTests
             entity.Id,
             teamId,
             Id("hp"),
-            CombatDefenseProfile.Empty,
-            [new BattleResourceState(Id("hp"), 100, 100)]);
+            defense ?? CombatDefenseProfile.Empty,
+            [
+                new BattleResourceState(Id("hp"), 100, 100),
+                new BattleResourceState(Id("sp"), 20, 20)
+            ]);
         return new CatalogBattleActor(entity, state, skills);
     }
 
