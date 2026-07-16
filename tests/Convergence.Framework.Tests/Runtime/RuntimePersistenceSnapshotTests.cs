@@ -48,7 +48,6 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorReferenceSnapshot owner = Reference(baseline.Actors[0]);
         Assert.Throws<ArgumentException>(() => new RuntimePartyRosterSnapshot(
             owner,
-            1,
             hostedEntityRoster: new RuntimeActorReferenceSnapshot[] { null! }));
         Assert.Throws<ArgumentException>(() => new RuntimeKnowledgeSnapshot(
             elementalAffinities: new RuntimeElementalAffinityKnowledgeSnapshot[] { null! }));
@@ -332,7 +331,7 @@ public sealed class RuntimePersistenceSnapshotTests
     public void RuntimeSessionRestoreService_UsesExplicitMigrationSeamAndRejectsMissingPath()
     {
         GameDataCatalog catalog = LoadCatalog();
-        RuntimeSaveGameSnapshot oldSnapshot = CreateSaveSnapshot(contractVersion: 7);
+        RuntimeSaveGameSnapshot oldSnapshot = CreateSaveSnapshot(contractVersion: 8);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
             catalog,
@@ -354,7 +353,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 new RuntimeSaveValidator(),
                 factory,
                 profiles,
-                new RuntimeSaveMigrationService([new FixedMigrationStep(7, 8, migratedSnapshot)]))
+                new RuntimeSaveMigrationService([new FixedMigrationStep(8, 9, migratedSnapshot)]))
             .Restore(oldSnapshot, catalog);
 
         Assert.True(migrated.IsSuccess, string.Join(Environment.NewLine, migrated.Diagnostics.Select(item => item.Message)));
@@ -1039,7 +1038,6 @@ public sealed class RuntimePersistenceSnapshotTests
             "Missing Hosted Entity");
         var malformedPartyRoster = new RuntimePartyRosterSnapshot(
             Reference(frost),
-            frost.Progression.Level,
             activeParty: [Reference(frost)],
             activeHostedEntity: missingHostedEntity,
             hostedEntityRoster: [wrongEmberReference, wrongEmberReference],
@@ -1079,7 +1077,7 @@ public sealed class RuntimePersistenceSnapshotTests
             actors,
             hostContext,
             checkpoints,
-            new RuntimePartyRosterSnapshot(frostRef, 5, activeParty: [frostRef]));
+            new RuntimePartyRosterSnapshot(frostRef, activeParty: [frostRef]));
         actors.Add(CreateActor(RuntimeInstanceId.Parse("ember"), Id("convergence.clean_battle_demo:ember_duelist_demo")));
         hostContext.Add(new KeyValuePair<ContentId, string>(Id("late"), "mutation"));
         checkpoints.Add(new RuntimeCheckpointEntrySnapshot(1, RuntimeCheckpointKind.HostAction, "Late mutation."));
@@ -1108,7 +1106,6 @@ public sealed class RuntimePersistenceSnapshotTests
             actors: [frost, frost],
             partyRoster: new RuntimePartyRosterSnapshot(
                 new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("ghost_owner"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Ghost Owner"),
-                5,
                 activeParty: [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("ghost"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Ghost")],
                 activeHostedEntity: new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("missing_hosted_entity"), Id("convergence.clean_battle_demo:frost_duelist_demo"), "Missing"),
                 hostedEntityRoster: [],
@@ -1169,7 +1166,7 @@ public sealed class RuntimePersistenceSnapshotTests
             baseline.FrameworkVersion,
             baseline.ContentPacks,
             [invalidActor],
-            new RuntimePartyRosterSnapshot(invalidReference, 1, activeParty: [invalidReference]),
+            new RuntimePartyRosterSnapshot(invalidReference, activeParty: [invalidReference]),
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(default, 1)],
                 [
@@ -1332,7 +1329,6 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorReferenceSnapshot wardRef = Reference(ward);
         RuntimePartyRosterSnapshot invalidParty = new(
             frostRef,
-            ownerLevel: 1,
             activeParty: [frostRef, emberRef, frostRef],
             reserveMembers: [emberRef],
             activeHostedEntity: frostRef,
@@ -1508,7 +1504,6 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot[] actors = [owner, activeCompanion, reserve, activeHostedEntity, hostedEntity];
         RuntimePartyRosterSnapshot validParty = new(
             ownerRef,
-            ownerLevel: 40,
             activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
             activeHostedEntity: activeHostedEntityRef,
@@ -1523,7 +1518,6 @@ public sealed class RuntimePersistenceSnapshotTests
 
         RuntimePartyRosterSnapshot invalidParty = new(
             ownerRef,
-            ownerLevel: 40,
             activeParty: [ownerRef, activeCompanionRef],
             reserveMembers: [reserveRef],
             activeHostedEntity: ownerRef,
@@ -1575,7 +1569,6 @@ public sealed class RuntimePersistenceSnapshotTests
             .ToArray();
         RuntimePartyRosterSnapshot party = new(
             mismatches[0],
-            ownerLevel: 40,
             activeParty: [mismatches[1]],
             reserveMembers: [mismatches[2]],
             activeHostedEntity: mismatches[3],
@@ -1632,7 +1625,6 @@ public sealed class RuntimePersistenceSnapshotTests
             actors: [frost, ember, ward, veil],
             partyRoster: new RuntimePartyRosterSnapshot(
                 frostRef,
-                ownerLevel: 1,
                 activeParty: [frostRef],
                 companionRoster: [frostRef, emberRef, wardRef, veilRef]));
 
@@ -1646,6 +1638,63 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Contains(constrainedResult.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeSaveValidationCode.CompanionRosterCapacityExceeded);
         Assert.True(permissiveResult.IsValid, string.Join(Environment.NewLine, permissiveResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_DerivesRosterCapacityFromTheSavedOwnerActor()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeActorSnapshot owner = CreateActor(
+            RuntimeInstanceId.Parse("frost"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot first = CreateActor(
+            RuntimeInstanceId.Parse("first"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimeActorSnapshot second = CreateActor(
+            RuntimeInstanceId.Parse("second"),
+            Id("convergence.clean_battle_demo:frost_duelist_demo"));
+        RuntimeActorSnapshot third = CreateActor(
+            RuntimeInstanceId.Parse("third"),
+            Id("convergence.clean_battle_demo:ember_duelist_demo"),
+            learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimePartyRosterSnapshot party = new(
+            Reference(owner),
+            activeParty: [Reference(owner)],
+            companionRoster:
+            [
+                Reference(first),
+                Reference(second),
+                Reference(third),
+                Reference(owner)
+            ]);
+        var policy = new TieredRosterCapacityPolicy(
+        [
+            new RosterCapacityTier(RuntimeRosterKind.Companion, 1, 3),
+            new RosterCapacityTier(RuntimeRosterKind.Companion, 10, 5)
+        ]);
+        RuntimeSaveGameSnapshot levelFive = CreateSaveSnapshot(
+            actors: [owner, first, second, third],
+            partyRoster: party);
+        RuntimeActorSnapshot grownOwner = CopyActor(
+            owner,
+            progression: new RuntimeProgressionSnapshot(10, 0, 0, 0));
+        RuntimeSaveGameSnapshot levelTen = CreateSaveSnapshot(
+            actors: [grownOwner, first, second, third],
+            partyRoster: party);
+
+        RuntimeSaveValidationResult beforeThreshold =
+            new RuntimeSaveValidator(policy).Validate(levelFive, catalog);
+        RuntimeSaveValidationResult afterThreshold =
+            new RuntimeSaveValidator(policy).Validate(levelTen, catalog);
+
+        Assert.Contains(beforeThreshold.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.CompanionRosterCapacityExceeded);
+        Assert.True(
+            afterThreshold.IsValid,
+            string.Join(
+                Environment.NewLine,
+                afterThreshold.Diagnostics.Select(diagnostic => diagnostic.Message)));
     }
 
     [Fact]
@@ -1672,7 +1721,6 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorReferenceSnapshot ownerRef = Reference(owner);
         RuntimePartyRosterSnapshot party = new(
             ownerRef,
-            ownerLevel: 1,
             activeParty: [ownerRef],
             hostedEntityRoster: [Reference(first), Reference(second), Reference(third), Reference(fourth)]);
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -1732,9 +1780,9 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Theory]
-    [InlineData(6)]
     [InlineData(7)]
-    [InlineData(9)]
+    [InlineData(8)]
+    [InlineData(10)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -1948,7 +1996,6 @@ public sealed class RuntimePersistenceSnapshotTests
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
                 frostRef,
-                5,
                 activeParty: [frostRef],
                 activeHostedEntity: emberRef,
                 hostedEntityRoster: [emberRef],

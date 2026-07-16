@@ -76,6 +76,7 @@ internal sealed class TrainingAnnexNegotiationController
         ArgumentNullException.ThrowIfNull(commands);
 
         NegotiationDefinition negotiation = catalog.GetRequiredNegotiation(TrainingAnnexHostSupport.SteadySampleNegotiation);
+        RuntimeActorSnapshot owner = roster.Player.Actor.State.ToSnapshot();
         IReadOnlyList<TrainingAnnexRuntimeActor> candidates = FindRecruitmentCandidates(negotiation, roster);
         if (candidates.Count == 0)
         {
@@ -134,7 +135,7 @@ internal sealed class TrainingAnnexNegotiationController
             target.Actor.Entity.Id,
             recruitedThisSession.Contains(target.Actor.Entity.Id),
             AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
-            HasOpenCompanionRosterSlot(party),
+            HasOpenCompanionRosterSlot(party, owner),
             target.Actor.Entity.Capabilities.Recruitable));
         if (!recruitment.Applied)
         {
@@ -149,6 +150,7 @@ internal sealed class TrainingAnnexNegotiationController
 
         PartyRosterTransitionResult rosterTransition = _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(
             party,
+            owner,
             TrainingAnnexHostSupport.Reference(target)));
         if (!rosterTransition.Applied)
         {
@@ -211,7 +213,9 @@ internal sealed class TrainingAnnexNegotiationController
             activeOpponentCount: 1,
             contextIds: [],
             isTargetFamiliar: AlreadyOwnedByEntity(party, target.Actor.Entity.Id),
-            hasRecruitmentCapacity: HasOpenCompanionRosterSlot(party),
+            hasRecruitmentCapacity: HasOpenCompanionRosterSlot(
+                party,
+                playerSnapshot),
             currentCurrency: wallet.Balance,
             questions: negotiation.Questions.Select(question => new NegotiationQuestionPrompt(
                 question.Text,
@@ -220,8 +224,12 @@ internal sealed class TrainingAnnexNegotiationController
             demands: negotiation.Demands.Select(MapDemand));
     }
 
-    private bool HasOpenCompanionRosterSlot(RuntimePartyRosterSnapshot party) =>
-        party.CompanionRoster.Count < _rosterCapacity.GetCapacity(RuntimeRosterKind.Companion, party.OwnerLevel);
+    private bool HasOpenCompanionRosterSlot(
+        RuntimePartyRosterSnapshot party,
+        RuntimeActorSnapshot owner) =>
+        party.CompanionRoster.Count < _rosterCapacity.GetCapacity(
+            RuntimeRosterKind.Companion,
+            owner.Progression.Level);
 
     private static bool AlreadyOwnedByEntity(RuntimePartyRosterSnapshot party, ContentId entityId) =>
         party.CompanionRoster.Any(companion => companion.EntityDefinitionId == entityId);

@@ -224,7 +224,6 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorReferenceSnapshot activeReference = Reference(activeHostedEntity);
         return new RuntimePartyRosterSnapshot(
             ownerReference,
-            owner.Progression.Level,
             activeParty: [ownerReference],
             activeHostedEntity: activeReference,
             hostedEntityRoster: [activeReference]);

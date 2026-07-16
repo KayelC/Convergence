@@ -88,7 +88,6 @@ internal sealed class TrainingAnnexPartyController
             .ToArray();
         var snapshot = new RuntimePartyRosterSnapshot(
             player,
-            roster.Player.Level,
             activeParty: [player],
             reserveMembers: reserveMembers,
             activeHostedEntity: activeHostedEntity,
@@ -105,28 +104,45 @@ internal sealed class TrainingAnnexPartyController
     {
         ArgumentNullException.ThrowIfNull(party);
         ArgumentNullException.ThrowIfNull(roster);
+        RuntimeActorSnapshot owner = roster.Player.Actor.State.ToSnapshot();
 
         return operation switch
         {
             TrainingAnnexPartyOperation.SelectActiveHostedEntity => _transitions.SelectActiveHostedEntity(
-                new SelectActiveHostedEntityRequest(party, TrainingAnnexHostSupport.HostedBrambleRunnerInstance)),
+                new SelectActiveHostedEntityRequest(
+                    party,
+                    owner,
+                    TrainingAnnexHostSupport.HostedBrambleRunnerInstance)),
             TrainingAnnexPartyOperation.DeployAshling => _transitions.DeployCompanion(
-                new DeployCompanionRequest(party, TrainingAnnexHostSupport.CompanionAshlingInstance)),
+                new DeployCompanionRequest(
+                    party,
+                    owner,
+                    TrainingAnnexHostSupport.CompanionAshlingInstance)),
             TrainingAnnexPartyOperation.SwapDeployedCompanionToWardShell => _transitions.SwapDeployedCompanion(
                 new SwapDeployedCompanionRequest(
                     party,
+                    owner,
                     TrainingAnnexHostSupport.CompanionAshlingInstance,
                     TrainingAnnexHostSupport.CompanionWardShellInstance)),
-            TrainingAnnexPartyOperation.RecallActiveCompanion => RecallActiveCompanion(party),
+            TrainingAnnexPartyOperation.RecallActiveCompanion => RecallActiveCompanion(
+                party,
+                owner),
             TrainingAnnexPartyOperation.ReplaceWardShellWithBrambleRunner => _transitions.ReplaceCompanion(
                 new ReplaceCompanionRequest(
                     party,
+                    owner,
                     TrainingAnnexHostSupport.CompanionWardShellInstance,
                     FindRosterReference(roster, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance))),
             TrainingAnnexPartyOperation.DismissAshling => _transitions.DismissCompanion(
-                new DismissCompanionRequest(party, TrainingAnnexHostSupport.CompanionAshlingInstance)),
+                new DismissCompanionRequest(
+                    party,
+                    owner,
+                    TrainingAnnexHostSupport.CompanionAshlingInstance)),
             TrainingAnnexPartyOperation.ConsumeBrambleRunner => _transitions.ConsumeCompanion(
-                new ConsumeCompanionRequest(party, TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance)),
+                new ConsumeCompanionRequest(
+                    party,
+                    owner,
+                    TrainingAnnexHostSupport.ReplacementBrambleRunnerInstance)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unsupported party operation.")
         };
     }
@@ -183,7 +199,9 @@ internal sealed class TrainingAnnexPartyController
             cancellationToken).ConfigureAwait(false);
     }
 
-    private PartyRosterTransitionResult RecallActiveCompanion(RuntimePartyRosterSnapshot party)
+    private PartyRosterTransitionResult RecallActiveCompanion(
+        RuntimePartyRosterSnapshot party,
+        RuntimeActorSnapshot owner)
     {
         RuntimeActorReferenceSnapshot? activeCompanion = party.ActiveParty.FirstOrDefault(actor =>
             party.CompanionRoster.Any(companion => companion.InstanceId == actor.InstanceId));
@@ -201,7 +219,8 @@ internal sealed class TrainingAnnexPartyController
                 ]);
         }
 
-        return _transitions.RecallCompanion(new RecallCompanionRequest(party, activeCompanion.InstanceId));
+        return _transitions.RecallCompanion(
+            new RecallCompanionRequest(party, owner, activeCompanion.InstanceId));
     }
 
     private static RuntimeActorReferenceSnapshot FindRosterReference(

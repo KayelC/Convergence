@@ -206,7 +206,6 @@ internal static class GodotSaveCodec
             actorSnapshots,
             new RuntimePartyRosterSnapshot(
                 ownerReference,
-                ownerSnapshot.Progression.Level,
                 activeParty: [ownerReference]),
             new RuntimeInventorySnapshot(),
             new RuntimeEquipmentSnapshot(),

@@ -192,6 +192,7 @@ internal sealed class TrainingAnnexCompendiumController
         CompendiumRecallTransactionResult recall = _compendium.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             partyRoster,
+            owner,
             wallet,
             selectedId.Value,
             instanceId,

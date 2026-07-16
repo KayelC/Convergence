@@ -189,10 +189,10 @@ public sealed class ProgressionPolicyTests
         RuntimeActorReferenceSnapshot second = ActorReference("owned_second");
         RuntimePartyRosterSnapshot[] invalidRosters =
         [
-            new(owner, 1, hostedEntityRoster: [first, first]),
-            new(owner, 1, companionRoster: [first, first]),
-            new(owner, 1, hostedEntityRoster: [first], companionRoster: [first]),
-            new(owner, 1, activeHostedEntity: second, hostedEntityRoster: [first])
+            new(owner, hostedEntityRoster: [first, first]),
+            new(owner, companionRoster: [first, first]),
+            new(owner, hostedEntityRoster: [first], companionRoster: [first]),
+            new(owner, activeHostedEntity: second, hostedEntityRoster: [first])
         ];
 
         for (int index = 0; index < invalidRosters.Length; index++)
@@ -222,7 +222,6 @@ public sealed class ProgressionPolicyTests
         RuntimeActorReferenceSnapshot reference = ActorReference("repeated_actor");
         var roster = new RuntimePartyRosterSnapshot(
             owner,
-            1,
             activeHostedEntity: reference,
             hostedEntityRoster: [reference, reference],
             companionRoster: [reference, reference]);
@@ -858,7 +857,6 @@ public sealed class ProgressionPolicyTests
             activeHostedEntity is null ? null : Reference(activeHostedEntity);
         return new RuntimePartyRosterSnapshot(
             ownerReference,
-            owner.Progression.Level,
             activeParty: [ownerReference],
             activeHostedEntity: activeReference,
             hostedEntityRoster: activeReference is null ? [] : [activeReference]);

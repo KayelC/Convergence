@@ -19,13 +19,14 @@ The D1-D6 design is confirmed and the demonstrated paths are green. The
 [completion code review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 identified remaining integration gaps around roster owner-level
 synchronization, complete live roster validation, capacity-aware high-level
-actor creation/restore, stale prepared growth, and direct pending-skill restore
-validation.
+actor creation/restore, stale prepared growth, direct pending-skill restore
+validation, and the Godot sample restore boundary. Owner-level duplication has
+now been corrected: capacity derives from the current owner actor.
 
 Until those follow-ups are corrected:
 
 - keep party snapshots sourced from validated session state;
-- reconstruct `OwnerLevel` when the owner actor's level changes;
+- supply the current owner actor snapshot to every roster transition;
 - do not use direct high-level creation as proof of an eight-slot move list;
 - apply growth results immediately to the state from which they were
   calculated;
@@ -114,7 +115,10 @@ level. It returns typed diagnostics instead of substituting a fallback actor.
 - the selected Active Hosted Entity;
 - the complete Hosted Entity Roster;
 - the complete Companion Roster;
-- active-party capacity and owner level.
+- active-party capacity.
+
+The roster does not cache the owner's level. Capacity-aware transitions receive
+the current owner actor snapshot and derive the level from its progression.
 
 An Active Hosted Entity remains in `HostedEntityRoster`. A deployed Companion
 remains in `CompanionRoster` while also appearing in `ActiveParty`.
@@ -138,6 +142,7 @@ PartyRosterTransitionResult selected =
     rosterService.SelectActiveHostedEntity(
         new SelectActiveHostedEntityRequest(
             partyRoster,
+            ownerActor.State.ToSnapshot(),
             hostedEntityInstanceId));
 
 if (selected.Applied)
@@ -306,7 +311,7 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v8 includes actors, the canonical party roster, pending
+format. Save contract v9 includes actors, the canonical party roster, pending
 skill choices, and the remaining session modules.
 
 Restore through `RuntimeSessionRestoreService`:
@@ -330,7 +335,7 @@ equipment stat modifiers.
 
 ```mermaid
 flowchart TD
-    Save["Host-deserialized save v8"] --> Validate["Validate complete aggregate"]
+    Save["Host-deserialized save v9"] --> Validate["Validate complete aggregate"]
     Validate --> Profiles["Resolve actor restore profiles"]
     Profiles --> Sources["Restore owned source actors"]
     Sources --> Vessels["Restore and recompose dependent Vessels"]

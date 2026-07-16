@@ -49,7 +49,6 @@ internal static class CleanSaveTestFixture
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
                 frostRef,
-                5,
                 activeParty: [frostRef],
                 activeHostedEntity: emberRef,
                 hostedEntityRoster: [emberRef],

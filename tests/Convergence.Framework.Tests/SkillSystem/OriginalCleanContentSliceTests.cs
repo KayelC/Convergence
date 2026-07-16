@@ -648,13 +648,20 @@ public sealed class OriginalCleanContentSliceTests
             "Owner");
         RuntimePartyRosterSnapshot party = new(
             owner,
-            ownerLevel: 10,
             companionRoster:
             [
                 new RuntimeActorReferenceSnapshot(ashling.InstanceId, ashling.EntityId, ashling.DisplayName),
                 new RuntimeActorReferenceSnapshot(bramble.InstanceId, bramble.EntityId, bramble.DisplayName)
             ]);
         var actorFactory = new CatalogBattleActorFactory(catalog, catalog, new TestInitializationPolicy());
+        RuntimeActorSnapshot ownerActor = actorFactory.Create(
+            new CatalogBattleActorCreationRequest(
+                owner.EntityDefinitionId,
+                owner.InstanceId,
+                Id("player_team"),
+                Level: 10,
+                IsDeployed: false,
+                Id("test_controller"))).RequireActor().State.ToSnapshot();
         var service = new FusionTransactionService(
             actorFactory,
             new PartyRosterTransitionService(new TestRosterCapacityPolicy()));
@@ -663,6 +670,7 @@ public sealed class OriginalCleanContentSliceTests
             plan,
             selection,
             party,
+            ownerActor,
             RuntimeInstanceId.Parse("fused_ward_shell"),
             Id("player_team"),
             Id("test_controller"));
@@ -703,6 +711,7 @@ public sealed class OriginalCleanContentSliceTests
             plan,
             selection,
             duplicateParty,
+            ownerActor,
             RuntimeInstanceId.Parse("second_ward_shell"),
             Id("player_team"),
             Id("test_controller")));

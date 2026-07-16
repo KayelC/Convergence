@@ -188,7 +188,6 @@ internal sealed class CleanSaveDemoHost
             [frost, ember],
             new RuntimePartyRosterSnapshot(
                 frostRef,
-                5,
                 activeParty: [frostRef],
                 activeHostedEntity: emberRef,
                 hostedEntityRoster: [emberRef],
@@ -569,7 +568,6 @@ internal static class CleanSaveJsonCodec
     private static HostPartyRosterDto ToDto(RuntimePartyRosterSnapshot snapshot) =>
         new(
             ToDto(snapshot.Owner),
-            snapshot.OwnerLevel,
             snapshot.ActiveParty.Select(ToDto).ToArray(),
             snapshot.ReserveMembers.Select(ToDto).ToArray(),
             snapshot.ActiveHostedEntity is null ? null : ToDto(snapshot.ActiveHostedEntity),
@@ -580,7 +578,6 @@ internal static class CleanSaveJsonCodec
     private static RuntimePartyRosterSnapshot FromDto(HostPartyRosterDto dto) =>
         new(
             FromDto(dto.Owner),
-            dto.OwnerLevel,
             dto.ActiveParty.Select(FromDto),
             dto.ReserveMembers.Select(FromDto),
             dto.ActiveHostedEntity is null ? null : FromDto(dto.ActiveHostedEntity),
@@ -786,7 +783,7 @@ internal static class CleanSaveJsonCodec
     private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
     private sealed record HostPassiveSkillStateDto(string SkillId, bool IsEnabled);
     private sealed record HostPassiveActivationDto(string SkillId, string EventId, int TriggerIndex, int ActivationCount);
-    private sealed record HostPartyRosterDto(HostReferenceDto Owner, int OwnerLevel, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveHostedEntity, HostReferenceDto[] HostedEntityRoster, HostReferenceDto[] CompanionRoster, int MaxActivePartySize);
+    private sealed record HostPartyRosterDto(HostReferenceDto Owner, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveHostedEntity, HostReferenceDto[] HostedEntityRoster, HostReferenceDto[] CompanionRoster, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
     private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);
     private sealed record HostFieldDto(string LocationId, HostDungeonTraversalDto? DungeonTraversal);

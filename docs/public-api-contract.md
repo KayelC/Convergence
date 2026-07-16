@@ -48,8 +48,9 @@ recorded in `PublicAPI.Unshipped.txt` and reviewed.
 - This is a guarded pre-release contract, not a `1.0` stability promise.
 - Content schema and save-contract compatibility are versioned separately.
 
-Save contract v8 removes the actor restore profile's duplicated Active Hosted
-Entity ID. `RuntimeSessionRestoreService` now derives that dependency from
+Save contract v9 removes the roster's duplicated owner level in addition to
+the actor restore profile's former duplicated Active Hosted Entity ID.
+`RuntimeSessionRestoreService` now derives that dependency from
 `RuntimePartyRosterSnapshot`, restores the owned actor first, and returns a
 normalized aggregate whose derived Vessel profile matches the restored source.
 Pending skill choices and their revision are part of the actor snapshot. A v7

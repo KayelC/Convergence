@@ -644,10 +644,17 @@ Remaining product choices are not defects in this roadmap:
 **Post-completion review:** the source-based review of revision `7aefd87`
 confirmed the D1-D6 direction but found reachable integration gaps in roster
 owner-level authority, live transition validation, high-level move-list
-capacity, stale prepared growth, and direct pending-skill restore validation.
+capacity, stale prepared growth, direct pending-skill restore validation, and
+the Godot sample's aggregate-restore boundary.
 The executable capability matrix therefore records 20 complete, 3 partial, and
 2 deferred capabilities until those follow-ups are corrected. See the
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md).
+
+**M1 correction:** save contract v9 removes `OwnerLevel` from the canonical
+roster. Live transitions receive the current owner actor snapshot, and save
+validation derives capacity from the saved owner actor's progression. The same
+immutable roster therefore observes a level-gated capacity change without
+being reconstructed.
 
 ## Expected File Ownership
 

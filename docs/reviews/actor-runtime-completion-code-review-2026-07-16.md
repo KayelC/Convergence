@@ -89,6 +89,10 @@ level should reject. Save validation does not compare the two values.
 explicit, validated authority derived from the current owner actor. Growth and
 restore must update or derive it atomically.
 
+**Resolution:** corrected. Save contract v9 removes `OwnerLevel`; transition
+requests carry the current owner actor snapshot, and save validation derives
+capacity from the canonical saved owner actor.
+
 ### M2. Live party transitions validate only a subset of party and roster invariants
 
 **Invariant:** every public party transition must reject malformed incoming

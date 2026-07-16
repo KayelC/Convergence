@@ -44,7 +44,6 @@ public sealed class RuntimeActorAffiliationTests
         RuntimeActorReferenceSnapshot hostedReference = Reference(hosted);
         var roster = new RuntimePartyRosterSnapshot(
             ownerReference,
-            ownerLevel: 1,
             activeParty: [ownerReference],
             activeHostedEntity: hostedReference,
             hostedEntityRoster: [hostedReference]);

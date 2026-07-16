@@ -206,6 +206,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
@@ -256,6 +257,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
@@ -281,6 +283,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             new CompendiumStateSnapshot(),
             party,
+            OwnerActor(party),
             wallet,
             default,
             default,
@@ -320,6 +323,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionRequest unavailableRequest = new(
             compendium,
             party,
+            OwnerActor(party),
             emptyWallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("unavailable_recall"),
@@ -329,6 +333,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionRequest freeRequest = new(
             compendium,
             party,
+            OwnerActor(party),
             emptyWallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("free_recall"),
@@ -378,6 +383,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             recalledId,
@@ -413,6 +419,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult full = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
@@ -451,6 +458,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
@@ -501,6 +509,7 @@ public sealed class CompendiumRuntimeServiceTests
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
+            OwnerActor(party),
             wallet,
             context.Entity.Id,
             RuntimeInstanceId.Parse("invalid_recall"),
@@ -768,7 +777,6 @@ public sealed class CompendiumRuntimeServiceTests
                 RuntimeInstanceId.Parse("owner"),
                 Id("test.pack:owner"),
                 "Owner"),
-            ownerLevel: 10,
             activeParty:
             [
                 new RuntimeActorReferenceSnapshot(
@@ -777,6 +785,27 @@ public sealed class CompendiumRuntimeServiceTests
                     "Owner")
             ],
             companionRoster: companionRoster);
+
+    private static RuntimeActorSnapshot OwnerActor(RuntimePartyRosterSnapshot party) =>
+        new(
+            new RuntimeActorIdentitySnapshot(
+                party.Owner.InstanceId,
+                party.Owner.EntityDefinitionId,
+                Id("independent_actor"),
+                party.Owner.DisplayName),
+            new RuntimeActorAffiliationSnapshot(
+                Id("player_controller"),
+                Id("player_team")),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
+            new RuntimeProgressionSnapshot(10, 0, 0, 0),
+            [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
+            new RuntimeStatBlockSnapshot(),
+            new RuntimeSkillStateSnapshot(),
+            new RuntimeEquipmentSnapshot(),
+            new RuntimeBattleStatusSnapshot(),
+            new RuntimeBattleActivationSnapshot(),
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 1)],
+            Id("hp"));
 
     private static RuntimeActorReferenceSnapshot Reference(CatalogBattleActor actor) =>
         new(actor.State.InstanceId, actor.Entity.Id, actor.Entity.DisplayName);
@@ -795,7 +824,6 @@ public sealed class CompendiumRuntimeServiceTests
             "Other Actor");
         return new RuntimePartyRosterSnapshot(
             location == PartyReferenceLocation.Owner ? collision : owner,
-            ownerLevel: 10,
             activeParty: location == PartyReferenceLocation.ActiveParty
                 ? [owner, collision]
                 : location == PartyReferenceLocation.Owner

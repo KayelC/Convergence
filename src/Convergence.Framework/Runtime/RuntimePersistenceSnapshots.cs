@@ -259,7 +259,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 8;
+    public const int CurrentContractVersion = 9;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -923,22 +923,33 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 Path: "$.partyRoster.activeParty"));
         }
 
-        int companionCapacity = rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.Companion, partyRoster.OwnerLevel);
-        if (partyRoster.CompanionRoster.Count > companionCapacity)
+        actors.TryGetValue(
+            partyRoster.Owner.InstanceId,
+            out RuntimeActorSnapshot? ownerActor);
+        if (ownerActor is not null)
         {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.CompanionRosterCapacityExceeded,
-                $"Companion roster has {partyRoster.CompanionRoster.Count} entries, exceeding the capacity of {companionCapacity}.",
-                Path: "$.partyRoster.companionRoster"));
-        }
+            int ownerLevel = ownerActor.Progression.Level;
+            int companionCapacity = rosterCapacityPolicy.GetCapacity(
+                RuntimeRosterKind.Companion,
+                ownerLevel);
+            if (partyRoster.CompanionRoster.Count > companionCapacity)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.CompanionRosterCapacityExceeded,
+                    $"Companion roster has {partyRoster.CompanionRoster.Count} entries, exceeding the capacity of {companionCapacity}.",
+                    Path: "$.partyRoster.companionRoster"));
+            }
 
-        int hostedEntityCapacity = rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, partyRoster.OwnerLevel);
-        if (partyRoster.HostedEntityRoster.Count > hostedEntityCapacity)
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded,
-                $"Hosted entity roster has {partyRoster.HostedEntityRoster.Count} entries, exceeding the capacity of {hostedEntityCapacity}.",
-                Path: "$.partyRoster.hostedEntityRoster"));
+            int hostedEntityCapacity = rosterCapacityPolicy.GetCapacity(
+                RuntimeRosterKind.HostedEntity,
+                ownerLevel);
+            if (partyRoster.HostedEntityRoster.Count > hostedEntityCapacity)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.HostedEntityRosterCapacityExceeded,
+                    $"Hosted entity roster has {partyRoster.HostedEntityRoster.Count} entries, exceeding the capacity of {hostedEntityCapacity}.",
+                    Path: "$.partyRoster.hostedEntityRoster"));
+            }
         }
 
         ValidateActorReferenceList(partyRoster.ActiveParty, actors, diagnostics, "$.partyRoster.activeParty");

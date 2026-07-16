@@ -54,7 +54,6 @@ public sealed record RuntimePartyRosterSnapshot
 {
     public RuntimePartyRosterSnapshot(
         RuntimeActorReferenceSnapshot owner,
-        int ownerLevel,
         IEnumerable<RuntimeActorReferenceSnapshot>? activeParty = null,
         IEnumerable<RuntimeActorReferenceSnapshot>? reserveMembers = null,
         RuntimeActorReferenceSnapshot? activeHostedEntity = null,
@@ -62,17 +61,12 @@ public sealed record RuntimePartyRosterSnapshot
         IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null,
         int maxActivePartySize = 4)
     {
-        if (ownerLevel <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ownerLevel), "Owner level must be positive.");
-        }
         if (maxActivePartySize <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(maxActivePartySize), "Maximum active party size must be positive.");
         }
 
         Owner = owner ?? throw new ArgumentNullException(nameof(owner));
-        OwnerLevel = ownerLevel;
         ActiveParty = RuntimeSnapshotCollections.List(activeParty);
         ReserveMembers = RuntimeSnapshotCollections.List(reserveMembers);
         ActiveHostedEntity = activeHostedEntity;
@@ -82,7 +76,6 @@ public sealed record RuntimePartyRosterSnapshot
     }
 
     public RuntimeActorReferenceSnapshot Owner { get; }
-    public int OwnerLevel { get; }
     public IReadOnlyList<RuntimeActorReferenceSnapshot> ActiveParty { get; }
     public IReadOnlyList<RuntimeActorReferenceSnapshot> ReserveMembers { get; }
     public RuntimeActorReferenceSnapshot? ActiveHostedEntity { get; }
@@ -99,7 +92,6 @@ public sealed record RuntimePartyRosterSnapshot
         IEnumerable<RuntimeActorReferenceSnapshot>? companionRoster = null) =>
         new(
             Owner,
-            OwnerLevel,
             activeParty ?? ActiveParty,
             reserveMembers ?? ReserveMembers,
             replaceActiveHostedEntity ? activeHostedEntity : ActiveHostedEntity,
@@ -215,20 +207,65 @@ public sealed class TieredRosterCapacityPolicy : IRosterCapacityPolicy
     }
 }
 
-public sealed record AddPartyMemberRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeActorReferenceSnapshot Member);
-public sealed record SwapPartyMemberRequest(RuntimePartyRosterSnapshot Snapshot, int ActiveIndex, int ReserveIndex);
-public sealed record AddCompanionToRosterRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeActorReferenceSnapshot Companion);
-public sealed record AddHostedEntityToRosterRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeActorReferenceSnapshot HostedEntity);
-public sealed record DeployCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId CompanionInstanceId);
-public sealed record SwapDeployedCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId ActiveCompanionInstanceId, RuntimeInstanceId StandbyCompanionInstanceId);
-public sealed record RecallCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId CompanionInstanceId);
-public sealed record DismissCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId CompanionInstanceId);
-public sealed record ReplaceCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId OldCompanionInstanceId, RuntimeActorReferenceSnapshot NewCompanion);
-public sealed record ConsumeCompanionRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId CompanionInstanceId);
-public sealed record SelectActiveHostedEntityRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId HostedEntityInstanceId);
-public sealed record ClearActiveHostedEntityRequest(RuntimePartyRosterSnapshot Snapshot);
-public sealed record ConsumeHostedEntityRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId HostedEntityInstanceId);
-public sealed record ReplaceHostedEntityRequest(RuntimePartyRosterSnapshot Snapshot, RuntimeInstanceId OldHostedEntityInstanceId, RuntimeActorReferenceSnapshot NewHostedEntity);
+public sealed record AddPartyMemberRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeActorReferenceSnapshot Member);
+public sealed record SwapPartyMemberRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    int ActiveIndex,
+    int ReserveIndex);
+public sealed record AddCompanionToRosterRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeActorReferenceSnapshot Companion);
+public sealed record AddHostedEntityToRosterRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeActorReferenceSnapshot HostedEntity);
+public sealed record DeployCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId CompanionInstanceId);
+public sealed record SwapDeployedCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId ActiveCompanionInstanceId,
+    RuntimeInstanceId StandbyCompanionInstanceId);
+public sealed record RecallCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId CompanionInstanceId);
+public sealed record DismissCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId CompanionInstanceId);
+public sealed record ReplaceCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId OldCompanionInstanceId,
+    RuntimeActorReferenceSnapshot NewCompanion);
+public sealed record ConsumeCompanionRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId CompanionInstanceId);
+public sealed record SelectActiveHostedEntityRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId HostedEntityInstanceId);
+public sealed record ClearActiveHostedEntityRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor);
+public sealed record ConsumeHostedEntityRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId HostedEntityInstanceId);
+public sealed record ReplaceHostedEntityRequest(
+    RuntimePartyRosterSnapshot Snapshot,
+    RuntimeActorSnapshot OwnerActor,
+    RuntimeInstanceId OldHostedEntityInstanceId,
+    RuntimeActorReferenceSnapshot NewHostedEntity);
 
 public interface IPartyRosterTransitionService
 {
@@ -261,7 +298,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (Contains(before.ActiveParty, request.Member.InstanceId) || Contains(before.ReserveMembers, request.Member.InstanceId))
         {
             return Rejected(before, PartyRosterTransitionCode.DuplicateOwned, "Party member is already present.", request.Member.InstanceId);
@@ -297,7 +334,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (request.ActiveIndex < 0 || request.ActiveIndex >= before.ActiveParty.Count)
         {
             return Rejected(before, PartyRosterTransitionCode.ActiveNotFound, "Active party index is out of range.");
@@ -320,7 +357,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (Contains(before.ActiveParty, request.Companion.InstanceId) || Contains(before.CompanionRoster, request.Companion.InstanceId))
         {
             return Rejected(before, PartyRosterTransitionCode.DuplicateOwned, "Companion is already present.", request.Companion.InstanceId);
@@ -335,7 +372,9 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
         }
 
         RuntimeActorReferenceSnapshot[] companionRoster = before.CompanionRoster.Append(request.Companion).ToArray();
-        if (companionRoster.Length > _rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.Companion, before.OwnerLevel))
+        if (companionRoster.Length > _rosterCapacityPolicy.GetCapacity(
+                RuntimeRosterKind.Companion,
+                request.OwnerActor.Progression.Level))
         {
             return Rejected(before, PartyRosterTransitionCode.RosterFull, "Companion roster is full.", request.Companion.InstanceId);
         }
@@ -347,7 +386,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (Contains(before.HostedEntityRoster, request.HostedEntity.InstanceId))
         {
             return Rejected(
@@ -366,7 +405,9 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
         }
 
         RuntimeActorReferenceSnapshot[] hostedEntityRoster = before.HostedEntityRoster.Append(request.HostedEntity).ToArray();
-        if (hostedEntityRoster.Length > _rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, before.OwnerLevel))
+        if (hostedEntityRoster.Length > _rosterCapacityPolicy.GetCapacity(
+                RuntimeRosterKind.HostedEntity,
+                request.OwnerActor.Progression.Level))
         {
             return Rejected(
                 before,
@@ -382,7 +423,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         RuntimeActorReferenceSnapshot? companion = Find(before.CompanionRoster, request.CompanionInstanceId);
         if (companion is null)
         {
@@ -404,7 +445,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (!Contains(before.CompanionRoster, request.ActiveCompanionInstanceId))
         {
             return Rejected(
@@ -439,7 +480,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (!Contains(before.CompanionRoster, request.CompanionInstanceId))
         {
             return Rejected(
@@ -464,7 +505,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (!Contains(before.CompanionRoster, request.CompanionInstanceId))
         {
             return Rejected(before, PartyRosterTransitionCode.NotOwned, "Companion is not owned.", request.CompanionInstanceId);
@@ -480,7 +521,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (!Contains(before.CompanionRoster, request.OldCompanionInstanceId))
         {
             return Rejected(
@@ -509,7 +550,9 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
         RuntimeActorReferenceSnapshot[] companionRoster = before.CompanionRoster
             .Select(actor => actor.InstanceId == request.OldCompanionInstanceId ? request.NewCompanion : actor)
             .ToArray();
-        if (companionRoster.Length > _rosterCapacityPolicy.GetCapacity(RuntimeRosterKind.Companion, before.OwnerLevel))
+        if (companionRoster.Length > _rosterCapacityPolicy.GetCapacity(
+                RuntimeRosterKind.Companion,
+                request.OwnerActor.Progression.Level))
         {
             return Rejected(before, PartyRosterTransitionCode.RosterFull, "Companion roster is full.", request.NewCompanion.InstanceId);
         }
@@ -521,7 +564,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (!Contains(before.CompanionRoster, request.CompanionInstanceId))
         {
             return Rejected(
@@ -541,7 +584,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         RuntimeActorReferenceSnapshot? selected = Find(
             before.HostedEntityRoster,
             request.HostedEntityInstanceId);
@@ -573,7 +616,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         if (before.ActiveHostedEntity is null)
         {
             return Rejected(
@@ -593,7 +636,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         bool activeMatch = before.ActiveHostedEntity?.InstanceId == request.HostedEntityInstanceId;
         if (!Contains(before.HostedEntityRoster, request.HostedEntityInstanceId))
         {
@@ -611,7 +654,7 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
     {
         ArgumentNullException.ThrowIfNull(request);
         RuntimePartyRosterSnapshot before = request.Snapshot;
-        if (RejectInvalid(before) is { } invalid) return invalid;
+        if (RejectInvalid(before, request.OwnerActor) is { } invalid) return invalid;
         bool activeMatch = before.ActiveHostedEntity?.InstanceId == request.OldHostedEntityInstanceId;
         int rosterIndex = IndexOf(before.HostedEntityRoster, request.OldHostedEntityInstanceId);
         if (rosterIndex < 0)
@@ -660,8 +703,21 @@ public sealed class PartyRosterTransitionService : IPartyRosterTransitionService
             before,
             diagnostics: [new PartyRosterTransitionDiagnostic(code, message, subjectInstanceId)]);
 
-    private static PartyRosterTransitionResult? RejectInvalid(RuntimePartyRosterSnapshot snapshot)
+    private static PartyRosterTransitionResult? RejectInvalid(
+        RuntimePartyRosterSnapshot snapshot,
+        RuntimeActorSnapshot ownerActor)
     {
+        ArgumentNullException.ThrowIfNull(ownerActor);
+        if (snapshot.Owner.InstanceId != ownerActor.Identity.InstanceId ||
+            snapshot.Owner.EntityDefinitionId != ownerActor.Identity.EntityDefinitionId)
+        {
+            return Rejected(
+                snapshot,
+                PartyRosterTransitionCode.InvalidSnapshot,
+                "Party roster owner does not match the supplied current owner actor.",
+                snapshot.Owner.InstanceId);
+        }
+
         RuntimePartyRosterInvariantDiagnostic? first =
             RuntimePartyRosterInvariantRules.Validate(snapshot).FirstOrDefault();
         return first is null

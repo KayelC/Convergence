@@ -513,7 +513,7 @@ public sealed class BattleActionExecutorTests
         BattleActionExecutor executor = Executor(escapeRules: [new(escapeRule, new AlwaysEscapeRule())]);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
-        RuntimePartyRosterSnapshot roster = PartyRoster();
+        RuntimePartyRosterSnapshot roster = PartyRoster(actor);
 
         BattleActionExecutionResult analyze = await Execute(
             executor,
@@ -671,11 +671,16 @@ public sealed class BattleActionExecutorTests
             false,
             new TargetCountDefinition(1, 1));
 
-    private static RuntimePartyRosterSnapshot PartyRoster() =>
+    private static RuntimePartyRosterSnapshot PartyRoster(RuntimeActorState owner) =>
         new(
-            new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero"),
-            10,
-            [new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("actor:hero"), Id("hero"), "Hero")],
+            new RuntimeActorReferenceSnapshot(
+                owner.InstanceId,
+                owner.EntityId,
+                owner.Identity.DisplayName),
+            [new RuntimeActorReferenceSnapshot(
+                owner.InstanceId,
+                owner.EntityId,
+                owner.Identity.DisplayName)],
             companionRoster:
             [
                 new RuntimeActorReferenceSnapshot(RuntimeInstanceId.Parse("companion:glow_wisp"), Id("glow_wisp"), "Glow Wisp")

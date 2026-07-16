@@ -3699,7 +3699,6 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 Assert.Single(actors, actor => actor.Identity.InstanceId == playerId));
             RuntimePartyRosterSnapshot party = new(
                 playerReference,
-                snapshot.PartyRoster.OwnerLevel,
                 activeParty: snapshot.PartyRoster.ActiveParty.Select(reference =>
                     reference.InstanceId == playerId ? playerReference : reference),
                 reserveMembers: snapshot.PartyRoster.ReserveMembers,
@@ -3741,7 +3740,6 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     actor.Identity.InstanceId == RuntimeInstanceId.Parse("enemy_ashling")));
             RuntimePartyRosterSnapshot corruptedParty = new(
                 snapshot.PartyRoster.Owner,
-                snapshot.PartyRoster.OwnerLevel,
                 activeParty: snapshot.PartyRoster.ActiveParty,
                 reserveMembers: [enemyReference],
                 maxActivePartySize: snapshot.PartyRoster.MaxActivePartySize);

@@ -491,13 +491,26 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     BattleActionKind.Pass,
                     turnConsumption: ActionTurnConsumption.Pass),
                 HostedEntitySelectBattleActionCommand hostedEntity => AssessPartyRoster(request, hostedEntity.Kind, _partyRoster.SelectActiveHostedEntity(
-                    new SelectActiveHostedEntityRequest(hostedEntity.Snapshot, hostedEntity.HostedEntityInstanceId))),
+                    new SelectActiveHostedEntityRequest(
+                        hostedEntity.Snapshot,
+                        request.Actor.ToSnapshot(),
+                        hostedEntity.HostedEntityInstanceId))),
                 CompanionDeployBattleActionCommand deploy => AssessPartyRoster(request, deploy.Kind, _partyRoster.DeployCompanion(
-                    new DeployCompanionRequest(deploy.Snapshot, deploy.CompanionInstanceId))),
+                    new DeployCompanionRequest(
+                        deploy.Snapshot,
+                        request.Actor.ToSnapshot(),
+                        deploy.CompanionInstanceId))),
                 CompanionRecallBattleActionCommand returned => AssessPartyRoster(request, returned.Kind, _partyRoster.RecallCompanion(
-                    new RecallCompanionRequest(returned.Snapshot, returned.CompanionInstanceId))),
+                    new RecallCompanionRequest(
+                        returned.Snapshot,
+                        request.Actor.ToSnapshot(),
+                        returned.CompanionInstanceId))),
                 CompanionSwapBattleActionCommand swap => AssessPartyRoster(request, swap.Kind, _partyRoster.SwapDeployedCompanion(
-                    new SwapDeployedCompanionRequest(swap.Snapshot, swap.ActiveCompanionInstanceId, swap.StandbyCompanionInstanceId))),
+                    new SwapDeployedCompanionRequest(
+                        swap.Snapshot,
+                        request.Actor.ToSnapshot(),
+                        swap.ActiveCompanionInstanceId,
+                        swap.StandbyCompanionInstanceId))),
                 HostMediatedBattleActionCommand mediated => CreateAssessment(
                     request,
                     mediated.Kind,

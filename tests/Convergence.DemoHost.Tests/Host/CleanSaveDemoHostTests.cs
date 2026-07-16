@@ -19,6 +19,8 @@ public sealed class CleanSaveDemoHostTests
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(json);
 
         Assert.Contains("\"contractVersion\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"ownerLevel\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(9, restored.ContractVersion);
         Assert.Equal(snapshot.ContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.FrameworkVersion, restored.FrameworkVersion);
         Assert.Equal(snapshot.Actors.Select(actor => actor.Identity.InstanceId), restored.Actors.Select(actor => actor.Identity.InstanceId));

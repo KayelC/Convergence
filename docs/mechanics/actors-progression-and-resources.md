@@ -210,7 +210,7 @@ queue.
 
 ## Save And Restore
 
-**Framework rule:** save contract v8 persists complete source actor progression,
+**Framework rule:** save contract v9 persists complete source actor progression,
 move lists, pending choices, the canonical party roster, and the other selected
 session modules.
 

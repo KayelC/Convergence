@@ -90,6 +90,7 @@ public sealed record CompendiumRecallTransactionRequest
     public CompendiumRecallTransactionRequest(
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
+        RuntimeActorSnapshot partyOwner,
         RuntimeWalletSnapshot wallet,
         ContentId entityId,
         RuntimeInstanceId recalledInstanceId,
@@ -105,6 +106,7 @@ public sealed record CompendiumRecallTransactionRequest
 
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
+        PartyOwner = partyOwner ?? throw new ArgumentNullException(nameof(partyOwner));
         Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
         EntityId = entityId;
         RecalledInstanceId = recalledInstanceId;
@@ -116,6 +118,7 @@ public sealed record CompendiumRecallTransactionRequest
 
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimePartyRosterSnapshot PartyRoster { get; }
+    public RuntimeActorSnapshot PartyOwner { get; }
     public RuntimeWalletSnapshot Wallet { get; }
     public ContentId EntityId { get; }
     public RuntimeInstanceId RecalledInstanceId { get; }
@@ -385,9 +388,15 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         PartyRosterTransitionResult placement = request.RosterKind switch
         {
             CompendiumRecallRosterKind.Companion => _partyRoster.AddCompanionToRoster(
-                new AddCompanionToRosterRequest(request.PartyRoster, recalledReference)),
+                new AddCompanionToRosterRequest(
+                    request.PartyRoster,
+                    request.PartyOwner,
+                    recalledReference)),
             CompendiumRecallRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(
-                new AddHostedEntityToRosterRequest(request.PartyRoster, recalledReference)),
+                new AddHostedEntityToRosterRequest(
+                    request.PartyRoster,
+                    request.PartyOwner,
+                    recalledReference)),
             _ => throw new ArgumentOutOfRangeException(nameof(request), "Unknown Compendium recall roster kind.")
         };
 

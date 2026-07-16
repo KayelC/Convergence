@@ -36,7 +36,7 @@ const Convergence.Execution.BattleStatStageRange.Minimum = -4 -> int
 const Convergence.Runtime.RuntimeActorNumericDomain.MaximumStatValue = 2147483647 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumBaseResourceValue = 0 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumStatValue = 0 -> decimal
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 8 -> int
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 9 -> int
 const Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.StandardCapacity = 8 -> int
 Convergence.Battle.AilmentResistanceResolver
 Convergence.Battle.CombatDefenseProfile
@@ -3871,10 +3871,11 @@ Convergence.Fusion.CompendiumRecallTransactionRequest.<Clone>$() -> Convergence.
 Convergence.Fusion.CompendiumRecallTransactionRequest.BasePrice.get -> int?
 Convergence.Fusion.CompendiumRecallTransactionRequest.CommandAuthorityId.get -> Convergence.Content.ContentId
 Convergence.Fusion.CompendiumRecallTransactionRequest.Compendium.get -> Convergence.Fusion.CompendiumStateSnapshot!
-Convergence.Fusion.CompendiumRecallTransactionRequest.CompendiumRecallTransactionRequest(Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Content.ContentId entityId, Convergence.Runtime.RuntimeInstanceId recalledInstanceId, Convergence.Content.ContentId commandAuthorityId, Convergence.Content.ContentId teamId, Convergence.Fusion.CompendiumRecallRosterKind rosterKind, int? basePrice = null) -> void
+Convergence.Fusion.CompendiumRecallTransactionRequest.CompendiumRecallTransactionRequest(Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeActorSnapshot! partyOwner, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Content.ContentId entityId, Convergence.Runtime.RuntimeInstanceId recalledInstanceId, Convergence.Content.ContentId commandAuthorityId, Convergence.Content.ContentId teamId, Convergence.Fusion.CompendiumRecallRosterKind rosterKind, int? basePrice = null) -> void
 Convergence.Fusion.CompendiumRecallTransactionRequest.EntityId.get -> Convergence.Content.ContentId
 Convergence.Fusion.CompendiumRecallTransactionRequest.Equals(Convergence.Fusion.CompendiumRecallTransactionRequest? other) -> bool
 Convergence.Fusion.CompendiumRecallTransactionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
+Convergence.Fusion.CompendiumRecallTransactionRequest.PartyOwner.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Fusion.CompendiumRecallTransactionRequest.RecalledInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Fusion.CompendiumRecallTransactionRequest.RosterKind.get -> Convergence.Fusion.CompendiumRecallRosterKind
 Convergence.Fusion.CompendiumRecallTransactionRequest.TeamId.get -> Convergence.Content.ContentId
@@ -4413,10 +4414,11 @@ Convergence.Fusion.FusionTransactionPreparationRequest
 Convergence.Fusion.FusionTransactionPreparationRequest.<Clone>$() -> Convergence.Fusion.FusionTransactionPreparationRequest!
 Convergence.Fusion.FusionTransactionPreparationRequest.Equals(Convergence.Fusion.FusionTransactionPreparationRequest? other) -> bool
 Convergence.Fusion.FusionTransactionPreparationRequest.ExistingResultActor.get -> Convergence.Runtime.RuntimeActorSnapshot?
-Convergence.Fusion.FusionTransactionPreparationRequest.FusionTransactionPreparationRequest(Convergence.Fusion.FusionParticipantRosterKind ownerKind, Convergence.Fusion.FusionPlanningResult! plan, Convergence.Inheritance.ValidatedFusionInheritanceSelection! inheritanceSelection, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInstanceId proposedResultInstanceId, Convergence.Content.ContentId resultTeamId, Convergence.Content.ContentId resultCommandAuthorityId, Convergence.Runtime.RuntimeActorSnapshot? existingResultActor = null) -> void
+Convergence.Fusion.FusionTransactionPreparationRequest.FusionTransactionPreparationRequest(Convergence.Fusion.FusionParticipantRosterKind ownerKind, Convergence.Fusion.FusionPlanningResult! plan, Convergence.Inheritance.ValidatedFusionInheritanceSelection! inheritanceSelection, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeActorSnapshot! partyOwner, Convergence.Runtime.RuntimeInstanceId proposedResultInstanceId, Convergence.Content.ContentId resultTeamId, Convergence.Content.ContentId resultCommandAuthorityId, Convergence.Runtime.RuntimeActorSnapshot? existingResultActor = null) -> void
 Convergence.Fusion.FusionTransactionPreparationRequest.InheritanceSelection.get -> Convergence.Inheritance.ValidatedFusionInheritanceSelection!
 Convergence.Fusion.FusionTransactionPreparationRequest.OwnerKind.get -> Convergence.Fusion.FusionParticipantRosterKind
 Convergence.Fusion.FusionTransactionPreparationRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
+Convergence.Fusion.FusionTransactionPreparationRequest.PartyOwner.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Fusion.FusionTransactionPreparationRequest.Plan.get -> Convergence.Fusion.FusionPlanningResult!
 Convergence.Fusion.FusionTransactionPreparationRequest.ProposedResultInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Fusion.FusionTransactionPreparationRequest.ResultCommandAuthorityId.get -> Convergence.Content.ContentId
@@ -4712,27 +4714,33 @@ Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.InstantDeathResistanceK
 Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.InstantDeathResistanceKnowledgeKey(Convergence.Content.ContentId EntityId, Convergence.Content.InstantDeathChannel Channel) -> void
 Convergence.Runtime.AddCompanionToRosterRequest
 Convergence.Runtime.AddCompanionToRosterRequest.<Clone>$() -> Convergence.Runtime.AddCompanionToRosterRequest!
-Convergence.Runtime.AddCompanionToRosterRequest.AddCompanionToRosterRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorReferenceSnapshot! Companion) -> void
+Convergence.Runtime.AddCompanionToRosterRequest.AddCompanionToRosterRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeActorReferenceSnapshot! Companion) -> void
 Convergence.Runtime.AddCompanionToRosterRequest.Companion.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
 Convergence.Runtime.AddCompanionToRosterRequest.Companion.init -> void
-Convergence.Runtime.AddCompanionToRosterRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorReferenceSnapshot! Companion) -> void
+Convergence.Runtime.AddCompanionToRosterRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeActorReferenceSnapshot! Companion) -> void
 Convergence.Runtime.AddCompanionToRosterRequest.Equals(Convergence.Runtime.AddCompanionToRosterRequest? other) -> bool
+Convergence.Runtime.AddCompanionToRosterRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.AddCompanionToRosterRequest.OwnerActor.init -> void
 Convergence.Runtime.AddCompanionToRosterRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.AddCompanionToRosterRequest.Snapshot.init -> void
 Convergence.Runtime.AddHostedEntityToRosterRequest
 Convergence.Runtime.AddHostedEntityToRosterRequest.<Clone>$() -> Convergence.Runtime.AddHostedEntityToRosterRequest!
-Convergence.Runtime.AddHostedEntityToRosterRequest.AddHostedEntityToRosterRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorReferenceSnapshot! HostedEntity) -> void
-Convergence.Runtime.AddHostedEntityToRosterRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorReferenceSnapshot! HostedEntity) -> void
+Convergence.Runtime.AddHostedEntityToRosterRequest.AddHostedEntityToRosterRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeActorReferenceSnapshot! HostedEntity) -> void
+Convergence.Runtime.AddHostedEntityToRosterRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeActorReferenceSnapshot! HostedEntity) -> void
 Convergence.Runtime.AddHostedEntityToRosterRequest.Equals(Convergence.Runtime.AddHostedEntityToRosterRequest? other) -> bool
+Convergence.Runtime.AddHostedEntityToRosterRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.AddHostedEntityToRosterRequest.OwnerActor.init -> void
 Convergence.Runtime.AddHostedEntityToRosterRequest.HostedEntity.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
 Convergence.Runtime.AddHostedEntityToRosterRequest.HostedEntity.init -> void
 Convergence.Runtime.AddHostedEntityToRosterRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.AddHostedEntityToRosterRequest.Snapshot.init -> void
 Convergence.Runtime.AddPartyMemberRequest
 Convergence.Runtime.AddPartyMemberRequest.<Clone>$() -> Convergence.Runtime.AddPartyMemberRequest!
-Convergence.Runtime.AddPartyMemberRequest.AddPartyMemberRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorReferenceSnapshot! Member) -> void
-Convergence.Runtime.AddPartyMemberRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorReferenceSnapshot! Member) -> void
+Convergence.Runtime.AddPartyMemberRequest.AddPartyMemberRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeActorReferenceSnapshot! Member) -> void
+Convergence.Runtime.AddPartyMemberRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeActorReferenceSnapshot! Member) -> void
 Convergence.Runtime.AddPartyMemberRequest.Equals(Convergence.Runtime.AddPartyMemberRequest? other) -> bool
+Convergence.Runtime.AddPartyMemberRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.AddPartyMemberRequest.OwnerActor.init -> void
 Convergence.Runtime.AddPartyMemberRequest.Member.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
 Convergence.Runtime.AddPartyMemberRequest.Member.init -> void
 Convergence.Runtime.AddPartyMemberRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
@@ -4764,25 +4772,31 @@ Convergence.Runtime.CatalogEncounterStartPlanner.CatalogEncounterStartPlanner(Co
 Convergence.Runtime.CatalogEncounterStartPlanner.Plan(Convergence.Runtime.EncounterStartRequest! request) -> Convergence.Runtime.EncounterStartPlanResult!
 Convergence.Runtime.ClearActiveHostedEntityRequest
 Convergence.Runtime.ClearActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.ClearActiveHostedEntityRequest!
-Convergence.Runtime.ClearActiveHostedEntityRequest.ClearActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot) -> void
-Convergence.Runtime.ClearActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot) -> void
+Convergence.Runtime.ClearActiveHostedEntityRequest.ClearActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor) -> void
+Convergence.Runtime.ClearActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor) -> void
 Convergence.Runtime.ClearActiveHostedEntityRequest.Equals(Convergence.Runtime.ClearActiveHostedEntityRequest? other) -> bool
+Convergence.Runtime.ClearActiveHostedEntityRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.ClearActiveHostedEntityRequest.OwnerActor.init -> void
 Convergence.Runtime.ClearActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.ClearActiveHostedEntityRequest.Snapshot.init -> void
 Convergence.Runtime.ConsumeCompanionRequest
 Convergence.Runtime.ConsumeCompanionRequest.<Clone>$() -> Convergence.Runtime.ConsumeCompanionRequest!
 Convergence.Runtime.ConsumeCompanionRequest.CompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.ConsumeCompanionRequest.CompanionInstanceId.init -> void
-Convergence.Runtime.ConsumeCompanionRequest.ConsumeCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
-Convergence.Runtime.ConsumeCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.ConsumeCompanionRequest.ConsumeCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.ConsumeCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
 Convergence.Runtime.ConsumeCompanionRequest.Equals(Convergence.Runtime.ConsumeCompanionRequest? other) -> bool
+Convergence.Runtime.ConsumeCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.ConsumeCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.ConsumeCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.ConsumeCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.ConsumeHostedEntityRequest
 Convergence.Runtime.ConsumeHostedEntityRequest.<Clone>$() -> Convergence.Runtime.ConsumeHostedEntityRequest!
-Convergence.Runtime.ConsumeHostedEntityRequest.ConsumeHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
-Convergence.Runtime.ConsumeHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.ConsumeHostedEntityRequest.ConsumeHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.ConsumeHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
 Convergence.Runtime.ConsumeHostedEntityRequest.Equals(Convergence.Runtime.ConsumeHostedEntityRequest? other) -> bool
+Convergence.Runtime.ConsumeHostedEntityRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.ConsumeHostedEntityRequest.OwnerActor.init -> void
 Convergence.Runtime.ConsumeHostedEntityRequest.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.ConsumeHostedEntityRequest.HostedEntityInstanceId.init -> void
 Convergence.Runtime.ConsumeHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
@@ -4794,18 +4808,22 @@ Convergence.Runtime.DeployCompanionRequest
 Convergence.Runtime.DeployCompanionRequest.<Clone>$() -> Convergence.Runtime.DeployCompanionRequest!
 Convergence.Runtime.DeployCompanionRequest.CompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.DeployCompanionRequest.CompanionInstanceId.init -> void
-Convergence.Runtime.DeployCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
-Convergence.Runtime.DeployCompanionRequest.DeployCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.DeployCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.DeployCompanionRequest.DeployCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
 Convergence.Runtime.DeployCompanionRequest.Equals(Convergence.Runtime.DeployCompanionRequest? other) -> bool
+Convergence.Runtime.DeployCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.DeployCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.DeployCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.DeployCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.DismissCompanionRequest
 Convergence.Runtime.DismissCompanionRequest.<Clone>$() -> Convergence.Runtime.DismissCompanionRequest!
 Convergence.Runtime.DismissCompanionRequest.CompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.DismissCompanionRequest.CompanionInstanceId.init -> void
-Convergence.Runtime.DismissCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
-Convergence.Runtime.DismissCompanionRequest.DismissCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.DismissCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.DismissCompanionRequest.DismissCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
 Convergence.Runtime.DismissCompanionRequest.Equals(Convergence.Runtime.DismissCompanionRequest? other) -> bool
+Convergence.Runtime.DismissCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.DismissCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.DismissCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.DismissCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.EconomyTransactionService
@@ -5232,31 +5250,37 @@ Convergence.Runtime.RecallCompanionRequest
 Convergence.Runtime.RecallCompanionRequest.<Clone>$() -> Convergence.Runtime.RecallCompanionRequest!
 Convergence.Runtime.RecallCompanionRequest.CompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RecallCompanionRequest.CompanionInstanceId.init -> void
-Convergence.Runtime.RecallCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.RecallCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
 Convergence.Runtime.RecallCompanionRequest.Equals(Convergence.Runtime.RecallCompanionRequest? other) -> bool
-Convergence.Runtime.RecallCompanionRequest.RecallCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
+Convergence.Runtime.RecallCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RecallCompanionRequest.OwnerActor.init -> void
+Convergence.Runtime.RecallCompanionRequest.RecallCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId CompanionInstanceId) -> void
 Convergence.Runtime.RecallCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.RecallCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.ReplaceCompanionRequest
 Convergence.Runtime.ReplaceCompanionRequest.<Clone>$() -> Convergence.Runtime.ReplaceCompanionRequest!
-Convergence.Runtime.ReplaceCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId OldCompanionInstanceId, out Convergence.Runtime.RuntimeActorReferenceSnapshot! NewCompanion) -> void
+Convergence.Runtime.ReplaceCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId OldCompanionInstanceId, out Convergence.Runtime.RuntimeActorReferenceSnapshot! NewCompanion) -> void
 Convergence.Runtime.ReplaceCompanionRequest.Equals(Convergence.Runtime.ReplaceCompanionRequest? other) -> bool
+Convergence.Runtime.ReplaceCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.ReplaceCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.ReplaceCompanionRequest.NewCompanion.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
 Convergence.Runtime.ReplaceCompanionRequest.NewCompanion.init -> void
 Convergence.Runtime.ReplaceCompanionRequest.OldCompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.ReplaceCompanionRequest.OldCompanionInstanceId.init -> void
-Convergence.Runtime.ReplaceCompanionRequest.ReplaceCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId OldCompanionInstanceId, Convergence.Runtime.RuntimeActorReferenceSnapshot! NewCompanion) -> void
+Convergence.Runtime.ReplaceCompanionRequest.ReplaceCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId OldCompanionInstanceId, Convergence.Runtime.RuntimeActorReferenceSnapshot! NewCompanion) -> void
 Convergence.Runtime.ReplaceCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.ReplaceCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.ReplaceHostedEntityRequest
 Convergence.Runtime.ReplaceHostedEntityRequest.<Clone>$() -> Convergence.Runtime.ReplaceHostedEntityRequest!
-Convergence.Runtime.ReplaceHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId OldHostedEntityInstanceId, out Convergence.Runtime.RuntimeActorReferenceSnapshot! NewHostedEntity) -> void
+Convergence.Runtime.ReplaceHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId OldHostedEntityInstanceId, out Convergence.Runtime.RuntimeActorReferenceSnapshot! NewHostedEntity) -> void
 Convergence.Runtime.ReplaceHostedEntityRequest.Equals(Convergence.Runtime.ReplaceHostedEntityRequest? other) -> bool
+Convergence.Runtime.ReplaceHostedEntityRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.ReplaceHostedEntityRequest.OwnerActor.init -> void
 Convergence.Runtime.ReplaceHostedEntityRequest.NewHostedEntity.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
 Convergence.Runtime.ReplaceHostedEntityRequest.NewHostedEntity.init -> void
 Convergence.Runtime.ReplaceHostedEntityRequest.OldHostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.ReplaceHostedEntityRequest.OldHostedEntityInstanceId.init -> void
-Convergence.Runtime.ReplaceHostedEntityRequest.ReplaceHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId OldHostedEntityInstanceId, Convergence.Runtime.RuntimeActorReferenceSnapshot! NewHostedEntity) -> void
+Convergence.Runtime.ReplaceHostedEntityRequest.ReplaceHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId OldHostedEntityInstanceId, Convergence.Runtime.RuntimeActorReferenceSnapshot! NewHostedEntity) -> void
 Convergence.Runtime.ReplaceHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.ReplaceHostedEntityRequest.Snapshot.init -> void
 Convergence.Runtime.ReplacePendingSkillCommand
@@ -6013,9 +6037,8 @@ Convergence.Runtime.RuntimePartyRosterSnapshot.Equals(Convergence.Runtime.Runtim
 Convergence.Runtime.RuntimePartyRosterSnapshot.HostedEntityRoster.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorReferenceSnapshot!>!
 Convergence.Runtime.RuntimePartyRosterSnapshot.MaxActivePartySize.get -> int
 Convergence.Runtime.RuntimePartyRosterSnapshot.Owner.get -> Convergence.Runtime.RuntimeActorReferenceSnapshot!
-Convergence.Runtime.RuntimePartyRosterSnapshot.OwnerLevel.get -> int
 Convergence.Runtime.RuntimePartyRosterSnapshot.ReserveMembers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorReferenceSnapshot!>!
-Convergence.Runtime.RuntimePartyRosterSnapshot.RuntimePartyRosterSnapshot(Convergence.Runtime.RuntimeActorReferenceSnapshot! owner, int ownerLevel, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? activeParty = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? reserveMembers = null, Convergence.Runtime.RuntimeActorReferenceSnapshot? activeHostedEntity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? hostedEntityRoster = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? companionRoster = null, int maxActivePartySize = 4) -> void
+Convergence.Runtime.RuntimePartyRosterSnapshot.RuntimePartyRosterSnapshot(Convergence.Runtime.RuntimeActorReferenceSnapshot! owner, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? activeParty = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? reserveMembers = null, Convergence.Runtime.RuntimeActorReferenceSnapshot? activeHostedEntity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? hostedEntityRoster = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? companionRoster = null, int maxActivePartySize = 4) -> void
 Convergence.Runtime.RuntimePartyRosterSnapshot.With(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? activeParty = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? reserveMembers = null, Convergence.Runtime.RuntimeActorReferenceSnapshot? activeHostedEntity = null, bool replaceActiveHostedEntity = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? hostedEntityRoster = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorReferenceSnapshot!>? companionRoster = null) -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.RuntimePassiveActivationSnapshot
 Convergence.Runtime.RuntimePassiveActivationSnapshot.<Clone>$() -> Convergence.Runtime.RuntimePassiveActivationSnapshot!
@@ -6122,7 +6145,7 @@ Convergence.Runtime.RuntimeSaveGameSnapshot.HostContext.get -> System.Collection
 Convergence.Runtime.RuntimeSaveGameSnapshot.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Knowledge.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 8) -> void
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 9) -> void
 Convergence.Runtime.RuntimeSaveGameSnapshot.Session.get -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeSaveKind
@@ -6582,11 +6605,13 @@ Convergence.Runtime.RuntimeWalletSnapshot.Equals(Convergence.Runtime.RuntimeWall
 Convergence.Runtime.RuntimeWalletSnapshot.RuntimeWalletSnapshot(int balance) -> void
 Convergence.Runtime.SelectActiveHostedEntityRequest
 Convergence.Runtime.SelectActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.SelectActiveHostedEntityRequest!
-Convergence.Runtime.SelectActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
 Convergence.Runtime.SelectActiveHostedEntityRequest.Equals(Convergence.Runtime.SelectActiveHostedEntityRequest? other) -> bool
+Convergence.Runtime.SelectActiveHostedEntityRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.SelectActiveHostedEntityRequest.OwnerActor.init -> void
 Convergence.Runtime.SelectActiveHostedEntityRequest.HostedEntityInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.SelectActiveHostedEntityRequest.HostedEntityInstanceId.init -> void
-Convergence.Runtime.SelectActiveHostedEntityRequest.SelectActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
+Convergence.Runtime.SelectActiveHostedEntityRequest.SelectActiveHostedEntityRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
 Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.SelectActiveHostedEntityRequest.Snapshot.init -> void
 Convergence.Runtime.SeparatedRuntimeMoveListCapacityPolicy
@@ -6738,24 +6763,28 @@ Convergence.Runtime.SwapDeployedCompanionRequest
 Convergence.Runtime.SwapDeployedCompanionRequest.<Clone>$() -> Convergence.Runtime.SwapDeployedCompanionRequest!
 Convergence.Runtime.SwapDeployedCompanionRequest.ActiveCompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.SwapDeployedCompanionRequest.ActiveCompanionInstanceId.init -> void
-Convergence.Runtime.SwapDeployedCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId ActiveCompanionInstanceId, out Convergence.Runtime.RuntimeInstanceId StandbyCompanionInstanceId) -> void
+Convergence.Runtime.SwapDeployedCompanionRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId ActiveCompanionInstanceId, out Convergence.Runtime.RuntimeInstanceId StandbyCompanionInstanceId) -> void
 Convergence.Runtime.SwapDeployedCompanionRequest.Equals(Convergence.Runtime.SwapDeployedCompanionRequest? other) -> bool
+Convergence.Runtime.SwapDeployedCompanionRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.SwapDeployedCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.SwapDeployedCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.SwapDeployedCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.SwapDeployedCompanionRequest.StandbyCompanionInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.SwapDeployedCompanionRequest.StandbyCompanionInstanceId.init -> void
-Convergence.Runtime.SwapDeployedCompanionRequest.SwapDeployedCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeInstanceId ActiveCompanionInstanceId, Convergence.Runtime.RuntimeInstanceId StandbyCompanionInstanceId) -> void
+Convergence.Runtime.SwapDeployedCompanionRequest.SwapDeployedCompanionRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeInstanceId ActiveCompanionInstanceId, Convergence.Runtime.RuntimeInstanceId StandbyCompanionInstanceId) -> void
 Convergence.Runtime.SwapPartyMemberRequest
 Convergence.Runtime.SwapPartyMemberRequest.<Clone>$() -> Convergence.Runtime.SwapPartyMemberRequest!
 Convergence.Runtime.SwapPartyMemberRequest.ActiveIndex.get -> int
 Convergence.Runtime.SwapPartyMemberRequest.ActiveIndex.init -> void
-Convergence.Runtime.SwapPartyMemberRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out int ActiveIndex, out int ReserveIndex) -> void
+Convergence.Runtime.SwapPartyMemberRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out int ActiveIndex, out int ReserveIndex) -> void
 Convergence.Runtime.SwapPartyMemberRequest.Equals(Convergence.Runtime.SwapPartyMemberRequest? other) -> bool
+Convergence.Runtime.SwapPartyMemberRequest.OwnerActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.SwapPartyMemberRequest.OwnerActor.init -> void
 Convergence.Runtime.SwapPartyMemberRequest.ReserveIndex.get -> int
 Convergence.Runtime.SwapPartyMemberRequest.ReserveIndex.init -> void
 Convergence.Runtime.SwapPartyMemberRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.SwapPartyMemberRequest.Snapshot.init -> void
-Convergence.Runtime.SwapPartyMemberRequest.SwapPartyMemberRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, int ActiveIndex, int ReserveIndex) -> void
+Convergence.Runtime.SwapPartyMemberRequest.SwapPartyMemberRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, int ActiveIndex, int ReserveIndex) -> void
 Convergence.Runtime.TieredRosterCapacityPolicy
 Convergence.Runtime.TieredRosterCapacityPolicy.GetCapacity(Convergence.Runtime.RuntimeRosterKind rosterKind, int ownerLevel) -> int
 Convergence.Runtime.TieredRosterCapacityPolicy.TieredRosterCapacityPolicy(System.Collections.Generic.IEnumerable<Convergence.Runtime.RosterCapacityTier!>! tiers) -> void

@@ -1654,7 +1654,6 @@ public sealed class CatalogBattleRuntimeTests
             owner.Identity.DisplayName);
         return new RuntimePartyRosterSnapshot(
             ownerReference,
-            owner.Progression.Level,
             activeParty: [ownerReference],
             activeHostedEntity: activeHostedEntity,
             hostedEntityRoster: [activeHostedEntity]);

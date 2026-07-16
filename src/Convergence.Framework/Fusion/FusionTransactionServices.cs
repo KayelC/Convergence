@@ -12,6 +12,7 @@ public sealed record FusionTransactionPreparationRequest
         FusionPlanningResult plan,
         ValidatedFusionInheritanceSelection inheritanceSelection,
         RuntimePartyRosterSnapshot partyRoster,
+        RuntimeActorSnapshot partyOwner,
         RuntimeInstanceId proposedResultInstanceId,
         ContentId resultTeamId,
         ContentId resultCommandAuthorityId,
@@ -26,6 +27,7 @@ public sealed record FusionTransactionPreparationRequest
         Plan = plan ?? throw new ArgumentNullException(nameof(plan));
         InheritanceSelection = inheritanceSelection ?? throw new ArgumentNullException(nameof(inheritanceSelection));
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
+        PartyOwner = partyOwner ?? throw new ArgumentNullException(nameof(partyOwner));
         ProposedResultInstanceId = proposedResultInstanceId;
         ResultTeamId = resultTeamId;
         ResultCommandAuthorityId = resultCommandAuthorityId;
@@ -36,6 +38,7 @@ public sealed record FusionTransactionPreparationRequest
     public FusionPlanningResult Plan { get; }
     public ValidatedFusionInheritanceSelection InheritanceSelection { get; }
     public RuntimePartyRosterSnapshot PartyRoster { get; }
+    public RuntimeActorSnapshot PartyOwner { get; }
     public RuntimeInstanceId ProposedResultInstanceId { get; }
     public ContentId ResultTeamId { get; }
     public ContentId ResultCommandAuthorityId { get; }
@@ -367,7 +370,11 @@ public sealed class FusionTransactionService : IFusionTransactionService
         var transitions = new List<PartyRosterTransitionResult>();
         foreach (RuntimeInstanceId participantId in consumedParticipantIds)
         {
-            PartyRosterTransitionResult consumed = Consume(request.OwnerKind, current, participantId);
+            PartyRosterTransitionResult consumed = Consume(
+                request.OwnerKind,
+                current,
+                request.PartyOwner,
+                participantId);
             transitions.Add(consumed);
             if (!consumed.Applied)
             {
@@ -388,7 +395,11 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 resultInstanceId,
                 preview.EntityId,
                 preview.DisplayName);
-            PartyRosterTransitionResult added = Add(request.OwnerKind, current, resultReference);
+            PartyRosterTransitionResult added = Add(
+                request.OwnerKind,
+                current,
+                request.PartyOwner,
+                resultReference);
             transitions.Add(added);
             if (!added.Applied)
             {
@@ -684,22 +695,28 @@ public sealed class FusionTransactionService : IFusionTransactionService
     private PartyRosterTransitionResult Consume(
         FusionParticipantRosterKind ownerKind,
         RuntimePartyRosterSnapshot snapshot,
+        RuntimeActorSnapshot partyOwner,
         RuntimeInstanceId participantId) =>
         ownerKind switch
         {
-            FusionParticipantRosterKind.Companion => _partyRoster.ConsumeCompanion(new ConsumeCompanionRequest(snapshot, participantId)),
-            FusionParticipantRosterKind.HostedEntity => _partyRoster.ConsumeHostedEntity(new ConsumeHostedEntityRequest(snapshot, participantId)),
+            FusionParticipantRosterKind.Companion => _partyRoster.ConsumeCompanion(
+                new ConsumeCompanionRequest(snapshot, partyOwner, participantId)),
+            FusionParticipantRosterKind.HostedEntity => _partyRoster.ConsumeHostedEntity(
+                new ConsumeHostedEntityRequest(snapshot, partyOwner, participantId)),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 
     private PartyRosterTransitionResult Add(
         FusionParticipantRosterKind ownerKind,
         RuntimePartyRosterSnapshot snapshot,
+        RuntimeActorSnapshot partyOwner,
         RuntimeActorReferenceSnapshot result) =>
         ownerKind switch
         {
-            FusionParticipantRosterKind.Companion => _partyRoster.AddCompanionToRoster(new AddCompanionToRosterRequest(snapshot, result)),
-            FusionParticipantRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(new AddHostedEntityToRosterRequest(snapshot, result)),
+            FusionParticipantRosterKind.Companion => _partyRoster.AddCompanionToRoster(
+                new AddCompanionToRosterRequest(snapshot, partyOwner, result)),
+            FusionParticipantRosterKind.HostedEntity => _partyRoster.AddHostedEntityToRoster(
+                new AddHostedEntityToRosterRequest(snapshot, partyOwner, result)),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind))
         };
 

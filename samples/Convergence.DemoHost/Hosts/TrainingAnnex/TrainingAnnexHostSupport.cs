@@ -366,7 +366,6 @@ internal static class TrainingAnnexHostSupport
             Reference(activeHostedEntity.State.ToSnapshot());
         var partyRoster = new RuntimePartyRosterSnapshot(
             playerReference,
-            player.State.Progression.Level,
             activeParty: [playerReference],
             reserveMembers: [Reference(mentorResult.RequireActor().State.ToSnapshot())],
             activeHostedEntity: activeHostedEntityReference,
@@ -558,7 +557,6 @@ internal static class TrainingAnnexHostSupport
             actors,
             partyRoster ?? new RuntimePartyRosterSnapshot(
                 playerReference,
-                playerSnapshot.Progression.Level,
                 activeParty: [playerReference]),
             inventory ?? new RuntimeInventorySnapshot(),
             new RuntimeEquipmentSnapshot(),

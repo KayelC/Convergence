@@ -18,11 +18,15 @@ The source-based
 confirmed the composition, skill-choice, stage, and save-v8 transaction design.
 It also found unresolved integration gaps:
 
-- `RuntimePartyRosterSnapshot.OwnerLevel` duplicates owner progression;
 - live transition preflight is narrower than aggregate save validation;
 - move-list capacity is not enforced consistently during creation and restore;
 - `LevelGrowthResult` has no stale-source precondition;
-- direct catalog actor restore omits pending-choice catalog/provenance checks.
+- direct catalog actor restore omits pending-choice catalog/provenance checks;
+- the Godot sample bypasses aggregate restoration.
+
+The duplicated roster owner level was removed in the first correction. Live
+transitions now receive the current owner actor, and save validation derives
+capacity from the saved owner actor.
 
 These are tracked as partial capability gaps, not changes to the confirmed
 D1-D6 intended behavior.
@@ -267,9 +271,11 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V8
+## Save Contract V9
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `8`.
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `9`. Version 9 removes the
+roster's duplicated owner-level field; capacity is derived from the canonical
+owner actor instead.
 
 The save aggregate contains:
 

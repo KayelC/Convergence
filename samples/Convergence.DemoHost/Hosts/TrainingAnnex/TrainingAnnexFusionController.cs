@@ -278,6 +278,7 @@ internal sealed class TrainingAnnexFusionController
         ArgumentNullException.ThrowIfNull(transactionService);
         ArgumentNullException.ThrowIfNull(commandSource);
         ArgumentNullException.ThrowIfNull(commands);
+        RuntimeActorSnapshot owner = roster.Player.Actor.State.ToSnapshot();
 
         const string scenarioId = "direct_transaction_commit";
         var repository = new CatalogFusionContentRepository(catalog);
@@ -332,6 +333,7 @@ internal sealed class TrainingAnnexFusionController
                 plan,
                 emptySelection,
                 partyRoster,
+                owner,
                 proposedResultInstanceId,
                 TrainingAnnexHostSupport.PlayerTeam,
                 ContentId.Parse("clean_training_annex")));
@@ -416,6 +418,7 @@ internal sealed class TrainingAnnexFusionController
                 plan,
                 validSelection,
                 partyRoster,
+                owner,
                 proposedResultInstanceId,
                 TrainingAnnexHostSupport.PlayerTeam,
                 ContentId.Parse("clean_training_annex")));

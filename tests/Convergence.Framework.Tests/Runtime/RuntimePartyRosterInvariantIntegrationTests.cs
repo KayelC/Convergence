@@ -17,7 +17,6 @@ public sealed class RuntimePartyRosterInvariantIntegrationTests
         RuntimeActorReferenceSnapshot owner = Reference(vessel);
         var invalidRoster = new RuntimePartyRosterSnapshot(
             owner,
-            ownerLevel: 1,
             activeParty: [owner],
             activeHostedEntity: Reference(hostedEntity));
         RuntimeActorSnapshot before = vessel.ToSnapshot();

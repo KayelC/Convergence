@@ -676,7 +676,6 @@ public sealed class RuntimeSkillProgressionTests
         RuntimeActorReferenceSnapshot sourceReference = Reference(activeHostedEntity);
         return new RuntimePartyRosterSnapshot(
             vesselReference,
-            vessel.Progression.Level,
             activeParty: [vesselReference],
             activeHostedEntity: sourceReference,
             hostedEntityRoster: [sourceReference]);

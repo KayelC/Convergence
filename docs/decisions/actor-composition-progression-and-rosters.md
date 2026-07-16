@@ -96,7 +96,7 @@ learned skills, equipped skills, pending choices, and skill-state revision.
 When it grows or resolves a skill choice, the dependent Vessel profile is
 recomposed in the same transaction.
 
-Runtime save contract v8 stores source actor state and the canonical party
+Runtime save contract v9 stores source actor state and the canonical party
 roster. Aggregate restoration validates the save, restores the Active Hosted
 Entity before its Vessel, recomposes the Vessel, and returns no live session
 when any dependency fails.

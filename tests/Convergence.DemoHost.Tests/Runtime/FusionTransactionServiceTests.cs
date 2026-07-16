@@ -184,13 +184,13 @@ public sealed class FusionTransactionServiceTests
                 selectedSkillIds: null);
             RuntimePartyRosterSnapshot party = new(
                 owner,
-                ownerLevel: 20,
                 companionRoster: [Reference(first), Reference(second)]);
             FusionTransactionAssessment assessment = service.Prepare(new FusionTransactionPreparationRequest(
                 FusionParticipantRosterKind.Companion,
                 plan,
                 selection,
                 party,
+                OwnerActor(party),
                 RuntimeInstanceId.Parse(resultInstanceId),
                 Id("player_team"),
                 Id("test_controller")));
@@ -242,6 +242,7 @@ public sealed class FusionTransactionServiceTests
             malformedPlan,
             context.Selection,
             party,
+            OwnerActor(party),
             RuntimeInstanceId.Parse("duplicate_parent_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -271,6 +272,7 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             context.Selection,
             validOverlap,
+            OwnerActor(validOverlap),
             RuntimeInstanceId.Parse("overlap_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -295,6 +297,7 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             context.Selection,
             mismatchedOverlap,
+            OwnerActor(mismatchedOverlap),
             RuntimeInstanceId.Parse("mismatched_overlap_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -332,7 +335,6 @@ public sealed class FusionTransactionServiceTests
             "Owner");
         RuntimePartyRosterSnapshot party = new(
             owner,
-            ownerLevel: 20,
             companionRoster: [Reference(echo), Reference(context.SecondParent), Reference(sacrifice)]);
         var service = new FusionTransactionService(
             context.ActorFactory,
@@ -343,6 +345,7 @@ public sealed class FusionTransactionServiceTests
             plan,
             selection,
             party,
+            OwnerActor(party),
             RuntimeInstanceId.Parse("sacrificial_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -418,7 +421,6 @@ public sealed class FusionTransactionServiceTests
             "Owner");
         RuntimePartyRosterSnapshot party = new(
             owner,
-            ownerLevel: 20,
             companionRoster: [Reference(target), Reference(catalyst)]);
         RuntimeActorSnapshot initializedTarget = context.ActorFactory.Create(new CatalogBattleActorCreationRequest(
                 target.EntityId,
@@ -444,6 +446,7 @@ public sealed class FusionTransactionServiceTests
             plan,
             selection,
             party,
+            OwnerActor(party),
             target.InstanceId,
             Id("player_team"),
             Id("test_controller")));
@@ -458,6 +461,7 @@ public sealed class FusionTransactionServiceTests
             plan,
             selection,
             party,
+            OwnerActor(party),
             target.InstanceId,
             Id("player_team"),
             Id("test_controller"),
@@ -533,6 +537,7 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             context.Selection,
             party,
+            OwnerActor(party),
             party.Owner.InstanceId,
             Id("player_team"),
             Id("test_controller")));
@@ -562,6 +567,7 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             otherSelection,
             party,
+            OwnerActor(party),
             RuntimeInstanceId.Parse("other_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -585,6 +591,7 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             context.Selection,
             mismatchedParent,
+            OwnerActor(mismatchedParent),
             RuntimeInstanceId.Parse("validated_result"),
             Id("player_team"),
             Id("test_controller")));
@@ -737,9 +744,31 @@ public sealed class FusionTransactionServiceTests
             context.Plan,
             context.Selection,
             party,
+            OwnerActor(party),
             RuntimeInstanceId.Parse(resultInstanceId),
             Id("player_team"),
             Id("test_controller"));
+
+    private static RuntimeActorSnapshot OwnerActor(RuntimePartyRosterSnapshot party) =>
+        new(
+            new RuntimeActorIdentitySnapshot(
+                party.Owner.InstanceId,
+                party.Owner.EntityDefinitionId,
+                Id("independent_actor"),
+                party.Owner.DisplayName),
+            new RuntimeActorAffiliationSnapshot(
+                Id("test_controller"),
+                Id("player_team")),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
+            new RuntimeProgressionSnapshot(20, 0, 0, 0),
+            [new RuntimeResourceSnapshot(Id("hp"), 1, 1)],
+            new RuntimeStatBlockSnapshot(),
+            new RuntimeSkillStateSnapshot(),
+            new RuntimeEquipmentSnapshot(),
+            new RuntimeBattleStatusSnapshot(),
+            new RuntimeBattleActivationSnapshot(),
+            [new KeyValuePair<ContentId, decimal>(Id("hp"), 1)],
+            Id("hp"));
 
     private static RuntimePartyRosterSnapshot Party(
         TransactionContext context,
@@ -755,8 +784,8 @@ public sealed class FusionTransactionServiceTests
             Reference(context.SecondParent)
         ];
         return ownerKind == FusionParticipantRosterKind.Companion
-            ? new RuntimePartyRosterSnapshot(owner, 20, companionRoster: parents)
-            : new RuntimePartyRosterSnapshot(owner, 20, hostedEntityRoster: parents);
+            ? new RuntimePartyRosterSnapshot(owner, companionRoster: parents)
+            : new RuntimePartyRosterSnapshot(owner, hostedEntityRoster: parents);
     }
 
     private static ValidatedFusionInheritanceSelection Selection(

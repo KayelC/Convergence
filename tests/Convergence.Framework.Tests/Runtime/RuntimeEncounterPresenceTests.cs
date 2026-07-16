@@ -19,12 +19,15 @@ public sealed class RuntimeEncounterPresenceTests
         RuntimeActorReferenceSnapshot reserveReference = Reference(reserve);
         var party = new RuntimePartyRosterSnapshot(
             ownerReference,
-            ownerLevel: 1,
             activeParty: [ownerReference],
             reserveMembers: [reserveReference]);
 
         PartyRosterTransitionResult result = new PartyRosterTransitionService().SwapPartyMember(
-            new SwapPartyMemberRequest(party, ActiveIndex: 0, ReserveIndex: 0));
+            new SwapPartyMemberRequest(
+                party,
+                owner.ToSnapshot(),
+                ActiveIndex: 0,
+                ReserveIndex: 0));
 
         Assert.True(result.Applied);
         Assert.Equal(reserveReference, Assert.Single(result.After.ActiveParty));
