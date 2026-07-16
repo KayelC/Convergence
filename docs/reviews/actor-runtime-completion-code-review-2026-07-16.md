@@ -2,6 +2,7 @@
 
 Date: 2026-07-16
 Reviewed revision: `7aefd87`
+Checkpoint 7 re-audit revision: `062a686`
 Scope: actor composition, progression, party/roster authority, stage scaling,
 save v8 restoration, and the Training Annex evidence added by the D1-D6
 roadmap.
@@ -24,6 +25,33 @@ The review traced:
 
 A finding is included only when there is an intended invariant, a reachable
 public path, a concrete consequence, and reproducible source evidence.
+
+## Checkpoint 7 Re-Audit
+
+Checkpoint 7 was re-audited directly from commit `35661bb` and current source
+because its implementation crossed an interrupted task boundary. The audit
+compared the commit diff with the current save validator, migration service,
+aggregate restore service, actor factory, DemoHost codec, Godot codec, and
+focused tests.
+
+The following Checkpoint 7 requirements are present and source-confirmed:
+
+- save contract v8 rejects unsupported versions unless an explicit migration
+  path is supplied;
+- pending skill-choice tokens, unlock metadata, and revisions are persisted;
+- aggregate validation runs before Framework actor restoration;
+- the canonical Active Hosted Entity is derived from the party roster;
+- the Hosted Entity is restored before its dependent Vessel;
+- the Vessel combat profile is recomposed from restored source state;
+- retained passive runtime state survives recomposition;
+- failed aggregate restoration returns diagnostics without a partial session;
+- DemoHost performs host-owned JSON decoding followed by aggregate restore.
+
+The re-audit reconfirmed M1 and L1 below as Checkpoint 7 boundary gaps. It also
+found M5: the real Godot sample does not yet use the same aggregate restore
+boundary. No additional defect was found in migration path selection,
+dependency ordering, pending-choice serialization, passive-state retention, or
+normalized Vessel snapshots.
 
 ## Findings
 
@@ -181,6 +209,50 @@ success.
 revision in the prepared result/request, or move growth calculation inside the
 transaction service so assessment and commit share one state precondition.
 
+### M5. The Godot reference save path bypasses aggregate restoration
+
+**Invariant:** a Godot host should create and expose live actors only after the
+complete save aggregate has passed validation and dependency-ordered
+restoration.
+
+`GodotSaveCodec.DeserializeAndRestore(...)` currently:
+
+1. deserializes its host-owned document;
+2. creates and directly restores each actor through
+   `ICatalogBattleActorFactory`;
+3. constructs a new `RuntimeSaveGameSnapshot`;
+4. validates that aggregate only after the live actor list already exists;
+5. returns both the live actors and the validation result.
+
+It does not call `IRuntimeSessionRestoreService`. It also restores every actor
+with `RuntimeStatSourceKind.Actor`, so the sample cannot demonstrate the
+source-first Vessel restoration contract that Checkpoint 7 introduced.
+
+Evidence:
+
+- [GodotSaveCodec.cs](../../samples/Convergence.GodotHost/Infrastructure/GodotSaveCodec.cs),
+  `DeserializeAndRestore`;
+- [ConvergenceSmokeRoot.cs](../../samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs),
+  the save-smoke call validates the returned snapshot after actors were
+  reconstructed;
+- [RuntimeSessionRestoration.cs](../../src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs),
+  `RuntimeSessionRestoreService`, which already owns the required atomic
+  boundary.
+
+**Reachable path:** a malformed host save can contain an invalid party owner,
+roster reference, or future Vessel dependency while each individual actor is
+otherwise constructible. The codec creates those actors before aggregate
+validation reports the save invalid.
+
+**Consequence:** the reference Godot integration teaches a weaker restore
+pattern than the documented Framework contract and makes partial live state
+available from a rejected aggregate.
+
+**Required correction:** decode the complete host-owned snapshot first, then
+restore it through `IRuntimeSessionRestoreService`. Return live actors and scene
+metadata only on aggregate success, and add a failure-path smoke/contract test
+proving invalid aggregate state exposes no actors.
+
 ### L1. Direct catalog actor restoration omits pending-skill catalog and provenance checks
 
 **Invariant:** a public actor restore result should not contain a pending skill
@@ -234,7 +306,7 @@ No high-severity crash, data-loss-on-normal-path, host-coupling, or arithmetic
 defect was found in the reviewed range. The approved D1-D6 design remains
 sound.
 
-The implementation is not ready to describe as fully complete yet. The four
+The implementation is not ready to describe as fully complete yet. The five
 medium findings affect ordinary framework integration choices, not impossible
 inputs:
 
@@ -242,6 +314,7 @@ inputs:
 - public hosts can construct and transition snapshots;
 - high-level actors are a supported factory path;
 - prepared growth results can outlive their source state.
+- the shipped Godot reference consumer currently bypasses aggregate restore.
 
 Until those corrections are implemented, `progression_and_resources`,
 `party_and_rosters`, and `persistence_snapshots` return to `partial`. Other
