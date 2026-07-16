@@ -244,6 +244,7 @@ public sealed class ProductionCombatRulesetTests
             StandardProgressionIds.Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(StandardProgressionIds.Hp, 100, 100)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             [
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, 10),
@@ -358,6 +359,7 @@ public sealed class ProductionCombatRulesetTests
             StandardProgressionIds.Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(StandardProgressionIds.Hp, 100m, 100m)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             [
                 new KeyValuePair<ContentId, decimal>(
                     StandardProgressionIds.Strength,

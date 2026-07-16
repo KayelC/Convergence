@@ -543,14 +543,13 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 prepared.ResultInstanceId,
                 prepared.ResultTeamId,
                 preview.Level,
+                IsDeployed: false,
                 new RuntimeProgressionSnapshot(
                     preview.Level,
                     preview.Experience,
                     preview.LifetimeExperience,
                     0),
-                prepared.ResultControllerId,
-                RuntimeActorDeployment.Reserve,
-                IsActive: false));
+                prepared.ResultControllerId));
             if (!created.IsSuccess)
             {
                 return created;
@@ -566,7 +565,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
         var resultSnapshot = new RuntimeActorSnapshot(
             baseline.Identity,
             baseline.Ownership,
-            baseline.Deployment,
+            baseline.EncounterPresence,
             new RuntimeProgressionSnapshot(
                 preview.Level,
                 preview.Experience,

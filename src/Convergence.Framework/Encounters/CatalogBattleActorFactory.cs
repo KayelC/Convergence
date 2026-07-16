@@ -12,14 +12,9 @@ public sealed record CatalogBattleActorCreationRequest(
     RuntimeInstanceId InstanceId,
     ContentId TeamId,
     int Level,
+    bool IsDeployed,
     RuntimeProgressionSnapshot? Progression = null,
-    ContentId? ControllerId = null,
-    RuntimeActorDeployment Deployment = RuntimeActorDeployment.Deployed,
-    bool IsActive = true)
-{
-    public RuntimeActorDeployment Deployment { get; init; } =
-        EnumDomain.RequireDefined(Deployment, nameof(Deployment));
-}
+    ContentId? ControllerId = null);
 
 public sealed record CatalogBattleActorRestoreRequest
 {
@@ -132,7 +127,6 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotStatCompositionFailed,
     SnapshotInvalid,
     IdentifierInvalid,
-    InvalidDeployment
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -253,13 +247,6 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             diagnostics.Add(new CatalogBattleActorDiagnostic(
                 CatalogBattleActorDiagnosticCode.IdentifierInvalid,
                 "Runtime actor controller ID cannot be empty.",
-                request.EntityId));
-        }
-        if (!EnumDomain.IsDefined(request.Deployment))
-        {
-            diagnostics.Add(new CatalogBattleActorDiagnostic(
-                CatalogBattleActorDiagnosticCode.InvalidDeployment,
-                $"Runtime actor deployment '{request.Deployment}' is not supported.",
                 request.EntityId));
         }
         if (diagnostics.Count > 0)
@@ -428,11 +415,12 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 initialization.VitalResourceId,
                 CombatDefenseProfile.FromEntityDefinition(entity),
                 initialization.Resources,
-                entity.Stats.Select(pair => new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
-                loadout.Select(skill => skill.Id),
+                new RuntimeEncounterPresenceSnapshot(request.IsDeployed),
+                stats: entity.Stats.Select(pair =>
+                    new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
+                skillIds: loadout.Select(skill => skill.Id),
                 capabilityIds: [],
                 passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive),
-                isActive: request.IsActive,
                 identity: new RuntimeActorIdentitySnapshot(
                     request.InstanceId,
                     entity.Id,
@@ -441,7 +429,6 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 ownership: new RuntimeActorOwnershipSnapshot(
                     request.ControllerId ?? ContentId.Parse("runtime"),
                     request.TeamId),
-                deployment: new RuntimeActorDeploymentSnapshot(request.Deployment, request.IsActive),
                 progression: progression,
                 baseResourceValues: initialization.BaseResourceValues.Select(pair =>
                     new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),

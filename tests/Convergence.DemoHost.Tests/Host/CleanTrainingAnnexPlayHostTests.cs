@@ -4110,7 +4110,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 actor.Identity.DisplayName,
                 actor.Identity.DisplaySubtitle),
             ownership ?? actor.Ownership,
-            actor.Deployment,
+            actor.EncounterPresence,
             actor.Progression,
             actor.Resources,
             actor.Stats,

@@ -219,10 +219,7 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
     {
         cancellationToken.ThrowIfCancellationRequested();
         RuntimeActorState actor = request.Actor.State;
-        RuntimeActorDeployment deployment = recallToRoster
-            ? RuntimeActorDeployment.Reserve
-            : actor.Deployment.Deployment;
-        actor.SetDeployment(deployment, isActive: false);
+        actor.SetEncounterPresence(isDeployed: false);
 
         string message = recallToRoster
             ? $"{actor.InstanceId} was recalled to its roster."
@@ -231,10 +228,9 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             ActionTurnConsumption.Normal,
             [new BattleEncounterEvent(
                 0,
-                BattleEncounterEventKind.DeploymentChanged,
-                new BattleDeploymentChangedEventPayload(
+                BattleEncounterEventKind.EncounterPresenceChanged,
+                new BattleEncounterPresenceChangedEventPayload(
                     actor.InstanceId,
-                    deployment,
                     false,
                     actor.TeamId),
                 message)]);

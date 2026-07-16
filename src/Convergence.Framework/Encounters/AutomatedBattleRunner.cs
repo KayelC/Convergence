@@ -125,7 +125,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         }
 
         RuntimeActorState? target = participants.FirstOrDefault(candidate =>
-            candidate.IsActive &&
+            candidate.IsDeployed &&
             RelationMatches(actor, candidate, targeting.Relation) &&
             (targeting.AllowSelf || targeting.Relation == TargetRelation.Self || candidate.InstanceId != actor.InstanceId) &&
             LifeMatches(candidate, targeting.LifeState));
@@ -144,7 +144,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         {
             TargetingDefinition targeting = skill.Targeting;
             targets = participants.Where(participant =>
-                participant.State.IsActive &&
+                participant.State.IsDeployed &&
                 RelationMatches(actor, participant.State, targeting.Relation) &&
                 (targeting.AllowSelf || targeting.Relation == TargetRelation.Self ||
                     participant.State.InstanceId != actor.InstanceId) &&
@@ -244,7 +244,7 @@ public enum BattleRuntimeEventKind
     ActorDefeated,
     BattleFaulted,
     BattleEnded,
-    DeploymentChanged,
+    EncounterPresenceChanged,
     HostActionRequested
 }
 
@@ -256,7 +256,8 @@ public sealed record BattleRuntimeEvent(
     RuntimeInstanceId? TargetId = null,
     ContentId? SkillId = null,
     decimal? Value = null,
-    BattleTurnEconomySnapshot? TurnEconomyState = null)
+    BattleTurnEconomySnapshot? TurnEconomyState = null,
+    bool? IsDeployed = null)
 {
     public BattleEncounterFaultCode? FaultCode { get; internal init; }
 }
@@ -268,8 +269,7 @@ public sealed record BattleActorFinalSnapshot
         InstanceId = participant.InstanceId;
         EntityId = participant.EntityId;
         TeamId = participant.TeamId;
-        Deployment = participant.State.Deployment.Deployment;
-        IsActive = participant.IsActive;
+        IsDeployed = participant.IsDeployed;
         IsDefeated = participant.IsDefeated;
         Resources = new ReadOnlyDictionary<ContentId, decimal>(
             participant.State.Resources.ToDictionary(resource => resource.ResourceId, resource => resource.Current));
@@ -278,8 +278,7 @@ public sealed record BattleActorFinalSnapshot
     public RuntimeInstanceId InstanceId { get; }
     public ContentId EntityId { get; }
     public ContentId TeamId { get; }
-    public RuntimeActorDeployment Deployment { get; }
-    public bool IsActive { get; }
+    public bool IsDeployed { get; }
     public bool IsDefeated { get; }
     public IReadOnlyDictionary<ContentId, decimal> Resources { get; }
 }
@@ -426,7 +425,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterEventKind.StatusChanged => BattleRuntimeEventKind.StatusChanged,
                 BattleEncounterEventKind.TurnEconomyChanged => BattleRuntimeEventKind.TurnEconomyChanged,
                 BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
-                BattleEncounterEventKind.DeploymentChanged => BattleRuntimeEventKind.DeploymentChanged,
+                BattleEncounterEventKind.EncounterPresenceChanged => BattleRuntimeEventKind.EncounterPresenceChanged,
                 BattleEncounterEventKind.HostActionRequested => BattleRuntimeEventKind.HostActionRequested,
                 BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
                 BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,
@@ -446,7 +445,10 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 battleEvent.TargetId,
                 battleEvent.SourceId,
                 battleEvent.Value,
-                battleEvent.TurnEconomyState)
+                battleEvent.TurnEconomyState,
+                battleEvent.Payload is BattleEncounterPresenceChangedEventPayload presence
+                    ? presence.IsDeployed
+                    : null)
             {
                 FaultCode = battleEvent.FaultCode
             };

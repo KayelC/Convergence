@@ -166,12 +166,14 @@ internal sealed class CleanBattleDemoHost
             ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"),
             RuntimeInstanceId.Parse("frost_duelist"),
             PlayerTeam,
-            5));
+            5,
+            IsDeployed: true));
         CatalogBattleActorCreationResult emberResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
             RuntimeInstanceId.Parse("ember_duelist"),
             EnemyTeam,
-            5));
+            5,
+            IsDeployed: true));
         if (!frostResult.IsSuccess || !emberResult.IsSuccess)
         {
             foreach (CatalogBattleActorDiagnostic diagnostic in frostResult.Diagnostics.Concat(emberResult.Diagnostics))

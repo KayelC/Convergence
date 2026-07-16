@@ -1142,7 +1142,7 @@ public sealed class BattleEncounterRunnerTests
                 new BattleResourceState(Hp, 10, 10),
                 new BattleResourceState(Sp, 5, 5)
             ],
-            isActive: true);
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
         return new BattleEncounterParticipant(state, id);
     }
 

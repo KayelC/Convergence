@@ -22,7 +22,7 @@ public enum BattleEncounterEventKind
     StatusChanged,
     ResourceChanged,
     TurnEconomyChanged,
-    DeploymentChanged,
+    EncounterPresenceChanged,
     ActorDefeated,
     PhaseEnded,
     BattleFaulted,
@@ -155,10 +155,9 @@ public sealed record BattleTurnEconomyChangedEventPayload(
     BattleTurnEconomySnapshot After,
     ActionTurnConsumption Consumption) : BattleEncounterEventPayload;
 
-public sealed record BattleDeploymentChangedEventPayload(
+public sealed record BattleEncounterPresenceChangedEventPayload(
     RuntimeInstanceId ActorId,
-    RuntimeActorDeployment Deployment,
-    bool IsActive,
+    bool IsDeployed,
     ContentId TeamId) : BattleEncounterEventPayload;
 
 public sealed record BattleActorDefeatedEventPayload(
@@ -249,7 +248,7 @@ public sealed record BattleEncounterEvent
         BattleStatusChangedEventPayload value => value.StatusEvent.ActorId,
         BattleResourceChangedEventPayload value => value.SourceActorId,
         BattleTurnEconomyChangedEventPayload value => value.ActorId,
-        BattleDeploymentChangedEventPayload value => value.ActorId,
+        BattleEncounterPresenceChangedEventPayload value => value.ActorId,
         BattleActorDefeatedEventPayload value => value.ActorId,
         BattleFaultedEventPayload value => value.ActorId,
         BattleHostActionRequestedEventPayload value => value.ActorId,
@@ -325,7 +324,7 @@ public sealed record BattleEncounterEvent
             BattleEncounterEventKind.StatusChanged => payload is BattleStatusChangedEventPayload,
             BattleEncounterEventKind.ResourceChanged => payload is BattleResourceChangedEventPayload,
             BattleEncounterEventKind.TurnEconomyChanged => payload is BattleTurnEconomyChangedEventPayload,
-            BattleEncounterEventKind.DeploymentChanged => payload is BattleDeploymentChangedEventPayload,
+            BattleEncounterEventKind.EncounterPresenceChanged => payload is BattleEncounterPresenceChangedEventPayload,
             BattleEncounterEventKind.ActorDefeated => payload is BattleActorDefeatedEventPayload,
             BattleEncounterEventKind.PhaseEnded => payload is BattlePhaseEndedEventPayload,
             BattleEncounterEventKind.BattleFaulted => payload is BattleFaultedEventPayload,

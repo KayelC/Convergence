@@ -67,7 +67,7 @@ public sealed record BattleEncounterParticipantSnapshot
     public RuntimeInstanceId InstanceId => State.Identity.InstanceId;
     public ContentId EntityId => State.Identity.EntityDefinitionId;
     public ContentId TeamId => State.Ownership.TeamId;
-    public bool IsActive => State.Deployment.IsActive;
+    public bool IsDeployed => State.EncounterPresence.IsDeployed;
     public bool IsDefeated => State.Resources
         .Single(resource => resource.ResourceId == State.VitalResourceId)
         .Current <= 0;
@@ -324,7 +324,7 @@ public sealed class LastTeamStandingCompletionPolicy : IBattleEncounterCompletio
     {
         ArgumentNullException.ThrowIfNull(request);
         ContentId[] livingTeams = request.Participants
-            .Where(participant => participant.State.IsActive && !participant.State.IsDefeated)
+            .Where(participant => participant.State.IsDeployed && !participant.State.IsDefeated)
             .Select(participant => participant.TeamId)
             .Distinct()
             .ToArray();
@@ -1312,7 +1312,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         ContentId teamId) =>
         participants
             .Where(participant => participant.TeamId == teamId &&
-                                  participant.State.IsActive &&
+                                  participant.State.IsDeployed &&
                                   !participant.State.IsDefeated)
             .ToArray();
 

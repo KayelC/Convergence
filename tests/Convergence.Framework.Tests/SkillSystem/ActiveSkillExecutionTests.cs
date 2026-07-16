@@ -135,7 +135,8 @@ public sealed class ActiveSkillExecutionTests
             EnemyTeam,
             Hp,
             CombatDefenseProfile.Empty,
-            [new BattleResourceState(Hp, decimal.MaxValue, decimal.MaxValue)]);
+            [new BattleResourceState(Hp, decimal.MaxValue, decimal.MaxValue)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
         SkillDefinition damageSkill = ActiveSkill(
         [
             new DamageEffectDefinition(
@@ -163,7 +164,8 @@ public sealed class ActiveSkillExecutionTests
             EnemyTeam,
             Hp,
             CombatDefenseProfile.Empty,
-            [new BattleResourceState(Hp, halfMaximum, decimal.MaxValue)]);
+            [new BattleResourceState(Hp, halfMaximum, decimal.MaxValue)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
         SkillDefinition recoverySkill = ActiveSkill(
             [new RestoreResourceEffectDefinition(Hp, new PercentMaximumAmountDefinition(100m))]);
         SkillExecutionResult recovery = new SkillExecutor(Services()).Execute(Request(
@@ -192,7 +194,8 @@ public sealed class ActiveSkillExecutionTests
             [
                 new BattleResourceState(Hp, 100m, 100m),
                 new BattleResourceState(Sp, decimal.MaxValue, decimal.MaxValue)
-            ]);
+            ],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
         RuntimeActorState target = Actor("target", EnemyTeam);
         SkillDefinition skill = ActiveSkill(
             [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
@@ -1094,6 +1097,7 @@ public sealed class ActiveSkillExecutionTests
             Hp,
             CombatDefenseProfile.Empty,
             [hp],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             skillIds: skills,
             capabilityIds: capabilities);
 
@@ -1273,6 +1277,7 @@ public sealed class ActiveSkillExecutionTests
             Hp,
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             skillIds: skillIds,
             capabilityIds: capabilityIds);
 

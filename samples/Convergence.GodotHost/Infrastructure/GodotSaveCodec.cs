@@ -15,6 +15,7 @@ internal sealed record GodotSaveActor(
     string EntityId,
     string TeamId,
     int Level,
+    bool IsDeployed,
     IReadOnlyList<GodotSaveResource> Resources);
 
 internal sealed record GodotSaveSceneInstance(string InstanceId, string NodePath);
@@ -60,6 +61,7 @@ internal static class GodotSaveCodec
                 snapshot.Identity.EntityDefinitionId.ToString(),
                 snapshot.Ownership.TeamId.ToString(),
                 snapshot.Progression.Level,
+                snapshot.EncounterPresence.IsDeployed,
                 snapshot.Resources
                     .Select(resource => new GodotSaveResource(
                         resource.ResourceId.ToString(),
@@ -108,7 +110,8 @@ internal static class GodotSaveCodec
                 ContentId.Parse(actorRecord.EntityId),
                 RuntimeInstanceId.Parse(actorRecord.InstanceId),
                 ContentId.Parse(actorRecord.TeamId),
-                actorRecord.Level)).RequireActor();
+                actorRecord.Level,
+                actorRecord.IsDeployed)).RequireActor();
             foreach (GodotSaveResource resource in actorRecord.Resources)
             {
                 ContentId resourceId = ContentId.Parse(resource.Id);

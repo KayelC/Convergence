@@ -57,7 +57,8 @@ public sealed class RuntimeStateSnapshotTests
             Id("team"),
             Id("hp"),
             CombatDefenseProfile.Empty,
-            [new BattleResourceState(Id("hp"), 1m, 1m)]));
+            [new BattleResourceState(Id("hp"), 1m, 1m)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true)));
         Assert.Throws<ArgumentException>(() => new RuntimeActorState(
             RuntimeInstanceId.Parse("actor_1"),
             Id("entity"),
@@ -65,6 +66,7 @@ public sealed class RuntimeStateSnapshotTests
             Id("hp"),
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Id("hp"), 1m, 1m)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             skillIds: [default]));
     }
 
@@ -102,6 +104,7 @@ public sealed class RuntimeStateSnapshotTests
                 ContentId.Parse("hp"),
                 CombatDefenseProfile.Empty,
                 [new BattleResourceState(ContentId.Parse("hp"), 1m, 1m)],
+                new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
                 stats,
                 baseResourceValues: baseResourceValues);
     }
@@ -137,9 +140,8 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(Id("player"), roundTrip.Ownership.ControllerId);
         Assert.Equal(Id("party"), roundTrip.Ownership.TeamId);
         Assert.Equal(RuntimeInstanceId.Parse("save:player_profile"), roundTrip.Ownership.OwnerInstanceId);
-        Assert.Equal(RuntimeActorDeployment.Deployed, roundTrip.Deployment.Deployment);
-        Assert.True(roundTrip.Deployment.IsActive);
-        Assert.True(roundTrip.Deployment.HasSwappedThisTurn);
+        Assert.True(roundTrip.EncounterPresence.IsDeployed);
+        Assert.True(roundTrip.EncounterPresence.HasSwappedThisTurn);
         Assert.Equal(14, roundTrip.Progression.Level);
         Assert.Equal(230, roundTrip.Progression.Experience);
         Assert.Equal(880, roundTrip.Progression.LifetimeExperience);
@@ -434,7 +436,7 @@ public sealed class RuntimeStateSnapshotTests
                 Id("player"),
                 Id("party"),
                 RuntimeInstanceId.Parse("save:player_profile")),
-            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Deployed, IsActive: true, HasSwappedThisTurn: true),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true, HasSwappedThisTurn: true),
             new RuntimeProgressionSnapshot(level: 14, experience: 230, lifetimeExperience: 880, unspentStatPoints: 3),
             resources ??
             [

@@ -1822,12 +1822,11 @@ Convergence.Encounters.BattleActorDefeatedEventPayload.TeamId.get -> Convergence
 Convergence.Encounters.BattleActorDefeatedEventPayload.TeamId.init -> void
 Convergence.Encounters.BattleActorFinalSnapshot
 Convergence.Encounters.BattleActorFinalSnapshot.<Clone>$() -> Convergence.Encounters.BattleActorFinalSnapshot!
-Convergence.Encounters.BattleActorFinalSnapshot.Deployment.get -> Convergence.Runtime.RuntimeActorDeployment
 Convergence.Encounters.BattleActorFinalSnapshot.EntityId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActorFinalSnapshot.Equals(Convergence.Encounters.BattleActorFinalSnapshot? other) -> bool
 Convergence.Encounters.BattleActorFinalSnapshot.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Encounters.BattleActorFinalSnapshot.IsActive.get -> bool
 Convergence.Encounters.BattleActorFinalSnapshot.IsDefeated.get -> bool
+Convergence.Encounters.BattleActorFinalSnapshot.IsDeployed.get -> bool
 Convergence.Encounters.BattleActorFinalSnapshot.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.BattleActorFinalSnapshot.TeamId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActorInitialization
@@ -1855,18 +1854,6 @@ Convergence.Encounters.BattleCommandSelectedEventPayload.Deconstruct(out Converg
 Convergence.Encounters.BattleCommandSelectedEventPayload.Equals(Convergence.Encounters.BattleCommandSelectedEventPayload? other) -> bool
 Convergence.Encounters.BattleCommandSelectedEventPayload.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Encounters.BattleCommandSelectedEventPayload.TargetId.init -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload
-Convergence.Encounters.BattleDeploymentChangedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Encounters.BattleDeploymentChangedEventPayload.ActorId.init -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload.BattleDeploymentChangedEventPayload(Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Runtime.RuntimeActorDeployment Deployment, bool IsActive, Convergence.Content.ContentId TeamId) -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Runtime.RuntimeActorDeployment Deployment, out bool IsActive, out Convergence.Content.ContentId TeamId) -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload.Deployment.get -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Encounters.BattleDeploymentChangedEventPayload.Deployment.init -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload.Equals(Convergence.Encounters.BattleDeploymentChangedEventPayload? other) -> bool
-Convergence.Encounters.BattleDeploymentChangedEventPayload.IsActive.get -> bool
-Convergence.Encounters.BattleDeploymentChangedEventPayload.IsActive.init -> void
-Convergence.Encounters.BattleDeploymentChangedEventPayload.TeamId.get -> Convergence.Content.ContentId
-Convergence.Encounters.BattleDeploymentChangedEventPayload.TeamId.init -> void
 Convergence.Encounters.BattleEffectResolvedEventPayload
 Convergence.Encounters.BattleEffectResolvedEventPayload.BattleEffectResolvedEventPayload(Convergence.Runtime.RuntimeInstanceId SourceActorId, Convergence.Content.ContentId SourceId, Convergence.Execution.EffectExecutionResult! Result) -> void
 Convergence.Encounters.BattleEffectResolvedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId SourceActorId, out Convergence.Content.ContentId SourceId, out Convergence.Execution.EffectExecutionResult! Result) -> void
@@ -1939,8 +1926,8 @@ Convergence.Encounters.BattleEncounterEventKind.BattleFaulted = 19 -> Convergenc
 Convergence.Encounters.BattleEncounterEventKind.BattleStarted = 1 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.CommandPassed = 8 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.CommandSelected = 7 -> Convergence.Encounters.BattleEncounterEventKind
-Convergence.Encounters.BattleEncounterEventKind.DeploymentChanged = 16 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.EffectResolved = 11 -> Convergence.Encounters.BattleEncounterEventKind
+Convergence.Encounters.BattleEncounterEventKind.EncounterPresenceChanged = 16 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.HostActionRequested = 21 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.InitiativeRolled = 2 -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEventKind.PassiveActivated = 12 -> Convergence.Encounters.BattleEncounterEventKind
@@ -2008,10 +1995,20 @@ Convergence.Encounters.BattleEncounterParticipantSnapshot.DisplayName.get -> str
 Convergence.Encounters.BattleEncounterParticipantSnapshot.EntityId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleEncounterParticipantSnapshot.Equals(Convergence.Encounters.BattleEncounterParticipantSnapshot? other) -> bool
 Convergence.Encounters.BattleEncounterParticipantSnapshot.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Encounters.BattleEncounterParticipantSnapshot.IsActive.get -> bool
 Convergence.Encounters.BattleEncounterParticipantSnapshot.IsDefeated.get -> bool
+Convergence.Encounters.BattleEncounterParticipantSnapshot.IsDeployed.get -> bool
 Convergence.Encounters.BattleEncounterParticipantSnapshot.State.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Encounters.BattleEncounterParticipantSnapshot.TeamId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.ActorId.init -> void
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.BattleEncounterPresenceChangedEventPayload(Convergence.Runtime.RuntimeInstanceId ActorId, bool IsDeployed, Convergence.Content.ContentId TeamId) -> void
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId ActorId, out bool IsDeployed, out Convergence.Content.ContentId TeamId) -> void
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.Equals(Convergence.Encounters.BattleEncounterPresenceChangedEventPayload? other) -> bool
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.IsDeployed.get -> bool
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.IsDeployed.init -> void
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.TeamId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.TeamId.init -> void
 Convergence.Encounters.BattleEncounterRequest
 Convergence.Encounters.BattleEncounterRequest.<Clone>$() -> Convergence.Encounters.BattleEncounterRequest!
 Convergence.Encounters.BattleEncounterRequest.BattleEncounterRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterParticipant!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit) -> void
@@ -2217,10 +2214,12 @@ Convergence.Encounters.BattleRuntimeEvent
 Convergence.Encounters.BattleRuntimeEvent.<Clone>$() -> Convergence.Encounters.BattleRuntimeEvent!
 Convergence.Encounters.BattleRuntimeEvent.ActorId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Encounters.BattleRuntimeEvent.ActorId.init -> void
-Convergence.Encounters.BattleRuntimeEvent.BattleRuntimeEvent(int Sequence, Convergence.Encounters.BattleRuntimeEventKind Kind, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, Convergence.Runtime.RuntimeInstanceId? TargetId = null, Convergence.Content.ContentId? SkillId = null, decimal? Value = null, Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState = null) -> void
-Convergence.Encounters.BattleRuntimeEvent.Deconstruct(out int Sequence, out Convergence.Encounters.BattleRuntimeEventKind Kind, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out Convergence.Runtime.RuntimeInstanceId? TargetId, out Convergence.Content.ContentId? SkillId, out decimal? Value, out Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState) -> void
+Convergence.Encounters.BattleRuntimeEvent.BattleRuntimeEvent(int Sequence, Convergence.Encounters.BattleRuntimeEventKind Kind, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, Convergence.Runtime.RuntimeInstanceId? TargetId = null, Convergence.Content.ContentId? SkillId = null, decimal? Value = null, Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState = null, bool? IsDeployed = null) -> void
+Convergence.Encounters.BattleRuntimeEvent.Deconstruct(out int Sequence, out Convergence.Encounters.BattleRuntimeEventKind Kind, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out Convergence.Runtime.RuntimeInstanceId? TargetId, out Convergence.Content.ContentId? SkillId, out decimal? Value, out Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState, out bool? IsDeployed) -> void
 Convergence.Encounters.BattleRuntimeEvent.Equals(Convergence.Encounters.BattleRuntimeEvent? other) -> bool
 Convergence.Encounters.BattleRuntimeEvent.FaultCode.get -> Convergence.Encounters.BattleEncounterFaultCode?
+Convergence.Encounters.BattleRuntimeEvent.IsDeployed.get -> bool?
+Convergence.Encounters.BattleRuntimeEvent.IsDeployed.init -> void
 Convergence.Encounters.BattleRuntimeEvent.Kind.get -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEvent.Kind.init -> void
 Convergence.Encounters.BattleRuntimeEvent.Message.get -> string!
@@ -2241,8 +2240,8 @@ Convergence.Encounters.BattleRuntimeEventKind.ActorDefeated = 12 -> Convergence.
 Convergence.Encounters.BattleRuntimeEventKind.BattleEnded = 14 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.BattleFaulted = 13 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.BattleStarted = 1 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.DeploymentChanged = 15 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.EffectResolved = 7 -> Convergence.Encounters.BattleRuntimeEventKind
+Convergence.Encounters.BattleRuntimeEventKind.EncounterPresenceChanged = 15 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.HostActionRequested = 16 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.PassiveActivated = 8 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleRuntimeEventKind.PhaseStarted = 3 -> Convergence.Encounters.BattleRuntimeEventKind
@@ -2313,19 +2312,17 @@ Convergence.Encounters.CatalogBattleActorCreationException.CatalogBattleActorCre
 Convergence.Encounters.CatalogBattleActorCreationException.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActorDiagnostic!>!
 Convergence.Encounters.CatalogBattleActorCreationRequest
 Convergence.Encounters.CatalogBattleActorCreationRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorCreationRequest!
-Convergence.Encounters.CatalogBattleActorCreationRequest.CatalogBattleActorCreationRequest(Convergence.Content.ContentId EntityId, Convergence.Runtime.RuntimeInstanceId InstanceId, Convergence.Content.ContentId TeamId, int Level, Convergence.Runtime.RuntimeProgressionSnapshot? Progression = null, Convergence.Content.ContentId? ControllerId = null, Convergence.Runtime.RuntimeActorDeployment Deployment = Convergence.Runtime.RuntimeActorDeployment.Deployed, bool IsActive = true) -> void
+Convergence.Encounters.CatalogBattleActorCreationRequest.CatalogBattleActorCreationRequest(Convergence.Content.ContentId EntityId, Convergence.Runtime.RuntimeInstanceId InstanceId, Convergence.Content.ContentId TeamId, int Level, bool IsDeployed, Convergence.Runtime.RuntimeProgressionSnapshot? Progression = null, Convergence.Content.ContentId? ControllerId = null) -> void
 Convergence.Encounters.CatalogBattleActorCreationRequest.ControllerId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.CatalogBattleActorCreationRequest.ControllerId.init -> void
-Convergence.Encounters.CatalogBattleActorCreationRequest.Deconstruct(out Convergence.Content.ContentId EntityId, out Convergence.Runtime.RuntimeInstanceId InstanceId, out Convergence.Content.ContentId TeamId, out int Level, out Convergence.Runtime.RuntimeProgressionSnapshot? Progression, out Convergence.Content.ContentId? ControllerId, out Convergence.Runtime.RuntimeActorDeployment Deployment, out bool IsActive) -> void
-Convergence.Encounters.CatalogBattleActorCreationRequest.Deployment.get -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Encounters.CatalogBattleActorCreationRequest.Deployment.init -> void
+Convergence.Encounters.CatalogBattleActorCreationRequest.Deconstruct(out Convergence.Content.ContentId EntityId, out Convergence.Runtime.RuntimeInstanceId InstanceId, out Convergence.Content.ContentId TeamId, out int Level, out bool IsDeployed, out Convergence.Runtime.RuntimeProgressionSnapshot? Progression, out Convergence.Content.ContentId? ControllerId) -> void
 Convergence.Encounters.CatalogBattleActorCreationRequest.EntityId.get -> Convergence.Content.ContentId
 Convergence.Encounters.CatalogBattleActorCreationRequest.EntityId.init -> void
 Convergence.Encounters.CatalogBattleActorCreationRequest.Equals(Convergence.Encounters.CatalogBattleActorCreationRequest? other) -> bool
 Convergence.Encounters.CatalogBattleActorCreationRequest.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Encounters.CatalogBattleActorCreationRequest.InstanceId.init -> void
-Convergence.Encounters.CatalogBattleActorCreationRequest.IsActive.get -> bool
-Convergence.Encounters.CatalogBattleActorCreationRequest.IsActive.init -> void
+Convergence.Encounters.CatalogBattleActorCreationRequest.IsDeployed.get -> bool
+Convergence.Encounters.CatalogBattleActorCreationRequest.IsDeployed.init -> void
 Convergence.Encounters.CatalogBattleActorCreationRequest.Level.get -> int
 Convergence.Encounters.CatalogBattleActorCreationRequest.Level.init -> void
 Convergence.Encounters.CatalogBattleActorCreationRequest.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot?
@@ -2359,7 +2356,6 @@ Convergence.Encounters.CatalogBattleActorDiagnosticCode.IdentifierInvalid = 15 -
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationFailed = 5 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationResourceDuplicate = 7 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationReturnedNull = 6 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
-Convergence.Encounters.CatalogBattleActorDiagnosticCode.InvalidDeployment = 16 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InvalidLevel = 0 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.ProgressionLevelMismatch = 1 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.RuntimeStateConstructionFailed = 9 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
@@ -3623,7 +3619,7 @@ Convergence.Execution.RuntimeActorState.Charges.get -> System.Collections.Generi
 Convergence.Execution.RuntimeActorState.ClearEncounterStatuses() -> void
 Convergence.Execution.RuntimeActorState.ClearTransientStatuses() -> void
 Convergence.Execution.RuntimeActorState.DefenseProfile.get -> Convergence.Battle.CombatDefenseProfile!
-Convergence.Execution.RuntimeActorState.Deployment.get -> Convergence.Runtime.RuntimeActorDeploymentSnapshot!
+Convergence.Execution.RuntimeActorState.EncounterPresence.get -> Convergence.Runtime.RuntimeEncounterPresenceSnapshot!
 Convergence.Execution.RuntimeActorState.EntityId.get -> Convergence.Content.ContentId
 Convergence.Execution.RuntimeActorState.Equipment.get -> Convergence.Runtime.RuntimeEquipmentSnapshot!
 Convergence.Execution.RuntimeActorState.ExpireInstantDurations() -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleDurationTickResult!>!
@@ -3639,9 +3635,8 @@ Convergence.Execution.RuntimeActorState.HasCapability(Convergence.Content.Conten
 Convergence.Execution.RuntimeActorState.HasSkill(Convergence.Content.ContentId id) -> bool
 Convergence.Execution.RuntimeActorState.Identity.get -> Convergence.Runtime.RuntimeActorIdentitySnapshot!
 Convergence.Execution.RuntimeActorState.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Execution.RuntimeActorState.IsActive.get -> bool
-Convergence.Execution.RuntimeActorState.IsActive.set -> void
 Convergence.Execution.RuntimeActorState.IsDefeated.get -> bool
+Convergence.Execution.RuntimeActorState.IsDeployed.get -> bool
 Convergence.Execution.RuntimeActorState.IsGuarding.get -> bool
 Convergence.Execution.RuntimeActorState.OtherStatuses.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
 Convergence.Execution.RuntimeActorState.OverrideAffinity(Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Content.DurationDefinition! duration) -> void
@@ -3653,7 +3648,8 @@ Convergence.Execution.RuntimeActorState.RemoveStatuses(System.Collections.Generi
 Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
 Convergence.Execution.RuntimeActorState.Reveal(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
-Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, bool isActive = true, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeActorOwnershipSnapshot? ownership = null, Convergence.Runtime.RuntimeActorDeploymentSnapshot? deployment = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null) -> void
+Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, Convergence.Runtime.RuntimeEncounterPresenceSnapshot! encounterPresence, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeActorOwnershipSnapshot? ownership = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null) -> void
+Convergence.Execution.RuntimeActorState.SetEncounterPresence(bool isDeployed, bool hasSwappedThisTurn = false) -> void
 Convergence.Execution.RuntimeActorState.SetGuarding(bool isGuarding) -> void
 Convergence.Execution.RuntimeActorState.SetResource(Convergence.Content.ContentId id, decimal value) -> decimal
 Convergence.Execution.RuntimeActorState.Shields.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ShieldKind, Convergence.Execution.BattleShieldState!>!
@@ -5350,21 +5346,6 @@ Convergence.Runtime.RulesetBindingResult<TService>.IsSuccess.get -> bool
 Convergence.Runtime.RulesetBindingResult<TService>.RequireService() -> TService!
 Convergence.Runtime.RulesetBindingResult<TService>.RulesetBindingResult(TService? service, System.Collections.Generic.IEnumerable<Convergence.Runtime.RulesetBindingDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RulesetBindingResult<TService>.Service.get -> TService?
-Convergence.Runtime.RuntimeActorDeployment
-Convergence.Runtime.RuntimeActorDeployment.Active = 0 -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Runtime.RuntimeActorDeployment.Deployed = 2 -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Runtime.RuntimeActorDeployment.Reserve = 1 -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Runtime.RuntimeActorDeploymentSnapshot
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeActorDeploymentSnapshot!
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.Deconstruct(out Convergence.Runtime.RuntimeActorDeployment Deployment, out bool IsActive, out bool HasSwappedThisTurn) -> void
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.Deployment.get -> Convergence.Runtime.RuntimeActorDeployment
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.Deployment.init -> void
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.Equals(Convergence.Runtime.RuntimeActorDeploymentSnapshot? other) -> bool
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.HasSwappedThisTurn.get -> bool
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.HasSwappedThisTurn.init -> void
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.IsActive.get -> bool
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.IsActive.init -> void
-Convergence.Runtime.RuntimeActorDeploymentSnapshot.RuntimeActorDeploymentSnapshot(Convergence.Runtime.RuntimeActorDeployment Deployment, bool IsActive, bool HasSwappedThisTurn = false) -> void
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic!
 Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorGrowthCompositionDiagnosticCode
@@ -5458,14 +5439,14 @@ Convergence.Runtime.RuntimeActorSnapshot.BaseResourceValues.get -> System.Collec
 Convergence.Runtime.RuntimeActorSnapshot.BattleActivations.get -> Convergence.Runtime.RuntimeBattleActivationSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.BattleStatus.get -> Convergence.Runtime.RuntimeBattleStatusSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.CapabilityIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
-Convergence.Runtime.RuntimeActorSnapshot.Deployment.get -> Convergence.Runtime.RuntimeActorDeploymentSnapshot!
+Convergence.Runtime.RuntimeActorSnapshot.EncounterPresence.get -> Convergence.Runtime.RuntimeEncounterPresenceSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Equals(Convergence.Runtime.RuntimeActorSnapshot? other) -> bool
 Convergence.Runtime.RuntimeActorSnapshot.Equipment.get -> Convergence.Runtime.RuntimeEquipmentSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Identity.get -> Convergence.Runtime.RuntimeActorIdentitySnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Ownership.get -> Convergence.Runtime.RuntimeActorOwnershipSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Resources.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeResourceSnapshot!>!
-Convergence.Runtime.RuntimeActorSnapshot.RuntimeActorSnapshot(Convergence.Runtime.RuntimeActorIdentitySnapshot! identity, Convergence.Runtime.RuntimeActorOwnershipSnapshot! ownership, Convergence.Runtime.RuntimeActorDeploymentSnapshot! deployment, Convergence.Runtime.RuntimeProgressionSnapshot! progression, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, Convergence.Runtime.RuntimeSkillStateSnapshot! skills, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeBattleStatusSnapshot! battleStatus, Convergence.Runtime.RuntimeBattleActivationSnapshot! battleActivations, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues, Convergence.Content.ContentId vitalResourceId, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null) -> void
+Convergence.Runtime.RuntimeActorSnapshot.RuntimeActorSnapshot(Convergence.Runtime.RuntimeActorIdentitySnapshot! identity, Convergence.Runtime.RuntimeActorOwnershipSnapshot! ownership, Convergence.Runtime.RuntimeEncounterPresenceSnapshot! encounterPresence, Convergence.Runtime.RuntimeProgressionSnapshot! progression, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, Convergence.Runtime.RuntimeSkillStateSnapshot! skills, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeBattleStatusSnapshot! battleStatus, Convergence.Runtime.RuntimeBattleActivationSnapshot! battleActivations, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues, Convergence.Content.ContentId vitalResourceId, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null) -> void
 Convergence.Runtime.RuntimeActorSnapshot.Skills.get -> Convergence.Runtime.RuntimeSkillStateSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.Stats.get -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.RuntimeActorSnapshot.VitalResourceId.get -> Convergence.Content.ContentId
@@ -5720,6 +5701,15 @@ Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.EntityId.get -> Co
 Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.EntityId.init -> void
 Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.Equals(Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot? other) -> bool
 Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.RuntimeElementalAffinityKnowledgeSnapshot(Convergence.Content.ContentId EntityId, Convergence.Content.DamageElement Element, Convergence.Content.ElementalAffinity Affinity) -> void
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeEncounterPresenceSnapshot!
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.Deconstruct(out bool IsDeployed, out bool HasSwappedThisTurn) -> void
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.Equals(Convergence.Runtime.RuntimeEncounterPresenceSnapshot? other) -> bool
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.HasSwappedThisTurn.get -> bool
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.HasSwappedThisTurn.init -> void
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.IsDeployed.get -> bool
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.IsDeployed.init -> void
+Convergence.Runtime.RuntimeEncounterPresenceSnapshot.RuntimeEncounterPresenceSnapshot(bool IsDeployed, bool HasSwappedThisTurn = false) -> void
 Convergence.Runtime.RuntimeEncounterTriggerRequest
 Convergence.Runtime.RuntimeEncounterTriggerRequest.<Clone>$() -> Convergence.Runtime.RuntimeEncounterTriggerRequest!
 Convergence.Runtime.RuntimeEncounterTriggerRequest.Deconstruct(out Convergence.Content.ContentId TriggerId, out Convergence.Content.ContentId EncounterId, out Convergence.Content.ContentId OpponentTeamId, out Convergence.Runtime.RuntimeInstanceId InstanceIdPrefix, out int FormationIndex) -> void
@@ -7333,10 +7323,6 @@ override Convergence.Encounters.BattleCommandSelectedEventPayload.<Clone>$() -> 
 override Convergence.Encounters.BattleCommandSelectedEventPayload.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleCommandSelectedEventPayload.GetHashCode() -> int
 override Convergence.Encounters.BattleCommandSelectedEventPayload.ToString() -> string!
-override Convergence.Encounters.BattleDeploymentChangedEventPayload.<Clone>$() -> Convergence.Encounters.BattleDeploymentChangedEventPayload!
-override Convergence.Encounters.BattleDeploymentChangedEventPayload.Equals(object? obj) -> bool
-override Convergence.Encounters.BattleDeploymentChangedEventPayload.GetHashCode() -> int
-override Convergence.Encounters.BattleDeploymentChangedEventPayload.ToString() -> string!
 override Convergence.Encounters.BattleEffectResolvedEventPayload.<Clone>$() -> Convergence.Encounters.BattleEffectResolvedEventPayload!
 override Convergence.Encounters.BattleEffectResolvedEventPayload.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEffectResolvedEventPayload.GetHashCode() -> int
@@ -7368,6 +7354,10 @@ override Convergence.Encounters.BattleEncounterParticipant.ToString() -> string!
 override Convergence.Encounters.BattleEncounterParticipantSnapshot.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterParticipantSnapshot.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterParticipantSnapshot.ToString() -> string!
+override Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.<Clone>$() -> Convergence.Encounters.BattleEncounterPresenceChangedEventPayload!
+override Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.Equals(object? obj) -> bool
+override Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.GetHashCode() -> int
+override Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.ToString() -> string!
 override Convergence.Encounters.BattleEncounterRequest.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterRequest.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterRequest.ToString() -> string!
@@ -8033,9 +8023,6 @@ override Convergence.Runtime.RulesetBindingDiagnostic.ToString() -> string!
 override Convergence.Runtime.RulesetBindingResult<TService>.Equals(object? obj) -> bool
 override Convergence.Runtime.RulesetBindingResult<TService>.GetHashCode() -> int
 override Convergence.Runtime.RulesetBindingResult<TService>.ToString() -> string!
-override Convergence.Runtime.RuntimeActorDeploymentSnapshot.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeActorDeploymentSnapshot.GetHashCode() -> int
-override Convergence.Runtime.RuntimeActorDeploymentSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.GetHashCode() -> int
 override Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.ToString() -> string!
@@ -8126,6 +8113,9 @@ override Convergence.Runtime.RuntimeDungeonTraversalTransition.ToString() -> str
 override Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimeEncounterPresenceSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeEncounterPresenceSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimeEncounterPresenceSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeEncounterTriggerRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeEncounterTriggerRequest.GetHashCode() -> int
 override Convergence.Runtime.RuntimeEncounterTriggerRequest.ToString() -> string!
@@ -8413,8 +8403,8 @@ override sealed Convergence.Encounters.BattleActorCreatedEventPayload.Equals(Con
 override sealed Convergence.Encounters.BattleActorDefeatedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleCommandPassedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleCommandSelectedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
-override sealed Convergence.Encounters.BattleDeploymentChangedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleEffectResolvedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
+override sealed Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleEndedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleFaultedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
 override sealed Convergence.Encounters.BattleHostActionRequestedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
@@ -8788,8 +8778,6 @@ static Convergence.Encounters.BattleCommandPassedEventPayload.operator !=(Conver
 static Convergence.Encounters.BattleCommandPassedEventPayload.operator ==(Convergence.Encounters.BattleCommandPassedEventPayload? left, Convergence.Encounters.BattleCommandPassedEventPayload? right) -> bool
 static Convergence.Encounters.BattleCommandSelectedEventPayload.operator !=(Convergence.Encounters.BattleCommandSelectedEventPayload? left, Convergence.Encounters.BattleCommandSelectedEventPayload? right) -> bool
 static Convergence.Encounters.BattleCommandSelectedEventPayload.operator ==(Convergence.Encounters.BattleCommandSelectedEventPayload? left, Convergence.Encounters.BattleCommandSelectedEventPayload? right) -> bool
-static Convergence.Encounters.BattleDeploymentChangedEventPayload.operator !=(Convergence.Encounters.BattleDeploymentChangedEventPayload? left, Convergence.Encounters.BattleDeploymentChangedEventPayload? right) -> bool
-static Convergence.Encounters.BattleDeploymentChangedEventPayload.operator ==(Convergence.Encounters.BattleDeploymentChangedEventPayload? left, Convergence.Encounters.BattleDeploymentChangedEventPayload? right) -> bool
 static Convergence.Encounters.BattleEffectResolvedEventPayload.operator !=(Convergence.Encounters.BattleEffectResolvedEventPayload? left, Convergence.Encounters.BattleEffectResolvedEventPayload? right) -> bool
 static Convergence.Encounters.BattleEffectResolvedEventPayload.operator ==(Convergence.Encounters.BattleEffectResolvedEventPayload? left, Convergence.Encounters.BattleEffectResolvedEventPayload? right) -> bool
 static Convergence.Encounters.BattleEncounterCommandResult.Cancelled(System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterEvent!>? events = null) -> Convergence.Encounters.BattleEncounterCommandResult!
@@ -8814,6 +8802,8 @@ static Convergence.Encounters.BattleEncounterParticipant.operator !=(Convergence
 static Convergence.Encounters.BattleEncounterParticipant.operator ==(Convergence.Encounters.BattleEncounterParticipant? left, Convergence.Encounters.BattleEncounterParticipant? right) -> bool
 static Convergence.Encounters.BattleEncounterParticipantSnapshot.operator !=(Convergence.Encounters.BattleEncounterParticipantSnapshot? left, Convergence.Encounters.BattleEncounterParticipantSnapshot? right) -> bool
 static Convergence.Encounters.BattleEncounterParticipantSnapshot.operator ==(Convergence.Encounters.BattleEncounterParticipantSnapshot? left, Convergence.Encounters.BattleEncounterParticipantSnapshot? right) -> bool
+static Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.operator !=(Convergence.Encounters.BattleEncounterPresenceChangedEventPayload? left, Convergence.Encounters.BattleEncounterPresenceChangedEventPayload? right) -> bool
+static Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.operator ==(Convergence.Encounters.BattleEncounterPresenceChangedEventPayload? left, Convergence.Encounters.BattleEncounterPresenceChangedEventPayload? right) -> bool
 static Convergence.Encounters.BattleEncounterRequest.operator !=(Convergence.Encounters.BattleEncounterRequest? left, Convergence.Encounters.BattleEncounterRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterRequest.operator ==(Convergence.Encounters.BattleEncounterRequest? left, Convergence.Encounters.BattleEncounterRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterResult.operator !=(Convergence.Encounters.BattleEncounterResult? left, Convergence.Encounters.BattleEncounterResult? right) -> bool
@@ -9274,8 +9264,6 @@ static Convergence.Runtime.RosterCapacityTier.operator !=(Convergence.Runtime.Ro
 static Convergence.Runtime.RosterCapacityTier.operator ==(Convergence.Runtime.RosterCapacityTier? left, Convergence.Runtime.RosterCapacityTier? right) -> bool
 static Convergence.Runtime.RulesetBindingDiagnostic.operator !=(Convergence.Runtime.RulesetBindingDiagnostic? left, Convergence.Runtime.RulesetBindingDiagnostic? right) -> bool
 static Convergence.Runtime.RulesetBindingDiagnostic.operator ==(Convergence.Runtime.RulesetBindingDiagnostic? left, Convergence.Runtime.RulesetBindingDiagnostic? right) -> bool
-static Convergence.Runtime.RuntimeActorDeploymentSnapshot.operator !=(Convergence.Runtime.RuntimeActorDeploymentSnapshot? left, Convergence.Runtime.RuntimeActorDeploymentSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeActorDeploymentSnapshot.operator ==(Convergence.Runtime.RuntimeActorDeploymentSnapshot? left, Convergence.Runtime.RuntimeActorDeploymentSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.operator !=(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic.operator ==(Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? left, Convergence.Runtime.RuntimeActorGrowthCompositionDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeActorGrowthCompositionRequest.operator !=(Convergence.Runtime.RuntimeActorGrowthCompositionRequest? left, Convergence.Runtime.RuntimeActorGrowthCompositionRequest? right) -> bool
@@ -9338,6 +9326,8 @@ static Convergence.Runtime.RuntimeDungeonTraversalTransition.operator !=(Converg
 static Convergence.Runtime.RuntimeDungeonTraversalTransition.operator ==(Convergence.Runtime.RuntimeDungeonTraversalTransition? left, Convergence.Runtime.RuntimeDungeonTraversalTransition? right) -> bool
 static Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.operator !=(Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot? left, Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot.operator ==(Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot? left, Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeEncounterPresenceSnapshot.operator !=(Convergence.Runtime.RuntimeEncounterPresenceSnapshot? left, Convergence.Runtime.RuntimeEncounterPresenceSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeEncounterPresenceSnapshot.operator ==(Convergence.Runtime.RuntimeEncounterPresenceSnapshot? left, Convergence.Runtime.RuntimeEncounterPresenceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeEncounterTriggerRequest.operator !=(Convergence.Runtime.RuntimeEncounterTriggerRequest? left, Convergence.Runtime.RuntimeEncounterTriggerRequest? right) -> bool
 static Convergence.Runtime.RuntimeEncounterTriggerRequest.operator ==(Convergence.Runtime.RuntimeEncounterTriggerRequest? left, Convergence.Runtime.RuntimeEncounterTriggerRequest? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentProfile.operator !=(Convergence.Runtime.RuntimeEquipmentProfile? left, Convergence.Runtime.RuntimeEquipmentProfile? right) -> bool

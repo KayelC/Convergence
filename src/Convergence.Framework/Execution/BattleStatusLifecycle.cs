@@ -674,7 +674,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         var events = new List<BattleStatusLifecycleEvent>();
         var passiveActivations = new List<PassiveTriggerExecutionResult>();
 
-        if (!actor.IsActive)
+        if (!actor.IsDeployed)
         {
             return new BattleTurnEndLifecycleResult(events, passiveActivations);
         }

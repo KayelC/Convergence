@@ -185,7 +185,8 @@ public sealed class CatalogEncounterStartPlanner : IEncounterStartPlanner
                     member.EntityId,
                     CreateInstanceId(request.InstanceIdPrefix, member.EntityId, actorIndex++),
                     request.OpponentTeamId,
-                    member.Level));
+                    member.Level,
+                    IsDeployed: true));
             }
         }
 

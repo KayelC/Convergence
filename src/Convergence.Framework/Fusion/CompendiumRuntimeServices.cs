@@ -521,10 +521,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.RecalledInstanceId,
             request.TeamId,
             entry.Level,
+            IsDeployed: false,
             progression,
-            request.ControllerId,
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            request.ControllerId));
         if (!initialized.IsSuccess)
         {
             return initialized;
@@ -559,7 +558,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 entry.DisplayName,
                 fresh.Identity.DisplaySubtitle),
             new RuntimeActorOwnershipSnapshot(request.ControllerId, request.TeamId),
-            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Reserve, IsActive: false),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
             progression,
             fullResources,
             statBlock,

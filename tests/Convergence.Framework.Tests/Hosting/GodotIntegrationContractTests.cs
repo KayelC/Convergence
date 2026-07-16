@@ -249,7 +249,8 @@ public sealed class GodotIntegrationContractTests
                 Id($"convergence.clean_battle_demo:{entityId}"),
                 RuntimeInstanceId.Parse(instanceId),
                 teamId,
-                5)).RequireActor();
+                5,
+                IsDeployed: true)).RequireActor();
 
     private static BattleExecutionServices Services(GameDataCatalog catalog) => new(
         catalog,
@@ -275,7 +276,7 @@ public sealed class GodotIntegrationContractTests
                 actor.Entity.EntityKindId,
                 actor.Entity.DisplayName),
             new RuntimeActorOwnershipSnapshot(ContentId.Parse("godot_host"), state.TeamId),
-            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Deployed, state.IsActive),
+            new RuntimeEncounterPresenceSnapshot(state.IsDeployed),
             new RuntimeProgressionSnapshot(level, experience: 0, lifetimeExperience: 0, unspentStatPoints: 0),
             resources,
             new RuntimeStatBlockSnapshot(state.Stats, state.Stats),

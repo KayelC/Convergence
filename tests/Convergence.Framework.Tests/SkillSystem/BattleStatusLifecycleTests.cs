@@ -271,7 +271,7 @@ public sealed class BattleStatusLifecycleTests
     public void TurnEnd_SuspendsReserveActorTicksDamageAndRecovery()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(0));
-        RuntimeActorState reserve = Actor("reserve", hp: 50, isActive: false);
+        RuntimeActorState reserve = Actor("reserve", hp: 50, isDeployed: false);
         reserve.ApplyAilment(PoisonAilment(), Turns(3));
 
         BattleTurnEndLifecycleResult result = service.ProcessTurnEnd(
@@ -623,13 +623,13 @@ public sealed class BattleStatusLifecycleTests
     [Fact]
     public void AffinityBreakDuration_SuspendsInReserveAndExpiresOnItsAuthoredTick()
     {
-        RuntimeActorState actor = Actor("actor", isActive: false);
+        RuntimeActorState actor = Actor("actor", isDeployed: false);
         actor.BreakAffinity(DamageElement.Ice, Turns(1));
 
         Assert.Empty(actor.TickTimedStatuses(OwnerTurnEnd));
         Assert.True(actor.AffinityBreaks.ContainsKey(DamageElement.Ice));
 
-        actor.IsActive = true;
+        actor.SetEncounterPresence(isDeployed: true);
         BattleDurationTickResult tick = Assert.Single(actor.TickTimedStatuses(OwnerTurnEnd));
 
         Assert.True(tick.Expired);
@@ -668,7 +668,7 @@ public sealed class BattleStatusLifecycleTests
         decimal sp = 100,
         decimal luck = 10,
         CombatDefenseProfile? defense = null,
-        bool isActive = true,
+        bool isDeployed = true,
         IEnumerable<SkillDefinition>? passiveSkills = null) =>
         new(
             RuntimeInstanceId.Parse(id),
@@ -677,8 +677,8 @@ public sealed class BattleStatusLifecycleTests
             Hp,
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
+            new RuntimeEncounterPresenceSnapshot(isDeployed),
             [new KeyValuePair<ContentId, decimal>(Luck, luck)],
-            isActive: isActive,
             passiveSkills: passiveSkills);
 
     private static SkillDefinition PassiveSkill(

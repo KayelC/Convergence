@@ -119,12 +119,14 @@ internal sealed class CleanFieldDemoHost
             ContentId.Parse("convergence.shared_effects_demo:field_medic_demo"),
             RuntimeInstanceId.Parse("field_medic"),
             Party,
-            5));
+            5,
+            IsDeployed: false));
         CatalogBattleActorCreationResult allyResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
             RuntimeInstanceId.Parse("field_ally"),
             Party,
-            5));
+            5,
+            IsDeployed: false));
         if (!medicResult.IsSuccess || !allyResult.IsSuccess)
         {
             foreach (CatalogBattleActorDiagnostic diagnostic in medicResult.Diagnostics.Concat(allyResult.Diagnostics))

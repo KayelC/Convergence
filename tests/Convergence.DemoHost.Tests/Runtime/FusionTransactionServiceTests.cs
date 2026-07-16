@@ -422,8 +422,7 @@ public sealed class FusionTransactionServiceTests
                 Id("player_team"),
                 target.Level,
                 ControllerId: Id("test_controller"),
-                Deployment: RuntimeActorDeployment.Reserve,
-                IsActive: false))
+                IsDeployed: false))
             .RequireActor()
             .State
             .ToSnapshot();
@@ -787,7 +786,7 @@ public sealed class FusionTransactionServiceTests
         new(
             snapshot.Identity,
             snapshot.Ownership,
-            snapshot.Deployment,
+            snapshot.EncounterPresence,
             snapshot.Progression,
             snapshot.Resources,
             snapshot.Stats,

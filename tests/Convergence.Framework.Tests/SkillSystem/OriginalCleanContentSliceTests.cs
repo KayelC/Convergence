@@ -829,7 +829,8 @@ public sealed class OriginalCleanContentSliceTests
             Id(teamId),
             Id("hp"),
             new CombatDefenseProfile(),
-            [new BattleResourceState(Id("hp"), hp, maxHp), new BattleResourceState(Id("sp"), sp, maxSp)]);
+            [new BattleResourceState(Id("hp"), hp, maxHp), new BattleResourceState(Id("sp"), sp, maxSp)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true));
 
     private static FusionParticipantSnapshot Participant(EntityDefinition entity, string instanceId) =>
         new(

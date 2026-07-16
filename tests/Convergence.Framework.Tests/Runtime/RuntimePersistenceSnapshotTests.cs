@@ -1838,7 +1838,7 @@ public sealed class RuntimePersistenceSnapshotTests
         new(
             identity ?? snapshot.Identity,
             snapshot.Ownership,
-            snapshot.Deployment,
+            snapshot.EncounterPresence,
             snapshot.Progression,
             resources ?? snapshot.Resources,
             stats ?? snapshot.Stats,
@@ -1858,7 +1858,7 @@ public sealed class RuntimePersistenceSnapshotTests
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
             new RuntimeActorOwnershipSnapshot(Id("host"), Id("player_team")),
-            new RuntimeActorDeploymentSnapshot(RuntimeActorDeployment.Deployed, IsActive: true),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
             [
                 new RuntimeResourceSnapshot(Id("hp"), 50, 75),

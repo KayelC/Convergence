@@ -117,8 +117,6 @@ public sealed class RuntimeActorState
     private IReadOnlyDictionary<ContentId, decimal> _baseStats;
     private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
     private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
-    private bool _isActive;
-
     public RuntimeActorState(
         RuntimeInstanceId instanceId,
         ContentId entityId,
@@ -126,14 +124,13 @@ public sealed class RuntimeActorState
         ContentId vitalResourceId,
         CombatDefenseProfile defenseProfile,
         IEnumerable<BattleResourceState> resources,
+        RuntimeEncounterPresenceSnapshot encounterPresence,
         IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
         IEnumerable<SkillDefinition>? passiveSkills = null,
-        bool isActive = true,
         RuntimeActorIdentitySnapshot? identity = null,
         RuntimeActorOwnershipSnapshot? ownership = null,
-        RuntimeActorDeploymentSnapshot? deployment = null,
         RuntimeProgressionSnapshot? progression = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
@@ -156,10 +153,7 @@ public sealed class RuntimeActorState
         Ownership = ownership ?? new RuntimeActorOwnershipSnapshot(
             ContentId.Parse("runtime"),
             teamId);
-        Deployment = deployment ?? new RuntimeActorDeploymentSnapshot(
-            isActive ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Reserve,
-            isActive);
-        EnumDomain.RequireDefined(Deployment.Deployment, nameof(deployment));
+        EncounterPresence = encounterPresence ?? throw new ArgumentNullException(nameof(encounterPresence));
         Progression = progression ?? new RuntimeProgressionSnapshot(1, 0, 0, 0);
         RequireValid(Identity.InstanceId, nameof(identity));
         RequireValid(Identity.EntityDefinitionId, nameof(identity));
@@ -202,7 +196,6 @@ public sealed class RuntimeActorState
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
         RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
         Passives = new BattlePassiveCollection(passiveSkills);
-        _isActive = Deployment.IsActive;
     }
 
     internal static RuntimeActorState Restore(
@@ -243,14 +236,13 @@ public sealed class RuntimeActorState
                 resource.ResourceId,
                 resource.Current,
                 resource.Maximum)),
+            snapshot.EncounterPresence,
             snapshot.Stats.EffectiveStats,
             snapshot.Skills.LearnedSkillIds,
             capabilityIds ?? snapshot.CapabilityIds,
             passiveDefinitions,
-            snapshot.Deployment.IsActive,
             snapshot.Identity,
             snapshot.Ownership,
-            snapshot.Deployment,
             snapshot.Progression,
             snapshot.BaseResourceValues,
             snapshot.Stats.BaseStats,
@@ -268,7 +260,7 @@ public sealed class RuntimeActorState
     public ContentId TeamId => Ownership.TeamId;
     public RuntimeActorIdentitySnapshot Identity { get; }
     public RuntimeActorOwnershipSnapshot Ownership { get; }
-    public RuntimeActorDeploymentSnapshot Deployment { get; private set; }
+    public RuntimeEncounterPresenceSnapshot EncounterPresence { get; private set; }
     public RuntimeProgressionSnapshot Progression { get; private set; }
     public RuntimeSkillStateSnapshot Skills { get; private set; }
     public RuntimeEquipmentSnapshot Equipment { get; private set; }
@@ -278,26 +270,12 @@ public sealed class RuntimeActorState
     public IReadOnlyDictionary<ContentId, decimal> BaseStats => _baseStats;
     public IReadOnlyDictionary<ContentId, decimal> Stats => _effectiveStats;
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues => _baseResourceValues;
-    public bool IsActive
-    {
-        get => _isActive;
-        set
-        {
-            _isActive = value;
-            Deployment = Deployment with { IsActive = value };
-        }
-    }
+    public bool IsDeployed => EncounterPresence.IsDeployed;
 
-    internal void SetDeployment(RuntimeActorDeployment deployment, bool isActive)
-    {
-        EnumDomain.RequireDefined(deployment, nameof(deployment));
-        RuntimeActorDeploymentSnapshot next = new(
-            deployment,
-            isActive,
-            Deployment.HasSwappedThisTurn);
-        _isActive = isActive;
-        Deployment = next;
-    }
+    public void SetEncounterPresence(bool isDeployed, bool hasSwappedThisTurn = false) =>
+        EncounterPresence = new RuntimeEncounterPresenceSnapshot(
+            isDeployed,
+            hasSwappedThisTurn);
 
     public bool IsGuarding { get; private set; }
     public bool IsDefeated => GetRequiredResource(VitalResourceId).Current <= 0;
@@ -455,7 +433,7 @@ public sealed class RuntimeActorState
         var results = new List<BattleDurationTickResult>();
         foreach ((ContentId id, ActiveAilmentState state) in _ailments.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -486,7 +464,7 @@ public sealed class RuntimeActorState
         foreach ((ContentId id, BattleStatStageState state) in _statStages.ToArray())
         {
             if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -510,7 +488,7 @@ public sealed class RuntimeActorState
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
         {
             if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -535,7 +513,7 @@ public sealed class RuntimeActorState
         foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
         {
             if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -559,7 +537,7 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityOverrideState state) in _affinityOverrides.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -583,7 +561,7 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityBreakState state) in _affinityBreaks.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -607,7 +585,7 @@ public sealed class RuntimeActorState
 
         foreach ((ContentId id, BattleOtherStatusState state) in _otherStatuses.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsActive, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -795,7 +773,7 @@ public sealed class RuntimeActorState
         new(
             Identity,
             Ownership,
-            Deployment with { IsActive = IsActive },
+            EncounterPresence,
             Progression,
             _resources.Values.Select(resource => new RuntimeResourceSnapshot(
                 resource.Id,
@@ -821,14 +799,13 @@ public sealed class RuntimeActorState
             VitalResourceId,
             DefenseProfile,
             _resources.Values,
+            EncounterPresence,
             _effectiveStats,
             _skillIds,
             _capabilityIds,
             Passives.Entries.Select(entry => entry.Skill),
-            IsActive,
             Identity,
             Ownership,
-            Deployment,
             Progression,
             _baseResourceValues,
             _baseStats,
@@ -895,11 +872,10 @@ public sealed class RuntimeActorState
         _baseStats = baseStats;
         _effectiveStats = effectiveStats;
         _baseResourceValues = baseResourceValues;
-        Deployment = source.Deployment;
+        EncounterPresence = source.EncounterPresence;
         Progression = source.Progression;
         Skills = source.Skills;
         Equipment = source.Equipment;
-        _isActive = source._isActive;
         IsGuarding = source.IsGuarding;
         Passives.ReplaceFrom(source.Passives);
     }
@@ -1217,7 +1193,7 @@ public sealed class RuntimeActorState
     private static bool TryTickDuration(
         DurationDefinition duration,
         ContentId eventId,
-        bool isActive,
+        bool isDeployed,
         out DurationDefinition? current,
         out bool expired)
     {
@@ -1225,7 +1201,7 @@ public sealed class RuntimeActorState
         expired = false;
         if (duration is not TurnDurationDefinition turns ||
             turns.TickEventId != eventId ||
-            turns.SuspendWhileReserve && !isActive)
+            turns.SuspendWhileReserve && !isDeployed)
         {
             return false;
         }

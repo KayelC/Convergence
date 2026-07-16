@@ -57,7 +57,7 @@ public sealed class CompendiumRuntimeServiceTests
                 "Later Acquired Snapshot",
                 firstActor.Identity.DisplaySubtitle),
             firstActor.Ownership,
-            firstActor.Deployment,
+            firstActor.EncounterPresence,
             firstActor.Progression,
             firstActor.Resources,
             firstActor.Stats,
@@ -126,7 +126,7 @@ public sealed class CompendiumRuntimeServiceTests
         var malformed = new RuntimeActorSnapshot(
             source.Identity,
             source.Ownership,
-            source.Deployment,
+            source.EncounterPresence,
             source.Progression,
             source.Resources,
             source.Stats,
@@ -168,7 +168,7 @@ public sealed class CompendiumRuntimeServiceTests
                 source.Identity.ActorKindId,
                 source.Identity.DisplayName),
             source.Ownership,
-            source.Deployment,
+            source.EncounterPresence,
             source.Progression,
             source.Resources,
             source.Stats,
@@ -819,10 +819,9 @@ public sealed class CompendiumRuntimeServiceTests
                 RuntimeInstanceId.Parse(instanceId),
                 Id("player_team"),
                 Entity.BaseLevel,
+                IsDeployed: false,
                 new RuntimeProgressionSnapshot(Entity.BaseLevel, 4, 9, 2),
-                Id("player_controller"),
-                RuntimeActorDeployment.Reserve,
-                IsActive: false)).RequireActor();
+                Id("player_controller"))).RequireActor();
 
         public CompendiumRuntimeService CreateService(IPartyRosterTransitionService? partyRoster = null) =>
             new(

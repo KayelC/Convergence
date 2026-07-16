@@ -72,13 +72,6 @@ public readonly record struct RuntimeInstanceId
     }
 }
 
-public enum RuntimeActorDeployment
-{
-    Active,
-    Reserve,
-    Deployed
-}
-
 public enum RuntimeMutationStatus
 {
     Applied,
@@ -125,14 +118,9 @@ public sealed record RuntimeActorOwnershipSnapshot(
     ContentId TeamId,
     RuntimeInstanceId? OwnerInstanceId = null);
 
-public sealed record RuntimeActorDeploymentSnapshot(
-    RuntimeActorDeployment Deployment,
-    bool IsActive,
-    bool HasSwappedThisTurn = false)
-{
-    public RuntimeActorDeployment Deployment { get; init; } =
-        EnumDomain.RequireDefined(Deployment, nameof(Deployment));
-}
+public sealed record RuntimeEncounterPresenceSnapshot(
+    bool IsDeployed,
+    bool HasSwappedThisTurn = false);
 
 public sealed record RuntimeProgressionSnapshot
 {
@@ -462,7 +450,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeActorSnapshot(
         RuntimeActorIdentitySnapshot identity,
         RuntimeActorOwnershipSnapshot ownership,
-        RuntimeActorDeploymentSnapshot deployment,
+        RuntimeEncounterPresenceSnapshot encounterPresence,
         RuntimeProgressionSnapshot progression,
         IEnumerable<RuntimeResourceSnapshot> resources,
         RuntimeStatBlockSnapshot stats,
@@ -476,7 +464,7 @@ public sealed record RuntimeActorSnapshot
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         Ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
-        Deployment = deployment ?? throw new ArgumentNullException(nameof(deployment));
+        EncounterPresence = encounterPresence ?? throw new ArgumentNullException(nameof(encounterPresence));
         Progression = progression ?? throw new ArgumentNullException(nameof(progression));
         Resources = RuntimeSnapshotCollections.List(resources);
         BaseResourceValues = RuntimeSnapshotCollections.Dictionary(baseResourceValues);
@@ -495,7 +483,7 @@ public sealed record RuntimeActorSnapshot
 
     public RuntimeActorIdentitySnapshot Identity { get; }
     public RuntimeActorOwnershipSnapshot Ownership { get; }
-    public RuntimeActorDeploymentSnapshot Deployment { get; }
+    public RuntimeEncounterPresenceSnapshot EncounterPresence { get; }
     public RuntimeProgressionSnapshot Progression { get; }
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
@@ -511,7 +499,7 @@ public sealed record RuntimeActorSnapshot
         new(
             Identity,
             Ownership,
-            Deployment,
+            EncounterPresence,
             Progression,
             resources,
             Stats,
@@ -531,7 +519,7 @@ public sealed record RuntimeActorSnapshot
         new(
             Identity,
             Ownership,
-            Deployment,
+            EncounterPresence,
             progression,
             resources ?? Resources,
             stats,

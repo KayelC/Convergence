@@ -233,11 +233,6 @@ internal static class RuntimeActorSnapshotIntegrity
         RuntimeActorSnapshot snapshot,
         ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
     {
-        ValidateEnumValue(
-            snapshot.Deployment.Deployment,
-            "$.deployment.deployment",
-            diagnostics);
-
         foreach (EquipmentSlot slot in snapshot.Equipment.EquippedItemIds.Keys)
         {
             ValidateEnumValue(

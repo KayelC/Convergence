@@ -57,7 +57,7 @@ public sealed class CleanSaveDemoHostTests
         var actor = new RuntimeActorSnapshot(
             original.Identity,
             original.Ownership,
-            original.Deployment,
+            original.EncounterPresence,
             original.Progression,
             original.Resources,
             original.Stats,

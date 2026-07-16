@@ -76,7 +76,7 @@ internal static class BattleConditionEvaluator
                 moon.AllowedMoonPhaseIds.Contains(moonPhaseId),
             PartySizeConditionDefinition party => Compare(
                 context.Participants.Count(candidate =>
-                    candidate.IsActive && candidate.TeamId == context.Actor.TeamId && !candidate.IsDefeated),
+                    candidate.IsDeployed && candidate.TeamId == context.Actor.TeamId && !candidate.IsDefeated),
                 party.Comparison,
                 party.Value),
             ChanceConditionDefinition chance => context.Services.ChancePolicy.Roll(
@@ -370,7 +370,7 @@ internal static class BattleTargetResolver
         SkillExecutionRequest request,
         TargetingDefinition targeting) =>
         request.Participants
-            .Where(candidate => candidate.IsActive)
+            .Where(candidate => candidate.IsDeployed)
             .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
             .Where(candidate => targeting.Relation == TargetRelation.Self ||
                                 targeting.AllowSelf ||

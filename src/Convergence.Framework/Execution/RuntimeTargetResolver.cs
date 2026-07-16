@@ -171,7 +171,7 @@ internal static class RuntimeTargetResolver
         EffectActionExecutionRequest request,
         TargetingDefinition targeting) =>
         request.Participants
-            .Where(candidate => candidate.IsActive)
+            .Where(candidate => candidate.IsDeployed)
             .Where(candidate => RelationMatches(request.Actor, candidate, targeting.Relation))
             .Where(candidate => targeting.Relation == TargetRelation.Self ||
                                 targeting.AllowSelf ||

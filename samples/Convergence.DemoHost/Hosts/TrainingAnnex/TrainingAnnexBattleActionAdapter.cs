@@ -1032,7 +1032,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             RuntimeActorState actor,
             TargetRelation relation) =>
             participants
-                .Where(participant => participant.State.IsActive && !participant.State.IsDefeated)
+                .Where(participant => participant.State.IsDeployed && !participant.State.IsDefeated)
                 .Where(participant => relation switch
                 {
                     TargetRelation.Enemy => participant.TeamId != actor.TeamId,

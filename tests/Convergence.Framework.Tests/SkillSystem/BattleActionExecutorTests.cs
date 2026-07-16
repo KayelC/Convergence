@@ -602,6 +602,7 @@ public sealed class BattleActionExecutorTests
             Hp,
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 20)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             [
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, 10),

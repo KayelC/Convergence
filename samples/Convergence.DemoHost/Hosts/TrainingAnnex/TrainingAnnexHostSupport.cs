@@ -246,9 +246,9 @@ internal static class TrainingAnnexHostSupport
             EchoAdeptInstance,
             PlayerTeam,
             3,
+            IsDeployed: true,
             new RuntimeProgressionSnapshot(3, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Active));
+            ContentId.Parse("clean_training_annex")));
         if (!playerResult.IsSuccess)
         {
             AddActorDiagnostics("player", playerResult.Diagnostics, diagnostics);
@@ -259,10 +259,9 @@ internal static class TrainingAnnexHostSupport
             SupportAnnexMentorInstance,
             PlayerTeam,
             5,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!mentorResult.IsSuccess)
         {
             AddActorDiagnostics("support", mentorResult.Diagnostics, diagnostics);
@@ -273,10 +272,9 @@ internal static class TrainingAnnexHostSupport
             HostedAnnexMentorInstance,
             PlayerTeam,
             5,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(5, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!activeHostedEntityResult.IsSuccess)
         {
             AddActorDiagnostics("active_hosted_entity", activeHostedEntityResult.Diagnostics, diagnostics);
@@ -287,10 +285,9 @@ internal static class TrainingAnnexHostSupport
             HostedBrambleRunnerInstance,
             PlayerTeam,
             3,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(3, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!hostedEntityRosterResult.IsSuccess)
         {
             AddActorDiagnostics("hosted_entity_roster", hostedEntityRosterResult.Diagnostics, diagnostics);
@@ -301,10 +298,9 @@ internal static class TrainingAnnexHostSupport
             CompanionAshlingInstance,
             PlayerTeam,
             2,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(2, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!companionAshlingResult.IsSuccess)
         {
             AddActorDiagnostics("companion_roster", companionAshlingResult.Diagnostics, diagnostics);
@@ -315,10 +311,9 @@ internal static class TrainingAnnexHostSupport
             CompanionWardShellInstance,
             PlayerTeam,
             4,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(4, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!companionWardShellResult.IsSuccess)
         {
             AddActorDiagnostics("companion_roster", companionWardShellResult.Diagnostics, diagnostics);
@@ -329,10 +324,9 @@ internal static class TrainingAnnexHostSupport
             ReplacementBrambleRunnerInstance,
             PlayerTeam,
             3,
+            IsDeployed: false,
             new RuntimeProgressionSnapshot(3, 0, 0, 0),
-            ContentId.Parse("clean_training_annex"),
-            RuntimeActorDeployment.Reserve,
-            IsActive: false));
+            ContentId.Parse("clean_training_annex")));
         if (!replacementBrambleResult.IsSuccess)
         {
             AddActorDiagnostics("companion_replacement_candidate", replacementBrambleResult.Diagnostics, diagnostics);
@@ -440,9 +434,7 @@ internal static class TrainingAnnexHostSupport
                 actor.Entity.EntityKindId,
                 actor.Entity.DisplayName),
             new RuntimeActorOwnershipSnapshot(ContentId.Parse("clean_training_annex"), actor.State.TeamId),
-            new RuntimeActorDeploymentSnapshot(
-                actor.State.TeamId == PlayerTeam ? RuntimeActorDeployment.Active : RuntimeActorDeployment.Deployed,
-                actor.State.IsActive),
+            new RuntimeEncounterPresenceSnapshot(actor.State.IsDeployed),
             resolvedProgression,
             RuntimeResources(actor.State),
             ActorStats(actor.Entity),

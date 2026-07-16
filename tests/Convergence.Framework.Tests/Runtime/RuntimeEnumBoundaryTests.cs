@@ -17,9 +17,6 @@ public sealed class RuntimeEnumBoundaryTests
     {
         var duration = new PermanentDurationDefinition();
 
-        AssertUndefined("Deployment", () => new RuntimeActorDeploymentSnapshot(
-            Undefined<RuntimeActorDeployment>(),
-            IsActive: true));
         AssertUndefined("equippedItemIds", () => new RuntimeEquipmentSnapshot(
         [
             new KeyValuePair<EquipmentSlot, ContentId>(Undefined<EquipmentSlot>(), Id("equipment"))
@@ -95,23 +92,6 @@ public sealed class RuntimeEnumBoundaryTests
                 Id("convergence.clean_battle_demo:frost_duelist_demo")),
             CombatDefenseProfile.Empty);
         var duration = new PermanentDurationDefinition();
-        RuntimeActorDeploymentSnapshot malformedDeployment = actor.Deployment with
-        {
-            Deployment = Undefined<RuntimeActorDeployment>()
-        };
-
-        AssertUndefined("deployment", () => new RuntimeActorState(
-            RuntimeInstanceId.Parse("other_actor"),
-            Id("test.pack:other_actor"),
-            Id("team"),
-            Id("hp"),
-            CombatDefenseProfile.Empty,
-            [new BattleResourceState(Id("hp"), 10m, 10m)],
-            deployment: malformedDeployment));
-        AssertUndefined("deployment", () => actor.SetDeployment(
-            Undefined<RuntimeActorDeployment>(),
-            isActive: false));
-
         AssertUndefined("kind", () => actor.GrantCharge(Undefined<ChargeKind>(), 2m, duration));
         AssertUndefined("kind", () => actor.GrantShield(Undefined<ShieldKind>(), duration));
         AssertUndefined("element", () => actor.BreakAffinity(Undefined<DamageElement>(), duration));
@@ -128,8 +108,7 @@ public sealed class RuntimeEnumBoundaryTests
             [Undefined<AnalysisLayer>()]));
 
         RuntimeBattleStatusSnapshot status = actor.ToSnapshot().BattleStatus;
-        Assert.True(actor.IsActive);
-        Assert.Equal(RuntimeActorDeployment.Deployed, actor.Deployment.Deployment);
+        Assert.True(actor.IsDeployed);
         Assert.Empty(status.Charges);
         Assert.Empty(status.Shields);
         Assert.Empty(status.AffinityBreaks);
@@ -229,11 +208,7 @@ public sealed class RuntimeEnumBoundaryTests
                     Undefined<ElementalAffinity>())
             ],
             analysis: [malformedAnalysis]);
-        RuntimeActorSnapshot malformed = CopyActor(
-            source,
-            source.Deployment with { Deployment = Undefined<RuntimeActorDeployment>() },
-            malformedEquipment,
-            malformedStatus);
+        RuntimeActorSnapshot malformed = CopyActor(source, malformedEquipment, malformedStatus);
         RuntimeActorSnapshot[] actors = baseline.Actors.ToArray();
         actors[0] = malformed;
         RuntimeSaveGameSnapshot save = CopySave(baseline, actors: actors);
@@ -242,7 +217,6 @@ public sealed class RuntimeEnumBoundaryTests
             save,
             RuntimePersistenceSnapshotTests.LoadCatalog());
 
-        AssertUndefinedDiagnostic(validation, "$.actors[0].deployment.deployment");
         AssertUndefinedDiagnostic(validation, "$.actors[0].equipment.equippedItemIds.999");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.charges[0].kind");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.shields[0].kind");
@@ -254,7 +228,7 @@ public sealed class RuntimeEnumBoundaryTests
         ArgumentException restore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
             malformed,
             CombatDefenseProfile.Empty));
-        Assert.Contains("$.deployment.deployment", restore.Message, StringComparison.Ordinal);
+        Assert.Contains("$.equipment.equippedItemIds", restore.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -334,13 +308,12 @@ public sealed class RuntimeEnumBoundaryTests
 
     private static RuntimeActorSnapshot CopyActor(
         RuntimeActorSnapshot source,
-        RuntimeActorDeploymentSnapshot deployment,
         RuntimeEquipmentSnapshot equipment,
         RuntimeBattleStatusSnapshot battleStatus) =>
         new(
             source.Identity,
             source.Ownership,
-            deployment,
+            source.EncounterPresence,
             source.Progression,
             source.Resources,
             source.Stats,
