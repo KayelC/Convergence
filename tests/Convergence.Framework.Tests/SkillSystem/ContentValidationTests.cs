@@ -619,19 +619,19 @@ public sealed class ContentValidationTests
     }
 
     private ContentPackManifest ReadManifest(string root, string fileName) =>
-        _deserializer.DeserializeManifest(File.ReadAllText(Path.Combine(root, fileName)), fileName);
+        _deserializer.DeserializeManifest(File.ReadAllText(TestContentPath.Resolve(root, fileName)), fileName);
 
     private SourceContentDocument<SkillDefinition> SkillDocument(string root, string fileName) =>
-        new(fileName, fileName, _deserializer.DeserializeSkills(File.ReadAllText(Path.Combine(root, fileName)), fileName));
+        new(fileName, fileName, _deserializer.DeserializeSkills(File.ReadAllText(TestContentPath.Resolve(root, fileName)), fileName));
 
     private SourceContentDocument<EntityDefinition> EntityDocument(string root, string fileName) =>
-        new(fileName, fileName, _deserializer.DeserializeEntities(File.ReadAllText(Path.Combine(root, fileName)), fileName));
+        new(fileName, fileName, _deserializer.DeserializeEntities(File.ReadAllText(TestContentPath.Resolve(root, fileName)), fileName));
 
     private SourceContentDocument<RaceDefinition> RaceDocument(string root, string fileName) =>
-        new(fileName, fileName, _deserializer.DeserializeRaces(File.ReadAllText(Path.Combine(root, fileName)), fileName));
+        new(fileName, fileName, _deserializer.DeserializeRaces(File.ReadAllText(TestContentPath.Resolve(root, fileName)), fileName));
 
     private SourceContentDocument<AilmentDefinition> AilmentDocument(string root, string fileName) =>
-        new(fileName, fileName, _deserializer.DeserializeAilments(File.ReadAllText(Path.Combine(root, fileName)), fileName));
+        new(fileName, fileName, _deserializer.DeserializeAilments(File.ReadAllText(TestContentPath.Resolve(root, fileName)), fileName));
 
     private static SkillSystemValidationRequest Request(
         SkillSystemRegistrationSnapshot registrations,

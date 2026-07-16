@@ -39,10 +39,9 @@ public sealed class PassiveSkillRuntimeTests
     [Fact]
     public void IceBoostFixture_ChangesIceDamageButNotFireDamage()
     {
-        string path = Path.Combine(
-            AppContext.BaseDirectory,
-            "Content",
-            "skill_system_redesign.skills.sample.json");
+        string path = TestContentPath.Resolve(
+            Path.Combine(AppContext.BaseDirectory, "Content"),
+            "reference/skill-system-redesign/skill_system_redesign.skills.sample.json");
         SkillDefinition iceBoost = Assert.Single(
             new SkillSystemJsonDeserializer().DeserializeSkills(File.ReadAllText(path), path).Records);
         RuntimeActorState actor = Actor("actor", PlayerTeam, passiveSkills: [iceBoost]);

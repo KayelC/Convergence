@@ -164,11 +164,14 @@
       "id": "PR-L2",
       "title": "Collision-safe DemoHost content layout",
       "severity": "low",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 6,
       "plannedCommit": "host: preserve content pack paths",
-      "evidence": ["ProductBoundaryTests"],
-      "remainingWork": ["pack-relative output paths", "duplicate-basename regression"],
+      "evidence": [
+        "FrameworkHostAdapterTests.FileContentSource_KeepsIdenticalDocumentNamesIsolatedByManifestDirectory",
+        "FrameworkHostAdapterTests.DemoHostContentOutput_PreservesPackRelativeDirectories"
+      ],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {

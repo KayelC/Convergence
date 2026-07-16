@@ -319,7 +319,7 @@ public sealed class GodotIntegrationContractTests
                 resourceRoot,
                 paths.ToDictionary(
                     path => path,
-                    path => File.ReadAllText(Path.Combine(root, path))));
+                    path => File.ReadAllText(TestContentPath.Resolve(root, path))));
         }
 
         public ValueTask<ContentPackTextBundle> ReadAsync(

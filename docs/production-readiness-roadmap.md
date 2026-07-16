@@ -50,7 +50,7 @@ This roadmap remains active while any finding is `open` or
 | PR-M5 | Encounter events leak presentation and omit data | `implemented_pending_review` | Every event kind carries an immutable typed payload; optional debug text is never the sole data source. |
 | PR-M6 | Aggregate save restoration is host-reimplemented | `implemented_pending_review` | Framework now owns validated, dependency-ordered, all-or-nothing session restoration and an explicit migration-step seam. |
 | PR-L1 | Runtime random targeting has an ordered fallback | `implemented_pending_review` | Both targeting policies are mandatory; ordered behavior requires explicit injection. |
-| PR-L2 | DemoHost flattens content filenames | `open` | Preserve pack-relative output and resolution paths. |
+| PR-L2 | DemoHost flattens content filenames | `implemented_pending_review` | Build output preserves pack directories; documents resolve relative to their manifest under the confined content root. |
 | CR-M6 | Catalyst rank shifting implements the wrong rule | `implemented_pending_review` | Schema v3 uses authored catalyst/target roles, exact same-race rank lookup, and typed rejection without clamping. |
 
 The later code review added `CR-M6`: catalyst rank shifting implemented the
@@ -86,6 +86,7 @@ resulting corrections are complete.
 | 3 | `4d2f8db` (`runtime: register authored ruleset policies`) | 799 tests passed; 0 skipped; all seven typed factory categories, 28 combat settings, authored roster tiers, authored Action Token liveness, custom replacement, and absent standard moon-phase composition covered. |
 | 4 | `battle: structure encounter event contracts` | 800 tests passed; 0 skipped; all event kinds are payload-checked, structural collections are immutable, turn-economy changes include before/after state and consumption, and final outcomes/faults are typed. |
 | 5 | `runtime: add aggregate session restoration` | 805 tests passed; 0 skipped; current-version restore, missing migration paths, explicit migration steps, Hosted Entity ordering, missing dependencies, dependency cycles, immutable aggregate views, and actor failure atomicity covered. |
+| 6 | `host: preserve content pack paths` | 807 tests passed; 0 skipped; all active content retains its pack-relative output path, document lookup is manifest-relative and root-confined, and identical document basenames in separate packs remain isolated. |
 
 ## Review Evidence Standard
 

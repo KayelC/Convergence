@@ -644,8 +644,8 @@ public sealed class BattleStatusLifecycleTests
         string ailmentName = "status_lifecycle_demo.ailments.json";
         var bundle = new ContentPackTextBundle(
             manifestName,
-            File.ReadAllText(Path.Combine(jsonRoot, manifestName)),
-            [new ContentDocumentText(ailmentName, ailmentName, File.ReadAllText(Path.Combine(jsonRoot, ailmentName)))]);
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, manifestName)),
+            [new ContentDocumentText(ailmentName, ailmentName, File.ReadAllText(TestContentPath.Resolve(jsonRoot, ailmentName)))]);
 
         GameDataCatalog catalog = new SkillSystemCatalogLoader()
             .Load(new SkillSystemCatalogLoadRequest(Registrations(), [bundle]))

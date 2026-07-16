@@ -76,7 +76,7 @@ public sealed class SkillSystemRedesignFixtureTests
 
     private static JsonObject LoadDocument(string fileName)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Content", fileName);
+        string path = TestContentPath.Resolve(Path.Combine(AppContext.BaseDirectory, "Content"), fileName);
         return JsonNode.Parse(File.ReadAllText(path))?.AsObject()
                ?? throw new InvalidOperationException($"Document '{fileName}' is not a JSON object.");
     }

@@ -10,7 +10,7 @@ JSON is a host-supplied authoring and import format. Framework public APIs consu
 - `content/demos`: focused runtime demonstrations.
 - `content/original/training-annex`: original end-to-end example content.
 
-Every active manifest lists its documents in authored order. DemoHost flattens these files into its output `Content` directory as a host deployment choice; logical manifest paths remain canonical.
+Every active manifest lists its documents in authored order. DemoHost preserves each pack's directory below its output `Content` root. A manifest is addressed relative to that root, while its document paths are resolved relative to the manifest directory. Resolution remains confined to the configured content root, so separate packs may safely use identical document filenames.
 
 ## Validation Layers
 

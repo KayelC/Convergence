@@ -17,16 +17,16 @@ public sealed class SchemaDeserializationTests
         string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
 
         ContentPackManifest manifest = _deserializer.DeserializeManifest(
-            File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.manifest.sample.json")),
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.manifest.sample.json")),
             "manifest.sample.json");
         DeserializedContentDocument<SkillDefinition> skills = _deserializer.DeserializeSkills(
-            File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.skills.sample.json")),
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.skills.sample.json")),
             "skills.sample.json");
         DeserializedContentDocument<EntityDefinition> entities = _deserializer.DeserializeEntities(
-            File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.entities.sample.json")),
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.entities.sample.json")),
             "entities.sample.json");
         DeserializedContentDocument<RaceDefinition> races = _deserializer.DeserializeRaces(
-            File.ReadAllText(Path.Combine(jsonRoot, "skill_system_redesign.races.sample.json")),
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
         Assert.Equal(3, manifest.SchemaVersion);

@@ -23,7 +23,9 @@ public sealed class CleanTrainingAnnexDemoHostTests
         Assert.NotNull(host.LastSummary);
         CleanTrainingAnnexDemoSummary summary = host.LastSummary!;
         Assert.Equal(0, exitCode);
-        Assert.Equal(["training_annex_slice.manifest.json"], source.ManifestRequests);
+        Assert.Equal(
+            ["original/training-annex/training_annex_slice.manifest.json"],
+            source.ManifestRequests);
         Assert.Equal(
             [
                 "training_annex_slice.races.json",
@@ -87,7 +89,9 @@ public sealed class CleanTrainingAnnexDemoHostTests
 
         Assert.Equal(2, exitCode);
         Assert.Null(host.LastSummary);
-        Assert.Equal(["training_annex_slice.manifest.json"], source.ManifestRequests);
+        Assert.Equal(
+            ["original/training-annex/training_annex_slice.manifest.json"],
+            source.ManifestRequests);
         Assert.Contains("Content read failed", output.ToString(), StringComparison.Ordinal);
         Assert.Contains("training_annex_slice.manifest.json", output.ToString(), StringComparison.Ordinal);
     }
@@ -109,14 +113,14 @@ public sealed class CleanTrainingAnnexDemoHostTests
         {
             _manifestRequests.Add(request.ManifestPath);
             _documentRequests.AddRange(request.DocumentPaths);
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
                 documents.Add(new ContentDocumentText(
                     path,
                     path,
-                    await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken)));
+                    await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken)));
             }
 
             return new ContentPackTextBundle(request.ManifestPath, manifest, documents);

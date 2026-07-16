@@ -155,7 +155,7 @@ internal static class TrainingAnnexHostSupport
 
     public static ContentPackTextRequest CreateContentRequest() =>
         new(
-            "training_annex_slice.manifest.json",
+            "original/training-annex/training_annex_slice.manifest.json",
             [
                 "training_annex_slice.races.json",
                 "training_annex_slice.ailments.json",

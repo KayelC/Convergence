@@ -78,9 +78,9 @@ public sealed class CatalogLoaderTests
         ];
         var bundle = new ContentPackTextBundle(
             manifestName,
-            File.ReadAllText(Path.Combine(root, manifestName)),
+            File.ReadAllText(TestContentPath.Resolve(root, manifestName)),
             documentNames.Select(name => new ContentDocumentText(
-                name, name, File.ReadAllText(Path.Combine(root, name)))));
+                name, name, File.ReadAllText(TestContentPath.Resolve(root, name)))));
 
         GameDataCatalog catalog = _loader.Load(new SkillSystemCatalogLoadRequest(
             ReferenceRegistrations(), [bundle])).RequireCatalog();

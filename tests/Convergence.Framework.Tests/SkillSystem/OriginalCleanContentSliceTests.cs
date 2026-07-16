@@ -708,7 +708,7 @@ public sealed class OriginalCleanContentSliceTests
     {
         string root = FindJsonRoot();
         ContentPackManifest manifest = new SkillSystemJsonDeserializer().DeserializeManifest(
-            File.ReadAllText(Path.Combine(root, "training_annex_slice.manifest.json")),
+            File.ReadAllText(TestContentPath.Resolve(root, "training_annex_slice.manifest.json")),
             "training_annex_slice.manifest.json");
 
         Assert.Equal(Pack, manifest.Id);
@@ -761,11 +761,11 @@ public sealed class OriginalCleanContentSliceTests
     private static ContentPackTextBundle Bundle(string root, string manifestName, params string[] documentNames) =>
         new(
             manifestName,
-            File.ReadAllText(Path.Combine(root, manifestName)),
+            File.ReadAllText(TestContentPath.Resolve(root, manifestName)),
             documentNames.Select(name => new ContentDocumentText(
                 name,
                 name,
-                File.ReadAllText(Path.Combine(root, name)))));
+                File.ReadAllText(TestContentPath.Resolve(root, name)))));
 
     private static SkillSystemRegistrationSnapshot Registrations() =>
         new SkillSystemRegistrationBuilder()

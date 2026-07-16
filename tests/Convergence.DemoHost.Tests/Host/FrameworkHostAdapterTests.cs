@@ -69,7 +69,7 @@ public sealed class FrameworkHostAdapterTests
             await File.WriteAllTextAsync(Path.Combine(nested, "document.json"), "{\"document\":true}");
             var source = new FileContentPackSource(root);
             const string manifestPath = "packs/nested/pack.manifest.json";
-            const string mixedDocumentPath = "packs\\nested/document.json";
+            const string mixedDocumentPath = "document.json";
 
             ContentPackTextBundle bundle = await source.ReadAsync(new ContentPackTextRequest(
                 manifestPath,
@@ -84,6 +84,59 @@ public sealed class FrameworkHostAdapterTests
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task FileContentSource_KeepsIdenticalDocumentNamesIsolatedByManifestDirectory()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            string firstPack = Path.Combine(root, "packs", "first");
+            string secondPack = Path.Combine(root, "packs", "second");
+            Directory.CreateDirectory(firstPack);
+            Directory.CreateDirectory(secondPack);
+            await File.WriteAllTextAsync(Path.Combine(firstPack, "pack.manifest.json"), "{\"pack\":1}");
+            await File.WriteAllTextAsync(Path.Combine(secondPack, "pack.manifest.json"), "{\"pack\":2}");
+            await File.WriteAllTextAsync(Path.Combine(firstPack, "skills.json"), "{\"skills\":1}");
+            await File.WriteAllTextAsync(Path.Combine(secondPack, "skills.json"), "{\"skills\":2}");
+            var source = new FileContentPackSource(root);
+
+            ContentPackTextBundle first = await source.ReadAsync(new ContentPackTextRequest(
+                "packs/first/pack.manifest.json",
+                ["skills.json"]));
+            ContentPackTextBundle second = await source.ReadAsync(new ContentPackTextRequest(
+                "packs/second/pack.manifest.json",
+                ["skills.json"]));
+
+            Assert.Equal("{\"skills\":1}", Assert.Single(first.Documents).Json);
+            Assert.Equal("{\"skills\":2}", Assert.Single(second.Documents).Json);
+            Assert.Equal(Path.Combine(firstPack, "skills.json"), first.Documents[0].SourceName);
+            Assert.Equal(Path.Combine(secondPack, "skills.json"), second.Documents[0].SourceName);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DemoHostContentOutput_PreservesPackRelativeDirectories()
+    {
+        string contentRoot = Path.Combine(AppContext.BaseDirectory, "Content");
+
+        Assert.True(File.Exists(Path.Combine(
+            contentRoot,
+            "original",
+            "training-annex",
+            "training_annex_slice.manifest.json")));
+        Assert.True(File.Exists(Path.Combine(
+            contentRoot,
+            "demos",
+            "clean-battle",
+            "clean_battle_demo.manifest.json")));
+        Assert.False(File.Exists(Path.Combine(contentRoot, "training_annex_slice.manifest.json")));
+        Assert.False(File.Exists(Path.Combine(contentRoot, "clean_battle_demo.manifest.json")));
     }
 
     [Fact]

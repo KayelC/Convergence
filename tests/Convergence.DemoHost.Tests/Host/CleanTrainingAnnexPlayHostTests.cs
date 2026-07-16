@@ -65,7 +65,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, exitCode);
         Assert.NotNull(host.LastSummary);
         CleanTrainingAnnexPlaySummary summary = host.LastSummary!;
-        Assert.Equal(["training_annex_slice.manifest.json"], source.ManifestRequests);
+        Assert.Equal(
+            ["original/training-annex/training_annex_slice.manifest.json"],
+            source.ManifestRequests);
         Assert.Equal(
             [
                 "training_annex_slice.races.json",
@@ -3918,7 +3920,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         Assert.Equal(2, exitCode);
         Assert.Null(host.LastSummary);
-        Assert.Equal(["training_annex_slice.manifest.json"], source.ManifestRequests);
+        Assert.Equal(
+            ["original/training-annex/training_annex_slice.manifest.json"],
+            source.ManifestRequests);
         Assert.Empty(io.Menus);
         Assert.Contains("Content read failed", output.ToString(), StringComparison.Ordinal);
         Assert.Contains("training_annex_slice.manifest.json", output.ToString(), StringComparison.Ordinal);
@@ -4242,14 +4246,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         {
             _manifestRequests.Add(request.ManifestPath);
             _documentRequests.AddRange(request.DocumentPaths);
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
                 documents.Add(new ContentDocumentText(
                     path,
                     path,
-                    await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken)));
+                    await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken)));
             }
 
             return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
@@ -4262,11 +4266,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 documents.Add(new ContentDocumentText(
                     path,
                     path,
@@ -4312,11 +4316,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 documents.Add(new ContentDocumentText(
                     path,
                     path,
@@ -4358,11 +4362,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 documents.Add(new ContentDocumentText(
                     path,
                     path,
@@ -4399,11 +4403,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 documents.Add(new ContentDocumentText(path, path, MutateDisplayText(text)));
             }
 
@@ -4461,11 +4465,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".skills.json", StringComparison.Ordinal))
                 {
                     text = MutateSkill(text);
@@ -4516,11 +4520,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".entities.json", StringComparison.Ordinal))
                 {
                     JsonObject rootNode = JsonNode.Parse(text)?.AsObject() ??
@@ -4548,11 +4552,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".encounters.json", StringComparison.Ordinal))
                 {
                     JsonObject document = JsonNode.Parse(text)?.AsObject() ??
@@ -4596,11 +4600,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".entities.json", StringComparison.Ordinal))
                 {
                     text = MutateEntities(text);
@@ -4768,11 +4772,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".rulesets.json", StringComparison.Ordinal))
                 {
                     JsonObject rootNode = JsonNode.Parse(text)?.AsObject() ??
@@ -4801,11 +4805,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".rulesets.json", StringComparison.Ordinal))
                 {
                     JsonObject rootNode = JsonNode.Parse(text)?.AsObject() ??
@@ -4833,11 +4837,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ContentPackTextRequest request,
             CancellationToken cancellationToken = default)
         {
-            string manifest = await File.ReadAllTextAsync(Path.Combine(root, request.ManifestPath), cancellationToken);
+            string manifest = await File.ReadAllTextAsync(TestContentPath.ResolveManifest(root, request.ManifestPath), cancellationToken);
             var documents = new List<ContentDocumentText>();
             foreach (string path in request.DocumentPaths)
             {
-                string text = await File.ReadAllTextAsync(Path.Combine(root, path), cancellationToken);
+                string text = await File.ReadAllTextAsync(TestContentPath.ResolveDocument(root, request.ManifestPath, path), cancellationToken);
                 if (path.EndsWith(".rulesets.json", StringComparison.Ordinal))
                 {
                     JsonObject rootNode = JsonNode.Parse(text)?.AsObject() ??

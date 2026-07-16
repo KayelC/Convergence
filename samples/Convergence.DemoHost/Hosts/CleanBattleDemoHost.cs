@@ -120,14 +120,14 @@ internal sealed class CleanBattleDemoHost
             bundles =
             [
                 await _contentSource.ReadAsync(new ContentPackTextRequest(
-                    "skill_system_redesign.manifest.sample.json",
+                    "reference/skill-system-redesign/skill_system_redesign.manifest.sample.json",
                     [
                         "skill_system_redesign.races.sample.json",
                         "skill_system_redesign.skills.sample.json",
                         "skill_system_redesign.entities.sample.json"
                     ]), cancellationToken),
                 await _contentSource.ReadAsync(new ContentPackTextRequest(
-                    "clean_battle_demo.manifest.json",
+                    "demos/clean-battle/clean_battle_demo.manifest.json",
                     [
                         "clean_battle_demo.races.json",
                         "clean_battle_demo.skills.json",

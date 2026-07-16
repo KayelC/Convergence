@@ -817,11 +817,11 @@ public sealed class FusionTransactionServiceTests
         string root = FindJsonRoot();
         var bundle = new ContentPackTextBundle(
             request.ManifestPath,
-            File.ReadAllText(Path.Combine(root, request.ManifestPath)),
+            File.ReadAllText(TestContentPath.ResolveManifest(root, request.ManifestPath)),
             request.DocumentPaths.Select(path => new ContentDocumentText(
                 path,
                 path,
-                File.ReadAllText(Path.Combine(root, path)))));
+                File.ReadAllText(TestContentPath.ResolveDocument(root, request.ManifestPath, path)))));
         CatalogLoadResult result = new SkillSystemCatalogLoader().Load(new SkillSystemCatalogLoadRequest(
             TrainingAnnexHostSupport.BuildRegistrations(),
             [bundle]));

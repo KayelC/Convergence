@@ -1248,11 +1248,11 @@ public sealed class CatalogBattleRuntimeTests
     private static ContentPackTextBundle Bundle(string root, string manifest, params string[] documents) =>
         new(
             manifest,
-            File.ReadAllText(Path.Combine(root, manifest)),
+            File.ReadAllText(TestContentPath.Resolve(root, manifest)),
             documents.Select(path => new ContentDocumentText(
                 path,
                 path,
-                File.ReadAllText(Path.Combine(root, path)))));
+                File.ReadAllText(TestContentPath.Resolve(root, path)))));
 
     private static SkillSystemRegistrationSnapshot Registrations() =>
         new SkillSystemRegistrationBuilder()

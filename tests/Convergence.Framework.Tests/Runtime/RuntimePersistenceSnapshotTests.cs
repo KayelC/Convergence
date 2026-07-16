@@ -1871,11 +1871,11 @@ public sealed class RuntimePersistenceSnapshotTests
         string jsonRoot = Path.Combine(AppContext.BaseDirectory, "Content");
         return new ContentPackTextBundle(
             manifestName,
-            File.ReadAllText(Path.Combine(jsonRoot, manifestName)),
+            File.ReadAllText(TestContentPath.Resolve(jsonRoot, manifestName)),
             documentNames.Select(name => new ContentDocumentText(
                 name,
                 name,
-                File.ReadAllText(Path.Combine(jsonRoot, name)))));
+                File.ReadAllText(TestContentPath.Resolve(jsonRoot, name)))));
     }
 
     private static SkillSystemRegistrationSnapshot Registrations() =>

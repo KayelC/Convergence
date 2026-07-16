@@ -38,21 +38,21 @@ internal sealed class CleanSaveDemoHost
                 BuildRegistrations(),
                 [
                     await _contentSource.ReadAsync(new ContentPackTextRequest(
-                        "skill_system_redesign.manifest.sample.json",
+                        "reference/skill-system-redesign/skill_system_redesign.manifest.sample.json",
                         [
                             "skill_system_redesign.races.sample.json",
                             "skill_system_redesign.skills.sample.json",
                             "skill_system_redesign.entities.sample.json"
                         ]), cancellationToken),
                     await _contentSource.ReadAsync(new ContentPackTextRequest(
-                        "clean_battle_demo.manifest.json",
+                        "demos/clean-battle/clean_battle_demo.manifest.json",
                         [
                             "clean_battle_demo.races.json",
                             "clean_battle_demo.skills.json",
                             "clean_battle_demo.entities.json"
                         ]), cancellationToken),
                     await _contentSource.ReadAsync(new ContentPackTextRequest(
-                        "shared_effects_demo.manifest.json",
+                        "demos/shared-effects/shared_effects_demo.manifest.json",
                         [
                             "shared_effects_demo.ailments.json",
                             "shared_effects_demo.skills.json",
@@ -60,7 +60,7 @@ internal sealed class CleanSaveDemoHost
                             "shared_effects_demo.items.json"
                         ]), cancellationToken),
                     await _contentSource.ReadAsync(new ContentPackTextRequest(
-                        "catalog_surface_sample.manifest.json",
+                        "reference/catalog-surface/catalog_surface_sample.manifest.json",
                         [
                             "catalog_surface_sample.equipment.json",
                             "catalog_surface_sample.shops.json",

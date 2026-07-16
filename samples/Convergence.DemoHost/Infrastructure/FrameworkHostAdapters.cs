@@ -29,9 +29,10 @@ internal sealed class FileContentPackSource : IContentPackTextSource
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        string manifestFile = ResolveContentFile(request.ManifestPath);
+        string manifestFile = ResolveContentFile(request.ManifestPath, _root);
+        string manifestDirectory = Path.GetDirectoryName(manifestFile) ?? _root;
         (string LogicalPath, string FilePath)[] resolvedDocuments = request.DocumentPaths
-            .Select(path => (path, ResolveContentFile(path)))
+            .Select(path => (path, ResolveContentFile(path, manifestDirectory)))
             .ToArray();
 
         string manifestText = await File.ReadAllTextAsync(manifestFile, cancellationToken).ConfigureAwait(false);
@@ -46,7 +47,7 @@ internal sealed class FileContentPackSource : IContentPackTextSource
         return new ContentPackTextBundle(manifestFile, manifestText, documents);
     }
 
-    private string ResolveContentFile(string logicalPath)
+    private string ResolveContentFile(string logicalPath, string baseDirectory)
     {
         if (string.IsNullOrWhiteSpace(logicalPath))
         {
@@ -61,7 +62,7 @@ internal sealed class FileContentPackSource : IContentPackTextSource
             throw OutsideContentRoot(logicalPath);
         }
 
-        string resolvedPath = Path.GetFullPath(normalizedPath, _root);
+        string resolvedPath = Path.GetFullPath(normalizedPath, baseDirectory);
         if (!resolvedPath.StartsWith(_rootPrefix, _pathComparison))
         {
             throw OutsideContentRoot(logicalPath);
