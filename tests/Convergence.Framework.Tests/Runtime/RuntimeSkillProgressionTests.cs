@@ -661,6 +661,11 @@ public sealed class RuntimeSkillProgressionTests
             .ToArray();
         return new LevelGrowthResult(
             ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                before.Progression,
+                before.Stats,
+                before.Resources,
+                before.BaseResourceValues),
             new RuntimeProgressionSnapshot(level, 0, level, 0),
             new RuntimeStatBlockSnapshot(baseStats, baseStats),
             before.Resources,

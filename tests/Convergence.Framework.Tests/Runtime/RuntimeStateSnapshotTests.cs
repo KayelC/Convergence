@@ -323,6 +323,11 @@ public sealed class RuntimeStateSnapshotTests
         RuntimeActorSnapshot before = actor.ToSnapshot();
         var growth = new LevelGrowthResult(
             ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                before.Progression,
+                before.Stats,
+                before.Resources,
+                before.BaseResourceValues),
             new RuntimeProgressionSnapshot(15, 10, 930, 4),
             new RuntimeStatBlockSnapshot(
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 11)],
@@ -345,6 +350,66 @@ public sealed class RuntimeStateSnapshotTests
     }
 
     [Fact]
+    public void RuntimeProgressionTransactions_RejectPreparedGrowthAfterSourceStateChanges()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorSnapshot source = actor.ToSnapshot();
+        var growth = new LevelGrowthResult(
+            ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                source.Progression,
+                source.Stats,
+                source.Resources,
+                source.BaseResourceValues),
+            new RuntimeProgressionSnapshot(15, 0, 930, 4),
+            source.Stats,
+            source.Resources,
+            source.BaseResourceValues);
+        actor.AddResource(Id("hp"), -1);
+        RuntimeActorSnapshot changed = actor.ToSnapshot();
+
+        RuntimeMutationResult result =
+            new RuntimeProgressionTransactionService().ApplyLevelGrowth(actor, growth);
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            RuntimeMutationErrorCode.ProgressionSourceStateChanged,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Same(result.Before, result.After);
+        AssertResourcesEqual(changed, result.After);
+        AssertResourcesEqual(changed, actor.ToSnapshot());
+    }
+
+    [Fact]
+    public void RuntimeProgressionTransactions_CannotApplyTheSamePreparedGrowthTwice()
+    {
+        RuntimeActorState actor = Restore(CreateCompleteSnapshot());
+        RuntimeActorSnapshot source = actor.ToSnapshot();
+        var growth = new LevelGrowthResult(
+            ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                source.Progression,
+                source.Stats,
+                source.Resources,
+                source.BaseResourceValues),
+            new RuntimeProgressionSnapshot(15, 0, 930, 4),
+            source.Stats,
+            source.Resources,
+            source.BaseResourceValues);
+        var service = new RuntimeProgressionTransactionService();
+
+        RuntimeMutationResult first = service.ApplyLevelGrowth(actor, growth);
+        RuntimeMutationResult repeated = service.ApplyLevelGrowth(actor, growth);
+
+        Assert.True(first.Applied);
+        Assert.False(repeated.Applied);
+        Assert.Equal(
+            RuntimeMutationErrorCode.ProgressionSourceStateChanged,
+            Assert.Single(repeated.Diagnostics).Code);
+        Assert.Equal(first.After.Progression, repeated.After.Progression);
+    }
+
+    [Fact]
     public void CanonicalActorState_GrowthResourcesAndBattleLifecycleMutateOneObject()
     {
         RuntimeActorState actor = Restore(CreateCompleteSnapshot());
@@ -354,8 +419,14 @@ public sealed class RuntimeStateSnapshotTests
         var lifecycle = new BattleStatusLifecycleService(new FixedRandomSource());
 
         RuntimeMutationResult resourceResult = resources.SetResource(actor, Id("hp"), 50);
+        RuntimeActorSnapshot growthBefore = actor.ToSnapshot();
         var growth = new LevelGrowthResult(
             ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                growthBefore.Progression,
+                growthBefore.Stats,
+                growthBefore.Resources,
+                growthBefore.BaseResourceValues),
             new RuntimeProgressionSnapshot(15, 10, 930, 4),
             new RuntimeStatBlockSnapshot(
                 [new KeyValuePair<ContentId, decimal>(Id("strength"), 11)],

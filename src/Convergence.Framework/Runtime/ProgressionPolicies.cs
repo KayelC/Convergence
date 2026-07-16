@@ -491,6 +491,7 @@ public sealed record LevelGrowthResult
 {
     public LevelGrowthResult(
         ProgressionMutationStatus status,
+        LevelGrowthSourceSnapshot source,
         RuntimeProgressionSnapshot progression,
         RuntimeStatBlockSnapshot stats,
         IEnumerable<RuntimeResourceSnapshot>? resources = null,
@@ -499,6 +500,7 @@ public sealed record LevelGrowthResult
         IEnumerable<ProgressionMutationDiagnostic>? diagnostics = null)
     {
         Status = status;
+        Source = source ?? throw new ArgumentNullException(nameof(source));
         Progression = progression ?? throw new ArgumentNullException(nameof(progression));
         Stats = stats ?? throw new ArgumentNullException(nameof(stats));
         Resources = SnapshotList(resources);
@@ -509,12 +511,33 @@ public sealed record LevelGrowthResult
 
     public ProgressionMutationStatus Status { get; }
     public bool Applied => Status == ProgressionMutationStatus.Applied;
+    public LevelGrowthSourceSnapshot Source { get; }
     public RuntimeProgressionSnapshot Progression { get; }
     public RuntimeStatBlockSnapshot Stats { get; }
     public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
     public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
     public IReadOnlyList<LevelUpEvent> LevelUps { get; }
     public IReadOnlyList<ProgressionMutationDiagnostic> Diagnostics { get; }
+}
+
+public sealed record LevelGrowthSourceSnapshot
+{
+    public LevelGrowthSourceSnapshot(
+        RuntimeProgressionSnapshot progression,
+        RuntimeStatBlockSnapshot stats,
+        IEnumerable<RuntimeResourceSnapshot>? resources = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null)
+    {
+        Progression = progression ?? throw new ArgumentNullException(nameof(progression));
+        Stats = stats ?? throw new ArgumentNullException(nameof(stats));
+        Resources = SnapshotList(resources);
+        BaseResourceValues = SnapshotDictionary(baseResourceValues);
+    }
+
+    public RuntimeProgressionSnapshot Progression { get; }
+    public RuntimeStatBlockSnapshot Stats { get; }
+    public IReadOnlyList<RuntimeResourceSnapshot> Resources { get; }
+    public IReadOnlyDictionary<ContentId, decimal> BaseResourceValues { get; }
 }
 
 public interface ILevelGrowthPolicy
@@ -649,6 +672,7 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
             var stats = new RuntimeStatBlockSnapshot(baseStats, effectiveStats);
             return new LevelGrowthResult(
                 ProgressionMutationStatus.Applied,
+                Source(request),
                 progression,
                 stats,
                 resources,
@@ -670,11 +694,19 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
         string message) =>
         new(
             ProgressionMutationStatus.Rejected,
+            Source(request),
             request.Progression,
             request.Stats,
             request.Resources,
             request.BaseResourceValues,
             diagnostics: [new ProgressionMutationDiagnostic(code, message)]);
+
+    private static LevelGrowthSourceSnapshot Source(LevelGrowthRequest request) =>
+        new(
+            request.Progression,
+            request.Stats,
+            request.Resources,
+            request.BaseResourceValues);
 }
 
 public sealed record StatAllocationRequest

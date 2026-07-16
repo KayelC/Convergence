@@ -82,7 +82,8 @@ public enum RuntimeMutationErrorCode
 {
     MissingResource,
     ResourceValueOutOfRange,
-    ProgressionMutationRejected
+    ProgressionMutationRejected,
+    ProgressionSourceStateChanged
 }
 
 public sealed record RuntimeActorIdentitySnapshot
@@ -699,6 +700,21 @@ public sealed class RuntimeProgressionTransactionService
                     "$.progression")));
         }
 
+        if (!MatchesGrowthSource(before, growth.Source))
+        {
+            return new RuntimeMutationResult(
+                RuntimeMutationStatus.Rejected,
+                before,
+                before,
+                [
+                    new RuntimeMutationDiagnostic(
+                        RuntimeMutationErrorCode.ProgressionSourceStateChanged,
+                        "Actor progression, stats, resources, or base-resource values changed " +
+                        "after level growth was prepared.",
+                        "$")
+                ]);
+        }
+
         actor.ApplyProgression(
             growth.Progression,
             growth.Stats,
@@ -707,6 +723,44 @@ public sealed class RuntimeProgressionTransactionService
         RuntimeActorSnapshot after = actor.ToSnapshot();
         return new RuntimeMutationResult(RuntimeMutationStatus.Applied, before, after);
     }
+
+    private static bool MatchesGrowthSource(
+        RuntimeActorSnapshot actor,
+        LevelGrowthSourceSnapshot source) =>
+        actor.Progression == source.Progression &&
+        DictionaryEqual(actor.Stats.BaseStats, source.Stats.BaseStats) &&
+        DictionaryEqual(actor.Stats.EffectiveStats, source.Stats.EffectiveStats) &&
+        ResourcesEqual(actor.Resources, source.Resources) &&
+        DictionaryEqual(actor.BaseResourceValues, source.BaseResourceValues);
+
+    private static bool ResourcesEqual(
+        IReadOnlyList<RuntimeResourceSnapshot> first,
+        IReadOnlyList<RuntimeResourceSnapshot> second)
+    {
+        if (first.Count != second.Count)
+        {
+            return false;
+        }
+        if (second.Select(resource => resource.ResourceId).Distinct().Count() != second.Count)
+        {
+            return false;
+        }
+
+        Dictionary<ContentId, RuntimeResourceSnapshot> secondById = second
+            .ToDictionary(resource => resource.ResourceId);
+        return first.All(resource =>
+            secondById.TryGetValue(resource.ResourceId, out RuntimeResourceSnapshot? candidate) &&
+            candidate.Current == resource.Current &&
+            candidate.Maximum == resource.Maximum);
+    }
+
+    private static bool DictionaryEqual(
+        IReadOnlyDictionary<ContentId, decimal> first,
+        IReadOnlyDictionary<ContentId, decimal> second) =>
+        first.Count == second.Count &&
+        first.All(pair =>
+            second.TryGetValue(pair.Key, out decimal value) &&
+            value == pair.Value);
 }
 
 internal static class RuntimeSnapshotCollections

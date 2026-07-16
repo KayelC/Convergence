@@ -668,6 +668,10 @@ authored unlocks use the same unlock planner as live growth and become pending
 when full; direct actor and aggregate save restoration reject equipped lists
 outside the selected policy.
 
+**M4 correction:** `LevelGrowthResult` now retains its complete immutable
+progression/stat/resource source precondition. Direct and composed growth
+transactions reject stale or repeated results before mutation.
+
 ## Expected File Ownership
 
 Likely Framework files to change:

@@ -115,6 +115,11 @@ public sealed class RuntimeActorGrowthCompositionTests
         RuntimeActorSnapshot before = vessel.ToSnapshot();
         var rejectedGrowth = new LevelGrowthResult(
             ProgressionMutationStatus.Rejected,
+            new LevelGrowthSourceSnapshot(
+                before.Progression,
+                before.Stats,
+                before.Resources,
+                before.BaseResourceValues),
             before.Progression,
             before.Stats,
             diagnostics:
@@ -146,6 +151,40 @@ public sealed class RuntimeActorGrowthCompositionTests
         AssertActorStateEqual(before, vessel.ToSnapshot());
     }
 
+    [Fact]
+    public void GrowthComposition_RejectsStalePreparedGrowthBeforeUnlocksOrComposition()
+    {
+        RuntimeActorState vessel = CreateActor("vessel_stale_growth", 5m);
+        RuntimeActorSnapshot source = vessel.ToSnapshot();
+        LevelGrowthResult growth = AppliedGrowth(source, customEffectiveStat: 19m);
+        vessel.AddResource(StandardProgressionIds.Hp, -1m);
+        RuntimeActorSnapshot changed = vessel.ToSnapshot();
+        var composition = new CountingCompositionService();
+        var skills = new SkillRepository();
+
+        RuntimeActorGrowthCompositionResult result = new RuntimeActorGrowthCompositionService(
+            composition,
+            skills).Apply(
+            new RuntimeActorGrowthCompositionRequest(
+                vessel,
+                Entity(vessel),
+                growth,
+                new SharedRuntimeMoveListCapacityPolicy(),
+                new RuntimeActorCombatProfileCompositionRequest(
+                    vessel,
+                    RuntimeStatSourceKind.Actor,
+                    MissingHostedEntityBehavior.UseActorBaseStats)));
+
+        Assert.False(result.Applied);
+        Assert.Equal(RuntimeActorGrowthCompositionStatus.GrowthRejected, result.Status);
+        Assert.Equal(
+            RuntimeMutationErrorCode.ProgressionSourceStateChanged,
+            Assert.Single(result.GrowthMutation.Diagnostics).Code);
+        Assert.Equal(0, composition.CallCount);
+        Assert.Null(result.CombatProfileComposition);
+        AssertActorStateEqual(changed, vessel.ToSnapshot());
+    }
+
     private static LevelGrowthResult AppliedGrowth(
         RuntimeActorSnapshot before,
         decimal customEffectiveStat)
@@ -157,6 +196,11 @@ public sealed class RuntimeActorGrowthCompositionTests
             .ToArray();
         return new LevelGrowthResult(
             ProgressionMutationStatus.Applied,
+            new LevelGrowthSourceSnapshot(
+                before.Progression,
+                before.Stats,
+                before.Resources,
+                before.BaseResourceValues),
             new RuntimeProgressionSnapshot(2, 0, 2, 0),
             new RuntimeStatBlockSnapshot(before.Stats.BaseStats, effectiveStats),
             [

@@ -5146,12 +5146,21 @@ Convergence.Runtime.LevelGrowthResult.Applied.get -> bool
 Convergence.Runtime.LevelGrowthResult.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.LevelGrowthResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ProgressionMutationDiagnostic!>!
 Convergence.Runtime.LevelGrowthResult.Equals(Convergence.Runtime.LevelGrowthResult? other) -> bool
-Convergence.Runtime.LevelGrowthResult.LevelGrowthResult(Convergence.Runtime.ProgressionMutationStatus status, Convergence.Runtime.RuntimeProgressionSnapshot! progression, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>? resources = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.LevelUpEvent!>? levelUps = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.ProgressionMutationDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.LevelGrowthResult.LevelGrowthResult(Convergence.Runtime.ProgressionMutationStatus status, Convergence.Runtime.LevelGrowthSourceSnapshot! source, Convergence.Runtime.RuntimeProgressionSnapshot! progression, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>? resources = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.LevelUpEvent!>? levelUps = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.ProgressionMutationDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.LevelGrowthResult.LevelUps.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.LevelUpEvent!>!
 Convergence.Runtime.LevelGrowthResult.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Runtime.LevelGrowthResult.Resources.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeResourceSnapshot!>!
+Convergence.Runtime.LevelGrowthResult.Source.get -> Convergence.Runtime.LevelGrowthSourceSnapshot!
 Convergence.Runtime.LevelGrowthResult.Stats.get -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.LevelGrowthResult.Status.get -> Convergence.Runtime.ProgressionMutationStatus
+Convergence.Runtime.LevelGrowthSourceSnapshot
+Convergence.Runtime.LevelGrowthSourceSnapshot.<Clone>$() -> Convergence.Runtime.LevelGrowthSourceSnapshot!
+Convergence.Runtime.LevelGrowthSourceSnapshot.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+Convergence.Runtime.LevelGrowthSourceSnapshot.Equals(Convergence.Runtime.LevelGrowthSourceSnapshot? other) -> bool
+Convergence.Runtime.LevelGrowthSourceSnapshot.LevelGrowthSourceSnapshot(Convergence.Runtime.RuntimeProgressionSnapshot! progression, Convergence.Runtime.RuntimeStatBlockSnapshot! stats, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>? resources = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null) -> void
+Convergence.Runtime.LevelGrowthSourceSnapshot.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
+Convergence.Runtime.LevelGrowthSourceSnapshot.Resources.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeResourceSnapshot!>!
+Convergence.Runtime.LevelGrowthSourceSnapshot.Stats.get -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.LevelUpEvent
 Convergence.Runtime.LevelUpEvent.<Clone>$() -> Convergence.Runtime.LevelUpEvent!
 Convergence.Runtime.LevelUpEvent.BaseResourceIncreases.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -5922,6 +5931,7 @@ Convergence.Runtime.RuntimeMutationDiagnostic.RuntimeMutationDiagnostic(Converge
 Convergence.Runtime.RuntimeMutationErrorCode
 Convergence.Runtime.RuntimeMutationErrorCode.MissingResource = 0 -> Convergence.Runtime.RuntimeMutationErrorCode
 Convergence.Runtime.RuntimeMutationErrorCode.ProgressionMutationRejected = 2 -> Convergence.Runtime.RuntimeMutationErrorCode
+Convergence.Runtime.RuntimeMutationErrorCode.ProgressionSourceStateChanged = 3 -> Convergence.Runtime.RuntimeMutationErrorCode
 Convergence.Runtime.RuntimeMutationErrorCode.ResourceValueOutOfRange = 1 -> Convergence.Runtime.RuntimeMutationErrorCode
 Convergence.Runtime.RuntimeMutationResult
 Convergence.Runtime.RuntimeMutationResult.<Clone>$() -> Convergence.Runtime.RuntimeMutationResult!
@@ -8243,6 +8253,9 @@ override Convergence.Runtime.LevelGrowthRequest.ToString() -> string!
 override Convergence.Runtime.LevelGrowthResult.Equals(object? obj) -> bool
 override Convergence.Runtime.LevelGrowthResult.GetHashCode() -> int
 override Convergence.Runtime.LevelGrowthResult.ToString() -> string!
+override Convergence.Runtime.LevelGrowthSourceSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.LevelGrowthSourceSnapshot.GetHashCode() -> int
+override Convergence.Runtime.LevelGrowthSourceSnapshot.ToString() -> string!
 override Convergence.Runtime.LevelUpEvent.Equals(object? obj) -> bool
 override Convergence.Runtime.LevelUpEvent.GetHashCode() -> int
 override Convergence.Runtime.LevelUpEvent.ToString() -> string!
@@ -9550,6 +9563,8 @@ static Convergence.Runtime.LevelGrowthRequest.operator !=(Convergence.Runtime.Le
 static Convergence.Runtime.LevelGrowthRequest.operator ==(Convergence.Runtime.LevelGrowthRequest? left, Convergence.Runtime.LevelGrowthRequest? right) -> bool
 static Convergence.Runtime.LevelGrowthResult.operator !=(Convergence.Runtime.LevelGrowthResult? left, Convergence.Runtime.LevelGrowthResult? right) -> bool
 static Convergence.Runtime.LevelGrowthResult.operator ==(Convergence.Runtime.LevelGrowthResult? left, Convergence.Runtime.LevelGrowthResult? right) -> bool
+static Convergence.Runtime.LevelGrowthSourceSnapshot.operator !=(Convergence.Runtime.LevelGrowthSourceSnapshot? left, Convergence.Runtime.LevelGrowthSourceSnapshot? right) -> bool
+static Convergence.Runtime.LevelGrowthSourceSnapshot.operator ==(Convergence.Runtime.LevelGrowthSourceSnapshot? left, Convergence.Runtime.LevelGrowthSourceSnapshot? right) -> bool
 static Convergence.Runtime.LevelUpEvent.operator !=(Convergence.Runtime.LevelUpEvent? left, Convergence.Runtime.LevelUpEvent? right) -> bool
 static Convergence.Runtime.LevelUpEvent.operator ==(Convergence.Runtime.LevelUpEvent? left, Convergence.Runtime.LevelUpEvent? right) -> bool
 static Convergence.Runtime.NoLimitRosterCapacityPolicy.Instance.get -> Convergence.Runtime.NoLimitRosterCapacityPolicy!

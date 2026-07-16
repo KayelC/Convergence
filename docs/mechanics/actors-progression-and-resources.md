@@ -145,6 +145,11 @@ Vessel and Hosted Entity as separate progression subjects.
 One experience award may cross multiple levels. The result contains ordered
 level-up events. Invalid or negative awards reject without mutation.
 
+**Framework rule:** a prepared growth result records the progression, stats,
+resources, and base-resource values from which it was calculated. If any of
+those values change before application, or the same result is submitted twice,
+the transaction rejects without overwriting newer state.
+
 ## Authored Skill Unlocks
 
 Entity content may list skills unlocked at specific levels.

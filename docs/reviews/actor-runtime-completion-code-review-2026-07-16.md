@@ -228,6 +228,14 @@ success.
 revision in the prepared result/request, or move growth calculation inside the
 transaction service so assessment and commit share one state precondition.
 
+**Resolution:** corrected. Every `LevelGrowthResult` now carries an immutable
+`LevelGrowthSourceSnapshot` containing the progression, stat block, resources,
+and base-resource values from which it was calculated. The progression
+transaction compares that complete precondition before mutation and returns
+`ProgressionSourceStateChanged` with the actor unchanged when it is stale.
+Duplicate application and high-level growth composition are covered by
+regression tests.
+
 ### M5. The Godot reference save path bypasses aggregate restoration
 
 **Invariant:** a Godot host should create and expose live actors only after the

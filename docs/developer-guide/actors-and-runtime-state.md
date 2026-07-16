@@ -18,16 +18,15 @@ The confirmed rules are recorded in
 The D1-D6 design is confirmed and the demonstrated paths are green. The
 [completion code review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 identified integration gaps around roster authority, live validation,
-high-level move-list capacity, stale prepared growth, direct pending-skill
-restore validation, and the Godot sample restore boundary. Roster authority,
-live validation, and high-level move-list capacity are now corrected.
+high-level move-list capacity, prepared growth, direct pending-skill restore
+validation, and the Godot sample restore boundary. Roster authority, live
+validation, move-list capacity, and prepared-growth staleness are now
+corrected.
 
 Until those follow-ups are corrected:
 
 - keep party snapshots sourced from validated session state;
 - supply the current owner actor snapshot to every roster transition;
-- apply growth results immediately to the state from which they were
-  calculated;
 - prefer aggregate session restoration over direct actor restoration.
 
 ## Runtime Roles
@@ -248,6 +247,11 @@ normally the actor that gains levels and unlocks authored skills.
 - the configured move-list capacity policy;
 - dependent Vessel recomposition;
 - final all-or-nothing commit.
+
+`LevelGrowthResult.Source` captures the progression, stats, resources, and
+base-resource values used during assessment. Applying it to changed state, or
+applying the same result twice, returns
+`RuntimeMutationErrorCode.ProgressionSourceStateChanged` without mutation.
 
 ```mermaid
 flowchart TD
