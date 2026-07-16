@@ -1,7 +1,7 @@
 # Product Roadmap
 
 The [Production-Readiness Completion Roadmap](production-readiness-roadmap.md)
-and its [consolidated source review](convergence-production-readiness-consolidated-review-2026-07-16.md)
+and its [consolidated source review](../reviews/convergence-production-readiness-consolidated-review-2026-07-16.md)
 are complete and verified. The priorities below now govern forward development;
 the completed release record remains active evidence for the guarded `0.1.0`
 baseline.
@@ -10,7 +10,7 @@ baseline.
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-The [Terminology Boundary](terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
 
 ## Completed Semantic Correction
 

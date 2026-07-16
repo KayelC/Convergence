@@ -98,4 +98,4 @@ terminology boundaries explicitly and smoke-tests every noninteractive DemoHost
 mode. Interactive Training Annex behavior is exercised through scripted host
 tests rather than terminal piping.
 
-Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), [mechanics and player rules](docs/mechanics/README.md), and [capability matrix](docs/framework-capability-matrix.md).
+Start with the [documentation index](docs/README.md), [architecture](docs/architecture.md), [mechanics and player rules](docs/mechanics/README.md), and [capability matrix](docs/roadmap/framework-capability-matrix.md).

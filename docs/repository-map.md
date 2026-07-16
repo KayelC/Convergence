@@ -28,6 +28,13 @@ content/
   demos/
   original/training-annex/
 docs/
+  mechanics/
+  developer-guide/
+  technical/
+  decisions/
+  reference/
+  reviews/
+  roadmap/
 ArchiveDocs/
   LegacyFramework/
   LegacyRepository/
@@ -47,7 +54,13 @@ ArchiveDocs/
 | `content/reference` | Small schema and catalog reference packs. |
 | `content/demos` | Focused battle and shared-effect demonstrations. |
 | `content/original/training-annex` | Original end-to-end example content. |
-| `docs` | Current product documentation. |
+| `docs/mechanics` | Player-visible and designer-facing rules. |
+| `docs/developer-guide` | Host integration and extension recipes. |
+| `docs/technical` | State machines, ordering, invariants, and implementation ownership. |
+| `docs/decisions` | Proposed, confirmed, superseded, and rejected design decisions. |
+| `docs/reference` | Tested inventories, API ownership, and documentation coverage. |
+| `docs/reviews` | Source-review evidence that does not define current mechanics. |
+| `docs/roadmap` | Product priorities, capability maturity, and completed release records. |
 | `ArchiveDocs/LegacyFramework` | Non-built, unsupported prototype history and migration evidence. |
 | `ArchiveDocs/LegacyRepository` | Retired pre-Convergence root solution, README, documentation, and older file archive. |
 

@@ -48,4 +48,4 @@ Versioned snapshots cover actors, party and rosters, inventory, equipment, walle
 
 ## Demonstration Coverage
 
-DemoHost provides focused battle, field, and save demonstrations plus the original Training Annex end-to-end slice. The [capability matrix](framework-capability-matrix.md) records whether each framework area is complete, partial, or deferred independently from demo breadth.
+DemoHost provides focused battle, field, and save demonstrations plus the original Training Annex end-to-end slice. The [capability matrix](roadmap/framework-capability-matrix.md) records whether each framework area is complete, partial, or deferred independently from demo breadth.

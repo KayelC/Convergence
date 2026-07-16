@@ -1,0 +1,459 @@
+{
+  "schemaVersion": 1,
+  "product": "Convergence.Framework",
+  "authority": "docs/documentation-design-pattern.md",
+  "states": ["reviewed", "existing_unreviewed", "missing", "not_applicable"],
+  "audiences": ["mechanics", "developer_guide", "technical"],
+  "capabilities": [
+    {
+      "id": "content_definitions",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "Content definition structure is an authoring concern rather than a player-visible mechanic."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/content-contract.md"],
+        "reason": "An active authoring overview exists but has not completed collaborative owner review."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/architecture.md"],
+        "reason": "Broad ownership is described, but definition-level invariants still require review."
+      }
+    },
+    {
+      "id": "portable_deserialization",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "Deserializer behavior is not player-visible."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/content-contract.md"],
+        "reason": "The content boundary is described without a reviewed deserialization recipe."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "The strict DTO, converter, and mapping pipeline needs a technical document."
+      }
+    },
+    {
+      "id": "content_validation",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "Authoring validation is not a player-visible mechanic."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/content-authoring-validator.md"],
+        "reason": "Validator usage exists but has not completed collaborative owner review."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Schema, semantic, dependency, registration, and catalog validation ordering needs a technical document."
+      }
+    },
+    {
+      "id": "catalog_loading",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "Catalog loading is host and authoring infrastructure."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/content-contract.md"],
+        "reason": "Pack and catalog concepts exist without a reviewed host composition guide."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Qualification, dependency visibility, and catalog construction need a technical document."
+      }
+    },
+    {
+      "id": "runtime_actor_state",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/actors-progression-and-resources.md"],
+        "reason": "Actor concepts exist but have not completed source-by-source owner review."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Hosts need a reviewed actor creation, identity, mutation, and snapshot guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/architecture.md", "docs/gameplay-systems.md"],
+        "reason": "Broad ownership exists without a reviewed canonical actor-state invariant document."
+      }
+    },
+    {
+      "id": "progression_and_resources",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/actors-progression-and-resources.md"],
+        "reason": "Current formulas are recorded but still require collaborative confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Growth policy binding and resource mutation need a host integration guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "The overview does not yet document composition, rollback, and numeric invariants in depth."
+      }
+    },
+    {
+      "id": "typed_action_and_effect_execution",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
+        "reason": "The action model exists but still requires collaborative rule confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Hosts need an assess, present, execute, cancel, and event-consumption recipe."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "The overview does not yet document target preparation and atomic effect execution in depth."
+      }
+    },
+    {
+      "id": "combat_resolution",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
+        "reason": "Combat rules exist but require formula-by-formula owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Combat ruleset binding and evidence consumption need an integration guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md", "docs/ruleset-policy-contracts.md"],
+        "reason": "Existing overviews do not yet form a reviewed combat pipeline reference."
+      }
+    },
+    {
+      "id": "turn_economy",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
+        "reason": "Action Token rules exist but need a complete state-transition review."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Custom turn economy composition and event presentation need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md", "docs/ruleset-policy-contracts.md"],
+        "reason": "Liveness, transition validation, and encounter ownership need a reviewed technical page."
+      }
+    },
+    {
+      "id": "status_and_passive_lifecycle",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/status-passives-and-knowledge.md"],
+        "reason": "Lifecycle behavior exists but still requires event-by-event owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Lifecycle composition, custom handlers, and presentation need an integration guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Atomic lifecycle mutation, duration ticking, and cleanup ordering need a reviewed technical page."
+      }
+    },
+    {
+      "id": "encounter_orchestration",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+        "reason": "Encounter outcomes are described but the complete loop still requires owner review."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Command, lifecycle, completion, event, cancellation, and fault ports need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "The encounter state machine and terminal event guarantees need a reviewed technical page."
+      }
+    },
+    {
+      "id": "battle_knowledge",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/status-passives-and-knowledge.md"],
+        "reason": "Player and encounter knowledge concepts exist but need owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Knowledge seeding, encounter scope, persistence, and UI querying need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Knowledge store authority and save boundaries need a reviewed technical page."
+      }
+    },
+    {
+      "id": "party_and_rosters",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+        "reason": "Party and roster behavior exists but still requires role-by-role confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Snapshot construction, transition application, and Godot scene mapping need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Global runtime identity, overlap, role, and capacity invariants need a reviewed technical page."
+      }
+    },
+    {
+      "id": "inventory_equipment_economy",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+        "reason": "Resource-management rules exist but still require owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Inventory reservations, equipment profiles, wallet, shop, and restoration composition need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Atomic transaction and arithmetic invariants need a reviewed technical page."
+      }
+    },
+    {
+      "id": "navigation",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+        "reason": "Generic transition behavior exists but needs owner confirmation and examples."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Scene triggers, policies, and transition-event mapping need a Godot integration guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Source matching, policy rejection, and optional-state invariants need a reviewed technical page."
+      }
+    },
+    {
+      "id": "dungeon_traversal",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+        "reason": "Traversal concepts exist but need node, trigger, encounter, and boss rule confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Godot exploration, authored nodes, triggers, and encounter hydration need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Traversal snapshots, transition legality, and event ordering need a reviewed technical page."
+      }
+    },
+    {
+      "id": "negotiation_and_rewards",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+        "reason": "Negotiation and reward behavior exists but still requires owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Prompt ports, demand resolution, acquisition, and reward application need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Session ordering, cancellation, mutation, and aggregate arithmetic need a reviewed technical page."
+      }
+    },
+    {
+      "id": "fusion_and_inheritance",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/fusion-acquisition-and-compendium.md"],
+        "reason": "Fusion rules exist but require recipe, catalyst, inheritance, accident, and mutation confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Content repositories, planning, preview, selection, and transaction composition need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Recipe authority, exact rank shifting, preview parity, and atomic commit need a reviewed technical page."
+      }
+    },
+    {
+      "id": "compendium",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/fusion-acquisition-and-compendium.md"],
+        "reason": "Registration, update, recall, and knowledge seeding rules need owner confirmation."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Acquisition hooks, registration policy, recall pricing, and roster application need a guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/gameplay-systems.md"],
+        "reason": "Snapshot isolation, integrity, pricing policy, and transaction boundaries need a reviewed technical page."
+      }
+    },
+    {
+      "id": "persistence_snapshots",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/saving-loading-and-suspend.md"],
+        "reason": "Save and suspend concepts exist but need final owner confirmation."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/godot-integration-contract.md"],
+        "reason": "Host-owned serialization is demonstrated but not yet a reviewed complete save recipe."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Validation, dependency-ordered restoration, atomic failure, and host context need a technical document."
+      }
+    },
+    {
+      "id": "host_contracts",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "Host command and event contracts are integration infrastructure, not a player mechanic."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/godot-integration-contract.md", "docs/public-api-contract.md"],
+        "reason": "Public boundaries exist but need task-oriented composition guides."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/architecture.md"],
+        "reason": "Dependency direction exists but cancellation and ownership invariants need deeper review."
+      }
+    },
+    {
+      "id": "authored_schema_contracts",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "JSON Schema is an authoring contract rather than a player-visible mechanic."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/content-contract.md", "docs/content-authoring-validator.md"],
+        "reason": "Schema and validator references exist but need a reviewed end-to-end authoring guide."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Schema-to-deserializer parity and semantic authority need a technical document."
+      }
+    },
+    {
+      "id": "godot_adapter",
+      "mechanics": {
+        "state": "not_applicable",
+        "documents": [],
+        "reason": "The Godot adapter is host integration rather than a game rule."
+      },
+      "developerGuide": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/godot-integration-contract.md"],
+        "reason": "The integration proof exists but is not yet a reviewed playable-host guide."
+      },
+      "technical": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/architecture.md", "docs/release-quality-gate.md"],
+        "reason": "The boundary and smoke gate exist without a reviewed adapter lifecycle document."
+      }
+    },
+    {
+      "id": "save_version_migration",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/saving-loading-and-suspend.md"],
+        "reason": "The deferred migration boundary is mentioned but still requires owner review."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "No released save migration recipe exists."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Migration ordering and compatibility rules are deferred until a released contract requires them."
+      }
+    },
+    {
+      "id": "deterministic_replay",
+      "mechanics": {
+        "state": "existing_unreviewed",
+        "documents": ["docs/mechanics/saving-loading-and-suspend.md"],
+        "reason": "The distinction between checkpoints and replay is documented but not owner-reviewed."
+      },
+      "developerGuide": {
+        "state": "missing",
+        "documents": [],
+        "reason": "No deterministic replay integration contract exists."
+      },
+      "technical": {
+        "state": "missing",
+        "documents": [],
+        "reason": "Replay authority, random streams, command logs, and compatibility are intentionally deferred."
+      }
+    }
+  ]
+}

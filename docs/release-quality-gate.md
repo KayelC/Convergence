@@ -43,4 +43,4 @@ An external tools cache remains equally valid.
 
 ## Security And Release Status
 
-Report security issues through the private process in `SECURITY.md`. A green gate establishes a pre-release candidate. The separate [consolidated source review](convergence-production-readiness-consolidated-review-2026-07-16.md) and its demonstrated correction are complete, so every production-readiness ledger item is now `verified` for the guarded `0.1.0` baseline.
+Report security issues through the private process in `SECURITY.md`. A green gate establishes a pre-release candidate. The separate [consolidated source review](reviews/convergence-production-readiness-consolidated-review-2026-07-16.md) and its demonstrated correction are complete, so every production-readiness ledger item is now `verified` for the guarded `0.1.0` baseline.

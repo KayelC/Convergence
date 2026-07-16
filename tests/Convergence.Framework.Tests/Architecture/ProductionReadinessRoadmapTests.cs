@@ -23,7 +23,7 @@ public sealed class ProductionReadinessRoadmapTests
         Assert.Equal("main", ledger.Branch);
         Assert.Equal("8db20fe", ledger.StartingCommit);
         Assert.Equal(
-            "docs/convergence-production-readiness-consolidated-review-2026-07-16.md",
+            "docs/reviews/convergence-production-readiness-consolidated-review-2026-07-16.md",
             ledger.ConsolidatedReview);
         Assert.Equal("4c07ac490b83e84fe387943cda6a9b8c7a7c4580", ledger.ReviewedCommit);
         Assert.Equal("2026-07-16", ledger.ReviewDate);
@@ -90,14 +90,16 @@ public sealed class ProductionReadinessRoadmapTests
     [Fact]
     public void ActiveDocumentation_KeepsVerifiedRoadmapAndReviewAuthoritative()
     {
-        string roadmap = File.ReadAllText(RepositoryPath("docs", "production-readiness-roadmap.md"));
+        string roadmap = File.ReadAllText(RepositoryPath("docs", "roadmap", "production-readiness-roadmap.md"));
         string index = File.ReadAllText(RepositoryPath("docs", "README.md"));
-        string productRoadmap = File.ReadAllText(RepositoryPath("docs", "roadmap.md"));
+        string roadmapIndex = File.ReadAllText(RepositoryPath("docs", "roadmap", "README.md"));
+        string productRoadmap = File.ReadAllText(RepositoryPath("docs", "roadmap", "product-roadmap.md"));
 
         Assert.Contains("Completion status: `verified`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("convergence-production-readiness-consolidated-review-2026-07-16.md", roadmap, StringComparison.Ordinal);
-        Assert.Contains("production-readiness-roadmap.md", index, StringComparison.Ordinal);
-        Assert.Contains("convergence-production-readiness-consolidated-review-2026-07-16.md", index, StringComparison.Ordinal);
+        Assert.Contains("../reviews/convergence-production-readiness-consolidated-review-2026-07-16.md", roadmap, StringComparison.Ordinal);
+        Assert.Contains("roadmap/README.md", index, StringComparison.Ordinal);
+        Assert.Contains("production-readiness-roadmap.md", roadmapIndex, StringComparison.Ordinal);
+        Assert.Contains("reviews/README.md", index, StringComparison.Ordinal);
         Assert.Contains("production-readiness-roadmap.md", productRoadmap, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "Completed restructuring, migration, and recovery plans are preserved",

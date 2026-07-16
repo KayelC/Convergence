@@ -43,6 +43,9 @@
     <Content Include="Fixtures\framework-source-inventory.json" Link="Fixtures\framework-source-inventory.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Fixtures\documentation-coverage-matrix.json" Link="Fixtures\documentation-coverage-matrix.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Fixtures\production-readiness-roadmap.json" Link="Fixtures\production-readiness-roadmap.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

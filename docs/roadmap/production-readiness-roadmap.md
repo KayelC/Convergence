@@ -8,7 +8,7 @@ archive before all of its findings were completed. Archiving its terminology did
 not complete its work.
 
 The machine-readable source is
-[`../tests/Convergence.Framework.Tests/Fixtures/production-readiness-roadmap.json`](../tests/Convergence.Framework.Tests/Fixtures/production-readiness-roadmap.json).
+[`../../tests/Convergence.Framework.Tests/Fixtures/production-readiness-roadmap.json`](../../tests/Convergence.Framework.Tests/Fixtures/production-readiness-roadmap.json).
 Tests require exact finding coverage and prohibit archive eligibility until a
 finding is verified.
 
@@ -22,10 +22,10 @@ Statuses mean:
 Completion status: `verified`.
 
 The source-based
-[consolidated review](convergence-production-readiness-consolidated-review-2026-07-16.md)
+[consolidated review](../reviews/convergence-production-readiness-consolidated-review-2026-07-16.md)
 accepted every ledger item after correcting the one demonstrated event-contract
 defect. This roadmap remains active as the auditable `0.1.0` release record;
-future feature priorities live in the [Product Roadmap](roadmap.md).
+future feature priorities live in the [Product Roadmap](product-roadmap.md).
 
 ## Baseline
 

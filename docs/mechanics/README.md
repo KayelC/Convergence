@@ -10,6 +10,10 @@ Convergence is modular. A game may omit an optional module, replace an injected 
 
 The documents describe the current supported contracts, not every possible JRPG design. DemoHost and Training Annex are examples rather than mandatory game rules.
 
+These pages are currently preserved as `existing_unreviewed`. Each page will be
+promoted only through the collaborative process in the
+[Documentation Design Pattern](../documentation-design-pattern.md).
+
 ## Rule Index
 
 1. [Actors, Stats, Resources, And Progression](actors-progression-and-resources.md)

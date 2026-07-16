@@ -4,7 +4,7 @@
   "branch": "main",
   "startingCommit": "8db20fe",
   "sourceAudit": "convergence-framework-production-readiness-audit-2026-07-14",
-  "consolidatedReview": "docs/convergence-production-readiness-consolidated-review-2026-07-16.md",
+  "consolidatedReview": "docs/reviews/convergence-production-readiness-consolidated-review-2026-07-16.md",
   "reviewedCommit": "4c07ac490b83e84fe387943cda6a9b8c7a7c4580",
   "reviewDate": "2026-07-16",
   "reviewVerdict": "verified",

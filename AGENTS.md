@@ -6,7 +6,21 @@
 - `samples/Convergence.DemoHost` and `samples/Convergence.GodotHost` are optional consumers, not rule authorities.
 - `tools/Convergence.ContentValidator` owns filesystem-based authoring validation.
 - `ArchiveDocs` is unsupported history. Active code, tests, content, or documentation must never depend on it.
-- Current source, executable tests, schemas, and active `docs` are authoritative. Review reports are evidence, not specifications.
+- Current source and executable tests define implemented behavior.
+- Confirmed mechanics and decision records define intended design.
+- Schemas define authored structural contracts.
+- Review reports are evidence, not specifications.
+- If implemented behavior and intended design disagree, stop and surface the discrepancy. Do not silently choose one.
+
+## Design Authority
+
+- Follow [`docs/documentation-design-pattern.md`](docs/documentation-design-pattern.md) for documentation structure, review states, diagrams, and evidence.
+- Read the relevant mechanics, developer-guide, technical, and decision documents before changing a rule.
+- Do not infer an unclear rule from current code, display text, examples, or archived behavior.
+- Explain uncertain behavior in plain language and obtain the project owner's decision before treating it as intended design.
+- Record confirmed decisions under `docs/decisions` and update every affected audience document.
+- A document becomes `reviewed` only after source verification and explicit project-owner confirmation.
+- `AGENTS.md` governs working discipline. It must point to design authority rather than duplicating the complete mechanics manual.
 
 ## Framework Boundary
 
@@ -25,6 +39,18 @@
 - A public API change requires a reviewed update to `PublicAPI.Shipped.txt` or `PublicAPI.Unshipped.txt` and an accompanying migration note when applicable.
 - Update `tests/Convergence.Framework.Tests/Fixtures/framework-source-inventory.json` whenever a Framework source file is added, removed, moved, or changes public-surface ownership.
 - Update mechanics documentation when player-visible rules change and integration documentation when host responsibilities change.
+
+## Documentation Discipline
+
+- Maintain three coordinated audiences:
+  - `docs/mechanics` for player-visible and designer-facing rules;
+  - `docs/developer-guide` for host integration and extension recipes;
+  - `docs/technical` for state machines, invariants, ordering, and ownership.
+- Use concept-oriented documents. Do not create hand-maintained prose copies of every C# file.
+- Use Mermaid diagrams when state, sequence, ownership, or data flow is easier to understand visually.
+- Mark assumptions, configured defaults, optional modules, unresolved decisions, and host responsibilities explicitly.
+- Update the documentation coverage matrix whenever a capability's documentation state or document ownership changes.
+- Preserve review reports under `docs/reviews` and active priorities under `docs/roadmap`; neither replaces current design authority.
 
 ## Review Standard
 

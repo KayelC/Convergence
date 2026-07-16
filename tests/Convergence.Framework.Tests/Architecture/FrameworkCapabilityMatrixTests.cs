@@ -67,11 +67,11 @@ public sealed class FrameworkCapabilityMatrixTests
 
         Assert.Contains(
             expected,
-            File.ReadAllText(RepositoryPath("docs", "framework-capability-matrix.md")),
+            File.ReadAllText(RepositoryPath("docs", "roadmap", "framework-capability-matrix.md")),
             StringComparison.Ordinal);
         Assert.Contains(
             expected,
-            File.ReadAllText(RepositoryPath("docs", "roadmap.md")),
+            File.ReadAllText(RepositoryPath("docs", "roadmap", "product-roadmap.md")),
             StringComparison.Ordinal);
     }
 

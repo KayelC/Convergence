@@ -9,7 +9,7 @@ Reviewed range: `8db20fed67f1c3b520e143fae5b947c578a0d274..4c07ac490b83e84fe3879
 ## Mandate
 
 This review closes the active
-[Production-Readiness Completion Roadmap](production-readiness-roadmap.md).
+[Production-Readiness Completion Roadmap](../roadmap/production-readiness-roadmap.md).
 It was performed from the current source, tests, content, schemas, projects,
 and automation rather than from earlier review conclusions.
 
@@ -122,4 +122,4 @@ Every finding in the active production-readiness ledger is implemented and
 verified. No unresolved release blocker remains in the reviewed product
 boundary. Convergence is ready to be treated as a guarded `0.1.0` pre-release
 framework and to continue feature development from the normal
-[Product Roadmap](roadmap.md).
+[Product Roadmap](../roadmap/product-roadmap.md).
