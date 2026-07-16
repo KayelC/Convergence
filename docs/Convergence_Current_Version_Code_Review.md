@@ -89,7 +89,7 @@ of a policy-normalized affinity, result immutability, and saturating arithmetic.
 ### R3. Framework lifecycle events are mapped repeatedly
 
 **Severity:** Low
-**Status:** Open
+**Status:** Implemented pending final review
 
 `BattleEncounterRunner` and `BattleStatusEncounterLifecyclePort` contain nearly
 identical Framework transformations from `BattleStatusLifecycleEvent` to
@@ -99,8 +99,11 @@ mapping with presentation differences.
 The Framework copies can drift when payload contracts change. The host-specific
 mapping should remain host-owned where its semantics genuinely differ.
 
-**Required correction:** centralize the identical Framework transformation in a
-small internal mapper without introducing a public universal event abstraction.
+**Implemented correction:** a small internal
+`BattleStatusLifecycleEventMapper` now owns the lifecycle-event kind and typed
+payload transformation. The status lifecycle port still supplies its generated
+diagnostic text, while the encounter runner still preserves lifecycle-provided
+detail. No public event abstraction or host-presentation rule was introduced.
 
 ### R4. Active documentation reports inconsistent capability totals
 

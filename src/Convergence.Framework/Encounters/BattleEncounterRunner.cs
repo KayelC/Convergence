@@ -1354,36 +1354,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         return null;
     }
 
-    private static IEnumerable<BattleEncounterEvent> MapStatusEvents(
+    private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>
-        events.Select(MapStatusEvent);
-
-    private static BattleEncounterEvent MapStatusEvent(BattleStatusLifecycleEvent statusEvent) =>
-        statusEvent.Kind switch
-        {
-            BattleStatusLifecycleEventKind.ResourceChanged => new BattleEncounterEvent(
-                0,
-                BattleEncounterEventKind.ResourceChanged,
-                new BattleResourceChangedEventPayload(
-                    statusEvent.ActorId,
-                    statusEvent.ActorId,
-                    statusEvent.Value ?? 0m,
-                    statusEvent.RelatedId),
-                statusEvent.Detail),
-            BattleStatusLifecycleEventKind.PassiveTriggered => new BattleEncounterEvent(
-                0,
-                BattleEncounterEventKind.PassiveActivated,
-                new BattlePassiveActivatedEventPayload(
-                    statusEvent.ActorId,
-                    statusEvent.RelatedId ?? throw new InvalidOperationException(
-                        "Passive lifecycle events require a related skill ID.")),
-                statusEvent.Detail),
-            _ => new BattleEncounterEvent(
-                0,
-                BattleEncounterEventKind.StatusChanged,
-                new BattleStatusChangedEventPayload(statusEvent),
-                statusEvent.Detail)
-        };
+        BattleStatusLifecycleEventMapper.MapAll(events, statusEvent => statusEvent.Detail);
 
     private static async ValueTask AnnounceNewDefeatsAsync(
         IEnumerable<BattleEncounterParticipant> participants,
