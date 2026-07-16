@@ -27,7 +27,11 @@ factory. Moon phase remains absent from the standard composition.
 
 ## Priority 1: Authoring Contract Completion
 
-Expand checked-in authoring schemas and contract documentation so every implemented content family has a stable structural reference. Semantic graph and host-registration rules remain validator-owned. Add author-facing examples and diagnostics guidance without embedding game content into Framework.
+The strict Draft 2020-12 schema-v3 set now covers every implemented content
+family, and all active documents declare and pass their family schema. The next
+authoring milestone is the host-side validator CLI, which will combine schema,
+deserialization, semantic, dependency, registration, and catalog diagnostics
+without adding filesystem or schema packages to Framework.
 
 ## Priority 2: Real Godot Consumer
 

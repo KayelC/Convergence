@@ -1,4 +1,5 @@
 {
+  "$schema": "urn:convergence:schema:content:v3:ailments",
   "schemaVersion": 3,
   "ailments": [
     {

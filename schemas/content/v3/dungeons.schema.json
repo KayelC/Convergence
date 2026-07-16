@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v3:dungeons",
+  "title": "Convergence Content v3 Dungeon Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "dungeons"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v3:dungeons" },
+    "schemaVersion": { "const": 3 },
+    "dungeons": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dungeon" }
+    }
+  },
+  "$defs": {
+    "dungeon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "blocks"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/block" }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "startFloor", "endFloor"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/nonEmptyString" },
+        "startFloor": { "type": "integer", "minimum": 1 },
+        "endFloor": { "type": "integer", "minimum": 1 },
+        "encounterPoolIds": {
+          "type": "array",
+          "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentReference" }
+        },
+        "fixedFloors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fixedFloor" }
+        }
+      }
+    },
+    "fixedFloor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["floor", "kind", "description"],
+      "properties": {
+        "floor": { "type": "integer", "minimum": 1 },
+        "kind": { "enum": ["empty", "battle", "boss", "safe_room", "block_end", "terminal", "barrier", "transition"] },
+        "description": { "type": "string" },
+        "encounterId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentReference" },
+        "transitionRuleId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "barrierRuleId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "hasTerminal": { "type": "boolean" }
+      }
+    }
+  }
+}

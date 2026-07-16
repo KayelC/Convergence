@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v3:shops",
+  "title": "Convergence Content v3 Shop Catalog Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "shops"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v3:shops" },
+    "schemaVersion": { "const": 3 },
+    "shops": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/shop" }
+    }
+  },
+  "$defs": {
+    "shop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "categoryId", "offers"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "categoryId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "availabilityContexts": {
+          "type": "array",
+          "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" }
+        },
+        "offers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/offer" }
+        }
+      }
+    },
+    "offer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contentKind", "contentId", "price", "stock"],
+      "properties": {
+        "contentKind": { "enum": ["item", "equipment"] },
+        "contentId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentReference" },
+        "price": { "$ref": "#/$defs/price" },
+        "stock": { "$ref": "#/$defs/stock" }
+      }
+    },
+    "price": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "basePrice"],
+          "properties": {
+            "kind": { "const": "fixed" },
+            "basePrice": { "type": "number", "minimum": 0 },
+            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pricingPolicyId"],
+          "properties": {
+            "kind": { "const": "policy" },
+            "pricingPolicyId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+          }
+        }
+      ]
+    },
+    "stock": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "const": "unlimited" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "quantity"],
+          "properties": {
+            "kind": { "const": "limited" },
+            "quantity": { "type": "integer", "minimum": 1 },
+            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "stockPolicyId"],
+          "properties": {
+            "kind": { "const": "policy" },
+            "stockPolicyId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+          }
+        }
+      ]
+    }
+  }
+}

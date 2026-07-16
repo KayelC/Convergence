@@ -1,4 +1,5 @@
 {
+  "$schema": "urn:convergence:schema:content:v3:entities",
   "schemaVersion": 3,
   "entities": [
     {

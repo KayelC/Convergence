@@ -1,4 +1,5 @@
 {
+  "$schema": "urn:convergence:schema:content:v3:manifest",
   "schemaVersion": 3,
   "id": "convergence.training_annex_slice",
   "version": "0.3.0",

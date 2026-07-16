@@ -1,4 +1,5 @@
 {
+  "$schema": "urn:convergence:schema:content:v3:negotiations",
   "schemaVersion": 3,
   "negotiations": [
     {

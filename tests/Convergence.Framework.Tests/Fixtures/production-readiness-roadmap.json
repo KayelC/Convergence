@@ -38,9 +38,10 @@
       "evidence": [
         "FrameworkBoundaryTests.FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded",
         "FrameworkBoundaryTests.FrameworkPublicApi_ExposesNoHostSerializerEngineOrLegacyTypes",
-        "SchemaDeserializationTests"
+        "SchemaDeserializationTests",
+        "ContentSchemaContractTests"
       ],
-      "remainingWork": ["JSON Schema v3", "authoring validator CLI", "Final consolidated review"],
+      "remainingWork": ["authoring validator CLI", "Final consolidated review"],
       "archiveEligible": false
     },
     {
