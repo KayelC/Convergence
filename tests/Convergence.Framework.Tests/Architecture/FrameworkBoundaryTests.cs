@@ -21,7 +21,10 @@ public sealed class FrameworkBoundaryTests
 
         Assert.All(
             framework.GetReferencedAssemblies(),
-            reference => Assert.StartsWith("System", reference.Name, StringComparison.Ordinal));
+            reference => Assert.True(
+                reference.Name?.StartsWith("System", StringComparison.Ordinal) == true ||
+                reference.Name == "netstandard",
+                $"Unexpected Framework assembly dependency '{reference.FullName}'."));
 
         XDocument project = XDocument.Load(RepositoryPath("src", "Convergence.Framework", "Convergence.Framework.csproj"));
         Assert.Empty(project.Descendants("ProjectReference"));
@@ -173,6 +176,8 @@ public sealed class FrameworkBoundaryTests
         Assert.Equal("0.1.0", RequiredProperty(project, "Version"));
         Assert.Equal("true", RequiredProperty(project, "GenerateDocumentationFile"));
         Assert.Equal("true", RequiredProperty(project, "CodeAnalysisTreatWarningsAsErrors"));
+        Assert.Equal("true", RequiredProperty(project, "IsTrimmable"));
+        Assert.Equal("true", RequiredProperty(project, "EnableTrimAnalyzer"));
 
         string[] shipped = File.ReadAllLines(Path.Combine(projectRoot, "PublicAPI.Shipped.txt"));
         Assert.Equal("#nullable enable", shipped[0]);
@@ -202,6 +207,9 @@ public sealed class FrameworkBoundaryTests
         Assert.Equal(
             "4.12.0",
             dependencies.GetProperty("Microsoft.Net.Compilers.Toolset").GetProperty("resolved").GetString());
+        Assert.Equal(
+            "8.0.28",
+            dependencies.GetProperty("Microsoft.NET.ILLink.Tasks").GetProperty("resolved").GetString());
     }
 
     [Fact]
@@ -296,7 +304,7 @@ public sealed class FrameworkBoundaryTests
     {
         XElement[] packages = project.Descendants("PackageReference").ToArray();
         Assert.Equal(
-            ["Microsoft.CodeAnalysis.PublicApiAnalyzers", "Microsoft.Net.Compilers.Toolset"],
+            ["Microsoft.CodeAnalysis.PublicApiAnalyzers", "Microsoft.NET.ILLink.Tasks", "Microsoft.Net.Compilers.Toolset"],
             packages
                 .Select(package => package.Attribute("Include")?.Value ?? string.Empty)
                 .Order(StringComparer.Ordinal)

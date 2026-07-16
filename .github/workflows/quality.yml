@@ -16,12 +16,15 @@ concurrency:
 
 jobs:
   verify:
-    name: .NET 8 verification
+    name: Convergence 0.1 release gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: true
+      GODOT_VERSION: 4.7.1
+      GODOT_ARCHIVE: Godot_v4.7.1-stable_mono_linux_x86_64.zip
+      GODOT_SHA256: 6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6
 
     steps:
       - name: Check out source
@@ -35,8 +38,13 @@ jobs:
       - name: Show SDK selection
         run: dotnet --info
 
-      - name: Restore
-        run: dotnet restore Convergence.sln -p:TreatWarningsAsErrors=true
+      - name: Restore locked dependencies and audit vulnerabilities
+        run: >-
+          dotnet restore Convergence.sln
+          --locked-mode
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Verify formatting
         run: dotnet format Convergence.sln --no-restore --verify-no-changes
@@ -50,7 +58,16 @@ jobs:
           -p:TreatWarningsAsErrors=true
           -p:ContinuousIntegrationBuild=true
 
-      - name: Verify architecture and terminology boundaries
+      - name: Verify API baseline and XML documentation
+        run: >-
+          dotnet build src/Convergence.Framework/Convergence.Framework.csproj
+          --configuration Release
+          --no-restore
+          --no-incremental
+          -p:TreatWarningsAsErrors=true
+          -p:ContinuousIntegrationBuild=true
+
+      - name: Verify architecture, documentation, and forbidden-reference boundaries
         run: >-
           dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj
           --configuration Release
@@ -65,38 +82,93 @@ jobs:
           --no-build
           --no-restore
 
-      - name: Smoke-test clean battle demo
+      - name: Measure Framework coverage
         run: >-
-          dotnet run
-          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj
           --configuration Release
           --no-build
           --no-restore
-          -- --clean-battle-demo
+          --collect:"XPlat Code Coverage"
+          --results-directory artifacts/coverage/framework
 
-      - name: Smoke-test clean field demo
-        run: >-
-          dotnet run
-          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
-          --configuration Release
-          --no-build
-          --no-restore
-          -- --clean-field-demo
+      - name: Enforce Framework coverage thresholds
+        shell: pwsh
+        run: |
+          $report = Get-ChildItem artifacts/coverage/framework -Recurse -Filter coverage.cobertura.xml |
+            Sort-Object LastWriteTimeUtc |
+            Select-Object -Last 1
+          if ($null -eq $report) { throw "Framework coverage report was not produced." }
+          & ./eng/Assert-CoberturaCoverage.ps1 -CoveragePath $report.FullName -MinimumLineRate 0.90 -MinimumBranchRate 0.70
 
-      - name: Smoke-test clean save demo
+      - name: Validate all active content contracts and catalogs
         run: >-
           dotnet run
-          --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
+          --project tools/Convergence.ContentValidator/Convergence.ContentValidator.csproj
           --configuration Release
           --no-build
           --no-restore
-          -- --clean-save-demo
+          --
+          --content-root content
+          --schema-root schemas/content/v3
+          --registrations config/content-validator/active-samples.registrations.json
 
-      - name: Smoke-test Training Annex demo
+      - name: Smoke-test noninteractive DemoHost modes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for mode in \
+            --clean-battle-demo \
+            --clean-field-demo \
+            --clean-save-demo \
+            --clean-training-annex-demo
+          do
+            dotnet run \
+              --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj \
+              --configuration Release \
+              --no-build \
+              --no-restore \
+              -- "$mode"
+          done
+
+      - name: Smoke-test scripted Training Annex play
+        shell: bash
         run: >-
+          printf '10\n' |
           dotnet run
           --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj
           --configuration Release
           --no-build
           --no-restore
-          -- --clean-training-annex-demo
+          -- --clean-training-annex-play
+
+      - name: Download and verify Godot 4.7.1 .NET
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/${GODOT_ARCHIVE}" \
+            --output "$RUNNER_TEMP/godot/${GODOT_ARCHIVE}"
+          echo "${GODOT_SHA256}  $RUNNER_TEMP/godot/${GODOT_ARCHIVE}" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/godot/${GODOT_ARCHIVE}" -d "$RUNNER_TEMP/godot/engine"
+          godot_bin=$(find "$RUNNER_TEMP/godot/engine" -type f -name 'Godot_v4.7.1-stable_mono_linux.x86_64' -print -quit)
+          test -n "$godot_bin"
+          chmod +x "$godot_bin"
+          echo "GODOT_BIN=$godot_bin" >> "$GITHUB_ENV"
+
+      - name: Run real Godot headless smoke
+        run: >-
+          "$GODOT_BIN"
+          --headless
+          --path samples/Convergence.GodotHost
+          -- --convergence-smoke
+
+      - name: Run Framework trimming analysis
+        run: >-
+          dotnet build src/Convergence.Framework/Convergence.Framework.csproj
+          --configuration Release
+          --no-restore
+          --no-incremental
+          -p:EnableTrimAnalyzer=true
+          -p:IsTrimmable=true
+          -p:TreatWarningsAsErrors=true

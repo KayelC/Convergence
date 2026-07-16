@@ -49,15 +49,25 @@ public sealed class ProductBoundaryTests
             "actions/checkout@v6",
             "actions/setup-dotnet@v5",
             "dotnet-version: 8.0.x",
+            "--locked-mode",
+            "NuGetAudit=true",
             "dotnet format Convergence.sln --no-restore --verify-no-changes",
             "-p:TreatWarningsAsErrors=true",
             "-p:ContinuousIntegrationBuild=true",
             "--filter FullyQualifiedName~Convergence.Framework.Tests.Architecture",
             "dotnet test Convergence.sln",
+            "XPlat Code Coverage",
+            "Assert-CoberturaCoverage.ps1",
+            "Convergence.ContentValidator.csproj",
             "--clean-battle-demo",
             "--clean-field-demo",
             "--clean-save-demo",
-            "--clean-training-annex-demo"
+            "--clean-training-annex-demo",
+            "--clean-training-annex-play",
+            "Godot_v4.7.1-stable_mono_linux_x86_64.zip",
+            "6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6",
+            "--convergence-smoke",
+            "EnableTrimAnalyzer=true"
         ];
 
         foreach (string token in requiredTokens)
@@ -67,6 +77,68 @@ public sealed class ProductBoundaryTests
 
         Assert.DoesNotContain("ArchiveDocs", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("continue-on-error: true", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ActiveDocumentationLinks_ResolveInsideTheProductBoundary()
+    {
+        string root = RepositoryRoot();
+        string archiveRoot = Path.GetFullPath(Path.Combine(root, "ArchiveDocs")) + Path.DirectorySeparatorChar;
+        string[] documents = Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(root, "*.md", SearchOption.TopDirectoryOnly))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var failures = new List<string>();
+        var linkPattern = new Regex(
+            @"!?\[[^\]]*\]\((?<target><[^>]+>|[^)\s]+)",
+            RegexOptions.CultureInvariant);
+
+        foreach (string document in documents)
+        {
+            string markdown = File.ReadAllText(document);
+            foreach (Match match in linkPattern.Matches(markdown))
+            {
+                string target = match.Groups["target"].Value.Trim('<', '>');
+                if (target.Length == 0 || target.StartsWith('#') ||
+                    Uri.TryCreate(target, UriKind.Absolute, out _))
+                {
+                    continue;
+                }
+
+                string pathPart = Uri.UnescapeDataString(target.Split('#', '?')[0]);
+                if (pathPart.Length == 0)
+                {
+                    continue;
+                }
+
+                string resolved = Path.GetFullPath(Path.Combine(
+                    Path.GetDirectoryName(document)!,
+                    pathPart.Replace('/', Path.DirectorySeparatorChar)));
+                string location = Path.GetRelativePath(root, document).Replace('\\', '/');
+                if (resolved.StartsWith(archiveRoot, StringComparisonForPaths()))
+                {
+                    failures.Add($"{location}: active link enters ArchiveDocs: {target}");
+                }
+                else if (!File.Exists(resolved) && !Directory.Exists(resolved))
+                {
+                    failures.Add($"{location}: missing local link target: {target}");
+                }
+            }
+        }
+
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    [Fact]
+    public void SecurityPolicy_DefinesPrivateReportingAndSupportedScope()
+    {
+        string policy = File.ReadAllText(RepositoryPath("SECURITY.md"));
+
+        Assert.Contains("Report a vulnerability", policy, StringComparison.Ordinal);
+        Assert.Contains("private", policy, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("0.1", policy, StringComparison.Ordinal);
+        Assert.Contains("ArchiveDocs", policy, StringComparison.Ordinal);
+        Assert.Contains("90 days", policy, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -283,4 +355,7 @@ public sealed class ProductBoundaryTests
 
     private static string NormalizePath(string path) =>
         path.Replace('\\', '/');
+
+    private static StringComparison StringComparisonForPaths() =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 }

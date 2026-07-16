@@ -11,6 +11,7 @@ src/Convergence.Framework/          reusable .NET 8 library
 samples/Convergence.DemoHost/       optional console example
 samples/Convergence.GodotHost/      Godot 4.7.1 .NET reference consumer
 tools/Convergence.ContentValidator/ host-side authoring validator
+eng/                               release-gate helpers
 tests/Convergence.Framework.Tests/  framework-only tests
 tests/Convergence.DemoHost.Tests/   example-host tests
 tests/Convergence.ContentValidator.Tests/ validator tests
@@ -86,7 +87,9 @@ dotnet run --project tools/Convergence.ContentValidator -- --content-root conten
 dotnet run --project samples/Convergence.DemoHost -- --help
 ```
 
-The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, DemoHost, and their independent test projects.
+Release candidates additionally require Framework coverage of at least 90% lines and 70% branches, locked dependency auditing, all content validation, all DemoHost modes, and the real Godot 4.7.1 headless smoke. See the [release quality gate](docs/release-quality-gate.md) and [security policy](SECURITY.md).
+
+The repository `global.json` selects the .NET 8 SDK line. The clean solution builds Framework, both reference hosts, the content validator, and their independent test projects.
 
 The same checks run automatically in
 [`quality.yml`](.github/workflows/quality.yml) for changes to `main`, pull

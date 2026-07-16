@@ -30,8 +30,10 @@ factory. Moon phase remains absent from the standard composition.
 The strict Draft 2020-12 schema-v3 set now covers every implemented content
 family, the authoring validator CLI combines schema and semantic gates, the
 0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
-integration. The remaining active release work is the consolidated quality gate
-and final review in the production-readiness roadmap.
+integration. The consolidated quality gate is implemented and green. The
+remaining active release work is the independent final review in the
+production-readiness roadmap and any corrections that review demonstrates are
+necessary.
 
 ## Priority 1: Persistence Evolution
 

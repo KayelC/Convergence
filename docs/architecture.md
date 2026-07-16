@@ -73,3 +73,5 @@ Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 composition entry points and the pre-release compatibility policy. Build-only
 API analyzers and compiler tooling are private development dependencies; the
 compiled framework retains no runtime package dependency.
+
+Framework is marked trimming-aware and builds with the pinned .NET 8 ILLink analyzer. The [Release Quality Gate](release-quality-gate.md) combines locked dependency auditing, API and documentation checks, schema/catalog validation, coverage thresholds, DemoHost modes, and a checksum-verified Godot headless run.

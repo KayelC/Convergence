@@ -60,11 +60,18 @@
       "id": "PR-B5",
       "title": "Repeatable repository release gate",
       "severity": "blocker",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 11,
       "plannedCommit": "quality: complete production release gate",
-      "evidence": ["ProductBoundaryTests.ActiveQualityWorkflow_EnforcesTheCleanProductGate"],
-      "remainingWork": ["coverage threshold", "API and schema gates", "Godot smoke gate", "documentation link gate", "security policy"],
+      "evidence": [
+        "ProductBoundaryTests.ActiveQualityWorkflow_EnforcesTheCleanProductGate",
+        "ProductBoundaryTests.ActiveDocumentationLinks_ResolveInsideTheProductBoundary",
+        "ProductBoundaryTests.SecurityPolicy_DefinesPrivateReportingAndSupportedScope",
+        "FrameworkBoundaryTests.FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded",
+        "Assert-CoberturaCoverage.ps1",
+        "Godot 4.7.1 headless smoke"
+      ],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {

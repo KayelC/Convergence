@@ -13,6 +13,12 @@
         "requested": "[4.12.0, )",
         "resolved": "4.12.0",
         "contentHash": "xXDdIgDfcbMr+2bLzVJHg+/oCHwcYs808TlooX0M9+BVCeHITaROsjdbWSJNdyzeMe/K8iB2NeHmaAOUcqkKWw=="
+      },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[8.0.28, )",
+        "resolved": "8.0.28",
+        "contentHash": "XMqgVjlLxLqWmEh3c49haXLQwsMNtvo6YscUaqfvEGfg1iA8hnYgkUVq3i9Zu9gKeNKMWiiZKVwZExc/qyEAsQ=="
       }
     }
   }
