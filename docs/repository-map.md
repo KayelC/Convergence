@@ -12,9 +12,14 @@ src/
   Convergence.Framework/
 samples/
   Convergence.DemoHost/
+tools/
+  Convergence.ContentValidator/
 tests/
   Convergence.Framework.Tests/
   Convergence.DemoHost.Tests/
+  Convergence.ContentValidator.Tests/
+config/
+  content-validator/
 content/
   reference/
   demos/
@@ -29,8 +34,11 @@ ArchiveDocs/
 |---|---|
 | `src/Convergence.Framework` | The only reusable product assembly. It owns definitions, catalogs, rules, runtime state, transitions, diagnostics, and host-neutral ports. |
 | `samples/Convergence.DemoHost` | Optional console example. It owns filesystem reads, terminal input/output, host JSON, and Training Annex orchestration. |
+| `tools/Convergence.ContentValidator` | Host-side authoring CLI. It owns filesystem discovery and independent JSON Schema evaluation, then delegates semantic and catalog validation to Framework. |
 | `tests/Convergence.Framework.Tests` | Framework-only tests. This project references only Framework. |
 | `tests/Convergence.DemoHost.Tests` | Example-host tests. This project references Framework and DemoHost only. |
+| `tests/Convergence.ContentValidator.Tests` | Validator CLI tests. This project references the tool and its transitive Framework dependency. |
+| `config/content-validator` | Explicit host-registration profiles used by authoring validation. |
 | `content/reference` | Small schema and catalog reference packs. |
 | `content/demos` | Focused battle and shared-effect demonstrations. |
 | `content/original/training-annex` | Original end-to-end example content. |
@@ -47,6 +55,8 @@ Convergence.Framework.Tests ---> Convergence.Framework
 
 Convergence.DemoHost.Tests ----> Convergence.DemoHost ----> Convergence.Framework
              `--------------------------------------------> Convergence.Framework
+
+Convergence.ContentValidator.Tests ---> Convergence.ContentValidator ---> Convergence.Framework
 ```
 
 Framework has no project reference and no external package dependency. No active project references the archive.

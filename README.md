@@ -9,9 +9,12 @@ The framework is under active development and has not reached a stable public re
 ```text
 src/Convergence.Framework/          reusable .NET 8 library
 samples/Convergence.DemoHost/       optional console example
+tools/Convergence.ContentValidator/ host-side authoring validator
 tests/Convergence.Framework.Tests/  framework-only tests
 tests/Convergence.DemoHost.Tests/   example-host tests
+tests/Convergence.ContentValidator.Tests/ validator tests
 content/                            generic reference and demo content
+schemas/content/v3/                 Draft 2020-12 authoring contracts
 docs/                               active product documentation
 ```
 
@@ -76,6 +79,7 @@ dotnet restore Convergence.sln
 dotnet format Convergence.sln --no-restore --verify-no-changes
 dotnet build Convergence.sln --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true
 dotnet test Convergence.sln --configuration Release --no-build --no-restore
+dotnet run --project tools/Convergence.ContentValidator -- --content-root content --schema-root schemas/content/v3 --registrations config/content-validator/active-samples.registrations.json
 dotnet run --project samples/Convergence.DemoHost -- --help
 ```
 

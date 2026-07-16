@@ -57,6 +57,10 @@ The schema contract is independently exercised with `JsonSchema.Net` 9.2.2.
 All active documents must pass both the schema and Framework deserialization,
 validation, and catalog construction paths.
 
+The checked-in [Content Authoring Validator](content-authoring-validator.md)
+executes those layers as one host-side command without adding filesystem or
+JSON Schema dependencies to Framework.
+
 Definitions and catalogs retain no serializer-owned values. Hosts may use another source format by mapping it into the same domain contracts or by supplying compatible JSON text.
 
 Ruleset categories identify generic service families. Policy IDs are validated

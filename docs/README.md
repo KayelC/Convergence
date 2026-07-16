@@ -15,11 +15,12 @@ This directory is the active documentation authority for Convergence Framework.
 9. [Public API Contract](public-api-contract.md): supported composition surface and `0.1` compatibility policy.
 10. [Public API Namespaces](public-api-namespaces.md): namespace ownership.
 11. [Content Contract](content-contract.md): clean content organization and loading authority.
-12. [Ruleset Policy Contracts](ruleset-policy-contracts.md): typed factory composition and supplied parameter contracts.
-13. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
-14. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
-15. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
-16. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
+12. [Content Authoring Validator](content-authoring-validator.md): complete schema-to-catalog validation from the command line.
+13. [Ruleset Policy Contracts](ruleset-policy-contracts.md): typed factory composition and supplied parameter contracts.
+14. [Mechanics And Player Rules](mechanics/README.md): detailed rules, optional modules, and host responsibilities.
+15. [Licensing](licensing.md): public noncommercial permissions, commercial licensing, ownership, and contributions.
+16. [Terminology Boundary](terminology-boundary.md): the active Action Token, Vessel, roster, schema-v3, save-v7, and vocabulary-enforcement contract.
+17. [Current Code Review](convergence-framework-code-review-2026-07-15.md): fresh source-based health assessment, confirmed defects, verification results, and release decision at commit `0109dc8`.
 
 ## Authority Rules
 

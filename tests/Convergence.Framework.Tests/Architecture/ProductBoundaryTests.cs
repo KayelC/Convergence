@@ -10,8 +10,10 @@ public sealed class ProductBoundaryTests
     [
         "samples/Convergence.DemoHost/Convergence.DemoHost.csproj",
         "src/Convergence.Framework/Convergence.Framework.csproj",
+        "tests/Convergence.ContentValidator.Tests/Convergence.ContentValidator.Tests.csproj",
         "tests/Convergence.DemoHost.Tests/Convergence.DemoHost.Tests.csproj",
-        "tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj"
+        "tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj",
+        "tools/Convergence.ContentValidator/Convergence.ContentValidator.csproj"
     ];
 
     [Fact]
@@ -90,7 +92,9 @@ public sealed class ProductBoundaryTests
         Assert.True(Directory.Exists(Path.Combine(productRoot, "samples")));
         Assert.True(Directory.Exists(Path.Combine(productRoot, "tests")));
         Assert.True(Directory.Exists(Path.Combine(productRoot, "content")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "config")));
         Assert.True(Directory.Exists(Path.Combine(productRoot, "docs")));
+        Assert.True(Directory.Exists(Path.Combine(productRoot, "tools")));
 
         Assert.False(File.Exists(Path.Combine(productRoot, "JRPG.sln")));
         Assert.False(File.Exists(Path.Combine(productRoot, "JRPG", "Convergence.sln")));
@@ -172,7 +176,7 @@ public sealed class ProductBoundaryTests
     [Fact]
     public void ActiveProductionSourcesAndProjects_DoNotReferenceTheLegacyArchive()
     {
-        string[] roots = [RepositoryPath("src"), RepositoryPath("samples")];
+        string[] roots = [RepositoryPath("src"), RepositoryPath("samples"), RepositoryPath("tools")];
         string[] forbidden =
         [
             "ArchiveDocs",

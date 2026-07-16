@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "registrations": {
+    "contexts": ["battle", "field"],
+    "resources": ["hp", "sp"],
+    "stats": ["strength", "magic", "vitality", "agility", "luck"],
+    "modifierTracks": ["attack", "defense", "agility"],
+    "events": ["battle_start", "owner_turn_end", "battle_end"],
+    "phases": ["next_attack"],
+    "entityKinds": ["vessel", "companion"],
+    "alignments": ["neutral"],
+    "negotiationPersonalities": ["playful", "steady_sample"],
+    "ailmentGroups": ["major_ailment", "poison", "toxin", "rest", "immobilize", "mental"],
+    "battleKinds": ["normal_battle"],
+    "moonPhases": [],
+    "capabilities": [],
+    "actions": ["basic_attack", "guard", "pass"],
+    "statuses": [],
+    "escapeRules": ["standard_escape"],
+    "shopCategories": ["weapon_shop", "training_supply"],
+    "negotiationDemands": ["credits", "sample_credits"],
+    "encounterEnvironments": ["entry_block", "training_annex"],
+    "policies": [
+      "standard_damage",
+      "standard_reward",
+      "standard_growth",
+      "standard_stat",
+      "standard_action_token",
+      "standard_roster_capacity",
+      "standard_economy",
+      "return_to_lobby",
+      "training_barrier",
+      "standard_accident",
+      "standard_mutation"
+    ],
+    "formulas": ["reference_poison_damage"],
+    "customEffects": ["request_dungeon_exit"],
+    "customConditions": [],
+    "customAilmentBehaviors": []
+  }
+}

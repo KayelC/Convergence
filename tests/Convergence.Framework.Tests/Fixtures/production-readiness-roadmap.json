@@ -32,16 +32,17 @@
       "id": "PR-B3",
       "title": "Public and authoring contract stabilization",
       "severity": "blocker",
-      "status": "open",
+      "status": "implemented_pending_review",
       "plannedCheckpoint": 7,
       "plannedCommit": "api: establish convergence 0.1 contract",
       "evidence": [
         "FrameworkBoundaryTests.FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded",
         "FrameworkBoundaryTests.FrameworkPublicApi_ExposesNoHostSerializerEngineOrLegacyTypes",
         "SchemaDeserializationTests",
-        "ContentSchemaContractTests"
+        "ContentSchemaContractTests",
+        "ContentValidatorApplicationTests"
       ],
-      "remainingWork": ["authoring validator CLI", "Final consolidated review"],
+      "remainingWork": ["Final consolidated review"],
       "archiveEligible": false
     },
     {
