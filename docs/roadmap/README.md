@@ -8,6 +8,7 @@ records. It does not define individual mechanics.
 ## Active Records
 
 - [Product Roadmap](product-roadmap.md)
+- [Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
 

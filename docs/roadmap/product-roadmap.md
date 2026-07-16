@@ -8,9 +8,23 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 18 complete, 5 partial, and 2 deferred.
 
 The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v7 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel stats now come from an explicit source policy rather than the removed weighted prototype model.
+
+## Current Design-Correction Roadmap
+
+The source-based collaborative actor review identified confirmed product
+direction that is not yet represented completely by the active runtime:
+complete Hosted Entity combat composition, runtime skill unlocking, one
+authoritative roster aggregate, unambiguous encounter presence, explicit
+command authority, and meaningful configurable stage magnitude.
+
+The ordered work and its owner decision lock are recorded in the
+[Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md).
+D1-D6 are approved, so the roadmap is active implementation authority. The five
+affected capability entries remain partial until the ordered checkpoints and
+completion review prove the corrected contracts.
 
 ## Completed Semantic Correction
 
