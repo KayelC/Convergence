@@ -18,15 +18,17 @@ The source-based
 confirmed the composition, skill-choice, stage, and save-v8 transaction design.
 It also found unresolved integration gaps:
 
-- live transition preflight is narrower than aggregate save validation;
-- move-list capacity is not enforced consistently during creation and restore;
 - `LevelGrowthResult` has no stale-source precondition;
 - direct catalog actor restore omits pending-choice catalog/provenance checks;
 - the Godot sample bypasses aggregate restoration.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
-capacity from the saved owner actor.
+capacity from the saved owner actor. A shared aggregate validator now governs
+live transitions, composition, and saves. High-level actor creation, direct
+restore, and save validation now apply the selected move-list capacity policy;
+starting-level authored unlocks use the same pending-choice planner as live
+growth.
 
 These are tracked as partial capability gaps, not changes to the confirmed
 D1-D6 intended behavior.

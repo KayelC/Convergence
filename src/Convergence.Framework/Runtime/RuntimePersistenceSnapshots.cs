@@ -83,7 +83,8 @@ public enum RuntimeSaveValidationCode
     DuplicateActorPendingSkill,
     ActorPendingSkillAlreadyLearned,
     ActorPendingSkillUnlockMismatch,
-    ActorPendingSkillLevelUnavailable
+    ActorPendingSkillLevelUnavailable,
+    ActorMoveListCapacityRejected
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -317,10 +318,15 @@ public sealed record RuntimeSaveGameSnapshot
 public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 {
     private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
+    private readonly IRuntimeMoveListCapacityPolicy _moveListCapacityPolicy;
 
-    public RuntimeSaveValidator(IRosterCapacityPolicy? rosterCapacityPolicy = null)
+    public RuntimeSaveValidator(
+        IRosterCapacityPolicy? rosterCapacityPolicy = null,
+        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null)
     {
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
+        _moveListCapacityPolicy = moveListCapacityPolicy ??
+            new SharedRuntimeMoveListCapacityPolicy();
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -700,7 +706,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
     }
 
-    private static void ValidateActorRestoreContract(
+    private void ValidateActorRestoreContract(
         RuntimeActorSnapshot actor,
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
@@ -740,6 +746,30 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             diagnostics,
             actor.Identity.InstanceId,
             $"$.actors[{actorIndex}].skills.equippedSkillIds");
+        SkillDefinition[] equippedDefinitions = actor.Skills.EquippedSkillIds
+            .Where(skillId => catalog.Skills.ContainsKey(skillId))
+            .Select(skillId => catalog.Skills[skillId])
+            .ToArray();
+        if (equippedDefinitions.Length == actor.Skills.EquippedSkillIds.Count &&
+            actor.Identity.InstanceId.IsValid &&
+            actor.Identity.EntityDefinitionId.IsValid &&
+            actor.Identity.ActorKindId.IsValid)
+        {
+            RuntimeMoveListCapacityViolation? violation =
+                RuntimeMoveListCapacityValidation.ValidateCurrent(
+                    actor.Identity,
+                    equippedDefinitions,
+                    _moveListCapacityPolicy);
+            if (violation is not null)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActorMoveListCapacityRejected,
+                    violation.Message,
+                    actor.Identity.InstanceId,
+                    violation.SkillId,
+                    $"$.actors[{actorIndex}].skills.equippedSkillIds"));
+            }
+        }
         ValidateActorPendingSkillChoices(
             actor,
             catalog,

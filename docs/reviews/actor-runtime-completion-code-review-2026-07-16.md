@@ -187,6 +187,14 @@ restore boundary.
 capacity-aware. Initial unlock planning should produce the same equipped and
 pending state as live progression for the selected policy.
 
+**Resolution:** corrected. `CatalogBattleActorFactory` now owns an explicit
+move-list capacity policy. Base skills must fit that policy, starting-level
+authored unlocks run through `RuntimeSkillUnlockPlanner`, and excess unlocks
+become pending choices in authored order. Direct actor restore and aggregate
+save validation reject equipped move lists that exceed the selected policy.
+Creating `annex_mentor` directly at level 8 now yields eight equipped skills
+and the level-8 ninth unlock as a pending choice, matching live growth.
+
 ### M4. A prepared level-growth result has no stale-state precondition
 
 **Invariant:** applying a prepared mutation must not overwrite actor changes

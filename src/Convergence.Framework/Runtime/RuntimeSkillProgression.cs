@@ -204,6 +204,94 @@ public sealed class SeparatedRuntimeMoveListCapacityPolicy : IRuntimeMoveListCap
     }
 }
 
+internal sealed record RuntimeMoveListCapacityViolation(
+    string Message,
+    ContentId? SkillId = null);
+
+internal static class RuntimeMoveListCapacityValidation
+{
+    public static RuntimeMoveListCapacityViolation? ValidateCurrent(
+        RuntimeActorIdentitySnapshot actor,
+        IReadOnlyList<SkillDefinition> equippedSkills,
+        IRuntimeMoveListCapacityPolicy capacityPolicy)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(equippedSkills);
+        ArgumentNullException.ThrowIfNull(capacityPolicy);
+
+        foreach (SkillDefinition skill in equippedSkills)
+        {
+            RuntimeMoveListCapacityAssessment? assessment =
+                TryAssess(actor, equippedSkills, skill, capacityPolicy, out string? failure);
+            if (assessment is null)
+            {
+                return new RuntimeMoveListCapacityViolation(failure!, skill.Id);
+            }
+            if (assessment.OccupiedSlots > assessment.Capacity)
+            {
+                return new RuntimeMoveListCapacityViolation(
+                    $"Equipped move-list group '{assessment.CapacityGroupId}' has " +
+                    $"{assessment.OccupiedSlots} skills, exceeding its capacity of " +
+                    $"{assessment.Capacity}.",
+                    skill.Id);
+            }
+        }
+
+        return null;
+    }
+
+    public static RuntimeMoveListCapacityViolation? ValidateAddition(
+        RuntimeActorIdentitySnapshot actor,
+        IReadOnlyList<SkillDefinition> equippedSkills,
+        SkillDefinition candidate,
+        IRuntimeMoveListCapacityPolicy capacityPolicy)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(equippedSkills);
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(capacityPolicy);
+
+        RuntimeMoveListCapacityAssessment? assessment =
+            TryAssess(actor, equippedSkills, candidate, capacityPolicy, out string? failure);
+        if (assessment is null)
+        {
+            return new RuntimeMoveListCapacityViolation(failure!, candidate.Id);
+        }
+
+        return assessment.HasAvailableSlot
+            ? null
+            : new RuntimeMoveListCapacityViolation(
+                $"Skill '{candidate.Id}' cannot be equipped because move-list group " +
+                $"'{assessment.CapacityGroupId}' is at its capacity of {assessment.Capacity}.",
+                candidate.Id);
+    }
+
+    private static RuntimeMoveListCapacityAssessment? TryAssess(
+        RuntimeActorIdentitySnapshot actor,
+        IReadOnlyList<SkillDefinition> equippedSkills,
+        SkillDefinition candidate,
+        IRuntimeMoveListCapacityPolicy capacityPolicy,
+        out string? failure)
+    {
+        try
+        {
+            RuntimeMoveListCapacityAssessment? assessment = capacityPolicy.Assess(
+                new RuntimeMoveListCapacityRequest(actor, equippedSkills, candidate));
+            failure = assessment is null
+                ? $"Move-list capacity policy returned no assessment for skill '{candidate.Id}'."
+                : null;
+            return assessment;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or OverflowException)
+        {
+            failure =
+                $"Move-list capacity policy rejected skill '{candidate.Id}': {exception.Message}";
+            return null;
+        }
+    }
+}
+
 public enum RuntimeSkillUnlockDisposition
 {
     AutomaticallyEquipped,
@@ -307,13 +395,13 @@ public sealed class RuntimeSkillUnlockPlanner : IRuntimeSkillUnlockPlanner
                 $"Actor entity '{request.Actor.Identity.EntityDefinitionId}' does not match " +
                 $"unlock source '{request.Entity.Id}'.");
         }
-        if (request.PreviousLevel <= 0 ||
+        if (request.PreviousLevel < 0 ||
             request.PreviousLevel > request.Actor.Progression.Level)
         {
             return Rejected(
                 before,
                 RuntimeSkillUnlockPlanDiagnosticCode.InvalidLevelRange,
-                $"Previous level {request.PreviousLevel} must be positive and no greater than " +
+                $"Previous level {request.PreviousLevel} must be nonnegative and no greater than " +
                 $"current level {request.Actor.Progression.Level}.");
         }
 

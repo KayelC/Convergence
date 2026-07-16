@@ -2361,17 +2361,20 @@ Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationFailed = 5
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationResourceDuplicate = 7 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InitializationReturnedNull = 6 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.InvalidLevel = 0 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+Convergence.Encounters.CatalogBattleActorDiagnosticCode.MoveListCapacityRejected = 16 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.ProgressionLevelMismatch = 1 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.RuntimeStateConstructionFailed = 9 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillMissing = 4 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillUnlockPlanningFailed = 17 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotActorKindMismatch = 10 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotAilmentMissing = 12 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotCombatProfileCompositionFailed = 13 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotInvalid = 14 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotMoveListCapacityRejected = 18 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotSkillMissing = 11 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorDiagnosticCode.VitalResourceMissing = 8 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
 Convergence.Encounters.CatalogBattleActorFactory
-Convergence.Encounters.CatalogBattleActorFactory.CatalogBattleActorFactory(Convergence.Catalog.IEntityDefinitionRepository! entities, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Encounters.IBattleActorInitializationPolicy! initialization, Convergence.Catalog.IAilmentDefinitionRepository? ailments = null, Convergence.Runtime.IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null) -> void
+Convergence.Encounters.CatalogBattleActorFactory.CatalogBattleActorFactory(Convergence.Catalog.IEntityDefinitionRepository! entities, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Encounters.IBattleActorInitializationPolicy! initialization, Convergence.Catalog.IAilmentDefinitionRepository? ailments = null, Convergence.Runtime.IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null) -> void
 Convergence.Encounters.CatalogBattleActorFactory.Create(Convergence.Encounters.CatalogBattleActorCreationRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.CatalogBattleActorRestoreRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorRestoreRequest
@@ -6246,6 +6249,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.ActorBaseStatOutOfRange = 59 -> Co
 Convergence.Runtime.RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange = 60 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorEquippedSkillNotLearned = 39 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorKindMismatch = 35 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorMoveListCapacityRejected = 74 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorPendingSkillAlreadyLearned = 71 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorPendingSkillLevelUnavailable = 73 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorPendingSkillUnlockMismatch = 72 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -6339,7 +6343,7 @@ Convergence.Runtime.RuntimeSaveValidationResult.RequireValidSnapshot() -> Conver
 Convergence.Runtime.RuntimeSaveValidationResult.RuntimeSaveValidationResult(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSaveValidationDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeSaveValidationResult.Snapshot.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
 Convergence.Runtime.RuntimeSaveValidator
-Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null) -> void
+Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null) -> void
 Convergence.Runtime.RuntimeSaveValidator.Validate(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSaveValidationResult!
 Convergence.Runtime.RuntimeSessionProgressSnapshot
 Convergence.Runtime.RuntimeSessionProgressSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeSessionProgressSnapshot!

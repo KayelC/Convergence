@@ -139,6 +139,9 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotCombatProfileCompositionFailed,
     SnapshotInvalid,
     IdentifierInvalid,
+    MoveListCapacityRejected,
+    SkillUnlockPlanningFailed,
+    SnapshotMoveListCapacityRejected,
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -213,13 +216,15 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
     private readonly IBattleActorInitializationPolicy _initialization;
     private readonly IDurationVocabularyRepository? _durationVocabulary;
     private readonly IRuntimeActorCombatProfileCompositionService _combatProfileComposition;
+    private readonly IRuntimeMoveListCapacityPolicy _moveListCapacityPolicy;
 
     public CatalogBattleActorFactory(
         IEntityDefinitionRepository entities,
         ISkillDefinitionRepository skills,
         IBattleActorInitializationPolicy initialization,
         IAilmentDefinitionRepository? ailments = null,
-        IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null)
+        IRuntimeActorCombatProfileCompositionService? combatProfileComposition = null,
+        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null)
     {
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
@@ -230,6 +235,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             _ailments as IDurationVocabularyRepository;
         _combatProfileComposition = combatProfileComposition ??
             new RuntimeActorCombatProfileCompositionService(skills);
+        _moveListCapacityPolicy = moveListCapacityPolicy ??
+            new SharedRuntimeMoveListCapacityPolicy();
     }
 
     public CatalogBattleActorCreationResult Create(CatalogBattleActorCreationRequest request)
@@ -308,11 +315,18 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
+        var baseSkillIds = new List<ContentId>();
         var orderedSkillIds = new List<ContentId>();
         var seenSkillIds = new HashSet<ContentId>();
         foreach (ContentId skillId in entity.BaseSkillIds)
         {
-            if (seenSkillIds.Add(skillId)) orderedSkillIds.Add(skillId);
+            if (!seenSkillIds.Add(skillId))
+            {
+                continue;
+            }
+
+            baseSkillIds.Add(skillId);
+            orderedSkillIds.Add(skillId);
         }
         foreach (SkillUnlockDefinition unlock in entity.SkillUnlocks.Where(
                      unlock => levelIsConsistent && unlock.Level <= actorLevel))
@@ -320,12 +334,12 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             if (seenSkillIds.Add(unlock.SkillId)) orderedSkillIds.Add(unlock.SkillId);
         }
 
-        var loadout = new List<SkillDefinition>();
+        var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
         foreach (ContentId skillId in orderedSkillIds)
         {
             if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
             {
-                loadout.Add(skill);
+                resolvedSkills.Add(skillId, skill);
             }
             else
             {
@@ -419,6 +433,34 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             return new CatalogBattleActorCreationResult(null, diagnostics);
         }
 
+        var identity = new RuntimeActorIdentitySnapshot(
+            request.InstanceId,
+            entity.Id,
+            entity.EntityKindId,
+            entity.DisplayName);
+        var loadout = new List<SkillDefinition>(baseSkillIds.Count);
+        foreach (ContentId skillId in baseSkillIds)
+        {
+            SkillDefinition skill = resolvedSkills[skillId];
+            RuntimeMoveListCapacityViolation? violation =
+                RuntimeMoveListCapacityValidation.ValidateAddition(
+                    identity,
+                    loadout,
+                    skill,
+                    _moveListCapacityPolicy);
+            if (violation is not null)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.MoveListCapacityRejected,
+                    violation.Message,
+                    entity.Id,
+                    violation.SkillId));
+                return new CatalogBattleActorCreationResult(null, diagnostics);
+            }
+
+            loadout.Add(skill);
+        }
+
         RuntimeProgressionSnapshot progression = request.Progression ??
             new RuntimeProgressionSnapshot(actorLevel, 0, 0, 0);
         try
@@ -439,11 +481,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 skillIds: loadout.Select(skill => skill.Id),
                 capabilityIds: [],
                 passiveSkills: loadout.Where(skill => skill.Activation == SkillActivation.Passive),
-                identity: new RuntimeActorIdentitySnapshot(
-                    request.InstanceId,
-                    entity.Id,
-                    entity.EntityKindId,
-                    entity.DisplayName),
+                identity: identity,
                 progression: progression,
                 baseResourceValues: initialization.BaseResourceValues.Select(pair =>
                     new KeyValuePair<ContentId, decimal>(pair.Key, pair.Value)),
@@ -452,6 +490,28 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 skillState: new RuntimeSkillStateSnapshot(
                     loadout.Select(skill => skill.Id),
                     loadout.Select(skill => skill.Id)));
+
+            RuntimeSkillUnlockPlanResult unlockPlan = new RuntimeSkillUnlockPlanner(_skills).Plan(
+                new RuntimeSkillUnlockPlanRequest(
+                    state.ToSnapshot(),
+                    entity,
+                    previousLevel: 0,
+                    _moveListCapacityPolicy));
+            if (!unlockPlan.Planned)
+            {
+                diagnostics.AddRange(unlockPlan.Diagnostics.Select(diagnostic =>
+                    new CatalogBattleActorDiagnostic(
+                        CatalogBattleActorDiagnosticCode.SkillUnlockPlanningFailed,
+                        diagnostic.Message,
+                        entity.Id,
+                        diagnostic.SkillId)));
+                return new CatalogBattleActorCreationResult(null, diagnostics);
+            }
+
+            SkillDefinition[] equippedDefinitions = unlockPlan.After.EquippedSkillIds
+                .Select(_skills.GetRequiredSkill)
+                .ToArray();
+            state.ApplySkillState(unlockPlan.After, equippedDefinitions);
 
             return new CatalogBattleActorCreationResult(
                 new CatalogBattleActor(entity, state, _skills),
@@ -567,6 +627,21 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         SkillDefinition[] loadout = snapshot.Skills.EquippedSkillIds
             .Select(skillId => resolvedSkills[skillId])
             .ToArray();
+        RuntimeMoveListCapacityViolation? capacityViolation =
+            RuntimeMoveListCapacityValidation.ValidateCurrent(
+                snapshot.Identity,
+                loadout,
+                _moveListCapacityPolicy);
+        if (capacityViolation is not null)
+        {
+            diagnostics.Add(new CatalogBattleActorDiagnostic(
+                CatalogBattleActorDiagnosticCode.SnapshotMoveListCapacityRejected,
+                capacityViolation.Message,
+                entityId,
+                capacityViolation.SkillId));
+            return new CatalogBattleActorCreationResult(null, diagnostics);
+        }
+
         try
         {
             RuntimeActorState state = RuntimeActorState.Restore(

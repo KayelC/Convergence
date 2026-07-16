@@ -217,6 +217,31 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexMentor_AtLevelEightUsesEightMovesAndQueuesTheNinthUnlock()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        var factory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new TestInitializationPolicy());
+
+        CatalogBattleActor mentor = factory.Create(new CatalogBattleActorCreationRequest(
+            Qualified("annex_mentor"),
+            RuntimeInstanceId.Parse("mentor_level_eight"),
+            Id("player_team"),
+            8,
+            IsDeployed: false,
+            Id("test_host"))).RequireActor();
+
+        Assert.Equal(8, mentor.State.Skills.EquippedSkillIds.Count);
+        Assert.DoesNotContain(Qualified("toxin_touch"), mentor.State.Skills.LearnedSkillIds);
+        RuntimePendingSkillChoiceSnapshot pending = Assert.Single(mentor.State.Skills.PendingChoices);
+        Assert.Equal(8, pending.UnlockLevel);
+        Assert.Equal(Qualified("toxin_touch"), pending.SkillId);
+        Assert.Equal(1, mentor.State.Skills.Revision);
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_DungeonContentAndGenericTraversalRemainSeparate()
     {
         GameDataCatalog catalog = LoadCatalog();

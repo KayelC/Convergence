@@ -157,6 +157,11 @@ pending skills are not added again.
 skills total. Active and passive skills share those slots. A game may supply a
 different capacity or separate active and passive lists.
 
+**Framework rule:** the selected capacity policy applies during actor creation,
+live growth, direct restore, and aggregate save validation. Base skills must
+fit. Starting-level authored unlocks are evaluated in authored order through
+the same planner as live growth, with excess unlocks becoming pending choices.
+
 When a slot is available, the skill is learned and equipped immediately. When
 the move list is full, level growth still succeeds and the new skill becomes a
 persisted pending choice.

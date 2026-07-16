@@ -113,6 +113,94 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_AppliesMoveListCapacityToBaseSkillsAndStartingLevelUnlocks()
+    {
+        SkillDefinition first = Active("test.pack:first", DamageElement.Fire);
+        SkillDefinition second = Active("test.pack:second", DamageElement.Ice);
+        SkillDefinition third = Active("test.pack:third", DamageElement.Wind);
+        EntityDefinition entity = Entity(
+            "test.pack:entity",
+            [first.Id],
+            [
+                new SkillUnlockDefinition(2, second.Id),
+                new SkillUnlockDefinition(3, third.Id)
+            ]);
+        var constrained = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(first, second, third),
+            new TestInitializationPolicy(),
+            moveListCapacityPolicy: new SharedRuntimeMoveListCapacityPolicy(2));
+
+        CatalogBattleActor actor = constrained.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            3,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
+
+        Assert.Equal([first.Id, second.Id], actor.State.Skills.EquippedSkillIds);
+        RuntimePendingSkillChoiceSnapshot pending = Assert.Single(actor.State.Skills.PendingChoices);
+        Assert.Equal(third.Id, pending.SkillId);
+        Assert.Equal(3, pending.UnlockLevel);
+
+        var insufficientForBase = new CatalogBattleActorFactory(
+            new EntityRepository(Entity("test.pack:base_overflow", [first.Id, second.Id])),
+            new SkillRepository(first, second),
+            new TestInitializationPolicy(),
+            moveListCapacityPolicy: new SharedRuntimeMoveListCapacityPolicy(1));
+        CatalogBattleActorCreationResult rejected = insufficientForBase.Create(
+            new CatalogBattleActorCreationRequest(
+                Id("test.pack:base_overflow"),
+                RuntimeInstanceId.Parse("overflow"),
+                PlayerTeam,
+                1,
+                IsDeployed: true,
+                Id("test_host")));
+
+        Assert.False(rejected.IsSuccess);
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.MoveListCapacityRejected,
+            Assert.Single(rejected.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void ActorFactory_RestoreRejectsEquippedMovesBeyondItsSelectedCapacity()
+    {
+        SkillDefinition first = Active("test.pack:first", DamageElement.Fire);
+        SkillDefinition second = Active("test.pack:second", DamageElement.Ice);
+        EntityDefinition entity = Entity("test.pack:entity", [first.Id, second.Id]);
+        var permissive = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(first, second),
+            new TestInitializationPolicy(),
+            moveListCapacityPolicy: new SharedRuntimeMoveListCapacityPolicy(2));
+        RuntimeActorSnapshot snapshot = permissive.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("instance"),
+            PlayerTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor().State.ToSnapshot();
+        var constrained = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SkillRepository(first, second),
+            new TestInitializationPolicy(),
+            moveListCapacityPolicy: new SharedRuntimeMoveListCapacityPolicy(1));
+
+        CatalogBattleActorCreationResult result = constrained.Restore(
+            new CatalogBattleActorRestoreRequest(
+                snapshot,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.SnapshotMoveListCapacityRejected,
+            Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Fact]
     public void ActorInitialization_DetachesAndProtectsBaseResourceValues()
     {
         var source = new Dictionary<ContentId, decimal>

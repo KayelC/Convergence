@@ -17,17 +17,15 @@ The confirmed rules are recorded in
 
 The D1-D6 design is confirmed and the demonstrated paths are green. The
 [completion code review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
-identified remaining integration gaps around roster owner-level
-synchronization, complete live roster validation, capacity-aware high-level
-actor creation/restore, stale prepared growth, direct pending-skill restore
-validation, and the Godot sample restore boundary. Owner-level duplication has
-now been corrected: capacity derives from the current owner actor.
+identified integration gaps around roster authority, live validation,
+high-level move-list capacity, stale prepared growth, direct pending-skill
+restore validation, and the Godot sample restore boundary. Roster authority,
+live validation, and high-level move-list capacity are now corrected.
 
 Until those follow-ups are corrected:
 
 - keep party snapshots sourced from validated session state;
 - supply the current owner actor snapshot to every roster transition;
-- do not use direct high-level creation as proof of an eight-slot move list;
 - apply growth results immediately to the state from which they were
   calculated;
 - prefer aggregate session restoration over direct actor restoration.
@@ -269,6 +267,12 @@ The standard `SharedRuntimeMoveListCapacityPolicy` permits eight equipped
 skills total. `SeparatedRuntimeMoveListCapacityPolicy` supports separate active
 and passive capacities. A game can implement `IRuntimeMoveListCapacityPolicy`
 for another design.
+
+Use the same policy when creating the actor factory and save validator.
+Base skills must fit the selected capacity. Authored unlocks available at an
+actor's requested starting level run through the same planner used by live
+growth, so excess moves become persisted pending choices rather than bypassing
+the configured limit.
 
 ## Present A Pending Skill Choice
 

@@ -1368,6 +1368,22 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_UsesItsSelectedMoveListCapacityPolicy()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator(
+            moveListCapacityPolicy: new SharedRuntimeMoveListCapacityPolicy(1))
+            .Validate(snapshot, catalog);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorMoveListCapacityRejected &&
+            diagnostic.Path == "$.actors[0].skills.equippedSkillIds");
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsDuplicateCompendiumEntitiesAndUnlearnedEquippedSkills()
     {
         ContentId entityId = Id("convergence.clean_battle_demo:frost_duelist_demo");

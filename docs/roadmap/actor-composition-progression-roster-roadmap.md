@@ -662,6 +662,12 @@ incoming snapshots and invalid proposed results without mutation, including
 invalid IDs, duplicate or conflicting roles, ownership mismatches, and active
 or roster capacity violations.
 
+**M3 correction:** high-level actor creation and restoration now use an
+explicit move-list capacity policy. Base moves must fit; starting-level
+authored unlocks use the same unlock planner as live growth and become pending
+when full; direct actor and aggregate save restoration reject equipped lists
+outside the selected policy.
+
 ## Expected File Ownership
 
 Likely Framework files to change:
