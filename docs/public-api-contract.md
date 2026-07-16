@@ -17,9 +17,13 @@ The primary composition path is:
 3. `RuntimeRulesetBindingResolver` binds authored rulesets through a
    host-supplied `RuntimeRulesetPolicyFactoryRegistry`.
 4. `CatalogBattleActorFactory` creates runtime actors from catalog definitions.
-5. `BattleActionExecutor`, `BattleEncounterRunner`, and the focused runtime
+5. `RuntimeActorCombatProfileCompositionService`,
+   `RuntimeActorGrowthCompositionService`, and
+   `RuntimeSkillChoiceTransactionService` coordinate source-owned actor state
+   and dependent Vessel profiles.
+6. `BattleActionExecutor`, `BattleEncounterRunner`, and the focused runtime
    transition services apply rules and return typed immutable results.
-6. `RuntimeSessionRestoreService` validates and restores aggregate snapshot
+7. `RuntimeSessionRestoreService` validates and restores aggregate snapshot
    state; the host still owns its save-file encoding and scene reconstruction.
 
 The complete namespace ownership map is in
@@ -64,3 +68,8 @@ or source-project-reference distribution model.
 The framework remains non-packable. Games integrate it through a source
 `ProjectReference`; no NuGet publication contract is implied by the API
 analyzer or its build-only compiler toolset.
+
+The supported actor composition path is documented in
+[Actors And Runtime State](developer-guide/actors-and-runtime-state.md). Its
+authority, transaction, and restoration invariants are documented in
+[Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).

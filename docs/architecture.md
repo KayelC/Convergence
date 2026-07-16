@@ -50,7 +50,24 @@ diagnostics and no hidden standard fallback. See
 
 ## Runtime Flow
 
-Runtime actors are identified by `RuntimeInstanceId` and content records by `ContentId`. Actor state, party and rosters, inventory, equipment, wallet, navigation, traversal, Compendium, knowledge, and session state have immutable snapshot boundaries.
+Runtime actors are identified by `RuntimeInstanceId` and content records by
+`ContentId`. Actor state, party and rosters, inventory, equipment, wallet,
+navigation, traversal, Compendium, knowledge, and session state have immutable
+snapshot boundaries.
+
+Actor authority is split deliberately. Individual actor state owns identity,
+progression, resources, equipment, skills, status, affiliation, and encounter
+presence. `RuntimePartyRosterSnapshot` exclusively owns active/reserve
+placement, Hosted Entity ownership, Companion ownership, and the Active Hosted
+Entity selection.
+
+The standard Vessel model atomically composes core stats, defenses, active
+skills, and passives from the selected Hosted Entity while retaining the
+Vessel's identity, progression, resources, equipment, status, affiliation, and
+presence. Source progression, pending skill decisions, dependent Vessel
+recomposition, and aggregate restoration share that authority model. See
+[Actors And Runtime State](developer-guide/actors-and-runtime-state.md) and
+[Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).
 
 Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 

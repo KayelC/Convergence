@@ -15,12 +15,14 @@ Developer guides focus on:
 - optional modules and replaceable policies;
 - focused integration examples.
 
-## Current State
+## Guides
 
-The documentation foundation is established, but subsystem guides have not yet
-completed owner review. Existing integration material is tracked as
-`existing_unreviewed` in the
-[documentation coverage matrix](../reference/documentation-coverage.md).
+- [Actors And Runtime State](actors-and-runtime-state.md): actor creation,
+  canonical party and roster ownership, Vessel composition, growth, pending
+  skill choices, and aggregate restoration.
+
+Other subsystem guides remain tracked as `existing_unreviewed` or `missing` in
+the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New guides must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

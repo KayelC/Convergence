@@ -32,6 +32,9 @@ internal enum CleanTrainingAnnexPlayCommand
     ResolveStats,
     RecalculateResources,
     ApplyVictoryExperience,
+    SelectSkillToReplace,
+    ForgetPendingSkill,
+    DeferPendingSkillChoice,
     ValidateStartupSnapshot,
     EnterTrainingAnnex,
     ReturnToStagingArea,
@@ -814,7 +817,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case CleanTrainingAnnexPlayCommand.ApplyVictoryExperience:
-                    (LevelGrowthResult growth, bool growthCommitted) = await ApplyVictoryExperienceAsync(
+                    (LevelGrowthResult growth, RuntimeActorGrowthCompositionResult? growthTransaction) =
+                        await ApplyVictoryExperienceAsync(
                         roster,
                         partyRoster,
                         growthServices,
@@ -822,8 +826,20 @@ internal sealed class CleanTrainingAnnexPlayHost
                         equipmentProfileResolver,
                         catalog,
                         cancellationToken).ConfigureAwait(false);
+                    bool growthCommitted = growthTransaction?.Applied == true;
                     growthApplied = growthCommitted;
                     levelUpCount = growthCommitted ? growth.LevelUps.Count : 0;
+                    if (growthCommitted)
+                    {
+                        await ResolvePendingSkillChoicesAsync(
+                            roster,
+                            partyRoster,
+                            combatProfileCompositionService,
+                            equipmentProfileResolver,
+                            catalog,
+                            commands,
+                            cancellationToken).ConfigureAwait(false);
+                    }
                     composeAfterCommand = false;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
@@ -2212,7 +2228,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         return results.ToArray();
     }
 
-    private async ValueTask<(LevelGrowthResult Growth, bool Committed)> ApplyVictoryExperienceAsync(
+    private async ValueTask<(
+        LevelGrowthResult Growth,
+        RuntimeActorGrowthCompositionResult? Transaction)> ApplyVictoryExperienceAsync(
         TrainingAnnexActorRoster roster,
         RuntimePartyRosterSnapshot partyRoster,
         GrowthRulesetServices growthServices,
@@ -2252,7 +2270,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return (growth, false);
+            return (growth, null);
         }
 
         RuntimeActorGrowthCompositionResult transaction = new RuntimeActorGrowthCompositionService(
@@ -2275,11 +2293,25 @@ internal sealed class CleanTrainingAnnexPlayHost
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return (growth, false);
+            return (growth, null);
         }
 
         RuntimeActorSnapshot sourceAfter = transaction.GrowthActorAfter;
         RuntimeActorSnapshot playerAfter = transaction.ComposedActorAfter;
+        foreach (RuntimeSkillUnlockPlanEntry entry in
+                 transaction.SkillUnlockPlan?.Entries ?? [])
+        {
+            SkillDefinition skill = catalog.GetRequiredSkill(entry.SkillId);
+            string message = entry.Disposition ==
+                RuntimeSkillUnlockDisposition.AutomaticallyEquipped
+                ? $"Skill unlocked: {skill.DisplayName} joined " +
+                  $"{growthActor.Actor.Entity.DisplayName}'s move list at level " +
+                  $"{entry.UnlockLevel}."
+                : $"Move list full: {skill.DisplayName} is pending for " +
+                  $"{growthActor.Actor.Entity.DisplayName} at level " +
+                  $"{entry.UnlockLevel}.";
+            await _eventSink.PublishAsync(message, cancellationToken).ConfigureAwait(false);
+        }
         await _eventSink.PublishAsync(
             $"Victory EXP: awarded {award} EXP through standard_growth.",
             cancellationToken).ConfigureAwait(false);
@@ -2300,7 +2332,158 @@ internal sealed class CleanTrainingAnnexPlayHost
             $"Level-up events: {(growth.LevelUps.Count == 0 ? "none" : string.Join(", ", growth.LevelUps.Select(levelUp => levelUp.Level.ToString())))}.",
             cancellationToken).ConfigureAwait(false);
 
-        return (growth, true);
+        return (growth, transaction);
+    }
+
+    private async ValueTask ResolvePendingSkillChoicesAsync(
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
+        IRuntimeActorCombatProfileCompositionService combatProfileCompositionService,
+        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        GameDataCatalog catalog,
+        ICollection<CleanTrainingAnnexPlayCommand> commands,
+        CancellationToken cancellationToken)
+    {
+        RuntimeActorReferenceSnapshot activeReference = partyRoster.ActiveHostedEntity ??
+            throw new InvalidOperationException(
+                "Training Annex move-list decisions require an active Hosted Entity.");
+        TrainingAnnexRuntimeActor source = roster.AllActors.Single(actor =>
+            actor.Actor.State.InstanceId == activeReference.InstanceId);
+
+        while (source.Actor.State.Skills.PendingChoices.Count > 0)
+        {
+            RuntimePendingSkillChoiceSnapshot pending =
+                source.Actor.State.Skills.PendingChoices[0];
+            SkillDefinition pendingSkill = catalog.GetRequiredSkill(pending.SkillId);
+            HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
+                await _commandSource.ReadAsync(
+                    CreatePendingSkillChoiceMenu(source, pendingSkill),
+                    cancellationToken).ConfigureAwait(false);
+            if (!selection.IsSelected)
+            {
+                commands.Add(CleanTrainingAnnexPlayCommand.Back);
+                await _eventSink.PublishAsync(
+                    $"Move-list decision deferred: {pendingSkill.DisplayName} remains " +
+                    $"pending for {source.Actor.Entity.DisplayName}.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            CleanTrainingAnnexPlayCommand selected = selection.Command;
+            commands.Add(selected);
+            if (selected == CleanTrainingAnnexPlayCommand.DeferPendingSkillChoice)
+            {
+                await _eventSink.PublishAsync(
+                    $"Move-list decision deferred: {pendingSkill.DisplayName} remains " +
+                    $"pending for {source.Actor.Entity.DisplayName}.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            RuntimeSkillStateSnapshot current = source.Actor.State.Skills;
+            RuntimeSkillChoiceCommand choice;
+            ContentId? replacedSkillId = null;
+            if (selected == CleanTrainingAnnexPlayCommand.SelectSkillToReplace &&
+                selection.SelectionIdentity?.ContentId is ContentId selectedSkillId)
+            {
+                replacedSkillId = selectedSkillId;
+                choice = new ReplacePendingSkillCommand(
+                    pending.Token,
+                    source.Actor.State.Progression.Level,
+                    current.Revision,
+                    selectedSkillId);
+            }
+            else if (selected == CleanTrainingAnnexPlayCommand.ForgetPendingSkill)
+            {
+                choice = new ForgetPendingSkillCommand(
+                    pending.Token,
+                    source.Actor.State.Progression.Level,
+                    current.Revision);
+            }
+            else
+            {
+                await _eventSink.PublishAsync(
+                    "Move-list selection was not recognized; the pending choice was preserved.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+                roster.Player.Actor.State.Equipment,
+                catalog);
+            if (equipmentProfile.Diagnostics.Count > 0)
+            {
+                foreach (RuntimeEquipmentProfileDiagnostic diagnostic in
+                         equipmentProfile.Diagnostics)
+                {
+                    await _eventSink.PublishAsync(
+                        $"[equipment:{diagnostic.Code}] {diagnostic.Message}",
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                return;
+            }
+
+            RuntimeSkillChoiceTransactionResult result =
+                new RuntimeSkillChoiceTransactionService(
+                    catalog,
+                    combatProfileCompositionService).Apply(
+                    new RuntimeSkillChoiceTransactionRequest(
+                        source.Actor.State,
+                        choice,
+                        TrainingAnnexHostSupport.CreatePlayerCombatProfileCompositionRequest(
+                            roster,
+                            partyRoster,
+                            equipmentProfile)));
+            if (!result.Applied)
+            {
+                foreach (RuntimeSkillChoiceDiagnostic diagnostic in result.Diagnostics)
+                {
+                    await _eventSink.PublishAsync(
+                        $"[skill-choice:{diagnostic.Code}] {diagnostic.Message}",
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                return;
+            }
+
+            string message = replacedSkillId is ContentId replaced
+                ? $"Move-list decision applied: {source.Actor.Entity.DisplayName} replaced " +
+                  $"{catalog.GetRequiredSkill(replaced).DisplayName} with " +
+                  $"{pendingSkill.DisplayName}."
+                : $"Move-list decision applied: {source.Actor.Entity.DisplayName} forgot " +
+                  $"{pendingSkill.DisplayName} and retained the current move list.";
+            await _eventSink.PublishAsync(message, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static HostCommandRequest<CleanTrainingAnnexPlayCommand>
+        CreatePendingSkillChoiceMenu(
+            TrainingAnnexRuntimeActor source,
+            SkillDefinition pendingSkill)
+    {
+        List<HostCommandOption<CleanTrainingAnnexPlayCommand>> options =
+            source.Actor.SkillLoadout.Select(skill =>
+                new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                    CleanTrainingAnnexPlayCommand.SelectSkillToReplace,
+                    $"Replace {skill.DisplayName}",
+                    Description: $"Forget {skill.DisplayName} and learn " +
+                                 $"{pendingSkill.DisplayName}.",
+                    SelectionIdentity:
+                        HostCommandSelectionIdentity.ForContent(skill.Id)))
+            .ToList();
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.ForgetPendingSkill,
+            $"Forget {pendingSkill.DisplayName}",
+            Description: "Keep the current move list and discard the new skill."));
+        options.Add(new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+            CleanTrainingAnnexPlayCommand.DeferPendingSkillChoice,
+            "Decide Later",
+            Description: "Leave the choice pending in the Hosted Entity snapshot."));
+        return new HostCommandRequest<CleanTrainingAnnexPlayCommand>(
+            $"{source.Actor.Entity.DisplayName} move list is full: learn " +
+            $"{pendingSkill.DisplayName}",
+            options);
     }
 
     private async ValueTask<bool> RecalculatePlayerResourcesAsync(

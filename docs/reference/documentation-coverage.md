@@ -11,23 +11,21 @@ The executable documentation ledger is
 It covers the same 25 capability IDs as the
 [Framework Capability Matrix](../roadmap/framework-capability-matrix.md).
 
-## Baseline
+## Current Reading
 
-This foundation deliberately marks no capability audience as `reviewed`.
-Existing pages are retained as `existing_unreviewed` until source inspection,
-plain-language discussion, diagram review, and explicit owner confirmation are
-complete.
+The actor composition, progression, party/roster, and actor-restoration
+documentation completed the collaborative workflow after D1-D6 were confirmed,
+implemented, inspected in current source, and exercised by tests and DemoHost.
+Other subsystem entries remain unreviewed until they complete the same process.
 
-Across 25 capabilities and three audiences, the initial 75 coverage entries are:
-
-The documentation matrix currently records 75 audience entries: 0 reviewed,
-44 existing_unreviewed, 24 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 11 reviewed,
+37 existing_unreviewed, 20 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 0 |
-| `existing_unreviewed` | 44 |
-| `missing` | 24 |
+| `reviewed` | 11 |
+| `existing_unreviewed` | 37 |
+| `missing` | 20 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

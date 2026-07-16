@@ -15,11 +15,15 @@ Technical pages focus on:
 - arithmetic domains and typed failure containment;
 - source and test evidence.
 
-## Current State
+## References
 
-Broad architecture material exists, but subsystem-level technical documents have
-not yet completed owner review. The baseline is recorded in the
-[documentation coverage matrix](../reference/documentation-coverage.md).
+- [Runtime Actor State And Restoration](runtime-actor-state-and-restoration.md):
+  actor authority, roster invariants, Vessel composition, progression
+  transactions, move-list decisions, save validation, and dependency-ordered
+  restoration.
+
+Other subsystem references remain tracked as `existing_unreviewed` or `missing`
+in the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New technical pages must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

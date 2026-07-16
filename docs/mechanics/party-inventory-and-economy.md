@@ -2,15 +2,56 @@
 
 ## Party And Ownership Graph
 
-Framework party state distinguishes active party members, reserve members, an Active Hosted Entity, a Hosted Entity Roster, and a Companion Roster. These are generic runtime roles; a game may use only the roles it needs.
+Framework party state distinguishes active party members, reserve members, an
+Active Hosted Entity, a Hosted Entity Roster, and a Companion Roster. These are
+generic runtime roles; a game may use only the roles it needs.
 
-**Framework rule:** one runtime instance ID cannot occupy incompatible ownership roles or appear as a duplicate entry. Active/reserve membership, Hosted Entity ownership, and Companion roster identity are validated on transitions and restore.
+**Framework rule:** `RuntimePartyRosterSnapshot` is the only ownership and party
+placement authority. Actor snapshots do not contain copies of these rosters.
+
+An Active Hosted Entity remains present in the Hosted Entity Roster. A deployed
+Companion remains present in the Companion Roster while also occupying an
+active-party slot. This deliberate overlap prevents an active owned actor from
+falling outside the ownership graph during recall, replacement, consumption,
+fusion, or save restoration.
+
+One runtime instance ID cannot occupy incompatible roles or appear twice in the
+same collection. Active/reserve membership, Hosted Entity ownership, Companion
+ownership, allowed overlaps, reference identity, and capacity are validated on
+transitions and restore.
+
+```mermaid
+flowchart LR
+    Owner["Party owner"] --> Party["Canonical party roster"]
+    Active["Active party"] --> Party
+    Reserve["Reserve party"] --> Party
+    Hosted["Hosted Entity Roster"] --> Party
+    Companion["Companion Roster"] --> Party
+    ActiveHosted["Active Hosted Entity"] --> Hosted
+    Deployed["Deployed Companion"] --> Active
+    Deployed --> Companion
+```
+
+## Placement And Encounter Presence
+
+**Framework rule:** active and reserve placement belongs only to the party
+aggregate. Encounter participation belongs only to
+`RuntimeEncounterPresenceSnapshot.IsDeployed`.
+
+An actor may be configured in the active party before an encounter starts while
+still having `IsDeployed = false`. The host or encounter planner explicitly
+sets encounter presence when battle begins. Party menus and scene labels do not
+silently change lifecycle eligibility.
 
 ## Party And Roster Commands
 
 Transition services support adding a party member; swapping active and reserve positions; deploying, swapping, recalling, dismissing, replacing, and consuming owned Companions; and swapping, consuming, or replacing an Active Hosted Entity.
 
 Each request returns `Before`, `After`, a stable code, diagnostics, and ordered affected IDs. Rejection preserves `Before` exactly.
+
+Selecting another Active Hosted Entity changes the canonical roster reference.
+A Vessel game then recomposes the owner through the actor combat-profile
+composition service before presenting the selection as complete.
 
 **Configured rule:** maximum party size and roster capacity come from policies. Capacity may be unlimited or tiered by level. Convergence does not require a particular number of party, Hosted Entity, or Companion slots.
 
@@ -43,3 +84,9 @@ Buy and sell prices are policy outcomes. The supplied standard/example policies 
 Hospital/restoration services assess a cost, payment, resource restoration, ailment removal, and encounter-persistence cleanup as one transaction. A host decides which actors can be selected and how the facility is presented.
 
 An ailment-only treatment may be valid even when HP/SP are full if the selected policy permits it. A game should not duplicate eligibility logic in its UI; it should present the assessment result.
+
+## Related Guidance
+
+- [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
+- [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
+- [Confirmed Actor Decision](../decisions/actor-composition-progression-and-rosters.md)

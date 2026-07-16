@@ -2,8 +2,8 @@
 
 ## Status
 
-**Active implementation authority. D1-D6 approved. Checkpoints 0-7 are
-implemented and verified. Checkpoint 8 is next.**
+**Completed implementation authority. D1-D6 are approved, implemented, and
+verified across Checkpoints 0-8.**
 
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
@@ -29,10 +29,10 @@ rules to Framework.
 | 2. Canonical owned rosters | complete | `0a43acd` |
 | 3. Encounter presence | complete | `5ede43e` |
 | 4. Authority and affiliation | complete | `979946d` |
-| 5. Vessel combat profiles | complete | `runtime: compose vessel combat profiles` |
-| 6. Runtime skill unlocks | complete | `runtime: add hosted entity skill progression` |
-| 7. Save v8 and restoration | pending | `runtime: restore canonical actor ownership and composition` |
-| 8. Documentation and review | pending | `docs: document actor composition and progression` |
+| 5. Vessel combat profiles | complete | `58a72ae` |
+| 6. Runtime skill unlocks | complete | `725c902` |
+| 7. Save v8 and restoration | complete | `35661bb` |
+| 8. Documentation and review | complete | `docs: document actor composition and progression` |
 
 ## Why This Work Exists
 
@@ -615,6 +615,32 @@ Completion review:
 - promote affected capability entries back to `complete` only after review;
 - record any remaining product choice separately from runtime defects.
 
+**Completion record (2026-07-16):** current source and focused tests were
+inspected for every D1-D6 decision. The confirmed decision record, mechanics
+page, developer guide, technical reference, ruleset authoring guidance, Godot
+save guidance, architecture, and public API overview now agree.
+
+Training Annex demonstrates one empty-slot unlock, one full-list pending
+choice, replace, forget, defer, and a canonical save/restore after a resolved
+choice. Its presentation remains a narrow host example over framework
+transactions.
+
+The framework capability matrix now records 23 complete, 0 partial, and 2
+deferred capabilities. Documentation coverage records 11 reviewed audience
+entries. Verification passed with 1,017 tests (843 Framework, 167 DemoHost, 7
+ContentValidator), zero skipped tests, zero build warnings, formatting
+verification, all DemoHost modes, scripted Training Annex exit, validation of
+6 packs/36 documents/94 definitions, and the Godot 4.7.1 headless smoke
+reporting save contract v8.
+
+Remaining product choices are not defects in this roadmap:
+
+- migrations between future released save contracts remain deferred;
+- deterministic replay remains deferred;
+- broader equipment behavior remains separate work;
+- documentation for unrelated capabilities remains unreviewed until each
+  subsystem completes the collaborative workflow.
+
 ## Expected File Ownership
 
 Likely Framework files to change:
@@ -699,7 +725,7 @@ The roadmap is implemented sequentially.
 5. stage and commit that checkpoint.
 6. Confirm the worktree is clean before beginning the next checkpoint.
 
-The phrase “separate staged commit” means an isolated Git commit whose staged
+The phrase "separate staged commit" means an isolated Git commit whose staged
 diff contains only that checkpoint. Multiple unrelated checkpoints will not be
 left mixed in the index.
 

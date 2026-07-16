@@ -80,37 +80,40 @@
     {
       "id": "runtime_actor_state",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/actors-progression-and-resources.md"],
-        "reason": "Actor concepts exist but have not completed source-by-source owner review."
+        "reason": "Actor roles, identity, composition, authority, and player-visible results were confirmed against current source and tests."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Hosts need a reviewed actor creation, identity, mutation, and snapshot guide."
+        "state": "reviewed",
+        "documents": ["docs/developer-guide/actors-and-runtime-state.md"],
+        "reason": "The reviewed guide covers actor creation, runtime identity, Vessel composition, host mapping, and snapshot use."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/architecture.md", "docs/gameplay-systems.md"],
-        "reason": "Broad ownership exists without a reviewed canonical actor-state invariant document."
+        "state": "reviewed",
+        "documents": ["docs/technical/runtime-actor-state-and-restoration.md"],
+        "reason": "The reviewed technical reference defines canonical actor authorities, composition atomicity, and identity invariants."
       }
     },
     {
       "id": "progression_and_resources",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/actors-progression-and-resources.md"],
-        "reason": "Current formulas are recorded but still require collaborative confirmation."
+        "reason": "Growth, resource recalculation, stage magnitude, skill unlocks, and full move-list decisions were confirmed with the project owner."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Growth policy binding and resource mutation need a host integration guide."
+        "state": "reviewed",
+        "documents": [
+          "docs/developer-guide/actors-and-runtime-state.md",
+          "docs/ruleset-policy-contracts.md"
+        ],
+        "reason": "The reviewed guides cover growth composition, move-list policy, skill decisions, and stage-policy authoring."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "The overview does not yet document composition, rollback, and numeric invariants in depth."
+        "state": "reviewed",
+        "documents": ["docs/technical/runtime-actor-state-and-restoration.md"],
+        "reason": "The reviewed technical reference documents staged growth, unlock planning, stale-choice protection, rollback, and restoration."
       }
     },
     {
@@ -224,19 +227,19 @@
     {
       "id": "party_and_rosters",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Party and roster behavior exists but still requires role-by-role confirmation."
+        "reason": "Canonical ownership, active plus owned overlap, party placement, encounter presence, and roster transitions were confirmed."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Snapshot construction, transition application, and Godot scene mapping need a guide."
+        "state": "reviewed",
+        "documents": ["docs/developer-guide/actors-and-runtime-state.md"],
+        "reason": "The reviewed guide covers canonical roster construction, transition application, and runtime-ID scene mapping."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Global runtime identity, overlap, role, and capacity invariants need a reviewed technical page."
+        "state": "reviewed",
+        "documents": ["docs/technical/runtime-actor-state-and-restoration.md"],
+        "reason": "The reviewed technical reference defines identity, overlap, ownership, placement, presence, and capacity invariants."
       }
     },
     {
@@ -355,14 +358,17 @@
         "reason": "Save and suspend concepts exist but need final owner confirmation."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/godot-integration-contract.md"],
-        "reason": "Host-owned serialization is demonstrated but not yet a reviewed complete save recipe."
+        "state": "reviewed",
+        "documents": [
+          "docs/developer-guide/actors-and-runtime-state.md",
+          "docs/godot-integration-contract.md"
+        ],
+        "reason": "The reviewed guides cover host-owned encoding, save v8 actor state, restore profiles, aggregate restore, and scene application."
       },
       "technical": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Validation, dependency-ordered restoration, atomic failure, and host context need a technical document."
+        "state": "reviewed",
+        "documents": ["docs/technical/runtime-actor-state-and-restoration.md"],
+        "reason": "The reviewed technical reference defines validation, source-first restoration, normalization, migration seams, and all-or-nothing failure."
       }
     },
     {

@@ -74,6 +74,94 @@ Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
 
+## Standard Stats And Stage Tables
+
+`standard_stat` uses `StandardStatResolutionPolicy` and
+`StandardStatStageScalingPolicy`. With no parameters it uses the confirmed
+`-4..+4` supplied tables documented in
+[Actors, Stats, Resources, And Progression](mechanics/actors-progression-and-resources.md).
+
+Its only optional parameter is `stageTables`. Each row must define:
+
+- `trackId`: one supported unqualified modifier-track ID;
+- `channel`: `physical_damage_dealt`, `magical_damage_dealt`,
+  `damage_taken`, `hit_chance`, or `evasion`;
+- `multipliers`: exactly one positive decimal multiplier for every integer
+  stage from `-4` through `+4`.
+
+Example ruleset fragment:
+
+```json
+{
+  "id": "fast_physical_stats",
+  "displayName": "Fast Physical Stages",
+  "description": "Overrides physical attack stages only.",
+  "category": "stat",
+  "policyId": "standard_stat",
+  "parameters": {
+    "stageTables": [
+      {
+        "trackId": "physical_attack",
+        "channel": "physical_damage_dealt",
+        "multipliers": [
+          { "stage": -4, "multiplier": 0.4 },
+          { "stage": -3, "multiplier": 0.55 },
+          { "stage": -2, "multiplier": 0.7 },
+          { "stage": -1, "multiplier": 0.85 },
+          { "stage": 0, "multiplier": 1.0 },
+          { "stage": 1, "multiplier": 1.3 },
+          { "stage": 2, "multiplier": 1.6 },
+          { "stage": 3, "multiplier": 1.9 },
+          { "stage": 4, "multiplier": 2.2 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Unspecified supported tables retain their supplied defaults. Duplicate
+track/channel overrides, incomplete stage ranges, unsupported mappings,
+nonpositive multipliers, unknown parameters, or malformed values reject the
+complete binding.
+
+For direct code composition, a host may construct:
+
+```csharp
+var customTable = new StatStageScalingTable(
+    ContentId.Parse("physical_attack"),
+    StatStageScalingChannel.PhysicalDamageDealt,
+    authoredMultipliers);
+
+IStatStageScalingPolicy stages =
+    new StandardStatStageScalingPolicy([customTable]);
+```
+
+A game that needs another stage range or a formula rather than tables should
+implement `IStatStageScalingPolicy`. A completely different stat service can be
+selected through a custom `IRuntimeStatRulesetPolicyFactory`:
+
+```csharp
+public sealed class MyStatFactory : IRuntimeStatRulesetPolicyFactory
+{
+    public ContentId PolicyId => ContentId.Parse("my_stat_policy");
+
+    public RulesetBindingResult<StatRulesetServices> Create(
+        RulesetDefinition definition)
+    {
+        // Validate every authored parameter before returning services.
+        return new RulesetBindingResult<StatRulesetServices>(
+            new StatRulesetServices(
+                new MyStatResolutionPolicy(),
+                new MyStageScalingPolicy()));
+    }
+}
+```
+
+Register `my_stat_policy` in both content registration and the `stat` factory
+collection of `RuntimeRulesetPolicyFactoryRegistry`. The resolver never falls
+back to `standard_stat` when a custom policy is missing or rejected.
+
 ## Standard Roster Capacity
 
 `standard_roster_capacity` requires a nonempty `tiers` list. Every tier has:
@@ -100,9 +188,15 @@ host's command model determines reasonable bounds. The supplied examples use
 
 ## Fixed Supplied Policies
 
-`standard_reward`, `standard_stat`, `standard_growth`, and
-`standard_economy` currently accept no parameters and reject unknown ones.
+`standard_reward`, `standard_growth`, and `standard_economy` currently accept
+no parameters and reject unknown ones.
 Their formulas remain the supplied fixed implementations for `0.1.0`.
 They are nevertheless replaceable: author another registered `policyId` and
 provide the matching typed factory. This keeps replacement explicit without
 pretending that unsupported tuning values are implemented.
+
+## Related Guidance
+
+- [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
+- [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
+- [Confirmed Actor Decision](decisions/actor-composition-progression-and-rosters.md)

@@ -143,7 +143,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.FusionPlanning);
         Assert.Empty(summary.FusionPreviews);
         Assert.Empty(summary.FusionTransactions);
-        Assert.Equal(5, summary.ActiveSkillCount);
+        Assert.Equal(6, summary.ActiveSkillCount);
         Assert.Equal(1, summary.PassiveSkillCount);
         RuntimeResourceSnapshot hp = Assert.Single(summary.PlayerResources, resource =>
             resource.ResourceId == ContentId.Parse("hp"));
@@ -158,6 +158,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(0, summary.PlayerProgression.UnspentStatPoints);
         Assert.Equal(6, summary.ActiveHostedEntityProgression?.Level);
+        Assert.NotNull(summary.ActiveHostedEntitySkills);
+        Assert.Contains(
+            Qualified("soften_guard"),
+            summary.ActiveHostedEntitySkills!.EquippedSkillIds);
+        Assert.Empty(summary.ActiveHostedEntitySkills.PendingChoices);
+        Assert.Equal(1, summary.ActiveHostedEntitySkills.Revision);
         Assert.True(summary.StatResolutionPreviewed);
         Assert.Equal(3, Resolved(summary, "strength").FinalValue);
         Assert.Equal(8, Resolved(summary, "magic").FinalValue);
@@ -331,7 +337,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Vessel combat profile: Echo Adept remains level 3 and now exposes 6 equipped skill(s).",
+            "Skill unlocked: Soften Guard joined Annex Mentor's move list at level 6.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Vessel combat profile: Echo Adept remains level 3 and now exposes 7 equipped skill(s).",
             text,
             StringComparison.Ordinal);
         Assert.Contains("Level-up events: 6.", text, StringComparison.Ordinal);
@@ -3438,6 +3448,134 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(75m, Resource(summary, "hp").Maximum);
         Assert.Equal(25m, Resource(summary, "sp").Maximum);
         Assert.Contains("Manual save restored", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FullMoveListReplacementSurvivesCanonicalSaveRestore()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            4,
+            4,
+            4,
+            0,
+            10, 0,
+            15, 0,
+            10, 1,
+            9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary =
+            Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("hosted_annex_mentor"),
+            summary.PartyRoster.ActiveHostedEntity?.InstanceId);
+        Assert.Equal(8, summary.ActiveHostedEntityProgression?.Level);
+        RuntimeSkillStateSnapshot skills =
+            Assert.IsType<RuntimeSkillStateSnapshot>(summary.ActiveHostedEntitySkills);
+        Assert.Equal(8, skills.EquippedSkillIds.Count);
+        Assert.Contains(Qualified("toxin_touch"), skills.LearnedSkillIds);
+        Assert.Contains(Qualified("toxin_touch"), skills.EquippedSkillIds);
+        Assert.DoesNotContain(Qualified("frost_tip"), skills.LearnedSkillIds);
+        Assert.DoesNotContain(Qualified("frost_tip"), skills.EquippedSkillIds);
+        Assert.Empty(skills.PendingChoices);
+        Assert.Equal(4, skills.Revision);
+        Assert.Equal(7, summary.ActiveSkillCount);
+        Assert.Equal(1, summary.PassiveSkillCount);
+        Assert.Contains(
+            CleanTrainingAnnexPlayCommand.SelectSkillToReplace,
+            summary.Commands);
+        Assert.Contains(io.Menus, menu =>
+            menu.Header == "Annex Mentor move list is full: learn Toxin Touch" &&
+            menu.Options.SequenceEqual(
+            [
+                "Replace Frost Tip",
+                "Replace Echo Strike",
+                "Replace Focus Call",
+                "Replace Steady Breath",
+                "Replace Mend",
+                "Replace Clear Toxin",
+                "Replace Soften Guard",
+                "Replace Shell Bash",
+                "Forget Toxin Touch",
+                "Decide Later"
+            ]));
+        string text = output.ToString();
+        Assert.Contains(
+            "Move list full: Toxin Touch is pending for Annex Mentor at level 8.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Move-list decision applied: Annex Mentor replaced Frost Tip with Toxin Touch.",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains("Manual save restored", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_FullMoveListCanForgetNewSkill()
+    {
+        var io = new ScriptedGameIO().QueueMenu(4, 4, 4, 8, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary =
+            Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        RuntimeSkillStateSnapshot skills =
+            Assert.IsType<RuntimeSkillStateSnapshot>(summary.ActiveHostedEntitySkills);
+        Assert.Equal(8, summary.ActiveHostedEntityProgression?.Level);
+        Assert.Equal(8, skills.EquippedSkillIds.Count);
+        Assert.DoesNotContain(Qualified("toxin_touch"), skills.LearnedSkillIds);
+        Assert.Empty(skills.PendingChoices);
+        Assert.Equal(4, skills.Revision);
+        Assert.Contains(
+            CleanTrainingAnnexPlayCommand.ForgetPendingSkill,
+            summary.Commands);
+        Assert.Contains(
+            "Move-list decision applied: Annex Mentor forgot Toxin Touch and retained the current move list.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_DeferredSkillChoicePersistsInValidV8Save()
+    {
+        var io = new ScriptedGameIO().QueueMenu(4, 4, 4, 9, 10, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary =
+            Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        RuntimeSkillStateSnapshot skills =
+            Assert.IsType<RuntimeSkillStateSnapshot>(summary.ActiveHostedEntitySkills);
+        RuntimePendingSkillChoiceSnapshot pending = Assert.Single(skills.PendingChoices);
+        Assert.Equal(Qualified("toxin_touch"), pending.SkillId);
+        Assert.Equal(8, pending.UnlockLevel);
+        Assert.Equal(3, skills.Revision);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            CleanTrainingAnnexPlayCommand.DeferPendingSkillChoice,
+            summary.Commands);
+        Assert.Contains(
+            "Move-list decision deferred: Toxin Touch remains pending for Annex Mentor.",
+            output.ToString(),
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 

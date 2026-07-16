@@ -12,7 +12,22 @@ without selecting a fallback. See [Ruleset Policy Contracts](ruleset-policy-cont
 
 ## Actors, Stats, Resources, And Growth
 
-Catalog actor factories hydrate identity, level, stats, defenses, resources, learned skills, active skills, and passives. Runtime snapshots preserve canonical actor state. Progression services own stat resolution, experience curves, level growth, resource recalculation, allocation, and rollback through injected policies.
+Catalog actor factories hydrate identity, level, stats, defenses, resources,
+learned skills, active skills, and passives. Runtime snapshots preserve
+canonical actor state.
+
+The standard Vessel composition service takes core stats, defenses, active
+skills, and passives from the Active Hosted Entity selected by the canonical
+party roster. The Vessel retains its own progression, current resources,
+equipment, status, affiliation, and encounter presence. Composition rejects
+atomically when source identity, ownership, skills, stats, or resources are
+invalid.
+
+Progression services own stat resolution, stage scaling, experience curves,
+level growth, resource recalculation, allocation, and rollback through injected
+policies. Live level growth processes authored skill unlocks. A full move list
+creates a persisted pending replace-or-forget choice rather than dropping the
+skill or cancelling the level.
 
 ## Actions And Effects
 
@@ -32,7 +47,17 @@ The encounter runner owns initiative, phases, turns, lifecycle dispatch, command
 
 ## Party, Rosters, Inventory, And Economy
 
-Transition services enforce runtime-ID uniqueness, active/reserve roles, Hosted Entity and Companion roster capacity, deploy/recall/swap/consume behavior, item stacks, unique equipment ownership, equip compatibility, wallet arithmetic, shop transactions, and restoration transactions. Hosts own UI and durable inventory storage.
+The party aggregate is the only authority for active/reserve placement, Hosted
+Entity ownership, Companion ownership, and Active Hosted Entity selection. An
+active Hosted Entity remains in its roster; a deployed Companion remains owned
+while also occupying an active-party slot. Encounter presence remains separate
+actor state.
+
+Transition services enforce runtime-ID uniqueness, approved overlap roles,
+roster capacity, deploy/recall/swap/consume behavior, item stacks, unique
+equipment ownership, equip compatibility, wallet arithmetic, shop
+transactions, and restoration transactions. Hosts own UI and durable inventory
+storage.
 
 ## Navigation, Traversal, And Encounter Preparation
 
@@ -49,3 +74,8 @@ Versioned snapshots cover actors, party and rosters, inventory, equipment, walle
 ## Demonstration Coverage
 
 DemoHost provides focused battle, field, and save demonstrations plus the original Training Annex end-to-end slice. The [capability matrix](roadmap/framework-capability-matrix.md) records whether each framework area is complete, partial, or deferred independently from demo breadth.
+
+Detailed actor integration is documented in
+[Actors And Runtime State](developer-guide/actors-and-runtime-state.md), with
+maintainer invariants in
+[Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).

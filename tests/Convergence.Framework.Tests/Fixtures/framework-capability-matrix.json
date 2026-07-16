@@ -42,26 +42,30 @@
     },
     {
       "id": "runtime_actor_state",
-      "implementationState": "partial",
-      "frameworkTests": ["RuntimeStateSnapshotTests", "CatalogBattleRuntimeTests"],
+      "implementationState": "complete",
+      "frameworkTests": [
+        "RuntimeStateSnapshotTests",
+        "ProgressionPolicyTests",
+        "RuntimePartyRosterInvariantIntegrationTests",
+        "CatalogBattleRuntimeTests"
+      ],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "Actor-local roster and deployment state must be replaced by canonical aggregate ownership and explicit encounter presence.",
-        "Vessel combat composition does not yet derive defenses, active skills, and passive skills from the Active Hosted Entity."
-      ]
+      "knownGaps": []
     },
     {
       "id": "progression_and_resources",
-      "implementationState": "partial",
-      "frameworkTests": ["ProgressionPolicyTests"],
+      "implementationState": "complete",
+      "frameworkTests": [
+        "ProgressionPolicyTests",
+        "RuntimeActorGrowthCompositionTests",
+        "RuntimeSkillProgressionTests"
+      ],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "Live level growth does not yet process authored skill unlocks or persisted full-move-list decisions."
-      ]
+      "knownGaps": []
     },
     {
       "id": "typed_action_and_effect_execution",
@@ -74,14 +78,12 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "partial",
-      "frameworkTests": ["ProductionCombatRulesetTests"],
+      "implementationState": "complete",
+      "frameworkTests": ["ProductionCombatRulesetTests", "StatStageScalingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "The supplied stat-stage policy currently distinguishes only positive, neutral, and negative stages instead of every approved stage magnitude."
-      ]
+      "knownGaps": []
     },
     {
       "id": "turn_economy",
@@ -121,15 +123,16 @@
     },
     {
       "id": "party_and_rosters",
-      "implementationState": "partial",
-      "frameworkTests": ["PartyRosterTransitionTests"],
+      "implementationState": "complete",
+      "frameworkTests": [
+        "PartyRosterTransitionTests",
+        "RuntimePartyRosterInvariantIntegrationTests",
+        "RuntimePersistenceSnapshotTests"
+      ],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Owned actor rosters are duplicated between actor snapshots and the session party aggregate.",
-        "Active or reserve party placement can contradict actor-local deployment state."
-      ]
+      "knownGaps": []
     },
     {
       "id": "inventory_equipment_economy",
@@ -187,15 +190,12 @@
     },
     {
       "id": "persistence_snapshots",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["RuntimePersistenceSnapshotTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Save contract v7 persists duplicated roster authority and ambiguous deployment fields.",
-        "Pending skill choices and complete Vessel profile recomposition are not yet restored."
-      ]
+      "knownGaps": []
     },
     {
       "id": "host_contracts",

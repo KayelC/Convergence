@@ -44,3 +44,7 @@ Which source, tests, diagrams, and documentation must agree?
 
 Decision records use lowercase kebab-case filenames. Confirmed or superseded
 records must link every affected mechanics, developer, and technical page.
+
+## Confirmed Decisions
+
+- [Actor Composition, Progression, And Rosters](actor-composition-progression-and-rosters.md)

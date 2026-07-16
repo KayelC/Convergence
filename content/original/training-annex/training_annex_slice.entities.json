@@ -234,7 +234,20 @@
         "mend",
         "clear_toxin"
       ],
-      "skillUnlocks": []
+      "skillUnlocks": [
+        {
+          "level": 6,
+          "skillId": "soften_guard"
+        },
+        {
+          "level": 7,
+          "skillId": "shell_bash"
+        },
+        {
+          "level": 8,
+          "skillId": "toxin_touch"
+        }
+      ]
     },
     {
       "id": "glimmer_guard",

@@ -39,7 +39,21 @@ Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes,
 
 ## Save Boundary
 
-The framework exposes serializer-neutral runtime snapshots and restores them against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. A Godot save may wrap those snapshots with scene paths, transforms, camera state, UI state, and asset references. Godot recreates Nodes and applies host context only after the aggregate restore result succeeds, using `RuntimeInstanceId` to reconnect scene objects.
+The framework exposes serializer-neutral runtime snapshots and restores them
+against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. Runtime
+save contract v8 stores one canonical party roster plus complete source actor
+progression, move lists, revisions, and pending skill choices.
+
+A Godot save may wrap those snapshots with scene paths, transforms, camera
+state, UI state, and asset references. Godot recreates Nodes and applies host
+context only after the aggregate restore result succeeds, using
+`RuntimeInstanceId` to reconnect scene objects.
+
+Restoration validates the complete aggregate, resolves actor restore profiles,
+restores an Active Hosted Entity before its dependent Vessel, and recomposes
+the Vessel from restored source state. Rejection returns diagnostics and no
+partial live session. Save contract v7 requires an explicit host-supplied
+migration step.
 
 The framework does not prescribe JSON, binary data, Godot `Resource`, save slots, cloud storage, or migration UI. `Convergence.DemoHost` uses host-owned `System.Text.Json` only as a portability example.
 
@@ -68,3 +82,9 @@ The sample reports `CONVERGENCE_GODOT_SMOKE_OK` and exits `0` on success. Its ge
 ## Forbidden Coupling
 
 Framework public APIs and source must not depend on Godot, console APIs, filesystem APIs, host serializers, or host scene types. The reusable assembly may be consumed without `Convergence.DemoHost`.
+
+## Related Guidance
+
+- [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
+- [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
+- [Public API Contract](public-api-contract.md)

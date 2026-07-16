@@ -8,9 +8,12 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
+The current runtime save contract is version `8`.
+
 `RuntimeSaveGameSnapshot` can include:
 
-- runtime actors;
+- runtime actors, including learned skills, equipped skills, pending
+  skill-choice tokens, and skill revisions;
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory and equipped items;
 - wallet;
@@ -23,11 +26,24 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 Catalog definitions are not copied into a save. Saves retain qualified content IDs and are restored against a supplied `GameDataCatalog`.
 
+The party roster is the one ownership and placement authority. Actor snapshots
+do not contain duplicate owned rosters or active/reserve placement.
+
 ## Validation Before Restore
 
 The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers.
 
-An invalid snapshot cannot produce a valid restore token. `IRuntimeSessionRestoreService` first runs an explicit migration service, validates the complete aggregate, resolves a host-supplied stat profile for every actor, restores Hosted Entity dependencies before their Vessels, and returns either one complete `RuntimeRestoredSession` or typed diagnostics with no partial session. The host should present diagnostics or reject the slot rather than partially loading it.
+An invalid snapshot cannot produce a valid restore token.
+`IRuntimeSessionRestoreService` first runs an explicit migration service,
+validates the complete aggregate, resolves a host-supplied restore profile for
+every actor, restores the Active Hosted Entity selected by the canonical party
+roster before its Vessel, recomposes the Vessel, and returns either one
+complete `RuntimeRestoredSession` or typed diagnostics with no partial session.
+The normalized restored snapshot replaces stale derived Vessel combat-profile
+data with the profile produced from restored source state.
+
+The host should present diagnostics or reject the slot rather than partially
+loading it.
 
 ## Manual Saves
 
@@ -54,3 +70,12 @@ A common one-use flow is:
 Checkpoint breadcrumbs are ordered diagnostic entries. They can help identify where a session snapshot was created, but they are not a deterministic replay log.
 
 `IRuntimeSaveMigrationService` and ordered `IRuntimeSaveMigrationStep` contracts provide the extension seam for future released save formats. Convergence ships no fictitious migration for unreleased formats: an older or newer version is rejected unless the host explicitly supplies a valid path to the current contract.
+
+Save contract v7 has no built-in conversion to v8. A host that intentionally
+retains pre-release v7 data must provide and test an explicit migration step.
+
+## Related Guidance
+
+- [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
+- [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
+- [Godot Integration Contract](../godot-integration-contract.md)

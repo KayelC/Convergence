@@ -72,6 +72,18 @@ resolver never substitutes an unregistered policy. In particular,
 implementation supplied by Convergence. The supported built-in parameters are
 normatively listed in [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
+Entity `skillUnlocks` are ordered authored progression records. Each row pairs a
+positive level with a skill ID. Runtime growth evaluates the rows in document
+order when an actor crosses those levels. Content does not decide what happens
+when a move list is full; the host-selected
+`IRuntimeMoveListCapacityPolicy` and skill-choice transaction own that runtime
+rule.
+
+Stat rulesets may provide `stageTables` to override supported supplied
+track/channel mappings. Every authored table must define the complete `-4..+4`
+stage range. Ruleset binding, rather than display text, determines which table
+is used.
+
 ## Generic Content Policy
 
 Checked-in active content must be generic, original, and small enough to review. It demonstrates contracts; it is not mandatory built-in game data. Historical prototype content is archived and never loaded by active projects.

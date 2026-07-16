@@ -2,72 +2,245 @@
 
 ## Actor Identity
 
-**Framework rule:** every live actor has a `RuntimeInstanceId`, while its authored entity uses a `ContentId`. Multiple runtime actors may share one entity definition, but runtime instance IDs must be unique throughout the active party, Hosted Entity and Companion rosters, encounters, and saves.
+**Framework rule:** every live actor has one unique `RuntimeInstanceId`. The
+authored entity it represents has a qualified `ContentId`. Two actors may use
+the same entity definition, but they cannot share one runtime ID.
 
-An actor snapshot can contain identity, ownership, team, deployment, progression, resources, stats, skills, owned-actor rosters, equipment, battle status, passive activations, base resource values, vital-resource identity, and capabilities. Snapshots are immutable boundaries. Runtime actor state is mutable only through validated services or explicit state methods.
+An actor owns its identity, progression, resources, equipment, statuses,
+skills, combat affiliation, command authority, and current encounter presence.
+It does not own active/reserve party placement or owned-actor rosters. Those
+belong to the party aggregate described in
+[Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md).
 
-## Catalog Hydration
+**Host responsibility:** associate the runtime ID with the corresponding scene
+object, visual model, controller, or other presentation object.
 
-**Framework rule:** `CatalogBattleActorFactory` creates an actor from a qualified entity ID and runtime creation request. It loads base skills first, then all level unlocks available at the requested level in authored order. Repeated skill IDs are kept only at their first occurrence. Passive skills enter the passive collection; active skills enter the ordered action loadout.
+## Actor Roles
 
-Creation fails with typed diagnostics when the entity, level, skills, initialization, or restored state is invalid. It never substitutes a fallback actor.
+Convergence supplies generic roles rather than a fixed game cast:
+
+- An **Independent Actor** fights using its own combat profile.
+- A **Vessel** can fight using the combat profile of an Active Hosted Entity.
+- A **Hosted Entity** is an owned actor selected as that source.
+- A **Companion** is an owned actor that can also be deployed as a party member.
+
+Hosted Entity and Companion are ownership roles. They use the same entity
+definitions and runtime actor contracts.
+
+## Vessel Combat Profile
+
+**Framework rule:** the standard Vessel model takes its effective core stats,
+defenses, active skills, and passive skills from its Active Hosted Entity.
+
+The Vessel still owns:
+
+- its identity and displayed actor;
+- its own level and progression state;
+- current HP, SP, and other resources;
+- equipment;
+- buffs, debuffs, ailments, and other timed state;
+- team and command authority;
+- encounter presence.
+
+The acting Vessel's current battle stages affect the composed profile. Existing
+equipment stat modifiers are applied after the selected stat source.
+
+```mermaid
+flowchart LR
+    Hosted["Active Hosted Entity"] --> Stats["Core stats"]
+    Hosted --> Defense["Defenses"]
+    Hosted --> Moves["Active and passive move list"]
+    Vessel["Vessel"] --> Identity["Identity and progression"]
+    Vessel --> Resources["Current resources"]
+    Vessel --> Equipment["Equipment modifiers"]
+    Vessel --> Status["Stages and status"]
+    Stats --> Effective["Effective Vessel combat profile"]
+    Defense --> Effective
+    Moves --> Effective
+    Equipment --> Effective
+    Status --> Effective
+```
+
+**Framework rule:** composition is atomic. If the selected source is missing,
+not owned, mismatched, or invalid, the complete operation is rejected and the
+Vessel remains unchanged.
+
+**Configured rule:** a game chooses whether a Vessel without an Active Hosted
+Entity rejects composition or explicitly falls back to actor base stats. The
+supplied Vessel behavior rejects by default.
 
 ## Stats
 
-The standard stat vocabulary is Strength, Magic, Vitality, Agility, and Luck. Games may register their own typed stat IDs where the consuming policy supports them.
+The supplied core stat vocabulary is Strength, Magic, Vitality, Agility, and
+Luck. A game may define additional typed stat IDs when its selected policies
+support them.
 
-**Configured rule:** stat calculation belongs to `IStatResolutionPolicy`. `RuntimeStatSourceKind` explicitly selects either the actor or its Active Hosted Entity as the stat source. The supplied standard policy then applies implemented equipment contributions, caps, and the acting Vessel's stage modifiers. A host may bind a catalog ruleset through its typed factory registry or inject another policy. The supplied stat and growth factories are fixed for `0.1.0`, while alternate registered policy IDs may replace them.
+**Configured rule:** `IStatResolutionPolicy` decides how a selected source stat,
+equipment modifier, and cap produce the final value. The standard policy uses
+either the actor or the Active Hosted Entity as an explicit source. It does not
+infer behavior from names or descriptions.
 
-`IRuntimeActorCombatProfileCompositionService` validates the selected Hosted
-Entity and canonical roster graph, resolves all registered core stats, copies
-the source actor's defenses and equipped active/passive skills, recalculates
-resources while preserving valid current values, and commits the complete
-profile atomically. The result identifies the source runtime actor. Missing
-Hosted Entity behavior is explicit: reject composition or use actor base stats.
-The framework never infers stat, defense, or skill sourcing from display names
-or actor-kind text.
+## Buff And Debuff Stages
 
-Battle stage aliases map to typed stat tracks. A generic attack stage can affect both physical and magical offense, while defense and agility affect their corresponding calculations. Luck has no implicit buff/debuff alias unless a game adds one deliberately.
+**Framework rule:** the supplied stage domain is `-4` through `+4`. Each
+magnitude has a distinct effect.
+
+| Stage | -4 | -3 | -2 | -1 | 0 | +1 | +2 | +3 | +4 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| offense dealt | 0.50 | 0.625 | 0.75 | 0.875 | 1.00 | 1.25 | 1.50 | 1.75 | 2.00 |
+| damage taken | 2.00 | 1.75 | 1.50 | 1.25 | 1.00 | 0.875 | 0.75 | 0.625 | 0.50 |
+| hit chance | 0.50 | 0.625 | 0.75 | 0.875 | 1.00 | 1.25 | 1.50 | 1.75 | 2.00 |
+| evasion | 0.50 | 0.625 | 0.75 | 0.875 | 1.00 | 1.25 | 1.50 | 1.75 | 2.00 |
+
+Standard track mapping:
+
+- `physical_attack` changes physical damage dealt;
+- `magical_attack` changes magical damage dealt;
+- `attack` changes both physical and magical damage dealt;
+- `defense` changes damage taken;
+- `agility` changes hit chance and evasion.
+
+More than one applicable track multiplies together. Luck has no implicit stage
+mapping.
+
+**Configured rule:** these are supplied defaults, not a mandatory formula.
+Ruleset content may replace supported tables, and a developer may replace the
+complete stage-scaling policy.
 
 ## Resources
 
-Resources are addressed by `ContentId`; HP and SP are conventional registrations, not hardcoded presentation strings. Each resource has current and maximum values. Base resource values are retained separately so growth policies can recalculate maxima.
+Resources use typed IDs. `hp` and `sp` are conventional example IDs rather than
+required display terms.
 
-**Framework rule:** resource mutation is range-safe. Current values cannot remain below zero or above the maximum after an accepted operation. Recalculation policies explicitly decide whether current values are preserved, capped, or changed by the difference in maximum.
+Each resource has current and maximum values. Base resource values remain
+separate so growth and stat changes can recalculate the maximum.
 
-**Configured rule:** `IResourceGrowthPolicy` owns maximum-resource formulas. The supplied standard policy derives HP from base HP and Vitality and SP from base SP and Magic, with configurable or bound ruleset ownership.
+**Framework rule:** accepted resource state cannot remain below zero or above
+its maximum. Overflow and invalid negative operations are rejected.
+
+**Configured rule:** `IResourceGrowthPolicy` decides maximum-resource formulas.
+The supplied policy derives HP from base HP and Vitality and SP from base SP
+and Magic.
+
+Ordinary stat or equipment changes preserve the current value and cap it when
+the maximum falls. Growth may use a different explicit current-value adjustment
+mode.
 
 ## Experience And Levels
 
-**Configured rule:** `IExperienceCurve` decides the experience required for each level. `ILevelGrowthPolicy` decides what a level grants, and `IRandomSource` supplies any random growth rolls. Framework progression services support multiple level gains from one award and return ordered level-up events.
+**Configured rule:** `IExperienceCurve` decides the experience required for a
+level. `ILevelGrowthPolicy` decides what a level grants. `IRandomSource`
+provides any random growth rolls.
 
-Negative experience and invalid allocations are rejected without mutation. Stat allocation checks available points and caps before applying. Rollback restores the prior base stats and points, then recalculates resources through the same policy.
+The supplied growth profiles distinguish:
 
-Authored skill unlocks are evaluated whenever an owned actor crosses one or
-more levels. `IRuntimeSkillUnlockPlanner` preserves authored order, ignores
-duplicates and already-known skills, and asks an injected
-`IRuntimeMoveListCapacityPolicy` whether each newly available skill can enter
-the equipped move list. The supplied shared policy permits eight active and
-passive skills in one list. Games may inject separate active/passive capacities
-or a role-specific policy.
+- Independent Actor growth;
+- Vessel growth;
+- owned-entity growth.
 
-When capacity is available, the skill is learned and equipped in the same
-growth transaction. When the list is full, the owned actor retains an immutable
-pending choice identified by a typed token. A later transaction either replaces
-an equipped skill or forgets the new skill. Commands carry the expected actor
-level and skill-state revision, so stale menus cannot overwrite newer
-progression. The standard replacement policy removes the old skill from both
-learned and equipped lists; games with loadout editing may inject the supplied
-retention policy or their own implementation.
+A Vessel does not receive manual core-stat points in the supplied profile.
+Owned entities can receive their own level and stat growth. This keeps the
+Vessel and Hosted Entity as separate progression subjects.
 
-For a Vessel, growth and skill decisions mutate the owned Hosted Entity first,
-then atomically recompose the acting Vessel's move list and passive collection.
-Pending choices remain owned by the Hosted Entity and are not copied into the
-derived Vessel combat profile.
+One experience award may cross multiple levels. The result contains ordered
+level-up events. Invalid or negative awards reject without mutation.
+
+## Authored Skill Unlocks
+
+Entity content may list skills unlocked at specific levels.
+
+**Framework rule:** when an owned actor crosses those levels, unlocks are
+evaluated in authored order. Duplicates, already learned skills, and already
+pending skills are not added again.
+
+**Configured rule:** the supplied move-list policy permits eight equipped
+skills total. Active and passive skills share those slots. A game may supply a
+different capacity or separate active and passive lists.
+
+When a slot is available, the skill is learned and equipped immediately. When
+the move list is full, level growth still succeeds and the new skill becomes a
+persisted pending choice.
+
+```mermaid
+flowchart TD
+    Level["Owned actor gains a level"] --> Unlock["Authored skill becomes available"]
+    Unlock --> Space{"Move-list slot available?"}
+    Space -->|Yes| Learn["Learn and equip"]
+    Space -->|No| Pending["Persist pending choice"]
+    Pending --> Replace["Replace an equipped skill"]
+    Pending --> Forget["Forget the new skill"]
+    Pending --> Later["Decide later and keep it pending"]
+```
+
+## Full Move-List Decisions
+
+**Framework rule:** a pending choice survives menu cancellation, suspend, save,
+and restore. It does not disappear because presentation was interrupted.
+
+The standard decision offers:
+
+- **Replace:** forget one selected equipped skill, then learn and equip the new
+  skill;
+- **Forget New:** discard the pending new skill and retain the current move
+  list;
+- **Decide Later:** a host action that performs no transaction, leaving the
+  choice pending.
+
+**Configured rule:** a game with later loadout editing may keep the replaced
+skill in the learned set by using another retention policy.
+
+Skill-choice commands include the expected actor level and skill-state revision.
+If state changed after the menu was shown, the stale command is rejected rather
+than overwriting newer progression.
+
+## Growth And Vessel Recomposition
+
+When the Active Hosted Entity grows:
+
+1. its own level, stats, and resources are staged;
+2. authored skill unlocks are staged;
+3. the dependent Vessel combat profile is recomposed;
+4. source and Vessel changes commit together.
+
+If recomposition fails, neither live actor receives a partial update.
+
+Pending choices belong only to the Hosted Entity. The Vessel receives the
+equipped result of that move list and does not copy the source's pending-choice
+queue.
+
+## Save And Restore
+
+**Framework rule:** save contract v8 persists complete source actor progression,
+move lists, pending choices, the canonical party roster, and the other selected
+session modules.
+
+Aggregate restoration:
+
+1. validates the complete save;
+2. restores an Active Hosted Entity before its dependent Vessel;
+3. recomposes the Vessel from restored source state;
+4. returns either one complete restored session or diagnostics with no partial
+   session.
+
+**Host responsibility:** choose a save-file format, deserialize the snapshot,
+provide actor restore profiles, and apply scene state only after restoration
+succeeds.
 
 ## Player-Facing Expectations
 
-- A displayed level or stat comes from the current runtime snapshot, not from descriptive text.
-- Equipment, an Active Hosted Entity, stages, and policies may change effective stats without rewriting base stats.
-- Resource and growth formulas are game configuration. Training Annex values demonstrate one binding only.
-- Save restoration validates numeric ranges and catalog references before a runtime actor is rebuilt.
+- A Vessel's displayed combat stats, defenses, and moves should reflect the
+  currently selected Hosted Entity.
+- Switching Hosted Entities can change those values without changing the
+  Vessel's own level or identity.
+- Buff and debuff magnitude matters at every supported stage.
+- An earned level is not lost because the move list is full.
+- A deferred skill choice remains available after saving and loading.
+- Rejected composition, growth, or skill decisions do not partially change the
+  live actor.
+
+## Related Guidance
+
+- [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
+- [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
+- [Ruleset Policy Contracts](../ruleset-policy-contracts.md)
+- [Confirmed Actor Decision](../decisions/actor-composition-progression-and-rosters.md)

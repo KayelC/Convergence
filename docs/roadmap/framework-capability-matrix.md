@@ -16,12 +16,14 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 18 complete, 5 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-Runtime actor state, progression/resources, combat resolution, party/rosters,
-and persistence snapshots are temporarily partial while the approved actor
-composition and progression corrections are implemented. The only deferred
-capabilities remain save-version migration and full deterministic replay.
+The actor composition and progression correction is complete: runtime actor
+state, progression/resources, combat resolution, party/rosters, and persistence
+snapshots have canonical authorities, direct framework tests, reviewed
+documentation, and clean host evidence. The only deferred capabilities remain
+save-version migration between released contracts and full deterministic
+replay.
 
 ## Authority
 
