@@ -16,11 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities:
-
-- 22 complete framework capabilities;
-- 1 partial capability;
-- 2 explicitly deferred capabilities.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The remaining gaps are future content-family schema breadth, save-version
 migration, and full deterministic replay. A real Godot 4.7.1 source-reference

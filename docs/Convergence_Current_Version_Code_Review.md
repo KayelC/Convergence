@@ -108,7 +108,7 @@ detail. No public event abstraction or host-presentation rule was introduced.
 ### R4. Active documentation reports inconsistent capability totals
 
 **Severity:** Medium for project ownership
-**Status:** Open
+**Status:** Implemented pending final review
 
 The executable capability matrix records 25 capabilities: 22 complete, one
 partial, and two deferred. `framework-capability-matrix.md` reports those values,
@@ -117,8 +117,11 @@ while `roadmap.md` still reports 21 complete, one partial, and three deferred.
 This does not change runtime behavior, but it directly undermines the active
 documentation authority intended to help maintainers understand the product.
 
-**Required correction:** align the active text and add an architecture test that
-checks displayed totals against the machine-readable matrix.
+**Implemented correction:** both active documents now report the same numeric
+summary: 25 capabilities, 22 complete, one partial, and two deferred. The
+architecture suite derives that sentence from the JSON matrix and requires it
+in both documents, so adding or reclassifying a capability cannot silently
+leave either roadmap stale.
 
 ### R5. Public API discoverability is weaker than its compatibility guard
 

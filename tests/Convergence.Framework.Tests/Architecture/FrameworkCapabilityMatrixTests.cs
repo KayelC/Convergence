@@ -54,6 +54,27 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.DoesNotContain("consumerMigrated", json, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ActiveDocuments_ReportTotalsDerivedFromTheExecutableMatrix()
+    {
+        CapabilityMatrix matrix = Load();
+        int complete = matrix.Capabilities.Count(capability => capability.ImplementationState == "complete");
+        int partial = matrix.Capabilities.Count(capability => capability.ImplementationState == "partial");
+        int deferred = matrix.Capabilities.Count(capability => capability.ImplementationState == "deferred");
+        string expected =
+            $"The matrix currently records {matrix.Capabilities.Count} capabilities: " +
+            $"{complete} complete, {partial} partial, and {deferred} deferred.";
+
+        Assert.Contains(
+            expected,
+            File.ReadAllText(RepositoryPath("docs", "framework-capability-matrix.md")),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            expected,
+            File.ReadAllText(RepositoryPath("docs", "roadmap.md")),
+            StringComparison.Ordinal);
+    }
+
     private static CapabilityMatrix Load() =>
         JsonSerializer.Deserialize<CapabilityMatrix>(
             File.ReadAllText(MatrixPath()),
@@ -62,6 +83,21 @@ public sealed class FrameworkCapabilityMatrixTests
 
     private static string MatrixPath() =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "framework-capability-matrix.json");
+
+    private static string RepositoryPath(params string[] segments) =>
+        Path.Combine([RepositoryRoot(), .. segments]);
+
+    private static string RepositoryRoot()
+    {
+        string? current = AppContext.BaseDirectory;
+        while (current is not null && !File.Exists(Path.Combine(current, "Convergence.sln")))
+        {
+            current = Directory.GetParent(current)?.FullName;
+        }
+
+        Assert.NotNull(current);
+        return current!;
+    }
 
     private sealed record CapabilityMatrix(
         int SchemaVersion,
