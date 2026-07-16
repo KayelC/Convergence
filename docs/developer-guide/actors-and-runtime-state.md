@@ -20,14 +20,13 @@ The D1-D6 design is confirmed and the demonstrated paths are green. The
 identified integration gaps around roster authority, live validation,
 high-level move-list capacity, prepared growth, direct pending-skill restore
 validation, and the Godot sample restore boundary. Every medium-severity gap
-and the Godot aggregate boundary are now corrected; direct pending-skill
-validation remains.
+and the Godot aggregate boundary are now corrected. Direct actor restore now
+also validates pending-skill definitions, authored provenance, and level
+availability.
 
-Until those follow-ups are corrected:
-
-- keep party snapshots sourced from validated session state;
-- supply the current owner actor snapshot to every roster transition;
-- prefer aggregate session restoration over direct actor restoration.
+Keep party snapshots sourced from validated session state, supply the current
+owner actor snapshot to roster transitions, and prefer aggregate session
+restoration when loading a complete game session.
 
 ## Runtime Roles
 

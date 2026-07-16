@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 20 complete, 3 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
 
@@ -28,9 +28,8 @@ contract v9 establish the corrected design direction.
 The subsequent
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 found five medium integration gaps and one low direct-restore inconsistency.
-Progression/resources, party/rosters, and persistence snapshots remain partial
-until those findings are corrected. The review did not invalidate the D1-D6
-design.
+All six are corrected with isolated commits and regression coverage. The
+review did not invalidate the D1-D6 design.
 
 ## Priority 1: Actor Runtime Review Corrections
 
@@ -38,11 +37,13 @@ Correct the completion-review findings in order:
 
 1. **complete:** remove the duplicated roster owner level and derive capacity
    from the current owner actor;
-2. unify complete live/save party aggregate validation;
-3. apply move-list capacity consistently during creation, growth, and restore;
-4. add a stale-state precondition to prepared growth;
-5. align direct actor restore with aggregate pending-skill validation;
-6. route the Godot reference save through aggregate restoration.
+2. **complete:** unify complete live/save party aggregate validation;
+3. **complete:** apply move-list capacity consistently during creation, growth,
+   and restore;
+4. **complete:** add a stale-state precondition to prepared growth;
+5. **complete:** align direct actor restore with aggregate pending-skill
+   validation;
+6. **complete:** route the Godot reference save through aggregate restoration.
 
 ## Completed Semantic Correction
 

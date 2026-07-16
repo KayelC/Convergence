@@ -470,6 +470,74 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void ActorFactory_DirectRestoreValidatesPendingSkillCatalogAndUnlockProvenance()
+    {
+        SkillDefinition pendingSkill = Active("test.pack:pending", DamageElement.Ice);
+        EntityDefinition validEntity = Entity(
+            "test.pack:valid_entity",
+            [],
+            [new SkillUnlockDefinition(1, pendingSkill.Id)]);
+        RuntimeActorSnapshot validSnapshot = WithPendingSkill(
+            RestorableActorSnapshot("valid_actor", validEntity, CoreStats(5m)),
+            unlockLevel: 1,
+            pendingSkill.Id);
+        var validFactory = new CatalogBattleActorFactory(
+            new EntityRepository(validEntity),
+            new SkillRepository(pendingSkill),
+            new ThrowingInitializationPolicy());
+
+        CatalogBattleActorCreationResult valid = validFactory.Restore(ActorRestore(validSnapshot));
+
+        Assert.True(valid.IsSuccess);
+        Assert.Equal(
+            pendingSkill.Id,
+            Assert.Single(valid.RequireActor().State.Skills.PendingChoices).SkillId);
+
+        ContentId missingSkillId = Id("test.pack:missing_pending");
+        EntityDefinition missingEntity = Entity(
+            "test.pack:missing_entity",
+            [],
+            [new SkillUnlockDefinition(1, missingSkillId)]);
+        CatalogBattleActorCreationResult missing = new CatalogBattleActorFactory(
+            new EntityRepository(missingEntity),
+            new SkillRepository(),
+            new ThrowingInitializationPolicy()).Restore(ActorRestore(WithPendingSkill(
+                RestorableActorSnapshot("missing_actor", missingEntity, CoreStats(5m)),
+                unlockLevel: 1,
+                missingSkillId)));
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.SnapshotSkillMissing,
+            Assert.Single(missing.Diagnostics).Code);
+
+        EntityDefinition unauthoredEntity = Entity("test.pack:unauthored_entity", []);
+        CatalogBattleActorCreationResult unauthored = new CatalogBattleActorFactory(
+            new EntityRepository(unauthoredEntity),
+            new SkillRepository(pendingSkill),
+            new ThrowingInitializationPolicy()).Restore(ActorRestore(WithPendingSkill(
+                RestorableActorSnapshot("unauthored_actor", unauthoredEntity, CoreStats(5m)),
+                unlockLevel: 1,
+                pendingSkill.Id)));
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.SnapshotPendingSkillUnlockMismatch,
+            Assert.Single(unauthored.Diagnostics).Code);
+
+        EntityDefinition futureEntity = Entity(
+            "test.pack:future_entity",
+            [],
+            [new SkillUnlockDefinition(2, pendingSkill.Id)]);
+        CatalogBattleActorCreationResult future = new CatalogBattleActorFactory(
+            new EntityRepository(futureEntity),
+            new SkillRepository(pendingSkill),
+            new ThrowingInitializationPolicy()).Restore(ActorRestore(WithPendingSkill(
+                RestorableActorSnapshot("future_actor", futureEntity, CoreStats(5m)),
+                unlockLevel: 2,
+                pendingSkill.Id)));
+        Assert.Equal(
+            CatalogBattleActorDiagnosticCode.SnapshotPendingSkillLevelUnavailable,
+            Assert.Single(future.Diagnostics).Code);
+    }
+
+    [Fact]
     public void ActorFactory_RestoreRecomposesVesselStatsInsteadOfTrustingSavedEffectiveValues()
     {
         EntityDefinition vesselEntity = Entity("test.pack:vessel", []);
@@ -1731,6 +1799,33 @@ public sealed class CatalogBattleRuntimeTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
             StandardProgressionIds.Hp);
+
+    private static RuntimeActorSnapshot WithPendingSkill(
+        RuntimeActorSnapshot source,
+        int unlockLevel,
+        ContentId skillId) =>
+        new(
+            source.Identity,
+            source.Affiliation,
+            source.EncounterPresence,
+            source.Progression,
+            source.Resources,
+            source.Stats,
+            new RuntimeSkillStateSnapshot(
+                pendingChoices:
+                [
+                    new RuntimePendingSkillChoiceSnapshot(
+                        new RuntimeSkillChoiceToken(1),
+                        unlockLevel,
+                        skillId)
+                ],
+                revision: 1),
+            source.Equipment,
+            source.BattleStatus,
+            source.BattleActivations,
+            source.BaseResourceValues,
+            source.VitalResourceId,
+            source.CapabilityIds);
 
     private static RuntimePartyRosterSnapshot PartyRoster(
         RuntimeActorSnapshot owner,

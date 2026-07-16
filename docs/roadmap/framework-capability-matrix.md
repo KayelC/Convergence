@@ -16,15 +16,14 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 20 complete, 3 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v9 restoration. Its
-independent completion review then identified three integration areas that
-remain partial: stale prepared growth, capacity-aware creation/restore, and
-party capacity/validation authority. The only deferred capabilities remain
-save-version migration between released contracts and full deterministic
-replay.
+independent completion review found six reachable integration gaps; all are
+corrected with isolated regression coverage. The only deferred capabilities
+remain save-version migration between released contracts and full
+deterministic replay.
 
 ## Authority
 

@@ -318,6 +318,12 @@ snapshot is valid.
 `CatalogBattleActorFactory.Restore(...)`, or make direct restore require an
 opaque result proving aggregate validation.
 
+**Resolution:** corrected. Direct catalog actor restoration now resolves
+pending skill IDs and requires each pending choice to match an authored unlock
+for the actor's entity at the recorded level. Choices above the actor's current
+level are rejected. Missing definitions, provenance mismatch, and unavailable
+levels have distinct typed diagnostics, matching aggregate save validation.
+
 ## Positive Findings
 
 - Every supplied stage from `-4` through `+4` has a distinct tested
@@ -328,7 +334,7 @@ opaque result proving aggregate validation.
   dependent Vessel together.
 - Pending skill choices have typed tokens, expected source levels, and skill
   revisions; replace and forget paths reject stale decisions.
-- Save v8 removes actor-local roster authority, validates pending choice
+- Save v9 removes duplicated roster level authority, validates pending choice
   provenance, restores the Active Hosted Entity before the Vessel, normalizes
   derived Vessel state, and exposes no partial restored session.
 - The framework remains host-neutral and the complete .NET 8, content,
@@ -340,28 +346,25 @@ No high-severity crash, data-loss-on-normal-path, host-coupling, or arithmetic
 defect was found in the reviewed range. The approved D1-D6 design remains
 sound.
 
-The implementation is not ready to describe as fully complete yet. The five
-medium findings affect ordinary framework integration choices, not impossible
-inputs:
-
-- owner progression can change after party creation;
-- public hosts can construct and transition snapshots;
-- high-level actors are a supported factory path;
-- prepared growth results can outlive their source state.
-- the shipped Godot reference consumer currently bypasses aggregate restore.
-
-Until those corrections are implemented, `progression_and_resources`,
-`party_and_rosters`, and `persistence_snapshots` return to `partial`. Other
-roadmap capabilities remain complete.
+All five medium findings and the low direct-restore inconsistency are now
+corrected with isolated commits and executable regressions. Actor progression,
+party/roster authority, and persistence return to `complete` in the capability
+matrix. The remaining deferred product items are future released-save
+migrations and deterministic replay; neither is an actor-runtime defect.
 
 ## Verification Evidence
 
-- focused actor/progression/roster/documentation tests: 134 passed;
-- focused Training Annex host tests: 106 passed;
-- full solution: 1,017 passed, 0 failed, 0 skipped;
+The original review baseline was 1,017 passing tests on save contract v8. After
+the six corrections recorded above, the consolidated gate produced:
+
+- full solution: 1,029 passed, 0 failed, 0 skipped;
+- framework tests: 855 passed;
+- DemoHost tests: 167 passed;
+- ContentValidator tests: 7 passed;
 - strict .NET 8 Release build: 0 warnings, 0 errors;
-- architecture and documentation boundary tests: 45 passed;
 - content validation: 6 packs, 36 documents, 94 definitions;
-- all DemoHost modes and scripted Training Annex exit passed;
-- real Godot 4.7.1 headless smoke passed with save contract v8;
-- formatting and `git diff --check` passed before the review commit.
+- all five DemoHost modes and scripted Training Annex coverage passed;
+- real Godot 4.7.1 headless smoke restored three actors through the aggregate
+  save v9 path and exposed no actors or scene metadata for a malformed save;
+- API compatibility, formatting, documentation links, forbidden-reference
+  boundaries, and `git diff --check` passed.

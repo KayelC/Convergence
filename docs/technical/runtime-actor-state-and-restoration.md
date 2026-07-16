@@ -16,8 +16,7 @@ the approved design is in
 The source-based
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 confirmed the composition, skill-choice, stage, and save-v8 transaction design.
-It also found one unresolved integration gap: direct catalog actor restore
-omits pending-choice catalog/provenance checks.
+It found six reachable integration gaps; all are now corrected.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -30,9 +29,12 @@ progression, stats, resources, and base-resource values; stale or repeated
 application rejects before mutation.
 The Godot sample now decodes complete host-owned snapshots before invoking the
 same aggregate restore service and exposes no live session after rejection.
+Direct catalog actor restore now applies the same pending-skill catalog,
+authored-unlock, and actor-level checks as aggregate save validation.
 
-These are tracked as partial capability gaps, not changes to the confirmed
-D1-D6 intended behavior.
+The actor-runtime capabilities are therefore complete. Future released-save
+migrations and deterministic replay remain intentionally deferred product
+work, not gaps in the D1-D6 actor model.
 
 ## State Authorities
 

@@ -677,6 +677,13 @@ and party snapshots before invoking `IRuntimeSessionRestoreService`. Its
 headless smoke proves source-first Vessel restoration and proves malformed
 aggregate state exposes no live session.
 
+**L1 correction:** direct catalog actor restoration now applies the same
+pending-skill catalog, authored-unlock provenance, and actor-level availability
+checks as aggregate save validation.
+
+All completion-review findings are corrected. The capability matrix returns to
+23 complete, 0 partial, and 2 intentionally deferred capabilities.
+
 ## Expected File Ownership
 
 Likely Framework files to change:

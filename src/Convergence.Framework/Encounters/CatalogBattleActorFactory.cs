@@ -142,6 +142,8 @@ public enum CatalogBattleActorDiagnosticCode
     MoveListCapacityRejected,
     SkillUnlockPlanningFailed,
     SnapshotMoveListCapacityRejected,
+    SnapshotPendingSkillUnlockMismatch,
+    SnapshotPendingSkillLevelUnavailable,
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -565,6 +567,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
 
         ContentId[] skillIds = snapshot.Skills.LearnedSkillIds
             .Concat(snapshot.Skills.EquippedSkillIds)
+            .Concat(snapshot.Skills.PendingChoices.Select(choice => choice.SkillId))
             .Distinct()
             .ToArray();
         var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
@@ -591,6 +594,36 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                     $"Saved actor references missing skill '{skillId}'.",
                     entityId,
                     skillId));
+            }
+        }
+
+        foreach (RuntimePendingSkillChoiceSnapshot choice in snapshot.Skills.PendingChoices)
+        {
+            if (!choice.SkillId.IsValid || !resolvedSkills.ContainsKey(choice.SkillId))
+            {
+                continue;
+            }
+
+            if (!entity.SkillUnlocks.Any(unlock =>
+                    unlock.Level == choice.UnlockLevel &&
+                    unlock.SkillId == choice.SkillId))
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotPendingSkillUnlockMismatch,
+                    $"Pending skill '{choice.SkillId}' at level {choice.UnlockLevel} is not an " +
+                    $"authored unlock for entity '{entity.Id}'.",
+                    entityId,
+                    choice.SkillId));
+            }
+            if (choice.UnlockLevel > snapshot.Progression.Level)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SnapshotPendingSkillLevelUnavailable,
+                    $"Pending skill '{choice.SkillId}' unlocks at level {choice.UnlockLevel}, " +
+                    $"but actor '{snapshot.Identity.InstanceId}' is level " +
+                    $"{snapshot.Progression.Level}.",
+                    entityId,
+                    choice.SkillId));
             }
         }
 
