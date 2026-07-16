@@ -167,14 +167,17 @@ mechanics documentation remains worthwhile before a stable `1.0` release.
 - noninteractive battle, field, save, and Training Annex demos: exited successfully;
 - scripted Training Annex interaction: covered by the DemoHost test suite and CI gate;
 - GodotHost: built from the solution in Release configuration;
+- local Godot 4.7.1 .NET headless smoke: exit code 0;
 - Framework forbidden-reference search: clean;
 - `git diff --check`: clean.
 
-A Godot executable was not installed on this review machine, so the real engine
-headless smoke was not repeated locally. The checked-in CI gate downloads the
-pinned official Godot 4.7.1 .NET build, verifies its SHA-256, and runs that smoke
-against the sample project. This is the one local-environment verification gap,
-not an observed Framework failure.
+The local smoke used official build
+`4.7.1.stable.mono.official.a13da4feb`. It loaded the Training Annex catalog,
+mapped two runtime actors to Godot Nodes, executed a typed skill, completed a
+bounded encounter with 18 mapped events, restored two actors through save
+contract v7, printed `CONVERGENCE_GODOT_SMOKE_OK`, and exited successfully.
+The checked-in CI gate independently downloads the pinned Linux build, verifies
+its SHA-256, and repeats the same real-engine smoke.
 
 ## Residual Product Constraints
 

@@ -18,5 +18,8 @@ artifacts/
 # Package directories
 packages/
 
+# Local engine test installations
+tests/Godot_v*-stable_mono_*/
+
 # Other common generated files
 *.log

@@ -34,7 +34,12 @@ For local Windows verification, use the official Godot 4.7.1 .NET executable:
 godot --headless --path samples/Convergence.GodotHost -- --convergence-smoke
 ```
 
-The engine belongs in an external tools cache; it is not installed or committed by Convergence.
+An unpacked repository-local copy may also be placed at
+`tests/Godot_v4.7.1-stable_mono_win64/` and invoked with its console executable.
+That versioned directory is ignored by Git. The official distribution is about
+256 MiB and CI downloads and verifies its own platform-specific copy, so
+committing the engine would inflate every clone without improving verification.
+An external tools cache remains equally valid.
 
 ## Security And Release Status
 
