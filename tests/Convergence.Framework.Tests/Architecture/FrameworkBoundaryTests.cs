@@ -56,6 +56,21 @@ public sealed class FrameworkBoundaryTests
     }
 
     [Fact]
+    public void SolutionReleaseConfiguration_DoesNotBuildAnyProjectAsDebug()
+    {
+        string solution = File.ReadAllText(RepositoryPath("Convergence.sln"));
+
+        Assert.DoesNotContain(
+            ".Release|Any CPU.ActiveCfg = Debug|Any CPU",
+            solution,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            ".Release|Any CPU.Build.0 = Debug|Any CPU",
+            solution,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RepositorySdkPolicy_SelectsTheDotNet8LineWithControlledRollForward()
     {
         using JsonDocument policy = JsonDocument.Parse(File.ReadAllText(RepositoryPath("global.json")));

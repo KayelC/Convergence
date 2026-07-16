@@ -40,7 +40,7 @@ reconciled form follows the active documentation and terminology boundaries.
 ### R1. GodotHost Release configuration builds Debug
 
 **Severity:** Medium
-**Status:** Open
+**Status:** Implemented pending final review
 
 `Convergence.sln` maps the GodotHost project's solution-level Release
 configuration to the project's Debug configuration. A live command confirmed
@@ -49,8 +49,9 @@ that `dotnet build Convergence.sln --configuration Release` emitted
 the Godot project directly as Release succeeded beneath its Release directory,
 so the defect is isolated to the solution mapping.
 
-**Required correction:** map both GodotHost Release entries to `Release|Any CPU`
-and add executable architecture evidence so the mistake cannot return.
+**Implemented correction:** both GodotHost Release entries now map to
+`Release|Any CPU`. An architecture test rejects any solution project that maps
+Release configuration or build entries back to Debug.
 
 ### R2. The canonical damage contract loses effective affinity state
 
