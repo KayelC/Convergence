@@ -232,6 +232,79 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterValue, Assert.Single(result.Diagnostics).Code);
     }
 
+    [Theory]
+    [InlineData(RulesetCategory.Damage)]
+    [InlineData(RulesetCategory.Reward)]
+    [InlineData(RulesetCategory.Stat)]
+    [InlineData(RulesetCategory.Growth)]
+    [InlineData(RulesetCategory.RosterCapacity)]
+    [InlineData(RulesetCategory.Economy)]
+    [InlineData(RulesetCategory.TurnEconomy)]
+    public void Resolver_ContainsExceptionsFromEveryHostFactoryCategory(RulesetCategory category)
+    {
+        ContentId policyId = Id("throwing_policy");
+        var factory = new ThrowingRulesetFactory(policyId);
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            damage: [factory],
+            reward: [factory],
+            stat: [factory],
+            growth: [factory],
+            rosterCapacity: [factory],
+            economy: [factory],
+            turnEconomy: [factory]));
+        RulesetDefinition definition = Ruleset("throwing", category, policyId);
+        GameDataCatalog catalog = Catalog(definition);
+
+        RulesetBindingDiagnostic diagnostic = category switch
+        {
+            RulesetCategory.Damage => Assert.Single(resolver.BindProductionCombatRuleset(
+                catalog,
+                definition.Id,
+                new SequenceRandomSource()).Diagnostics),
+            RulesetCategory.Reward => Assert.Single(resolver.BindBattleRewardService(
+                catalog,
+                definition.Id,
+                new ProductionCombatRuleset(new SequenceRandomSource())).Diagnostics),
+            RulesetCategory.Stat => Assert.Single(resolver.BindStatResolutionPolicy(
+                catalog,
+                definition.Id).Diagnostics),
+            RulesetCategory.Growth => Assert.Single(resolver.BindGrowthServices(
+                catalog,
+                definition.Id).Diagnostics),
+            RulesetCategory.RosterCapacity => Assert.Single(resolver.BindRosterCapacityPolicy(
+                catalog,
+                definition.Id).Diagnostics),
+            RulesetCategory.Economy => Assert.Single(resolver.BindResourceManagementServices(
+                catalog,
+                definition.Id).Diagnostics),
+            RulesetCategory.TurnEconomy => Assert.Single(resolver.BindTurnEconomy(
+                catalog,
+                definition.Id).Diagnostics),
+            _ => throw new ArgumentOutOfRangeException(nameof(category))
+        };
+
+        Assert.Equal(RulesetBindingDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
+        Assert.Equal(definition.Id, diagnostic.RulesetId);
+        Assert.Equal(category, diagnostic.ExpectedCategory);
+        Assert.Equal(category, diagnostic.ActualCategory);
+        Assert.Equal(policyId, diagnostic.PolicyId);
+        Assert.Contains("Host policy factory failed.", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Resolver_DoesNotConvertHostFactoryCancellationIntoAConfigurationDiagnostic()
+    {
+        ContentId policyId = Id("canceling_policy");
+        RulesetDefinition definition = Ruleset("canceling", RulesetCategory.Damage, policyId);
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            damage: [new CancelingDamageFactory(policyId)]));
+
+        Assert.Throws<OperationCanceledException>(() => resolver.BindProductionCombatRuleset(
+            Catalog(definition),
+            definition.Id,
+            new SequenceRandomSource()));
+    }
+
     [Fact]
     public void DamageBinding_AppliesOnlyApprovedSupportedParameters()
     {
@@ -587,6 +660,53 @@ public sealed class RuntimeRulesetBindingTests
                         ActualCategory: definition.Category,
                         PolicyId: definition.PolicyId)
                 ]);
+    }
+
+    private sealed class ThrowingRulesetFactory(ContentId policyId) :
+        IRuntimeDamageRulesetPolicyFactory,
+        IRuntimeRewardRulesetPolicyFactory,
+        IRuntimeStatRulesetPolicyFactory,
+        IRuntimeGrowthRulesetPolicyFactory,
+        IRuntimeRosterCapacityRulesetPolicyFactory,
+        IRuntimeEconomyRulesetPolicyFactory,
+        IRuntimeTurnEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        RulesetBindingResult<ProductionCombatRuleset> IRuntimeDamageRulesetPolicyFactory.Create(
+            RulesetDefinition definition,
+            IRandomSource random) => Fail<RulesetBindingResult<ProductionCombatRuleset>>();
+
+        RulesetBindingResult<IBattleRewardService> IRuntimeRewardRulesetPolicyFactory.Create(
+            RulesetDefinition definition,
+            ProductionCombatRuleset combatRuleset) => Fail<RulesetBindingResult<IBattleRewardService>>();
+
+        RulesetBindingResult<IStatResolutionPolicy> IRuntimeStatRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<IStatResolutionPolicy>>();
+
+        RulesetBindingResult<GrowthRulesetServices> IRuntimeGrowthRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<GrowthRulesetServices>>();
+
+        RulesetBindingResult<IRosterCapacityPolicy> IRuntimeRosterCapacityRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<IRosterCapacityPolicy>>();
+
+        RulesetBindingResult<ResourceManagementRulesetServices> IRuntimeEconomyRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<ResourceManagementRulesetServices>>();
+
+        RulesetBindingResult<BattleTurnEconomyRuleset> IRuntimeTurnEconomyRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<BattleTurnEconomyRuleset>>();
+
+        private static T Fail<T>() => throw new InvalidOperationException("Host policy factory failed.");
+    }
+
+    private sealed class CancelingDamageFactory(ContentId policyId) : IRuntimeDamageRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ProductionCombatRuleset> Create(
+            RulesetDefinition definition,
+            IRandomSource random) =>
+            throw new OperationCanceledException("Host policy factory cancelled.");
     }
 
     private sealed class FixedStatFactory(

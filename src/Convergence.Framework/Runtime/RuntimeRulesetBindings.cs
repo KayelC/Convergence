@@ -263,7 +263,22 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
                 PolicyId: definition.PolicyId));
         }
 
-        RulesetBindingResult<TService>? result = create(factory, definition);
+        RulesetBindingResult<TService>? result;
+        try
+        {
+            result = create(factory, definition);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return Failure<TService>(new RulesetBindingDiagnostic(
+                RulesetBindingDiagnosticCode.PolicyFactoryFailure,
+                rulesetId,
+                $"Ruleset policy factory '{definition.PolicyId}' failed: {exception.Message}",
+                ExpectedCategory: expectedCategory,
+                ActualCategory: definition.Category,
+                PolicyId: definition.PolicyId));
+        }
+
         if (result is null || (result.Service is null && result.Diagnostics.Count == 0))
         {
             return Failure<TService>(new RulesetBindingDiagnostic(
