@@ -69,6 +69,10 @@ public sealed record GrowthRulesetServices(
     ILevelGrowthPolicy LevelGrowthPolicy,
     IStatAllocationService StatAllocationService);
 
+public sealed record StatRulesetServices(
+    IStatResolutionPolicy StatResolutionPolicy,
+    IStatStageScalingPolicy StageScalingPolicy);
+
 public sealed record ResourceManagementRulesetServices(
     IInventoryTransitionService Inventory,
     IEquipmentTransitionService Equipment,
@@ -95,14 +99,15 @@ public interface IRuntimeRulesetBindingResolver
     RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
         GameDataCatalog catalog,
         ContentId rulesetId,
-        IRandomSource random);
+        IRandomSource random,
+        IStatStageScalingPolicy stageScalingPolicy);
 
     RulesetBindingResult<IBattleRewardService> BindBattleRewardService(
         GameDataCatalog catalog,
         ContentId rulesetId,
         ProductionCombatRuleset combatRuleset);
 
-    RulesetBindingResult<IStatResolutionPolicy> BindStatResolutionPolicy(
+    RulesetBindingResult<StatRulesetServices> BindStatServices(
         GameDataCatalog catalog,
         ContentId rulesetId);
 
@@ -136,15 +141,17 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
     public RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
         GameDataCatalog catalog,
         ContentId rulesetId,
-        IRandomSource random)
+        IRandomSource random,
+        IStatStageScalingPolicy stageScalingPolicy)
     {
         ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(stageScalingPolicy);
         return Bind<IRuntimeDamageRulesetPolicyFactory, ProductionCombatRuleset>(
             catalog,
             rulesetId,
             RulesetCategory.Damage,
             _factories.FindDamage,
-            (factory, definition) => factory.Create(definition, random));
+            (factory, definition) => factory.Create(definition, random, stageScalingPolicy));
     }
 
     public RulesetBindingResult<IBattleRewardService> BindBattleRewardService(
@@ -161,10 +168,10 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
             (factory, definition) => factory.Create(definition, combatRuleset));
     }
 
-    public RulesetBindingResult<IStatResolutionPolicy> BindStatResolutionPolicy(
+    public RulesetBindingResult<StatRulesetServices> BindStatServices(
         GameDataCatalog catalog,
         ContentId rulesetId) =>
-        Bind<IRuntimeStatRulesetPolicyFactory, IStatResolutionPolicy>(
+        Bind<IRuntimeStatRulesetPolicyFactory, StatRulesetServices>(
             catalog,
             rulesetId,
             RulesetCategory.Stat,

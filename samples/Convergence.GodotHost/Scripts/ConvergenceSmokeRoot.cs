@@ -64,10 +64,14 @@ public partial class ConvergenceSmokeRoot : Node
 
         var random = new MinimumRandomSource();
         var rulesets = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        StatRulesetServices statServices = rulesets.BindStatServices(
+            catalog,
+            Qualified("standard_stat")).RequireService();
         ProductionCombatRuleset combat = rulesets.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
-            random).RequireService();
+            random,
+            statServices.StageScalingPolicy).RequireService();
         BattleTurnEconomyRuleset turnEconomy = rulesets.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();

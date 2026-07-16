@@ -46,39 +46,33 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
-    public void StatPolicy_AppliesAccessoryModifiersBeforeCapAndStagesAfterCap()
+    public void StatPolicy_AppliesEquipmentModifiersBeforeCapWithoutApplyingBattleStages()
     {
         StatResolutionResult result = _stats.Resolve(new StatResolutionRequest(
             RuntimeStatSourceKind.Actor,
             StandardProgressionIds.Strength,
             BaseStats(38),
-            equipmentStatModifiers: [new(StandardProgressionIds.Strength, 10)],
-            statStages:
-            [
-                new RuntimeStatStageSnapshot(StandardProgressionIds.PhysicalAttack, 1),
-                new RuntimeStatStageSnapshot(StandardProgressionIds.PhysicalAttack, -1)
-            ]));
+            equipmentStatModifiers: [new(StandardProgressionIds.Strength, 10)]));
 
         Assert.Equal(48, result.RawValue);
         Assert.Equal(40, result.CappedValue);
-        Assert.Equal(33, result.FinalValue);
+        Assert.Equal(40, result.FinalValue);
     }
 
     [Fact]
-    public void StatPolicy_GenericAttackAffectsStrengthAndMagicButNotLuck()
+    public void StagePolicy_GenericAttackAffectsPhysicalAndMagicalDamageOnly()
     {
         RuntimeStatStageSnapshot attackUp = new(StandardProgressionIds.Attack, 1);
+        var stages = new StandardStatStageScalingPolicy();
 
-        Assert.Equal(14, Resolve(StandardProgressionIds.Strength, attackUp));
-        Assert.Equal(14, Resolve(StandardProgressionIds.Magic, attackUp));
-        Assert.Equal(10, Resolve(StandardProgressionIds.Luck, attackUp));
+        Assert.Equal(1.25m, Resolve(StatStageScalingChannel.PhysicalDamageDealt));
+        Assert.Equal(1.25m, Resolve(StatStageScalingChannel.MagicalDamageDealt));
+        Assert.Equal(1m, Resolve(StatStageScalingChannel.DamageTaken));
+        Assert.Equal(1m, Resolve(StatStageScalingChannel.HitChance));
+        Assert.Equal(1m, Resolve(StatStageScalingChannel.Evasion));
 
-        int Resolve(ContentId stat, RuntimeStatStageSnapshot stage) =>
-            _stats.Resolve(new StatResolutionRequest(
-                RuntimeStatSourceKind.Actor,
-                stat,
-                BaseStats(10),
-                statStages: [stage])).FinalValue;
+        decimal Resolve(StatStageScalingChannel channel) =>
+            stages.Resolve(new StatStageScalingRequest(channel, [attackUp])).Multiplier;
     }
 
     [Fact]
@@ -105,12 +99,12 @@ public sealed class ProgressionPolicyTests
 
         Assert.True(result.Applied);
         Assert.Equal(RuntimeStatSourceKind.ActiveHostedEntity, result.ResolvedSourceKind);
-        Assert.Equal(30m, vessel.Stats[StandardProgressionIds.Strength]);
+        Assert.Equal(22m, vessel.Stats[StandardProgressionIds.Strength]);
         Assert.Equal(21m, vessel.Stats[StandardProgressionIds.Vitality]);
         Assert.Equal(90m, vessel.Resources[StandardProgressionIds.Hp].Current);
         Assert.Equal(125m, vessel.Resources[StandardProgressionIds.Hp].Maximum);
         Assert.Equal(20m, vessel.Resources[StandardProgressionIds.Sp].Current);
-        Assert.Equal(90m, vessel.Resources[StandardProgressionIds.Sp].Maximum);
+        Assert.Equal(66m, vessel.Resources[StandardProgressionIds.Sp].Maximum);
         Assert.Equal(rosters.ActiveHostedEntity, vessel.Rosters.ActiveHostedEntity);
     }
 
@@ -287,12 +281,12 @@ public sealed class ProgressionPolicyTests
 
         Assert.True(composedDamage.TotalDamage > actorDamage.TotalDamage);
 
-        static ProductionDamageResolutionRequest DamageRequest(
+        ProductionDamageResolutionRequest DamageRequest(
             RuntimeActorState attacker,
             RuntimeActorState defender) =>
             new(
-                ProductionCombatRuleset.FromRuntimeActor(attacker),
-                ProductionCombatRuleset.FromRuntimeActor(defender),
+                ruleset.CreateCombatantProfile(attacker),
+                ruleset.CreateCombatantProfile(defender),
                 DamageElement.Physical,
                 ElementalAffinity.Normal,
                 Power: 20,
@@ -344,9 +338,7 @@ public sealed class ProgressionPolicyTests
     public void StandardPolicies_SaturateBoundaryArithmeticInsteadOfThrowing()
     {
         decimal maximumStat = RuntimeActorNumericDomain.MaximumStatValue;
-        var extremeConfig = new StandardStatPolicyConfig(
-            statCap: int.MaxValue,
-            buffMultiplier: decimal.MaxValue);
+        var extremeConfig = new StandardStatPolicyConfig(statCap: int.MaxValue);
         var stats = new StandardStatResolutionPolicy(extremeConfig);
 
         StatResolutionResult stat = stats.Resolve(new StatResolutionRequest(
@@ -354,8 +346,7 @@ public sealed class ProgressionPolicyTests
             StandardProgressionIds.Strength,
             BaseStats(maximumStat),
             ActiveHostedEntityStats(decimal.MaxValue),
-            equipmentStatModifiers: BaseStats(decimal.MaxValue),
-            statStages: [new RuntimeStatStageSnapshot(StandardProgressionIds.Attack, 1)]));
+            equipmentStatModifiers: BaseStats(decimal.MaxValue)));
         ResourceRecalculationResult resources = _resources.Recalculate(new ResourceRecalculationRequest(
             [
                 new RuntimeResourceSnapshot(StandardProgressionIds.Hp, decimal.MaxValue, decimal.MaxValue),

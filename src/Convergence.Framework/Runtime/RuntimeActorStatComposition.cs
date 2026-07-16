@@ -186,9 +186,6 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
             }
         }
 
-        RuntimeStatStageSnapshot[] stages = actor.StatStages
-            .Select(pair => new RuntimeStatStageSnapshot(pair.Key, pair.Value.Stage, pair.Value.Duration))
-            .ToArray();
         var resolutions = new List<StatResolutionResult>(StandardProgressionIds.CoreStats.Count);
         HashSet<ContentId> composedStatIds = [.. StandardProgressionIds.CoreStats];
         var effectiveStats = before.Stats.EffectiveStats
@@ -204,8 +201,7 @@ public sealed class RuntimeActorStatCompositionService : IRuntimeActorStatCompos
                     statId,
                     actor.BaseStats,
                     hostedStats,
-                    request.EquipmentStatModifiers,
-                    stages));
+                    request.EquipmentStatModifiers));
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or OverflowException)
             {

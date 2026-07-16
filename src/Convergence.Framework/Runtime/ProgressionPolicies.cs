@@ -68,48 +68,21 @@ public enum ProgressionMutationErrorCode
     InvalidExperienceRequirement
 }
 
-public sealed record StatModifierTrackAlias(ContentId TrackId, ContentId StatId);
-
 public sealed record StandardStatPolicyConfig
 {
-    public StandardStatPolicyConfig(
-        int statCap = 40,
-        decimal buffMultiplier = 1.4m,
-        decimal debuffMultiplier = 0.6m,
-        IEnumerable<StatModifierTrackAlias>? modifierTrackAliases = null)
+    public StandardStatPolicyConfig(int statCap = 40)
     {
         if (statCap <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(statCap), "Stat cap must be positive.");
         }
-        if (buffMultiplier <= 0 || debuffMultiplier <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(buffMultiplier), "Stat multipliers must be positive.");
-        }
 
         StatCap = statCap;
-        BuffMultiplier = buffMultiplier;
-        DebuffMultiplier = debuffMultiplier;
-        ModifierTrackAliases = SnapshotList(modifierTrackAliases ?? DefaultAliases());
     }
 
     public int StatCap { get; }
-    public decimal BuffMultiplier { get; }
-    public decimal DebuffMultiplier { get; }
-    public IReadOnlyList<StatModifierTrackAlias> ModifierTrackAliases { get; }
 
     public static StandardStatPolicyConfig Default { get; } = new();
-
-    private static IEnumerable<StatModifierTrackAlias> DefaultAliases()
-    {
-        yield return new(StandardProgressionIds.PhysicalAttack, StandardProgressionIds.Strength);
-        yield return new(StandardProgressionIds.MagicalAttack, StandardProgressionIds.Magic);
-        yield return new(StandardProgressionIds.Attack, StandardProgressionIds.Strength);
-        yield return new(StandardProgressionIds.Attack, StandardProgressionIds.Magic);
-        yield return new(StandardProgressionIds.Defense, StandardProgressionIds.Vitality);
-        yield return new(StandardProgressionIds.AgilityTrack, StandardProgressionIds.Agility);
-    }
-
 }
 
 public sealed record StatResolutionRequest
@@ -119,8 +92,7 @@ public sealed record StatResolutionRequest
         ContentId statId,
         IEnumerable<KeyValuePair<ContentId, decimal>>? actorStats = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? activeHostedEntityStats = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
-        IEnumerable<RuntimeStatStageSnapshot>? statStages = null)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
     {
         if (!Enum.IsDefined(sourceKind))
         {
@@ -132,7 +104,6 @@ public sealed record StatResolutionRequest
         ActorStats = SnapshotDictionary(actorStats);
         ActiveHostedEntityStats = SnapshotDictionary(activeHostedEntityStats);
         EquipmentStatModifiers = SnapshotDictionary(equipmentStatModifiers);
-        StatStages = SnapshotList(statStages);
     }
 
     public RuntimeStatSourceKind SourceKind { get; }
@@ -140,7 +111,6 @@ public sealed record StatResolutionRequest
     public IReadOnlyDictionary<ContentId, decimal> ActorStats { get; }
     public IReadOnlyDictionary<ContentId, decimal> ActiveHostedEntityStats { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
-    public IReadOnlyList<RuntimeStatStageSnapshot> StatStages { get; }
 }
 
 public sealed record StatResolutionResult(
@@ -169,21 +139,7 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
 
         decimal raw = ResolveRawValue(request);
         int capped = SaturatingFloorToInt(Math.Min(_config.StatCap, Math.Floor(raw)));
-        decimal final = capped;
-
-        foreach (RuntimeStatStageSnapshot stage in request.StatStages)
-        {
-            if (stage.Stage == 0 || !AffectsStat(stage.ModifierTrackId, request.StatId))
-            {
-                continue;
-            }
-
-            final = SaturatingMultiply(
-                final,
-                stage.Stage > 0 ? _config.BuffMultiplier : _config.DebuffMultiplier);
-        }
-
-        return new StatResolutionResult(request.StatId, raw, capped, SaturatingFloorToInt(final));
+        return new StatResolutionResult(request.StatId, raw, capped, capped);
     }
 
     private decimal ResolveRawValue(StatResolutionRequest request)
@@ -200,9 +156,6 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
             ValueOrZero(request.EquipmentStatModifiers, request.StatId));
     }
 
-    private bool AffectsStat(ContentId trackId, ContentId statId) =>
-        _config.ModifierTrackAliases.Any(alias => alias.TrackId == trackId && alias.StatId == statId);
-
     private static decimal ValueOrZero(IReadOnlyDictionary<ContentId, decimal> values, ContentId id) =>
         values.TryGetValue(id, out decimal value) ? value : 0m;
 
@@ -215,18 +168,6 @@ public sealed class StandardStatResolutionPolicy : IStatResolutionPolicy
         catch (OverflowException)
         {
             return left >= 0m && right >= 0m ? decimal.MaxValue : decimal.MinValue;
-        }
-    }
-
-    private static decimal SaturatingMultiply(decimal left, decimal right)
-    {
-        try
-        {
-            return checked(left * right);
-        }
-        catch (OverflowException)
-        {
-            return Math.Sign(left) == Math.Sign(right) ? decimal.MaxValue : decimal.MinValue;
         }
     }
 

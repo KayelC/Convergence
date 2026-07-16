@@ -161,11 +161,15 @@ public sealed class OriginalCleanContentSliceTests
     {
         GameDataCatalog catalog = LoadCatalog();
         var resolver = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        StatRulesetServices stats = resolver.BindStatServices(
+            catalog,
+            Qualified("standard_stat")).RequireService();
 
         ProductionCombatRuleset damage = resolver.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
-            new SequenceRandomSource())
+            new SequenceRandomSource(),
+            stats.StageScalingPolicy)
             .RequireService();
         Assert.Equal(1.5m, damage.Config.WeakDamageMultiplier);
         Assert.Equal(0.5m, damage.Config.ResistDamageMultiplier);
@@ -190,9 +194,8 @@ public sealed class OriginalCleanContentSliceTests
         Assert.True(reward.TotalExperience > 0);
         Assert.True(reward.TotalCurrency > 0);
 
-        Assert.IsType<StandardStatResolutionPolicy>(resolver.BindStatResolutionPolicy(
-            catalog,
-            Qualified("standard_stat")).RequireService());
+        Assert.IsType<StandardStatResolutionPolicy>(stats.StatResolutionPolicy);
+        Assert.IsType<StandardStatStageScalingPolicy>(stats.StageScalingPolicy);
         Assert.IsType<StandardResourceGrowthPolicy>(resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService().ResourceGrowthPolicy);

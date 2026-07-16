@@ -163,7 +163,9 @@ public sealed record ProductionCombatModifiers(
     decimal HitMultiplier = 1m,
     decimal EvasionMultiplier = 1m,
     decimal CriticalChanceMultiplier = 1m,
-    int CriticalChanceTakenBonus = 0);
+    int CriticalChanceTakenBonus = 0,
+    decimal PhysicalDamageDealtMultiplier = 1m,
+    decimal MagicalDamageDealtMultiplier = 1m);
 
 public sealed record ProductionCombatantProfile
 {
@@ -206,7 +208,9 @@ public sealed record ProductionCombatantProfile
             modifiers.DamageTakenMultiplier < 0 ||
             modifiers.HitMultiplier < 0 ||
             modifiers.EvasionMultiplier < 0 ||
-            modifiers.CriticalChanceMultiplier < 0)
+            modifiers.CriticalChanceMultiplier < 0 ||
+            modifiers.PhysicalDamageDealtMultiplier < 0 ||
+            modifiers.MagicalDamageDealtMultiplier < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(modifiers), "Combat multipliers cannot be negative.");
         }
@@ -288,25 +292,29 @@ public sealed class ProductionCombatRuleset :
 {
     private readonly IRandomSource _random;
     private readonly ProductionCombatRulesetConfig _config;
+    private readonly IStatStageScalingPolicy _stageScaling;
 
     public ProductionCombatRuleset(
         IRandomSource random,
-        ProductionCombatRulesetConfig? config = null)
+        ProductionCombatRulesetConfig? config = null,
+        IStatStageScalingPolicy? stageScaling = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? new ProductionCombatRulesetConfig();
         _config.Validate();
+        _stageScaling = stageScaling ?? new StandardStatStageScalingPolicy();
     }
 
     public ProductionCombatRulesetConfig Config => _config;
+    public IStatStageScalingPolicy StageScalingPolicy => _stageScaling;
 
     public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         ProductionDamageResolutionResult result = ResolveDamage(new ProductionDamageResolutionRequest(
-            FromRuntimeActor(request.Actor),
-            FromRuntimeActor(request.Target),
+            CreateCombatantProfile(request.Actor),
+            CreateCombatantProfile(request.Target),
             request.Effect.Element,
             request.Affinity,
             request.Effect.Power,
@@ -324,8 +332,8 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(request);
 
         ProductionInstantDeathResult result = ResolveInstantDeath(new ProductionInstantDeathRequest(
-            FromRuntimeActor(request.Actor),
-            FromRuntimeActor(request.Target),
+            CreateCombatantProfile(request.Actor),
+            CreateCombatantProfile(request.Target),
             request.Effect.Chance,
             request.Resistance.Resistance,
             request.Resistance.BypassesResistance));
@@ -338,8 +346,8 @@ public sealed class ProductionCombatRuleset :
 
         ProductionAilmentApplicationResult result = ResolveAilmentApplication(
             new ProductionAilmentApplicationRequest(
-                FromRuntimeActor(request.Actor),
-                FromRuntimeActor(request.Target),
+                CreateCombatantProfile(request.Actor),
+                CreateCombatantProfile(request.Target),
                 request.Chance,
                 request.Resistance));
         return result.Applied;
@@ -607,6 +615,11 @@ public sealed class ProductionCombatRuleset :
         attack = CombatArithmetic.SaturatingMultiply(
             attack,
             attacker.Modifiers.DamageDealtMultiplier);
+        attack = CombatArithmetic.SaturatingMultiply(
+            attack,
+            IsPhysical(element)
+                ? attacker.Modifiers.PhysicalDamageDealtMultiplier
+                : attacker.Modifiers.MagicalDamageDealtMultiplier);
         if (IsPhysical(element) && attacker.Status.HasPhysicalCharge)
         {
             attack = CombatArithmetic.SaturatingMultiply(attack, _config.ChargeMultiplier);
@@ -680,7 +693,7 @@ public sealed class ProductionCombatRuleset :
     private static int ClampPercent(decimal chance, int minimum, int maximum) =>
         (int)Math.Clamp(Math.Floor(chance), minimum, maximum);
 
-    internal static ProductionCombatantProfile FromRuntimeActor(RuntimeActorState actor)
+    internal ProductionCombatantProfile CreateCombatantProfile(RuntimeActorState actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
 
@@ -692,8 +705,24 @@ public sealed class ProductionCombatRuleset :
         bool physicalCharge = actor.Charges.ContainsKey(ChargeKind.Physical);
         bool magicalCharge = actor.Charges.ContainsKey(ChargeKind.Magical);
         decimal damageDealt = 1m;
-        decimal damageTaken = 1m;
-        decimal evasion = 1m;
+        RuntimeStatStageSnapshot[] stages = actor.StatStages
+            .Select(pair => new RuntimeStatStageSnapshot(pair.Key, pair.Value.Stage, pair.Value.Duration))
+            .ToArray();
+        decimal physicalDamageDealt = ResolveStageMultiplier(
+            StatStageScalingChannel.PhysicalDamageDealt,
+            stages);
+        decimal magicalDamageDealt = ResolveStageMultiplier(
+            StatStageScalingChannel.MagicalDamageDealt,
+            stages);
+        decimal damageTaken = ResolveStageMultiplier(
+            StatStageScalingChannel.DamageTaken,
+            stages);
+        decimal hit = ResolveStageMultiplier(
+            StatStageScalingChannel.HitChance,
+            stages);
+        decimal evasion = ResolveStageMultiplier(
+            StatStageScalingChannel.Evasion,
+            stages);
         int criticalTakenBonus = 0;
         bool rigid = false;
 
@@ -725,8 +754,15 @@ public sealed class ProductionCombatRuleset :
             new ProductionCombatModifiers(
                 DamageDealtMultiplier: damageDealt,
                 DamageTakenMultiplier: damageTaken,
+                HitMultiplier: hit,
                 EvasionMultiplier: evasion,
-                CriticalChanceTakenBonus: criticalTakenBonus));
+                CriticalChanceTakenBonus: criticalTakenBonus,
+                PhysicalDamageDealtMultiplier: physicalDamageDealt,
+                MagicalDamageDealtMultiplier: magicalDamageDealt));
     }
 
+    private decimal ResolveStageMultiplier(
+        StatStageScalingChannel channel,
+        IReadOnlyList<RuntimeStatStageSnapshot> stages) =>
+        _stageScaling.Resolve(new StatStageScalingRequest(channel, stages)).Multiplier;
 }

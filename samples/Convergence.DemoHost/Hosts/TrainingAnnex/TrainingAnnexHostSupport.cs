@@ -230,8 +230,8 @@ internal static class TrainingAnnexHostSupport
 
         var diagnostics = new List<string>();
         GrowthRulesetServices? growthServices = BindGrowthServices(catalog, diagnostics);
-        IStatResolutionPolicy? statPolicy = BindStatPolicy(catalog, diagnostics);
-        if (growthServices is null || statPolicy is null)
+        StatRulesetServices? statServices = BindStatServices(catalog, diagnostics);
+        if (growthServices is null || statServices is null)
         {
             return new TrainingAnnexActorRosterResult(null, diagnostics);
         }
@@ -376,7 +376,7 @@ internal static class TrainingAnnexHostSupport
                 Reference(replacementBrambleResult.RequireActor().State.ToSnapshot())
             ]);
         RuntimeActorStatCompositionResult composition = new RuntimeActorStatCompositionService(
-                statPolicy,
+                statServices.StatResolutionPolicy,
                 growthServices.ResourceGrowthPolicy)
             .Compose(new RuntimeActorStatCompositionRequest(
                 player.State,
@@ -675,13 +675,13 @@ internal static class TrainingAnnexHostSupport
         return null;
     }
 
-    private static IStatResolutionPolicy? BindStatPolicy(
+    private static StatRulesetServices? BindStatServices(
         GameDataCatalog catalog,
         List<string> diagnostics)
     {
-        RulesetBindingResult<IStatResolutionPolicy> stats = new RuntimeRulesetBindingResolver(
+        RulesetBindingResult<StatRulesetServices> stats = new RuntimeRulesetBindingResolver(
             RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
-            .BindStatResolutionPolicy(catalog, Qualified("standard_stat"));
+            .BindStatServices(catalog, Qualified("standard_stat"));
         if (stats.IsSuccess)
         {
             return stats.RequireService();

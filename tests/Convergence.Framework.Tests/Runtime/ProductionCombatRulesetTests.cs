@@ -253,7 +253,7 @@ public sealed class ProductionCombatRulesetTests
             ],
             progression: new RuntimeProgressionSnapshot(37, 0, 0, 0));
 
-        ProductionCombatantProfile profile = ProductionCombatRuleset.FromRuntimeActor(actor);
+        ProductionCombatantProfile profile = Rules().CreateCombatantProfile(actor);
 
         Assert.Equal(37, profile.Level);
     }
@@ -378,7 +378,7 @@ public sealed class ProductionCombatRulesetTests
         actor.ApplyAilment(ExtremeAilment("extreme_one"), new BattleDurationDefinition());
         actor.ApplyAilment(ExtremeAilment("extreme_two"), new BattleDurationDefinition());
 
-        ProductionCombatantProfile profile = ProductionCombatRuleset.FromRuntimeActor(actor);
+        ProductionCombatantProfile profile = Rules().CreateCombatantProfile(actor);
 
         Assert.Equal(decimal.MaxValue, profile.Modifiers.DamageDealtMultiplier);
         Assert.Equal(decimal.MaxValue, profile.Modifiers.DamageTakenMultiplier);

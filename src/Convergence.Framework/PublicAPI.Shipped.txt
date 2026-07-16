@@ -97,13 +97,17 @@ Convergence.Battle.ProductionCombatModifiers.DamageDealtMultiplier.get -> decima
 Convergence.Battle.ProductionCombatModifiers.DamageDealtMultiplier.init -> void
 Convergence.Battle.ProductionCombatModifiers.DamageTakenMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatModifiers.DamageTakenMultiplier.init -> void
-Convergence.Battle.ProductionCombatModifiers.Deconstruct(out decimal DamageDealtMultiplier, out decimal DamageTakenMultiplier, out decimal HitMultiplier, out decimal EvasionMultiplier, out decimal CriticalChanceMultiplier, out int CriticalChanceTakenBonus) -> void
+Convergence.Battle.ProductionCombatModifiers.Deconstruct(out decimal DamageDealtMultiplier, out decimal DamageTakenMultiplier, out decimal HitMultiplier, out decimal EvasionMultiplier, out decimal CriticalChanceMultiplier, out int CriticalChanceTakenBonus, out decimal PhysicalDamageDealtMultiplier, out decimal MagicalDamageDealtMultiplier) -> void
 Convergence.Battle.ProductionCombatModifiers.Equals(Convergence.Battle.ProductionCombatModifiers? other) -> bool
 Convergence.Battle.ProductionCombatModifiers.EvasionMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatModifiers.EvasionMultiplier.init -> void
 Convergence.Battle.ProductionCombatModifiers.HitMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatModifiers.HitMultiplier.init -> void
-Convergence.Battle.ProductionCombatModifiers.ProductionCombatModifiers(decimal DamageDealtMultiplier = 1, decimal DamageTakenMultiplier = 1, decimal HitMultiplier = 1, decimal EvasionMultiplier = 1, decimal CriticalChanceMultiplier = 1, int CriticalChanceTakenBonus = 0) -> void
+Convergence.Battle.ProductionCombatModifiers.MagicalDamageDealtMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatModifiers.MagicalDamageDealtMultiplier.init -> void
+Convergence.Battle.ProductionCombatModifiers.PhysicalDamageDealtMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatModifiers.PhysicalDamageDealtMultiplier.init -> void
+Convergence.Battle.ProductionCombatModifiers.ProductionCombatModifiers(decimal DamageDealtMultiplier = 1, decimal DamageTakenMultiplier = 1, decimal HitMultiplier = 1, decimal EvasionMultiplier = 1, decimal CriticalChanceMultiplier = 1, int CriticalChanceTakenBonus = 0, decimal PhysicalDamageDealtMultiplier = 1, decimal MagicalDamageDealtMultiplier = 1) -> void
 Convergence.Battle.ProductionCombatRuleset
 Convergence.Battle.ProductionCombatRuleset.CalculateCriticalChance(Convergence.Battle.ProductionCombatantProfile! attacker, Convergence.Battle.ProductionCombatantProfile! target) -> int
 Convergence.Battle.ProductionCombatRuleset.CalculateCurrencyYield(Convergence.Battle.ProductionCombatantProfile! enemy) -> int
@@ -111,7 +115,7 @@ Convergence.Battle.ProductionCombatRuleset.CalculateExperienceYield(Convergence.
 Convergence.Battle.ProductionCombatRuleset.CheckCritical(Convergence.Battle.ProductionCriticalCheckRequest! request) -> Convergence.Battle.ProductionCriticalCheckResult!
 Convergence.Battle.ProductionCombatRuleset.CheckHit(Convergence.Battle.ProductionHitCheckRequest! request) -> Convergence.Battle.ProductionHitCheckResult!
 Convergence.Battle.ProductionCombatRuleset.Config.get -> Convergence.Battle.ProductionCombatRulesetConfig!
-Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null) -> void
+Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null, Convergence.Runtime.IStatStageScalingPolicy? stageScaling = null) -> void
 Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Content.PowerAmountDefinition! amount, Convergence.Execution.AmountResolutionContext! context) -> decimal
 Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Execution.DamagePolicyRequest! request) -> Convergence.Execution.DamagePolicyResolution!
 Convergence.Battle.ProductionCombatRuleset.ResolveAilmentApplication(Convergence.Battle.ProductionAilmentApplicationRequest! request) -> Convergence.Battle.ProductionAilmentApplicationResult!
@@ -121,6 +125,7 @@ Convergence.Battle.ProductionCombatRuleset.Roll(Convergence.Execution.ChancePoli
 Convergence.Battle.ProductionCombatRuleset.RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility) -> bool
 Convergence.Battle.ProductionCombatRuleset.ShouldApply(Convergence.Execution.AilmentApplicationPolicyRequest! request) -> bool
 Convergence.Battle.ProductionCombatRuleset.ShouldDefeat(Convergence.Execution.InstantDeathPolicyRequest! request) -> bool
+Convergence.Battle.ProductionCombatRuleset.StageScalingPolicy.get -> Convergence.Runtime.IStatStageScalingPolicy!
 Convergence.Battle.ProductionCombatRulesetConfig
 Convergence.Battle.ProductionCombatRulesetConfig.<Clone>$() -> Convergence.Battle.ProductionCombatRulesetConfig!
 Convergence.Battle.ProductionCombatRulesetConfig.ChargeMultiplier.get -> decimal
@@ -3314,18 +3319,6 @@ Convergence.Execution.EffectExecutionResult.TurnEconomyOutcome.get -> Convergenc
 Convergence.Execution.EffectExecutionResult.TurnEconomyOutcome.init -> void
 Convergence.Execution.EffectExecutionResult.Value.get -> decimal?
 Convergence.Execution.EffectExecutionResult.Value.init -> void
-Convergence.Execution.ExecutionResourceChange
-Convergence.Execution.ExecutionResourceChange.<Clone>$() -> Convergence.Execution.ExecutionResourceChange!
-Convergence.Execution.ExecutionResourceChange.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Execution.ExecutionResourceChange.Delta.get -> decimal
-Convergence.Execution.ExecutionResourceChange.Equals(Convergence.Execution.ExecutionResourceChange? other) -> bool
-override Convergence.Execution.ExecutionResourceChange.Equals(object? obj) -> bool
-Convergence.Execution.ExecutionResourceChange.ExecutionResourceChange(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId resourceId, decimal delta) -> void
-override Convergence.Execution.ExecutionResourceChange.GetHashCode() -> int
-Convergence.Execution.ExecutionResourceChange.ResourceId.get -> Convergence.Content.ContentId
-override Convergence.Execution.ExecutionResourceChange.ToString() -> string!
-static Convergence.Execution.ExecutionResourceChange.operator !=(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
-static Convergence.Execution.ExecutionResourceChange.operator ==(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
 Convergence.Execution.EffectExecutorRegistry
 Convergence.Execution.EffectExecutorRegistry.EffectExecutorRegistry() -> void
 Convergence.Execution.EffectExecutorRegistry.Register<TDefinition>(Convergence.Execution.IEffectExecutor<TDefinition!>! executor) -> Convergence.Execution.EffectExecutorRegistry!
@@ -3335,6 +3328,13 @@ Convergence.Execution.EscapeAttemptBattleActionCommand.Chance.get -> int?
 Convergence.Execution.EscapeAttemptBattleActionCommand.EligibilityRuleId.get -> Convergence.Content.ContentId
 Convergence.Execution.EscapeAttemptBattleActionCommand.Equals(Convergence.Execution.EscapeAttemptBattleActionCommand? other) -> bool
 Convergence.Execution.EscapeAttemptBattleActionCommand.EscapeAttemptBattleActionCommand(Convergence.Content.ContentId eligibilityRuleId, int? chance = null) -> void
+Convergence.Execution.ExecutionResourceChange
+Convergence.Execution.ExecutionResourceChange.<Clone>$() -> Convergence.Execution.ExecutionResourceChange!
+Convergence.Execution.ExecutionResourceChange.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.ExecutionResourceChange.Delta.get -> decimal
+Convergence.Execution.ExecutionResourceChange.Equals(Convergence.Execution.ExecutionResourceChange? other) -> bool
+Convergence.Execution.ExecutionResourceChange.ExecutionResourceChange(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId resourceId, decimal delta) -> void
+Convergence.Execution.ExecutionResourceChange.ResourceId.get -> Convergence.Content.ContentId
 Convergence.Execution.GuardBattleActionCommand
 Convergence.Execution.GuardBattleActionCommand.Equals(Convergence.Execution.GuardBattleActionCommand? other) -> bool
 Convergence.Execution.GuardBattleActionCommand.GuardBattleActionCommand() -> void
@@ -4737,6 +4737,19 @@ Convergence.Runtime.AddPartyMemberRequest.Member.get -> Convergence.Runtime.Runt
 Convergence.Runtime.AddPartyMemberRequest.Member.init -> void
 Convergence.Runtime.AddPartyMemberRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.AddPartyMemberRequest.Snapshot.init -> void
+Convergence.Runtime.AppliedStatStageMultiplier
+Convergence.Runtime.AppliedStatStageMultiplier.<Clone>$() -> Convergence.Runtime.AppliedStatStageMultiplier!
+Convergence.Runtime.AppliedStatStageMultiplier.AppliedStatStageMultiplier(Convergence.Content.ContentId TrackId, int Stage, Convergence.Runtime.StatStageScalingChannel Channel, decimal Multiplier) -> void
+Convergence.Runtime.AppliedStatStageMultiplier.Channel.get -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.AppliedStatStageMultiplier.Channel.init -> void
+Convergence.Runtime.AppliedStatStageMultiplier.Deconstruct(out Convergence.Content.ContentId TrackId, out int Stage, out Convergence.Runtime.StatStageScalingChannel Channel, out decimal Multiplier) -> void
+Convergence.Runtime.AppliedStatStageMultiplier.Equals(Convergence.Runtime.AppliedStatStageMultiplier? other) -> bool
+Convergence.Runtime.AppliedStatStageMultiplier.Multiplier.get -> decimal
+Convergence.Runtime.AppliedStatStageMultiplier.Multiplier.init -> void
+Convergence.Runtime.AppliedStatStageMultiplier.Stage.get -> int
+Convergence.Runtime.AppliedStatStageMultiplier.Stage.init -> void
+Convergence.Runtime.AppliedStatStageMultiplier.TrackId.get -> Convergence.Content.ContentId
+Convergence.Runtime.AppliedStatStageMultiplier.TrackId.init -> void
 Convergence.Runtime.BattleTurnEconomyRuleset
 Convergence.Runtime.BattleTurnEconomyRuleset.<Clone>$() -> Convergence.Runtime.BattleTurnEconomyRuleset!
 Convergence.Runtime.BattleTurnEconomyRuleset.BattleTurnEconomyRuleset(System.Func<Convergence.Execution.IBattleTurnEconomy!>! createEconomy, Convergence.Execution.BattlePhaseProgressPolicy! phaseProgress) -> void
@@ -5007,7 +5020,7 @@ Convergence.Runtime.IRuntimeActorRestoreProfileResolver.Resolve(Convergence.Runt
 Convergence.Runtime.IRuntimeActorStatCompositionService
 Convergence.Runtime.IRuntimeActorStatCompositionService.Compose(Convergence.Runtime.RuntimeActorStatCompositionRequest! request) -> Convergence.Runtime.RuntimeActorStatCompositionResult!
 Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory
-Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
+Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeDungeonTraversalPolicy
 Convergence.Runtime.IRuntimeDungeonTraversalPolicy.Evaluate(Convergence.Runtime.RuntimeDungeonTraversalPolicyRequest! request) -> Convergence.Runtime.RuntimeDungeonTraversalPolicyDecision!
@@ -5036,10 +5049,10 @@ Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory.PolicyId.get -> C
 Convergence.Runtime.IRuntimeRulesetBindingResolver
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Battle.ProductionCombatRuleset! combatRuleset) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindGrowthServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
-Convergence.Runtime.IRuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
+Convergence.Runtime.IRuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
-Convergence.Runtime.IRuntimeRulesetBindingResolver.BindStatResolutionPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatResolutionPolicy!>!
+Convergence.Runtime.IRuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindTurnEconomy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.IRuntimeSaveMigrationService
 Convergence.Runtime.IRuntimeSaveMigrationService.MigrateToCurrent(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSaveMigrationResult!
@@ -5057,7 +5070,7 @@ Convergence.Runtime.IRuntimeSessionRestoreService.Restore(Convergence.Runtime.Ru
 Convergence.Runtime.IRuntimeShopOfferResolver
 Convergence.Runtime.IRuntimeShopOfferResolver.Resolve(Convergence.Content.ShopOfferDefinition! offer, Convergence.Catalog.IItemDefinitionRepository! itemRepository, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeShopOfferResolutionResult!
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory
-Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatResolutionPolicy!>!
+Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
@@ -5072,6 +5085,8 @@ Convergence.Runtime.IStatAllocationService.Allocate(Convergence.Runtime.StatAllo
 Convergence.Runtime.IStatAllocationService.Rollback(Convergence.Runtime.StatRollbackRequest! request) -> Convergence.Runtime.StatAllocationResult!
 Convergence.Runtime.IStatResolutionPolicy
 Convergence.Runtime.IStatResolutionPolicy.Resolve(Convergence.Runtime.StatResolutionRequest! request) -> Convergence.Runtime.StatResolutionResult!
+Convergence.Runtime.IStatStageScalingPolicy
+Convergence.Runtime.IStatStageScalingPolicy.Resolve(Convergence.Runtime.StatStageScalingRequest! request) -> Convergence.Runtime.StatStageScalingResult!
 Convergence.Runtime.LevelGrowthRequest
 Convergence.Runtime.LevelGrowthRequest.<Clone>$() -> Convergence.Runtime.LevelGrowthRequest!
 Convergence.Runtime.LevelGrowthRequest.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -6016,10 +6031,10 @@ Convergence.Runtime.RuntimeRosterKind.HostedEntity = 0 -> Convergence.Runtime.Ru
 Convergence.Runtime.RuntimeRulesetBindingResolver
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Battle.ProductionCombatRuleset! combatRuleset) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindGrowthServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
-Convergence.Runtime.RuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
+Convergence.Runtime.RuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
-Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatResolutionPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatResolutionPolicy!>!
+Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindTurnEconomy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.RuntimeRulesetBindingResolver(Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry! factories) -> void
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry
@@ -6393,15 +6408,16 @@ Convergence.Runtime.StandardResourceGrowthPolicy.StandardResourceGrowthPolicy() 
 Convergence.Runtime.StandardRulesetPolicyIds
 Convergence.Runtime.StandardStatPolicyConfig
 Convergence.Runtime.StandardStatPolicyConfig.<Clone>$() -> Convergence.Runtime.StandardStatPolicyConfig!
-Convergence.Runtime.StandardStatPolicyConfig.BuffMultiplier.get -> decimal
-Convergence.Runtime.StandardStatPolicyConfig.DebuffMultiplier.get -> decimal
 Convergence.Runtime.StandardStatPolicyConfig.Equals(Convergence.Runtime.StandardStatPolicyConfig? other) -> bool
-Convergence.Runtime.StandardStatPolicyConfig.ModifierTrackAliases.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTrackAlias!>!
-Convergence.Runtime.StandardStatPolicyConfig.StandardStatPolicyConfig(int statCap = 40, decimal buffMultiplier = 1.4, decimal debuffMultiplier = 0.6, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierTrackAlias!>? modifierTrackAliases = null) -> void
+Convergence.Runtime.StandardStatPolicyConfig.StandardStatPolicyConfig(int statCap = 40) -> void
 Convergence.Runtime.StandardStatPolicyConfig.StatCap.get -> int
 Convergence.Runtime.StandardStatResolutionPolicy
 Convergence.Runtime.StandardStatResolutionPolicy.Resolve(Convergence.Runtime.StatResolutionRequest! request) -> Convergence.Runtime.StatResolutionResult!
 Convergence.Runtime.StandardStatResolutionPolicy.StandardStatResolutionPolicy(Convergence.Runtime.StandardStatPolicyConfig? config = null) -> void
+Convergence.Runtime.StandardStatStageScalingPolicy
+Convergence.Runtime.StandardStatStageScalingPolicy.Resolve(Convergence.Runtime.StatStageScalingRequest! request) -> Convergence.Runtime.StatStageScalingResult!
+Convergence.Runtime.StandardStatStageScalingPolicy.StandardStatStageScalingPolicy(System.Collections.Generic.IEnumerable<Convergence.Runtime.StatStageScalingTable!>? tableOverrides = null) -> void
+Convergence.Runtime.StandardStatStageScalingPolicy.Tables.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatStageScalingTable!>!
 Convergence.Runtime.StatAllocationRequest
 Convergence.Runtime.StatAllocationRequest.<Clone>$() -> Convergence.Runtime.StatAllocationRequest!
 Convergence.Runtime.StatAllocationRequest.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -6426,15 +6442,6 @@ Convergence.Runtime.StatAllocationService
 Convergence.Runtime.StatAllocationService.Allocate(Convergence.Runtime.StatAllocationRequest! request) -> Convergence.Runtime.StatAllocationResult!
 Convergence.Runtime.StatAllocationService.Rollback(Convergence.Runtime.StatRollbackRequest! request) -> Convergence.Runtime.StatAllocationResult!
 Convergence.Runtime.StatAllocationService.StatAllocationService(Convergence.Runtime.IResourceGrowthPolicy? resourceGrowthPolicy = null) -> void
-Convergence.Runtime.StatModifierTrackAlias
-Convergence.Runtime.StatModifierTrackAlias.<Clone>$() -> Convergence.Runtime.StatModifierTrackAlias!
-Convergence.Runtime.StatModifierTrackAlias.Deconstruct(out Convergence.Content.ContentId TrackId, out Convergence.Content.ContentId StatId) -> void
-Convergence.Runtime.StatModifierTrackAlias.Equals(Convergence.Runtime.StatModifierTrackAlias? other) -> bool
-Convergence.Runtime.StatModifierTrackAlias.StatId.get -> Convergence.Content.ContentId
-Convergence.Runtime.StatModifierTrackAlias.StatId.init -> void
-Convergence.Runtime.StatModifierTrackAlias.StatModifierTrackAlias(Convergence.Content.ContentId TrackId, Convergence.Content.ContentId StatId) -> void
-Convergence.Runtime.StatModifierTrackAlias.TrackId.get -> Convergence.Content.ContentId
-Convergence.Runtime.StatModifierTrackAlias.TrackId.init -> void
 Convergence.Runtime.StatResolutionRequest
 Convergence.Runtime.StatResolutionRequest.<Clone>$() -> Convergence.Runtime.StatResolutionRequest!
 Convergence.Runtime.StatResolutionRequest.ActiveHostedEntityStats.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
@@ -6443,8 +6450,7 @@ Convergence.Runtime.StatResolutionRequest.Equals(Convergence.Runtime.StatResolut
 Convergence.Runtime.StatResolutionRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.StatResolutionRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.StatResolutionRequest.StatId.get -> Convergence.Content.ContentId
-Convergence.Runtime.StatResolutionRequest.StatResolutionRequest(Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Content.ContentId statId, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? actorStats = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? activeHostedEntityStats = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatStageSnapshot!>? statStages = null) -> void
-Convergence.Runtime.StatResolutionRequest.StatStages.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeStatStageSnapshot!>!
+Convergence.Runtime.StatResolutionRequest.StatResolutionRequest(Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Content.ContentId statId, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? actorStats = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? activeHostedEntityStats = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
 Convergence.Runtime.StatResolutionResult
 Convergence.Runtime.StatResolutionResult.<Clone>$() -> Convergence.Runtime.StatResolutionResult!
 Convergence.Runtime.StatResolutionResult.CappedValue.get -> int
@@ -6467,6 +6473,48 @@ Convergence.Runtime.StatRollbackRequest.Resources.get -> System.Collections.Gene
 Convergence.Runtime.StatRollbackRequest.RollbackProgression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Runtime.StatRollbackRequest.RollbackStats.get -> Convergence.Runtime.RuntimeStatBlockSnapshot!
 Convergence.Runtime.StatRollbackRequest.StatRollbackRequest(Convergence.Runtime.RuntimeProgressionSnapshot! currentProgression, Convergence.Runtime.RuntimeProgressionSnapshot! rollbackProgression, Convergence.Runtime.RuntimeStatBlockSnapshot! rollbackStats, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeResourceSnapshot!>! resources, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>! baseResourceValues) -> void
+Convergence.Runtime.StatRulesetServices
+Convergence.Runtime.StatRulesetServices.<Clone>$() -> Convergence.Runtime.StatRulesetServices!
+Convergence.Runtime.StatRulesetServices.Deconstruct(out Convergence.Runtime.IStatResolutionPolicy! StatResolutionPolicy, out Convergence.Runtime.IStatStageScalingPolicy! StageScalingPolicy) -> void
+Convergence.Runtime.StatRulesetServices.Equals(Convergence.Runtime.StatRulesetServices? other) -> bool
+Convergence.Runtime.StatRulesetServices.StageScalingPolicy.get -> Convergence.Runtime.IStatStageScalingPolicy!
+Convergence.Runtime.StatRulesetServices.StageScalingPolicy.init -> void
+Convergence.Runtime.StatRulesetServices.StatResolutionPolicy.get -> Convergence.Runtime.IStatResolutionPolicy!
+Convergence.Runtime.StatRulesetServices.StatResolutionPolicy.init -> void
+Convergence.Runtime.StatRulesetServices.StatRulesetServices(Convergence.Runtime.IStatResolutionPolicy! StatResolutionPolicy, Convergence.Runtime.IStatStageScalingPolicy! StageScalingPolicy) -> void
+Convergence.Runtime.StatStageMultiplier
+Convergence.Runtime.StatStageMultiplier.<Clone>$() -> Convergence.Runtime.StatStageMultiplier!
+Convergence.Runtime.StatStageMultiplier.Equals(Convergence.Runtime.StatStageMultiplier? other) -> bool
+Convergence.Runtime.StatStageMultiplier.Multiplier.get -> decimal
+Convergence.Runtime.StatStageMultiplier.Stage.get -> int
+Convergence.Runtime.StatStageMultiplier.StatStageMultiplier(int stage, decimal multiplier) -> void
+Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingChannel.DamageTaken = 2 -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingChannel.Evasion = 4 -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingChannel.HitChance = 3 -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingChannel.MagicalDamageDealt = 1 -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingChannel.PhysicalDamageDealt = 0 -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingRequest
+Convergence.Runtime.StatStageScalingRequest.<Clone>$() -> Convergence.Runtime.StatStageScalingRequest!
+Convergence.Runtime.StatStageScalingRequest.Channel.get -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingRequest.Equals(Convergence.Runtime.StatStageScalingRequest? other) -> bool
+Convergence.Runtime.StatStageScalingRequest.Stages.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeStatStageSnapshot!>!
+Convergence.Runtime.StatStageScalingRequest.StatStageScalingRequest(Convergence.Runtime.StatStageScalingChannel channel, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatStageSnapshot!>? stages = null) -> void
+Convergence.Runtime.StatStageScalingResult
+Convergence.Runtime.StatStageScalingResult.<Clone>$() -> Convergence.Runtime.StatStageScalingResult!
+Convergence.Runtime.StatStageScalingResult.AppliedMultipliers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.AppliedStatStageMultiplier!>!
+Convergence.Runtime.StatStageScalingResult.Channel.get -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingResult.Equals(Convergence.Runtime.StatStageScalingResult? other) -> bool
+Convergence.Runtime.StatStageScalingResult.Multiplier.get -> decimal
+Convergence.Runtime.StatStageScalingResult.StatStageScalingResult(Convergence.Runtime.StatStageScalingChannel channel, decimal multiplier, System.Collections.Generic.IEnumerable<Convergence.Runtime.AppliedStatStageMultiplier!>? appliedMultipliers = null) -> void
+Convergence.Runtime.StatStageScalingTable
+Convergence.Runtime.StatStageScalingTable.<Clone>$() -> Convergence.Runtime.StatStageScalingTable!
+Convergence.Runtime.StatStageScalingTable.Channel.get -> Convergence.Runtime.StatStageScalingChannel
+Convergence.Runtime.StatStageScalingTable.Equals(Convergence.Runtime.StatStageScalingTable? other) -> bool
+Convergence.Runtime.StatStageScalingTable.GetMultiplier(int stage) -> decimal
+Convergence.Runtime.StatStageScalingTable.Multipliers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatStageMultiplier!>!
+Convergence.Runtime.StatStageScalingTable.StatStageScalingTable(Convergence.Content.ContentId trackId, Convergence.Runtime.StatStageScalingChannel channel, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatStageMultiplier!>! multipliers) -> void
+Convergence.Runtime.StatStageScalingTable.TrackId.get -> Convergence.Content.ContentId
 Convergence.Runtime.SwapActiveHostedEntityRequest
 Convergence.Runtime.SwapActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.SwapActiveHostedEntityRequest!
 Convergence.Runtime.SwapActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
@@ -7606,6 +7654,9 @@ override Convergence.Execution.EscapeAttemptBattleActionCommand.<Clone>$() -> Co
 override Convergence.Execution.EscapeAttemptBattleActionCommand.Equals(object? obj) -> bool
 override Convergence.Execution.EscapeAttemptBattleActionCommand.GetHashCode() -> int
 override Convergence.Execution.EscapeAttemptBattleActionCommand.ToString() -> string!
+override Convergence.Execution.ExecutionResourceChange.Equals(object? obj) -> bool
+override Convergence.Execution.ExecutionResourceChange.GetHashCode() -> int
+override Convergence.Execution.ExecutionResourceChange.ToString() -> string!
 override Convergence.Execution.GuardBattleActionCommand.<Clone>$() -> Convergence.Execution.GuardBattleActionCommand!
 override Convergence.Execution.GuardBattleActionCommand.Equals(object? obj) -> bool
 override Convergence.Execution.GuardBattleActionCommand.GetHashCode() -> int
@@ -7870,6 +7921,9 @@ override Convergence.Runtime.AddHostedEntityToRosterRequest.ToString() -> string
 override Convergence.Runtime.AddPartyMemberRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.AddPartyMemberRequest.GetHashCode() -> int
 override Convergence.Runtime.AddPartyMemberRequest.ToString() -> string!
+override Convergence.Runtime.AppliedStatStageMultiplier.Equals(object? obj) -> bool
+override Convergence.Runtime.AppliedStatStageMultiplier.GetHashCode() -> int
+override Convergence.Runtime.AppliedStatStageMultiplier.ToString() -> string!
 override Convergence.Runtime.BattleTurnEconomyRuleset.Equals(object? obj) -> bool
 override Convergence.Runtime.BattleTurnEconomyRuleset.GetHashCode() -> int
 override Convergence.Runtime.BattleTurnEconomyRuleset.ToString() -> string!
@@ -8223,9 +8277,6 @@ override Convergence.Runtime.StatAllocationRequest.ToString() -> string!
 override Convergence.Runtime.StatAllocationResult.Equals(object? obj) -> bool
 override Convergence.Runtime.StatAllocationResult.GetHashCode() -> int
 override Convergence.Runtime.StatAllocationResult.ToString() -> string!
-override Convergence.Runtime.StatModifierTrackAlias.Equals(object? obj) -> bool
-override Convergence.Runtime.StatModifierTrackAlias.GetHashCode() -> int
-override Convergence.Runtime.StatModifierTrackAlias.ToString() -> string!
 override Convergence.Runtime.StatResolutionRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.StatResolutionRequest.GetHashCode() -> int
 override Convergence.Runtime.StatResolutionRequest.ToString() -> string!
@@ -8235,6 +8286,21 @@ override Convergence.Runtime.StatResolutionResult.ToString() -> string!
 override Convergence.Runtime.StatRollbackRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.StatRollbackRequest.GetHashCode() -> int
 override Convergence.Runtime.StatRollbackRequest.ToString() -> string!
+override Convergence.Runtime.StatRulesetServices.Equals(object? obj) -> bool
+override Convergence.Runtime.StatRulesetServices.GetHashCode() -> int
+override Convergence.Runtime.StatRulesetServices.ToString() -> string!
+override Convergence.Runtime.StatStageMultiplier.Equals(object? obj) -> bool
+override Convergence.Runtime.StatStageMultiplier.GetHashCode() -> int
+override Convergence.Runtime.StatStageMultiplier.ToString() -> string!
+override Convergence.Runtime.StatStageScalingRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.StatStageScalingRequest.GetHashCode() -> int
+override Convergence.Runtime.StatStageScalingRequest.ToString() -> string!
+override Convergence.Runtime.StatStageScalingResult.Equals(object? obj) -> bool
+override Convergence.Runtime.StatStageScalingResult.GetHashCode() -> int
+override Convergence.Runtime.StatStageScalingResult.ToString() -> string!
+override Convergence.Runtime.StatStageScalingTable.Equals(object? obj) -> bool
+override Convergence.Runtime.StatStageScalingTable.GetHashCode() -> int
+override Convergence.Runtime.StatStageScalingTable.ToString() -> string!
 override Convergence.Runtime.SwapActiveHostedEntityRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.SwapActiveHostedEntityRequest.GetHashCode() -> int
 override Convergence.Runtime.SwapActiveHostedEntityRequest.ToString() -> string!
@@ -8942,6 +9008,8 @@ static Convergence.Execution.EffectExecutionResult.operator ==(Convergence.Execu
 static Convergence.Execution.EffectExecutorRegistry.CreateDefault() -> Convergence.Execution.EffectExecutorRegistry!
 static Convergence.Execution.EscapeAttemptBattleActionCommand.operator !=(Convergence.Execution.EscapeAttemptBattleActionCommand? left, Convergence.Execution.EscapeAttemptBattleActionCommand? right) -> bool
 static Convergence.Execution.EscapeAttemptBattleActionCommand.operator ==(Convergence.Execution.EscapeAttemptBattleActionCommand? left, Convergence.Execution.EscapeAttemptBattleActionCommand? right) -> bool
+static Convergence.Execution.ExecutionResourceChange.operator !=(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
+static Convergence.Execution.ExecutionResourceChange.operator ==(Convergence.Execution.ExecutionResourceChange? left, Convergence.Execution.ExecutionResourceChange? right) -> bool
 static Convergence.Execution.GuardBattleActionCommand.operator !=(Convergence.Execution.GuardBattleActionCommand? left, Convergence.Execution.GuardBattleActionCommand? right) -> bool
 static Convergence.Execution.GuardBattleActionCommand.operator ==(Convergence.Execution.GuardBattleActionCommand? left, Convergence.Execution.GuardBattleActionCommand? right) -> bool
 static Convergence.Execution.HostedEntitySwapBattleActionCommand.operator !=(Convergence.Execution.HostedEntitySwapBattleActionCommand? left, Convergence.Execution.HostedEntitySwapBattleActionCommand? right) -> bool
@@ -9131,6 +9199,8 @@ static Convergence.Runtime.AddHostedEntityToRosterRequest.operator !=(Convergenc
 static Convergence.Runtime.AddHostedEntityToRosterRequest.operator ==(Convergence.Runtime.AddHostedEntityToRosterRequest? left, Convergence.Runtime.AddHostedEntityToRosterRequest? right) -> bool
 static Convergence.Runtime.AddPartyMemberRequest.operator !=(Convergence.Runtime.AddPartyMemberRequest? left, Convergence.Runtime.AddPartyMemberRequest? right) -> bool
 static Convergence.Runtime.AddPartyMemberRequest.operator ==(Convergence.Runtime.AddPartyMemberRequest? left, Convergence.Runtime.AddPartyMemberRequest? right) -> bool
+static Convergence.Runtime.AppliedStatStageMultiplier.operator !=(Convergence.Runtime.AppliedStatStageMultiplier? left, Convergence.Runtime.AppliedStatStageMultiplier? right) -> bool
+static Convergence.Runtime.AppliedStatStageMultiplier.operator ==(Convergence.Runtime.AppliedStatStageMultiplier? left, Convergence.Runtime.AppliedStatStageMultiplier? right) -> bool
 static Convergence.Runtime.BattleTurnEconomyRuleset.operator !=(Convergence.Runtime.BattleTurnEconomyRuleset? left, Convergence.Runtime.BattleTurnEconomyRuleset? right) -> bool
 static Convergence.Runtime.BattleTurnEconomyRuleset.operator ==(Convergence.Runtime.BattleTurnEconomyRuleset? left, Convergence.Runtime.BattleTurnEconomyRuleset? right) -> bool
 static Convergence.Runtime.ConsumeCompanionRequest.operator !=(Convergence.Runtime.ConsumeCompanionRequest? left, Convergence.Runtime.ConsumeCompanionRequest? right) -> bool
@@ -9399,14 +9469,22 @@ static Convergence.Runtime.StatAllocationRequest.operator !=(Convergence.Runtime
 static Convergence.Runtime.StatAllocationRequest.operator ==(Convergence.Runtime.StatAllocationRequest? left, Convergence.Runtime.StatAllocationRequest? right) -> bool
 static Convergence.Runtime.StatAllocationResult.operator !=(Convergence.Runtime.StatAllocationResult? left, Convergence.Runtime.StatAllocationResult? right) -> bool
 static Convergence.Runtime.StatAllocationResult.operator ==(Convergence.Runtime.StatAllocationResult? left, Convergence.Runtime.StatAllocationResult? right) -> bool
-static Convergence.Runtime.StatModifierTrackAlias.operator !=(Convergence.Runtime.StatModifierTrackAlias? left, Convergence.Runtime.StatModifierTrackAlias? right) -> bool
-static Convergence.Runtime.StatModifierTrackAlias.operator ==(Convergence.Runtime.StatModifierTrackAlias? left, Convergence.Runtime.StatModifierTrackAlias? right) -> bool
 static Convergence.Runtime.StatResolutionRequest.operator !=(Convergence.Runtime.StatResolutionRequest? left, Convergence.Runtime.StatResolutionRequest? right) -> bool
 static Convergence.Runtime.StatResolutionRequest.operator ==(Convergence.Runtime.StatResolutionRequest? left, Convergence.Runtime.StatResolutionRequest? right) -> bool
 static Convergence.Runtime.StatResolutionResult.operator !=(Convergence.Runtime.StatResolutionResult? left, Convergence.Runtime.StatResolutionResult? right) -> bool
 static Convergence.Runtime.StatResolutionResult.operator ==(Convergence.Runtime.StatResolutionResult? left, Convergence.Runtime.StatResolutionResult? right) -> bool
 static Convergence.Runtime.StatRollbackRequest.operator !=(Convergence.Runtime.StatRollbackRequest? left, Convergence.Runtime.StatRollbackRequest? right) -> bool
 static Convergence.Runtime.StatRollbackRequest.operator ==(Convergence.Runtime.StatRollbackRequest? left, Convergence.Runtime.StatRollbackRequest? right) -> bool
+static Convergence.Runtime.StatRulesetServices.operator !=(Convergence.Runtime.StatRulesetServices? left, Convergence.Runtime.StatRulesetServices? right) -> bool
+static Convergence.Runtime.StatRulesetServices.operator ==(Convergence.Runtime.StatRulesetServices? left, Convergence.Runtime.StatRulesetServices? right) -> bool
+static Convergence.Runtime.StatStageMultiplier.operator !=(Convergence.Runtime.StatStageMultiplier? left, Convergence.Runtime.StatStageMultiplier? right) -> bool
+static Convergence.Runtime.StatStageMultiplier.operator ==(Convergence.Runtime.StatStageMultiplier? left, Convergence.Runtime.StatStageMultiplier? right) -> bool
+static Convergence.Runtime.StatStageScalingRequest.operator !=(Convergence.Runtime.StatStageScalingRequest? left, Convergence.Runtime.StatStageScalingRequest? right) -> bool
+static Convergence.Runtime.StatStageScalingRequest.operator ==(Convergence.Runtime.StatStageScalingRequest? left, Convergence.Runtime.StatStageScalingRequest? right) -> bool
+static Convergence.Runtime.StatStageScalingResult.operator !=(Convergence.Runtime.StatStageScalingResult? left, Convergence.Runtime.StatStageScalingResult? right) -> bool
+static Convergence.Runtime.StatStageScalingResult.operator ==(Convergence.Runtime.StatStageScalingResult? left, Convergence.Runtime.StatStageScalingResult? right) -> bool
+static Convergence.Runtime.StatStageScalingTable.operator !=(Convergence.Runtime.StatStageScalingTable? left, Convergence.Runtime.StatStageScalingTable? right) -> bool
+static Convergence.Runtime.StatStageScalingTable.operator ==(Convergence.Runtime.StatStageScalingTable? left, Convergence.Runtime.StatStageScalingTable? right) -> bool
 static Convergence.Runtime.SwapActiveHostedEntityRequest.operator !=(Convergence.Runtime.SwapActiveHostedEntityRequest? left, Convergence.Runtime.SwapActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.SwapActiveHostedEntityRequest.operator ==(Convergence.Runtime.SwapActiveHostedEntityRequest? left, Convergence.Runtime.SwapActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.SwapDeployedCompanionRequest.operator !=(Convergence.Runtime.SwapDeployedCompanionRequest? left, Convergence.Runtime.SwapDeployedCompanionRequest? right) -> bool

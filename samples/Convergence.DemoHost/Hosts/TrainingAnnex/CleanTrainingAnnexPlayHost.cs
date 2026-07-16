@@ -248,11 +248,24 @@ internal sealed class CleanTrainingAnnexPlayHost
         GameDataCatalog catalog = load.Catalog;
         var rulesetResolver = new RuntimeRulesetBindingResolver(
             RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        RulesetBindingResult<StatRulesetServices> statBinding =
+            rulesetResolver.BindStatServices(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_stat"));
+        if (!statBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync("stat", statBinding.Diagnostics, cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        StatRulesetServices statServices = statBinding.RequireService();
         RulesetBindingResult<ProductionCombatRuleset> combatBinding =
             rulesetResolver.BindProductionCombatRuleset(
                 catalog,
                 TrainingAnnexHostSupport.Qualified("standard_damage"),
-                _randomSource);
+                _randomSource,
+                statServices.StageScalingPolicy);
         if (!combatBinding.IsSuccess)
         {
             await PublishRulesetDiagnosticsAsync("damage", combatBinding.Diagnostics, cancellationToken)
@@ -329,9 +342,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         GrowthRulesetServices growthServices = rulesetResolver
             .BindGrowthServices(catalog, TrainingAnnexHostSupport.Qualified("standard_growth"))
             .RequireService();
-        IStatResolutionPolicy statPolicy = rulesetResolver
-            .BindStatResolutionPolicy(catalog, TrainingAnnexHostSupport.Qualified("standard_stat"))
-            .RequireService();
+        IStatResolutionPolicy statPolicy = statServices.StatResolutionPolicy;
         IRuntimeActorStatCompositionService statCompositionService =
             _statCompositionFactory(statPolicy, growthServices.ResourceGrowthPolicy) ??
             throw new InvalidOperationException("The stat-composition factory returned no service.");
@@ -782,6 +793,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     statPreview = await ResolvePlayerStatsAsync(
                         roster.Player,
                         statPolicy,
+                        statServices.StageScalingPolicy,
                         cancellationToken).ConfigureAwait(false);
                     statResolutionPreviewed = true;
                     break;
@@ -2139,6 +2151,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private async ValueTask<IReadOnlyList<StatResolutionResult>> ResolvePlayerStatsAsync(
         TrainingAnnexRuntimeActor player,
         IStatResolutionPolicy statPolicy,
+        IStatStageScalingPolicy stageScalingPolicy,
         CancellationToken cancellationToken)
     {
         RuntimeActorSnapshot snapshot = player.Actor.State.ToSnapshot();
@@ -2152,20 +2165,24 @@ internal sealed class CleanTrainingAnnexPlayHost
                 RuntimeStatSourceKind.Actor,
                 statId,
                 snapshot.Stats.EffectiveStats));
-            StatResolutionResult boosted = statPolicy.Resolve(new StatResolutionRequest(
-                RuntimeStatSourceKind.Actor,
-                statId,
-                snapshot.Stats.EffectiveStats,
-                statStages: [attackStage]));
-            results.Add(boosted);
-            messages.Add($"{statId} {unmodified.FinalValue}->{boosted.FinalValue}");
+            results.Add(unmodified);
+            messages.Add($"{statId} {unmodified.FinalValue}");
         }
 
         await _eventSink.PublishAsync(
-            $"Stat policy: standard_stat resolved {player.Actor.Entity.DisplayName} with attack stage +1.",
+            $"Stat policy: standard_stat resolved raw stats for {player.Actor.Entity.DisplayName}.",
             cancellationToken).ConfigureAwait(false);
         await _eventSink.PublishAsync(
             $"Resolved stats: {string.Join(", ", messages)}.",
+            cancellationToken).ConfigureAwait(false);
+        StatStageScalingResult physical = stageScalingPolicy.Resolve(new StatStageScalingRequest(
+            StatStageScalingChannel.PhysicalDamageDealt,
+            [attackStage]));
+        StatStageScalingResult magical = stageScalingPolicy.Resolve(new StatStageScalingRequest(
+            StatStageScalingChannel.MagicalDamageDealt,
+            [attackStage]));
+        await _eventSink.PublishAsync(
+            $"Stage policy: attack +1 resolves physical x{physical.Multiplier:0.###} and magical x{magical.Multiplier:0.###}.",
             cancellationToken).ConfigureAwait(false);
 
         return results.ToArray();

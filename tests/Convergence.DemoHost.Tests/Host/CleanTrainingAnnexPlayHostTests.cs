@@ -154,8 +154,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(40, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(0, summary.PlayerProgression.UnspentStatPoints);
         Assert.True(summary.StatResolutionPreviewed);
-        Assert.Equal(4, Resolved(summary, "strength").FinalValue);
-        Assert.Equal(11, Resolved(summary, "magic").FinalValue);
+        Assert.Equal(3, Resolved(summary, "strength").FinalValue);
+        Assert.Equal(8, Resolved(summary, "magic").FinalValue);
         Assert.Equal(5, Resolved(summary, "vitality").FinalValue);
         Assert.Equal(4, Resolved(summary, "agility").FinalValue);
         Assert.Equal(6, Resolved(summary, "luck").FinalValue);
@@ -311,8 +311,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains("Effective stats: strength 3, magic 8, vitality 5, agility 4, luck 6.", text, StringComparison.Ordinal);
         Assert.Contains("Active skills: Frost Tip, Echo Strike.", text, StringComparison.Ordinal);
         Assert.Contains("Passive skills: Steady Breath.", text, StringComparison.Ordinal);
-        Assert.Contains("Stat policy: standard_stat resolved Echo Adept with attack stage +1.", text, StringComparison.Ordinal);
-        Assert.Contains("Resolved stats: strength 3->4, magic 8->11, vitality 5->5, agility 4->4, luck 6->6.", text, StringComparison.Ordinal);
+        Assert.Contains("Stat policy: standard_stat resolved raw stats for Echo Adept.", text, StringComparison.Ordinal);
+        Assert.Contains("Resolved stats: strength 3, magic 8, vitality 5, agility 4, luck 6.", text, StringComparison.Ordinal);
+        Assert.Contains("Stage policy: attack +1 resolves physical x1.25 and magical x1.25.", text, StringComparison.Ordinal);
         Assert.Contains("Resource recalculation: Echo Adept hp 80/80 -> 70/80.", text, StringComparison.Ordinal);
         Assert.Contains("Resource policy: standard_growth preserved current hp and recalculated maximum 80.", text, StringComparison.Ordinal);
         Assert.Contains("Victory EXP: awarded 40 EXP through standard_growth.", text, StringComparison.Ordinal);
@@ -2266,11 +2267,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task TrainingAnnexExecutionServices_UseOneCatalogBoundProductionCombatRuleset()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
+        var resolver = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        StatRulesetServices stats = resolver.BindStatServices(
+            catalog,
+            Qualified("standard_stat")).RequireService();
+        ProductionCombatRuleset ruleset = resolver
             .BindProductionCombatRuleset(
                 catalog,
                 Qualified("standard_damage"),
-                new SequenceRandomSource())
+                new SequenceRandomSource(),
+                stats.StageScalingPolicy)
             .RequireService();
 
         BattleExecutionServices services =
@@ -2289,11 +2295,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task TrainingAnnexBoundRuleset_UsesStrengthForPhysicalAndMagicForMagicalDamage()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
-        ProductionCombatRuleset ruleset = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
+        var resolver = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        StatRulesetServices stats = resolver.BindStatServices(
+            catalog,
+            Qualified("standard_stat")).RequireService();
+        ProductionCombatRuleset ruleset = resolver
             .BindProductionCombatRuleset(
                 catalog,
                 Qualified("standard_damage"),
-                new SequenceRandomSource())
+                new SequenceRandomSource(),
+                stats.StageScalingPolicy)
             .RequireService();
         EntityDefinition attacker = catalog.GetRequiredEntity(Qualified("echo_adept"));
         EntityDefinition target = catalog.GetRequiredEntity(Qualified("bramble_runner"));

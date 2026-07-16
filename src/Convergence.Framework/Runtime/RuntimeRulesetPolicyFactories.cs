@@ -13,7 +13,8 @@ public interface IRuntimeDamageRulesetPolicyFactory
 
     RulesetBindingResult<ProductionCombatRuleset> Create(
         RulesetDefinition definition,
-        IRandomSource random);
+        IRandomSource random,
+        IStatStageScalingPolicy stageScalingPolicy);
 }
 
 public interface IRuntimeRewardRulesetPolicyFactory
@@ -29,7 +30,7 @@ public interface IRuntimeStatRulesetPolicyFactory
 {
     ContentId PolicyId { get; }
 
-    RulesetBindingResult<IStatResolutionPolicy> Create(RulesetDefinition definition);
+    RulesetBindingResult<StatRulesetServices> Create(RulesetDefinition definition);
 }
 
 public interface IRuntimeGrowthRulesetPolicyFactory
@@ -178,10 +179,12 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
 
     public RulesetBindingResult<ProductionCombatRuleset> Create(
         RulesetDefinition definition,
-        IRandomSource random)
+        IRandomSource random,
+        IStatStageScalingPolicy stageScalingPolicy)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(stageScalingPolicy);
 
         var diagnostics = new List<RulesetBindingDiagnostic>();
         var config = new ProductionCombatRulesetConfig();
@@ -324,7 +327,7 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
         try
         {
             return new RulesetBindingResult<ProductionCombatRuleset>(
-                new ProductionCombatRuleset(random, config));
+                new ProductionCombatRuleset(random, config, stageScalingPolicy));
         }
         catch (ArgumentException exception)
         {
@@ -388,12 +391,175 @@ internal sealed class StandardStatRulesetPolicyFactory : IRuntimeStatRulesetPoli
 {
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardStat;
 
-    public RulesetBindingResult<IStatResolutionPolicy> Create(RulesetDefinition definition)
+    public RulesetBindingResult<StatRulesetServices> Create(RulesetDefinition definition)
     {
-        List<RulesetBindingDiagnostic> diagnostics = RulesetPolicyFactoryDiagnostics.RequireNoParameters(definition);
-        return diagnostics.Count == 0
-            ? new RulesetBindingResult<IStatResolutionPolicy>(new StandardStatResolutionPolicy())
-            : new RulesetBindingResult<IStatResolutionPolicy>(null, diagnostics);
+        var diagnostics = new List<RulesetBindingDiagnostic>();
+        foreach (string key in definition.Parameters.Keys.Where(key => key != "stageTables"))
+        {
+            RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
+        }
+
+        var overrides = new List<StatStageScalingTable>();
+        if (definition.Parameters.TryGetValue("stageTables", out object? rawTables))
+        {
+            ReadStageTables(definition, rawTables, overrides, diagnostics);
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return new RulesetBindingResult<StatRulesetServices>(null, diagnostics);
+        }
+
+        try
+        {
+            return new RulesetBindingResult<StatRulesetServices>(new StatRulesetServices(
+                new StandardStatResolutionPolicy(),
+                new StandardStatStageScalingPolicy(overrides)));
+        }
+        catch (ArgumentException exception)
+        {
+            RulesetPolicyFactoryDiagnostics.InvalidConfiguration(definition, exception.Message, diagnostics);
+            return new RulesetBindingResult<StatRulesetServices>(null, diagnostics);
+        }
+    }
+
+    private static void ReadStageTables(
+        RulesetDefinition definition,
+        object? rawTables,
+        ICollection<StatStageScalingTable> tables,
+        ICollection<RulesetBindingDiagnostic> diagnostics)
+    {
+        if (rawTables is not IReadOnlyList<object?> authoredTables || authoredTables.Count == 0)
+        {
+            RulesetPolicyFactoryDiagnostics.InvalidType(
+                definition,
+                "stageTables",
+                "nonempty list",
+                diagnostics);
+            return;
+        }
+
+        var seen = new HashSet<(ContentId TrackId, StatStageScalingChannel Channel)>();
+        for (int tableIndex = 0; tableIndex < authoredTables.Count; tableIndex++)
+        {
+            string path = $"stageTables[{tableIndex}]";
+            if (authoredTables[tableIndex] is not IReadOnlyDictionary<string, object?> table ||
+                table.Keys.Any(key => key is not ("trackId" or "channel" or "multipliers")) ||
+                !TryReadTrackId(table, out ContentId trackId) ||
+                !TryReadChannel(table, out StatStageScalingChannel channel) ||
+                !table.TryGetValue("multipliers", out object? rawRows) ||
+                rawRows is not IReadOnlyList<object?> rows)
+            {
+                RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                    definition,
+                    $"Parameter '{path}' must contain only a valid unqualified 'trackId', supported " +
+                    "'channel', and 'multipliers' list.",
+                    diagnostics,
+                    "stageTables");
+                continue;
+            }
+
+            if (!seen.Add((trackId, channel)))
+            {
+                RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                    definition,
+                    $"Parameter '{path}' duplicates track '{trackId}' and channel '{channel}'.",
+                    diagnostics,
+                    "stageTables");
+                continue;
+            }
+
+            var multipliers = new List<StatStageMultiplier>();
+            bool valid = true;
+            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                if (rows[rowIndex] is not IReadOnlyDictionary<string, object?> row ||
+                    row.Keys.Any(key => key is not ("stage" or "multiplier")) ||
+                    !RulesetPolicyFactoryParameters.TryReadInt(row, "stage", out int stage) ||
+                    !row.TryGetValue("multiplier", out object? rawMultiplier) ||
+                    !RulesetPolicyFactoryParameters.TryReadDecimal(rawMultiplier, out decimal multiplier))
+                {
+                    RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                        definition,
+                        $"Parameter '{path}.multipliers[{rowIndex}]' must contain an integer 'stage' " +
+                        "and numeric 'multiplier'.",
+                        diagnostics,
+                        "stageTables");
+                    valid = false;
+                    continue;
+                }
+
+                try
+                {
+                    multipliers.Add(new StatStageMultiplier(stage, multiplier));
+                }
+                catch (ArgumentException exception)
+                {
+                    RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                        definition,
+                        $"Parameter '{path}.multipliers[{rowIndex}]' is invalid: {exception.Message}",
+                        diagnostics,
+                        "stageTables");
+                    valid = false;
+                }
+            }
+
+            if (!valid)
+            {
+                continue;
+            }
+
+            try
+            {
+                tables.Add(new StatStageScalingTable(trackId, channel, multipliers));
+            }
+            catch (ArgumentException exception)
+            {
+                RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                    definition,
+                    $"Parameter '{path}' is invalid: {exception.Message}",
+                    diagnostics,
+                    "stageTables");
+            }
+        }
+    }
+
+    private static bool TryReadTrackId(
+        IReadOnlyDictionary<string, object?> values,
+        out ContentId trackId)
+    {
+        trackId = default;
+        return values.TryGetValue("trackId", out object? value) &&
+               value is string text &&
+               ContentId.TryParse(text, out trackId) &&
+               !trackId.IsQualified;
+    }
+
+    private static bool TryReadChannel(
+        IReadOnlyDictionary<string, object?> values,
+        out StatStageScalingChannel channel)
+    {
+        channel = default;
+        if (!values.TryGetValue("channel", out object? value) || value is not string text)
+        {
+            return false;
+        }
+
+        channel = text switch
+        {
+            "physical_damage_dealt" => StatStageScalingChannel.PhysicalDamageDealt,
+            "magical_damage_dealt" => StatStageScalingChannel.MagicalDamageDealt,
+            "damage_taken" => StatStageScalingChannel.DamageTaken,
+            "hit_chance" => StatStageScalingChannel.HitChance,
+            "evasion" => StatStageScalingChannel.Evasion,
+            _ => default
+        };
+        return text is
+            "physical_damage_dealt" or
+            "magical_damage_dealt" or
+            "damage_taken" or
+            "hit_chance" or
+            "evasion";
     }
 }
 

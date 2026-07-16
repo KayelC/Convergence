@@ -105,10 +105,14 @@ internal sealed class CleanTrainingAnnexDemoHost
         var resolver = new RuntimeRulesetBindingResolver(
             RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         var random = new TrainingAnnexMinimumRandomSource();
+        StatRulesetServices statServices = resolver
+            .BindStatServices(catalog, Qualified("standard_stat"))
+            .RequireService();
         ProductionCombatRuleset damageRuleset = resolver.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
-            random).RequireService();
+            random,
+            statServices.StageScalingPolicy).RequireService();
         IBattleRewardService rewardService = resolver.BindBattleRewardService(
             catalog,
             Qualified("standard_reward"),
@@ -116,9 +120,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         GrowthRulesetServices growthServices = resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService();
-        IStatResolutionPolicy statPolicy = resolver
-            .BindStatResolutionPolicy(catalog, Qualified("standard_stat"))
-            .RequireService();
+        IStatResolutionPolicy statPolicy = statServices.StatResolutionPolicy;
         BattleTurnEconomyRuleset turnEconomy = resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();
