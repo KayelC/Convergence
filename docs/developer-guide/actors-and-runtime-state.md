@@ -19,9 +19,9 @@ The D1-D6 design is confirmed and the demonstrated paths are green. The
 [completion code review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 identified integration gaps around roster authority, live validation,
 high-level move-list capacity, prepared growth, direct pending-skill restore
-validation, and the Godot sample restore boundary. Roster authority, live
-validation, move-list capacity, and prepared-growth staleness are now
-corrected.
+validation, and the Godot sample restore boundary. Every medium-severity gap
+and the Godot aggregate boundary are now corrected; direct pending-skill
+validation remains.
 
 Until those follow-ups are corrected:
 

@@ -16,10 +16,8 @@ the approved design is in
 The source-based
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 confirmed the composition, skill-choice, stage, and save-v8 transaction design.
-It also found unresolved integration gaps:
-
-- direct catalog actor restore omits pending-choice catalog/provenance checks;
-- the Godot sample bypasses aggregate restoration.
+It also found one unresolved integration gap: direct catalog actor restore
+omits pending-choice catalog/provenance checks.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -30,6 +28,8 @@ starting-level authored unlocks use the same pending-choice planner as live
 growth. Prepared level-growth results now retain their complete source
 progression, stats, resources, and base-resource values; stale or repeated
 application rejects before mutation.
+The Godot sample now decodes complete host-owned snapshots before invoking the
+same aggregate restore service and exposes no live session after rejection.
 
 These are tracked as partial capability gaps, not changes to the confirmed
 D1-D6 intended behavior.

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Convergence.Battle;
 using Convergence.Catalog;
 using Convergence.Content;
@@ -75,10 +76,25 @@ public partial class ConvergenceSmokeRoot : Node
         BattleTurnEconomyRuleset turnEconomy = rulesets.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService();
+        GrowthRulesetServices growthServices = rulesets.BindGrowthServices(
+            catalog,
+            Qualified("standard_growth")).RequireService();
+        IRosterCapacityPolicy rosterCapacity = rulesets.BindRosterCapacityPolicy(
+            catalog,
+            Qualified("standard_roster_capacity")).RequireService();
+        var moveListCapacity = new SharedRuntimeMoveListCapacityPolicy();
+        var composition = new RuntimeActorCombatProfileCompositionService(
+            statServices.StatResolutionPolicy,
+            growthServices.ResourceGrowthPolicy,
+            catalog,
+            rosterCapacity);
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,
-            new GodotActorInitializationPolicy());
+            new GodotActorInitializationPolicy(),
+            catalog,
+            composition,
+            moveListCapacity);
         CatalogBattleActor player = actorFactory.Create(new CatalogBattleActorCreationRequest(
             Qualified("echo_adept"),
             RuntimeInstanceId.Parse("godot_echo_adept"),
@@ -93,16 +109,47 @@ public partial class ConvergenceSmokeRoot : Node
             2,
             IsDeployed: true,
             ContentId.Parse("godot_ai"))).RequireActor();
+        CatalogBattleActor hostedEntity = actorFactory.Create(
+            new CatalogBattleActorCreationRequest(
+                Qualified("annex_mentor"),
+                RuntimeInstanceId.Parse("godot_annex_mentor"),
+                PlayerTeam,
+                5,
+                IsDeployed: false,
+                ContentId.Parse("godot_player"))).RequireActor();
+        RuntimeActorReferenceSnapshot playerReference = Reference(player);
+        RuntimeActorReferenceSnapshot hostedEntityReference = Reference(hostedEntity);
+        var partyRoster = new RuntimePartyRosterSnapshot(
+            playerReference,
+            activeParty: [playerReference],
+            activeHostedEntity: hostedEntityReference,
+            hostedEntityRoster: [hostedEntityReference]);
+        RuntimeActorCombatProfileCompositionResult composed = composition.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                player.State,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster,
+                [hostedEntity.State]));
+        if (!composed.Applied)
+        {
+            throw new InvalidOperationException(
+                "The Godot Vessel could not compose its Active Hosted Entity profile: " +
+                string.Join("; ", composed.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        }
 
         Node actorRoot = GetNode<Node>("ActorScenes");
         var playerNode = new Node { Name = "EchoAdept" };
         var enemyNode = new Node { Name = "Ashling" };
+        var hostedEntityNode = new Node { Name = "AnnexMentor" };
         actorRoot.AddChild(playerNode);
         actorRoot.AddChild(enemyNode);
+        actorRoot.AddChild(hostedEntityNode);
         var sceneInstances = new GodotSceneInstanceRegistry();
         sceneInstances.Attach(player.State.InstanceId, playerNode);
         sceneInstances.Attach(enemy.State.InstanceId, enemyNode);
-        GD.Print("GODOT_SCENE_MAP_OK count=2");
+        sceneInstances.Attach(hostedEntity.State.InstanceId, hostedEntityNode);
+        GD.Print("GODOT_SCENE_MAP_OK count=3");
 
         BattleExecutionServices executionServices = new(
             catalog,
@@ -179,14 +226,23 @@ public partial class ConvergenceSmokeRoot : Node
         GD.Print($"GODOT_ENCOUNTER_OK outcome={encounter.Outcome} events={eventSink.Events.Count}");
 
         string saveJson = GodotSaveCodec.Serialize(
-            [player, enemy],
-            player.State.InstanceId,
+            [player, enemy, hostedEntity],
+            partyRoster,
             new ContentPackIdentity(PackId, SemanticVersion.Parse("0.3.0")),
             sceneInstances);
-        GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(saveJson, catalog, actorFactory);
-        restored.Validation.RequireValidSnapshot();
-        CatalogBattleActor restoredPlayer = restored.Actors.Single(actor =>
+        var restoreService = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(rosterCapacity, moveListCapacity),
+            actorFactory,
+            GodotActorRestoreProfileResolver.Instance);
+        GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(
+            saveJson,
+            catalog,
+            restoreService);
+        RuntimeRestoredSession session = restored.RequireSession();
+        CatalogBattleActor restoredPlayer = session.Actors.Single(actor =>
             actor.State.InstanceId == player.State.InstanceId);
+        CatalogBattleActor restoredHostedEntity = session.Actors.Single(actor =>
+            actor.State.InstanceId == hostedEntity.State.InstanceId);
         if (restoredPlayer.State.GetRequiredResource(Sp).Current !=
             player.State.GetRequiredResource(Sp).Current ||
             !restoredPlayer.State.Skills.LearnedSkillIds.SequenceEqual(
@@ -196,12 +252,38 @@ public partial class ConvergenceSmokeRoot : Node
             restoredPlayer.State.Skills.Revision != player.State.Skills.Revision ||
             !restoredPlayer.State.Skills.PendingChoices.SequenceEqual(
                 player.State.Skills.PendingChoices) ||
-            restored.SceneInstances.Count != 2)
+            restoredPlayer.State.Stats[StandardProgressionIds.Strength] !=
+            restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
+            restored.SceneInstances.Count != 3)
         {
             throw new InvalidOperationException("The Godot-owned save did not preserve runtime and scene state.");
         }
 
-        GD.Print($"GODOT_SAVE_OK actors={restored.Snapshot.Actors.Count} contract={restored.Snapshot.ContractVersion}");
+        GD.Print(
+            $"GODOT_SAVE_OK actors={session.Snapshot.Actors.Count} " +
+            $"contract={session.Snapshot.ContractVersion} aggregate_restore=true");
+
+        JsonObject invalidDocument = JsonNode.Parse(saveJson)?.AsObject() ??
+            throw new InvalidDataException("Godot save JSON could not be parsed for rejection proof.");
+        JsonObject invalidOwner = invalidDocument["partyRoster"]?["owner"]?.AsObject() ??
+            throw new InvalidDataException("Godot save JSON did not contain its party owner.");
+        invalidOwner["instanceId"] = "missing_godot_owner";
+        GodotSaveRestoreResult rejected = GodotSaveCodec.DeserializeAndRestore(
+            invalidDocument.ToJsonString(),
+            catalog,
+            restoreService);
+        if (rejected.IsSuccess ||
+            rejected.RestoreResult.Session is not null ||
+            rejected.RestoreResult.Diagnostics.Count == 0 ||
+            rejected.SceneInstances.Count != 0)
+        {
+            throw new InvalidOperationException(
+                "Rejected aggregate save state exposed a live Godot session.");
+        }
+
+        GD.Print(
+            $"GODOT_SAVE_REJECTION_OK actors_exposed=0 scene_metadata_exposed=0 " +
+            $"diagnostics={rejected.RestoreResult.Diagnostics.Count}");
         GD.Print("CONVERGENCE_GODOT_SMOKE_OK");
     }
 
@@ -264,10 +346,38 @@ public partial class ConvergenceSmokeRoot : Node
 
     private static ContentId Qualified(string localId) => ContentId.Parse($"{PackId}:{localId}");
 
+    private static RuntimeActorReferenceSnapshot Reference(CatalogBattleActor actor)
+    {
+        RuntimeActorSnapshot snapshot = actor.State.ToSnapshot();
+        return new RuntimeActorReferenceSnapshot(
+            snapshot.Identity.InstanceId,
+            snapshot.Identity.EntityDefinitionId,
+            snapshot.Identity.DisplayName);
+    }
+
     private sealed class MinimumRandomSource : IRandomSource
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class GodotActorRestoreProfileResolver : IRuntimeActorRestoreProfileResolver
+    {
+        public static GodotActorRestoreProfileResolver Instance { get; } = new();
+
+        public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request)
+        {
+            bool isVesselOwner =
+                request.Actor.Identity.InstanceId == request.Session.PartyRoster.Owner.InstanceId &&
+                request.Actor.Identity.ActorKindId == StandardProgressionIds.Vessel;
+            return isVesselOwner
+                ? new RuntimeActorRestoreProfile(
+                    RuntimeStatSourceKind.ActiveHostedEntity,
+                    MissingHostedEntityBehavior.RejectStatResolution)
+                : new RuntimeActorRestoreProfile(
+                    RuntimeStatSourceKind.Actor,
+                    MissingHostedEntityBehavior.UseActorBaseStats);
+        }
     }
 
     private sealed class FirstSkillTargetPolicy : IRandomTargetSelectionPolicy

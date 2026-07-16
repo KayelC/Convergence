@@ -79,7 +79,9 @@ public sealed class GodotReferenceConsumerBoundaryTests
             "CatalogBattleActorFactory",
             "BattleActionExecutor",
             "BattleEncounterRunner",
+            "RuntimeSessionRestoreService",
             "RuntimeRulesetPolicyFactoryRegistry.CreateStandard()",
+            "GODOT_SAVE_REJECTION_OK",
             "CONVERGENCE_GODOT_SMOKE_OK"
         ];
         Assert.All(rootTokens, token => Assert.Contains(token, rootSource, StringComparison.Ordinal));
@@ -90,7 +92,10 @@ public sealed class GodotReferenceConsumerBoundaryTests
         Assert.Contains("IBattleEncounterEventSink", ports, StringComparison.Ordinal);
         Assert.Contains("Dictionary<RuntimeInstanceId, Node>", ports, StringComparison.Ordinal);
         Assert.Contains("System.Text.Json", save, StringComparison.Ordinal);
-        Assert.Contains("RuntimeSaveValidator", save, StringComparison.Ordinal);
+        Assert.Contains("IRuntimeSessionRestoreService", save, StringComparison.Ordinal);
+        Assert.Contains("restoreService.Restore(snapshot, catalog)", save, StringComparison.Ordinal);
+        Assert.DoesNotContain("actorFactory.Create", save, StringComparison.Ordinal);
+        Assert.DoesNotContain("actorFactory.Restore", save, StringComparison.Ordinal);
         Assert.DoesNotContain("Convergence.DemoHost", rootSource, StringComparison.Ordinal);
     }
 

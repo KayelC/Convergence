@@ -280,6 +280,13 @@ restore it through `IRuntimeSessionRestoreService`. Return live actors and scene
 metadata only on aggregate success, and add a failure-path smoke/contract test
 proving invalid aggregate state exposes no actors.
 
+**Resolution:** corrected. The Godot codec now decodes complete actor and
+canonical roster snapshots without creating live actors, then delegates only
+to `IRuntimeSessionRestoreService`. The real Godot 4.7.1 smoke composes and
+saves a Vessel with an Active Hosted Entity, restores the source before the
+Vessel, and reports `aggregate_restore=true`. A malformed owner-reference smoke
+returns typed aggregate diagnostics with `actors_exposed=0`.
+
 ### L1. Direct catalog actor restoration omits pending-skill catalog and provenance checks
 
 **Invariant:** a public actor restore result should not contain a pending skill

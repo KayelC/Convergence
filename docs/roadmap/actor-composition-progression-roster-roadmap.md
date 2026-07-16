@@ -672,6 +672,11 @@ outside the selected policy.
 progression/stat/resource source precondition. Direct and composed growth
 transactions reject stale or repeated results before mutation.
 
+**M5 correction:** the real Godot codec now decodes complete host-owned actor
+and party snapshots before invoking `IRuntimeSessionRestoreService`. Its
+headless smoke proves source-first Vessel restoration and proves malformed
+aggregate state exposes no live session.
+
 ## Expected File Ownership
 
 Likely Framework files to change:

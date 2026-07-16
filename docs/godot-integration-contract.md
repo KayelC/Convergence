@@ -52,8 +52,8 @@ context only after the aggregate restore result succeeds, using
 Restoration validates the complete aggregate, resolves actor restore profiles,
 restores an Active Hosted Entity before its dependent Vessel, and recomposes
 the Vessel from restored source state. Rejection returns diagnostics and no
-partial live session. Save contract v7 requires an explicit host-supplied
-migration step.
+partial live session. Any non-current save contract requires an explicit
+host-supplied migration path.
 
 The framework does not prescribe JSON, binary data, Godot `Resource`, save slots, cloud storage, or migration UI. `Convergence.DemoHost` uses host-owned `System.Text.Json` only as a portability example.
 
@@ -70,7 +70,13 @@ Two layers guard the integration boundary.
 - map runtime IDs to host scene handles;
 - round-trip actor and field snapshots through host-owned storage.
 
-`samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference consumer. Its noninteractive smoke scene reads the canonical Training Annex pack through `Godot.FileAccess`, maps framework runtime IDs to actual `Node` instances, selects and executes a typed action, consumes an ordered encounter stream, and round-trips a host-owned JSON save before framework validation.
+`samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference
+consumer. Its noninteractive smoke scene reads the canonical Training Annex
+pack through `Godot.FileAccess`, maps framework runtime IDs to actual `Node`
+instances, selects and executes a typed action, consumes an ordered encounter
+stream, and decodes a host-owned JSON save before handing the complete
+aggregate to `IRuntimeSessionRestoreService`. It proves source-first Active
+Hosted Entity restoration and proves a rejected aggregate exposes no actors.
 
 ```powershell
 dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj
