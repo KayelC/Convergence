@@ -120,18 +120,27 @@
       "id": "typed_action_and_effect_execution",
       "mechanics": {
         "state": "existing_unreviewed",
-        "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
-        "reason": "The earlier owner-confirmed page remains useful, but stat-modifier application and meaningful-success rules must be revised after the approved three-policy family is implemented."
+        "documents": [
+          "docs/mechanics/actions-targeting-and-effects.md",
+          "docs/mechanics/stat-modifier-policies.md"
+        ],
+        "reason": "The action page remains useful and the confirmed modifier policies now have a player-facing design record, but execution and meaningful-success claims require source review after M1 integration."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
-        "documents": ["docs/developer-guide/typed-actions-and-effects.md"],
-        "reason": "The existing integration guide covers stable action and inventory authority, but does not yet document explicit modifier-policy selection, custom policies, or retained-state compatibility."
+        "documents": [
+          "docs/developer-guide/typed-actions-and-effects.md",
+          "docs/developer-guide/stat-modifier-policies.md"
+        ],
+        "reason": "The guides record action authority and the confirmed modifier composition boundary, but timed policies, authored selection, and effect integration remain pending implementation and source review."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/technical/typed-action-and-effect-execution.md"],
-        "reason": "The technical reference remains accurate for authorization and transactions, but must be re-reviewed after one canonical modifier authority replaces direct aggregate mutation."
+        "documents": [
+          "docs/technical/typed-action-and-effect-execution.md",
+          "docs/technical/stat-modifier-policy-runtime.md"
+        ],
+        "reason": "The technical references distinguish implemented action authority from the confirmed modifier runtime design, but require re-review after one canonical modifier authority replaces direct aggregate mutation."
       }
     },
     {
@@ -174,18 +183,24 @@
       "id": "status_and_passive_lifecycle",
       "mechanics": {
         "state": "existing_unreviewed",
-        "documents": ["docs/mechanics/status-passives-and-knowledge.md"],
-        "reason": "Lifecycle behavior exists but still requires event-by-event owner confirmation."
+        "documents": [
+          "docs/mechanics/status-passives-and-knowledge.md",
+          "docs/mechanics/stat-modifier-policies.md"
+        ],
+        "reason": "The modifier clocks and reserve rules are owner-confirmed, while the remaining ailment and passive lifecycle still requires event-by-event review."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Lifecycle composition, custom handlers, and presentation need an integration guide."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/stat-modifier-policies.md"],
+        "reason": "Modifier lifecycle composition and host scheduling are documented as confirmed design; ailment/passive handlers and complete presentation guidance remain to be documented and reviewed."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Atomic lifecycle mutation, duration ticking, and cleanup ordering need a reviewed technical page."
+        "documents": [
+          "docs/gameplay-systems.md",
+          "docs/technical/stat-modifier-policy-runtime.md"
+        ],
+        "reason": "Modifier lifecycle authority, clocks, and cleanup are recorded as confirmed design; complete ailment/passive atomicity and ordering still need a dedicated source-reviewed reference."
       }
     },
     {

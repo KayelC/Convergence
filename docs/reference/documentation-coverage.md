@@ -19,18 +19,22 @@ documentation completed an earlier review, but has returned to
 `existing_unreviewed` after the source review and owner decision that expanded
 stat modifiers into three supplied lifecycle policies. It will be reviewed
 again against the implemented family rather than preserved as stale authority.
-Other subsystem entries remain unreviewed until they complete the same process.
+The approved persistent, timed-exclusive, and timed-contribution designs now
+have mechanics, developer, and technical records. Those records remain
+`existing_unreviewed` until the timed policies, integration, persistence, and
+source review are complete. Other subsystem entries remain unreviewed until
+they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
 The documentation matrix currently records 75 audience entries: 11 reviewed,
-38 existing_unreviewed, 19 missing, and 7 not_applicable.
+39 existing_unreviewed, 18 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
 | `reviewed` | 11 |
-| `existing_unreviewed` | 38 |
-| `missing` | 19 |
+| `existing_unreviewed` | 39 |
+| `missing` | 18 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

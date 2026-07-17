@@ -82,8 +82,15 @@ infer behavior from names or descriptions.
 
 ## Buff And Debuff Stages
 
-**Framework rule:** the supplied stage domain is `-4` through `+4`. Each
-magnitude has a distinct effect.
+Convergence supplies multiple optional modifier-lifecycle policies. Persistent
+stages and timed contributions use configurable signed bounds with a reference
+domain of `-4` through `+4`. Timed-exclusive signals use only `--`, `-`, neutral,
+`+`, and `++`, represented internally as `-2..+2`. Their application, timing,
+and removal rules are defined in
+[Stat Modifier Policies](stat-modifier-policies.md).
+
+**Framework rule:** when the supplied scaling table receives a stage in its
+supported domain, each magnitude has a distinct effect.
 
 | Stage | -4 | -3 | -2 | -1 | 0 | +1 | +2 | +3 | +4 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|

@@ -198,6 +198,12 @@ actions report `None`; successful skills and basic attacks carry their typed
 turn-economy result; guard, item, pass, roster, and host-mediated commands use
 their command-specific turn contract.
 
+The replacement authority for stat-stage application and duration is specified
+in [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md).
+That reference distinguishes current code from confirmed future invariants;
+M1-5 is the point at which this action pipeline must stop using the old
+aggregate mutation path.
+
 ## Source And Test Evidence
 
 Primary source:

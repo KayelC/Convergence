@@ -24,9 +24,14 @@ Technical pages focus on:
 - [Typed Action And Effect Execution](typed-action-and-effect-execution.md):
   action authorization, assessment ownership, prepared targets, skill costs,
   item reservations, ordered effects, and actor transaction boundaries.
+- [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md):
+  immutable policy state, signal transitions, contribution projection,
+  lifecycle clocks, boundary ordering, and persistence requirements.
 
-Both references above have completed collaborative review. Other subsystem
-references remain tracked as `existing_unreviewed` or `missing` in the
+The actor reference has completed collaborative review. Typed action/effect and
+stat modifier references remain `existing_unreviewed` while the confirmed
+policy family is implemented and source-reviewed. Other subsystem references
+remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New technical pages must follow the

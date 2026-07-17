@@ -11,9 +11,10 @@ Convergence is modular. A game may omit an optional module, replace an injected 
 The documents describe the current supported contracts, not every possible JRPG design. DemoHost and Training Annex are examples rather than mandatory game rules.
 
 Documentation maturity is tracked per capability and audience. Actor,
-progression, party/roster, and typed action/effect rules have completed
-collaborative review; other pages remain `existing_unreviewed` until they
-complete the process in the
+progression, and party/roster rules have completed collaborative review. Typed
+action/effect documentation is being re-reviewed while the confirmed
+stat-modifier policy family is implemented; other pages remain
+`existing_unreviewed` until they complete the process in the
 [Documentation Design Pattern](../documentation-design-pattern.md).
 
 ## Rule Index
@@ -26,6 +27,7 @@ complete the process in the
 6. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
 7. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
 8. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
+9. [Stat Modifier Policies](stat-modifier-policies.md)
 
 ## Reading A Result
 

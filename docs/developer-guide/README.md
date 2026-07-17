@@ -23,9 +23,14 @@ Developer guides focus on:
 - [Typed Actions And Effects](typed-actions-and-effects.md): canonical action
   composition, authorization, assess/present/execute flow, item reservations,
   cancellation, results, and host-mediated work.
+- [Stat Modifier Policies](stat-modifier-policies.md): modifier authority,
+  supplied policy models, counted lifecycle clocks, boundary sequences,
+  removal, and Godot responsibilities.
 
-Both guides above have completed collaborative review. Other subsystem guides
-remain tracked as `existing_unreviewed` or `missing` in
+The actor guide has completed collaborative review. Typed action/effect and stat
+modifier guidance remains `existing_unreviewed` while the confirmed policy
+family is implemented and verified. Other subsystem guides remain tracked as
+`existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New guides must follow the

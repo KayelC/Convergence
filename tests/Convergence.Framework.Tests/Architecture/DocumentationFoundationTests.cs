@@ -143,6 +143,53 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void StatModifierDocumentation_PreservesConfirmedSignalsAndClockEdges()
+    {
+        string decision = File.ReadAllText(
+            RepositoryPath("docs", "decisions", "stat-modifier-policy-family.md"));
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "stat-modifier-policies.md"));
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "stat-modifier-policy-runtime.md"));
+
+        string[] exclusiveTokens =
+        [
+            "| `-2` | `--` | strong negative change |",
+            "| `+2` | `++` | strong positive change |",
+            "| `++` | `+` | rejected | unchanged; reason is already in effect |",
+            "| `++` | `-` | `+` | retain the stronger existing effect's remaining duration |",
+            "| `+` | `--` | `-` | use the stronger incoming effect's full duration |",
+            "must not consume a cost, item, action, or turn"
+        ];
+        Assert.All(exclusiveTokens, token => Assert.Contains(token, decision, StringComparison.Ordinal));
+
+        string[] contributionTokens =
+        [
+            "refreshes the oldest retained contribution",
+            "Positive and negative contributions otherwise coexist and net",
+            "application such as `+2` creates one `+2` contribution"
+        ];
+        Assert.All(contributionTokens, token => Assert.Contains(token, decision, StringComparison.Ordinal));
+
+        string[] clockTokens =
+        [
+            "A committed attack, skill, item, guard, pass, forced action, or skipped action",
+            "Cancelling command selection before commitment does not.",
+            "A bonus action that continues the current turn window does not advance",
+            "The same turn completes -> modifier remains at 3",
+            "SuspendWhileReserve"
+        ];
+        Assert.All(clockTokens, token =>
+            Assert.True(
+                mechanics.Contains(token, StringComparison.Ordinal) ||
+                decision.Contains(token, StringComparison.Ordinal),
+                $"Missing confirmed clock rule '{token}'."));
+
+        Assert.Contains("event ID + positive monotonic boundary sequence", technical, StringComparison.Ordinal);
+        Assert.Contains("Applied in this exact boundary?", technical, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");

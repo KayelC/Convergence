@@ -15,6 +15,7 @@ This directory is the active documentation authority for Convergence Framework.
 5. [Architecture](architecture.md): dependency direction and module responsibilities.
 6. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
 7. [Documentation Coverage](reference/documentation-coverage.md): honest audience-by-capability documentation status.
+8. [Stat Modifier Policies](mechanics/stat-modifier-policies.md): confirmed persistent, timed-exclusive, and independently timed modifier rules.
 
 ## Documentation Audiences
 

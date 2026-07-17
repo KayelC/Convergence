@@ -174,6 +174,11 @@ Do not expect the actor transaction to roll back file writes, scene changes,
 network calls, or other side effects performed by host/custom callbacks. Keep
 such work after accepted Framework results whenever possible.
 
+For stat-stage effects, also read
+[Stat Modifier Policies](stat-modifier-policies.md). That guide separates the
+implemented persistent policy from the confirmed timed designs and identifies
+the remaining action-integration checkpoint explicitly.
+
 ## Call Sequence
 
 ```mermaid

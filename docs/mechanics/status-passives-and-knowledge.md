@@ -24,7 +24,13 @@ Manual and automated encounters consume these outcomes through the same command 
 
 ## Duration Kinds
 
-Timed state can expire by actor turns, phase ticks, battle cleanup, or another authored duration contract. A duration can suspend while the actor is in reserve. The runtime tracks and validates ailment, stat-stage, charge, shield, Break, and affinity-override durations.
+Timed state can expire by actor turns, team phases, rounds, actions, battle
+cleanup, or another explicit lifecycle clock. A duration can suspend while the
+actor is in reserve. Stat-modifier clock boundaries and same-boundary
+application protection are defined in
+[Stat Modifier Policies](stat-modifier-policies.md); their runtime migration is
+tracked separately from existing ailment, charge, shield, Clean Break, and
+affinity-override duration handling.
 
 Reserve suspension prevents configured turn-end effects and ticking while the actor is not deployed. Cleanup scopes let a host request battle-end, swap, or field-transition removal without parsing status names.
 

@@ -123,6 +123,14 @@ Current checkpoints:
 | O1-IR-M1 | `open` | Complete M1-1 through M1-8 for the approved stat-modifier policy family. |
 | O1-DOC | `reopened` | Revise all three audience documents after policy implementation and complete a new owner-confirmed documentation review. |
 
+The owner confirmed the timed-exclusive signal arithmetic, rejection behavior,
+dominant-duration rule, independently timed rolling example, cap refresh,
+explicit lifecycle clocks, same-boundary protection, bonus-action handling,
+cancellation behavior, and reserve suspension on 17 July 2026. The mechanics,
+developer, and technical design records now preserve those decisions before
+runtime work continues. `O1-DOC` remains reopened because those records must be
+checked against the completed M1 implementation before promotion.
+
 The earlier
 [post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md)
 remains evidence for the original checkpoints, not proof that the expanded M1

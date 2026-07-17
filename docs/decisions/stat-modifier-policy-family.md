@@ -36,11 +36,15 @@ Convergence will supply three neutral reference implementations:
    - an application at the same-direction cap reports no state change.
 
 2. **Timed exclusive policy**
-   - one modifier contribution occupies a track;
+   - one modifier signal occupies a track;
+   - the supplied scale is `--`, `-`, neutral, `+`, and `++`;
    - the contribution has an explicit duration and tick event;
-   - same-direction and opposite-direction reapplication behavior are explicit
-     configuration, never an executor assumption;
-   - no independent stage stack is implied.
+   - equal same-direction application refreshes its duration;
+   - a stronger same-direction application replaces it with the stronger
+     signal and a fresh duration;
+   - a weaker same-direction application is rejected as already in effect;
+   - opposite signals offset one another arithmetically;
+   - no independent contribution stack is implied.
 
 3. **Timed contribution policy**
    - each uncapped application creates independently timed signed
@@ -52,6 +56,43 @@ Convergence will supply three neutral reference implementations:
    - a one-stage, three-turn application used once per turn can remain at three
       active stages because the oldest contribution expires as the newest is
       added.
+
+### Confirmed Timed-Exclusive Scale
+
+The supplied timed-exclusive policy presents five states:
+
+| Internal value | Player-facing signal | Meaning |
+|---:|:---:|---|
+| `-2` | `--` | strong negative change |
+| `-1` | `-` | negative change |
+| `0` | `~` | no stat change |
+| `+1` | `+` | positive change |
+| `+2` | `++` | strong positive change |
+
+Internal signed values provide deterministic arithmetic; games may present
+icons, arrows, words, or other signals instead of numbers.
+
+Reapplication follows these confirmed rules:
+
+| Existing | Incoming | Result | Duration result |
+|:---:|:---:|:---:|---|
+| `+` | `+` | `+` | reset to the incoming full duration |
+| `+` | `++` | `++` | incoming full duration |
+| `++` | `+` | rejected | unchanged; reason is already in effect |
+| `+` | `-` | `~` | removed |
+| `++` | `-` | `+` | retain the stronger existing effect's remaining duration |
+| `+` | `--` | `-` | use the stronger incoming effect's full duration |
+
+The negative side behaves symmetrically. Equal opposite strengths remove the
+track. When opposite strengths differ, the surviving signal keeps the duration
+of the effect whose magnitude prevailed. A rejected weaker application changes
+no state and must not consume a cost, item, action, or turn.
+
+Generic removal effects can clear positive, negative, selected-track, selected-
+contribution, or all modifier state. Targeting determines whether such an
+effect cleans negative state from allies, positive state from enemies, or some
+other game-authored combination. The Framework does not infer that purpose from
+a display name.
 
 ### Confirmed Rolling-Duration Example
 
@@ -77,6 +118,42 @@ expires, such as through additional actions from other actors or an authored
 effect that contributes more than one stage. The selected duration tick event
 defines the exact lifecycle boundary; it must advance every contribution from
 its own application point consistently.
+
+At a configured same-direction cap, another timed contribution does not create
+an unlimited invisible stack. It refreshes the oldest retained contribution of
+the same sign. Positive and negative contributions otherwise coexist and net
+together until their independent durations expire. An authored multi-stage
+application such as `+2` creates one `+2` contribution with one timer.
+
+### Confirmed Duration Clocks
+
+Duration is measured by an explicit lifecycle clock, not by presentation or an
+assumption that every battle uses the same scheduler. Supplied clock meanings
+include:
+
+- owner-turn completion: once after the affected actor completes one turn
+  window;
+- team-phase completion: once after the affected actor's team completes a
+  phase;
+- round completion: once after all scheduled teams or actors complete a round;
+- action completion: once after each committed action, including bonus actions.
+
+The supplied timed-policy default is owner-turn completion. A bonus action that
+continues the same turn window does not advance this clock again. A genuinely
+new scheduled turn does. A cancelled command does not complete a turn window;
+a committed pass, guard, forced action, or skipped action does. Phase-based
+games may select the team-phase clock instead.
+
+Every counted duration identifies its clock explicitly. Reserve suspension
+uses the duration's authored `SuspendWhileReserve` value rather than a hidden
+policy default.
+
+Each runtime clock occurrence has a monotonic boundary sequence. Applying a
+modifier during the same matching boundary stamps that boundary on the retained
+contribution, so completion of that boundary cannot immediately decrement the
+new effect. An effect applied before the target's next boundary does decrement
+after the target completes that boundary. This distinction protects both
+self-applied effects and effects applied by another actor.
 
 One selected policy owns assessment, application, ticking, removal, cleanup,
 meaningful-success reporting, retained-state compatibility, and policy events.
@@ -105,23 +182,17 @@ Framework-owned services validate and atomically commit accepted transitions.
 - Content and ruleset binding select the policy explicitly; missing or invalid
   selection cannot fall back silently.
 
-## Decisions Required Before Reference Defaults Are Final
+## Confirmed Reference Defaults
 
-The architecture is confirmed. These policy-specific defaults remain explicit
-owner checkpoints rather than inferred behavior:
+The project owner confirmed the timed-exclusive signal arithmetic,
+same-direction refresh/upgrade/rejection rules, dominant-effect duration rule,
+timed-contribution cap refresh, signed contribution coexistence, one-timer
+multi-stage representation, explicit duration clocks, same-boundary protection,
+and authored reserve suspension on 2026-07-17.
 
-- whether timed-exclusive same-direction reapplication rejects, refreshes, or
-  replaces;
-- how timed-exclusive opposite-direction application behaves;
-- whether a capped timed contribution rejects or refreshes the oldest matching
-  contribution;
-- whether opposite signed timed contributions coexist and net together or
-  cancel in deterministic order;
-- whether reserve deployment suspends each supplied timed policy by default.
-
-The roadmap requires these answers before their corresponding policy commit.
-Custom implementations may support other coherent choices regardless of the
-supplied defaults.
+Custom implementations may support other coherent choices. They must still use
+the shared immutable authority, state validation, typed rejection, lifecycle,
+and persistence contracts rather than bypassing them.
 
 ## Alternatives
 

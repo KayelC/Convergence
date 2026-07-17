@@ -42,8 +42,8 @@ and reviews are complete.
 | M1-0 | `complete` | Confirm the policy-family decision, audit architectural feasibility, create this roadmap, and reopen inaccurate maturity/documentation claims. | `docs: define stat modifier policy family` |
 | M1-1 | `complete` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
 | M1-2 | `complete` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
-| M1-3 | `pending` | Confirm reapplication defaults, then implement and test the timed exclusive reference policy. | `runtime: add timed exclusive modifiers` |
-| M1-4 | `pending` | Confirm cap/opposition defaults, then implement and test independently timed contributions. | `runtime: add timed modifier contributions` |
+| M1-3 | `pending` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
+| M1-4 | `pending` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
 | M1-5 | `pending` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `pending` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `pending` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
@@ -144,15 +144,14 @@ inventory execution through the new authority.
 
 ## M1-3: Timed Exclusive Policy
 
-Before implementation, the project owner confirms:
+The confirmed supplied policy uses a five-signal `--`, `-`, neutral, `+`, `++`
+scale. Equal same-direction application refreshes duration, a stronger signal
+upgrades with a fresh duration, a weaker signal is rejected as already in
+effect, and opposite signals offset arithmetically. The surviving side owns the
+timer: existing duration when the existing signal remains dominant, incoming
+duration when the incoming signal becomes dominant, and no timer at neutral.
 
-- same-direction reapplication behavior: reject, refresh, or replace;
-- opposite-direction behavior;
-- whether the supplied default always resolves to one magnitude or honors an
-  authored multi-stage magnitude;
-- reserve suspension default.
-
-The implementation then proves:
+The implementation proves:
 
 - at most one contribution per track;
 - one explicit duration and tick event;
@@ -160,6 +159,13 @@ The implementation then proves:
 - deterministic reapplication and expiry;
 - exact applicability and meaningful-success results;
 - restore compatibility and cleanup.
+
+It also extends retained contribution state and requests with the typed
+lifecycle-boundary sequence needed to prevent an application from decrementing
+during the same owner turn, phase, round, or action boundary in which it was
+created. The supplied clock is owner-turn completion; counted durations retain
+their explicit event ID, and authored `SuspendWhileReserve` remains
+authoritative.
 
 Configuration variants belong inside this coherent policy only when they do not
 change the fundamental one-contribution model.
@@ -175,12 +181,11 @@ The confirmed core behavior is:
 - one-stage applications on consecutive turns form the documented rolling
   duration window rather than refreshing one shared timer.
 
-Before implementation, the project owner confirms:
-
-- capped reapplication behavior;
-- opposite-sign coexistence or cancellation order;
-- multi-stage contribution representation;
-- reserve suspension default.
+At the same-direction aggregate cap, application refreshes the oldest retained
+contribution of that sign instead of adding an invisible contribution. Opposite
+signs coexist and net together. A multi-stage application is one signed
+contribution with one duration. Reserve ticking follows each contribution's
+authored `SuspendWhileReserve` value.
 
 Tests include the exact three-turn rolling example, multiple applications in
 one phase, stronger multi-stage applications, both signs, both bounds, expiry
