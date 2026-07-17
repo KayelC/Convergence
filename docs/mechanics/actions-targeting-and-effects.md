@@ -6,6 +6,13 @@ The clean battle action surface includes basic attack, skill, item, guard, pass,
 
 **Framework rule:** every action is assessed before execution. Assessment and execution use the same typed command and resolved targets. A rejected or cancelled assessment causes no cost, inventory consumption, effect mutation, or turn consumption.
 
+**Confirmed correction pending implementation:** the canonical battle-action
+facade will reject a skill that is not in the actor's authorized equipped action
+loadout and a basic attack that is not the actor's resolved basic-attack profile.
+The resolved profile may come from equipment, a natural attack, or another
+explicit game policy. Hosts choose among authorized actions; they do not grant
+authority by constructing arbitrary definitions.
+
 ## Targeting
 
 Authored targeting defines relation, selection style, and optional count. Relations identify allies, opponents, self, or no target. Selection may be explicit, automatic, all, or random according to the definition.
@@ -36,6 +43,13 @@ Item use follows reservation semantics:
 2. Framework executes the typed item effects.
 3. Consumption commits only when at least one applicable effect succeeds meaningfully.
 4. Failure, cancellation, unavailability, or no effect rolls the reservation back.
+
+**Confirmed correction pending implementation:** an item command represents one
+use of one owned consumable. The canonical battle-action facade will require an
+inventory port, reserve exactly one matching item, validate the returned
+reservation, and reject without actor mutation when that contract is absent or
+invalid. Direct `ItemExecutor` use is a lower-level effect operation, not an
+owned-inventory transaction.
 
 Healing a full resource, curing no matching ailment, reviving a living target, setting an unchanged value, or removing an absent status is treated as known no effect. A multi-target item consumes once when at least one target receives a meaningful result.
 

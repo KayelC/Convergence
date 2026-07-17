@@ -1,0 +1,99 @@
+# Decision: Battle Action Ownership And Inventory Authority
+
+Status: confirmed
+Date: 2026-07-17
+
+## Context
+
+The typed battle-action facade currently accepts item commands without an
+inventory port and accepts caller-supplied skill definitions and basic-attack
+profiles without proving that the actor owns them. Those paths make a host UI,
+AI adapter, or script responsible for gameplay authorization that belongs in
+the reusable framework.
+
+The public item command also accepts arbitrary positive quantities even though
+the execution result describes one item use as `ConsumeOne`.
+
+## Decision
+
+### Inventory-Backed Item Actions
+
+An `ItemBattleActionCommand` represents exactly one use of one owned consumable.
+Execution through the canonical battle-action facade requires an
+`IItemActionInventory` port.
+
+The Framework must:
+
+1. reject before mutation when no inventory port is supplied;
+2. reserve exactly one unit;
+3. verify that the returned reservation is live, uncompleted, and belongs to
+   the requested item and quantity;
+4. execute staged typed effects;
+5. commit the reservation only when the item reports meaningful success; and
+6. roll back the reservation and publish no actor mutation when execution or
+   commitment is rejected.
+
+`ItemExecutor` may remain a lower-level typed-effect service. Calling it directly
+does not constitute an inventory transaction and must not be documented as the
+canonical owned-item action path.
+
+### Actor Action Authorization
+
+The Framework, not the presentation host, is the canonical authority for which
+skills and basic attacks an actor may execute.
+
+- A skill action must reference a skill in the actor's authorized equipped
+  action loadout.
+- A basic attack must reference the actor's resolved basic-attack profile.
+- A resolved basic attack may originate from equipment, an authored natural
+  attack, or another explicit game policy. Equipment is not mandatory.
+- A host chooses among authorized actions and supplies presentation and target
+  input. It cannot make an action legal by constructing an arbitrary typed
+  definition.
+- Temporary grants, scripted actions, and other exceptions require an explicit
+  framework-recognized authorization path or a host-mediated action; they are
+  not inferred from names or display text.
+
+## Alternatives
+
+- Trusting every host to filter actions was rejected because a Godot UI, AI
+  adapter, or script error could bypass actor ownership rules.
+- Allowing an inventory-less item command to mutate actors and asking the host
+  to consume afterward was rejected because actor and inventory mutation would
+  not be atomic.
+- Treating the item command quantity as a batch-use count was rejected because
+  one action executes the authored effects once and the public result reports
+  `ConsumeOne`.
+- Requiring every basic attack to come from a weapon was rejected because games
+  may use natural or policy-supplied attacks.
+
+## Consequences
+
+- The current action facade requires a focused breaking correction before Order
+  1 documentation can be promoted.
+- Item commands become one-use commands and no longer expose arbitrary
+  quantities.
+- The action request must expose enough canonical actor-action authority to
+  validate skill definitions and basic-attack profiles without trusting host
+  display choices.
+- Existing clean hosts must build commands from the actor's authorized action
+  surface and supply inventory for item actions.
+- Failed authorization and reservation validation return typed diagnostics and
+  consume no item, resource, effect mutation, or turn.
+
+## Affected Documentation And Evidence
+
+- [Actions, Targeting, And Effects](../mechanics/actions-targeting-and-effects.md)
+- [Gameplay Systems](../gameplay-systems.md)
+- [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md)
+- [Order 1 Source Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
+- [Developer Guide Index](../developer-guide/README.md), pending the Order 1
+  integration guide
+- [Technical Documentation Index](../technical/README.md), pending the Order 1
+  execution reference
+
+Implementation evidence must include focused tests for missing inventory,
+exactly-one consumption, malformed reservations, unowned skills, definition
+substitution, valid natural/equipment basic attacks, and host-mediated
+exceptions.
+

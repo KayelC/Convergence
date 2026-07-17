@@ -69,12 +69,15 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "The canonical item-action facade does not yet require and validate an exactly-one inventory reservation.",
+        "The canonical action facade does not yet validate skill and resolved basic-attack authority against the actor loadout."
+      ]
     },
     {
       "id": "combat_resolution",

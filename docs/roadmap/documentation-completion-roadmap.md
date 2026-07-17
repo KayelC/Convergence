@@ -90,6 +90,31 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
+## Active Order 1 Review
+
+The source-based
+[Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
+records the current correction and decision backlog. Order 1 remains active and
+its documentation matrix entries remain unreviewed.
+
+The project owner approved both authority decisions on 17 July 2026. Their
+normative record is
+[Battle Action Ownership And Inventory Authority](../decisions/battle-action-ownership-and-inventory-authority.md).
+
+Current checkpoints:
+
+| Checkpoint | State | Required outcome |
+|---|---|---|
+| O1-M1 | `open` | Make one item action consume exactly one inventory unit. |
+| O1-M2 | `open` | Validate reservation identity, quantity, and lifecycle state. |
+| O1-D1 | `approved_pending_implementation` | Require an inventory port and exactly-one reservation for item commands. |
+| O1-D2 | `approved_pending_implementation` | Make Framework validate skill and resolved basic-attack authority. |
+| O1-DOC | `blocked_by_corrections` | Correct mechanics prose and add developer and technical documents after behavior is confirmed. |
+
+This active record does not promote implementation or documentation state. Code
+corrections receive separate focused commits before the documentation review
+resumes against corrected source.
+
 ## Deferred Documentation
 
 Two capability IDs describe extension seams rather than completed mechanics:

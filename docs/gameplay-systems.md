@@ -33,6 +33,12 @@ skill or cancelling the level.
 
 Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape, Hosted Entity swaps, Companion deployment/recall, and host-mediated actions. Skills and items share targeting, condition evaluation, ordered effects, diagnostics, and transaction-safe inventory decisions. Behavior comes from typed definitions, not display text.
 
+The owner-approved Order 1 correction is still pending implementation: the
+canonical battle-action facade must require an exactly-one inventory
+reservation for item commands and must validate skills and resolved basic
+attacks against the actor's authorized action surface. Until those boundaries
+are implemented and re-reviewed, this capability remains `partial`.
+
 ## Combat And Turn Economy
 
 Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Action Token is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.

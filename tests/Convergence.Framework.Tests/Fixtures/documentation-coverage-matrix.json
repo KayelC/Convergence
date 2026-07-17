@@ -121,7 +121,7 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
-        "reason": "The action model exists but still requires collaborative rule confirmation."
+        "reason": "Inventory and actor-action authority are confirmed; implementation corrections and the remaining collaborative mechanics review are still pending."
       },
       "developerGuide": {
         "state": "missing",

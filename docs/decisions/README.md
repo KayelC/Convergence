@@ -48,3 +48,4 @@ records must link every affected mechanics, developer, and technical page.
 ## Confirmed Decisions
 
 - [Actor Composition, Progression, And Rosters](actor-composition-progression-and-rosters.md)
+- [Battle Action Ownership And Inventory Authority](battle-action-ownership-and-inventory-authority.md)

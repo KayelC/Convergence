@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v9 restoration. Its
@@ -24,6 +24,11 @@ independent completion review found six reachable integration gaps; all are
 corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full
 deterministic replay.
+
+Typed action and effect execution is temporarily partial after the Order 1
+source review confirmed two reachable authority gaps. The approved correction
+requires exactly-one inventory reservations for item actions and Framework-owned
+validation of actor skill and basic-attack authority.
 
 ## Authority
 
