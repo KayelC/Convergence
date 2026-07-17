@@ -2791,6 +2791,7 @@ Convergence.Execution.BattleActionDiagnosticCode.EffectExecutorMissing = 4 -> Co
 Convergence.Execution.BattleActionDiagnosticCode.ExecutionFailed = 9 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.HostActionRequired = 7 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ItemCommitFailed = 11 -> Convergence.Execution.BattleActionDiagnosticCode
+Convergence.Execution.BattleActionDiagnosticCode.ItemInventoryRequired = 14 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ItemRejected = 1 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ItemReservationFailed = 10 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ItemReservationInvalid = 13 -> Convergence.Execution.BattleActionDiagnosticCode

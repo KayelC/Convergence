@@ -386,6 +386,33 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task ItemAction_RequiresInventoryPortBeforeExecution()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        BattleActionExecutionRequest request = Request(
+            new ItemBattleActionCommand(medicine, [target.InstanceId]),
+            actor,
+            [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Contains(assessment.Diagnostics, diagnostic =>
+            diagnostic.Code == BattleActionDiagnosticCode.ItemInventoryRequired);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Empty(result.Effects);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.False(result.ItemConsumptionCommitted);
+    }
+
+    [Fact]
     public async Task ItemAction_DoesNotReserveWhenAssessmentRejects()
     {
         BattleActionExecutor executor = Executor();

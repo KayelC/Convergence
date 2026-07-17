@@ -52,7 +52,8 @@ public enum BattleActionDiagnosticCode
     ItemReservationFailed,
     ItemCommitFailed,
     ItemRollbackFailed,
-    ItemReservationInvalid
+    ItemReservationInvalid,
+    ItemInventoryRequired
 }
 
 public enum BattleActionEventKind
@@ -637,12 +638,17 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             request.Environment,
             command.SelectedTargetIds));
         List<BattleActionDiagnostic> diagnostics = item.Diagnostics.Select(ToActionDiagnostic).ToList();
-        if (request.ItemInventory is not null &&
-            !request.ItemInventory.HasAvailable(command.Item.Id, ItemUseQuantity))
+        if (request.ItemInventory is null)
+        {
+            diagnostics.Add(new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemInventoryRequired,
+                "Item actions require an inventory reservation port."));
+        }
+        else if (!request.ItemInventory.HasAvailable(command.Item.Id, ItemUseQuantity))
         {
             diagnostics.Add(new BattleActionDiagnostic(
                 BattleActionDiagnosticCode.ItemUnavailable,
-                $"Item '{command.Item.Id}' is not available in the requested quantity."));
+                $"Item '{command.Item.Id}' is not available."));
         }
 
         return CreateAssessment(
