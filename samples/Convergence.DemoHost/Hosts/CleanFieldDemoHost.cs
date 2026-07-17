@@ -120,14 +120,14 @@ internal sealed class CleanFieldDemoHost
             RuntimeInstanceId.Parse("field_medic"),
             Party,
             5,
-            IsDeployed: false,
+            IsDeployed: true,
             ContentId.Parse("clean_field_demo")));
         CatalogBattleActorCreationResult allyResult = factory.Create(new CatalogBattleActorCreationRequest(
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
             RuntimeInstanceId.Parse("field_ally"),
             Party,
             5,
-            IsDeployed: false,
+            IsDeployed: true,
             ContentId.Parse("clean_field_demo")));
         if (!medicResult.IsSuccess || !allyResult.IsSuccess)
         {

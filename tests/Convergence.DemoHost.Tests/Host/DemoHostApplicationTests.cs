@@ -51,6 +51,25 @@ public sealed class DemoHostApplicationTests
     }
 
     [Fact]
+    public async Task CleanFieldDemo_ProvesTargetedFieldEffectsInsteadOfOnlyPrintingSuccessFooter()
+    {
+        using var output = new StringWriter();
+
+        int exitCode = await DemoHostApplication.RunAsync(
+            ["--clean-field-demo"],
+            TextReader.Null,
+            output);
+
+        string transcript = output.ToString();
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Recovery Pulse: Executed; restored 25 HP.", transcript, StringComparison.Ordinal);
+        Assert.Contains("Medicine: Executed; consume=ConsumeOne", transcript, StringComparison.Ordinal);
+        Assert.Contains("Dis-Poison: Executed; consume=ConsumeOne", transcript, StringComparison.Ordinal);
+        Assert.Contains("Revival Bead: Executed; consume=ConsumeOne", transcript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Recovery Pulse: Rejected", transcript, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TrainingAnnexPlay_AcceptsHostInputAndCanExitImmediately()
     {
         using var input = new StringReader("10\n");
