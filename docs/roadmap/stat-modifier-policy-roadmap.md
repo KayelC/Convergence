@@ -155,6 +155,14 @@ Before implementation, the project owner confirms:
 Tests include the exact three-turn rolling example, multiple applications in
 one phase, stronger multi-stage applications, both signs, both bounds, expiry
 ordering, removal scopes, and save/restore in the middle of staggered timers.
+The regression must assert the complete post-application sequence from the
+[confirmed decision](../decisions/stat-modifier-policy-family.md#confirmed-rolling-duration-example):
+
+- resolved stages: `+1`, `+2`, `+3`, `+3`;
+- remaining-duration sets: `[3]`, `[2, 3]`, `[1, 2, 3]`, `[1, 2, 3]` after the
+  oldest contribution expires and the fourth is applied;
+- no shared-timer refresh;
+- `+4` remains reachable when enough contributions are active concurrently.
 
 ## M1-5: Canonical Runtime Integration
 

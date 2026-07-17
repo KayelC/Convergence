@@ -43,14 +43,40 @@ Convergence will supply three neutral reference implementations:
    - no independent stage stack is implied.
 
 3. **Timed contribution policy**
-   - each application creates or refreshes policy-defined signed contributions;
+   - each uncapped application creates independently timed signed
+     contributions;
    - each retained contribution has its own duration;
    - contributions tick and expire independently;
    - the resolved stage is derived from active contributions and configured
      bounds;
    - a one-stage, three-turn application used once per turn can remain at three
-     active stages because the oldest contribution expires as the newest is
-     added.
+      active stages because the oldest contribution expires as the newest is
+      added.
+
+### Confirmed Rolling-Duration Example
+
+The timed contribution policy is the approved hybrid staged-duration model. It
+must reproduce this exact example for one actor taking one action per turn. Each
+use applies `+1` to the same attack track and creates a separate three-turn
+contribution:
+
+| Turn | Contributions after due expiry and the new application | Resolved stage |
+|---:|---|---:|
+| 1 | first contribution: 3 turns remaining | `+1` |
+| 2 | first: 2; second: 3 | `+2` |
+| 3 | first: 1; second: 2; third: 3 | `+3` |
+| 4 | first expires; second: 1; third: 2; fourth: 3 | `+3` |
+
+The fourth application does not produce `+4` in this sequence, and it does not
+refresh the older contributions into one shared three-turn timer. The oldest
+contribution expires on its own schedule while the newest begins its own
+schedule.
+
+Stage `+4` remains reachable when four contributions become active before one
+expires, such as through additional actions from other actors or an authored
+effect that contributes more than one stage. The selected duration tick event
+defines the exact lifecycle boundary; it must advance every contribution from
+its own application point consistently.
 
 One selected policy owns assessment, application, ticking, removal, cleanup,
 meaningful-success reporting, retained-state compatibility, and policy events.

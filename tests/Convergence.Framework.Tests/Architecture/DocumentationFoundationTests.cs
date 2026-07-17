@@ -114,6 +114,35 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void StatModifierDecision_PreservesConfirmedRollingDurationExample()
+    {
+        string decision = File.ReadAllText(
+            RepositoryPath("docs", "decisions", "stat-modifier-policy-family.md"));
+        string roadmap = File.ReadAllText(
+            RepositoryPath("docs", "roadmap", "stat-modifier-policy-roadmap.md"));
+
+        string[] decisionTokens =
+        [
+            "## Confirmed Rolling-Duration Example",
+            "| 1 | first contribution: 3 turns remaining | `+1` |",
+            "| 2 | first: 2; second: 3 | `+2` |",
+            "| 3 | first: 1; second: 2; third: 3 | `+3` |",
+            "| 4 | first expires; second: 1; third: 2; fourth: 3 | `+3` |",
+            "The fourth application does not produce `+4`",
+            "Stage `+4` remains reachable"
+        ];
+        Assert.All(
+            decisionTokens,
+            token => Assert.Contains(token, decision, StringComparison.Ordinal));
+
+        Assert.Contains("`+1`, `+2`, `+3`, `+3`", roadmap, StringComparison.Ordinal);
+        Assert.Contains(
+            "`[3]`, `[2, 3]`, `[1, 2, 3]`, `[1, 2, 3]`",
+            roadmap,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");
