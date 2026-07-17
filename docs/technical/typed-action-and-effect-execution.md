@@ -15,11 +15,21 @@ the external host boundary.
 | `CatalogBattleActionAuthorizationPolicy` | equipped canonical skill identity and resolved basic-attack identity | item inventory and target legality |
 | `SkillExecutor` | active-skill availability, costs, targets, effects, skill turn outcome | actor loadout authority |
 | `ItemExecutor` | consumable usage, applicability, targets, effects, consumption decision | inventory ownership or quantity mutation |
+| `AutomatedBattleRunner` | exact selector/assessment identity, catalog-backed equipped skill authority, automated encounter execution | arbitrary skill grants or host-mediated actions |
 | `OrderedEffectExecutor` | authored order, conditions, failure policy, action-duration boundary | external callback rollback |
 | `RuntimeActorExecutionTransaction` | clone live actors and publish accepted staged state | inventory, scenes, files, network state |
 
 The lower-level skill and item executors remain public composition tools, but
 they are not equivalent to the complete actor-owned battle action.
+
+`AutomatedBattleRunner` is a specialized framework consumer of
+`SkillExecutor`. A selector may use a prepared skill assessment for scoring,
+but the runner accepts it only when its skill, actor, participant references,
+encounter environment, and resolved targets describe the exact current action.
+It then applies the same shared equipped/canonical catalog check used by
+`CatalogBattleActionAuthorizationPolicy` immediately before execution. Invalid
+selector output faults the encounter before command publication, costs, or
+effects.
 
 ## Assessment Ownership
 

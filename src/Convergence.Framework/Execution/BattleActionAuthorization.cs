@@ -158,28 +158,8 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
 
     private BattleActionAuthorizationResult AuthorizeSkill(
         RuntimeActorState actor,
-        SkillBattleActionCommand command)
-    {
-        if (!actor.HasSkill(command.Skill.Id))
-        {
-            return BattleActionAuthorizationResult.Rejected(
-                BattleActionAuthorizationDiagnosticCode.SkillNotEquipped,
-                $"Actor '{actor.InstanceId}' does not have skill '{command.Skill.Id}' equipped.");
-        }
-
-        if (!_skills.TryGetSkill(command.Skill.Id, out SkillDefinition? canonical) || canonical is null)
-        {
-            return BattleActionAuthorizationResult.Rejected(
-                BattleActionAuthorizationDiagnosticCode.SkillDefinitionMissing,
-                $"Equipped skill '{command.Skill.Id}' is not available from the authorization catalog.");
-        }
-
-        return ReferenceEquals(canonical, command.Skill)
-            ? BattleActionAuthorizationResult.Authorized
-            : BattleActionAuthorizationResult.Rejected(
-                BattleActionAuthorizationDiagnosticCode.SkillDefinitionSubstituted,
-                $"Skill '{command.Skill.Id}' is not the actor's canonical catalog definition.");
-    }
+        SkillBattleActionCommand command) =>
+        CatalogSkillActionAuthorization.Authorize(actor, command.Skill, _skills);
 
     private BattleActionAuthorizationResult AuthorizeBasicAttack(
         RuntimeActorState actor,
@@ -212,5 +192,38 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
             : BattleActionAuthorizationResult.Rejected(
                 BattleActionAuthorizationDiagnosticCode.BasicAttackTargetingMismatch,
                 $"Basic attack '{command.ActionId}' does not match the resolved targeting profile.");
+    }
+}
+
+internal static class CatalogSkillActionAuthorization
+{
+    public static BattleActionAuthorizationResult Authorize(
+        RuntimeActorState actor,
+        SkillDefinition skill,
+        ISkillDefinitionRepository skills)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(skill);
+        ArgumentNullException.ThrowIfNull(skills);
+
+        if (!actor.HasSkill(skill.Id))
+        {
+            return BattleActionAuthorizationResult.Rejected(
+                BattleActionAuthorizationDiagnosticCode.SkillNotEquipped,
+                $"Actor '{actor.InstanceId}' does not have skill '{skill.Id}' equipped.");
+        }
+
+        if (!skills.TryGetSkill(skill.Id, out SkillDefinition? canonical) || canonical is null)
+        {
+            return BattleActionAuthorizationResult.Rejected(
+                BattleActionAuthorizationDiagnosticCode.SkillDefinitionMissing,
+                $"Equipped skill '{skill.Id}' is not available from the authorization catalog.");
+        }
+
+        return ReferenceEquals(canonical, skill)
+            ? BattleActionAuthorizationResult.Authorized
+            : BattleActionAuthorizationResult.Rejected(
+                BattleActionAuthorizationDiagnosticCode.SkillDefinitionSubstituted,
+                $"Skill '{skill.Id}' is not the actor's canonical catalog definition.");
     }
 }

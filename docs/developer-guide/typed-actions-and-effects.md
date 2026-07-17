@@ -155,6 +155,14 @@ bypasses the actor-loadout authorization supplied by `BattleActionExecutor`.
 Use those lower-level services only when the caller deliberately owns those
 missing policy boundaries.
 
+The supplied `AutomatedBattleRunner` deliberately composes `SkillExecutor`, but
+does not trust its `IBattleActionSelector` as an authority. Before execution it
+requires the prepared assessment to match the exact current actor,
+participants, encounter environment, selected skill, and resolved targets. It
+also verifies that the skill is the equipped canonical definition from that
+`CatalogBattleActor`'s repository. A custom selector may rank legal actions; it
+cannot grant itself an arbitrary skill.
+
 ## Dispatch Host-Mediated Work
 
 Use a typed host-mediated command when an operation belongs to the application

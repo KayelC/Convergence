@@ -1423,6 +1423,162 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleRuntimeEventKind.BattleFaulted);
     }
 
+    [Fact]
+    public void Runner_RejectsAnUnequippedPreparedSkillBeforeMutationOrCommandPublication()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor enemy = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        SkillDefinition unequipped = Active("test.pack:unequipped_attack", DamageElement.Ice);
+        decimal playerSp = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHp = enemy.State.GetRequiredResource(Id("hp")).Current;
+        var selector = new DelegatingBattleActionSelector(request =>
+            PrepareSelection(executor, request, unequipped, unequipped));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("not authorized", result.FaultMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+    }
+
+    [Fact]
+    public void Runner_RejectsASubstitutedEquippedSkillDefinitionBeforeMutation()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor enemy = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        SkillDefinition substituted = player.ActiveSkills[0] with { };
+        decimal playerSp = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHp = enemy.State.GetRequiredResource(Id("hp")).Current;
+        var selector = new DelegatingBattleActionSelector(request =>
+            PrepareSelection(executor, request, substituted, substituted));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("canonical catalog definition", result.FaultMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+    }
+
+    [Fact]
+    public void Runner_RejectsASelectionWhoseSkillDoesNotMatchItsPreparedAssessment()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor enemy = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        SkillDefinition advertised = player.ActiveSkills[0];
+        SkillDefinition preparedSkill = player.ActiveSkills[1];
+        decimal playerSp = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHp = enemy.State.GetRequiredResource(Id("hp")).Current;
+        var selector = new DelegatingBattleActionSelector(request =>
+            PrepareSelection(executor, request, preparedSkill, advertised));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("does not match", result.FaultMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+    }
+
+    [Theory]
+    [InlineData(PreparedSelectionMismatch.Actor, "another actor")]
+    [InlineData(PreparedSelectionMismatch.Participants, "another participant set")]
+    [InlineData(PreparedSelectionMismatch.Environment, "another encounter environment")]
+    [InlineData(PreparedSelectionMismatch.Targets, "targets do not match")]
+    public void Runner_RejectsPreparedSelectionMetadataFromAnotherActionBoundary(
+        PreparedSelectionMismatch mismatch,
+        string expectedDiagnostic)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor enemy = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        SkillDefinition skill = player.ActiveSkills[0];
+        decimal playerSp = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHp = enemy.State.GetRequiredResource(Id("hp")).Current;
+        var selector = new DelegatingBattleActionSelector(request =>
+        {
+            RuntimeActorState preparedActor = mismatch == PreparedSelectionMismatch.Actor
+                ? enemy.State
+                : request.Actor.State;
+            RuntimeActorState[] preparedParticipants = request.Participants
+                .Select(participant => participant.State)
+                .ToArray();
+            if (mismatch == PreparedSelectionMismatch.Participants)
+            {
+                preparedParticipants = preparedParticipants.Reverse().ToArray();
+            }
+
+            RuntimeInstanceId targetId = preparedParticipants.Single(participant =>
+                participant.TeamId != preparedActor.TeamId).InstanceId;
+            var executionRequest = new SkillExecutionRequest(
+                skill,
+                preparedActor,
+                preparedParticipants,
+                request.ContextId,
+                mismatch == PreparedSelectionMismatch.Environment
+                    ? Id("alternate_battle")
+                    : request.BattleKindId,
+                request.MoonPhaseId,
+                [targetId]);
+            SkillExecutionAssessment assessment = executor.Assess(executionRequest);
+            Assert.True(
+                assessment.CanExecute,
+                string.Join("; ", assessment.Diagnostics.Select(diagnostic => diagnostic.Message)));
+            IReadOnlyList<RuntimeInstanceId> advertisedTargets =
+                mismatch == PreparedSelectionMismatch.Targets
+                    ? [preparedActor.InstanceId]
+                    : assessment.TargetIds;
+            return new BattleActionSelection(
+                BattleActionSelectionStatus.Selected,
+                skill,
+                advertisedTargets,
+                assessment);
+        });
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains(expectedDiagnostic, result.FaultMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+    }
+
     [Theory]
     [InlineData(TurnEconomyOutcome.Normal, false, false, 1, 0)]
     [InlineData(TurnEconomyOutcome.Weakness, false, false, 1, 1)]
@@ -1570,6 +1726,33 @@ public sealed class CatalogBattleRuntimeTests
                 Id("owner_turn_end")),
             turnEconomy ?? StandardTurnEconomy(),
             restrictionResolver ?? new AutomatedBattleTurnRestrictionResolver());
+
+    private static BattleActionSelection PrepareSelection(
+        ISkillExecutor executor,
+        BattleActionSelectionRequest request,
+        SkillDefinition preparedSkill,
+        SkillDefinition advertisedSkill)
+    {
+        RuntimeInstanceId targetId = request.Participants.Single(participant =>
+            participant.State.TeamId != request.Actor.State.TeamId).State.InstanceId;
+        var executionRequest = new SkillExecutionRequest(
+            preparedSkill,
+            request.Actor.State,
+            request.Participants.Select(participant => participant.State),
+            request.ContextId,
+            request.BattleKindId,
+            request.MoonPhaseId,
+            [targetId]);
+        SkillExecutionAssessment assessment = executor.Assess(executionRequest);
+        Assert.True(
+            assessment.CanExecute,
+            string.Join("; ", assessment.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        return new BattleActionSelection(
+            BattleActionSelectionStatus.Selected,
+            advertisedSkill,
+            assessment.TargetIds,
+            assessment);
+    }
 
     private static AutomatedBattleTurnRestrictionResolver RestrictionResolver(
         ISkillExecutor skillExecutor,
@@ -1988,6 +2171,20 @@ public sealed class CatalogBattleRuntimeTests
                 BattleActionSelectionStatus.Selected,
                 request.Actor.ActiveSkills[0],
                 [RuntimeInstanceId.Parse("missing_target")]);
+    }
+
+    private sealed class DelegatingBattleActionSelector(
+        Func<BattleActionSelectionRequest, BattleActionSelection> select) : IBattleActionSelector
+    {
+        public BattleActionSelection Select(BattleActionSelectionRequest request) => select(request);
+    }
+
+    public enum PreparedSelectionMismatch
+    {
+        Actor,
+        Participants,
+        Environment,
+        Targets
     }
 
     private sealed class RestrictedPassTurnHandler : IBattleEncounterTurnHandler

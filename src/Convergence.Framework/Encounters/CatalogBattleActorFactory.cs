@@ -173,6 +173,9 @@ public sealed class CatalogBattleActor
         State.Skills.EquippedSkillIds.Select(_skills.GetRequiredSkill).ToArray());
     public IReadOnlyList<SkillDefinition> ActiveSkills => Array.AsReadOnly(
         SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
+
+    internal BattleActionAuthorizationResult AuthorizeSkill(SkillDefinition skill) =>
+        CatalogSkillActionAuthorization.Authorize(State, skill, _skills);
 }
 
 public sealed class CatalogBattleActorCreationResult

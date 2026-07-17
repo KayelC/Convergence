@@ -509,7 +509,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 request.Encounter.MoonPhaseId,
                 _knowledge[actor.State.TeamId]);
             BattleActionSelection selection = _selector.Select(selectionRequest);
-            if (selection.Status == BattleActionSelectionStatus.Pass || selection.Skill is null)
+            if (selection.Status == BattleActionSelectionStatus.Pass)
             {
                 events.Add(new BattleEncounterEvent(
                     0,
@@ -518,6 +518,39 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                     $"{actor.State.InstanceId} passed."));
                 return new ValueTask<BattleEncounterCommandResult>(
                     BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass, events));
+            }
+
+            if (selection.Status != BattleActionSelectionStatus.Selected || selection.Skill is null)
+            {
+                return FaultedAutomatedAction(
+                    actor,
+                    "The selected automated action does not identify a skill.",
+                    events);
+            }
+
+            if (selection.Assessment is not SkillExecutionAssessment prepared)
+            {
+                return FaultedAutomatedAction(
+                    actor,
+                    "The selected automated action has no prepared assessment.",
+                    events);
+            }
+
+            if (!TryValidatePreparedSelection(request, actor, selection, prepared, out string? validationDiagnostic))
+            {
+                return FaultedAutomatedAction(actor, validationDiagnostic!, events);
+            }
+
+            BattleActionAuthorizationResult authorization = actor.AuthorizeSkill(selection.Skill);
+            if (!authorization.IsAuthorized)
+            {
+                string diagnostic = string.Join(
+                    "; ",
+                    authorization.Diagnostics.Select(item => item.Message));
+                return FaultedAutomatedAction(
+                    actor,
+                    $"Selected skill '{selection.Skill.Id}' is not authorized: {diagnostic}",
+                    events);
             }
 
             events.Add(new BattleEncounterEvent(
@@ -529,22 +562,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                     selection.SelectedTargetIds.FirstOrDefault()),
                 $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}."));
 
-            if (selection.Assessment is not SkillExecutionAssessment prepared)
-            {
-                const string fault = "The selected automated action has no prepared assessment.";
-                events.Add(new BattleEncounterEvent(
-                    0,
-                    BattleEncounterEventKind.BattleFaulted,
-                    new BattleFaultedEventPayload(
-                        BattleEncounterFaultCode.CommandExecutionFaulted,
-                        actor.State.InstanceId,
-                        actor.State.TeamId,
-                        "automated-action"),
-                    fault));
-                return new ValueTask<BattleEncounterCommandResult>(
-                    BattleEncounterCommandResult.Faulted(fault, events));
-            }
-
             SkillExecutionResult execution = _executor.Execute(
                 prepared.Preparation.Request,
                 prepared);
@@ -552,17 +569,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             {
                 string fault = $"Selected skill '{selection.Skill.Id}' was rejected: " +
                                string.Join("; ", execution.Diagnostics.Select(diagnostic => diagnostic.Message));
-                events.Add(new BattleEncounterEvent(
-                    0,
-                    BattleEncounterEventKind.BattleFaulted,
-                    new BattleFaultedEventPayload(
-                        BattleEncounterFaultCode.CommandExecutionFaulted,
-                        actor.State.InstanceId,
-                        actor.State.TeamId,
-                        "automated-action"),
-                    fault));
-                return new ValueTask<BattleEncounterCommandResult>(
-                    BattleEncounterCommandResult.Faulted(fault, events));
+                return FaultedAutomatedAction(actor, fault, events);
             }
 
             RecordExecution(events, actor, selection.Skill, execution, _actors, _knowledge[actor.State.TeamId]);
@@ -570,6 +577,77 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 BattleEncounterCommandResult.Executed(
                     ActionTurnConsumption.FromTurnEconomy(execution.TurnEconomy),
                     events));
+        }
+
+        private bool TryValidatePreparedSelection(
+            BattleEncounterTurnRequest turn,
+            CatalogBattleActor actor,
+            BattleActionSelection selection,
+            SkillExecutionAssessment prepared,
+            out string? diagnostic)
+        {
+            SkillExecutionRequest preparedRequest = prepared.Preparation.Request;
+            if (!prepared.CanExecute)
+            {
+                diagnostic = "The selected automated action assessment is not executable.";
+                return false;
+            }
+
+            if (!ReferenceEquals(preparedRequest.Skill, selection.Skill))
+            {
+                diagnostic = "The selected automated skill does not match its prepared assessment.";
+                return false;
+            }
+
+            if (!ReferenceEquals(preparedRequest.Actor, actor.State))
+            {
+                diagnostic = "The selected automated action was prepared for another actor.";
+                return false;
+            }
+
+            RuntimeActorState[] currentParticipants = _actors
+                .Select(participant => participant.State)
+                .ToArray();
+            if (!preparedRequest.Participants.SequenceEqual(currentParticipants))
+            {
+                diagnostic = "The selected automated action was prepared for another participant set.";
+                return false;
+            }
+
+            if (preparedRequest.ContextId != turn.Encounter.ContextId ||
+                preparedRequest.BattleKindId != turn.Encounter.BattleKindId ||
+                preparedRequest.MoonPhaseId != turn.Encounter.MoonPhaseId)
+            {
+                diagnostic = "The selected automated action was prepared for another encounter environment.";
+                return false;
+            }
+
+            if (!prepared.TargetIds.SequenceEqual(selection.SelectedTargetIds))
+            {
+                diagnostic = "The selected automated targets do not match the prepared assessment.";
+                return false;
+            }
+
+            diagnostic = null;
+            return true;
+        }
+
+        private static ValueTask<BattleEncounterCommandResult> FaultedAutomatedAction(
+            CatalogBattleActor actor,
+            string fault,
+            ICollection<BattleEncounterEvent> events)
+        {
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.BattleFaulted,
+                new BattleFaultedEventPayload(
+                    BattleEncounterFaultCode.CommandExecutionFaulted,
+                    actor.State.InstanceId,
+                    actor.State.TeamId,
+                    "automated-action"),
+                fault));
+            return new ValueTask<BattleEncounterCommandResult>(
+                BattleEncounterCommandResult.Faulted(fault, events));
         }
     }
 
