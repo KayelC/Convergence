@@ -142,6 +142,11 @@ The inventory adapter is a trusted transactional port. The Framework verifies
 observable identity and lifecycle fields, but it cannot prove or undo hidden
 adapter state. `Reserve`, `Commit`, and `Rollback` must be atomic.
 
+The item definition is also host-supplied at this boundary. The canonical
+facade validates owned identity through the inventory port's content ID but does
+not independently compare the definition object with an item repository.
+Catalog-backed hosts should always construct item commands from their catalog.
+
 ## Ordered Effects
 
 For each authored effect index, `OrderedEffectExecutor` evaluates each prepared

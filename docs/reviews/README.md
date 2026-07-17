@@ -18,6 +18,7 @@ or implementation authority.
 - [Documentation Alignment Review, 17 July 2026](convergence-documentation-alignment-review-2026-07-17.md)
 - [Documentation Post-Correction Review, 17 July 2026](convergence-documentation-post-correction-review-2026-07-17.md)
 - [Typed Action And Effect Execution Order 1 Review, 17 July 2026](typed-action-and-effect-execution-order-1-review-2026-07-17.md)
+- [Typed Action And Effect Execution Order 1 Post-Correction Review, 17 July 2026](typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
 Current implementation behavior belongs in source and executable tests.

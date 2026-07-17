@@ -69,14 +69,12 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "The implemented Order 1 action-authority and inventory corrections await consolidated source review."
-      ]
+      "knownGaps": []
     },
     {
       "id": "combat_resolution",

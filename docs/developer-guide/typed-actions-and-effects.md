@@ -120,6 +120,10 @@ gameplay diagnostic.
 Item commands have no quantity option: each command attempts one use. They
 require an `IItemActionInventory` on the request.
 
+Resolve the `ItemDefinition` from the host's loaded catalog before constructing
+the command. The current facade validates ownership and reservation identity by
+content ID; it does not perform a second item-repository lookup.
+
 Your inventory adapter must satisfy these rules:
 
 - `HasAvailable(itemId, 1)` reflects current owned quantity;

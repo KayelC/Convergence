@@ -14,9 +14,11 @@ separate commits: one-use item commands, reservation validation, mandatory
 inventory authority, and Framework-owned skill/basic-attack authorization.
 
 The mechanics page has been corrected and dedicated developer and technical
-guides now exist. The implementation and new documents remain pending the
-consolidated post-correction review and owner documentation confirmation. This
-report is review evidence, not mechanics or design authority.
+guides now exist. The implementation has passed its consolidated
+post-correction review. The new documents remain pending owner documentation
+confirmation. See
+[Order 1 Post-Correction Review](typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md).
+This report is review evidence, not mechanics or design authority.
 
 ## Review Method
 
@@ -56,7 +58,7 @@ traced:
 
 ### O1-M1: Item quantity and consumption disagree
 
-**Status:** `implemented_pending_review`
+**Status:** `verified`
 
 **Invariant:** one item action that reports `ConsumeOne` must consume exactly one
 inventory quantity.
@@ -87,7 +89,7 @@ that an inventory count of two becomes one after one successful action.
 
 ### O1-M2: The reservation returned by a host is not validated
 
-**Status:** `implemented_pending_review`
+**Status:** `verified`
 
 **Invariant:** the reservation committed for an item action must be a live,
 uncompleted reservation for the requested item and requested quantity.
@@ -113,7 +115,7 @@ rollback attempt. The five specified boundary cases have focused coverage.
 
 ### O1-D1: Inventory-backed action execution requires a port
 
-**Status:** `implemented_pending_review`
+**Status:** `verified`
 
 `BattleActionExecutionRequest.ItemInventory` is nullable. With no inventory port,
 an item action can commit actor effects and return `ConsumeOne` with
@@ -130,7 +132,7 @@ assessment and cannot reach actor mutation.
 
 ### O1-D2: Framework owns actor action authorization
 
-**Status:** `implemented_pending_review`
+**Status:** `verified`
 
 The direct action facade accepts a supplied `SkillDefinition` or basic-attack
 profile. It does not prove that the actor has the skill equipped or that the
@@ -188,10 +190,10 @@ Order 1 also added:
 2. [Complete] Validate host reservation identity and lifecycle state.
 3. [Complete] Implement the confirmed mandatory inventory-port rule.
 4. [Complete] Implement the confirmed actor action-authorization rule.
-5. [Pending] Re-review the corrected source and focused tests.
+5. [Complete] Re-review the corrected source and focused tests.
 6. [Complete] Rewrite the mechanics page.
 7. [Complete] Add the developer and technical documents with diagrams and examples.
-8. [Pending] Run documentation, subsystem, full-solution, demo, and boundary gates.
+8. [Complete] Run documentation, subsystem, full-solution, demo, and boundary gates.
 9. [Pending] Promote the three documentation audience entries only after owner
    confirmation.
 

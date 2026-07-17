@@ -95,9 +95,10 @@ social/fusion systems, authoring infrastructure, and host integration.
 The source-based
 [Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
 records the correction and decision history. The four source corrections and
-the three audience documents are implemented. Order 1 remains active while the
-consolidated source review, full quality gate, and owner documentation
-confirmation are pending.
+the three audience documents are implemented. The consolidated source review
+and managed quality gate are complete. The local Godot project builds and its
+contract tests pass, while the installed Windows engine currently faults before
+project load. Order 1 remains active only for owner documentation confirmation.
 
 The project owner approved both authority decisions on 17 July 2026. Their
 normative record is
@@ -107,15 +108,16 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O1-M1 | `implemented_pending_review` | One item action reserves and commits exactly one inventory unit. |
-| O1-M2 | `implemented_pending_review` | Reservation identity, quantity, and lifecycle state are validated before effects. |
-| O1-D1 | `implemented_pending_review` | Item commands require an inventory port and an exactly-one reservation. |
-| O1-D2 | `implemented_pending_review` | Framework validates equipped canonical skills and resolved basic attacks. |
+| O1-M1 | `verified` | One item action reserves and commits exactly one inventory unit. |
+| O1-M2 | `verified` | Reservation identity, quantity, and lifecycle state are validated before effects. |
+| O1-D1 | `verified` | Item commands require an inventory port and an exactly-one reservation. |
+| O1-D2 | `verified` | Framework validates equipped canonical skills and resolved basic attacks. |
 | O1-DOC | `written_pending_owner_confirmation` | Mechanics, developer, and technical pages agree with corrected source and await collaborative confirmation. |
 
-Implementation is promoted only after the consolidated source review. Audience
-documentation remains `existing_unreviewed` until the project owner confirms
-that the explanations match the intended mechanic.
+The implementation is promoted by the
+[post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md).
+Audience documentation remains `existing_unreviewed` until the project owner
+confirms that the explanations match the intended mechanic.
 
 ## Deferred Documentation
 
