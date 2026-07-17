@@ -257,7 +257,10 @@ public sealed class StatModifierPolicyContractTests
         var service = new StatModifierPolicyService(policy);
 
         StatModifierTransitionResult tick = service.Tick(
-            new StatModifierTickRequest(state, TurnEnd, true));
+            new StatModifierTickRequest(
+                state,
+                new StatModifierLifecycleBoundary(TurnEnd, 1),
+                true));
         StatModifierTransitionResult removal = service.Remove(
             new StatModifierRemovalRequest(state, StatModifierRemovalMode.All));
         StatModifierTransitionResult cleanup = service.Cleanup(

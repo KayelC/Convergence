@@ -102,7 +102,10 @@ public sealed class PersistentStagedStatModifierPolicyTests
         StatModifierTransitionResult applied = service.Apply(
             new StatModifierApplicationRequest(Empty(), Attack, 1, duration));
         StatModifierTransitionResult ticked = service.Tick(
-            new StatModifierTickRequest(applied.After, TurnEnd, true));
+            new StatModifierTickRequest(
+                applied.After,
+                new StatModifierLifecycleBoundary(TurnEnd, 1),
+                true));
 
         Assert.Null(Assert.Single(Assert.Single(applied.After.Tracks).Contributions).Duration);
         Assert.Equal(StatModifierTransitionCode.Unchanged, ticked.Code);
@@ -210,7 +213,8 @@ public sealed class PersistentStagedStatModifierPolicyTests
                     new RuntimeStatModifierContributionSnapshot(
                         contribution.Sequence,
                         contribution.StageDelta,
-                        contribution.Duration)))));
+                        contribution.Duration,
+                        contribution.LastLifecycleBoundary)))));
 
         Assert.True(service.ValidateState(reconstructed).IsValid);
         Assert.Equal(
@@ -259,5 +263,7 @@ public sealed class PersistentStagedStatModifierPolicyTests
     private static string Shape(RuntimeStatModifierTrackSnapshot track) =>
         $"{track.ModifierTrackId}:{track.ResolvedStage}:" +
         string.Join(',', track.Contributions.Select(contribution =>
-            $"{contribution.Sequence}/{contribution.StageDelta}/{contribution.Duration}"));
+            $"{contribution.Sequence}/{contribution.StageDelta}/{contribution.Duration}/" +
+            $"{contribution.LastLifecycleBoundary?.EventId}/" +
+            $"{contribution.LastLifecycleBoundary?.Sequence}"));
 }

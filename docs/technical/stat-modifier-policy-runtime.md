@@ -5,18 +5,19 @@
 This reference defines the confirmed runtime invariants for the stat-modifier
 policy family.
 
-Implemented at M1-2:
+Implemented through M1-3:
 
 - immutable neutral snapshots, requests, decisions, results, diagnostics, and
   events;
 - `StatModifierPolicyService` validation and fault containment;
 - removal of public direct stage mutation;
-- the persistent staged reference policy.
+- the persistent staged reference policy;
+- typed lifecycle-boundary cursors and boundary-aware events;
+- the timed-exclusive reference policy.
 
 Confirmed but not yet implemented:
 
-- lifecycle boundary metadata;
-- timed-exclusive and timed-contribution policies;
+- the timed-contribution policy;
 - actor/effect/lifecycle commit integration;
 - authored policy binding;
 - contribution-aware aggregate persistence.
@@ -71,30 +72,32 @@ Each `RuntimeStatModifierTrackSnapshot` contains:
 - resolved bounded stage;
 - ordered retained contributions.
 
-Each contribution currently contains:
+Each contribution contains:
 
 - globally unique positive sequence;
 - signed, nonzero stage delta;
-- optional duration.
+- optional duration;
+- optional last-observed lifecycle boundary.
 
 Neutral validation rejects invalid IDs, duplicate tracks, duplicate or
 nonpositive sequences, zero deltas, invalid duration shapes, and raw arithmetic
 outside the integer domain. The selected policy additionally validates its
 bounds, contribution count, aggregate projection, and allowed duration shape.
 
-M1-3 adds the boundary anchor required by counted durations. The target shape
-is conceptually:
+Counted durations use this boundary cursor shape:
 
 ```text
 Contribution
   identity sequence
   signed magnitude
   duration
-  optional applied boundary: event ID + monotonic sequence
+  optional last lifecycle boundary: event ID + monotonic sequence
 ```
 
 The identity sequence orders contributions and event output. It is not a
-duration clock.
+duration clock. The lifecycle boundary is initialized from an active matching
+boundary during application and advances whenever a later matching boundary is
+observed.
 
 ## Timed-Exclusive State Machine
 
@@ -177,6 +180,10 @@ for round events, it is the encounter.
 The scheduler owns boundary creation. The modifier service owns matching,
 suspension, decrement, and expiry. Presentation owns neither.
 
+The boundary cursor also makes ticking idempotent. A sequence equal to the
+cursor has already been observed and is ignored. A lower sequence violates the
+monotonic contract and rejects the complete tick without mutation.
+
 ### Application Anchor
 
 Application receives the currently active matching boundary when one exists:
@@ -193,8 +200,10 @@ Ticking uses this order:
 flowchart TD
     Tick["Matching clock boundary completes"]
     Match{"Duration event ID matches?"}
+    Stale{"Older than boundary cursor?"}
+    Same{"Applied in this exact boundary or already observed?"}
     Reserve{"Actor in reserve and suspension enabled?"}
-    Same{"Applied in this exact boundary?"}
+    Observe["Advance cursor without decrement"]
     Decrement["Decrement remaining count once"]
     Expire{"Remaining count reached zero?"}
     Remove["Remove only the expired contribution"]
@@ -202,11 +211,14 @@ flowchart TD
 
     Tick --> Match
     Match -->|no| Keep
-    Match -->|yes| Reserve
-    Reserve -->|yes| Keep
-    Reserve -->|no| Same
+    Match -->|yes| Stale
+    Stale -->|yes| Reject["Reject unchanged"]
+    Stale -->|no| Same
     Same -->|yes| Keep
-    Same -->|no| Decrement
+    Same -->|no| Reserve
+    Reserve -->|yes| Observe
+    Reserve -->|no| Decrement
+    Observe --> Keep
     Decrement --> Expire
     Expire -->|yes| Remove
     Expire -->|no| Keep
@@ -282,8 +294,10 @@ Current implementation evidence:
 
 - `src/Convergence.Framework/Runtime/StatModifierPolicies.cs`
 - `src/Convergence.Framework/Runtime/PersistentStagedStatModifierPolicy.cs`
+- `src/Convergence.Framework/Runtime/TimedExclusiveStatModifierPolicy.cs`
 - `tests/Convergence.Framework.Tests/Runtime/StatModifierPolicyContractTests.cs`
 - `tests/Convergence.Framework.Tests/Runtime/PersistentStagedStatModifierPolicyTests.cs`
+- `tests/Convergence.Framework.Tests/Runtime/TimedExclusiveStatModifierPolicyTests.cs`
 
 Confirmed future behavior:
 

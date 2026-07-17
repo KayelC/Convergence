@@ -7,13 +7,13 @@ are available today:
 
 - shared immutable policy contracts and `StatModifierPolicyService`: available;
 - `PersistentStagedStatModifierPolicy`: available;
-- timed-exclusive and timed-contribution policies: confirmed, under active
-  implementation;
+- `TimedExclusiveStatModifierPolicy`: available;
+- timed-contribution policy: confirmed, under active implementation;
 - effect/lifecycle integration: M1-5;
 - authored ruleset selection: M1-6;
 - aggregate save and restore: M1-7.
 
-Do not build a host-side timed modifier store while those checkpoints are in
+Do not build a host-side modifier store while those checkpoints are in
 progress. The Framework remains the intended rule and state authority.
 
 ## Composition Boundary
@@ -74,7 +74,7 @@ item merely because the authored delta was nonzero.
 
 ## Timed-Exclusive Configuration
 
-The supplied timed-exclusive policy will implement the confirmed five-signal
+The supplied timed-exclusive policy implements the confirmed five-signal
 scale. Its important integration behavior is:
 
 - equal signal: accepted timer refresh;
@@ -122,8 +122,11 @@ The confirmed M1-3 contract revision is:
 2. Application records the active sequence for the selected clock when one is
    currently open.
 3. Completion of that same sequence does not decrement the new contribution.
-4. A later matching sequence may decrement it.
-5. Reserve suspension is checked before decrement.
+4. A later matching sequence may decrement it and advances the contribution's
+   boundary cursor.
+5. Repeating the latest sequence is idempotent; an older sequence is rejected.
+6. Reserve suspension is checked before decrement, but the observed boundary is
+   still recorded so deploying later cannot replay it.
 
 ```mermaid
 sequenceDiagram

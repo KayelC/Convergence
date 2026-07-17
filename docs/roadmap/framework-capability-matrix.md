@@ -33,7 +33,9 @@ current direct stat-stage mutation and one-stage/one-duration state cannot
 implement the approved stat-modifier policy family without competing
 authorities or lossy restoration. The active
 [Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md) governs that
-correction.
+correction. Its neutral authority, persistent policy, and timed-exclusive
+policy are complete; independently timed contributions and production
+integration remain open.
 
 ## Authority
 

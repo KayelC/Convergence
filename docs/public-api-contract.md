@@ -59,6 +59,13 @@ Direct live-actor commit remains Framework-owned and is completed by the M1-5
 integration checkpoint; external callers must not replace it with reflection
 or another mutable stage store.
 
+M1-3 adds `StatModifierLifecycleBoundary` and the supplied
+`TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
+observed boundary so same-boundary application is protected, duplicate ticks
+are idempotent, and stale ticks reject without mutation. The tick request now
+requires this typed event-and-sequence boundary; the former event-ID-only
+constructor is deliberately removed from the guarded pre-release contract.
+
 Save contract v9 removes the roster's duplicated owner level in addition to
 the actor restore profile's former duplicated Active Hosted Entity ID.
 `RuntimeSessionRestoreService` now derives that dependency from

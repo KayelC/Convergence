@@ -9963,7 +9963,8 @@ Convergence.Runtime.IStatModifierPolicyService.Tick(Convergence.Runtime.StatModi
 Convergence.Runtime.IStatModifierPolicyService.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
 Convergence.Runtime.RuntimeStatModifierContributionSnapshot
 Convergence.Runtime.RuntimeStatModifierContributionSnapshot.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Runtime.RuntimeStatModifierContributionSnapshot.RuntimeStatModifierContributionSnapshot(long sequence, int stageDelta, Convergence.Content.DurationDefinition? duration = null) -> void
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.LastLifecycleBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.RuntimeStatModifierContributionSnapshot(long sequence, int stageDelta, Convergence.Content.DurationDefinition? duration = null, Convergence.Runtime.StatModifierLifecycleBoundary? lastLifecycleBoundary = null) -> void
 Convergence.Runtime.RuntimeStatModifierContributionSnapshot.Sequence.get -> long
 Convergence.Runtime.RuntimeStatModifierContributionSnapshot.StageDelta.get -> int
 Convergence.Runtime.RuntimeStatModifierStateSnapshot
@@ -9977,12 +9978,13 @@ Convergence.Runtime.RuntimeStatModifierTrackSnapshot.ModifierTrackId.get -> Conv
 Convergence.Runtime.RuntimeStatModifierTrackSnapshot.ResolvedStage.get -> int
 Convergence.Runtime.RuntimeStatModifierTrackSnapshot.RuntimeStatModifierTrackSnapshot(Convergence.Content.ContentId modifierTrackId, int resolvedStage, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatModifierContributionSnapshot!>! contributions) -> void
 Convergence.Runtime.StatModifierApplicationRequest
+Convergence.Runtime.StatModifierApplicationRequest.ActiveLifecycleBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
 Convergence.Runtime.StatModifierApplicationRequest.Duration.get -> Convergence.Content.DurationDefinition?
 Convergence.Runtime.StatModifierApplicationRequest.IsActorDeployed.get -> bool
 Convergence.Runtime.StatModifierApplicationRequest.ModifierTrackId.get -> Convergence.Content.ContentId
 Convergence.Runtime.StatModifierApplicationRequest.StageDelta.get -> int
 Convergence.Runtime.StatModifierApplicationRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
-Convergence.Runtime.StatModifierApplicationRequest.StatModifierApplicationRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Content.ContentId modifierTrackId, int stageDelta, Convergence.Content.DurationDefinition? duration = null, bool isActorDeployed = true) -> void
+Convergence.Runtime.StatModifierApplicationRequest.StatModifierApplicationRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Content.ContentId modifierTrackId, int stageDelta, Convergence.Content.DurationDefinition? duration = null, bool isActorDeployed = true, Convergence.Runtime.StatModifierLifecycleBoundary? activeLifecycleBoundary = null) -> void
 Convergence.Runtime.StatModifierCleanupRequest
 Convergence.Runtime.StatModifierCleanupRequest.Scope.get -> Convergence.Runtime.StatModifierCleanupScope
 Convergence.Runtime.StatModifierCleanupRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
@@ -9999,6 +10001,7 @@ Convergence.Runtime.StatModifierDiagnostic.Message.get -> string!
 Convergence.Runtime.StatModifierDiagnostic.ModifierTrackId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.StatModifierDiagnostic.StatModifierDiagnostic(Convergence.Runtime.StatModifierDiagnosticCode code, string! message, Convergence.Content.ContentId? modifierTrackId = null, long? contributionSequence = null) -> void
 Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.AlreadyInEffect = 17 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.DuplicateContributionSequence = 5 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.DuplicateModifierTrack = 3 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.IncompatibleState = 15 -> Convergence.Runtime.StatModifierDiagnosticCode
@@ -10006,6 +10009,7 @@ Convergence.Runtime.StatModifierDiagnosticCode.InvalidCleanupScope = 10 -> Conve
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidContributionSequence = 4 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidDuration = 7 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidEventId = 8 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidLifecycleBoundary = 16 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidModifierTrackId = 2 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidPolicyId = 0 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierDiagnosticCode.InvalidPolicyResult = 14 -> Convergence.Runtime.StatModifierDiagnosticCode
@@ -10017,11 +10021,13 @@ Convergence.Runtime.StatModifierDiagnosticCode.PolicyMismatch = 1 -> Convergence
 Convergence.Runtime.StatModifierDiagnosticCode.PolicyRejected = 12 -> Convergence.Runtime.StatModifierDiagnosticCode
 Convergence.Runtime.StatModifierEvent
 Convergence.Runtime.StatModifierEvent.ContributionSequence.get -> long?
+Convergence.Runtime.StatModifierEvent.CurrentLifecycleBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
 Convergence.Runtime.StatModifierEvent.CurrentDuration.get -> Convergence.Content.DurationDefinition?
 Convergence.Runtime.StatModifierEvent.CurrentStage.get -> int
 Convergence.Runtime.StatModifierEvent.Kind.get -> Convergence.Runtime.StatModifierEventKind
 Convergence.Runtime.StatModifierEvent.ModifierTrackId.get -> Convergence.Content.ContentId
 Convergence.Runtime.StatModifierEvent.PreviousDuration.get -> Convergence.Content.DurationDefinition?
+Convergence.Runtime.StatModifierEvent.PreviousLifecycleBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
 Convergence.Runtime.StatModifierEvent.PreviousStage.get -> int
 Convergence.Runtime.StatModifierEvent.StageDelta.get -> int?
 Convergence.Runtime.StatModifierEventKind
@@ -10036,6 +10042,10 @@ Convergence.Runtime.StatModifierOperationKind.Application = 0 -> Convergence.Run
 Convergence.Runtime.StatModifierOperationKind.Cleanup = 3 -> Convergence.Runtime.StatModifierOperationKind
 Convergence.Runtime.StatModifierOperationKind.Removal = 2 -> Convergence.Runtime.StatModifierOperationKind
 Convergence.Runtime.StatModifierOperationKind.Tick = 1 -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierLifecycleBoundary
+Convergence.Runtime.StatModifierLifecycleBoundary.EventId.get -> Convergence.Content.ContentId
+Convergence.Runtime.StatModifierLifecycleBoundary.Sequence.get -> long
+Convergence.Runtime.StatModifierLifecycleBoundary.StatModifierLifecycleBoundary(Convergence.Content.ContentId eventId, long sequence) -> void
 Convergence.Runtime.StatModifierPolicyDecision
 Convergence.Runtime.StatModifierPolicyDecision.Accepted.get -> bool
 Convergence.Runtime.StatModifierPolicyDecision.After.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
@@ -10062,10 +10072,10 @@ Convergence.Runtime.StatModifierRemovalRequest.ModifierTrackIds.get -> System.Co
 Convergence.Runtime.StatModifierRemovalRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
 Convergence.Runtime.StatModifierRemovalRequest.StatModifierRemovalRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Runtime.StatModifierRemovalMode mode, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? modifierTrackIds = null, System.Collections.Generic.IEnumerable<long>? contributionSequences = null) -> void
 Convergence.Runtime.StatModifierTickRequest
-Convergence.Runtime.StatModifierTickRequest.EventId.get -> Convergence.Content.ContentId
 Convergence.Runtime.StatModifierTickRequest.IsActorDeployed.get -> bool
+Convergence.Runtime.StatModifierTickRequest.LifecycleBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary!
 Convergence.Runtime.StatModifierTickRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
-Convergence.Runtime.StatModifierTickRequest.StatModifierTickRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Content.ContentId eventId, bool isActorDeployed) -> void
+Convergence.Runtime.StatModifierTickRequest.StatModifierTickRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Runtime.StatModifierLifecycleBoundary! lifecycleBoundary, bool isActorDeployed) -> void
 Convergence.Runtime.StatModifierTransitionCode
 Convergence.Runtime.StatModifierTransitionCode.Applied = 0 -> Convergence.Runtime.StatModifierTransitionCode
 Convergence.Runtime.StatModifierTransitionCode.Rejected = 2 -> Convergence.Runtime.StatModifierTransitionCode
@@ -10096,3 +10106,13 @@ Convergence.Runtime.PersistentStagedStatModifierPolicy.PolicyId.get -> Convergen
 Convergence.Runtime.PersistentStagedStatModifierPolicy.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
 Convergence.Runtime.PersistentStagedStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
 Convergence.Runtime.PersistentStagedStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Runtime.TimedExclusiveStatModifierPolicy
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.TimedExclusiveStatModifierPolicy(Convergence.Content.ContentId policyId) -> void
+Convergence.Runtime.TimedExclusiveStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+const Convergence.Runtime.TimedExclusiveStatModifierPolicy.MaximumSignal = 2 -> int
+const Convergence.Runtime.TimedExclusiveStatModifierPolicy.MinimumSignal = -2 -> int

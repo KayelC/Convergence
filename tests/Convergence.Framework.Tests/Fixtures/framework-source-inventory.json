@@ -483,6 +483,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/TimedExclusiveStatModifierPolicy.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/ResourceManagementServices.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

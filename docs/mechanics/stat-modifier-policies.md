@@ -3,8 +3,8 @@
 ## Status And Purpose
 
 This page records the confirmed player-visible design for Convergence stat
-modifiers. The persistent staged policy is implemented. The timed-exclusive and
-timed-contribution policies are confirmed designs being implemented through the
+modifiers. The persistent staged and timed-exclusive policies are implemented.
+The timed-contribution policy is a confirmed design being implemented through the
 [Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md).
 
 Stat modifiers are optional. A game selects one coherent policy for a runtime
@@ -200,7 +200,10 @@ receives that next turn under the modifier and its duration then decreases when
 that turn completes.
 
 Runtime contributions therefore remember the clock boundary in which they were
-created. This is rule state, not presentation state.
+created and the latest matching boundary they have observed. This is rule state,
+not presentation state. Repeating one completed boundary does not consume
+another turn of duration. An older out-of-order boundary is rejected rather
+than silently shortening the effect.
 
 ### Reserve Actors
 

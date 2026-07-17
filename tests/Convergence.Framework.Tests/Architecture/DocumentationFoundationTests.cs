@@ -186,7 +186,7 @@ public sealed class DocumentationFoundationTests
                 $"Missing confirmed clock rule '{token}'."));
 
         Assert.Contains("event ID + positive monotonic boundary sequence", technical, StringComparison.Ordinal);
-        Assert.Contains("Applied in this exact boundary?", technical, StringComparison.Ordinal);
+        Assert.Contains("Applied in this exact boundary", technical, StringComparison.Ordinal);
     }
 
     [Fact]

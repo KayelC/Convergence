@@ -155,6 +155,12 @@ new effect. An effect applied before the target's next boundary does decrement
 after the target completes that boundary. This distinction protects both
 self-applied effects and effects applied by another actor.
 
+The retained boundary is also an idempotency cursor. Each later matching
+boundary advances it. Delivering the same boundary twice cannot decrement a
+duration twice, and delivering an older boundary is rejected without changing
+state. This makes timer correctness independent of duplicate host event
+delivery while still exposing an out-of-order scheduler fault.
+
 One selected policy owns assessment, application, ticking, removal, cleanup,
 meaningful-success reporting, retained-state compatibility, and policy events.
 No effect executor or public actor mutation method may provide a parallel rule.

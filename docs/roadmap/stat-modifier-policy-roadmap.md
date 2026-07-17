@@ -42,7 +42,7 @@ and reviews are complete.
 | M1-0 | `complete` | Confirm the policy-family decision, audit architectural feasibility, create this roadmap, and reopen inaccurate maturity/documentation claims. | `docs: define stat modifier policy family` |
 | M1-1 | `complete` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
 | M1-2 | `complete` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
-| M1-3 | `pending` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
+| M1-3 | `complete` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
 | M1-4 | `pending` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
 | M1-5 | `pending` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `pending` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
@@ -169,6 +169,25 @@ authoritative.
 
 Configuration variants belong inside this coherent policy only when they do not
 change the fundamental one-contribution model.
+
+### M1-3 Completion Record
+
+- Added `TimedExclusiveStatModifierPolicy` with the confirmed `--`, `-`,
+  neutral, `+`, and `++` scale represented by nonzero values in `-2..+2`.
+- Equal same-direction signals refresh, stronger signals replace, weaker
+  signals reject with `AlreadyInEffect`, and opposite signals use the confirmed
+  arithmetic and dominant-effect timer rule.
+- Added typed lifecycle boundaries to retained contributions, application
+  requests, tick requests, and events. The retained cursor protects the
+  application boundary, makes duplicate ticks idempotent, and rejects stale
+  out-of-order ticks without mutation.
+- Counted durations honor their explicit event ID and authored reserve
+  suspension. Positive, negative, selected-track, selected-contribution, and
+  complete removal share the neutral service contract.
+- Added 43 focused cases covering the complete occupied-signal matrix, timer
+  ownership, expiry, malformed state, boundary ordering, reserve behavior,
+  cleanup scopes, immutable results, and sequence exhaustion. The checkpoint
+  gate completed with 1,127 passing tests, zero failures, and zero skips.
 
 ## M1-4: Timed Contribution Policy
 

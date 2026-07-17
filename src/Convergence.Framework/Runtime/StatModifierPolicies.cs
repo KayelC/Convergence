@@ -34,7 +34,9 @@ public enum StatModifierDiagnosticCode
     PolicyRejected,
     PolicyFaulted,
     InvalidPolicyResult,
-    IncompatibleState
+    IncompatibleState,
+    InvalidLifecycleBoundary,
+    AlreadyInEffect
 }
 
 public enum StatModifierEventKind
@@ -106,21 +108,36 @@ public sealed class StatModifierDiagnostic
     public long? ContributionSequence { get; }
 }
 
+public sealed class StatModifierLifecycleBoundary
+{
+    public StatModifierLifecycleBoundary(ContentId eventId, long sequence)
+    {
+        EventId = eventId;
+        Sequence = sequence;
+    }
+
+    public ContentId EventId { get; }
+    public long Sequence { get; }
+}
+
 public sealed class RuntimeStatModifierContributionSnapshot
 {
     public RuntimeStatModifierContributionSnapshot(
         long sequence,
         int stageDelta,
-        DurationDefinition? duration = null)
+        DurationDefinition? duration = null,
+        StatModifierLifecycleBoundary? lastLifecycleBoundary = null)
     {
         Sequence = sequence;
         StageDelta = stageDelta;
         Duration = duration;
+        LastLifecycleBoundary = lastLifecycleBoundary;
     }
 
     public long Sequence { get; }
     public int StageDelta { get; }
     public DurationDefinition? Duration { get; }
+    public StatModifierLifecycleBoundary? LastLifecycleBoundary { get; }
 }
 
 public sealed class RuntimeStatModifierTrackSnapshot
@@ -174,13 +191,15 @@ public sealed class StatModifierApplicationRequest
         ContentId modifierTrackId,
         int stageDelta,
         DurationDefinition? duration = null,
-        bool isActorDeployed = true)
+        bool isActorDeployed = true,
+        StatModifierLifecycleBoundary? activeLifecycleBoundary = null)
     {
         State = state ?? throw new ArgumentNullException(nameof(state));
         ModifierTrackId = modifierTrackId;
         StageDelta = stageDelta;
         Duration = duration;
         IsActorDeployed = isActorDeployed;
+        ActiveLifecycleBoundary = activeLifecycleBoundary;
     }
 
     public RuntimeStatModifierStateSnapshot State { get; }
@@ -188,22 +207,23 @@ public sealed class StatModifierApplicationRequest
     public int StageDelta { get; }
     public DurationDefinition? Duration { get; }
     public bool IsActorDeployed { get; }
+    public StatModifierLifecycleBoundary? ActiveLifecycleBoundary { get; }
 }
 
 public sealed class StatModifierTickRequest
 {
     public StatModifierTickRequest(
         RuntimeStatModifierStateSnapshot state,
-        ContentId eventId,
+        StatModifierLifecycleBoundary lifecycleBoundary,
         bool isActorDeployed)
     {
         State = state ?? throw new ArgumentNullException(nameof(state));
-        EventId = eventId;
+        LifecycleBoundary = lifecycleBoundary ?? throw new ArgumentNullException(nameof(lifecycleBoundary));
         IsActorDeployed = isActorDeployed;
     }
 
     public RuntimeStatModifierStateSnapshot State { get; }
-    public ContentId EventId { get; }
+    public StatModifierLifecycleBoundary LifecycleBoundary { get; }
     public bool IsActorDeployed { get; }
 }
 
@@ -257,7 +277,9 @@ public sealed class StatModifierEvent
         long? contributionSequence = null,
         int? stageDelta = null,
         DurationDefinition? previousDuration = null,
-        DurationDefinition? currentDuration = null)
+        DurationDefinition? currentDuration = null,
+        StatModifierLifecycleBoundary? previousLifecycleBoundary = null,
+        StatModifierLifecycleBoundary? currentLifecycleBoundary = null)
     {
         if (!Enum.IsDefined(kind))
         {
@@ -284,6 +306,8 @@ public sealed class StatModifierEvent
         StageDelta = stageDelta;
         PreviousDuration = previousDuration;
         CurrentDuration = currentDuration;
+        PreviousLifecycleBoundary = previousLifecycleBoundary;
+        CurrentLifecycleBoundary = currentLifecycleBoundary;
     }
 
     public StatModifierEventKind Kind { get; }
@@ -294,6 +318,8 @@ public sealed class StatModifierEvent
     public int? StageDelta { get; }
     public DurationDefinition? PreviousDuration { get; }
     public DurationDefinition? CurrentDuration { get; }
+    public StatModifierLifecycleBoundary? PreviousLifecycleBoundary { get; }
+    public StatModifierLifecycleBoundary? CurrentLifecycleBoundary { get; }
 }
 
 public sealed class StatModifierValidationResult
@@ -506,14 +532,10 @@ public sealed class StatModifierPolicyService : IStatModifierPolicyService
     public StatModifierTransitionResult Tick(StatModifierTickRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (!request.EventId.IsValid)
+        List<StatModifierDiagnostic> diagnostics = ValidateLifecycleBoundary(request.LifecycleBoundary);
+        if (diagnostics.Count > 0)
         {
-            return Rejected(
-                StatModifierOperationKind.Tick,
-                request.State,
-                new StatModifierDiagnostic(
-                    StatModifierDiagnosticCode.InvalidEventId,
-                    "Stat-modifier tick event ID cannot be empty."));
+            return Rejected(StatModifierOperationKind.Tick, request.State, diagnostics);
         }
 
         return Evaluate(
@@ -576,6 +598,12 @@ public sealed class StatModifierPolicyService : IStatModifierPolicyService
         }
 
         AddDurationDiagnostic(request.Duration, request.ModifierTrackId, null, diagnostics);
+        AddLifecycleBoundaryDiagnostics(
+            request.ActiveLifecycleBoundary,
+            request.Duration,
+            request.ModifierTrackId,
+            null,
+            diagnostics);
         if (diagnostics.Count > 0)
         {
             return Rejected(StatModifierOperationKind.Application, request.State, diagnostics);
@@ -726,6 +754,12 @@ public sealed class StatModifierPolicyService : IStatModifierPolicyService
                     track.ModifierTrackId,
                     contribution.Sequence,
                     diagnostics);
+                AddLifecycleBoundaryDiagnostics(
+                    contribution.LastLifecycleBoundary,
+                    contribution.Duration,
+                    track.ModifierTrackId,
+                    contribution.Sequence,
+                    diagnostics);
             }
 
             if (rawStage is < int.MinValue or > int.MaxValue)
@@ -816,6 +850,52 @@ public sealed class StatModifierPolicyService : IStatModifierPolicyService
         }
     }
 
+    private static List<StatModifierDiagnostic> ValidateLifecycleBoundary(
+        StatModifierLifecycleBoundary boundary)
+    {
+        var diagnostics = new List<StatModifierDiagnostic>();
+        if (!boundary.EventId.IsValid)
+        {
+            diagnostics.Add(new StatModifierDiagnostic(
+                StatModifierDiagnosticCode.InvalidLifecycleBoundary,
+                "Stat-modifier lifecycle boundary event ID cannot be empty."));
+        }
+
+        if (boundary.Sequence <= 0)
+        {
+            diagnostics.Add(new StatModifierDiagnostic(
+                StatModifierDiagnosticCode.InvalidLifecycleBoundary,
+                "Stat-modifier lifecycle boundary sequence must be positive."));
+        }
+
+        return diagnostics;
+    }
+
+    private static void AddLifecycleBoundaryDiagnostics(
+        StatModifierLifecycleBoundary? boundary,
+        DurationDefinition? duration,
+        ContentId modifierTrackId,
+        long? contributionSequence,
+        ICollection<StatModifierDiagnostic> diagnostics)
+    {
+        if (boundary is null)
+        {
+            return;
+        }
+
+        bool validBoundary = boundary.EventId.IsValid && boundary.Sequence > 0;
+        bool matchesDuration = duration is TurnDurationDefinition turns &&
+            turns.TickEventId == boundary.EventId;
+        if (!validBoundary || !matchesDuration)
+        {
+            diagnostics.Add(new StatModifierDiagnostic(
+                StatModifierDiagnosticCode.InvalidLifecycleBoundary,
+                "A lifecycle boundary must be valid and match its counted duration event.",
+                ValidTrackOrNull(modifierTrackId),
+                ValidSequenceOrNull(contributionSequence)));
+        }
+    }
+
     private static ContentId? ValidTrackOrNull(ContentId modifierTrackId) =>
         modifierTrackId.IsValid ? modifierTrackId : null;
 
@@ -877,7 +957,10 @@ internal static class StatModifierStateEquality
                     rightTrack.Contributions[contributionIndex];
                 if (leftContribution.Sequence != rightContribution.Sequence ||
                     leftContribution.StageDelta != rightContribution.StageDelta ||
-                    !Equals(leftContribution.Duration, rightContribution.Duration))
+                    !Equals(leftContribution.Duration, rightContribution.Duration) ||
+                    !LifecycleBoundaryEquals(
+                        leftContribution.LastLifecycleBoundary,
+                        rightContribution.LastLifecycleBoundary))
                 {
                     return false;
                 }
@@ -886,6 +969,15 @@ internal static class StatModifierStateEquality
 
         return true;
     }
+
+    private static bool LifecycleBoundaryEquals(
+        StatModifierLifecycleBoundary? left,
+        StatModifierLifecycleBoundary? right) =>
+        left is null
+            ? right is null
+            : right is not null &&
+              left.EventId == right.EventId &&
+              left.Sequence == right.Sequence;
 }
 
 internal static class StatModifierEventDiff
@@ -933,7 +1025,8 @@ internal static class StatModifierEventDiff
                     currentStage,
                     sequence,
                     contribution.StageDelta,
-                    contribution.Duration));
+                    contribution.Duration,
+                    previousLifecycleBoundary: contribution.LastLifecycleBoundary));
             }
 
             foreach (long sequence in afterContributions.Keys
@@ -948,7 +1041,8 @@ internal static class StatModifierEventDiff
                     currentStage,
                     sequence,
                     contribution.StageDelta,
-                    currentDuration: contribution.Duration));
+                    currentDuration: contribution.Duration,
+                    currentLifecycleBoundary: contribution.LastLifecycleBoundary));
             }
 
             foreach (long sequence in beforeContributions.Keys
@@ -958,7 +1052,10 @@ internal static class StatModifierEventDiff
                 RuntimeStatModifierContributionSnapshot previous = beforeContributions[sequence];
                 RuntimeStatModifierContributionSnapshot current = afterContributions[sequence];
                 if (previous.StageDelta == current.StageDelta &&
-                    Equals(previous.Duration, current.Duration))
+                    Equals(previous.Duration, current.Duration) &&
+                    LifecycleBoundaryEquals(
+                        previous.LastLifecycleBoundary,
+                        current.LastLifecycleBoundary))
                 {
                     continue;
                 }
@@ -971,7 +1068,9 @@ internal static class StatModifierEventDiff
                     sequence,
                     current.StageDelta,
                     previous.Duration,
-                    current.Duration));
+                    current.Duration,
+                    previous.LastLifecycleBoundary,
+                    current.LastLifecycleBoundary));
             }
 
             if (previousStage != currentStage)
@@ -995,4 +1094,13 @@ internal static class StatModifierEventDiff
 
         return events.ToArray();
     }
+
+    private static bool LifecycleBoundaryEquals(
+        StatModifierLifecycleBoundary? left,
+        StatModifierLifecycleBoundary? right) =>
+        left is null
+            ? right is null
+            : right is not null &&
+              left.EventId == right.EventId &&
+              left.Sequence == right.Sequence;
 }
