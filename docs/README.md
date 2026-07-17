@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/Convergence_Logo.png" alt="Convergence Framework logo" width="760">
+</p>
+
 # Convergence Documentation
 
 This directory is the active documentation authority for Convergence Framework.

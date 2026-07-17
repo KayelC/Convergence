@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/Convergence_Logo.png" alt="Convergence Framework logo" width="900">
+</p>
+
 # Convergence Framework
 
 Convergence is an engine-neutral, modular JRPG rules framework. It combines reusable concepts from several JRPG traditions without requiring a particular game, presentation layer, content setting, or engine.
