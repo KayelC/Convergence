@@ -335,6 +335,37 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task CatalogAuthorization_RevalidatesBasicAttackProfileBeforeExecution()
+    {
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        TargetingDefinition targeting = SingleEnemy();
+        var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
+        var profileSource = new MutableBasicAttackProfileSource(profile);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            profileSource);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            basicAttack,
+            targeting,
+            [target.InstanceId],
+            profile.ActionId);
+        BattleActionExecutionRequest request = Request(command, actor, [actor, target]);
+        BattleActionAssessment assessment = executor.Assess(request);
+        profileSource.Profile = null;
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.ActionNotAuthorized, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task SkillAction_RejectsStalePreparedCostWithoutMutationOrTurnConsumption()
     {
         BattleActionExecutor executor = Executor();
@@ -1149,6 +1180,14 @@ public sealed class BattleActionExecutorTests
         : IBattleBasicAttackProfileSource
     {
         public BattleBasicAttackProfile? Resolve(RuntimeActorState actor) => profile;
+    }
+
+    private sealed class MutableBasicAttackProfileSource(BattleBasicAttackProfile? profile)
+        : IBattleBasicAttackProfileSource
+    {
+        public BattleBasicAttackProfile? Profile { get; set; } = profile;
+
+        public BattleBasicAttackProfile? Resolve(RuntimeActorState actor) => Profile;
     }
 
     private sealed class TestItemInventory(ContentId itemId, int quantity) : IItemActionInventory
