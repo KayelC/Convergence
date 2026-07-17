@@ -513,7 +513,8 @@ public sealed record PassiveTriggerDispatchRequest
         IEnumerable<RuntimeActorState> targets,
         ContentId contextId,
         ContentId? battleKindId,
-        ContentId? moonPhaseId)
+        ContentId? moonPhaseId,
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries = null)
     {
         EventId = eventId;
         Owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -522,6 +523,18 @@ public sealed record PassiveTriggerDispatchRequest
         ContextId = contextId;
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;
+        StatModifierLifecycleBoundary[] boundaries =
+            (activeStatModifierBoundaries ?? []).ToArray();
+        if (boundaries.Any(boundary => boundary is null) ||
+            boundaries.Any(boundary => !boundary.EventId.IsValid || boundary.Sequence <= 0) ||
+            boundaries.Select(boundary => boundary.EventId).Distinct().Count() != boundaries.Length)
+        {
+            throw new ArgumentException(
+                "Active stat-modifier boundaries must be valid and unique by event ID.",
+                nameof(activeStatModifierBoundaries));
+        }
+
+        ActiveStatModifierBoundaries = Array.AsReadOnly(boundaries);
     }
 
     public ContentId EventId { get; }
@@ -531,6 +544,7 @@ public sealed record PassiveTriggerDispatchRequest
     public ContentId ContextId { get; }
     public ContentId? BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
+    public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; }
 }
 
 public interface IPassiveTriggerDispatcher
@@ -570,7 +584,8 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
             request.Targets.Select(transaction.GetStaged),
             request.ContextId,
             request.BattleKindId,
-            request.MoonPhaseId);
+            request.MoonPhaseId,
+            request.ActiveStatModifierBoundaries);
 
         try
         {
@@ -713,7 +728,8 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
             new EffectExecutionEnvironment(
                 dispatchRequest.ContextId,
                 dispatchRequest.BattleKindId,
-                dispatchRequest.MoonPhaseId),
+                dispatchRequest.MoonPhaseId,
+                dispatchRequest.ActiveStatModifierBoundaries),
             new TargetingDefinition(TargetRelation.Self, TargetSelection.Single, TargetLifeState.Any, true),
             [target.InstanceId],
             skill: skill);

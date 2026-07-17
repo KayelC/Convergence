@@ -440,7 +440,7 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(ElementalAffinity.Null, owner.GetElementalAffinity(DamageElement.Fire, replacements));
         owner.GrantShield(ShieldKind.Magical, null);
         Assert.Equal(ElementalAffinity.Repel, owner.GetElementalAffinity(DamageElement.Fire, replacements));
-        owner.RemoveStatuses([StatusEffectKind.Shield], []);
+        owner.RemoveNonModifierStatuses(new HashSet<StatusEffectKind> { StatusEffectKind.Shield }, []);
         owner.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Resist, new BattleDurationDefinition());
         Assert.Equal(ElementalAffinity.Resist, owner.GetElementalAffinity(DamageElement.Fire, replacements));
         Assert.Equal(
@@ -685,6 +685,7 @@ public sealed class PassiveSkillRuntimeTests
             new FlatPowerPolicy(),
             new FirstTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent(),
             customEffectHandlers: customEffects);
 
     private sealed class TestAilmentRepository(IEnumerable<AilmentDefinition> ailments)

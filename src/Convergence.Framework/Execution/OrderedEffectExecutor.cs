@@ -68,7 +68,8 @@ internal sealed class OrderedEffectExecutor
                 try
                 {
                     DurationLifecycle.ProcessActionEnd(
-                        new BattleActionEndLifecycleRequest(scope.Actors));
+                        new BattleActionEndLifecycleRequest(scope.Actors),
+                        _services.StatModifiers);
                 }
                 finally
                 {
@@ -165,13 +166,13 @@ internal sealed class OrderedEffectExecutor
     private sealed class ActionDurationScope
     {
         private readonly List<RuntimeActorState> _actors = [];
-        private readonly HashSet<RuntimeActorState> _known = new(ReferenceEqualityComparer.Instance);
+        private readonly HashSet<RuntimeInstanceId> _knownActorIds = [];
 
         public IReadOnlyList<RuntimeActorState> Actors => _actors;
 
         public void Track(RuntimeActorState actor)
         {
-            if (_known.Add(actor))
+            if (_knownActorIds.Add(actor.InstanceId))
             {
                 _actors.Add(actor);
             }

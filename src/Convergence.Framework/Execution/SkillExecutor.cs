@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Runtime;
 
 namespace Convergence.Execution;
 
@@ -169,7 +170,10 @@ public sealed class SkillExecutor : ISkillExecutor
         assessed.SelectedTargetIds.SequenceEqual(execution.SelectedTargetIds) &&
         assessed.ContextId == execution.ContextId &&
         assessed.BattleKindId == execution.BattleKindId &&
-        assessed.MoonPhaseId == execution.MoonPhaseId;
+        assessed.MoonPhaseId == execution.MoonPhaseId &&
+        BoundariesAreEquivalent(
+            assessed.Environment.ActiveStatModifierBoundaries,
+            execution.Environment.ActiveStatModifierBoundaries);
 
     private static SkillExecutionResult InvalidAssessment(string message) =>
         SkillExecutionResult.Rejected(
@@ -238,6 +242,8 @@ public sealed class SkillExecutor : ISkillExecutor
                     effectIndex));
             }
         }
+
+        AddStatModifierApplicabilityDiagnostic(request, targets?.Targets, diagnostics);
 
         return diagnostics;
     }
@@ -309,7 +315,7 @@ public sealed class SkillExecutor : ISkillExecutor
         return Array.AsReadOnly(resolvedCosts.ToArray());
     }
 
-    private static List<SkillExecutionDiagnostic> ValidatePreparedState(
+    private List<SkillExecutionDiagnostic> ValidatePreparedState(
         SkillExecutionRequest request,
         SkillExecutionAssessment assessment,
         ResolvedRuntimeTargetSet preparedTargets)
@@ -374,8 +380,47 @@ public sealed class SkillExecutor : ISkillExecutor
             }
         }
 
+        AddStatModifierApplicabilityDiagnostic(request, preparedTargets.Targets, diagnostics);
+
         return diagnostics;
     }
+
+    private void AddStatModifierApplicabilityDiagnostic(
+        SkillExecutionRequest request,
+        IEnumerable<RuntimeActorState>? targets,
+        ICollection<SkillExecutionDiagnostic> diagnostics)
+    {
+        ModifyStatStageEffectDefinition[] modifierEffects = request.Skill.Effects
+            .OfType<ModifyStatStageEffectDefinition>()
+            .ToArray();
+        if (modifierEffects.Length == 0 ||
+            modifierEffects.Length != request.Skill.Effects.Count ||
+            targets is null)
+        {
+            return;
+        }
+
+        RuntimeActorState[] targetSnapshot = targets.ToArray();
+        bool applicable = modifierEffects.Any(effect => targetSnapshot.Any(target =>
+            StatModifierExecution.AssessApplication(
+                target,
+                effect,
+                request.Environment,
+                _services.StatModifiers) is { Accepted: true, StateChanged: true }));
+        if (!applicable)
+        {
+            diagnostics.Add(new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.NoApplicableEffect,
+                $"Skill '{request.Skill.Id}' would not change the selected target modifier state."));
+        }
+    }
+
+    private static bool BoundariesAreEquivalent(
+        IReadOnlyList<StatModifierLifecycleBoundary> assessed,
+        IReadOnlyList<StatModifierLifecycleBoundary> execution) =>
+        assessed.Count == execution.Count && assessed.Zip(execution).All(pair =>
+            pair.First.EventId == pair.Second.EventId &&
+            pair.First.Sequence == pair.Second.Sequence);
 
     private static IReadOnlyList<ExecutionResourceChange> CommitCosts(
         RuntimeActorState actor,

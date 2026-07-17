@@ -344,6 +344,7 @@ public sealed class SharedEffectsRuntimeTests
             new FlatPowerPolicy(),
             new FirstBattleTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
+            DemoHostTestStatModifierPolicy.CreatePersistent(),
             escapeRuleHandlers:
             [
                 new KeyValuePair<ContentId, IEscapeRuleHandler>(

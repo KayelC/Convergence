@@ -261,7 +261,8 @@ public sealed class GodotIntegrationContractTests
         new AlwaysChancePolicy(),
         new TestPowerPolicy(),
         new FirstRandomTargetPolicy(),
-        new OrderedRuntimeTargetSelectionPolicy());
+        new OrderedRuntimeTargetSelectionPolicy(),
+        TestStatModifierPolicy.CreatePersistent());
 
     private static RuntimeActorSnapshot ToRuntimeSnapshot(CatalogBattleActor actor, int level)
     {

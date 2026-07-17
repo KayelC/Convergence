@@ -1435,6 +1435,7 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
     private readonly IBattleStatusLifecycleService _lifecycle;
     private readonly BattleExecutionServices _services;
     private readonly TrainingAnnexLifecycleTracker _tracker;
+    private readonly Dictionary<RuntimeInstanceId, long> _ownerTurnSequences = [];
 
     public TrainingAnnexBattleLifecyclePort(
         IBattleStatusLifecycleService lifecycle,
@@ -1495,6 +1496,7 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         RuntimeActorState[] participants = request.Participants
             .Select(participant => participant.State)
             .ToArray();
+        long sequence = checked(_ownerTurnSequences.GetValueOrDefault(request.Actor.InstanceId) + 1);
         BattleTurnEndLifecycleResult result = _lifecycle.ProcessTurnEnd(
             new BattleTurnEndLifecycleRequest(
                 request.Actor.State,
@@ -1502,8 +1504,10 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
                 request.Encounter.ContextId,
                 OwnerTurnEnd,
                 request.Encounter.BattleKindId,
-                request.Encounter.MoonPhaseId),
+                request.Encounter.MoonPhaseId,
+                new StatModifierLifecycleBoundary(OwnerTurnEnd, sequence)),
             _services);
+        _ownerTurnSequences[request.Actor.InstanceId] = sequence;
         _tracker.RecordStatusEvents(result.Events);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
     }
@@ -1517,7 +1521,8 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
         BattleStatusLifecycleResult result = _lifecycle.ProcessPhaseEnd(
             new BattlePhaseEndLifecycleRequest(
                 request.Participants.Select(participant => participant.State),
-                teamId));
+                teamId),
+            _services.StatModifiers);
         _tracker.RecordStatusEvents(result.Events);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
     }
@@ -1534,7 +1539,8 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
             BattleStatusLifecycleResult result = _lifecycle.Cleanup(
                 new BattleStatusCleanupRequest(
                     participant.State,
-                    BattleStatusCleanupScope.BattleEnd));
+                    BattleStatusCleanupScope.BattleEnd),
+                _services.StatModifiers);
             statusEvents.AddRange(result.Events);
         }
 

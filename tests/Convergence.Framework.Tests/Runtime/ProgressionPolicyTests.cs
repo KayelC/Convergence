@@ -82,7 +82,7 @@ public sealed class ProgressionPolicyTests
         RuntimeActorState hostedEntity = CreateActor("hosted", 20m);
         RuntimeActorState vessel = CreateActor("vessel", 5m, hpCurrent: 90m);
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
-        vessel.ChangeStatStage(StandardProgressionIds.Attack, 1, duration: null);
+        TestStatModifierPolicy.ApplyPersistent(vessel, StandardProgressionIds.Attack, 1);
         var service = new RuntimeActorCombatProfileCompositionService(
             _stats,
             _resources,
@@ -965,7 +965,8 @@ public sealed class ProgressionPolicyTests
             ruleset,
             ruleset,
             new FirstTargetPolicy(),
-            new OrderedRuntimeTargetSelectionPolicy());
+            new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent());
     }
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)

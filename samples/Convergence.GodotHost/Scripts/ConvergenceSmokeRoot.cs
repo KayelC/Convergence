@@ -159,7 +159,10 @@ public partial class ConvergenceSmokeRoot : Node
             combat,
             combat,
             new FirstSkillTargetPolicy(),
-            new OrderedRuntimeTargetSelectionPolicy());
+            new OrderedRuntimeTargetSelectionPolicy(),
+            new StatModifierPolicyService(
+                new PersistentStagedStatModifierPolicy(
+                    ContentId.Parse("godot_smoke_persistent_stat_modifiers"))));
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Catalog;
+using Convergence.Runtime;
 
 namespace Convergence.Execution;
 
@@ -149,6 +150,7 @@ public sealed class BattleExecutionServices
         IPowerAmountPolicy powerAmountPolicy,
         IRandomTargetSelectionPolicy randomTargetPolicy,
         IRuntimeRandomTargetSelectionPolicy runtimeRandomTargetPolicy,
+        IStatModifierPolicyService statModifiers,
         IEnumerable<KeyValuePair<ContentId, IFormulaAmountHandler>>? formulaHandlers = null,
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRuleHandlers = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditionHandlers = null,
@@ -170,6 +172,7 @@ public sealed class BattleExecutionServices
         PowerAmountPolicy = powerAmountPolicy ?? throw new ArgumentNullException(nameof(powerAmountPolicy));
         RandomTargetPolicy = randomTargetPolicy ?? throw new ArgumentNullException(nameof(randomTargetPolicy));
         RuntimeRandomTargetPolicy = runtimeRandomTargetPolicy ?? throw new ArgumentNullException(nameof(runtimeRandomTargetPolicy));
+        StatModifiers = statModifiers ?? throw new ArgumentNullException(nameof(statModifiers));
         FormulaHandlers = Snapshot(formulaHandlers);
         EscapeRuleHandlers = Snapshot(escapeRuleHandlers);
         CustomConditionHandlers = Snapshot(customConditionHandlers);
@@ -195,6 +198,7 @@ public sealed class BattleExecutionServices
     public IPowerAmountPolicy PowerAmountPolicy { get; }
     public IRandomTargetSelectionPolicy RandomTargetPolicy { get; }
     public IRuntimeRandomTargetSelectionPolicy RuntimeRandomTargetPolicy { get; }
+    public IStatModifierPolicyService StatModifiers { get; }
     public IReadOnlyDictionary<ContentId, IFormulaAmountHandler> FormulaHandlers { get; }
     public IReadOnlyDictionary<ContentId, IEscapeRuleHandler> EscapeRuleHandlers { get; }
     public IReadOnlyDictionary<ContentId, ICustomConditionHandler> CustomConditionHandlers { get; }

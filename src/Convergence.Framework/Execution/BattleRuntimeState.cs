@@ -105,7 +105,7 @@ public sealed class RuntimeActorState
 {
     private readonly Dictionary<ContentId, BattleResourceState> _resources;
     private readonly Dictionary<ContentId, ActiveAilmentState> _ailments = [];
-    private readonly Dictionary<ContentId, BattleStatStageState> _statStages = [];
+    private readonly Dictionary<ContentId, BattleStatStageState> _snapshotStatStageProjection = [];
     private readonly Dictionary<ChargeKind, BattleChargeState> _charges = [];
     private readonly Dictionary<ShieldKind, BattleShieldState> _shields = [];
     private readonly Dictionary<DamageElement, BattleAffinityBreakState> _affinityBreaks = [];
@@ -117,6 +117,7 @@ public sealed class RuntimeActorState
     private IReadOnlyDictionary<ContentId, decimal> _baseStats;
     private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
     private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
+    private RuntimeStatModifierStateSnapshot? _statModifierState;
     public RuntimeActorState(
         RuntimeInstanceId instanceId,
         ContentId entityId,
@@ -299,8 +300,18 @@ public sealed class RuntimeActorState
         new ReadOnlyDictionary<ContentId, BattleResourceState>(_resources);
     public IReadOnlyDictionary<ContentId, ActiveAilmentState> Ailments =>
         new ReadOnlyDictionary<ContentId, ActiveAilmentState>(_ailments);
+    /// <summary>
+    /// Gets the selected policy's canonical modifier state, or <see langword="null"/>
+    /// until a policy first owns this actor's modifier state.
+    /// </summary>
+    public RuntimeStatModifierStateSnapshot? StatModifierState => _statModifierState;
+    /// <summary>
+    /// Gets an aggregate compatibility projection for combat scaling and the
+    /// pre-M1-7 save contract. Mutation is owned exclusively by the selected
+    /// stat-modifier policy.
+    /// </summary>
     public IReadOnlyDictionary<ContentId, BattleStatStageState> StatStages =>
-        new ReadOnlyDictionary<ContentId, BattleStatStageState>(_statStages);
+        new ReadOnlyDictionary<ContentId, BattleStatStageState>(ProjectStatStages());
     public IReadOnlyDictionary<ChargeKind, BattleChargeState> Charges =>
         new ReadOnlyDictionary<ChargeKind, BattleChargeState>(_charges);
     public IReadOnlyDictionary<ShieldKind, BattleShieldState> Shields =>
@@ -325,7 +336,7 @@ public sealed class RuntimeActorState
     public bool HasSkill(ContentId id) => _skillIds.Contains(id);
     public bool HasCapability(ContentId id) => _capabilityIds.Contains(id);
     public bool HasBuff(ContentId modifierTrackId) =>
-        _statStages.TryGetValue(modifierTrackId, out BattleStatStageState? state) && state.Stage != 0;
+        StatStages.TryGetValue(modifierTrackId, out BattleStatStageState? state) && state.Stage != 0;
 
     public ElementalAffinity GetElementalAffinity(
         DamageElement element,
@@ -392,12 +403,40 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(removed);
     }
 
-    internal int ChangeStatStage(ContentId id, int delta, DurationDefinition? duration)
+    internal RuntimeStatModifierStateSnapshot ResolveStatModifierState(
+        IStatModifierPolicyService service)
     {
-        int current = _statStages.TryGetValue(id, out BattleStatStageState? state) ? state.Stage : 0;
-        int next = BattleStatStageRange.ApplyDelta(current, delta);
-        _statStages[id] = new BattleStatStageState(next, duration ?? state?.Duration);
-        return next - current;
+        ArgumentNullException.ThrowIfNull(service);
+        RuntimeStatModifierStateSnapshot candidate = _statModifierState ??
+            CreateStateFromSnapshotProjection(service.PolicyId);
+        StatModifierValidationResult validation = service.ValidateState(candidate);
+        if (!validation.IsValid)
+        {
+            throw new InvalidOperationException(
+                $"Actor '{InstanceId}' modifier state is incompatible with selected policy " +
+                $"'{service.PolicyId}': {string.Join("; ", validation.Diagnostics.Select(value => value.Message))}");
+        }
+
+        return candidate;
+    }
+
+    internal void ReplaceStatModifierState(
+        IStatModifierPolicyService service,
+        RuntimeStatModifierStateSnapshot state)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(state);
+        StatModifierValidationResult validation = service.ValidateState(state);
+        if (!validation.IsValid)
+        {
+            throw new ArgumentException(
+                $"Replacement modifier state is incompatible with selected policy '{service.PolicyId}': " +
+                string.Join("; ", validation.Diagnostics.Select(value => value.Message)),
+                nameof(state));
+        }
+
+        _statModifierState = state;
+        _snapshotStatStageProjection.Clear();
     }
 
     public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration)
@@ -476,30 +515,6 @@ public sealed class RuntimeActorState
     public IReadOnlyList<BattleDurationTickResult> TickTimedStatuses(ContentId eventId)
     {
         var results = new List<BattleDurationTickResult>();
-
-        foreach ((ContentId id, BattleStatStageState state) in _statStages.ToArray())
-        {
-            if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
-            {
-                continue;
-            }
-
-            results.Add(new BattleDurationTickResult(
-                id,
-                state.Duration,
-                current,
-                expired,
-                BattleDurationStateKind.StatStage));
-            if (expired)
-            {
-                _statStages.Remove(id);
-            }
-            else
-            {
-                _statStages[id] = state with { Duration = current };
-            }
-        }
 
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
         {
@@ -663,14 +678,6 @@ public sealed class RuntimeActorState
             _ailments.Remove(id);
         }
 
-        foreach (ContentId id in _statStages
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
-                     .Select(pair => pair.Key)
-                     .ToArray())
-        {
-            _statStages.Remove(id);
-        }
-
         foreach (ChargeKind kind in _charges
                      .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
                      .Select(pair => pair.Key)
@@ -712,36 +719,29 @@ public sealed class RuntimeActorState
         }
     }
 
-    public int RemoveStatuses(IEnumerable<StatusEffectKind> kinds, IEnumerable<ContentId> statusIds)
+    internal int RemoveNonModifierStatuses(
+        IReadOnlySet<StatusEffectKind> kinds,
+        IEnumerable<ContentId> statusIds)
     {
-        int before = _statStages.Count + _charges.Count + _shields.Count + _affinityBreaks.Count +
+        int before = _charges.Count + _shields.Count + _affinityBreaks.Count +
             _affinityOverrides.Count + _otherStatuses.Count;
-        HashSet<StatusEffectKind> requested = new(kinds);
-        if (requested.Contains(StatusEffectKind.Buff))
-        {
-            RemoveStatStages(stage => stage > 0);
-        }
-        if (requested.Contains(StatusEffectKind.Debuff))
-        {
-            RemoveStatStages(stage => stage < 0);
-        }
-        if (requested.Contains(StatusEffectKind.Charge))
+        if (kinds.Contains(StatusEffectKind.Charge))
         {
             _charges.Clear();
         }
-        if (requested.Contains(StatusEffectKind.Shield))
+        if (kinds.Contains(StatusEffectKind.Shield))
         {
             _shields.Clear();
         }
-        if (requested.Contains(StatusEffectKind.AffinityBreak))
+        if (kinds.Contains(StatusEffectKind.AffinityBreak))
         {
             _affinityBreaks.Clear();
         }
-        if (requested.Contains(StatusEffectKind.AffinityOverride))
+        if (kinds.Contains(StatusEffectKind.AffinityOverride))
         {
             _affinityOverrides.Clear();
         }
-        if (requested.Contains(StatusEffectKind.Other))
+        if (kinds.Contains(StatusEffectKind.Other))
         {
             foreach (ContentId statusId in statusIds)
             {
@@ -752,7 +752,7 @@ public sealed class RuntimeActorState
             }
         }
 
-        int after = _statStages.Count + _charges.Count + _shields.Count + _affinityBreaks.Count +
+        int after = _charges.Count + _shields.Count + _affinityBreaks.Count +
             _affinityOverrides.Count + _otherStatuses.Count;
         return before - after;
     }
@@ -847,7 +847,9 @@ public sealed class RuntimeActorState
         Dictionary<ContentId, BattleResourceState> resources = source._resources
             .ToDictionary(pair => pair.Key, pair => pair.Value.Copy());
         Dictionary<ContentId, ActiveAilmentState> ailments = new(source._ailments);
-        Dictionary<ContentId, BattleStatStageState> statStages = new(source._statStages);
+        Dictionary<ContentId, BattleStatStageState> statStageProjection =
+            new(source._snapshotStatStageProjection);
+        RuntimeStatModifierStateSnapshot? statModifierState = source._statModifierState;
         Dictionary<ChargeKind, BattleChargeState> charges = new(source._charges);
         Dictionary<ShieldKind, BattleShieldState> shields = new(source._shields);
         Dictionary<DamageElement, BattleAffinityBreakState> affinityBreaks =
@@ -872,7 +874,8 @@ public sealed class RuntimeActorState
         }
 
         ReplaceDictionary(_ailments, ailments);
-        ReplaceDictionary(_statStages, statStages);
+        ReplaceDictionary(_snapshotStatStageProjection, statStageProjection);
+        _statModifierState = statModifierState;
         ReplaceDictionary(_charges, charges);
         ReplaceDictionary(_shields, shields);
         ReplaceDictionary(_affinityBreaks, affinityBreaks);
@@ -1104,10 +1107,13 @@ public sealed class RuntimeActorState
             _otherStatuses.Add(other.Id, new BattleOtherStatusState(other.Duration, other.IsRemovable));
         }
 
-        _statStages.Clear();
+        _statModifierState = null;
+        _snapshotStatStageProjection.Clear();
         foreach (RuntimeStatStageSnapshot stage in status.StatStages)
         {
-            _statStages.Add(stage.ModifierTrackId, new BattleStatStageState(stage.Stage, stage.Duration));
+            _snapshotStatStageProjection.Add(
+                stage.ModifierTrackId,
+                new BattleStatStageState(stage.Stage, stage.Duration));
         }
 
         _charges.Clear();
@@ -1163,7 +1169,7 @@ public sealed class RuntimeActorState
                 pair.Key,
                 pair.Value.Duration,
                 pair.Value.IsRemovable)),
-            _statStages.Select(pair => new RuntimeStatStageSnapshot(
+            StatStages.Select(pair => new RuntimeStatStageSnapshot(
                 pair.Key,
                 pair.Value.Stage,
                 pair.Value.Duration)),
@@ -1182,6 +1188,38 @@ public sealed class RuntimeActorState
                 pair.Key,
                 pair.Value.Duration)));
 
+    private RuntimeStatModifierStateSnapshot CreateStateFromSnapshotProjection(ContentId policyId)
+    {
+        RuntimeStatModifierTrackSnapshot[] tracks = _snapshotStatStageProjection
+            .Where(pair => pair.Value.Stage != 0)
+            .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
+            .Select((pair, index) => new RuntimeStatModifierTrackSnapshot(
+                pair.Key,
+                pair.Value.Stage,
+                [new RuntimeStatModifierContributionSnapshot(
+                    index + 1L,
+                    pair.Value.Stage,
+                    pair.Value.Duration)]))
+            .ToArray();
+        return new RuntimeStatModifierStateSnapshot(policyId, tracks);
+    }
+
+    private Dictionary<ContentId, BattleStatStageState> ProjectStatStages()
+    {
+        if (_statModifierState is null)
+        {
+            return new Dictionary<ContentId, BattleStatStageState>(_snapshotStatStageProjection);
+        }
+
+        return _statModifierState.Tracks.ToDictionary(
+            track => track.ModifierTrackId,
+            track => new BattleStatStageState(
+                track.ResolvedStage,
+                track.Contributions.Count == 1
+                    ? track.Contributions[0].Duration
+                    : null));
+    }
+
     private static void ReplaceDictionary<TKey, TValue>(
         IDictionary<TKey, TValue> destination,
         IEnumerable<KeyValuePair<TKey, TValue>> source)
@@ -1191,14 +1229,6 @@ public sealed class RuntimeActorState
         foreach ((TKey key, TValue value) in source)
         {
             destination.Add(key, value);
-        }
-    }
-
-    private void RemoveStatStages(Func<int, bool> predicate)
-    {
-        foreach (ContentId id in _statStages.Where(pair => predicate(pair.Value.Stage)).Select(pair => pair.Key).ToArray())
-        {
-            _statStages.Remove(id);
         }
     }
 
@@ -1217,17 +1247,6 @@ public sealed class RuntimeActorState
 
             _ailments.Remove(id);
             results.Add(Expired(id, state.Duration, BattleDurationStateKind.Ailment));
-        }
-
-        foreach ((ContentId id, BattleStatStageState state) in _statStages.ToArray())
-        {
-            if (state.Duration is null || !predicate(state.Duration))
-            {
-                continue;
-            }
-
-            _statStages.Remove(id);
-            results.Add(Expired(id, state.Duration, BattleDurationStateKind.StatStage));
         }
 
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())

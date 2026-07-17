@@ -4,7 +4,7 @@
 
 The executable source inventory is
 [`../../tests/Convergence.Framework.Tests/Fixtures/framework-source-inventory.json`](../../tests/Convergence.Framework.Tests/Fixtures/framework-source-inventory.json).
-It currently accounts for 99 active Framework C# files. Architecture tests
+It currently accounts for 100 active Framework C# files. Architecture tests
 compare that inventory with the filesystem and fail when a source is missing,
 duplicated, assigned to the wrong directory owner, or misclassified as exported
 or internal-only.

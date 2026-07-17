@@ -44,6 +44,7 @@ public enum SkillExecutionDiagnosticCode
     CustomConditionHandlerMissing,
     EscapeRuleHandlerMissing,
     AilmentMissing,
+    NoApplicableEffect,
     AssessmentInvalid,
     ExecutionFailed
 }
@@ -94,6 +95,8 @@ public sealed record EffectExecutionResult
     private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
     private readonly IReadOnlyList<ExecutionResourceChange> _resourceChanges =
         Array.Empty<ExecutionResourceChange>();
+    private readonly IReadOnlyList<StatModifierTransitionResult> _statModifierTransitions =
+        Array.Empty<StatModifierTransitionResult>();
 
     public EffectExecutionResult(
         int EffectIndex,
@@ -107,7 +110,8 @@ public sealed record EffectExecutionResult
         bool EscapeRequested = false,
         IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null,
         ElementalAffinity? ResolvedAffinity = null,
-        IReadOnlyList<ContentId>? HostActionRequestIds = null)
+        IReadOnlyList<ContentId>? HostActionRequestIds = null,
+        IReadOnlyList<StatModifierTransitionResult>? StatModifierTransitions = null)
     {
         this.EffectIndex = EffectIndex;
         this.TargetId = TargetId;
@@ -122,6 +126,7 @@ public sealed record EffectExecutionResult
         this.ResolvedAffinity = ResolvedAffinity;
         this.HostActionRequestIds = Array.AsReadOnly(HostActionRequestIds?.ToArray() ?? []);
         this.ResourceChanges = [];
+        this.StatModifierTransitions = StatModifierTransitions ?? [];
     }
 
     public int EffectIndex { get; init; }
@@ -150,6 +155,12 @@ public sealed record EffectExecutionResult
         get => _resourceChanges;
         init => _resourceChanges = Array.AsReadOnly(value?.ToArray() ?? []);
     }
+    /// <summary>Gets the canonical modifier transitions committed by this effect.</summary>
+    public IReadOnlyList<StatModifierTransitionResult> StatModifierTransitions
+    {
+        get => _statModifierTransitions;
+        init => _statModifierTransitions = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
 }
 
 public sealed record EffectExecutionEnvironment
@@ -157,16 +168,36 @@ public sealed record EffectExecutionEnvironment
     public EffectExecutionEnvironment(
         ContentId contextId,
         ContentId? battleKindId = null,
-        ContentId? moonPhaseId = null)
+        ContentId? moonPhaseId = null,
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries = null)
     {
+        StatModifierLifecycleBoundary[] boundaries =
+            (activeStatModifierBoundaries ?? []).ToArray();
+        if (boundaries.Any(boundary => boundary is null) ||
+            boundaries.Any(boundary => !boundary.EventId.IsValid || boundary.Sequence <= 0) ||
+            boundaries.Select(boundary => boundary.EventId).Distinct().Count() != boundaries.Length)
+        {
+            throw new ArgumentException(
+                "Active stat-modifier boundaries must be valid and unique by event ID.",
+                nameof(activeStatModifierBoundaries));
+        }
+
         ContextId = contextId;
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;
+        ActiveStatModifierBoundaries = Array.AsReadOnly(boundaries);
     }
 
     public ContentId ContextId { get; }
     public ContentId? BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
+    public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; }
+
+    public StatModifierLifecycleBoundary? FindStatModifierBoundary(DurationDefinition? duration) =>
+        duration is TurnDurationDefinition turns
+            ? ActiveStatModifierBoundaries.FirstOrDefault(boundary =>
+                boundary.EventId == turns.TickEventId)
+            : null;
 }
 
 public sealed record EffectActionExecutionRequest

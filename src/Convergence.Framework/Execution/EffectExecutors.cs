@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Runtime;
 
 namespace Convergence.Execution;
 
@@ -19,11 +20,13 @@ internal abstract class TargetedEffectExecutor
         bool escape = false,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
         ElementalAffinity? resolvedAffinity = null,
-        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null) =>
+        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null,
+        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null) =>
         new EffectExecutionResult(
             context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
             turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity,
-            HostActionRequestIds: null)
+            HostActionRequestIds: null,
+            StatModifierTransitions: statModifierTransitions)
         {
             ResourceChanges = resourceChanges ?? []
         };
@@ -33,9 +36,11 @@ internal abstract class TargetedEffectExecutor
         TurnEconomyOutcome turnEconomy = TurnEconomyOutcome.Miss,
         string? detail = null,
         ContentId? relatedId = null,
-        ElementalAffinity? resolvedAffinity = null) =>
+        ElementalAffinity? resolvedAffinity = null,
+        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure,
-            turnEconomy, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity);
+            turnEconomy, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity,
+            StatModifierTransitions: statModifierTransitions);
 
     protected static EffectExecutionResult Interrupted(
         EffectExecutionContext context,
@@ -390,11 +395,32 @@ internal sealed class ModifyStatStageEffectExecutor : TargetedEffectExecutor, IE
     public EffectExecutionResult Execute(ModifyStatStageEffectDefinition definition, EffectExecutionContext context)
     {
         RuntimeActorState target = Target(context);
-        foreach (ContentId id in definition.ModifierTrackIds)
+        StatModifierApplicationEvaluation evaluation = StatModifierExecution.Apply(
+            target,
+            definition,
+            context.Request.Environment,
+            context.Services.StatModifiers);
+        if (!evaluation.Accepted)
         {
-            target.ChangeStatStage(id, definition.StageDelta, definition.Duration);
+            return Failure(
+                context,
+                detail: evaluation.RejectionDetail,
+                statModifierTransitions: evaluation.Transitions);
         }
-        return Success(context, definition.StageDelta, detail: string.Join(",", definition.ModifierTrackIds));
+
+        if (!evaluation.StateChanged)
+        {
+            return Failure(
+                context,
+                detail: "The selected stat-modifier policy produced no state change.",
+                statModifierTransitions: evaluation.Transitions);
+        }
+
+        return Success(
+            context,
+            evaluation.AggregateStageDelta,
+            detail: string.Join(",", definition.ModifierTrackIds),
+            statModifierTransitions: evaluation.Transitions);
     }
 }
 
@@ -447,8 +473,33 @@ internal sealed class RemoveStatusEffectExecutor : TargetedEffectExecutor, IEffe
 {
     public EffectExecutionResult Execute(RemoveStatusEffectDefinition definition, EffectExecutionContext context)
     {
-        int removed = Target(context).RemoveStatuses(definition.StatusKinds, definition.StatusIds);
-        return Success(context, removed);
+        RuntimeActorState target = Target(context);
+        HashSet<StatusEffectKind> kinds = definition.StatusKinds.ToHashSet();
+        StatModifierTransitionResult? modifierTransition = StatModifierExecution.Remove(
+            target,
+            kinds,
+            context.Services.StatModifiers);
+        if (modifierTransition is { Accepted: false })
+        {
+            return Failure(
+                context,
+                detail: string.Join("; ", modifierTransition.Diagnostics.Select(value => value.Message)),
+                statModifierTransitions: [modifierTransition]);
+        }
+
+        int removed = target.RemoveNonModifierStatuses(kinds, definition.StatusIds);
+        int modifierChanges = modifierTransition?.Events.Count(@event =>
+            @event.Kind is StatModifierEventKind.ContributionRemoved or StatModifierEventKind.TrackRemoved) ?? 0;
+        int total = removed + modifierChanges;
+        return total == 0 && modifierTransition?.StateChanged != true
+            ? Failure(
+                context,
+                detail: "No matching removable status was active.",
+                statModifierTransitions: modifierTransition is null ? [] : [modifierTransition])
+            : Success(
+                context,
+                total,
+                statModifierTransitions: modifierTransition is null ? [] : [modifierTransition]);
     }
 }
 

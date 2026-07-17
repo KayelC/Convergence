@@ -152,10 +152,10 @@ public sealed class StatStageScalingTests
     {
         RuntimeActorState attacker = Actor("attacker");
         RuntimeActorState defender = Actor("defender");
-        attacker.ChangeStatStage(StandardProgressionIds.PhysicalAttack, 1, duration: null);
-        attacker.ChangeStatStage(StandardProgressionIds.AgilityTrack, 1, duration: null);
-        defender.ChangeStatStage(StandardProgressionIds.Defense, 1, duration: null);
-        defender.ChangeStatStage(StandardProgressionIds.AgilityTrack, 1, duration: null);
+        TestStatModifierPolicy.ApplyPersistent(attacker, StandardProgressionIds.PhysicalAttack, 1);
+        TestStatModifierPolicy.ApplyPersistent(attacker, StandardProgressionIds.AgilityTrack, 1);
+        TestStatModifierPolicy.ApplyPersistent(defender, StandardProgressionIds.Defense, 1);
+        TestStatModifierPolicy.ApplyPersistent(defender, StandardProgressionIds.AgilityTrack, 1);
         RuntimeActorSnapshot attackerBefore = attacker.ToSnapshot();
         RuntimeActorSnapshot defenderBefore = defender.ToSnapshot();
         var ruleset = new ProductionCombatRuleset(new MinimumRandomSource());

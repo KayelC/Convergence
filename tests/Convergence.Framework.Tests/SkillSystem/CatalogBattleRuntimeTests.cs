@@ -1706,7 +1706,8 @@ public sealed class CatalogBattleRuntimeTests
         new AlwaysChancePolicy(),
         new TestPowerPolicy(),
         randomTargetPolicy ?? new FirstRandomTargetPolicy(),
-        new OrderedRuntimeTargetSelectionPolicy());
+        new OrderedRuntimeTargetSelectionPolicy(),
+        TestStatModifierPolicy.CreatePersistent());
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,

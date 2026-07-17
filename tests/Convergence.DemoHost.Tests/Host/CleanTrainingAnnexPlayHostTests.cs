@@ -3091,7 +3091,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         state.SetResource(StandardProgressionIds.Hp, 70);
         state.ApplyAilment(catalog.GetRequiredAilment(Qualified("sample_poison")), Turns(3));
         state.SetGuarding(true);
-        state.ChangeStatStage(ContentId.Parse("attack"), 1, Turns(1));
+        DemoHostTestStatModifierPolicy.ApplyPersistent(state, ContentId.Parse("attack"), 1);
         state.GrantCharge(ChargeKind.Physical, 2m, Turns(1));
         state.GrantShield(ShieldKind.Physical, Turns(1));
         state.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));

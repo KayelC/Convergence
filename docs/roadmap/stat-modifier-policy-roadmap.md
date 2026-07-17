@@ -44,7 +44,7 @@ and reviews are complete.
 | M1-2 | `complete` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
 | M1-3 | `complete` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
 | M1-4 | `complete` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
-| M1-5 | `pending` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
+| M1-5 | `complete` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `pending` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `pending` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
 | M1-8 | `pending` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
@@ -259,6 +259,31 @@ Effect results must distinguish:
 - contributions added, refreshed, removed, or expired;
 - duration changes;
 - whether canonical state changed.
+
+### M1-5 Completion Record
+
+- `BattleExecutionServices` now requires one explicit
+  `IStatModifierPolicyService`; clean console, Godot, and test composition roots
+  cannot silently select a stage model.
+- Skills, items, passives, lifecycle helpers, positive/negative removal, swap
+  cleanup, encounter cleanup, and field cleanup all execute through that one
+  selected authority. The former direct actor-stage mutation and status-removal
+  bypasses are gone.
+- `RuntimeActorState` retains canonical immutable modifier state while exposing
+  an aggregate read projection to combat scaling. The old save projection is
+  deliberately temporary and remains scheduled for M1-7.
+- Assessments use `AssessApplication`; committed effects use `Apply`.
+  Multi-track applications stage every transition and commit only when all
+  tracks are accepted. Timer refresh is meaningful success even when the
+  aggregate stage does not change.
+- Effect and lifecycle results carry ordered typed modifier transitions.
+  Aggregate changes, contribution changes, and expiry are distinguishable,
+  rather than being flattened into one stage-change message.
+- Owner-turn lifecycle ports provide monotonic boundaries. Nested passive
+  transactions retain the outer staged actor for action-end cleanup, preventing
+  legitimate transactional clones from being mistaken for duplicate actors.
+- Added 7 focused integration cases. The checkpoint gate completed with 1,157
+  passing tests, zero failures, zero skips, and zero compiler warnings.
 
 Inventory consumption uses `StateChanged`. Turn consumption continues to come
 from the action command result and selected turn economy.

@@ -248,5 +248,6 @@ internal sealed class CleanBattleDemoHost
             new DemoChancePolicy(),
             new DemoPowerAmountPolicy(),
             new DemoRandomTargetPolicy(),
-            new OrderedRuntimeTargetSelectionPolicy());
+            new OrderedRuntimeTargetSelectionPolicy(),
+            DemoStatModifierPolicy.CreatePersistent());
 }

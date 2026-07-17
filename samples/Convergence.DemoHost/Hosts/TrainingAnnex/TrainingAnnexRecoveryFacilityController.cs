@@ -158,7 +158,8 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         actor.SetResource(StandardProgressionIds.Sp, after.CurrentSp);
         actor.RemoveAilments(_ => true);
         new BattleStatusLifecycleService(new TrainingAnnexMinimumRandomSource()).Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.FieldTransition));
+            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.FieldTransition),
+            DemoStatModifierPolicy.CreatePersistent());
     }
 
     private static TrainingAnnexHospitalRestorationEvidence ToEvidence(HospitalRestorationResult result) =>

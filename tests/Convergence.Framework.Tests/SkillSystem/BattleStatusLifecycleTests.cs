@@ -470,34 +470,41 @@ public sealed class BattleStatusLifecycleTests
     public void StatStages_SaturateAtApprovedBoundsWithoutOverflow()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        BattleExecutionServices execution = Services();
         RuntimeActorState actor = Actor("actor");
         ContentId attack = ContentId.Parse("attack");
 
-        BattleStatusLifecycleResult raised = service.ApplyStatStage(actor, attack, int.MaxValue);
-        BattleStatusLifecycleResult unchanged = service.ApplyStatStage(actor, attack, int.MaxValue);
-        BattleStatusLifecycleResult lowered = service.ApplyStatStage(actor, attack, int.MinValue);
+        BattleStatusLifecycleResult raised = service.ApplyStatStage(actor, attack, int.MaxValue, execution);
+        BattleStatusLifecycleResult unchanged = service.ApplyStatStage(actor, attack, int.MaxValue, execution);
+        BattleStatusLifecycleResult lowered = service.ApplyStatStage(actor, attack, int.MinValue, execution);
 
         Assert.Equal(BattleStatStageRange.Minimum, actor.StatStages[attack].Stage);
-        Assert.Equal(4, Assert.Single(raised.Events).Value);
-        Assert.Equal(0, Assert.Single(unchanged.Events).Value);
-        Assert.Equal(-8, Assert.Single(lowered.Events).Value);
+        Assert.Equal(4, Assert.Single(raised.Events, IsAggregateChange).Value);
+        Assert.Empty(unchanged.Events);
+        Assert.Equal(-8, Assert.Single(lowered.Events, IsAggregateChange).Value);
+
+        static bool IsAggregateChange(BattleStatusLifecycleEvent value) =>
+            value.ModifierEvent?.Kind == StatModifierEventKind.AggregateStageChanged;
     }
 
     [Fact]
     public void Cleanup_ClearsTransientAndEncounterStatusesWithoutRemovingAilments()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        IStatModifierPolicyService statModifiers = TestStatModifierPolicy.CreatePersistent();
         RuntimeActorState actor = Actor("actor");
         actor.SetGuarding(true);
         actor.GrantShield(ShieldKind.Physical, Turns(1));
         actor.GrantCharge(ChargeKind.Physical, 2, Turns(1));
-        actor.ChangeStatStage(ContentId.Parse("attack"), 1, Turns(1));
+        TestStatModifierPolicy.ApplyPersistent(actor, ContentId.Parse("attack"), 1);
         actor.BreakAffinity(DamageElement.Fire, Turns(1));
         actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
         actor.AddOtherStatus(ContentId.Parse("marked"), Turns(1));
         actor.ApplyAilment(PoisonAilment(), Turns(3));
 
-        service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap));
+        service.Cleanup(
+            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap),
+            statModifiers);
 
         Assert.False(actor.IsGuarding);
         Assert.Empty(actor.Shields);
@@ -508,7 +515,9 @@ public sealed class BattleStatusLifecycleTests
         Assert.NotEmpty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
 
-        service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd));
+        service.Cleanup(
+            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd),
+            statModifiers);
 
         Assert.Empty(actor.StatStages);
         Assert.Empty(actor.AffinityBreaks);
@@ -518,7 +527,7 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
-    public void ActionEnd_ExpiresInstantDurationsAcrossEveryStateFamily()
+    public void ActionEnd_ExpiresInstantDurationsAcrossNonModifierStateFamilies()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
         RuntimeActorState actor = Actor("actor");
@@ -527,22 +536,24 @@ public sealed class BattleStatusLifecycleTests
         var request = new BattleActionEndLifecycleRequest(participants);
         participants.Clear();
 
-        BattleStatusLifecycleResult result = service.ProcessActionEnd(request);
+        BattleStatusLifecycleResult result = service.ProcessActionEnd(
+            request,
+            TestStatModifierPolicy.CreatePersistent());
 
         Assert.Single(request.Participants);
         Assert.Throws<NotSupportedException>(() =>
             ((IList<RuntimeActorState>)request.Participants).Add(actor));
         AssertNoDurationStates(actor, "instant");
-        Assert.Equal(7, result.Events.Count);
+        Assert.Equal(6, result.Events.Count);
         Assert.Equal(1, result.Events.Count(status =>
             status.Kind == BattleStatusLifecycleEventKind.AilmentExpired));
-        Assert.Equal(6, result.Events.Count(status =>
+        Assert.Equal(5, result.Events.Count(status =>
             status.Kind == BattleStatusLifecycleEventKind.StatusExpired));
         Assert.All(result.Events, status => Assert.Contains("Instant", status.Detail));
     }
 
     [Fact]
-    public void TurnDurations_TickEveryStateFamilyOnlyOnTheirAuthoredEvent()
+    public void TurnDurations_TickEveryNonModifierStateFamilyOnlyOnTheirAuthoredEvent()
     {
         RuntimeActorState actor = Actor("actor");
         SeedDurationStates(actor, new TurnDurationDefinition(1, OwnerTurnEnd, false), "turn");
@@ -555,14 +566,15 @@ public sealed class BattleStatusLifecycleTests
             .ToArray();
 
         AssertNoDurationStates(actor, "turn");
-        Assert.Equal(7, ticks.Length);
-        Assert.Equal(Enum.GetValues<BattleDurationStateKind>(),
+        Assert.Equal(6, ticks.Length);
+        Assert.Equal(Enum.GetValues<BattleDurationStateKind>()
+                .Where(kind => kind != BattleDurationStateKind.StatStage),
             ticks.Select(tick => tick.StateKind).Order().ToArray());
         Assert.All(ticks, tick => Assert.True(tick.Expired));
     }
 
     [Fact]
-    public void PhaseEnd_ExpiresOnlyTheMatchingPhaseAcrossEveryStateFamily()
+    public void PhaseEnd_ExpiresOnlyTheMatchingNonModifierStateFamilies()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
         ContentId playerPhase = ContentId.Parse("player_phase");
@@ -574,12 +586,13 @@ public sealed class BattleStatusLifecycleTests
         SeedDurationStates(permanent, new PermanentDurationDefinition(), "permanent");
 
         BattleStatusLifecycleResult result = service.ProcessPhaseEnd(
-            new BattlePhaseEndLifecycleRequest([matching, other, permanent], playerPhase));
+            new BattlePhaseEndLifecycleRequest([matching, other, permanent], playerPhase),
+            TestStatModifierPolicy.CreatePersistent());
 
         AssertNoDurationStates(matching, "matching");
         AssertAllDurationStatesPresent(other, "other");
         AssertAllDurationStatesPresent(permanent, "permanent");
-        Assert.Equal(7, result.Events.Count);
+        Assert.Equal(6, result.Events.Count);
         Assert.All(result.Events, status => Assert.Contains("Phase", status.Detail));
     }
 
@@ -596,8 +609,13 @@ public sealed class BattleStatusLifecycleTests
             new NormalAilmentTurnBehaviorDefinition());
         permanent.ApplyAilment(turnAilment, Turns(2));
 
-        service.Cleanup(new BattleStatusCleanupRequest(battle, BattleStatusCleanupScope.BattleEnd));
-        service.Cleanup(new BattleStatusCleanupRequest(permanent, BattleStatusCleanupScope.BattleEnd));
+        IStatModifierPolicyService statModifiers = TestStatModifierPolicy.CreatePersistent();
+        service.Cleanup(
+            new BattleStatusCleanupRequest(battle, BattleStatusCleanupScope.BattleEnd),
+            statModifiers);
+        service.Cleanup(
+            new BattleStatusCleanupRequest(permanent, BattleStatusCleanupScope.BattleEnd),
+            statModifiers);
 
         AssertNoDurationStates(battle, "battle");
         AssertAllDurationStatesPresent(permanent, "permanent");
@@ -613,7 +631,9 @@ public sealed class BattleStatusLifecycleTests
         actor.GrantCharge(ChargeKind.Physical, 2m, new PermanentDurationDefinition());
         actor.GrantShield(ShieldKind.Physical, new PermanentDurationDefinition());
 
-        service.Cleanup(new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap));
+        service.Cleanup(
+            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap),
+            TestStatModifierPolicy.CreatePersistent());
 
         Assert.False(actor.IsGuarding);
         Assert.Contains(ChargeKind.Physical, actor.Charges.Keys);
@@ -708,7 +728,6 @@ public sealed class BattleStatusLifecycleTests
                 $"ailment_{suffix}",
                 new NormalAilmentTurnBehaviorDefinition()),
             duration);
-        actor.ChangeStatStage(ContentId.Parse($"stat_{suffix}"), 1, duration);
         actor.GrantCharge(ChargeKind.Physical, 2m, duration);
         actor.GrantShield(ShieldKind.Physical, duration);
         actor.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Resist, duration);
@@ -719,7 +738,6 @@ public sealed class BattleStatusLifecycleTests
     private static void AssertAllDurationStatesPresent(RuntimeActorState actor, string suffix)
     {
         Assert.True(actor.HasAilment(ContentId.Parse($"ailment_{suffix}")));
-        Assert.Contains(ContentId.Parse($"stat_{suffix}"), actor.StatStages.Keys);
         Assert.Contains(ChargeKind.Physical, actor.Charges.Keys);
         Assert.Contains(ShieldKind.Physical, actor.Shields.Keys);
         Assert.Contains(DamageElement.Ice, actor.AffinityOverrides.Keys);
@@ -730,7 +748,6 @@ public sealed class BattleStatusLifecycleTests
     private static void AssertNoDurationStates(RuntimeActorState actor, string suffix)
     {
         Assert.False(actor.HasAilment(ContentId.Parse($"ailment_{suffix}")));
-        Assert.DoesNotContain(ContentId.Parse($"stat_{suffix}"), actor.StatStages.Keys);
         Assert.DoesNotContain(ChargeKind.Physical, actor.Charges.Keys);
         Assert.DoesNotContain(ShieldKind.Physical, actor.Shields.Keys);
         Assert.DoesNotContain(DamageElement.Ice, actor.AffinityOverrides.Keys);
@@ -806,6 +823,7 @@ public sealed class BattleStatusLifecycleTests
             new ZeroPowerPolicy(),
             new FirstTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent(),
             formulaHandlers:
             [
                 new KeyValuePair<ContentId, IFormulaAmountHandler>(

@@ -39,9 +39,13 @@ public sealed class ActiveSkillExecutionTests
         System.Reflection.ParameterInfo runtimePolicy = Assert.Single(
             constructor.GetParameters(),
             parameter => parameter.Name == "runtimeRandomTargetPolicy");
+        System.Reflection.ParameterInfo statModifierPolicy = Assert.Single(
+            constructor.GetParameters(),
+            parameter => parameter.Name == "statModifiers");
 
         Assert.False(skillPolicy.IsOptional);
         Assert.False(runtimePolicy.IsOptional);
+        Assert.False(statModifierPolicy.IsOptional);
 
         Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
             new TestAilmentRepository([Ailment(Poison)]),
@@ -51,7 +55,8 @@ public sealed class ActiveSkillExecutionTests
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             null!,
-            new OrderedRuntimeTargetSelectionPolicy()));
+            new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent()));
         Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
             new TestAilmentRepository([Ailment(Poison)]),
             new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
@@ -60,6 +65,17 @@ public sealed class ActiveSkillExecutionTests
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
+            null!,
+            TestStatModifierPolicy.CreatePersistent()));
+        Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
+            new TestAilmentRepository([Ailment(Poison)]),
+            new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
+            new DelegateInstantDeathPolicy(_ => false),
+            new AlwaysApplyAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new PowerAmountPolicy(),
+            new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
+            new OrderedRuntimeTargetSelectionPolicy(),
             null!));
     }
 
@@ -765,7 +781,7 @@ public sealed class ActiveSkillExecutionTests
             EnemyTeam,
             defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
         target.ApplyAilment(Ailment(Poison), new BattleDurationDefinition());
-        target.ChangeStatStage(attack, 1, null);
+        TestStatModifierPolicy.ApplyPersistent(target, attack, 1);
         ConditionDefinition[] conditions =
         [
             new AllConditionDefinition([
@@ -971,7 +987,7 @@ public sealed class ActiveSkillExecutionTests
 
         target.GrantShield(ShieldKind.Magical, null);
         Assert.Equal(ElementalAffinity.Repel, target.GetElementalAffinity(DamageElement.Fire));
-        target.RemoveStatuses([StatusEffectKind.Shield], []);
+        target.RemoveNonModifierStatuses(new HashSet<StatusEffectKind> { StatusEffectKind.Shield }, []);
 
         SkillExecutionResult damage = ExecuteEffect(
             executor,
@@ -1383,6 +1399,7 @@ public sealed class ActiveSkillExecutionTests
             new DelegateRandomTargetPolicy(randomTargets ?? ((candidates, count, _) =>
                 candidates.Take(count.Minimum).ToArray())),
             new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent(),
             formulaHandlers: formulas,
             escapeRuleHandlers: escapeRules,
             customConditionHandlers: customConditions,

@@ -373,6 +373,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Execution/StatModifierExecution.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
       "path": "Fusion/CatalogFusionContentRepository.cs",
       "owner": "fusion_compendium",
       "publicSurface": "exported"

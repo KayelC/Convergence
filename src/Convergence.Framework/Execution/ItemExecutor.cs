@@ -208,7 +208,11 @@ public sealed class ItemExecutor : IItemExecutor
 
         ValidateEffects(usage.Effects, diagnostics);
         if (targets is not null &&
-            !usage.Effects.Any(effect => IsApplicable(effect, targets, request.Actor)))
+            !usage.Effects.Any(effect => IsApplicable(
+                effect,
+                targets,
+                request.Actor,
+                request.Environment)))
         {
             diagnostics.Add(new ItemExecutionDiagnostic(
                 ItemExecutionDiagnosticCode.NoApplicableEffect,
@@ -272,7 +276,11 @@ public sealed class ItemExecutor : IItemExecutor
                 targetingDiagnostic ?? "The prepared item targets are no longer eligible.");
         }
 
-        if (!request.Item.Usage.Effects.Any(effect => IsApplicable(effect, preparedTargets, request.Actor)))
+        if (!request.Item.Usage.Effects.Any(effect => IsApplicable(
+                effect,
+                preparedTargets,
+                request.Actor,
+                request.Environment)))
         {
             return ItemExecutionResult.Rejected(
             [
@@ -330,7 +338,10 @@ public sealed class ItemExecutor : IItemExecutor
         assessed.SelectedTargetIds.SequenceEqual(execution.SelectedTargetIds) &&
         assessed.Environment.ContextId == execution.Environment.ContextId &&
         assessed.Environment.BattleKindId == execution.Environment.BattleKindId &&
-        assessed.Environment.MoonPhaseId == execution.Environment.MoonPhaseId;
+        assessed.Environment.MoonPhaseId == execution.Environment.MoonPhaseId &&
+        BoundariesAreEquivalent(
+            assessed.Environment.ActiveStatModifierBoundaries,
+            execution.Environment.ActiveStatModifierBoundaries);
 
     private static ItemExecutionResult InvalidAssessment(string message) =>
         ItemExecutionResult.Rejected(
@@ -447,20 +458,22 @@ public sealed class ItemExecutor : IItemExecutor
     private bool IsApplicable(
         EffectDefinition effect,
         ResolvedRuntimeTargetSet targets,
-        RuntimeActorState actor)
+        RuntimeActorState actor,
+        EffectExecutionEnvironment environment)
     {
         if (effect is EscapeEffectDefinition or CustomEffectDefinition)
         {
             return true;
         }
 
-        return targets.Targets.Any(target => IsApplicable(effect, actor, target));
+        return targets.Targets.Any(target => IsApplicable(effect, actor, target, environment));
     }
 
     private bool IsApplicable(
         EffectDefinition effect,
         RuntimeActorState actor,
-        RuntimeActorState target) => effect switch
+        RuntimeActorState target,
+        EffectExecutionEnvironment environment) => effect switch
         {
             RestoreResourceEffectDefinition restore =>
                 target.TryGetResource(restore.ResourceId, out BattleResourceState? resource) &&
@@ -475,6 +488,12 @@ public sealed class ItemExecutor : IItemExecutor
             ReduceResourceEffectDefinition reduce =>
                 target.TryGetResource(reduce.ResourceId, out BattleResourceState? resource) &&
                 resource is not null && resource.Current > (reduce.CanReduceToZero ? 0 : Math.Min(1, resource.Maximum)),
+            ModifyStatStageEffectDefinition modify =>
+                StatModifierExecution.AssessApplication(
+                    target,
+                    modify,
+                    environment,
+                    _services.StatModifiers) is { Accepted: true, StateChanged: true },
             RemoveStatusEffectDefinition remove => HasRemovableStatus(remove, target),
             _ => true
         };
@@ -501,11 +520,12 @@ public sealed class ItemExecutor : IItemExecutor
         return Math.Clamp(desired, 0, resource.Maximum) != resource.Current;
     }
 
-    private static bool HasRemovableStatus(RemoveStatusEffectDefinition effect, RuntimeActorState target)
+    private bool HasRemovableStatus(RemoveStatusEffectDefinition effect, RuntimeActorState target)
     {
         HashSet<StatusEffectKind> kinds = new(effect.StatusKinds);
-        return kinds.Contains(StatusEffectKind.Buff) && target.StatStages.Values.Any(stage => stage.Stage > 0) ||
-               kinds.Contains(StatusEffectKind.Debuff) && target.StatStages.Values.Any(stage => stage.Stage < 0) ||
+        StatModifierTransitionResult? modifierRemoval =
+            StatModifierExecution.AssessRemoval(target, kinds, _services.StatModifiers);
+        return modifierRemoval?.StateChanged == true ||
                kinds.Contains(StatusEffectKind.Charge) && target.Charges.Count > 0 ||
                kinds.Contains(StatusEffectKind.Shield) && target.Shields.Count > 0 ||
                kinds.Contains(StatusEffectKind.AffinityBreak) && target.AffinityBreaks.Count > 0 ||
@@ -525,6 +545,14 @@ public sealed class ItemExecutor : IItemExecutor
             return true;
         }
 
-        return result.Value is null || result.Value != 0;
+        return result.StatModifierTransitions.Any(transition => transition.StateChanged) ||
+               result.Value is null || result.Value != 0;
     }
+
+    private static bool BoundariesAreEquivalent(
+        IReadOnlyList<StatModifierLifecycleBoundary> assessed,
+        IReadOnlyList<StatModifierLifecycleBoundary> execution) =>
+        assessed.Count == execution.Count && assessed.Zip(execution).All(pair =>
+            pair.First.EventId == pair.Second.EventId &&
+            pair.First.Sequence == pair.Second.Sequence);
 }

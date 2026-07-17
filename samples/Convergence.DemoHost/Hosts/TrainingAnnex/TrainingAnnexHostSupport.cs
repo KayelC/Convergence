@@ -223,7 +223,8 @@ internal static class TrainingAnnexHostSupport
             combatRuleset,
             combatRuleset,
             new TrainingAnnexFirstTargetSelectionPolicy(),
-            new OrderedRuntimeTargetSelectionPolicy());
+            new OrderedRuntimeTargetSelectionPolicy(),
+            DemoStatModifierPolicy.CreatePersistent());
 
     public static TrainingAnnexActorRosterResult CreateActorRoster(GameDataCatalog catalog)
     {

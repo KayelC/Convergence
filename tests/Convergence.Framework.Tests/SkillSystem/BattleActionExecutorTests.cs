@@ -956,6 +956,7 @@ public sealed class BattleActionExecutorTests
             new PowerAmountPolicy(),
             randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
             runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent(),
             escapeRuleHandlers: escapeRules,
             customEffectHandlers: customEffects);
 

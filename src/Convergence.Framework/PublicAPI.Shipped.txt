@@ -2820,7 +2820,6 @@ Convergence.Execution.BattleActionDiagnosticCode.TargetSelectionInvalid = 3 -> C
 Convergence.Execution.BattleActionDiagnosticCode.UnsupportedAction = 6 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionEndLifecycleRequest
 Convergence.Execution.BattleActionEndLifecycleRequest.<Clone>$() -> Convergence.Execution.BattleActionEndLifecycleRequest!
-Convergence.Execution.BattleActionEndLifecycleRequest.BattleActionEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants) -> void
 Convergence.Execution.BattleActionEndLifecycleRequest.Equals(Convergence.Execution.BattleActionEndLifecycleRequest? other) -> bool
 Convergence.Execution.BattleActionEndLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.BattleActionEvent
@@ -2983,9 +2982,6 @@ Convergence.Execution.BattleConditionContext.Services.get -> Convergence.Executi
 Convergence.Execution.BattleConditionContext.Target.get -> Convergence.Execution.RuntimeActorState!
 Convergence.Execution.BattleDurationLifecycleService
 Convergence.Execution.BattleDurationLifecycleService.BattleDurationLifecycleService() -> void
-Convergence.Execution.BattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleDurationStateKind
 Convergence.Execution.BattleDurationStateKind.AffinityBreak = 5 -> Convergence.Execution.BattleDurationStateKind
 Convergence.Execution.BattleDurationStateKind.AffinityOverride = 4 -> Convergence.Execution.BattleDurationStateKind
@@ -3013,7 +3009,6 @@ Convergence.Execution.BattleExecutionServices
 Convergence.Execution.BattleExecutionServices.AilmentApplications.get -> Convergence.Execution.IBattleAilmentApplicationService!
 Convergence.Execution.BattleExecutionServices.AilmentPolicy.get -> Convergence.Execution.IAilmentApplicationPolicy!
 Convergence.Execution.BattleExecutionServices.Ailments.get -> Convergence.Catalog.IAilmentDefinitionRepository!
-Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null) -> void
 Convergence.Execution.BattleExecutionServices.ChancePolicy.get -> Convergence.Execution.IChanceExecutionPolicy!
 Convergence.Execution.BattleExecutionServices.CustomConditionHandlers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>!
 Convergence.Execution.BattleExecutionServices.CustomEffectHandlers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>!
@@ -3059,7 +3054,6 @@ Convergence.Execution.BattlePassiveEntry.Skill.get -> Convergence.Content.SkillD
 Convergence.Execution.BattlePassiveEntry.Skill.init -> void
 Convergence.Execution.BattlePhaseEndLifecycleRequest
 Convergence.Execution.BattlePhaseEndLifecycleRequest.<Clone>$() -> Convergence.Execution.BattlePhaseEndLifecycleRequest!
-Convergence.Execution.BattlePhaseEndLifecycleRequest.BattlePhaseEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId phaseId) -> void
 Convergence.Execution.BattlePhaseEndLifecycleRequest.Equals(Convergence.Execution.BattlePhaseEndLifecycleRequest? other) -> bool
 Convergence.Execution.BattlePhaseEndLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.BattlePhaseEndLifecycleRequest.PhaseId.get -> Convergence.Content.ContentId
@@ -3108,8 +3102,6 @@ Convergence.Execution.BattleStatusLifecycleEvent
 Convergence.Execution.BattleStatusLifecycleEvent.<Clone>$() -> Convergence.Execution.BattleStatusLifecycleEvent!
 Convergence.Execution.BattleStatusLifecycleEvent.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Execution.BattleStatusLifecycleEvent.ActorId.init -> void
-Convergence.Execution.BattleStatusLifecycleEvent.BattleStatusLifecycleEvent(Convergence.Execution.BattleStatusLifecycleEventKind Kind, Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Content.ContentId? RelatedId = null, decimal? Value = null, string? Detail = null) -> void
-Convergence.Execution.BattleStatusLifecycleEvent.Deconstruct(out Convergence.Execution.BattleStatusLifecycleEventKind Kind, out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Content.ContentId? RelatedId, out decimal? Value, out string? Detail) -> void
 Convergence.Execution.BattleStatusLifecycleEvent.Detail.get -> string?
 Convergence.Execution.BattleStatusLifecycleEvent.Detail.init -> void
 Convergence.Execution.BattleStatusLifecycleEvent.Equals(Convergence.Execution.BattleStatusLifecycleEvent? other) -> bool
@@ -3139,11 +3131,7 @@ Convergence.Execution.BattleStatusLifecycleResult.BattleStatusLifecycleResult(Sy
 Convergence.Execution.BattleStatusLifecycleResult.Equals(Convergence.Execution.BattleStatusLifecycleResult? other) -> bool
 Convergence.Execution.BattleStatusLifecycleResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
 Convergence.Execution.BattleStatusLifecycleService
-Convergence.Execution.BattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Content.DurationDefinition? duration = null) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.BattleStatusLifecycleService(Convergence.Hosting.IRandomSource! random, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomAilmentTurnBehaviorHandler!>>? customTurnBehaviorHandlers = null, Convergence.Execution.IBattleTurnRestrictionPolicy? turnRestrictionPolicy = null) -> void
-Convergence.Execution.BattleStatusLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleStatusLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleStatusLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.ProcessTurnEnd(Convergence.Execution.BattleTurnEndLifecycleRequest! request, Convergence.Execution.BattleExecutionServices! services) -> Convergence.Execution.BattleTurnEndLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.ProcessTurnStart(Convergence.Execution.BattleTurnStartLifecycleRequest! request) -> Convergence.Execution.BattleTurnStartLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.TryApplyAilment(Convergence.Execution.BattleAilmentApplicationRequest! request, Convergence.Execution.BattleExecutionServices! services) -> Convergence.Execution.BattleAilmentApplicationResult!
@@ -3155,20 +3143,11 @@ Convergence.Execution.BattleTurnEconomySnapshot.RemainingActions.get -> int
 Convergence.Execution.BattleTurnEndLifecycleRequest
 Convergence.Execution.BattleTurnEndLifecycleRequest.<Clone>$() -> Convergence.Execution.BattleTurnEndLifecycleRequest!
 Convergence.Execution.BattleTurnEndLifecycleRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
-Convergence.Execution.BattleTurnEndLifecycleRequest.Actor.init -> void
 Convergence.Execution.BattleTurnEndLifecycleRequest.BattleKindId.get -> Convergence.Content.ContentId?
-Convergence.Execution.BattleTurnEndLifecycleRequest.BattleKindId.init -> void
-Convergence.Execution.BattleTurnEndLifecycleRequest.BattleTurnEndLifecycleRequest(Convergence.Execution.RuntimeActorState! Actor, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! Participants, Convergence.Content.ContentId ContextId, Convergence.Content.ContentId EventId, Convergence.Content.ContentId? BattleKindId = null, Convergence.Content.ContentId? MoonPhaseId = null) -> void
 Convergence.Execution.BattleTurnEndLifecycleRequest.ContextId.get -> Convergence.Content.ContentId
-Convergence.Execution.BattleTurnEndLifecycleRequest.ContextId.init -> void
-Convergence.Execution.BattleTurnEndLifecycleRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! Participants, out Convergence.Content.ContentId ContextId, out Convergence.Content.ContentId EventId, out Convergence.Content.ContentId? BattleKindId, out Convergence.Content.ContentId? MoonPhaseId) -> void
 Convergence.Execution.BattleTurnEndLifecycleRequest.Equals(Convergence.Execution.BattleTurnEndLifecycleRequest? other) -> bool
 Convergence.Execution.BattleTurnEndLifecycleRequest.EventId.get -> Convergence.Content.ContentId
-Convergence.Execution.BattleTurnEndLifecycleRequest.EventId.init -> void
 Convergence.Execution.BattleTurnEndLifecycleRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
-Convergence.Execution.BattleTurnEndLifecycleRequest.MoonPhaseId.init -> void
-Convergence.Execution.BattleTurnEndLifecycleRequest.Participants.get -> System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>!
-Convergence.Execution.BattleTurnEndLifecycleRequest.Participants.init -> void
 Convergence.Execution.BattleTurnEndLifecycleResult
 Convergence.Execution.BattleTurnEndLifecycleResult.<Clone>$() -> Convergence.Execution.BattleTurnEndLifecycleResult!
 Convergence.Execution.BattleTurnEndLifecycleResult.BattleTurnEndLifecycleResult(System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>! Events, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>! PassiveActivations) -> void
@@ -3319,7 +3298,6 @@ Convergence.Execution.EffectExecutionEnvironment
 Convergence.Execution.EffectExecutionEnvironment.<Clone>$() -> Convergence.Execution.EffectExecutionEnvironment!
 Convergence.Execution.EffectExecutionEnvironment.BattleKindId.get -> Convergence.Content.ContentId?
 Convergence.Execution.EffectExecutionEnvironment.ContextId.get -> Convergence.Content.ContentId
-Convergence.Execution.EffectExecutionEnvironment.EffectExecutionEnvironment(Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null) -> void
 Convergence.Execution.EffectExecutionEnvironment.Equals(Convergence.Execution.EffectExecutionEnvironment? other) -> bool
 Convergence.Execution.EffectExecutionEnvironment.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Execution.EffectExecutionOutcome
@@ -3331,7 +3309,6 @@ Convergence.Execution.EffectExecutionResult
 Convergence.Execution.EffectExecutionResult.<Clone>$() -> Convergence.Execution.EffectExecutionResult!
 Convergence.Execution.EffectExecutionResult.Detail.get -> string?
 Convergence.Execution.EffectExecutionResult.Detail.init -> void
-Convergence.Execution.EffectExecutionResult.EffectExecutionResult(int EffectIndex, Convergence.Runtime.RuntimeInstanceId? TargetId, Convergence.Execution.EffectExecutionOutcome Outcome, Convergence.Execution.TurnEconomyOutcome TurnEconomyOutcome = Convergence.Execution.TurnEconomyOutcome.Normal, bool IsCritical = false, decimal? Value = null, Convergence.Content.ContentId? RelatedId = null, string? Detail = null, bool EscapeRequested = false, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>? PassiveActivations = null, Convergence.Content.ElementalAffinity? ResolvedAffinity = null, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>? HostActionRequestIds = null) -> void
 Convergence.Execution.EffectExecutionResult.EffectIndex.get -> int
 Convergence.Execution.EffectExecutionResult.EffectIndex.init -> void
 Convergence.Execution.EffectExecutionResult.Equals(Convergence.Execution.EffectExecutionResult? other) -> bool
@@ -3400,11 +3377,7 @@ Convergence.Execution.IBattleAilmentApplicationService.Apply(Convergence.Executi
 Convergence.Execution.IBattleBasicAttackProfileSource
 Convergence.Execution.IBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
 Convergence.Execution.IBattleDurationLifecycleService
-Convergence.Execution.IBattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.IBattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.IBattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.IBattleStatusLifecycleService
-Convergence.Execution.IBattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Content.DurationDefinition? duration = null) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.IBattleStatusLifecycleService.ProcessTurnEnd(Convergence.Execution.BattleTurnEndLifecycleRequest! request, Convergence.Execution.BattleExecutionServices! services) -> Convergence.Execution.BattleTurnEndLifecycleResult!
 Convergence.Execution.IBattleStatusLifecycleService.ProcessTurnStart(Convergence.Execution.BattleTurnStartLifecycleRequest! request) -> Convergence.Execution.BattleTurnStartLifecycleResult!
 Convergence.Execution.IBattleStatusLifecycleService.TryApplyAilment(Convergence.Execution.BattleAilmentApplicationRequest! request, Convergence.Execution.BattleExecutionServices! services) -> Convergence.Execution.BattleAilmentApplicationResult!
@@ -3588,7 +3561,6 @@ Convergence.Execution.PassiveTriggerDispatchRequest.EventId.get -> Convergence.C
 Convergence.Execution.PassiveTriggerDispatchRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Execution.PassiveTriggerDispatchRequest.Owner.get -> Convergence.Execution.RuntimeActorState!
 Convergence.Execution.PassiveTriggerDispatchRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
-Convergence.Execution.PassiveTriggerDispatchRequest.PassiveTriggerDispatchRequest(Convergence.Content.ContentId eventId, Convergence.Execution.RuntimeActorState! owner, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! targets, Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId, Convergence.Content.ContentId? moonPhaseId) -> void
 Convergence.Execution.PassiveTriggerDispatchRequest.Targets.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.PassiveTriggerDispatchResult
 Convergence.Execution.PassiveTriggerDispatchResult.<Clone>$() -> Convergence.Execution.PassiveTriggerDispatchResult!
@@ -3687,7 +3659,6 @@ Convergence.Execution.RuntimeActorState.OverrideAffinity(Convergence.Content.Dam
 Convergence.Execution.RuntimeActorState.Passives.get -> Convergence.Execution.BattlePassiveCollection!
 Convergence.Execution.RuntimeActorState.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Execution.RuntimeActorState.RemoveAilments(System.Func<Convergence.Execution.ActiveAilmentState!, bool>! predicate) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
-Convergence.Execution.RuntimeActorState.RemoveStatuses(System.Collections.Generic.IEnumerable<Convergence.Content.StatusEffectKind>! kinds, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! statusIds) -> int
 Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
 Convergence.Execution.RuntimeActorState.Reveal(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
@@ -3732,13 +3703,11 @@ Convergence.Execution.SkillExecutionDiagnostic.TargetId.get -> Convergence.Runti
 Convergence.Execution.SkillExecutionDiagnostic.TargetId.init -> void
 Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.AilmentMissing = 12 -> Convergence.Execution.SkillExecutionDiagnosticCode
-Convergence.Execution.SkillExecutionDiagnosticCode.AssessmentInvalid = 13 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.ContextUnavailable = 2 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.CustomConditionHandlerMissing = 10 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.CustomEffectHandlerMissing = 9 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.EffectExecutorMissing = 7 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.EscapeRuleHandlerMissing = 11 -> Convergence.Execution.SkillExecutionDiagnosticCode
-Convergence.Execution.SkillExecutionDiagnosticCode.ExecutionFailed = 14 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.FormulaHandlerMissing = 8 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.InsufficientResource = 6 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.ResourceMissing = 5 -> Convergence.Execution.SkillExecutionDiagnosticCode
@@ -10126,3 +10095,40 @@ Convergence.Runtime.TimedContributionStatModifierPolicy.Remove(Convergence.Runti
 Convergence.Runtime.TimedContributionStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
 Convergence.Runtime.TimedContributionStatModifierPolicy.TimedContributionStatModifierPolicy(Convergence.Content.ContentId policyId, int minimumStage = -4, int maximumStage = 4) -> void
 Convergence.Runtime.TimedContributionStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Execution.BattleActionEndLifecycleRequest.BattleActionEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? statModifierBoundaries = null) -> void
+Convergence.Execution.BattleActionEndLifecycleRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
+Convergence.Execution.BattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, Convergence.Runtime.IStatModifierPolicyService! statModifiers, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null) -> void
+Convergence.Execution.BattleExecutionServices.StatModifiers.get -> Convergence.Runtime.IStatModifierPolicyService!
+Convergence.Execution.BattlePhaseEndLifecycleRequest.BattlePhaseEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId phaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? statModifierBoundaries = null) -> void
+Convergence.Execution.BattlePhaseEndLifecycleRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
+Convergence.Execution.BattleStatusLifecycleEvent.BattleStatusLifecycleEvent(Convergence.Execution.BattleStatusLifecycleEventKind Kind, Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Content.ContentId? RelatedId = null, decimal? Value = null, string? Detail = null, Convergence.Runtime.StatModifierEvent? ModifierEvent = null) -> void
+Convergence.Execution.BattleStatusLifecycleEvent.Deconstruct(out Convergence.Execution.BattleStatusLifecycleEventKind Kind, out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Content.ContentId? RelatedId, out decimal? Value, out string? Detail, out Convergence.Runtime.StatModifierEvent? ModifierEvent) -> void
+Convergence.Execution.BattleStatusLifecycleEvent.ModifierEvent.get -> Convergence.Runtime.StatModifierEvent?
+Convergence.Execution.BattleStatusLifecycleEvent.ModifierEvent.init -> void
+Convergence.Execution.BattleStatusLifecycleEventKind.StatModifierChanged = 13 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Execution.BattleExecutionServices! services, Convergence.Content.DurationDefinition? duration = null, Convergence.Runtime.StatModifierLifecycleBoundary? activeBoundary = null) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleStatusLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleStatusLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleStatusLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleTurnEndLifecycleRequest.BattleTurnEndLifecycleRequest(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId eventId, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, Convergence.Runtime.StatModifierLifecycleBoundary? statModifierBoundary = null) -> void
+Convergence.Execution.BattleTurnEndLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+Convergence.Execution.BattleTurnEndLifecycleRequest.StatModifierBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
+Convergence.Execution.EffectExecutionEnvironment.ActiveStatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
+Convergence.Execution.EffectExecutionEnvironment.EffectExecutionEnvironment(Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries = null) -> void
+Convergence.Execution.EffectExecutionEnvironment.FindStatModifierBoundary(Convergence.Content.DurationDefinition? duration) -> Convergence.Runtime.StatModifierLifecycleBoundary?
+Convergence.Execution.EffectExecutionResult.EffectExecutionResult(int EffectIndex, Convergence.Runtime.RuntimeInstanceId? TargetId, Convergence.Execution.EffectExecutionOutcome Outcome, Convergence.Execution.TurnEconomyOutcome TurnEconomyOutcome = Convergence.Execution.TurnEconomyOutcome.Normal, bool IsCritical = false, decimal? Value = null, Convergence.Content.ContentId? RelatedId = null, string? Detail = null, bool EscapeRequested = false, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>? PassiveActivations = null, Convergence.Content.ElementalAffinity? ResolvedAffinity = null, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>? HostActionRequestIds = null, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>? StatModifierTransitions = null) -> void
+Convergence.Execution.EffectExecutionResult.StatModifierTransitions.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>!
+Convergence.Execution.EffectExecutionResult.StatModifierTransitions.init -> void
+Convergence.Execution.IBattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.IBattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.IBattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.IBattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Execution.BattleExecutionServices! services, Convergence.Content.DurationDefinition? duration = null, Convergence.Runtime.StatModifierLifecycleBoundary? activeBoundary = null) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.PassiveTriggerDispatchRequest.ActiveStatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
+Convergence.Execution.PassiveTriggerDispatchRequest.PassiveTriggerDispatchRequest(Convergence.Content.ContentId eventId, Convergence.Execution.RuntimeActorState! owner, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! targets, Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId, Convergence.Content.ContentId? moonPhaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries = null) -> void
+Convergence.Execution.RuntimeActorState.StatModifierState.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
+Convergence.Execution.SkillExecutionDiagnosticCode.AssessmentInvalid = 14 -> Convergence.Execution.SkillExecutionDiagnosticCode
+Convergence.Execution.SkillExecutionDiagnosticCode.ExecutionFailed = 15 -> Convergence.Execution.SkillExecutionDiagnosticCode
+Convergence.Execution.SkillExecutionDiagnosticCode.NoApplicableEffect = 13 -> Convergence.Execution.SkillExecutionDiagnosticCode

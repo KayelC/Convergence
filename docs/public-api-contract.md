@@ -55,9 +55,10 @@ host or custom runtime module now constructs immutable modifier snapshots and
 requests, then calls `IStatModifierPolicyService`. The service validates the
 selected `IStatModifierPolicy`, contains extension faults, and returns typed
 diagnostics, ordered events, and unchanged before/after state on rejection.
-Direct live-actor commit remains Framework-owned and is completed by the M1-5
-integration checkpoint; external callers must not replace it with reflection
-or another mutable stage store.
+Direct live-actor commit remains Framework-owned. M1-5 routes skill, item,
+passive, lifecycle, removal, and cleanup execution through the selected policy;
+external callers must not replace it with reflection or another mutable stage
+store. Retained modifier save state is completed separately by M1-7.
 
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
