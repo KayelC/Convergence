@@ -13,21 +13,23 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The actor composition, progression, party/roster, actor-restoration, and typed
-action/effect documentation completed the collaborative workflow after their
-owner decisions were confirmed, implemented, inspected in current source, and
-exercised by tests and DemoHost. Other subsystem entries remain unreviewed until
-they complete the same process.
+The actor composition, progression, party/roster, and actor-restoration
+documentation has completed the collaborative workflow. Typed action/effect
+documentation completed an earlier review, but has returned to
+`existing_unreviewed` after the source review and owner decision that expanded
+stat modifiers into three supplied lifecycle policies. It will be reviewed
+again against the implemented family rather than preserved as stale authority.
+Other subsystem entries remain unreviewed until they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
-The documentation matrix currently records 75 audience entries: 14 reviewed,
-35 existing_unreviewed, 19 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 11 reviewed,
+38 existing_unreviewed, 19 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 14 |
-| `existing_unreviewed` | 35 |
+| `reviewed` | 11 |
+| `existing_unreviewed` | 38 |
 | `missing` | 19 |
 | `not_applicable` | 7 |
 

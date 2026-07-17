@@ -9,11 +9,12 @@ This directory is the active documentation authority for Convergence Framework.
 ## Start Here
 
 1. [Documentation Design Pattern](documentation-design-pattern.md): how documentation is researched, discussed, diagrammed, reviewed, and promoted.
-2. [Project Vision](project-vision.md): what Convergence is and what it deliberately does not own.
-3. [Repository Map](repository-map.md): where active product code, tests, content, and examples live.
-4. [Architecture](architecture.md): dependency direction and module responsibilities.
-5. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
-6. [Documentation Coverage](reference/documentation-coverage.md): honest audience-by-capability documentation status.
+2. [Policy Family Design Pattern](policy-family-design-pattern.md): how multiple coherent rules models share one neutral authority without hidden defaults.
+3. [Project Vision](project-vision.md): what Convergence is and what it deliberately does not own.
+4. [Repository Map](repository-map.md): where active product code, tests, content, and examples live.
+5. [Architecture](architecture.md): dependency direction and module responsibilities.
+6. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
+7. [Documentation Coverage](reference/documentation-coverage.md): honest audience-by-capability documentation status.
 
 ## Documentation Audiences
 

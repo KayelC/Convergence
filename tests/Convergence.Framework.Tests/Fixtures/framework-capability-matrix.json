@@ -69,12 +69,14 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Stat-modifier applicability, actual-state-change reporting, and item-consumption semantics still use the current aggregate mutation path pending the approved policy-family migration."
+      ]
     },
     {
       "id": "combat_resolution",
@@ -96,12 +98,14 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "The one-stage/one-duration stat-modifier state cannot represent all three approved lifecycle policies; canonical policy authority, independent contribution ticking, and compatible restoration remain open."
+      ]
     },
     {
       "id": "encounter_orchestration",

@@ -119,19 +119,19 @@
     {
       "id": "typed_action_and_effect_execution",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
-        "reason": "The owner-confirmed mechanics page matches the corrected source, tests, and approved action and inventory authority."
+        "reason": "The earlier owner-confirmed page remains useful, but stat-modifier application and meaningful-success rules must be revised after the approved three-policy family is implemented."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/typed-actions-and-effects.md"],
-        "reason": "The owner-confirmed integration guide covers canonical composition, assessment, reservations, cancellation, and host-mediated work."
+        "reason": "The existing integration guide covers stable action and inventory authority, but does not yet document explicit modifier-policy selection, custom policies, or retained-state compatibility."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/typed-action-and-effect-execution.md"],
-        "reason": "The owner-confirmed technical reference documents authorization, prepared targets, transactions, and ordered execution against current source."
+        "reason": "The technical reference remains accurate for authorization and transactions, but must be re-reviewed after one canonical modifier authority replaces direct aggregate mutation."
       }
     },
     {

@@ -134,14 +134,23 @@ misreports the magnitude whenever clamping applies partially, such as applying
 
 **Required correction**
 
-Make stat-stage execution report whether any target state actually changed and
-use that fact for item consumption. The implementation must also define and test
-whether refreshing a genuinely different duration at the stage cap is a
-meaningful effect. Cover full clamping, partial clamping, multiple modifier
-tracks, both caps, unchanged duration, and changed duration.
+Do not patch only the executor's reported value. The project owner confirmed
+that stat modifiers are a policy family with three supplied models: persistent
+stages, one timed exclusive modifier, and independently timed contributions.
+The current one-stage/one-duration actor state cannot represent all three.
 
-**Correction status:** `open`. This finding is deliberately unchanged by the
-H1 correction pass.
+The correction is therefore governed by the
+[Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md). It
+must establish one immutable and atomic Framework authority, implement each
+reference policy in its own checkpoint, route effect execution and lifecycle
+work through that authority, bind selection explicitly, persist compatible
+state, and then complete fresh code and documentation reviews. Item consumption
+must ultimately use the selected policy's actual `StateChanged` result.
+
+**Correction status:** `open`. M1-0, the owner decision, feasibility review,
+and implementation roadmap, is complete. M1-1 through M1-8 and the final review
+gates remain pending. The reachable capped-item defect remains until canonical
+runtime integration is complete.
 
 ## Healthy Areas Verified
 
@@ -197,13 +206,15 @@ current tests.
 ## Readiness Decision
 
 The Order 1 documentation review was genuinely completed, but its final product
-status was promoted too early. Until H1 and M1 are corrected and independently
-retested:
+status was promoted too early. H1 has been corrected and remains pending an
+independent completion review. M1 has become the approved multi-policy runtime
+program described above. Until M1 is implemented and both corrections are
+independently retested:
 
 - `typed_action_and_effect_execution` should be treated as reopened;
 - the implementation should not be described as fully complete;
-- the three audience documents remain useful but require small corrections to
-  describe the automated-runner boundary and stat-stage no-effect semantics;
+- the three audience documents remain useful but are no longer reviewed
+  authority for stat-modifier application, duration, or item applicability;
 - Order 2 documentation work may be planned, but calling Order 1 polished and
   final would be inaccurate.
 

@@ -6,11 +6,13 @@
 verified across Checkpoints 0-8.**
 
 **Current state:** runtime save contract v9 is authoritative; the Framework
-Capability Matrix records 23 complete, 0 partial, and 2 intentionally deferred
-capabilities. Save v8 and the temporary 20-complete/3-partial state below are
-preserved only as labelled checkpoint history. Sections written in proposal or
-future tense describe the implementation plan that produced the current code,
-not unfinished work.
+Capability Matrix records 21 complete, 2 partial, and 2 intentionally deferred
+capabilities after the later stat-modifier policy decision reopened action
+execution and status lifecycle. This actor roadmap itself remains completed.
+Save v8 and earlier capability counts below are preserved only as labelled
+checkpoint history. Sections written in proposal or future tense describe the
+implementation plan that produced the current actor code, not unfinished actor
+work.
 
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
@@ -640,8 +642,8 @@ choice, replace, forget, defer, and a canonical save/restore after a resolved
 choice. Its presentation remains a narrow host example over framework
 transactions.
 
-The framework capability matrix now records 23 complete, 0 partial, and 2
-deferred capabilities. Documentation coverage records 11 reviewed audience
+At this checkpoint, the framework capability matrix recorded 23 complete, 0
+partial, and 2 deferred capabilities. Documentation coverage recorded 11 reviewed audience
 entries. Verification passed with 1,017 tests (843 Framework, 167 DemoHost, 7
 ContentValidator), zero skipped tests, zero build warnings, formatting
 verification, all DemoHost modes, scripted Training Annex exit, validation of
@@ -700,8 +702,9 @@ aggregate state exposes no live session.
 pending-skill catalog, authored-unlock provenance, and actor-level availability
 checks as aggregate save validation.
 
-All completion-review findings are corrected. The capability matrix returns to
-23 complete, 0 partial, and 2 intentionally deferred capabilities.
+All completion-review findings were corrected. At that checkpoint, the
+capability matrix returned to 23 complete, 0 partial, and 2 intentionally
+deferred capabilities. Later policy-family work is tracked independently.
 
 ## Expected File Ownership
 

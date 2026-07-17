@@ -64,9 +64,10 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
-    public void DocumentationPatternAndAgentGuide_PreserveCollaborativeDesignAuthority()
+    public void DocumentationPatternsAndAgentGuide_PreserveCollaborativeDesignAuthority()
     {
         string pattern = File.ReadAllText(RepositoryPath("docs", "documentation-design-pattern.md"));
+        string policyPattern = File.ReadAllText(RepositoryPath("docs", "policy-family-design-pattern.md"));
         string agents = File.ReadAllText(RepositoryPath("AGENTS.md"));
 
         string[] patternTokens =
@@ -83,9 +84,24 @@ public sealed class DocumentationFoundationTests
         ];
         Assert.All(patternTokens, token => Assert.Contains(token, pattern, StringComparison.Ordinal));
 
+        string[] policyPatternTokens =
+        [
+            "## Required Principles",
+            "### One Authority Per Scope",
+            "### Immutable Decisions Before Mutation",
+            "### State Must Represent Every Supplied Policy",
+            "## Development Sequence",
+            "## Required Conformance Tests",
+            "## Definition Of Complete"
+        ];
+        Assert.All(
+            policyPatternTokens,
+            token => Assert.Contains(token, policyPattern, StringComparison.Ordinal));
+
         string[] agentTokens =
         [
             "docs/documentation-design-pattern.md",
+            "docs/policy-family-design-pattern.md",
             "Confirmed mechanics and decision records define intended design.",
             "Do not infer an unclear rule",
             "explicit project-owner confirmation",

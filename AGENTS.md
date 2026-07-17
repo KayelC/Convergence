@@ -15,6 +15,7 @@
 ## Design Authority
 
 - Follow [`docs/documentation-design-pattern.md`](docs/documentation-design-pattern.md) for documentation structure, review states, diagrams, and evidence.
+- Follow [`docs/policy-family-design-pattern.md`](docs/policy-family-design-pattern.md) whenever multiple coherent mechanics answer the same gameplay question. Audit state, mutation, lifecycle, persistence, events, and host composition before defining the shared policy contract.
 - Read the relevant mechanics, developer-guide, technical, and decision documents before changing a rule.
 - Do not infer an unclear rule from current code, display text, examples, or archived behavior.
 - Explain uncertain behavior in plain language and obtain the project owner's decision before treating it as intended design.
@@ -33,6 +34,7 @@
 ## Change Discipline
 
 - Prefer existing typed contracts and module ownership over new abstractions.
+- Give each policy family one explicitly selected authority per runtime scope. Do not add configuration flags, silent defaults, or direct mutation paths that let one implementation impersonate several incompatible mechanics.
 - Keep mutations atomic. Assessment, execution, reservations, lifecycle operations, and restoration must reject without leaving partial live state.
 - Preserve immutable public results by defensive copying at construction boundaries.
 - Treat content schemas, save versions, and public API signatures as separate versioned contracts.

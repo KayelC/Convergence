@@ -49,3 +49,4 @@ records must link every affected mechanics, developer, and technical page.
 
 - [Actor Composition, Progression, And Rosters](actor-composition-progression-and-rosters.md)
 - [Battle Action Ownership And Inventory Authority](battle-action-ownership-and-inventory-authority.md)
+- [Stat Modifier Policy Family](stat-modifier-policy-family.md)

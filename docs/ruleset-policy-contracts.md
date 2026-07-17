@@ -31,6 +31,13 @@ raw actor stats and the `IStatStageScalingPolicy` used to interpret battle
 stages. A custom stat factory must return the pair so neither responsibility is
 silently inherited from the standard policy.
 
+Stat-modifier accumulation and duration are not currently an independently
+bound ruleset category. The approved
+[Stat Modifier Policy Roadmap](roadmap/stat-modifier-policy-roadmap.md) will add
+that separate family after introducing policy-neutral retained state. Until
+then, the existing aggregate stage/duration behavior must not be presented as
+three selectable policies. Stage scaling remains a separate responsibility.
+
 `RuntimeRulesetPolicyFactoryRegistry.CreateStandard()` is an explicit
 convenience composition. A host may instead construct a registry from its own
 factories. Duplicate or qualified factory policy IDs are rejected. Moon phase

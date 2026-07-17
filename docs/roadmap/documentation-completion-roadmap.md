@@ -90,16 +90,22 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
-## Completed Order 1 Review
+## Reopened Order 1
 
 The source-based
 [Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
-records the correction and decision history. The four source corrections and
-the three audience documents are implemented. The consolidated source review
-and managed quality gate are complete. The local Godot project builds and its
-contract tests pass, while the installed Windows engine currently faults before
-project load. The project owner's documentation confirmation and the final
-documentation audit close Order 1.
+records the original correction and decision history. Those corrections remain
+valid, and the three audience documents completed the collaborative workflow
+that was known at the time.
+
+A later source-first
+[independent review](../reviews/typed-action-and-effect-execution-order-1-independent-review-2026-07-17.md)
+found two additional reachable paths. Automated skill authorization is now
+corrected and pending final review. The stat-modifier finding exposed a broader
+design decision: Convergence will supply three selectable modifier lifecycle
+policies rather than preserve the current accidental aggregate-duration hybrid.
+That work is controlled by the
+[Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md).
 
 The project owner approved both authority decisions on 17 July 2026. Their
 normative record is
@@ -113,14 +119,18 @@ Current checkpoints:
 | O1-M2 | `verified` | Reservation identity, quantity, and lifecycle state are validated before effects. |
 | O1-D1 | `verified` | Item commands require an inventory port and an exactly-one reservation. |
 | O1-D2 | `verified` | Framework validates equipped canonical skills and resolved basic attacks. |
-| O1-DOC | `verified` | Mechanics, developer, and technical pages agree with corrected source and have completed collaborative owner confirmation. |
+| O1-IR-H1 | `implemented_pending_review` | Automated battles use the canonical skill-authorization policy. |
+| O1-IR-M1 | `open` | Complete M1-1 through M1-8 for the approved stat-modifier policy family. |
+| O1-DOC | `reopened` | Revise all three audience documents after policy implementation and complete a new owner-confirmed documentation review. |
 
-The implementation and its audience documentation are promoted by the
-[post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md).
-All three `typed_action_and_effect_execution` audience entries are now
-`reviewed`. The executable matrix therefore records 14 reviewed, 35
-`existing_unreviewed`, 19 missing, and 7 `not_applicable` entries. Order 2,
-`combat_resolution`, is the next collaborative documentation subject.
+The earlier
+[post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md)
+remains evidence for the original checkpoints, not proof that the expanded M1
+scope is complete. All three `typed_action_and_effect_execution` audience
+entries have returned to `existing_unreviewed`. The executable matrix therefore
+records 11 reviewed, 38 `existing_unreviewed`, 19 missing, and 7
+`not_applicable` entries. Order 2, `combat_resolution`, remains queued until M1
+and the reopened Order 1 documentation gate close.
 
 ## Deferred Documentation
 

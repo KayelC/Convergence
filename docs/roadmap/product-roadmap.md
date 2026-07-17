@@ -8,14 +8,14 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 21 complete, 2 partial, and 2 deferred.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
-rules are confirmed and implemented in
+rules remain confirmed and implemented in
 [Battle Action Ownership And Inventory Authority](../decisions/battle-action-ownership-and-inventory-authority.md),
-with implementation review and all three audience documentation reviews
-completed by
-[Order 1](documentation-completion-roadmap.md#completed-order-1-review).
+but Order 1 is reopened by the approved stat-modifier policy-family work. The
+current state and review boundary are recorded under
+[Reopened Order 1](documentation-completion-roadmap.md#reopened-order-1).
 
 The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
 
@@ -76,7 +76,16 @@ complete. The review demonstrated one encounter resource-event defect,
 corrected it with exact signed mutation records, and found no unresolved release
 blocker.
 
-## Priority 1: Collaborative Documentation Completion
+## Priority 1: Stat Modifier Policy Family
+
+Complete the active
+[Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md). Establish the
+shared immutable authority first, then implement persistent staged, timed
+exclusive, and independently timed contribution policies in separate green
+checkpoints. Integrate ruleset selection, execution, lifecycle, persistence,
+hosts, code review, and documentation review before restoring complete status.
+
+## Priority 2: Collaborative Documentation Completion
 
 Complete the active
 [Documentation Completion Roadmap](documentation-completion-roadmap.md) one
@@ -84,11 +93,11 @@ capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted.
 
-## Priority 2: Persistence Evolution
+## Priority 3: Persistence Evolution
 
 Define save-contract migration only when a released contract actually requires it. Full deterministic replay remains optional; checkpoint breadcrumbs are currently diagnostics rather than replay authority.
 
-## Priority 3: Example Breadth
+## Priority 4: Example Breadth
 
 Expand original example content only when it demonstrates a framework contract or reveals a missing reusable rule. DemoHost remains optional reference software, not the product architecture driver.
 

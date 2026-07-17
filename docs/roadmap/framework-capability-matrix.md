@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 21 complete, 2 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v9 restoration. Its
@@ -25,10 +25,15 @@ corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full
 deterministic replay.
 
-Typed action and effect execution is complete for its approved Order 1
-contract. Exactly-one item reservations, reservation validation, mandatory
-inventory authority, and Framework-owned skill/basic-attack authorization are
-implemented, independently reviewed, and covered by focused tests.
+Exactly-one item reservations, reservation validation, mandatory inventory
+authority, and Framework-owned skill/basic-attack authorization remain
+implemented and covered by focused tests. Typed action/effect execution and
+status/passive lifecycle are temporarily `partial`, however, because the
+current direct stat-stage mutation and one-stage/one-duration state cannot
+implement the approved stat-modifier policy family without competing
+authorities or lossy restoration. The active
+[Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md) governs that
+correction.
 
 ## Authority
 
