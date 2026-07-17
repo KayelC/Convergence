@@ -1,230 +1,220 @@
 # Using Stat Modifier Policies
 
-## Status
+## What A Host Must Choose
 
-This guide describes the confirmed composition model and identifies which parts
-are available today:
+A host does not own live modifier rules or a second modifier dictionary. It
+loads an authored `stat_modifier` ruleset, binds that ruleset to a registered
+factory, and passes the returned `IStatModifierPolicyService` into the canonical
+execution and lifecycle services.
 
-- shared immutable policy contracts and `StatModifierPolicyService`: available;
-- `PersistentStagedStatModifierPolicy`: available;
-- `TimedExclusiveStatModifierPolicy`: available;
-- `TimedContributionStatModifierPolicy`: available;
-- effect/lifecycle integration: M1-5;
-- authored ruleset selection: M1-6;
-- aggregate save and restore: M1-7.
+The selected service owns application, assessment, duration, removal, cleanup,
+diagnostics, and immutable retained state. `IStatStageScalingPolicy` remains a
+separate choice for numeric combat impact.
 
-Do not build a host-side modifier store while those checkpoints are in
-progress. The Framework remains the intended rule and state authority.
+## Author A Ruleset
 
-## Composition Boundary
+Schema-v4 content selects a factory with the unqualified `policyId` field. A
+bounded persistent or timed-contribution policy also requires both bounds:
 
-A selected `IStatModifierPolicy` owns:
-
-- application and applicability;
-- reapplication and opposition;
-- duration ticking and reserve suspension;
-- positive, negative, selected, and complete removal;
-- cleanup behavior;
-- compatible retained-state shape.
-
-`StatModifierPolicyService` wraps that policy. It validates neutral state,
-contains extension faults, validates the policy's result, derives ordered
-events, and returns unchanged before/after snapshots on rejection.
-
-`IStatStageScalingPolicy` is separate. It translates the resolved stage into
-numeric multipliers but does not decide how the stage accumulated or expired.
-
-## Current Persistent Example
-
-Until M1-6 adds authored selection, a host or runtime composition root supplies
-an explicit policy ID:
-
-```csharp
-using Convergence.Content;
-using Convergence.Runtime;
-
-ContentId policyId = ContentId.Parse("example_persistent_modifiers");
-IStatModifierPolicy policy = new PersistentStagedStatModifierPolicy(
-    policyId,
-    minimumStage: -4,
-    maximumStage: 4);
-IStatModifierPolicyService modifiers = new StatModifierPolicyService(policy);
-
-RuntimeStatModifierStateSnapshot state = new(policyId);
-var request = new StatModifierApplicationRequest(
-    state,
-    ContentId.Parse("attack"),
-    stageDelta: 1);
-
-StatModifierTransitionResult assessment = modifiers.AssessApplication(request);
-if (assessment.StateChanged)
+```json
 {
-    StatModifierTransitionResult applied = modifiers.Apply(request);
-    state = applied.After;
+  "id": "standard_stat_modifiers",
+  "displayName": "Persistent Stat Modifiers",
+  "description": "Keeps bounded stages until explicit cleanup.",
+  "category": "stat_modifier",
+  "policyId": "persistent_staged",
+  "parameters": {
+    "minimumStage": -4,
+    "maximumStage": 4
+  }
 }
 ```
 
-Assessment and application are immutable evaluations. M1-5 connects accepted
-state to the staged `RuntimeActorState` transaction; a Godot host should consume
-the result rather than mutating actor internals.
+The supplied factory IDs are:
 
-At a cap, the persistent policy returns `Unchanged`. An item or skill must use
-that canonical result when deciding meaningful success. It must not consume an
-item merely because the authored delta was nonzero.
+| `policyId` | Parameters | Result |
+|---|---|---|
+| `persistent_staged` | `minimumStage`, `maximumStage` | bounded persistent net stage |
+| `timed_exclusive` | none | one timed signal in `-2`, `-1`, `+1`, `+2` |
+| `timed_contribution` | `minimumStage`, `maximumStage` | independently timed signed contributions |
 
-## Timed-Exclusive Configuration
+Unknown parameters, missing bounds, a wrong ruleset category, and an
+unregistered factory ID produce binding diagnostics. There is no hidden
+fallback policy.
 
-The supplied timed-exclusive policy implements the confirmed five-signal
-scale. Its important integration behavior is:
-
-- equal signal: accepted timer refresh;
-- stronger same-sign signal: accepted replacement;
-- weaker same-sign signal: typed already-in-effect rejection;
-- opposite signal: arithmetic offset;
-- neutral result: remove the track.
-
-The host presents the diagnostic and returns to command selection after a
-weaker rejection. It does not charge costs or consume turn economy because the
-Framework rejects before commitment.
-
-Custom timed-exclusive policies may use different coherent rules. They must use
-the shared immutable contracts and cannot add a second live actor mutation path.
-
-## Timed-Contribution Configuration
-
-`TimedContributionStatModifierPolicy` keeps one signed contribution and one
-counted duration per accepted application. The policy derives the visible
-stage by summing those retained contributions and clamping the result to its
-configured bounds.
+## Bind Once At Composition
 
 ```csharp
-IStatModifierPolicy policy = new TimedContributionStatModifierPolicy(
-    ContentId.Parse("example_timed_contributions"),
-    minimumStage: -4,
-    maximumStage: 4);
+using Convergence.Catalog;
+using Convergence.Content;
+using Convergence.Runtime;
+
+var factories = RuntimeRulesetPolicyFactoryRegistry.CreateStandard();
+var resolver = new RuntimeRulesetBindingResolver(factories);
+
+RulesetBindingResult<IStatModifierPolicyService> binding =
+    resolver.BindStatModifierPolicy(
+        catalog,
+        ContentId.Parse("my_pack:standard_stat_modifiers"));
+
+IStatModifierPolicyService modifiers = binding.RequireService();
 ```
 
-At a same-direction cap, another application refreshes the oldest retained
-contribution of that sign. It does not create hidden stacks. Positive and
-negative contributions coexist, and each matching lifecycle clock ticks only
-the contributions that use that clock.
+Bind once for the session or encounter scope that owns the actors. Do not bind
+again per menu selection or effect. The same service must be supplied to:
 
-## Counted Duration And Clock Selection
+- `BattleExecutionServices` for skills, items, passives, and typed effects;
+- `BattleStatusLifecycleService` or `BattleStatusEncounterLifecyclePort` for
+  duration and cleanup;
+- `RuntimeSaveValidator` and `RuntimeSessionRestoreService` for policy-aware
+  restore validation.
 
-`TurnDurationDefinition` currently carries a value, a `TickEventId`, and
-`SuspendWhileReserve`. Despite the historical type name, the event ID determines
-the counted lifecycle clock. M1-6 will ensure authored ruleset registration
-selects supported clock IDs explicitly.
+This keeps execution, capture, and restoration under one policy identity.
 
-Reference clock meanings are:
+## Execution And Meaningful Success
 
-```text
-owner_turn_completed
-team_phase_completed
-round_completed
-action_completed
-```
-
-The supplied timed-policy default is `owner_turn_completed`. A phase-oriented
-game can author `team_phase_completed` instead. A custom scheduler may register
-another typed event, provided it emits deterministic monotonic boundaries.
-
-## Boundary Sequences
-
-A clock name alone cannot distinguish an effect applied during the current turn
-from one applied before the target's next turn. Timed runtime state therefore
-needs a monotonic boundary sequence.
-
-The confirmed M1-3 contract revision is:
-
-1. A lifecycle clock occurrence has an event ID and sequence.
-2. Application records the active sequence for the selected clock when one is
-   currently open.
-3. Completion of that same sequence does not decrement the new contribution.
-4. A later matching sequence may decrement it and advances the contribution's
-   boundary cursor.
-5. Repeating the latest sequence is idempotent; an older sequence is rejected.
-6. Reserve suspension is checked before decrement, but the observed boundary is
-   still recorded so deploying later cannot replay it.
-
-```mermaid
-sequenceDiagram
-    participant Scheduler
-    participant Effects
-    participant Modifiers
-
-    Scheduler->>Effects: actor acts in owner-turn boundary 12
-    Effects->>Modifiers: apply +, clock boundary 12
-    Modifiers-->>Effects: contribution stamped 12
-    Scheduler->>Modifiers: complete owner-turn boundary 12
-    Modifiers-->>Scheduler: new contribution is not decremented
-    Scheduler->>Modifiers: complete owner-turn boundary 13
-    Modifiers-->>Scheduler: decrement contribution once
-```
-
-The encounter scheduler, not the presentation host, emits these boundaries. A
-Godot scene may animate one action as several clips without creating several
-turn completions.
-
-## Bonus Actions, Skips, And Cancellation
-
-The scheduler decides whether an action continues the current turn window or
-starts another one:
-
-- an immediate bonus inside the same window does not produce another owner-turn
-  completion;
-- a newly scheduled turn does;
-- a committed pass, guard, forced action, or skipped action completes the
-  window;
-- backing out before command commitment does not.
-
-This distinction lets an individual-turn scheduler and a team-phase scheduler
-use the same modifier policy without pretending their clocks are identical.
-
-## Removal Effects
-
-Use typed removal intent rather than special-casing a skill name:
+`ModifyStatStageEffectDefinition` carries typed track IDs, a signed delta, and
+an optional duration. The executor asks the selected policy to assess the
+transition before committing costs or inventory.
 
 ```csharp
-var removeNegative = new StatModifierRemovalRequest(
-    state,
-    StatModifierRemovalMode.Negative);
-
-StatModifierTransitionResult result = modifiers.Remove(removeNegative);
+var effect = new ModifyStatStageEffectDefinition(
+    [ContentId.Parse("attack")],
+    stageDelta: 1,
+    new TurnDurationDefinition(
+        Value: 3,
+        TickEventId: ContentId.Parse("owner_turn_end"),
+        SuspendWhileReserve: true));
 ```
 
-Selected tracks, selected contribution sequences, positive state, negative
-state, and all state have separate removal modes. The action's normal targeting
-definition decides which actors receive the removal effect.
+For persistent staged rules, the duration is ignored because the policy stores
+no counted duration. Both timed policies require `TurnDurationDefinition`.
+Supplying an incompatible shape returns typed rejection rather than silently
+changing the authored effect.
 
-M1-5 connects these operations to the typed effect pipeline. Until then, this
-request demonstrates the runtime policy boundary rather than a complete battle
-content recipe.
+Assessment and execution must use the same actor state, targets, active
+lifecycle boundaries, and policy. Prepared skill assessment already enforces
+that contract. If state becomes stale, execution rejects before mutation.
 
-## Godot Responsibilities
+For items, Framework reserves one item before staged execution. It commits the
+reservation only after at least one effect produces meaningful success. A
+rejected inventory commit rolls actor state and the reservation back.
 
-Godot owns:
+## Lifecycle Boundaries
 
-- input and command presentation;
-- icons, labels, animations, and remaining-duration displays;
-- scene-node mapping by runtime instance ID;
-- host save-file encoding.
+Timed contributions decrement only when their authored event ID receives a
+positive monotonic `StatModifierLifecycleBoundary` sequence.
 
-Convergence owns:
+```csharp
+var boundary = new StatModifierLifecycleBoundary(
+    ContentId.Parse("owner_turn_end"),
+    sequence: 12);
 
-- policy selection and validation;
-- retained modifier contributions;
-- application, rejection, ticking, removal, and cleanup;
-- immutable events and diagnostics;
-- snapshot compatibility and restoration after M1-7.
+BattleTurnEndLifecycleResult result = lifecycle.ProcessTurnEnd(
+    new BattleTurnEndLifecycleRequest(
+        actor,
+        participants,
+        contextId,
+        ContentId.Parse("owner_turn_end"),
+        battleKindId,
+        statModifierBoundary: boundary),
+    executionServices);
+```
 
-Do not decrement timers from `_Process`, animation completion, frame counts, or
-button presses. Send commands to the encounter/runtime services and present the
-typed lifecycle results they return.
+The supplied `BattleStatusEncounterLifecyclePort` creates owner-turn sequences
+for the canonical encounter runner. Direct action-end and phase-end lifecycle
+APIs accept their own boundaries. If a custom scheduler uses another clock, it
+must generate one monotonic sequence per clock scope and must not derive it from
+frames, animations, or button presses.
+
+A boundary used during application should also be present in
+`EffectExecutionEnvironment.ActiveStatModifierBoundaries`. The policy stamps
+new state with that boundary, preventing same-boundary decrement.
+
+## Present Results In Godot
+
+Godot owns labels, icons, animation, and input. It should present typed
+`StatModifierEvent` and `StatModifierDiagnostic` values:
+
+- `AggregateStageChanged` updates a stage or signal display;
+- `ContributionAdded`, `ContributionUpdated`, and `ContributionExpired` update
+  duration indicators;
+- `TrackRemoved` clears the indicator;
+- `AlreadyInEffect` returns the player to command selection without charging a
+  cost or consuming a turn.
+
+Do not inspect display names to decide whether an effect is a buff, debuff,
+reset, or timed effect. Use the transition code, event kind, track ID, and
+diagnostic code.
+
+## Removal And Cleanup
+
+Use `StatModifierRemovalRequest` with one of these modes:
+
+- `Positive` or `Negative`;
+- `SelectedTracks` with track IDs;
+- `SelectedContributions` with contribution sequences;
+- `All`.
+
+Typed `RemoveStatusEffectDefinition` routes positive and negative status
+removal through this same authority. `BattleStatusLifecycleService.Cleanup`
+maps swap, battle end, and field transition scopes to modifier cleanup. The
+supplied policies preserve swap state and clear on the other terminal scopes.
+
+## Persistence And Restore
+
+Save contract v10 stores canonical modifier state in
+`RuntimeBattleStatusSnapshot.StatModifiers`. Host JSON DTOs must preserve:
+
+- the qualified policy ID;
+- ordered tracks and resolved stages;
+- contribution sequence and signed magnitude;
+- counted duration and reserve-suspension flag;
+- last lifecycle event ID and sequence.
+
+Create both `RuntimeSaveValidator` and `RuntimeSessionRestoreService` with the
+same `IRuntimeRulesetBindingResolver`. Restore first locates the authored
+ruleset by saved policy ID, binds it, validates the retained state, and only
+then creates live actors. A host must not reconstruct aggregate stages itself.
+
+## Custom Policies
+
+Custom behavior implements `IStatModifierPolicy`; content binding implements
+`IRuntimeStatModifierRulesetPolicyFactory`. Keep these constraints:
+
+- evaluate immutable requests and return immutable snapshots;
+- never mutate `RuntimeActorState` inside a policy;
+- return rejection rather than partial state after invalid input or faults;
+- validate every retained state shape the policy can produce;
+- use typed lifecycle boundaries for counted duration;
+- preserve deterministic contribution and event ordering.
+
+`RuntimeRulesetPolicyFactoryRegistry` accepts host-supplied factories by
+category. The current `CreateStandard()` helper creates the supplied registry
+as one immutable set; it does not mutate after construction.
+
+## Host And Framework Ownership
+
+| Framework owns | Host owns |
+|---|---|
+| authored policy binding | choosing the authored ruleset ID |
+| canonical modifier state | icons, text, colors, and animation |
+| assess/apply/tick/remove/cleanup | command and target presentation |
+| costs and item transaction ordering | host save-file encoding |
+| typed events and diagnostics | scene-node mapping by runtime ID |
+| save validation and actor restoration | custom scheduler boundary creation |
+
+## Evidence
+
+- `tests/Convergence.Framework.Tests/SkillSystem/StatModifierExecutionIntegrationTests.cs`
+- `tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs`
+- `tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs`
+- `tests/Convergence.Framework.Tests/Architecture/GodotReferenceConsumerBoundaryTests.cs`
+- `samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs`
 
 ## Related Documentation
 
 - [Player And Designer Rules](../mechanics/stat-modifier-policies.md)
 - [Runtime Authority](../technical/stat-modifier-policy-runtime.md)
-- [Confirmed Decision](../decisions/stat-modifier-policy-family.md)
+- [Ruleset Policy Contracts](../ruleset-policy-contracts.md)
 - [Policy Family Design Pattern](../policy-family-design-pattern.md)

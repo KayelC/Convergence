@@ -29,8 +29,8 @@ Technical pages focus on:
   lifecycle clocks, boundary ordering, and persistence requirements.
 
 The actor reference has completed collaborative review. Typed action/effect and
-stat modifier references remain `existing_unreviewed` while the confirmed
-policy family is implemented and source-reviewed. Other subsystem references
+stat modifier references remain `existing_unreviewed` while the implemented
+policy family receives its fresh source and documentation reviews. Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 

@@ -27,14 +27,12 @@ deterministic replay.
 
 Exactly-one item reservations, reservation validation, mandatory inventory
 authority, and Framework-owned skill/basic-attack authorization remain
-implemented and covered by focused tests. Typed action/effect execution and
-status/passive lifecycle are temporarily `partial`, however, because the
-current direct stat-stage mutation and one-stage/one-duration state cannot
-implement the approved stat-modifier policy family without competing
-authorities or lossy restoration. The active
-[Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md) governs that
-correction. Its neutral authority and all three supplied policies are complete;
-production effect, lifecycle, ruleset, and persistence integration remain open.
+implemented and covered by focused tests. The stat-modifier migration now has
+one canonical actor authority, three supplied policies, typed effect and
+lifecycle integration, authored ruleset binding, save-v10 restoration, and
+cross-policy host evidence. The executable matrix remains conservative until
+the fresh M1 source review closes any reachable integration finding and the
+documentation review confirms the public explanation.
 
 ## Authority
 

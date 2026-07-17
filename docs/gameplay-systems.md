@@ -52,8 +52,10 @@ The lifecycle service handles battle start, turn restrictions, turn end, duratio
 The stat-modifier policy family separately supplies persistent staged,
 timed-exclusive signal, and independently timed contribution policies. Timed
 state retains explicit lifecycle-boundary cursors for same-boundary protection
-and idempotent ticking. These policies are available as immutable runtime
-services; battle effect and lifecycle paths move to that authority at M1-5.
+and idempotent ticking. Skill, item, passive, removal, lifecycle, cleanup,
+ruleset binding, save validation, and aggregate restore paths now use that one
+immutable policy authority. The combat stage-scaling policy remains a separate
+replaceable choice.
 
 ## Encounters, AI, Knowledge, And Rewards
 

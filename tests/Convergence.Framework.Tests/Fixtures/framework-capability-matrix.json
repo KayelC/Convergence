@@ -75,7 +75,7 @@
       "hostNeutral": true,
       "optionalModule": false,
       "knownGaps": [
-        "Stat-modifier applicability, actual-state-change reporting, and item-consumption semantics still use the current aggregate mutation path pending the approved policy-family migration."
+        "The canonical stat-modifier integration is implemented; final maturity promotion awaits the fresh M1 source review."
       ]
     },
     {
@@ -104,7 +104,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The one-stage/one-duration stat-modifier state cannot represent all three approved lifecycle policies; canonical policy authority, independent contribution ticking, and compatible restoration remain open."
+        "Persistent, timed-exclusive, and timed-contribution lifecycle integration is implemented; final maturity promotion awaits the fresh M1 source review."
       ]
     },
     {

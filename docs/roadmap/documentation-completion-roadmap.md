@@ -120,16 +120,17 @@ Current checkpoints:
 | O1-D1 | `verified` | Item commands require an inventory port and an exactly-one reservation. |
 | O1-D2 | `verified` | Framework validates equipped canonical skills and resolved basic attacks. |
 | O1-IR-H1 | `implemented_pending_review` | Automated battles use the canonical skill-authorization policy. |
-| O1-IR-M1 | `open` | Complete M1-1 through M1-8 for the approved stat-modifier policy family. |
-| O1-DOC | `reopened` | Revise all three audience documents after policy implementation and complete a new owner-confirmed documentation review. |
+| O1-IR-M1 | `implemented_pending_review` | M1-1 through M1-8 are complete; the fresh source review remains. |
+| O1-DOC | `written_pending_review` | All three audience documents are revised; source comparison and owner-confirmed documentation review remain. |
 
 The owner confirmed the timed-exclusive signal arithmetic, rejection behavior,
 dominant-duration rule, independently timed rolling example, cap refresh,
 explicit lifecycle clocks, same-boundary protection, bonus-action handling,
 cancellation behavior, and reserve suspension on 17 July 2026. The mechanics,
 developer, and technical design records now preserve those decisions before
-runtime work continues. `O1-DOC` remains reopened because those records must be
-checked against the completed M1 implementation before promotion.
+runtime work continues. `O1-DOC` is written but remains unpromoted because the
+records must be checked against the completed M1 implementation before owner
+confirmation.
 
 The earlier
 [post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md)

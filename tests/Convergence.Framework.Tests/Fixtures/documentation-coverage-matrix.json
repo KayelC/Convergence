@@ -124,7 +124,7 @@
           "docs/mechanics/actions-targeting-and-effects.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The action page remains useful and the confirmed modifier policies now have a player-facing design record, but execution and meaningful-success claims require source review after M1 integration."
+        "reason": "The action page and revised modifier mechanics describe the completed integration, but both await the fresh M1 source and documentation reviews."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -132,7 +132,7 @@
           "docs/developer-guide/typed-actions-and-effects.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The guides record action authority and the confirmed modifier composition boundary, but timed policies, authored selection, and effect integration remain pending implementation and source review."
+        "reason": "The guides now cover all supplied policies, authored selection, execution, host presentation, and persistence, but await the fresh M1 reviews."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -140,7 +140,7 @@
           "docs/technical/typed-action-and-effect-execution.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The technical references distinguish implemented action authority from the confirmed modifier runtime design, but require re-review after one canonical modifier authority replaces direct aggregate mutation."
+        "reason": "The technical references describe the canonical modifier authority and completed integrations, but require fresh source and documentation review before promotion."
       }
     },
     {

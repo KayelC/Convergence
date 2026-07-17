@@ -28,8 +28,8 @@ Developer guides focus on:
   removal, and Godot responsibilities.
 
 The actor guide has completed collaborative review. Typed action/effect and stat
-modifier guidance remains `existing_unreviewed` while the confirmed policy
-family is implemented and verified. Other subsystem guides remain tracked as
+modifier guidance remains `existing_unreviewed` while the completed policy
+family receives its fresh source and documentation reviews. Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 

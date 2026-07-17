@@ -48,7 +48,7 @@ and reviews are complete.
 | M1-6 | `complete` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `complete` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
 | M1-8 | `complete` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
-| M1-DOC | `pending` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
+| M1-DOC | `complete` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
 | M1-CR | `pending` | Perform a fresh source-first code review of the completed family and correct substantiated findings in isolated commits. | `review: audit stat modifier policies` |
 | M1-DR | `pending` | Review documentation against corrected source, obtain owner confirmation, and only then restore `reviewed`/`complete` status. | `docs: verify stat modifier policy documentation` |
 
@@ -397,6 +397,25 @@ checkpoint:
   and zero compiler warnings. Content validation loaded 6 packs, 36 documents,
   and 98 qualified definitions. All four noninteractive demos, scripted
   Training Annex startup, and the real Godot 4.7.1 headless smoke passed.
+
+### M1-DOC Completion Record
+
+- Rewrote the mechanics page around observable behavior for persistent stages,
+  timed-exclusive signals, and independently timed contributions. It includes
+  the owner-confirmed rolling-duration example, reapplication and opposition,
+  lifecycle clocks, reserve suspension, cleanup, default stage scaling, and
+  save-v10 behavior.
+- Rewrote the developer guide around authored `stat_modifier` rulesets,
+  explicit binding, canonical execution/lifecycle composition, meaningful item
+  success, Godot presentation, custom-policy obligations, and policy-aware
+  aggregate restoration.
+- Rewrote the technical reference around immutable authority, policy state
+  machines, staged transaction ordering, boundary monotonicity, event ordering,
+  ruleset validation, and dependency-ordered aggregate restore, with Mermaid
+  diagrams and current source/test evidence.
+- Updated audience indexes, architecture summaries, documentation tracking,
+  and capability evidence without promoting documentation beyond
+  `existing_unreviewed`; M1-CR and M1-DR remain the independent review gates.
 
 ## M1-8: Cross-Policy Evidence
 

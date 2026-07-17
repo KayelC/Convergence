@@ -1,108 +1,118 @@
 # Stat Modifier Policy Runtime Authority
 
-## Scope And Implementation State
+## Scope
 
-This reference defines the confirmed runtime invariants for the stat-modifier
-policy family.
+This reference defines the implemented authority, state, transaction, lifecycle,
+and restore invariants for the stat-modifier family. It covers all three
+supplied policies through M1-8.
 
-Implemented through M1-4:
+The central invariant is:
 
-- immutable neutral snapshots, requests, decisions, results, diagnostics, and
-  events;
-- `StatModifierPolicyService` validation and fault containment;
-- removal of public direct stage mutation;
-- the persistent staged reference policy;
-- typed lifecycle-boundary cursors and boundary-aware events;
-- the timed-exclusive reference policy;
-- the independently timed contribution reference policy.
+> One bound `IStatModifierPolicyService` is the only authority that may derive
+> canonical modifier state for a live actor.
 
-Confirmed but not yet implemented:
+Neither an effect executor, lifecycle service, host, save codec, nor combat
+resolver may directly edit a resolved stage or duration.
 
-- actor/effect/lifecycle commit integration;
-- authored policy binding;
-- contribution-aware aggregate persistence.
-
-This distinction is deliberate. The document is current design authority, while
-the [roadmap](../roadmap/stat-modifier-policy-roadmap.md) records implementation
-progress.
-
-## Authority Boundary
-
-Exactly one selected `IStatModifierPolicy` owns modifier state for one runtime
-scope. `StatModifierPolicyService` is the neutral authority around it.
+## Authority Flow
 
 ```mermaid
 flowchart TD
-    Request["Immutable application, tick, removal, or cleanup request"]
-    Neutral["Neutral state and request validation"]
-    Policy["Selected IStatModifierPolicy"]
-    PolicyState["Policy-specific state validation"]
-    Diff["Framework event derivation"]
-    Accept["Immutable accepted transition"]
-    Reject["Typed rejection; Before equals After"]
+    subgraph Content["Authored selection"]
+        R["RulesetDefinition: stat_modifier"]
+        F["Registered policy factory"]
+    end
+    subgraph Runtime["Framework authority"]
+        B["RuntimeRulesetBindingResolver"]
+        S["StatModifierPolicyService"]
+        P["Selected IStatModifierPolicy"]
+        A["RuntimeActorState.StatModifierState"]
+    end
+    subgraph Consumers["Canonical consumers"]
+        E["Skill, item, and passive execution"]
+        L["Battle lifecycle"]
+        C["Combat stage projection"]
+        V["Save validation and restore"]
+    end
 
-    Request --> Neutral
-    Neutral -->|invalid| Reject
-    Neutral -->|valid| Policy
-    Policy -->|throws or rejects| Reject
-    Policy -->|returns state| PolicyState
-    PolicyState -->|invalid or incompatible| Reject
-    PolicyState -->|valid| Diff
-    Diff --> Accept
+    R --> B
+    F --> B
+    B --> S
+    S --> P
+    E --> S
+    L --> S
+    S --> A
+    A --> C
+    A --> V
 ```
 
-Custom policy code never receives a live `RuntimeActorState`. M1-5 stages an
-accepted immutable transition inside the existing actor transaction and only
-publishes it after the whole ordered effect operation succeeds.
+`RuntimeActorState.StatStages` is a read-only aggregate projection of canonical
+policy state. It is not a second mutable authority.
 
-`RuntimeActorState.ChangeStatStage` is no longer public. M1-5 removes its
-remaining internal callers and replaces the old aggregate store with validated
-policy state.
-
-## Neutral Retained State
+## Neutral Immutable State
 
 `RuntimeStatModifierStateSnapshot` contains:
 
-- selected policy ID;
-- ordered modifier tracks.
+- one qualified policy ID;
+- ordered `RuntimeStatModifierTrackSnapshot` values.
 
-Each `RuntimeStatModifierTrackSnapshot` contains:
+Each track contains:
 
-- modifier track ID;
-- resolved bounded stage;
-- ordered retained contributions.
+- a valid modifier-track ID;
+- a resolved nonzero stage;
+- one or more ordered contribution snapshots.
 
 Each contribution contains:
 
-- globally unique positive sequence;
-- signed, nonzero stage delta;
-- optional duration;
+- a globally unique positive sequence;
+- a signed nonzero stage delta;
+- optional typed duration;
 - optional last-observed lifecycle boundary.
 
-Neutral validation rejects invalid IDs, duplicate tracks, duplicate or
-nonpositive sequences, zero deltas, invalid duration shapes, and raw arithmetic
-outside the integer domain. The selected policy additionally validates its
-bounds, contribution count, aggregate projection, and allowed duration shape.
+The neutral service validates IDs, duplicate tracks and sequences, duration
+shape, boundary shape, integer arithmetic, and policy identity. The selected
+policy then validates its own bounds, contribution count, projection, and
+duration requirements.
 
-Counted durations use this boundary cursor shape:
+Snapshots sort tracks by ID and contributions by sequence. Public collections
+are read-only snapshots, so caller-owned arrays cannot mutate a retained result.
 
-```text
-Contribution
-  identity sequence
-  signed magnitude
-  duration
-  optional last lifecycle boundary: event ID + monotonic sequence
+## Service Containment
+
+`StatModifierPolicyService` wraps extension policy code:
+
+```mermaid
+flowchart TD
+    Q["Immutable request"] --> N{"Neutral request and state valid?"}
+    N -->|"no"| R["Rejected; Before == After"]
+    N -->|"yes"| P["Invoke selected policy"]
+    P -->|"throws"| R
+    P -->|"rejects"| R
+    P -->|"returns state"| V{"Policy result validates?"}
+    V -->|"no"| R
+    V -->|"yes"| D["Derive ordered diff events"]
+    D --> T["Applied or Unchanged transition"]
 ```
 
-The identity sequence orders contributions and event output. It is not a
-duration clock. The lifecycle boundary is initialized from an active matching
-boundary during application and advances whenever a later matching boundary is
-observed.
+Policy exceptions other than process-fatal memory exhaustion become
+`PolicyFaulted` diagnostics. Rejection never exposes a partial `After` state.
 
-## Timed-Exclusive State Machine
+`AssessApplication` and `Apply` evaluate the same immutable policy path. Skill
+and item prepared assessments additionally compare actor revisions, prepared
+targets, definitions, context, and active boundaries before execution.
 
-The supplied timed-exclusive policy permits one contribution per track and
-stages `-2..+2`, excluding stored zero.
+## Policy State Machines
+
+### Persistent Staged
+
+One contribution stores the net stage. Application computes
+`clamp(current + delta, minimum, maximum)`. Stored duration and lifecycle cursor
+must be null. `Tick` is unchanged.
+
+### Timed Exclusive
+
+One contribution stores one of `-2`, `-1`, `+1`, or `+2` and one counted
+duration.
 
 ```mermaid
 stateDiagram-v2
@@ -112,196 +122,211 @@ stateDiagram-v2
     Neutral --> Negative: apply -
     Neutral --> StrongNegative: apply --
 
-    Positive --> Positive: apply + / refresh
-    Positive --> StrongPositive: apply ++ / replace
-    StrongPositive --> StrongPositive: apply + / reject weaker
-    Positive --> Neutral: apply - / cancel
-    StrongPositive --> Positive: apply - / existing timer survives
-    Positive --> Negative: apply -- / incoming timer survives
+    Positive --> Positive: + / restart timer
+    Positive --> StrongPositive: ++ / replace
+    StrongPositive --> StrongPositive: + / reject weaker
+    Positive --> Neutral: - / cancel
+    StrongPositive --> Positive: - / keep existing timer
+    Positive --> Negative: -- / use incoming timer
 
-    Negative --> Negative: apply - / refresh
-    Negative --> StrongNegative: apply -- / replace
-    StrongNegative --> StrongNegative: apply - / reject weaker
-    Negative --> Neutral: apply + / cancel
-    StrongNegative --> Negative: apply + / existing timer survives
-    Negative --> Positive: apply ++ / incoming timer survives
+    Negative --> Negative: - / restart timer
+    Negative --> StrongNegative: -- / replace
+    StrongNegative --> StrongNegative: - / reject weaker
+    Negative --> Neutral: + / cancel
+    StrongNegative --> Negative: + / keep existing timer
+    Negative --> Positive: ++ / use incoming timer
 ```
 
-The complete arithmetic is:
+The weaker same-sign rejection is `AlreadyInEffect`. Equal opposite magnitudes
+remove the complete track.
+
+### Timed Contributions
+
+Every accepted application normally appends one contribution. The projection
+is:
 
 ```text
-same sign, equal magnitude   -> same stage, incoming fresh duration
-same sign, incoming stronger -> incoming stage and duration
-same sign, incoming weaker   -> AlreadyInEffect rejection
-opposite signs               -> existing stage + incoming stage
-opposite result zero         -> remove track
-opposite existing sign wins  -> result stage, existing remaining duration
-opposite incoming sign wins  -> result stage, incoming fresh duration
+resolved = clamp(sum(contribution.StageDelta), minimum, maximum)
 ```
 
-The weaker same-sign rejection occurs during assessment and must be identical
-during execution. It cannot reserve a cost, commit an item, mutate state, or
-consume turn economy.
+At a same-direction cap, application refreshes the lowest-sequence contribution
+of that sign instead of appending hidden state. Selected-contribution removal
+can therefore remove one timed application without removing the complete
+track.
 
-## Timed-Contribution Projection
+## Ordered Effect Transaction
 
-The supplied timed-contribution policy retains each accepted application as a
-separate contribution. Its aggregate is:
+For an active skill or item, modifier execution occurs inside the same staged
+actor transaction as all other effects:
 
-```text
-resolved stage = clamp(sum(active signed contributions), minimum, maximum)
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Action as BattleActionExecutor
+    participant Inventory
+    participant Effects as Skill/Item Executor
+    participant Modifier as StatModifierPolicyService
+    participant Actor as Live RuntimeActorState
+
+    Host->>Action: assess typed command
+    Action->>Effects: assess ordered effects on clones
+    Effects->>Modifier: assess immutable transition
+    Modifier-->>Effects: accepted, unchanged, or rejected
+    Effects-->>Action: prepared result
+    Host->>Action: execute prepared assessment
+    Action->>Inventory: reserve one item when applicable
+    Action->>Effects: execute against staged actors
+    Effects->>Modifier: apply same transition inputs
+    Modifier-->>Effects: immutable state and events
+    alt all commits succeed
+        Action->>Actor: commit staged actor revisions
+        Action->>Inventory: commit reservation
+    else any execution or inventory commit rejects
+        Action->>Inventory: roll back reservation
+        Action-->>Host: rejected; live actors unchanged
+    end
 ```
 
-Positive and negative contributions coexist. Expiry removes only the due
-contribution, then recomputes the aggregate.
+A modifier effect reports meaningful success only when its canonical transition
+changes state. Typed removal follows the same path. Ordered effect failure rolls
+back earlier modifier changes because only staged actor clones were changed.
 
-An authored multi-stage application is one contribution. This preserves one
-application identity and one duration.
+## Lifecycle Boundary Model
 
-When an incoming same-sign contribution would leave the resolved stage at the
-same configured cap, the policy refreshes the oldest retained contribution of
-that sign instead of appending hidden state. "Oldest" means lowest contribution
-identity sequence. The retained contribution keeps its magnitude and receives
-the incoming duration.
+Counted duration uses `TurnDurationDefinition` and
+`StatModifierLifecycleBoundary(eventId, sequence)`.
 
-## Lifecycle Clock Contract
+The complete boundary identity is an event ID + positive monotonic boundary sequence.
 
-Every counted duration names its clock through a lifecycle event ID. One runtime
-boundary is represented by:
-
-```text
-event ID + positive monotonic boundary sequence
-```
-
-Sequences are monotonic within the selected clock's scope. For owner-turn
-events, the scope is the affected actor; for team-phase events, it is the team;
-for round events, it is the encounter.
-
-The scheduler owns boundary creation. The modifier service owns matching,
-suspension, decrement, and expiry. Presentation owns neither.
-
-The boundary cursor also makes ticking idempotent. A sequence equal to the
-cursor has already been observed and is ignored. A lower sequence violates the
-monotonic contract and rejects the complete tick without mutation.
-
-### Application Anchor
-
-Application receives the currently active matching boundary when one exists:
-
-- self-application during owner turn 12 records owner-turn boundary 12;
-- application to an actor whose owner turn is not active records no active
-  owner-turn boundary;
-- application during team phase 5 records phase 5 only when the duration uses
-  the team-phase clock.
-
-Ticking uses this order:
+- Event ID chooses the clock.
+- Sequence is positive and monotonic within that clock's scope.
+- A matching active boundary stamps application or refresh.
+- Completion of the same sequence does not decrement the contribution.
+- Repeating the latest sequence is idempotent.
+- An older sequence rejects the complete tick.
+- A later matching sequence decrements once or expires at one.
+- A nonmatching event leaves the contribution unchanged.
+- Reserve suspension records the later sequence without decrementing.
 
 ```mermaid
 flowchart TD
-    Tick["Matching clock boundary completes"]
-    Match{"Duration event ID matches?"}
-    Stale{"Older than boundary cursor?"}
-    Same{"Applied in this exact boundary or already observed?"}
-    Reserve{"Actor in reserve and suspension enabled?"}
-    Observe["Advance cursor without decrement"]
-    Decrement["Decrement remaining count once"]
-    Expire{"Remaining count reached zero?"}
-    Remove["Remove only the expired contribution"]
-    Keep["Retain contribution"]
-
-    Tick --> Match
-    Match -->|no| Keep
-    Match -->|yes| Stale
-    Stale -->|yes| Reject["Reject unchanged"]
-    Stale -->|no| Same
-    Same -->|yes| Keep
-    Same -->|no| Reserve
-    Reserve -->|yes| Observe
-    Reserve -->|no| Decrement
-    Observe --> Keep
-    Decrement --> Expire
-    Expire -->|yes| Remove
-    Expire -->|no| Keep
+    T["Receive lifecycle boundary"] --> M{"Event ID matches duration?"}
+    M -->|"no"| U["Unchanged"]
+    M -->|"yes"| O{"Sequence older than cursor?"}
+    O -->|"yes"| R["Reject complete tick"]
+    O -->|"no"| S{"Same sequence already observed?"}
+    S -->|"Applied in this exact boundary or already observed"| U
+    S -->|"no"| D{"Reserve suspension active?"}
+    D -->|"yes"| C["Advance cursor only"]
+    D -->|"no"| V{"Remaining value is 1?"}
+    V -->|"yes"| X["Expire contribution"]
+    V -->|"no"| K["Decrement once and advance cursor"]
 ```
 
-This prevents immediate same-turn loss without granting an extra duration to an
-effect applied before the target's next turn.
+The canonical `BattleStatusEncounterLifecyclePort` owns per-actor owner-turn
+sequences and supplies `owner_turn_end` to turn-end lifecycle processing. The
+lower-level duration lifecycle also accepts action-end and phase-end boundary
+collections from schedulers that define those clocks.
 
-## Turn Windows Versus Actions
+## Lifecycle Commit And Cleanup
 
-The owner-turn clock advances once per completed turn window, not once per
-animation or effect:
+Lifecycle work uses staged encounter or actor transactions. Modifier ticks,
+passive effects, ailment effects, and resource effects commit together. A custom
+handler fault cannot leave only the modifier portion live.
 
-- command cancellation before commitment: no completion;
-- committed normal command: completion;
-- committed pass, guard, forced action, or skipped action: completion;
-- immediate bonus action in the same window: no additional completion;
-- genuinely new scheduled turn: another completion.
+All supplied policies use the same cleanup rules:
 
-A future bonus-action scheduler must expose whether the bonus continues the
-current window. `IBattleTurnEconomy` alone cannot infer scheduling boundaries
-from token consumption.
+| Scope | Result |
+|---|---|
+| `Swap` | preserve state |
+| `ActorDeparture` | clear all modifier state |
+| `EncounterEnd` | clear all modifier state |
+| `FieldTransition` | clear all modifier state |
 
-## Removal And Cleanup
+## Events
 
-The neutral service validates selector shape before dispatch:
+Events are derived from validated before/after snapshots in deterministic track
+ID and contribution-sequence order:
 
-- positive and negative removal require no selectors;
-- selected-track removal requires track IDs only;
-- selected-contribution removal requires contribution sequences only;
-- complete removal requires no selectors.
+1. removed or expired contributions;
+2. added contributions;
+3. updated contributions;
+4. aggregate-stage change;
+5. track removal.
 
-Policies decide which retained contributions match. Events are derived from the
-validated before/after states and report contribution addition, update,
-removal, expiry, aggregate change, and track removal in deterministic order.
+`BattleStatusLifecycleEventMapper` carries modifier event payloads into the
+encounter event stream. Debug messages are optional; typed IDs, values, and
+event kinds are authoritative.
 
-Persistent policy cleanup preserves swap state and clears on actor departure,
-encounter end, or field transition. Timed reference policies follow the same
-cleanup scope unless a later confirmed policy decision explicitly differs.
+## Ruleset Binding
 
-## Atomic Integration Requirements
+`RulesetCategory.StatModifier` is independent from `RulesetCategory.Stat`.
+The latter binds stat resolution and scaling; the former binds modifier
+lifecycle state.
 
-M1-5 must route all of these paths through the selected service:
+`RuntimeRulesetBindingResolver.BindStatModifierPolicy` validates:
 
-1. skill and item assessment;
-2. ordered active and passive effects;
-3. battle-status lifecycle application;
-4. matching clock ticks and expiry;
-5. typed positive/negative/selected removal;
-6. swap, departure, encounter, and field cleanup;
-7. actor clone/commit and event publication.
+- qualified ruleset lookup;
+- `stat_modifier` category;
+- registered unqualified policy-factory ID;
+- exact allowed parameter names;
+- required bounds and coherent signed range;
+- factory result and diagnostics.
 
-No production caller may directly change an aggregate stage, decrement a
-duration, or clear the old stage dictionary after that checkpoint.
+The standard registry supplies `persistent_staged`, `timed_exclusive`, and
+`timed_contribution`. There is no policy fallback after binding failure.
 
-## Persistence Requirements
+## Save And Aggregate Restore
 
-M1-7 advances the save contract because the current aggregate stage snapshot
-cannot preserve:
+Save contract v10 serializes canonical state under
+`RuntimeBattleStatusSnapshot.StatModifiers`. Validation performs neutral checks,
+catalog lookup of the saved qualified policy ID, authored factory binding, and
+selected-policy compatibility validation.
 
-- policy identity;
-- independent contribution identity and magnitude;
-- remaining duration per contribution;
-- application boundary anchor.
+```mermaid
+flowchart TD
+    S["RuntimeSaveGameSnapshot v10"] --> N["Neutral save validation"]
+    N --> C{"Policy ruleset exists in catalog?"}
+    C -->|"no"| R["Reject aggregate restore"]
+    C -->|"yes"| B["Bind authored stat-modifier policy"]
+    B -->|"diagnostics"| R
+    B --> V["Validate every retained actor state"]
+    V -->|"incompatible"| R
+    V --> A["Restore actors in dependency order"]
+    A --> Q["Revalidate restoration resolver policy"]
+    Q -->|"mismatch"| R
+    Q -->|"valid"| L["Publish complete live session"]
+```
 
-Restore validates neutral state and selected-policy compatibility before any
-actor becomes live. A failure returns aggregate diagnostics and publishes no
-partial session.
+No actor is exposed when aggregate validation fails. Host JSON and Godot save
+codecs encode the snapshot but do not reinterpret policy state.
 
-## Evidence
+## Source And Test Evidence
 
-Current implementation evidence:
+Primary source:
 
 - `src/Convergence.Framework/Runtime/StatModifierPolicies.cs`
 - `src/Convergence.Framework/Runtime/PersistentStagedStatModifierPolicy.cs`
 - `src/Convergence.Framework/Runtime/TimedExclusiveStatModifierPolicy.cs`
+- `src/Convergence.Framework/Runtime/TimedContributionStatModifierPolicy.cs`
+- `src/Convergence.Framework/Execution/StatModifierExecution.cs`
+- `src/Convergence.Framework/Execution/BattleStatusLifecycle.cs`
+- `src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs`
+- `src/Convergence.Framework/Runtime/RuntimeRulesetPolicyFactories.cs`
+- `src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs`
+
+Executable evidence:
+
 - `tests/Convergence.Framework.Tests/Runtime/StatModifierPolicyContractTests.cs`
 - `tests/Convergence.Framework.Tests/Runtime/PersistentStagedStatModifierPolicyTests.cs`
 - `tests/Convergence.Framework.Tests/Runtime/TimedExclusiveStatModifierPolicyTests.cs`
+- `tests/Convergence.Framework.Tests/Runtime/TimedContributionStatModifierPolicyTests.cs`
+- `tests/Convergence.Framework.Tests/SkillSystem/StatModifierExecutionIntegrationTests.cs`
+- `tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs`
 
-Confirmed future behavior:
+## Related Documentation
 
-- [Stat Modifier Policy Family Decision](../decisions/stat-modifier-policy-family.md)
-- [Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md)
-- [Player And Designer Rules](../mechanics/stat-modifier-policies.md)
+- [Mechanics](../mechanics/stat-modifier-policies.md)
 - [Developer Integration](../developer-guide/stat-modifier-policies.md)
+- [Typed Action And Effect Execution](typed-action-and-effect-execution.md)
+- [Runtime Actor State And Restoration](runtime-actor-state-and-restoration.md)

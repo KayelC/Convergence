@@ -1,85 +1,102 @@
 # Stat Modifier Policies
 
-## Status And Purpose
+## Purpose And Optionality
 
-This page records the confirmed player-visible design for Convergence stat
-modifiers. The persistent staged, timed-exclusive, and timed-contribution
-policies are implemented as standalone runtime authorities. Their production
-effect, lifecycle, ruleset, and persistence integration continues through the
-[Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md).
+Stat modifiers change an actor's combat performance without changing the
+actor's permanent stats. A game selects one modifier policy for a runtime
+scope. Convergence supplies three policies, but none is mandatory and a game
+may register its own.
 
-Stat modifiers are optional. A game selects one coherent policy for a runtime
-scope; Convergence does not force every game to use staged buffs, timed signals,
-or timed stacking.
+Two decisions remain separate:
 
-Two separate questions must not be confused:
+1. the **modifier policy** decides how applications accumulate, expire, oppose,
+   and clear;
+2. the **stage-scaling policy** decides what the resolved stage means to damage,
+   defense, accuracy, or evasion.
 
-1. **Modifier lifecycle:** how a change is applied, combined, timed, removed,
-   and saved.
-2. **Stage scaling:** what a resolved change does to damage, defense, accuracy,
-   evasion, or another value.
+Changing a duration rule does not silently change combat multipliers, and
+changing a multiplier table does not alter duration state.
 
-A game may keep the same lifecycle policy while replacing the multiplier table.
+## Shared Player-Visible Rules
+
+All supplied policies follow these rules:
+
+- Each modifier affects a typed track such as physical attack, magical attack,
+  generic attack, defense, or agility.
+- A rejected application changes nothing. It does not spend a skill cost,
+  consume an item, or consume the actor's turn.
+- An accepted but unchanged application is not meaningful success. For
+  example, an item used against a persistent stage already at its cap is not
+  consumed.
+- Positive and negative removal are typed operations. Behavior is never
+  inferred from a skill's name or description.
+- Swapping an actor preserves modifier state. Actor departure, encounter end,
+  and field transition clear it under the supplied policies.
+- Timed state records the lifecycle boundary it has already observed, so one
+  completed boundary cannot be counted twice.
+
+```mermaid
+flowchart TD
+    A["Actor selects a typed skill or item"] --> B["Framework assesses every effect"]
+    B -->|"rejected"| C["No cost, item, turn, or actor mutation"]
+    B -->|"accepted"| D["Framework executes against staged actor state"]
+    D --> E{"Did canonical state change?"}
+    E -->|"no"| F["Unchanged result; item is retained"]
+    E -->|"yes"| G["Commit actor, costs, and item transaction"]
+    G --> H["Publish ordered typed events"]
+```
 
 ## Policy One: Persistent Stages
 
-The supplied persistent policy uses signed stages. Its reference range is
-`-4..+4`, although a developer may configure different signed bounds.
+The persistent staged policy keeps one signed stage per track until explicit
+cleanup. Its supplied range is `-4..+4`; authored rulesets may choose different
+negative and positive bounds.
 
-- Repeated positive applications move toward the positive cap.
-- Repeated negative applications move toward the negative cap.
-- Opposite applications move the stage toward neutral and then toward the
-  opposite side.
-- An application that cannot change a capped stage is unchanged.
-- Stages do not expire naturally during an encounter.
-- Explicit removal, actor departure, encounter end, or field transition can
-  clear them. Swapping an actor does not clear them.
-
-Example:
+- Positive applications move toward the positive cap.
+- Negative applications move toward the negative cap.
+- Opposite applications move through neutral.
+- Reaching a cap prevents further movement in that direction.
+- No natural duration is stored or ticked.
 
 ```text
-Neutral -> apply +2 -> +2
+neutral -> apply +2 -> +2
 +2      -> apply -1 -> +1
 +1      -> apply -1 -> neutral
-Neutral -> apply -3 -> -3
+neutral -> apply -3 -> -3
 ```
+
+This policy suits games where modifiers last for the encounter unless removed.
 
 ## Policy Two: Timed Exclusive Signals
 
-This policy allows one signal on a stat track. It is suitable for games where a
-stat is either unchanged, changed, or strongly changed rather than built from
-many independent applications.
+The timed-exclusive policy stores one timed signal per track. Its fixed scale
+is:
 
-| Internal value | Suggested signal | Player-facing meaning |
+| Stored value | Suggested display | Meaning |
 |---:|:---:|---|
 | `-2` | `--` | strong negative change |
 | `-1` | `-` | negative change |
-| `0` | `~` | no change |
+| `0` | `~` | no active change |
 | `+1` | `+` | positive change |
 | `+2` | `++` | strong positive change |
 
-A game may display icons, arrows, colors, or words. The signals above explain
-the rule; they do not require a particular user interface.
+The host may display arrows, icons, colors, or words instead of these symbols.
 
-### Same-Direction Application
+### Same Direction
 
-- Applying the same signal again resets its timer.
-- Applying a stronger signal replaces the weaker signal and starts the new
-  full timer.
-- Applying a weaker signal while a stronger one is active is rejected as
-  already in effect.
+- Reapplying the same signal restarts its full authored duration.
+- A stronger incoming signal replaces the weaker signal and starts its own
+  full duration.
+- A weaker incoming signal is rejected with `AlreadyInEffect`. The player may
+  choose another command without losing resources or a turn.
 
 ```text
-Current + with 1 turn left; apply +  -> + with a fresh timer
-Current +; apply ++                  -> ++ with a fresh timer
-Current ++; try to apply +           -> rejected, unchanged
+current + with 1 remaining; apply +  -> + with a fresh duration
+current +; apply ++                  -> ++ with a fresh duration
+current ++; try to apply +           -> rejected and unchanged
 ```
 
-The weaker rejection is discovered before commitment. It does not spend a
-resource or item, mutate the actor, consume an action, or consume turn economy.
-The host can explain the reason and ask for another command.
-
-### Opposite Application
+### Opposite Direction
 
 Opposite signals offset arithmetically:
 
@@ -89,137 +106,129 @@ Opposite signals offset arithmetically:
 +  plus -- -> -
 ```
 
-If the existing effect remains stronger, the surviving signal keeps the
-existing effect's remaining time. If the incoming effect becomes stronger, the
-surviving signal uses the incoming effect's fresh time. Equal strengths remove
-the signal and its timer.
-
-This prevents a weak opposing effect from accidentally refreshing the stronger
-effect that it was trying to reduce.
+When the existing side remains stronger, its remaining timer survives. When
+the incoming side becomes stronger, the incoming effect's fresh timer is used.
+Equal strength removes the track and timer. A weak counter-effect therefore
+cannot accidentally refresh the stronger effect it opposed.
 
 ## Policy Three: Timed Contributions
 
-This policy combines signed stages with independent timers. Every accepted
-application creates one contribution. Contributions expire separately, and the
-visible stage is the bounded sum of all active positive and negative
-contributions.
-
-An authored `+2` effect creates one `+2` contribution with one timer. It does
-not secretly create two `+1` records.
-
-### Rolling Three-Turn Example
-
-One actor applies `+1` to the same track once per turn. Each application lasts
-three owner-turn completions:
-
-| Turn | Active remaining times after due expiry and application | Stage |
-|---:|---|---:|
-| 1 | `[3]` | `+1` |
-| 2 | `[2, 3]` | `+2` |
-| 3 | `[1, 2, 3]` | `+3` |
-| 4 | `[1, 2, 3]` | `+3` |
-
-On turn 4, the oldest contribution expires and the newest starts. The policy
-does not merge them into one timer.
-
-Stage `+4` remains reachable when four contributions overlap, such as through
-additional actions or a stronger authored contribution.
-
-At the same-direction cap, another application refreshes the oldest
-contribution of that sign. It does not create an unlimited invisible fifth,
-sixth, or later stack.
-
-Positive and negative contributions coexist and net together:
+The timed-contribution policy retains every accepted application separately.
+The visible stage is the bounded sum of all live signed contributions.
 
 ```text
-three active +1 contributions = +3
-one active -1 contribution    = -1
-resolved stage                = +2
+resolved stage = clamp(sum of live contributions, minimum, maximum)
 ```
 
-If the negative contribution expires first, the stage returns to `+3` while the
-positive contributions remain.
+An authored `+2` application is one `+2` contribution with one timer. It is not
+split into two hidden `+1` entries. Positive and negative contributions coexist
+and expire independently.
 
-## Removing And Resetting Modifiers
+### Confirmed Rolling Example
 
-All policies support generic typed removal. Content may request:
+Assume one actor, one action per turn, a `+1` application, and a three-owner-turn
+duration:
 
-- remove positive modifiers;
-- remove negative modifiers;
-- remove selected stat tracks;
-- remove selected timed contributions;
-- remove all modifiers.
+| Turn | Result after due expiry and the new application | Resolved stage |
+|---:|---|---:|
+| 1 | `[expires in 3]` | `+1` |
+| 2 | `[expires in 2, expires in 3]` | `+2` |
+| 3 | `[expires in 1, expires in 2, expires in 3]` | `+3` |
+| 4 | oldest expires; `[expires in 1, expires in 2, expires in 3]` | `+3` |
 
-Targeting gives these operations their game-specific purpose. For example, a
-game may author one effect that removes negative modifiers from allies and a
-different effect that removes positive modifiers from enemies. Convergence does
-not infer this behavior from the skill name or description.
+The fourth application does not blindly extend one shared timer. A fourth
+stage is reachable only when four contributions overlap, for example through
+additional actors, additional scheduled actions, or a stronger authored
+application.
 
-## Duration Clocks
+At the same-direction cap, another application refreshes the oldest live
+contribution of that sign. It does not create unlimited invisible stacks.
 
-"Three turns" is ambiguous unless the game identifies which clock advances.
-Convergence therefore treats the clock as part of the configured duration.
+## Counted Duration
 
-| Clock | Advances when |
-|---|---|
-| Owner turn | the affected actor completes one turn window |
-| Team phase | the affected actor's team completes a phase |
-| Round | all scheduled teams or actors complete a round |
-| Action | any matching committed action completes |
+A timed effect stores:
 
-The supplied timed-policy default is the owner-turn clock. Phase-oriented games
-may select the team-phase clock. A game may supply another explicit lifecycle
-clock through the policy boundary.
+- a positive remaining count;
+- a typed lifecycle event ID, such as the active content's
+  `owner_turn_end` event;
+- whether the count suspends while the actor is in reserve;
+- the latest monotonic boundary sequence already observed.
 
-### What Counts As One Owner Turn
+The scheduler decides which lifecycle event represents a clock. The supplied
+encounter lifecycle follows these confirmed rules:
 
 - A committed attack, skill, item, guard, pass, forced action, or skipped action
   completes a turn window.
 - Cancelling command selection before commitment does not.
 - A bonus action that continues the current turn window does not advance the
   owner-turn clock a second time.
-- A genuinely new scheduled turn does advance it.
 
-The battle scheduler identifies turn-window boundaries. A console menu or Godot
-animation must not guess them from how many buttons were pressed or effects were
-shown.
-
-### Application During A Boundary
-
-A newly applied modifier does not lose duration at the end of the same clock
-boundary in which it was created.
+A newly applied modifier is anchored to the current matching boundary and does
+not immediately lose one count when that same boundary closes:
 
 ```text
-Actor's turn begins
-Actor applies a three-turn modifier
+owner turn 12: apply duration 3
 The same turn completes -> modifier remains at 3
-The actor's next turn completes -> modifier becomes 2
+owner turn 13 ends: becomes 2
 ```
 
-If another actor applies the modifier before the target's next turn, the target
-receives that next turn under the modifier and its duration then decreases when
-that turn completes.
+Repeated delivery of boundary 13 is idempotent. Delivery of an older boundary
+is rejected rather than silently shortening state.
 
-Runtime contributions therefore remember the clock boundary in which they were
-created and the latest matching boundary they have observed. This is rule state,
-not presentation state. Repeating one completed boundary does not consume
-another turn of duration. An older out-of-order boundary is rejected rather
-than silently shortening the effect.
+If reserve suspension is enabled, a matching boundary records that it was
+observed but does not decrement the duration. This prevents deployment from
+replaying already completed boundaries.
 
-### Reserve Actors
+## Removing And Cleaning Up
 
-Each counted duration explicitly states whether it suspends while its owner is
-in reserve:
+Typed removal can remove:
 
-- suspension enabled: matching clock events do not decrease it in reserve;
-- suspension disabled: matching clock events continue to decrease it.
+- all positive contributions;
+- all negative contributions;
+- selected modifier tracks;
+- selected contribution identities;
+- all modifier state.
 
-There is no hidden global reserve assumption.
+Targeting determines who receives removal. A game can therefore author one
+effect that removes negative state from allies and another that removes
+positive state from enemies without special names in Framework code.
+
+The supplied policies preserve state across `Swap`. They clear state on
+`ActorDeparture`, `EncounterEnd`, and `FieldTransition`.
+
+## Default Combat Scaling
+
+The supplied `StandardStatStageScalingPolicy` maps stages independently from
+the selected lifecycle policy.
+
+| Stage | Offense, hit, and evasion | Damage taken with defense track |
+|---:|---:|---:|
+| `-4` | `0.50` | `2.00` |
+| `-3` | `0.625` | `1.75` |
+| `-2` | `0.75` | `1.50` |
+| `-1` | `0.875` | `1.25` |
+| `0` | `1.00` | `1.00` |
+| `+1` | `1.25` | `0.875` |
+| `+2` | `1.50` | `0.75` |
+| `+3` | `1.75` | `0.625` |
+| `+4` | `2.00` | `0.50` |
+
+The standard mappings are physical attack to physical damage, magical attack
+to magical damage, generic attack to both damage channels, defense to damage
+taken, and agility to hit and evasion. Developers may replace tables or the
+whole scaling policy.
+
+## Persistence
+
+Save contract version `10` retains the selected policy ID, every ordered track,
+every contribution identity and magnitude, remaining duration, reserve flag,
+and lifecycle cursor. Restore validates the state against the authored policy
+before any actor or aggregate session becomes live. A mismatch rejects the
+restore without publishing a partial session.
 
 ## Related Documentation
 
-- [Stat Modifier Policy Family Decision](../decisions/stat-modifier-policy-family.md)
-- [Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md)
 - [Using Stat Modifier Policies](../developer-guide/stat-modifier-policies.md)
 - [Stat Modifier Runtime Authority](../technical/stat-modifier-policy-runtime.md)
+- [Stat Modifier Policy Family Decision](../decisions/stat-modifier-policy-family.md)
 - [Actors, Stats, Resources, And Progression](actors-progression-and-resources.md)
