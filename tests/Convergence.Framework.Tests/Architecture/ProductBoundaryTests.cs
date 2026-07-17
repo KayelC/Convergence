@@ -156,10 +156,23 @@ public sealed class ProductBoundaryTests
         }
 
         Assert.True(File.Exists(Path.Combine(productRoot, "README.md")));
-        Assert.StartsWith(
-            "# Convergence Framework",
-            File.ReadAllText(Path.Combine(productRoot, "README.md")),
+        string readme = File.ReadAllText(Path.Combine(productRoot, "README.md"));
+        string? firstHeading = readme
+            .ReplaceLineEndings("\n")
+            .Split('\n')
+            .FirstOrDefault(line => line.StartsWith("# ", StringComparison.Ordinal));
+        int logoIndex = readme.IndexOf(
+            "docs/assets/Convergence_Logo.png",
             StringComparison.Ordinal);
+        int headingIndex = readme.IndexOf(
+            "# Convergence Framework",
+            StringComparison.Ordinal);
+
+        Assert.Equal("# Convergence Framework", firstHeading);
+        Assert.True(logoIndex >= 0, "The root README must display the Convergence logo.");
+        Assert.True(
+            logoIndex < headingIndex,
+            "The Convergence logo must appear before the product heading.");
         Assert.True(File.Exists(Path.Combine(productRoot, "global.json")));
         Assert.True(Directory.Exists(Path.Combine(productRoot, "src")));
         Assert.True(Directory.Exists(Path.Combine(productRoot, "samples")));
