@@ -476,6 +476,37 @@ public sealed class BattleActionExecutorTests
         Assert.Equal(20, target.GetRequiredResource(Hp).Current);
     }
 
+    [Theory]
+    [InlineData(MalformedReservationKind.Null)]
+    [InlineData(MalformedReservationKind.WrongItem)]
+    [InlineData(MalformedReservationKind.WrongQuantity)]
+    [InlineData(MalformedReservationKind.AlreadyCommitted)]
+    [InlineData(MalformedReservationKind.AlreadyRolledBack)]
+    public async Task ItemAction_RejectsMalformedReservationBeforeActorMutation(
+        MalformedReservationKind malformedKind)
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new MalformedReservationInventory(medicine.Id, malformedKind);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == BattleActionDiagnosticCode.ItemReservationInvalid);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.False(result.ItemConsumptionCommitted);
+        Assert.Equal(0, inventory.CommitCalls);
+        Assert.Equal(
+            malformedKind is MalformedReservationKind.WrongItem or MalformedReservationKind.WrongQuantity ? 1 : 0,
+            inventory.RollbackCalls);
+    }
+
     [Fact]
     public async Task ItemAction_CancellationOccursBeforeReservation()
     {
@@ -892,5 +923,65 @@ public sealed class BattleActionExecutorTests
 
         public IItemActionReservation Reserve(ContentId requestedItemId, int requestedQuantity) =>
             throw new InvalidOperationException("Host inventory failed during reservation.");
+    }
+
+    public enum MalformedReservationKind
+    {
+        Null,
+        WrongItem,
+        WrongQuantity,
+        AlreadyCommitted,
+        AlreadyRolledBack
+    }
+
+    private sealed class MalformedReservationInventory(
+        ContentId requestedItemId,
+        MalformedReservationKind malformedKind) : IItemActionInventory
+    {
+        public int CommitCalls { get; private set; }
+        public int RollbackCalls { get; private set; }
+
+        public bool HasAvailable(ContentId itemId, int quantity) =>
+            itemId == requestedItemId && quantity == 1;
+
+        public IItemActionReservation Reserve(ContentId itemId, int quantity) =>
+            malformedKind == MalformedReservationKind.Null
+                ? null!
+                : new Reservation(this, itemId, quantity, malformedKind);
+
+        private sealed class Reservation(
+            MalformedReservationInventory inventory,
+            ContentId requestedItemId,
+            int requestedQuantity,
+            MalformedReservationKind malformedKind) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = malformedKind == MalformedReservationKind.WrongItem
+                ? Id("different_item")
+                : requestedItemId;
+
+            public int Quantity { get; } = malformedKind == MalformedReservationKind.WrongQuantity
+                ? requestedQuantity + 1
+                : requestedQuantity;
+
+            public bool IsCommitted { get; private set; } =
+                malformedKind == MalformedReservationKind.AlreadyCommitted;
+
+            public bool IsRolledBack { get; private set; } =
+                malformedKind == MalformedReservationKind.AlreadyRolledBack;
+
+            public ItemActionReservationTransitionResult Commit()
+            {
+                inventory.CommitCalls++;
+                IsCommitted = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+
+            public ItemActionReservationTransitionResult Rollback()
+            {
+                inventory.RollbackCalls++;
+                IsRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+        }
     }
 }

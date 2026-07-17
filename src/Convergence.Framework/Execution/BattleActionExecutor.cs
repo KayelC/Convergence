@@ -51,7 +51,8 @@ public enum BattleActionDiagnosticCode
     ExecutionFailed,
     ItemReservationFailed,
     ItemCommitFailed,
-    ItemRollbackFailed
+    ItemRollbackFailed,
+    ItemReservationInvalid
 }
 
 public enum BattleActionEventKind
@@ -831,6 +832,33 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     ]);
                 }
 
+                if (!TryValidateReservation(
+                        reservation,
+                        command.Item.Id,
+                        ItemUseQuantity,
+                        out BattleActionDiagnostic? reservationDiagnostic,
+                        out bool canRollback))
+                {
+                    var diagnostics = new List<BattleActionDiagnostic> { reservationDiagnostic! };
+                    if (canRollback && reservation is not null)
+                    {
+                        if (!TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+                        {
+                            diagnostics.Add(rollbackDiagnostic!);
+                        }
+                        else
+                        {
+                            events.Add(new BattleActionEvent(
+                                BattleActionEventKind.ItemRolledBack,
+                                $"Rolled back invalid item reservation for '{command.Item.Id}'.",
+                                request.Actor.InstanceId,
+                                SourceId: command.Item.Id));
+                        }
+                    }
+
+                    return Rejected(command.Kind, diagnostics, events);
+                }
+
                 events.Add(new BattleActionEvent(
                     BattleActionEventKind.ItemReserved,
                     $"Reserved item '{command.Item.Id}'.",
@@ -1183,6 +1211,62 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             diagnostic = new BattleActionDiagnostic(
                 BattleActionDiagnosticCode.ItemCommitFailed,
                 $"Item reservation commit failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    private static bool TryValidateReservation(
+        IItemActionReservation? reservation,
+        ContentId requestedItemId,
+        int requestedQuantity,
+        out BattleActionDiagnostic? diagnostic,
+        out bool canRollback)
+    {
+        canRollback = false;
+        if (reservation is null)
+        {
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemReservationInvalid,
+                "Item inventory returned no reservation.");
+            return false;
+        }
+
+        try
+        {
+            if (reservation.IsCommitted || reservation.IsRolledBack)
+            {
+                diagnostic = new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ItemReservationInvalid,
+                    "Item inventory returned a reservation that was already completed.");
+                return false;
+            }
+
+            canRollback = true;
+            if (reservation.ItemId != requestedItemId)
+            {
+                diagnostic = new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ItemReservationInvalid,
+                    $"Item reservation belongs to '{reservation.ItemId}' instead of '{requestedItemId}'.");
+                return false;
+            }
+
+            if (reservation.Quantity != requestedQuantity)
+            {
+                diagnostic = new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ItemReservationInvalid,
+                    $"Item reservation quantity {reservation.Quantity} does not match requested quantity {requestedQuantity}.");
+                return false;
+            }
+
+            diagnostic = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            canRollback = false;
+            diagnostic = new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ItemReservationInvalid,
+                $"Item reservation could not be validated: {exception.Message}");
             return false;
         }
     }
