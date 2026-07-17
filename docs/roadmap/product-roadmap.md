@@ -31,7 +31,7 @@ found five medium integration gaps and one low direct-restore inconsistency.
 All six are corrected with isolated commits and regression coverage. The
 review did not invalidate the D1-D6 design.
 
-## Priority 1: Actor Runtime Review Corrections
+## Completed Actor Runtime Review Corrections
 
 Correct the completion-review findings in order:
 
@@ -68,6 +68,14 @@ integration. The consolidated quality gate and independent final review are
 complete. The review demonstrated one encounter resource-event defect,
 corrected it with exact signed mutation records, and found no unresolved release
 blocker.
+
+## Priority 1: Collaborative Documentation Completion
+
+Complete the active
+[Documentation Completion Roadmap](documentation-completion-roadmap.md) one
+capability at a time. Source and tests establish current behavior; the project
+owner confirms intended mechanics and extension boundaries before an audience
+entry becomes `reviewed`. Existing prose must not be bulk-promoted.
 
 ## Priority 2: Persistence Evolution
 

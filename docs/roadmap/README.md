@@ -9,10 +9,12 @@ records. It does not define individual mechanics.
 
 - [Product Roadmap](product-roadmap.md)
 - [Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md)
+- [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
 
 Documentation maturity is tracked separately through the
 [documentation coverage matrix](../reference/documentation-coverage.md). A
 framework capability may be implemented completely while its documentation still
-requires owner review.
+requires owner review. The Documentation Completion Roadmap governs the ordered
+collaborative review of those outstanding entries.
