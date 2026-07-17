@@ -242,14 +242,23 @@ tokens. Revision and token arithmetic are checked.
 The source actor and dependent Vessel are execution clones until both results
 are valid. Only then are live states updated.
 
+A rejected command is a transaction result, not a persisted skill-choice
+state. The pending choice remains unchanged, and the host rebuilds presentation
+from the current actor snapshot.
+
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> Pending
-    Pending --> Replaced: Replace old skill
-    Pending --> Forgotten: Forget new skill
-    Pending --> Pending: Host defers or closes
-    Pending --> Rejected: Token, level, or revision is stale
-    Rejected --> Pending: Rebuild presentation from current state
+    state ValidateCommand <<choice>>
+    Pending --> ValidateCommand: Submit Replace or Forget command
+    ValidateCommand --> Replaced: Valid Replace
+    ValidateCommand --> Forgotten: Valid Forget New
+    ValidateCommand --> Pending: Rejected, choice remains pending
+    note right of Pending
+        Deferring or closing performs no transaction.
+        Rebuild presentation after a rejected command.
+    end note
     Replaced --> [*]
     Forgotten --> [*]
 ```
