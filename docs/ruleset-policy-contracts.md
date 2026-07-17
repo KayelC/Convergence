@@ -20,11 +20,16 @@ The seven factory interfaces keep service types separate:
 |---|---|---|
 | `damage` | `IRuntimeDamageRulesetPolicyFactory` | `ProductionCombatRuleset` |
 | `reward` | `IRuntimeRewardRulesetPolicyFactory` | `IBattleRewardService` |
-| `stat` | `IRuntimeStatRulesetPolicyFactory` | `IStatResolutionPolicy` |
+| `stat` | `IRuntimeStatRulesetPolicyFactory` | `StatRulesetServices` |
 | `growth` | `IRuntimeGrowthRulesetPolicyFactory` | `GrowthRulesetServices` |
 | `roster_capacity` | `IRuntimeRosterCapacityRulesetPolicyFactory` | `IRosterCapacityPolicy` |
 | `economy` | `IRuntimeEconomyRulesetPolicyFactory` | `ResourceManagementRulesetServices` |
 | `turn_economy` | `IRuntimeTurnEconomyRulesetPolicyFactory` | `BattleTurnEconomyRuleset` |
+
+`StatRulesetServices` contains both the `IStatResolutionPolicy` used to resolve
+raw actor stats and the `IStatStageScalingPolicy` used to interpret battle
+stages. A custom stat factory must return the pair so neither responsibility is
+silently inherited from the standard policy.
 
 `RuntimeRulesetPolicyFactoryRegistry.CreateStandard()` is an explicit
 convenience composition. A host may instead construct a registry from its own
