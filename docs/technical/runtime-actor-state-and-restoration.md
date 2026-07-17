@@ -57,17 +57,20 @@ aggregate does not duplicate complete actor state; it stores immutable
 references containing runtime ID, entity-definition ID, and display metadata.
 
 ```mermaid
-flowchart TD
-    Actor["RuntimeActorState"] --> Identity["Identity"]
-    Actor --> Affiliation["CommandAuthorityId + TeamId"]
-    Actor --> Presence["IsDeployed + HasSwappedThisTurn"]
-    Actor --> Progression["Level, EXP, stats, resources"]
-    Actor --> Skills["Learned, equipped, pending, revision"]
-    Actor --> Combat["Defense, passives, statuses"]
-    Party["RuntimePartyRosterSnapshot"] --> Placement["Active + reserve references"]
-    Party --> Ownership["Hosted Entity + Companion rosters"]
-    Party --> Selected["Active Hosted Entity reference"]
-    Actor -. "not stored here" .-> Party
+flowchart LR
+    subgraph ActorAuthority["Actor-owned state"]
+        direction TB
+        Actor["RuntimeActorState"]
+        Actor --> ActorIdentity["Identity, affiliation, and presence<br/>Command authority, team, deployment, swap state"]
+        Actor --> ActorRuntime["Progression and combat state<br/>level, EXP, stats, resources, skills, defenses, passives, statuses"]
+    end
+
+    subgraph RosterAuthority["Party-owned state"]
+        direction TB
+        Party["RuntimePartyRosterSnapshot"]
+        Party --> PartyPlacement["Owner and party placement<br/>active + reserve references"]
+        Party --> PartyOwnership["Ownership and selected source<br/>Hosted Entity + Companion rosters, Active Hosted Entity"]
+    end
 ```
 
 ## Identity Invariants
@@ -335,7 +338,7 @@ The Active Hosted Entity dependency comes from
 data.
 
 ```mermaid
-flowchart LR
+flowchart TD
     Input["Save snapshot"] --> Migration["Explicit migration chain"]
     Migration --> Validation["Aggregate validation"]
     Validation --> Profiles["Resolve actor profiles"]
