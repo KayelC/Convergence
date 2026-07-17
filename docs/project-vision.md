@@ -21,6 +21,13 @@ use is reserved for separate licensing by the copyright owner.
 
 A developer may use battle without fusion, navigation without dungeon traversal, a custom turn economy instead of Action Token, or no moon-phase mechanic at all. Optional vocabulary does not imply mandatory runtime behavior. Features activate because the host registers, binds, and calls them.
 
+Optionality describes service composition, not necessarily nullability inside a
+cross-module aggregate. A game that does not use Framework persistence creates
+no save snapshot at all. A game that adopts runtime save contract v9 supplies
+the contract's required neutral component snapshots for modules it does not
+activate; doing so stores no gameplay state and does not instantiate or execute
+the corresponding services.
+
 ## Quality Direction
 
 Convergence favors explicit commands and results, immutable contracts, injected randomness and policy, transactional mutation, qualified content identity, deterministic diagnostics, and tests at public boundaries.

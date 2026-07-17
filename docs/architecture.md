@@ -75,6 +75,13 @@ Action execution reuses typed targeting, conditions, effects, lifecycle rules, a
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
+Runtime save contract v9 is a deliberately broad interoperability aggregate,
+not the module activation mechanism. When a host chooses to use it, required
+but unused components are represented by neutral snapshots. The minimal party
+roster still identifies the session owner while its placement and ownership
+lists may remain empty. Field state is nullable. A future change to make other
+components absent would require a new versioned save contract.
+
 Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. The supplied ruleset registry has no moon-phase factory, and DemoHost does not require or bind a moon-phase system.
 
 ## Distribution

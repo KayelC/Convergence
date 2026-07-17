@@ -10,7 +10,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 The current runtime save contract is version `9`.
 
-`RuntimeSaveGameSnapshot` can include:
+`RuntimeSaveGameSnapshot` contains:
 
 - runtime actors, including learned skills, equipped skills, pending
   skill-choice tokens, and skill revisions;
@@ -23,6 +23,24 @@ The current runtime save contract is version `9`.
 - session flags and counters;
 - checkpoint breadcrumbs;
 - optional host context.
+
+These fields describe the shape of save contract v9; they do not activate every
+listed mechanic. Hosts that use Framework persistence provide neutral snapshots
+for required modules they do not use:
+
+- an inventory with no quantities or owned equipment;
+- an equipment snapshot with no equipped IDs;
+- a wallet with balance `0`;
+- an empty Compendium and knowledge snapshot;
+- session progress with no counters, flags, elapsed time, or moon phase;
+- a party roster that identifies the saved session owner but has empty active,
+  reserve, Hosted Entity, and Companion collections when those roles are not
+  used.
+
+Navigation and dungeon state may be absent through a null `Field` value.
+Checkpoint breadcrumbs and host context default to empty collections. A game
+that does not use Framework persistence does not construct this aggregate at
+all.
 
 Catalog definitions are not copied into a save. Saves retain qualified content IDs and are restored against a supplied `GameDataCatalog`.
 
