@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `8`.
+The current runtime save contract is version `9`.
 
 `RuntimeSaveGameSnapshot` can include:
 
@@ -71,8 +71,10 @@ Checkpoint breadcrumbs are ordered diagnostic entries. They can help identify wh
 
 `IRuntimeSaveMigrationService` and ordered `IRuntimeSaveMigrationStep` contracts provide the extension seam for future released save formats. Convergence ships no fictitious migration for unreleased formats: an older or newer version is rejected unless the host explicitly supplies a valid path to the current contract.
 
-Save contract v7 has no built-in conversion to v8. A host that intentionally
-retains pre-release v7 data must provide and test an explicit migration step.
+Save contract v8 has no built-in conversion to v9. Version 9 removes the
+duplicated roster owner level and derives capacity from the saved owner actor.
+A host that intentionally retains pre-release v8 or earlier data must provide
+and test an explicit migration step.
 
 ## Related Guidance
 

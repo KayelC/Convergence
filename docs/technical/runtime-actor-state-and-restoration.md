@@ -15,8 +15,9 @@ the approved design is in
 
 The source-based
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
-confirmed the composition, skill-choice, stage, and save-v8 transaction design.
-It found six reachable integration gaps; all are now corrected.
+confirmed the composition, skill-choice, stage, and original save-v8
+transaction design. The corrections below advanced the current contract to
+save v9 and closed all six reachable integration gaps.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives

@@ -83,7 +83,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `3` and runtime save contract version `8` are deliberate pre-release breaks with no compatibility aliases. Save v8 persists pending skill choices and derives Active Hosted Entity restoration from the canonical party roster; v7 requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `3` and runtime save contract version `9` are deliberate pre-release breaks with no compatibility aliases. Save v9 persists pending skill choices, derives Active Hosted Entity restoration from the canonical party roster, and derives roster capacity from the saved owner actor instead of duplicating an owner level in the roster snapshot. Save v8 and earlier require an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported
