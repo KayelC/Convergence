@@ -20,7 +20,7 @@ public sealed class CleanSaveDemoHostTests
 
         Assert.Contains("\"contractVersion\"", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"ownerLevel\"", json, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(9, restored.ContractVersion);
+        Assert.Equal(RuntimeSaveGameSnapshot.CurrentContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.ContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.FrameworkVersion, restored.FrameworkVersion);
         Assert.Equal(snapshot.Actors.Select(actor => actor.Identity.InstanceId), restored.Actors.Select(actor => actor.Identity.InstanceId));
@@ -117,13 +117,25 @@ public sealed class CleanSaveDemoHostTests
                         ContentId.Parse("focused"),
                         new PermanentDurationDefinition())
                 ],
-                statStages:
-                [
-                    new RuntimeStatStageSnapshot(
-                        ContentId.Parse("attack"),
-                        2,
-                        new PhaseDurationDefinition(ContentId.Parse("phase_end")))
-                ],
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    ContentId.Parse("test.pack:timed_contribution"),
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            ContentId.Parse("attack"),
+                            2,
+                            [
+                                new RuntimeStatModifierContributionSnapshot(
+                                    1,
+                                    2,
+                                    new TurnDurationDefinition(
+                                        3,
+                                        ContentId.Parse("owner_turn_end"),
+                                        false),
+                                    new StatModifierLifecycleBoundary(
+                                        ContentId.Parse("owner_turn_end"),
+                                        4))
+                            ])
+                    ]),
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(
@@ -164,7 +176,12 @@ public sealed class CleanSaveDemoHostTests
 
         Assert.Equal(original.VitalResourceId, restoredActor.VitalResourceId);
         Assert.IsType<PermanentDurationDefinition>(Assert.Single(restoredActor.BattleStatus.Statuses).Duration);
-        Assert.IsType<PhaseDurationDefinition>(Assert.Single(restoredActor.BattleStatus.StatStages).Duration);
+        RuntimeStatModifierStateSnapshot modifiers = Assert.IsType<RuntimeStatModifierStateSnapshot>(
+            restoredActor.BattleStatus.StatModifiers);
+        RuntimeStatModifierContributionSnapshot contribution = Assert.Single(
+            Assert.Single(modifiers.Tracks).Contributions);
+        Assert.IsType<TurnDurationDefinition>(contribution.Duration);
+        Assert.Equal(4, contribution.LastLifecycleBoundary?.Sequence);
         Assert.IsType<TurnDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Duration);
         Assert.Equal(DamageElement.Fire, Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Element);
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);

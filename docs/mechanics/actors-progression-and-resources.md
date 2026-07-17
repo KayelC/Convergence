@@ -227,13 +227,13 @@ queue.
 
 ## Save And Restore
 
-**Framework rule:** save contract v9 persists complete source actor progression,
-move lists, pending choices, the canonical party roster, and the other selected
-session modules.
+**Framework rule:** save contract v10 persists complete source actor progression,
+move lists, pending choices, complete selected-policy stat-modifier state, the
+canonical party roster, and the other selected session modules.
 
 Aggregate restoration:
 
-1. validates the complete save;
+1. validates the complete save and each retained modifier policy state;
 2. restores an Active Hosted Entity before its dependent Vessel;
 3. recomposes the Vessel from restored source state;
 4. returns either one complete restored session or diagnostics with no partial

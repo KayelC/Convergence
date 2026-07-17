@@ -396,7 +396,7 @@ public sealed record RuntimeBattleStatusSnapshot
     public RuntimeBattleStatusSnapshot(
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null,
         IEnumerable<RuntimeTimedStateSnapshot>? statuses = null,
-        IEnumerable<RuntimeStatStageSnapshot>? statStages = null,
+        RuntimeStatModifierStateSnapshot? statModifiers = null,
         IEnumerable<RuntimeChargeSnapshot>? charges = null,
         IEnumerable<RuntimeShieldSnapshot>? shields = null,
         IEnumerable<RuntimeAffinityOverrideSnapshot>? affinityOverrides = null,
@@ -406,7 +406,7 @@ public sealed record RuntimeBattleStatusSnapshot
     {
         Ailments = RuntimeSnapshotCollections.List(ailments);
         Statuses = RuntimeSnapshotCollections.List(statuses);
-        StatStages = RuntimeSnapshotCollections.List(statStages);
+        StatModifiers = statModifiers;
         Charges = RuntimeSnapshotCollections.List(charges);
         Shields = RuntimeSnapshotCollections.List(shields);
         AffinityOverrides = RuntimeSnapshotCollections.List(affinityOverrides);
@@ -417,7 +417,7 @@ public sealed record RuntimeBattleStatusSnapshot
 
     public IReadOnlyList<RuntimeTimedStateSnapshot> Ailments { get; }
     public IReadOnlyList<RuntimeTimedStateSnapshot> Statuses { get; }
-    public IReadOnlyList<RuntimeStatStageSnapshot> StatStages { get; }
+    public RuntimeStatModifierStateSnapshot? StatModifiers { get; }
     public IReadOnlyList<RuntimeChargeSnapshot> Charges { get; }
     public IReadOnlyList<RuntimeShieldSnapshot> Shields { get; }
     public IReadOnlyList<RuntimeAffinityOverrideSnapshot> AffinityOverrides { get; }

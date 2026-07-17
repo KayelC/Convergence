@@ -21,10 +21,22 @@ internal sealed record GodotSaveTimedState(
     GodotSaveDuration Duration,
     bool IsRemovable);
 
-internal sealed record GodotSaveStatStage(
+internal sealed record GodotSaveStatModifierBoundary(string EventId, long Sequence);
+
+internal sealed record GodotSaveStatModifierContribution(
+    long Sequence,
+    int StageDelta,
+    GodotSaveDuration? Duration,
+    GodotSaveStatModifierBoundary? LastLifecycleBoundary);
+
+internal sealed record GodotSaveStatModifierTrack(
     string ModifierTrackId,
-    int Stage,
-    GodotSaveDuration? Duration);
+    int ResolvedStage,
+    IReadOnlyList<GodotSaveStatModifierContribution> Contributions);
+
+internal sealed record GodotSaveStatModifierState(
+    string PolicyId,
+    IReadOnlyList<GodotSaveStatModifierTrack> Tracks);
 
 internal sealed record GodotSaveCharge(
     string Kind,
@@ -88,7 +100,7 @@ internal sealed record GodotSaveActor(
     IReadOnlyDictionary<string, string> EquippedItemIds,
     IReadOnlyList<GodotSaveTimedState> Ailments,
     IReadOnlyList<GodotSaveTimedState> Statuses,
-    IReadOnlyList<GodotSaveStatStage> StatStages,
+    GodotSaveStatModifierState? StatModifiers,
     IReadOnlyList<GodotSaveCharge> Charges,
     IReadOnlyList<GodotSaveShield> Shields,
     IReadOnlyList<GodotSaveAffinityBreak> AffinityBreaks,
@@ -269,10 +281,7 @@ internal static class GodotSaveCodec
                 pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
-            actor.BattleStatus.StatStages.Select(stage => new GodotSaveStatStage(
-                stage.ModifierTrackId.ToString(),
-                stage.Stage,
-                ToDto(stage.Duration))).ToArray(),
+            ToDto(actor.BattleStatus.StatModifiers),
             actor.BattleStatus.Charges.Select(charge => new GodotSaveCharge(
                 charge.Kind.ToString(),
                 charge.Multiplier,
@@ -346,10 +355,7 @@ internal static class GodotSaveCodec
             new RuntimeBattleStatusSnapshot(
                 actor.Ailments.Select(FromDto),
                 actor.Statuses.Select(FromDto),
-                actor.StatStages.Select(stage => new RuntimeStatStageSnapshot(
-                    Id(stage.ModifierTrackId),
-                    stage.Stage,
-                    FromDto(stage.Duration))),
+                FromDto(actor.StatModifiers),
                 actor.Charges.Select(charge => new RuntimeChargeSnapshot(
                     Enum.Parse<ChargeKind>(charge.Kind),
                     charge.Multiplier,
@@ -384,6 +390,44 @@ internal static class GodotSaveCodec
             DecimalPairs(actor.BaseResourceValues),
             Id(actor.VitalResourceId),
             actor.CapabilityIds.Select(Id));
+
+    private static GodotSaveStatModifierState? ToDto(RuntimeStatModifierStateSnapshot? state) =>
+        state is null
+            ? null
+            : new GodotSaveStatModifierState(
+                state.PolicyId.ToString(),
+                state.Tracks.Select(track => new GodotSaveStatModifierTrack(
+                    track.ModifierTrackId.ToString(),
+                    track.ResolvedStage,
+                    track.Contributions.Select(contribution =>
+                        new GodotSaveStatModifierContribution(
+                            contribution.Sequence,
+                            contribution.StageDelta,
+                            ToDto(contribution.Duration),
+                            contribution.LastLifecycleBoundary is null
+                                ? null
+                                : new GodotSaveStatModifierBoundary(
+                                    contribution.LastLifecycleBoundary.EventId.ToString(),
+                                    contribution.LastLifecycleBoundary.Sequence))).ToArray())).ToArray());
+
+    private static RuntimeStatModifierStateSnapshot? FromDto(GodotSaveStatModifierState? state) =>
+        state is null
+            ? null
+            : new RuntimeStatModifierStateSnapshot(
+                Id(state.PolicyId),
+                state.Tracks.Select(track => new RuntimeStatModifierTrackSnapshot(
+                    Id(track.ModifierTrackId),
+                    track.ResolvedStage,
+                    track.Contributions.Select(contribution =>
+                        new RuntimeStatModifierContributionSnapshot(
+                            contribution.Sequence,
+                            contribution.StageDelta,
+                            FromDto(contribution.Duration),
+                            contribution.LastLifecycleBoundary is null
+                                ? null
+                                : new StatModifierLifecycleBoundary(
+                                    Id(contribution.LastLifecycleBoundary.EventId),
+                                    contribution.LastLifecycleBoundary.Sequence))))));
 
     private static GodotSavePartyRoster ToDto(RuntimePartyRosterSnapshot roster) =>
         new(

@@ -471,6 +471,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         var persistence = new TrainingAnnexPersistenceController(
             _saveSlots,
             _eventSink,
+            rulesetResolver,
             rosterCapacityPolicy);
         RuntimeWalletSnapshot wallet = _initialWallet ?? new RuntimeWalletSnapshot(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
@@ -869,7 +870,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                     composeAfterCommand = false;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
-                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(rosterCapacityPolicy).Validate(
+                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+                        rosterCapacityPolicy,
+                        rulesetBindings: rulesetResolver).Validate(
                         TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
                             partyRoster,

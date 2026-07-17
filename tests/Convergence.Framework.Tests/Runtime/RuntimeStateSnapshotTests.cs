@@ -166,7 +166,9 @@ public sealed class RuntimeStateSnapshotTests
 
         Assert.Equal(Id("poison"), Assert.Single(roundTrip.BattleStatus.Ailments).Id);
         Assert.Equal(Id("downed"), Assert.Single(roundTrip.BattleStatus.Statuses).Id);
-        Assert.Equal(2, Assert.Single(roundTrip.BattleStatus.StatStages).Stage);
+        RuntimeStatModifierStateSnapshot modifiers = Assert.IsType<RuntimeStatModifierStateSnapshot>(
+            roundTrip.BattleStatus.StatModifiers);
+        Assert.Equal(2, Assert.Single(modifiers.Tracks).ResolvedStage);
         Assert.Equal(2.5m, Assert.Single(roundTrip.BattleStatus.Charges).Multiplier);
         Assert.Equal(ShieldKind.Magical, Assert.Single(roundTrip.BattleStatus.Shields).Kind);
         Assert.Equal(DamageElement.Ice, Assert.Single(roundTrip.BattleStatus.AffinityBreaks).Element);
@@ -529,7 +531,14 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeBattleStatusSnapshot(
                 ailments: [new RuntimeTimedStateSnapshot(Id("poison"), Turns(3))],
                 statuses: [new RuntimeTimedStateSnapshot(Id("downed"), Turns(1), isRemovable: false)],
-                statStages: [new RuntimeStatStageSnapshot(Id("attack"), stage: 2, Turns(3))],
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    Id("test.pack:timed_contribution"),
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            2,
+                            [new RuntimeStatModifierContributionSnapshot(1, 2, Turns(3))])
+                    ]),
                 charges: [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))],
                 shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, Turns(1))],
                 affinityOverrides: [new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Normal, Turns(2))],
@@ -570,7 +579,10 @@ public sealed class RuntimeStateSnapshotTests
                 Turns(3),
                 new NormalAilmentTurnBehaviorDefinition(),
                 new AilmentModifiersDefinition(1, 0, 1, 1, false),
-                new AilmentRecoveryDefinition())]);
+                new AilmentRecoveryDefinition())],
+            statModifierPolicy: new StatModifierPolicyService(
+                new TimedContributionStatModifierPolicy(
+                    Id("test.pack:timed_contribution"))));
 
     private static TurnDurationDefinition Turns(int value) =>
         new(value, Id("owner_turn_end"), false);

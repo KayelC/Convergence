@@ -407,7 +407,7 @@ public sealed class CatalogBattleRuntimeTests
             new RuntimeSkillStateSnapshot(),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
-                statStages: [new RuntimeStatStageSnapshot(Id("attack"), 2, new PhaseDurationDefinition(Id("phase_end")))],
+                statModifiers: PersistentModifiers(Id("attack"), 2),
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(
@@ -430,7 +430,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.False(state.IsDeployed);
         Assert.True(state.EncounterPresence.HasSwappedThisTurn);
         Assert.True(state.IsGuarding);
-        Assert.IsType<PhaseDurationDefinition>(state.StatStages[Id("attack")].Duration);
+        Assert.Equal(2, state.StatStages[Id("attack")].Stage);
         Assert.IsType<BattleDurationDefinition>(state.AffinityOverrides[DamageElement.Ice].Duration);
     }
 
@@ -1954,7 +1954,26 @@ public sealed class CatalogBattleRuntimeTests
         new(
             snapshot,
             RuntimeStatSourceKind.Actor,
-            MissingHostedEntityBehavior.UseActorBaseStats);
+            MissingHostedEntityBehavior.UseActorBaseStats,
+            statModifierPolicy: snapshot.BattleStatus.StatModifiers is null
+                ? null
+                : PersistentModifierService());
+
+    private static IStatModifierPolicyService PersistentModifierService() =>
+        new StatModifierPolicyService(new PersistentStagedStatModifierPolicy(
+            Id("test.pack:persistent_stat_modifiers")));
+
+    private static RuntimeStatModifierStateSnapshot PersistentModifiers(
+        ContentId trackId,
+        int stage) =>
+        new(
+            Id("test.pack:persistent_stat_modifiers"),
+            [
+                new RuntimeStatModifierTrackSnapshot(
+                    trackId,
+                    stage,
+                    [new RuntimeStatModifierContributionSnapshot(1, stage)])
+            ]);
 
     private static RuntimeActorSnapshot RestorableActorSnapshot(
         string instanceId,

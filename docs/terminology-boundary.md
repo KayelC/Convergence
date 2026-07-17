@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `3`, and active runtime snapshots use save contract version `9`. Save v9 persists pending move-list choices, treats the party roster as the authority for the Active Hosted Entity used during Vessel restoration, and derives roster capacity from the saved owner actor. Earlier pre-release shapes have no aliases or automatic translation; save v8 and earlier can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
+Active content uses schema version `4`, and active runtime snapshots use save contract version `10`. Save v10 retains the actor, move-list, and canonical-roster authorities established by v9 and additionally persists the selected stat-modifier policy with its ordered contributions, durations, and lifecycle boundaries. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

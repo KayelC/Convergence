@@ -378,7 +378,7 @@
           "docs/developer-guide/actors-and-runtime-state.md",
           "docs/godot-integration-contract.md"
         ],
-        "reason": "The reviewed guides cover host-owned encoding, save v9 actor state, restore profiles, aggregate restore, and scene application."
+        "reason": "The reviewed guides cover host-owned encoding, save v10 actor state, restore profiles, aggregate restore, and scene application."
       },
       "technical": {
         "state": "reviewed",

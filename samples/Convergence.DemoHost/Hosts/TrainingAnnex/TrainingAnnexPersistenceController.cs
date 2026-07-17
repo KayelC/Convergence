@@ -18,14 +18,17 @@ internal sealed class TrainingAnnexPersistenceController
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
     private readonly IHostEventSink<string> _eventSink;
     private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
+    private readonly IRuntimeRulesetBindingResolver _rulesetBindings;
 
     public TrainingAnnexPersistenceController(
         TrainingAnnexSaveSlotStore saveSlots,
         IHostEventSink<string> eventSink,
+        IRuntimeRulesetBindingResolver rulesetBindings,
         IRosterCapacityPolicy? rosterCapacityPolicy = null)
     {
         _saveSlots = saveSlots ?? throw new ArgumentNullException(nameof(saveSlots));
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
+        _rulesetBindings = rulesetBindings ?? throw new ArgumentNullException(nameof(rulesetBindings));
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
     }
 
@@ -71,7 +74,9 @@ internal sealed class TrainingAnnexPersistenceController
             preparedBattleOutcome,
             preparedBattleWinningTeamId,
             compendium);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(_rosterCapacityPolicy)
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+                _rosterCapacityPolicy,
+                rulesetBindings: _rulesetBindings)
             .Validate(snapshot, catalog);
         if (!validation.IsValid)
         {
@@ -125,7 +130,9 @@ internal sealed class TrainingAnnexPersistenceController
             return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
         }
 
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(_rosterCapacityPolicy)
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+                _rosterCapacityPolicy,
+                rulesetBindings: _rulesetBindings)
             .Validate(record!.Snapshot, catalog);
         if (!validation.IsValid)
         {
@@ -287,9 +294,12 @@ internal sealed class TrainingAnnexPersistenceController
             currentRoster.Player.Actor.State.InstanceId,
             equipmentProfileResolver);
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
-                new RuntimeSaveValidator(_rosterCapacityPolicy),
+                new RuntimeSaveValidator(
+                    _rosterCapacityPolicy,
+                    rulesetBindings: _rulesetBindings),
                 actorFactory,
-                profileResolver)
+                profileResolver,
+                rulesetBindings: _rulesetBindings)
             .Restore(snapshot, catalog);
         if (!aggregate.IsSuccess)
         {

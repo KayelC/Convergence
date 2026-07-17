@@ -72,13 +72,13 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v9 removes the roster's duplicated owner level in addition to
-the actor restore profile's former duplicated Active Hosted Entity ID.
-`RuntimeSessionRestoreService` now derives that dependency from
-`RuntimePartyRosterSnapshot`, restores the owned actor first, and returns a
-normalized aggregate whose derived Vessel profile matches the restored source.
-Pending skill choices and their revision are part of the actor snapshot. A v7
-snapshot is rejected unless the host registers an explicit migration step.
+Save contract v10 retains the canonical roster and pending skill-choice
+authorities established by v9 and stores complete stat-modifier policy state.
+`RuntimeSessionRestoreService` binds retained modifier policies explicitly,
+derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
+restores owned actors first, and returns a normalized aggregate whose derived
+Vessel profile matches the restored source. Any non-current snapshot is
+rejected unless the host registers an explicit migration path.
 
 ## Documentation And Build Tooling
 

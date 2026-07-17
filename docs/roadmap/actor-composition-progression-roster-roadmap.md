@@ -5,7 +5,7 @@
 **Completed implementation authority. D1-D6 are approved, implemented, and
 verified across Checkpoints 0-8.**
 
-**Current state:** runtime save contract v9 is authoritative; the Framework
+**Current state:** runtime save contract v10 is authoritative; the Framework
 Capability Matrix records 21 complete, 2 partial, and 2 intentionally deferred
 capabilities after the later stat-modifier policy decision reopened action
 execution and status lifecycle. This actor roadmap itself remains completed.
@@ -551,7 +551,7 @@ Tests:
 **Commit:** `runtime: restore canonical actor ownership and composition`
 
 > **Historical checkpoint specification:** this section records the save-v8
-> implementation delivered by Checkpoint 7. Save v9 is current; its
+> implementation delivered by Checkpoint 7. Save v10 is current; the v9
 > owner-derived roster-capacity correction is recorded after Checkpoint 8.
 
 Contract changes:

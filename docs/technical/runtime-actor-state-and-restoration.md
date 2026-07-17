@@ -16,8 +16,9 @@ the approved design is in
 The source-based
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 confirmed the composition, skill-choice, stage, and original save-v8
-transaction design. The corrections below advanced the current contract to
-save v9 and closed all six reachable integration gaps.
+transaction design. Subsequent corrections advanced actor restoration through
+save v9, and the stat-modifier policy migration advances the current contract
+to save v10.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -289,15 +290,18 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V9
+## Save Contract V10
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `9`. Version 9 removes the
-roster's duplicated owner-level field; capacity is derived from the canonical
-owner actor instead.
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `10`. Version 10 retains
+the owner-derived roster capacity and pending move-list state established by
+version 9. It replaces the lossy one-stage save projection with complete
+policy-owned stat-modifier state.
 
 The save aggregate contains:
 
 - complete actor snapshots;
+- selected stat-modifier policy IDs, ordered contributions, durations, and
+  lifecycle boundaries;
 - one canonical party roster;
 - inventory, equipment, and wallet;
 - optional field and dungeon state;
@@ -313,6 +317,7 @@ revision. Roster ownership is not copied into actor snapshots.
 - contract version;
 - actor identity uniqueness;
 - actor numeric and timed-state domains;
+- stat-modifier policy binding and policy-specific retained-state validity;
 - content references;
 - party and roster role invariants;
 - roster capacities;
@@ -327,11 +332,12 @@ revision. Roster ownership is not copied into actor snapshots.
 1. migrate to the current contract through an explicit host-supplied migration
    chain when necessary;
 2. validate the complete save;
-3. resolve one `RuntimeActorRestoreProfile` per actor;
-4. restore source actors before dependent Vessels;
-5. restore Vessels through `CatalogBattleActorFactory.Restore`;
-6. normalize actor snapshots from restored live state;
-7. return one `RuntimeRestoredSession`.
+3. bind and validate every retained stat-modifier policy;
+4. resolve one `RuntimeActorRestoreProfile` per actor;
+5. restore source actors before dependent Vessels;
+6. restore Vessels through `CatalogBattleActorFactory.Restore`;
+7. normalize actor snapshots from restored live state;
+8. return one `RuntimeRestoredSession`.
 
 The Active Hosted Entity dependency comes from
 `RuntimePartyRosterSnapshot.ActiveHostedEntity`, not from stale derived Vessel
@@ -341,7 +347,8 @@ data.
 flowchart TD
     Input["Save snapshot"] --> Migration["Explicit migration chain"]
     Migration --> Validation["Aggregate validation"]
-    Validation --> Profiles["Resolve actor profiles"]
+    Validation --> Modifiers["Bind retained modifier policies"]
+    Modifiers --> Profiles["Resolve actor profiles"]
     Profiles --> Graph["Build source dependencies"]
     Graph --> RestoreSources["Restore source actors"]
     RestoreSources --> RestoreVessels["Restore dependent Vessels"]
@@ -349,6 +356,7 @@ flowchart TD
     Normalize --> Success["Complete restored session"]
     Migration -->|Rejected| Failure["Diagnostics, no session"]
     Validation -->|Rejected| Failure
+    Modifiers -->|Rejected| Failure
     Profiles -->|Rejected| Failure
     Graph -->|Rejected| Failure
     RestoreSources -->|Rejected| Failure

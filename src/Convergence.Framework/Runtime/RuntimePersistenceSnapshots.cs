@@ -53,8 +53,7 @@ public enum RuntimeSaveValidationCode
     DuplicateActorCapability,
     DuplicateActorAilment,
     DuplicateActorStatus,
-    DuplicateActorStatStage,
-    DuplicateActorCharge,
+    DuplicateActorCharge = 44,
     DuplicateActorShield,
     DuplicateActorAffinityBreak,
     InvalidActorAffinityBreakElement,
@@ -68,8 +67,7 @@ public enum RuntimeSaveValidationCode
     EquippedEquipmentNotOwned,
     EquipmentSlotMismatch,
     EquipmentAssignedToMultipleActors,
-    ActorStatStageOutOfRange,
-    ActorBaseStatOutOfRange,
+    ActorBaseStatOutOfRange = 59,
     ActorEffectiveStatOutOfRange,
     ActorBaseResourceValueOutOfRange,
     ActorRetainedDurationKindInvalid,
@@ -84,7 +82,10 @@ public enum RuntimeSaveValidationCode
     ActorPendingSkillAlreadyLearned,
     ActorPendingSkillUnlockMismatch,
     ActorPendingSkillLevelUnavailable,
-    ActorMoveListCapacityRejected
+    ActorMoveListCapacityRejected,
+    ActorStatModifierPolicyResolverMissing,
+    ActorStatModifierPolicyBindingRejected,
+    ActorStatModifierStateInvalid
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -92,7 +93,8 @@ public sealed record RuntimeSaveValidationDiagnostic(
     string Message,
     RuntimeInstanceId? InstanceId = null,
     ContentId? ContentId = null,
-    string? Path = null);
+    string? Path = null,
+    StatModifierDiagnosticCode? StatModifierCode = null);
 
 public sealed class RuntimeSaveValidationException : InvalidOperationException
 {
@@ -260,7 +262,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 9;
+    public const int CurrentContractVersion = 10;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -319,14 +321,17 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 {
     private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
     private readonly IRuntimeMoveListCapacityPolicy _moveListCapacityPolicy;
+    private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
 
     public RuntimeSaveValidator(
         IRosterCapacityPolicy? rosterCapacityPolicy = null,
-        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null)
+        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null,
+        IRuntimeRulesetBindingResolver? rulesetBindings = null)
     {
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
         _moveListCapacityPolicy = moveListCapacityPolicy ??
             new SharedRuntimeMoveListCapacityPolicy();
+        _rulesetBindings = rulesetBindings;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -734,6 +739,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 ActorPath(actorIndex, issue.Path)));
         }
 
+        ValidateActorStatModifiers(actor, catalog, diagnostics, actorIndex);
+
         ValidateActorSkillCatalogReferences(
             actor.Skills.LearnedSkillIds,
             catalog,
@@ -876,7 +883,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateAilment => RuntimeSaveValidationCode.DuplicateActorAilment,
             RuntimeActorSnapshotIntegrityCode.MissingAilmentDefinition => RuntimeSaveValidationCode.MissingCatalogAilment,
             RuntimeActorSnapshotIntegrityCode.DuplicateStatus => RuntimeSaveValidationCode.DuplicateActorStatus,
-            RuntimeActorSnapshotIntegrityCode.DuplicateStatStage => RuntimeSaveValidationCode.DuplicateActorStatStage,
             RuntimeActorSnapshotIntegrityCode.DuplicateCharge => RuntimeSaveValidationCode.DuplicateActorCharge,
             RuntimeActorSnapshotIntegrityCode.DuplicateShield => RuntimeSaveValidationCode.DuplicateActorShield,
             RuntimeActorSnapshotIntegrityCode.DuplicateAffinityBreak => RuntimeSaveValidationCode.DuplicateActorAffinityBreak,
@@ -888,7 +894,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded => RuntimeSaveValidationCode.PassiveStateSkillNotLoaded,
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveActivation => RuntimeSaveValidationCode.DuplicatePassiveActivation,
             RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded => RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded,
-            RuntimeActorSnapshotIntegrityCode.StatStageOutOfRange => RuntimeSaveValidationCode.ActorStatStageOutOfRange,
             RuntimeActorSnapshotIntegrityCode.BaseStatOutOfRange => RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.EffectiveStatOutOfRange => RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.BaseResourceValueOutOfRange => RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,
@@ -899,6 +904,97 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.UndefinedEnumValue => RuntimeSaveValidationCode.UndefinedEnumValue,
             _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown actor snapshot integrity code.")
         };
+
+    private void ValidateActorStatModifiers(
+        RuntimeActorSnapshot actor,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        int actorIndex)
+    {
+        RuntimeStatModifierStateSnapshot? state = actor.BattleStatus.StatModifiers;
+        if (state is null)
+        {
+            return;
+        }
+
+        string rootPath = $"$.actors[{actorIndex}].battleStatus.statModifiers";
+        if (_rulesetBindings is null)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorStatModifierPolicyResolverMissing,
+                "Retained stat modifiers require an explicit ruleset binding resolver during save validation.",
+                actor.Identity.InstanceId,
+                state.PolicyId,
+                rootPath + ".policyId"));
+            return;
+        }
+
+        RulesetBindingResult<IStatModifierPolicyService> binding =
+            _rulesetBindings.BindStatModifierPolicy(catalog, state.PolicyId);
+        if (!binding.IsSuccess || binding.Service is null)
+        {
+            foreach (RulesetBindingDiagnostic issue in binding.Diagnostics)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.ActorStatModifierPolicyBindingRejected,
+                    issue.Message,
+                    actor.Identity.InstanceId,
+                    state.PolicyId,
+                    rootPath + ".policyId"));
+            }
+            return;
+        }
+
+        StatModifierValidationResult validation = binding.Service.ValidateState(state);
+        foreach (StatModifierDiagnostic issue in validation.Diagnostics)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorStatModifierStateInvalid,
+                issue.Message,
+                actor.Identity.InstanceId,
+                issue.ModifierTrackId ?? state.PolicyId,
+                StatModifierPath(state, rootPath, issue),
+                issue.Code));
+        }
+    }
+
+    private static string StatModifierPath(
+        RuntimeStatModifierStateSnapshot state,
+        string rootPath,
+        StatModifierDiagnostic diagnostic)
+    {
+        if (diagnostic.ModifierTrackId is not ContentId trackId)
+        {
+            return rootPath;
+        }
+
+        int trackIndex = state.Tracks
+            .Select((track, index) => new { track, index })
+            .Where(value => value.track.ModifierTrackId == trackId)
+            .Select(value => value.index)
+            .DefaultIfEmpty(-1)
+            .First();
+        if (trackIndex < 0)
+        {
+            return rootPath + ".tracks";
+        }
+
+        string trackPath = $"{rootPath}.tracks[{trackIndex}]";
+        if (diagnostic.ContributionSequence is not long sequence)
+        {
+            return trackPath;
+        }
+
+        int contributionIndex = state.Tracks[trackIndex].Contributions
+            .Select((contribution, index) => new { contribution, index })
+            .Where(value => value.contribution.Sequence == sequence)
+            .Select(value => value.index)
+            .DefaultIfEmpty(-1)
+            .First();
+        return contributionIndex < 0
+            ? trackPath + ".contributions"
+            : $"{trackPath}.contributions[{contributionIndex}]";
+    }
 
     private static string ActorPath(int actorIndex, string relativePath) =>
         $"$.actors[{actorIndex}]" + relativePath[1..];

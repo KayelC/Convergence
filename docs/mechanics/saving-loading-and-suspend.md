@@ -8,12 +8,13 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `9`.
+The current runtime save contract is version `10`.
 
 `RuntimeSaveGameSnapshot` contains:
 
 - runtime actors, including learned skills, equipped skills, pending
-  skill-choice tokens, and skill revisions;
+  skill-choice tokens, skill revisions, and complete selected-policy
+  stat-modifier state;
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory and equipped items;
 - wallet;
@@ -24,7 +25,7 @@ The current runtime save contract is version `9`.
 - checkpoint breadcrumbs;
 - optional host context.
 
-These fields describe the shape of save contract v9; they do not activate every
+These fields describe the shape of save contract v10; they do not activate every
 listed mechanic. Hosts that use Framework persistence provide neutral snapshots
 for required modules they do not use:
 
@@ -49,11 +50,12 @@ do not contain duplicate owned rosters or active/reserve placement.
 
 ## Validation Before Restore
 
-The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers.
+The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers. When an actor retains stat modifiers, validation also requires an explicit ruleset-binding resolver and checks the complete state against its authored policy.
 
 An invalid snapshot cannot produce a valid restore token.
 `IRuntimeSessionRestoreService` first runs an explicit migration service,
-validates the complete aggregate, resolves a host-supplied restore profile for
+validates the complete aggregate, resolves each retained stat-modifier policy
+from the supplied catalog, resolves a host-supplied restore profile for
 every actor, restores the Active Hosted Entity selected by the canonical party
 roster before its Vessel, recomposes the Vessel, and returns either one
 complete `RuntimeRestoredSession` or typed diagnostics with no partial session.

@@ -19,7 +19,6 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateAilment,
     MissingAilmentDefinition,
     DuplicateStatus,
-    DuplicateStatStage,
     DuplicateCharge,
     DuplicateShield,
     DuplicateAffinityBreak,
@@ -31,7 +30,6 @@ internal enum RuntimeActorSnapshotIntegrityCode
     PassiveSkillStateNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
-    StatStageOutOfRange,
     BaseStatOutOfRange,
     EffectiveStatOutOfRange,
     BaseResourceValueOutOfRange,
@@ -189,27 +187,6 @@ internal static class RuntimeActorSnapshotIntegrity
             "status",
             key => key,
             diagnostics);
-        ValidateUnique(
-            snapshot.BattleStatus.StatStages,
-            stage => stage.ModifierTrackId,
-            RuntimeActorSnapshotIntegrityCode.DuplicateStatStage,
-            "$.battleStatus.statStages",
-            "stat-stage track",
-            key => key,
-            diagnostics);
-        for (int index = 0; index < snapshot.BattleStatus.StatStages.Count; index++)
-        {
-            RuntimeStatStageSnapshot stage = snapshot.BattleStatus.StatStages[index];
-            if (!BattleStatStageRange.Contains(stage.Stage))
-            {
-                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
-                    RuntimeActorSnapshotIntegrityCode.StatStageOutOfRange,
-                    $"Stat stage '{stage.Stage}' for track '{stage.ModifierTrackId}' must be between " +
-                    $"{BattleStatStageRange.Minimum} and {BattleStatStageRange.Maximum}.",
-                    $"$.battleStatus.statStages[{index}].stage",
-                    stage.ModifierTrackId));
-            }
-        }
         ValidateUnique(
             snapshot.BattleStatus.Charges,
             charge => charge.Kind,
@@ -390,10 +367,35 @@ internal static class RuntimeActorSnapshotIntegrity
             ValidateContentId(snapshot.BattleStatus.Statuses[index].Id,
                 $"$.battleStatus.statuses[{index}].id", diagnostics);
         }
-        for (int index = 0; index < snapshot.BattleStatus.StatStages.Count; index++)
+        if (snapshot.BattleStatus.StatModifiers is RuntimeStatModifierStateSnapshot modifiers)
         {
-            ValidateContentId(snapshot.BattleStatus.StatStages[index].ModifierTrackId,
-                $"$.battleStatus.statStages[{index}].modifierTrackId", diagnostics);
+            ValidateContentId(
+                modifiers.PolicyId,
+                "$.battleStatus.statModifiers.policyId",
+                diagnostics);
+            for (int trackIndex = 0; trackIndex < modifiers.Tracks.Count; trackIndex++)
+            {
+                RuntimeStatModifierTrackSnapshot track = modifiers.Tracks[trackIndex];
+                ValidateContentId(
+                    track.ModifierTrackId,
+                    $"$.battleStatus.statModifiers.tracks[{trackIndex}].modifierTrackId",
+                    diagnostics);
+                for (int contributionIndex = 0;
+                     contributionIndex < track.Contributions.Count;
+                     contributionIndex++)
+                {
+                    RuntimeStatModifierContributionSnapshot contribution =
+                        track.Contributions[contributionIndex];
+                    if (contribution.LastLifecycleBoundary is StatModifierLifecycleBoundary boundary)
+                    {
+                        ValidateContentId(
+                            boundary.EventId,
+                            $"$.battleStatus.statModifiers.tracks[{trackIndex}]." +
+                            $"contributions[{contributionIndex}].lastLifecycleBoundary.eventId",
+                            diagnostics);
+                    }
+                }
+            }
         }
         for (int index = 0; index < snapshot.BattleStatus.Analysis.Count; index++)
         {
@@ -523,18 +525,31 @@ internal static class RuntimeActorSnapshotIntegrity
                 diagnostics);
         }
 
-        for (int index = 0; index < status.StatStages.Count; index++)
+        if (status.StatModifiers is RuntimeStatModifierStateSnapshot modifiers)
         {
-            RuntimeStatStageSnapshot stage = status.StatStages[index];
-            if (stage.Duration is not null)
+            for (int trackIndex = 0; trackIndex < modifiers.Tracks.Count; trackIndex++)
             {
-                ValidateRetainedDuration(
-                    stage.Duration,
-                    $"$.battleStatus.statStages[{index}].duration",
-                    stage.ModifierTrackId,
-                    registeredEventIds,
-                    registeredPhaseIds,
-                    diagnostics);
+                RuntimeStatModifierTrackSnapshot track = modifiers.Tracks[trackIndex];
+                for (int contributionIndex = 0;
+                     contributionIndex < track.Contributions.Count;
+                     contributionIndex++)
+                {
+                    RuntimeStatModifierContributionSnapshot contribution =
+                        track.Contributions[contributionIndex];
+                    if (contribution.Duration is null)
+                    {
+                        continue;
+                    }
+
+                    ValidateRetainedDuration(
+                        contribution.Duration,
+                        $"$.battleStatus.statModifiers.tracks[{trackIndex}]." +
+                        $"contributions[{contributionIndex}].duration",
+                        track.ModifierTrackId,
+                        registeredEventIds,
+                        registeredPhaseIds,
+                        diagnostics);
+                }
             }
         }
 

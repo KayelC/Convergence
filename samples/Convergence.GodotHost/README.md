@@ -16,6 +16,7 @@ directory. The sample then proves:
 Run the noninteractive proof with the official Godot 4.7.1 .NET executable:
 
 ```powershell
+dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj --configuration Debug --no-restore --no-incremental -warnaserror
 godot --headless --path samples/Convergence.GodotHost -- --convergence-smoke
 ```
 

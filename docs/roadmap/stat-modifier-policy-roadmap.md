@@ -46,7 +46,7 @@ and reviews are complete.
 | M1-4 | `complete` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
 | M1-5 | `complete` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `complete` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
-| M1-7 | `pending` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
+| M1-7 | `complete` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
 | M1-8 | `pending` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
 | M1-DOC | `pending` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
 | M1-CR | `pending` | Perform a fresh source-first code review of the completed family and correct substantiated findings in isolated commits. | `review: audit stat modifier policies` |
@@ -336,8 +336,8 @@ schema merely because runtime snapshot types changed.
 
 ## M1-7: Persistence And Restore
 
-The current save-v9 stat-stage shape cannot retain independent contributions.
-This checkpoint must:
+The save-v9 stat-stage shape could not retain independent contributions. This
+checkpoint:
 
 - advance `RuntimeSaveGameSnapshot.CurrentContractVersion`;
 - capture policy identity and ordered contribution state;
@@ -348,6 +348,33 @@ This checkpoint must:
 - update DemoHost and Godot host-owned JSON envelopes;
 - retain the migration extension seam without inventing an unnecessary
   automatic migration for unreleased saves.
+
+### M1-7 Completion Record
+
+- Advanced the pre-release runtime save contract to v10. Actor battle status
+  now stores the selected policy ID plus ordered tracks, contributions,
+  durations, and lifecycle boundaries rather than a lossy aggregate-stage
+  projection.
+- Save validation requires an explicit ruleset-binding resolver whenever
+  retained modifiers exist. Missing bindings, failed bindings, and
+  policy-incompatible state produce typed save and stat-modifier diagnostics.
+- Aggregate restoration binds and revalidates the exact policy service it will
+  use before invoking any actor factory. A mismatched validation/restore
+  configuration therefore rejects without constructing or exposing actors.
+- Direct catalog restoration requires the matching policy service and validates
+  retained state before assignment. Runtime capture and transaction copies
+  preserve canonical policy state without a second mutable authority.
+- DemoHost and Godot host-owned JSON codecs round-trip complete modifier state.
+  The real Godot smoke executes an authored modifier skill, restores the
+  resulting policy state, and reports save contract v10.
+- The Godot quality gate now explicitly builds the Debug assembly loaded by a
+  headless editor run, preventing a stale local assembly from producing a false
+  positive.
+- Added five focused persistence and aggregate-restore cases. The checkpoint
+  gate completed with 1,168 passing tests, zero failures, zero skips, and zero
+  compiler warnings. Content validation loaded 6 packs, 36 documents, and 98
+  qualified definitions; all four noninteractive demos, scripted Training
+  Annex startup, and the real Godot 4.7.1 headless smoke passed.
 
 ## M1-8: Cross-Policy Evidence
 

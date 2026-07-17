@@ -13,6 +13,11 @@ namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimePersistenceSnapshotTests
 {
+    private static readonly ContentId PersistentModifierRuleset =
+        Id("convergence.catalog_surface_sample:persistent_staged_modifiers_sample");
+    private static readonly ContentId TimedContributionModifierRuleset =
+        Id("convergence.catalog_surface_sample:timed_contribution_modifiers_sample");
+
     [Fact]
     public void RuntimeSaveSnapshot_ValidatesRepresentativeCleanSessionAndRestoresActors()
     {
@@ -353,7 +358,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 new RuntimeSaveValidator(),
                 factory,
                 profiles,
-                new RuntimeSaveMigrationService([new FixedMigrationStep(8, 9, migratedSnapshot)]))
+                new RuntimeSaveMigrationService([new FixedMigrationStep(8, 10, migratedSnapshot)]))
             .Restore(oldSnapshot, catalog);
 
         Assert.True(migrated.IsSuccess, string.Join(Environment.NewLine, migrated.Diagnostics.Select(item => item.Message)));
@@ -537,11 +542,18 @@ public sealed class RuntimePersistenceSnapshotTests
                     new RuntimeTimedStateSnapshot(Id("sealed"), duration),
                     new RuntimeTimedStateSnapshot(Id("sealed"), duration)
                 ],
-                statStages:
-                [
-                    new RuntimeStatStageSnapshot(Id("attack"), 1, duration),
-                    new RuntimeStatStageSnapshot(Id("attack"), 1, duration)
-                ],
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    PersistentModifierRuleset,
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            1,
+                            [new RuntimeStatModifierContributionSnapshot(1, 1)]),
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            1,
+                            [new RuntimeStatModifierContributionSnapshot(2, 1)])
+                    ]),
                 charges:
                 [
                     new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
@@ -579,7 +591,7 @@ public sealed class RuntimePersistenceSnapshotTests
                     new RuntimePassiveSkillStateSnapshot(iceBoost, false)
                 ]),
             capabilityIds: [Id("analyze"), Id("analyze")]);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
             Copy(baseline, actors: [malformed, baseline.Actors[1]]),
             catalog);
 
@@ -590,7 +602,9 @@ public sealed class RuntimePersistenceSnapshotTests
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorCapability, "$.actors[0].capabilityIds[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAilment, "$.actors[0].battleStatus.ailments[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorStatus, "$.actors[0].battleStatus.statuses[1]");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorStatStage, "$.actors[0].battleStatus.statStages[1]");
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorStatModifierStateInvalid &&
+            diagnostic.StatModifierCode == StatModifierDiagnosticCode.DuplicateModifierTrack);
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorCharge, "$.actors[0].battleStatus.charges[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorShield, "$.actors[0].battleStatus.shields[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityBreak, "$.actors[0].battleStatus.affinityBreaks[1]");
@@ -618,7 +632,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveValidator_AndActorRestoreRejectOutOfRangeStatStages()
+    public void RuntimeSaveValidator_AndActorRestoreRejectPolicyIncompatibleModifierState()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
@@ -627,16 +641,23 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot malformed = CopyActor(
             actor,
             battleStatus: new RuntimeBattleStatusSnapshot(
-                statStages: [new RuntimeStatStageSnapshot(attack, 5)]));
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    PersistentModifierRuleset,
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            attack,
+                            5,
+                            [new RuntimeStatModifierContributionSnapshot(1, 5)])
+                    ])));
 
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
             Copy(baseline, actors: [malformed, baseline.Actors[1]]),
             catalog);
 
         AssertDiagnostic(
             validation,
-            RuntimeSaveValidationCode.ActorStatStageOutOfRange,
-            "$.actors[0].battleStatus.statStages[0].stage");
+            RuntimeSaveValidationCode.ActorStatModifierStateInvalid,
+            "$.actors[0].battleStatus.statModifiers.tracks[0]");
 
         SkillDefinition[] passives = malformed.Skills.EquippedSkillIds
             .Select(skillId => catalog.Skills[skillId])
@@ -645,8 +666,169 @@ public sealed class RuntimePersistenceSnapshotTests
         ArgumentException restore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
             malformed,
             CombatDefenseProfile.Empty,
-            passives));
-        Assert.Contains("$.battleStatus.statStages[0].stage", restore.Message, StringComparison.Ordinal);
+            passives,
+            statModifierPolicy: ModifierPolicy(malformed)));
+        Assert.Contains("incompatible", restore.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RequiresExplicitPolicyBindingForRetainedModifiers()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = WithTimedContributions(baseline.Actors[0]);
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [actor, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorStatModifierPolicyResolverMissing,
+            "$.actors[0].battleStatus.statModifiers.policyId");
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsUnboundRetainedModifierPolicy()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    Id("missing.pack:missing_modifier_policy"))));
+
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
+            Copy(baseline, actors: [actor, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ActorStatModifierPolicyBindingRejected,
+            "$.actors[0].battleStatus.statModifiers.policyId");
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_PreservesIndependentModifierTimersAndBoundaries()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = WithTimedContributions(baseline.Actors[0]);
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [actor, baseline.Actors[1]]);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        IRuntimeRulesetBindingResolver rulesets = CreateRulesetBindings();
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(rulesetBindings: rulesets),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            rulesetBindings: rulesets);
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.True(
+            result.IsSuccess,
+            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        RuntimeActorSnapshot restored = result.RequireSession().Snapshot.Actors[0];
+        RuntimeStatModifierStateSnapshot state = Assert.IsType<RuntimeStatModifierStateSnapshot>(
+            restored.BattleStatus.StatModifiers);
+        Assert.Equal(TimedContributionModifierRuleset, state.PolicyId);
+        RuntimeStatModifierTrackSnapshot track = Assert.Single(state.Tracks);
+        Assert.Equal(Id("attack"), track.ModifierTrackId);
+        Assert.Equal(2, track.ResolvedStage);
+        Assert.Collection(
+            track.Contributions,
+            contribution => AssertContribution(contribution, 2, 1, 2, 7),
+            contribution => AssertContribution(contribution, 5, 1, 3, 8));
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_RejectsMalformedModifierStateBeforeActorConstruction()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    TimedContributionModifierRuleset,
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            2,
+                            [
+                                new RuntimeStatModifierContributionSnapshot(
+                                    1,
+                                    1,
+                                    new TurnDurationDefinition(2, Id("owner_turn_end"), false)),
+                                new RuntimeStatModifierContributionSnapshot(
+                                    1,
+                                    1,
+                                    new TurnDurationDefinition(3, Id("owner_turn_end"), false))
+                            ])
+                    ])));
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [actor, baseline.Actors[1]]);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        IRuntimeRulesetBindingResolver rulesets = CreateRulesetBindings();
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(rulesetBindings: rulesets),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            rulesetBindings: rulesets);
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Empty(factory.RestoreOrder);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
+            diagnostic.SaveValidationCode == RuntimeSaveValidationCode.ActorStatModifierStateInvalid);
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_RevalidatesStateAgainstRestorePolicyBeforeConstruction()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = WithTimedContributions(baseline.Actors[0]);
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [actor, baseline.Actors[1]]);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        IRuntimeRulesetBindingResolver restoreRulesets = new RuntimeRulesetBindingResolver(
+            new RuntimeRulesetPolicyFactoryRegistry(
+                statModifier: [new NarrowTimedContributionPolicyFactory()]));
+        var service = new RuntimeSessionRestoreService(
+            CreateModifierAwareValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            rulesetBindings: restoreRulesets);
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Empty(factory.RestoreOrder);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed &&
+            diagnostic.ActorId == actor.Identity.InstanceId);
     }
 
     [Fact]
@@ -717,13 +899,19 @@ public sealed class RuntimePersistenceSnapshotTests
                         Id("instant_state"),
                         new InstantDurationDefinition())
                 ],
-                statStages:
-                [
-                    new RuntimeStatStageSnapshot(
-                        Id("attack"),
-                        1,
-                        new TurnDurationDefinition(1, default, false))
-                ],
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    TimedContributionModifierRuleset,
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            1,
+                            [
+                                new RuntimeStatModifierContributionSnapshot(
+                                    1,
+                                    1,
+                                    new TurnDurationDefinition(1, default, false))
+                            ])
+                    ]),
                 charges:
                 [
                     new RuntimeChargeSnapshot(
@@ -751,7 +939,7 @@ public sealed class RuntimePersistenceSnapshotTests
                         new PhaseDurationDefinition(Id("unregistered_phase")))
                 ]));
 
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
             Copy(baseline, actors: [malformed, baseline.Actors[1]]),
             catalog);
 
@@ -763,7 +951,7 @@ public sealed class RuntimePersistenceSnapshotTests
             (RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid,
                 "$.actors[0].battleStatus.statuses[0].duration.kind"),
             (RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid,
-                "$.actors[0].battleStatus.statStages[0].duration.tickEventId"),
+                "$.actors[0].battleStatus.statModifiers.tracks[0].contributions[0].duration.tickEventId"),
             (RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid,
                 "$.actors[0].battleStatus.charges[0].duration.phaseId"),
             (RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange,
@@ -1042,7 +1230,7 @@ public sealed class RuntimePersistenceSnapshotTests
             activeHostedEntity: missingHostedEntity,
             hostedEntityRoster: [wrongEmberReference, wrongEmberReference],
             companionRoster: [Reference(frost)]);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
             Copy(
                 baseline,
                 actors: [malformedFrost, malformedEmber],
@@ -1798,7 +1986,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [Theory]
     [InlineData(7)]
     [InlineData(8)]
-    [InlineData(10)]
+    [InlineData(9)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -2311,7 +2499,74 @@ public sealed class RuntimePersistenceSnapshotTests
         new(
             snapshot,
             RuntimeStatSourceKind.Actor,
-            MissingHostedEntityBehavior.UseActorBaseStats);
+            MissingHostedEntityBehavior.UseActorBaseStats,
+            statModifierPolicy: ModifierPolicy(snapshot));
+
+    private static RuntimeSaveValidator CreateModifierAwareValidator() =>
+        new(rulesetBindings: CreateRulesetBindings());
+
+    private static IRuntimeRulesetBindingResolver CreateRulesetBindings() =>
+        new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+
+    private static RuntimeActorSnapshot WithTimedContributions(RuntimeActorSnapshot actor) =>
+        CopyActor(
+            actor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                statModifiers: new RuntimeStatModifierStateSnapshot(
+                    TimedContributionModifierRuleset,
+                    [
+                        new RuntimeStatModifierTrackSnapshot(
+                            Id("attack"),
+                            2,
+                            [
+                                new RuntimeStatModifierContributionSnapshot(
+                                    5,
+                                    1,
+                                    new TurnDurationDefinition(3, Id("owner_turn_end"), false),
+                                    new StatModifierLifecycleBoundary(Id("owner_turn_end"), 8)),
+                                new RuntimeStatModifierContributionSnapshot(
+                                    2,
+                                    1,
+                                    new TurnDurationDefinition(2, Id("owner_turn_end"), false),
+                                    new StatModifierLifecycleBoundary(Id("owner_turn_end"), 7))
+                            ])
+                    ])));
+
+    private static void AssertContribution(
+        RuntimeStatModifierContributionSnapshot contribution,
+        long sequence,
+        int stageDelta,
+        int duration,
+        long boundarySequence)
+    {
+        Assert.Equal(sequence, contribution.Sequence);
+        Assert.Equal(stageDelta, contribution.StageDelta);
+        TurnDurationDefinition retainedDuration = Assert.IsType<TurnDurationDefinition>(
+            contribution.Duration);
+        Assert.Equal(duration, retainedDuration.Value);
+        Assert.Equal(Id("owner_turn_end"), retainedDuration.TickEventId);
+        StatModifierLifecycleBoundary boundary = Assert.IsType<StatModifierLifecycleBoundary>(
+            contribution.LastLifecycleBoundary);
+        Assert.Equal(Id("owner_turn_end"), boundary.EventId);
+        Assert.Equal(boundarySequence, boundary.Sequence);
+    }
+
+    private static IStatModifierPolicyService? ModifierPolicy(RuntimeActorSnapshot snapshot)
+    {
+        if (snapshot.BattleStatus.StatModifiers is not RuntimeStatModifierStateSnapshot state)
+        {
+            return null;
+        }
+
+        return state.PolicyId switch
+        {
+            var id when id == PersistentModifierRuleset =>
+                new StatModifierPolicyService(new PersistentStagedStatModifierPolicy(id)),
+            var id when id == TimedContributionModifierRuleset =>
+                new StatModifierPolicyService(new TimedContributionStatModifierPolicy(id)),
+            _ => null
+        };
+    }
 
     private static void AssertDiagnostic(
         RuntimeSaveValidationResult result,
@@ -2359,6 +2614,16 @@ public sealed class RuntimePersistenceSnapshotTests
         public static EmptyParameterValidator Instance { get; } = new();
 
         public IReadOnlyList<ContentParameterValidationIssue> Validate(IReadOnlyDictionary<string, object?> parameters) => [];
+    }
+
+    private sealed class NarrowTimedContributionPolicyFactory :
+        IRuntimeStatModifierRulesetPolicyFactory
+    {
+        public ContentId PolicyId => StandardRulesetPolicyIds.TimedContributionStatModifier;
+
+        public RulesetBindingResult<IStatModifierPolicyService> Create(RulesetDefinition definition) =>
+            new(new StatModifierPolicyService(
+                new TimedContributionStatModifierPolicy(definition.Id, -1, 1)));
     }
 
     private sealed class FixedRosterCapacityPolicy(int capacity) : IRosterCapacityPolicy

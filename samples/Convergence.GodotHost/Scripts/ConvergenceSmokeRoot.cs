@@ -201,6 +201,29 @@ public partial class ConvergenceSmokeRoot : Node
 
         GD.Print($"GODOT_ACTION_OK kind={action.Kind} effects={action.Effects.Count}");
 
+        SkillDefinition focusCall = player.ActiveSkills.Single(skill =>
+            skill.Id == Qualified("focus_call"));
+        BattleActionExecutionResult modifierAction = await actionExecutor.ExecuteAsync(
+            new BattleActionExecutionRequest(
+                new SkillBattleActionCommand(focusCall, [player.State.InstanceId]),
+                player.State,
+                [player.State, enemy.State],
+                new EffectExecutionEnvironment(Battle, NormalBattle)));
+        RuntimeStatModifierStateSnapshot savedModifierState =
+            player.State.StatModifierState ??
+            throw new InvalidOperationException(
+                "The Godot-selected stat-modifier action produced no retained policy state.");
+        if (modifierAction.Status != BattleActionExecutionStatus.Executed ||
+            modifierAction.Effects.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "The Godot-selected stat-modifier action did not execute.");
+        }
+
+        GD.Print(
+            $"GODOT_MODIFIER_OK policy={savedModifierState.PolicyId} " +
+            $"tracks={savedModifierState.Tracks.Count}");
+
         var eventSink = new GodotEncounterEventSink(sceneInstances);
         BattleEncounterResult encounter = await new BattleEncounterRunner().RunAsync(
             new BattleEncounterRequest(
@@ -238,9 +261,10 @@ public partial class ConvergenceSmokeRoot : Node
             new ContentPackIdentity(PackId, SemanticVersion.Parse("0.4.0")),
             sceneInstances);
         var restoreService = new RuntimeSessionRestoreService(
-            new RuntimeSaveValidator(rosterCapacity, moveListCapacity),
+            new RuntimeSaveValidator(rosterCapacity, moveListCapacity, rulesets),
             actorFactory,
-            GodotActorRestoreProfileResolver.Instance);
+            GodotActorRestoreProfileResolver.Instance,
+            rulesetBindings: rulesets);
         GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(
             saveJson,
             catalog,
@@ -250,6 +274,8 @@ public partial class ConvergenceSmokeRoot : Node
             actor.State.InstanceId == player.State.InstanceId);
         CatalogBattleActor restoredHostedEntity = session.Actors.Single(actor =>
             actor.State.InstanceId == hostedEntity.State.InstanceId);
+        RuntimeStatModifierStateSnapshot? restoredModifierState =
+            restoredPlayer.State.StatModifierState;
         if (restoredPlayer.State.GetRequiredResource(Sp).Current !=
             player.State.GetRequiredResource(Sp).Current ||
             !restoredPlayer.State.Skills.LearnedSkillIds.SequenceEqual(
@@ -261,6 +287,7 @@ public partial class ConvergenceSmokeRoot : Node
                 player.State.Skills.PendingChoices) ||
             restoredPlayer.State.Stats[StandardProgressionIds.Strength] !=
             restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
+            !EquivalentModifierState(savedModifierState, restoredModifierState) ||
             restored.SceneInstances.Count != 3)
         {
             throw new InvalidOperationException("The Godot-owned save did not preserve runtime and scene state.");
@@ -293,6 +320,60 @@ public partial class ConvergenceSmokeRoot : Node
             $"diagnostics={rejected.RestoreResult.Diagnostics.Count}");
         GD.Print("CONVERGENCE_GODOT_SMOKE_OK");
     }
+
+    private static bool EquivalentModifierState(
+        RuntimeStatModifierStateSnapshot expected,
+        RuntimeStatModifierStateSnapshot? actual)
+    {
+        if (actual is null ||
+            actual.PolicyId != expected.PolicyId ||
+            actual.Tracks.Count != expected.Tracks.Count)
+        {
+            return false;
+        }
+
+        for (int trackIndex = 0; trackIndex < expected.Tracks.Count; trackIndex++)
+        {
+            RuntimeStatModifierTrackSnapshot expectedTrack = expected.Tracks[trackIndex];
+            RuntimeStatModifierTrackSnapshot actualTrack = actual.Tracks[trackIndex];
+            if (actualTrack.ModifierTrackId != expectedTrack.ModifierTrackId ||
+                actualTrack.ResolvedStage != expectedTrack.ResolvedStage ||
+                actualTrack.Contributions.Count != expectedTrack.Contributions.Count)
+            {
+                return false;
+            }
+
+            for (int contributionIndex = 0;
+                 contributionIndex < expectedTrack.Contributions.Count;
+                 contributionIndex++)
+            {
+                RuntimeStatModifierContributionSnapshot expectedContribution =
+                    expectedTrack.Contributions[contributionIndex];
+                RuntimeStatModifierContributionSnapshot actualContribution =
+                    actualTrack.Contributions[contributionIndex];
+                if (actualContribution.Sequence != expectedContribution.Sequence ||
+                    actualContribution.StageDelta != expectedContribution.StageDelta ||
+                    !Equals(actualContribution.Duration, expectedContribution.Duration) ||
+                    !EquivalentBoundary(
+                        expectedContribution.LastLifecycleBoundary,
+                        actualContribution.LastLifecycleBoundary))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool EquivalentBoundary(
+        StatModifierLifecycleBoundary? expected,
+        StatModifierLifecycleBoundary? actual) =>
+        expected is null
+            ? actual is null
+            : actual is not null &&
+              actual.EventId == expected.EventId &&
+              actual.Sequence == expected.Sequence;
 
     private static ContentPackTextRequest CreateContentRequest() => new(
         "training_annex_slice.manifest.json",

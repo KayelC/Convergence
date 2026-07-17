@@ -36,7 +36,7 @@ const Convergence.Execution.BattleStatStageRange.Minimum = -4 -> int
 const Convergence.Runtime.RuntimeActorNumericDomain.MaximumStatValue = 2147483647 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumBaseResourceValue = 0 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumStatValue = 0 -> decimal
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 9 -> int
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 10 -> int
 const Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.StandardCapacity = 8 -> int
 Convergence.Battle.AilmentResistanceResolver
 Convergence.Battle.CombatDefenseProfile
@@ -2382,13 +2382,14 @@ Convergence.Encounters.CatalogBattleActorFactory.Create(Convergence.Encounters.C
 Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.CatalogBattleActorRestoreRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorRestoreRequest
 Convergence.Encounters.CatalogBattleActorRestoreRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorRestoreRequest!
-Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Equals(Convergence.Encounters.CatalogBattleActorRestoreRequest? other) -> bool
 Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
 Convergence.Encounters.CatalogBattleActorRestoreRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
 Convergence.Encounters.CatalogBattleActorRestoreRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Snapshot.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Encounters.CatalogBattleActorRestoreRequest.StatModifierPolicy.get -> Convergence.Runtime.IStatModifierPolicyService?
 Convergence.Encounters.CatalogBattleActorRestoreRequest.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Encounters.DeterministicBattleActionSelector
 Convergence.Encounters.DeterministicBattleActionSelector.DeterministicBattleActionSelector(Convergence.Execution.ISkillExecutor! executor) -> void
@@ -5640,9 +5641,9 @@ Convergence.Runtime.RuntimeBattleStatusSnapshot.Analysis.get -> System.Collectio
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Charges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeChargeSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Equals(Convergence.Runtime.RuntimeBattleStatusSnapshot? other) -> bool
 Convergence.Runtime.RuntimeBattleStatusSnapshot.IsGuarding.get -> bool
-Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatStageSnapshot!>? statStages = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeChargeSnapshot!>? charges = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalysisSnapshot!>? analysis = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
+Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, Convergence.Runtime.RuntimeStatModifierStateSnapshot? statModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeChargeSnapshot!>? charges = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalysisSnapshot!>? analysis = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Shields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeShieldSnapshot!>!
-Convergence.Runtime.RuntimeBattleStatusSnapshot.StatStages.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeStatStageSnapshot!>!
+Convergence.Runtime.RuntimeBattleStatusSnapshot.StatModifiers.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Statuses.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeTimedStateSnapshot!>!
 Convergence.Runtime.RuntimeChargeSnapshot
 Convergence.Runtime.RuntimeChargeSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeChargeSnapshot!
@@ -6181,7 +6182,7 @@ Convergence.Runtime.RuntimeSaveGameSnapshot.HostContext.get -> System.Collection
 Convergence.Runtime.RuntimeSaveGameSnapshot.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Knowledge.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 9) -> void
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 10) -> void
 Convergence.Runtime.RuntimeSaveGameSnapshot.Session.get -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeSaveKind
@@ -6278,7 +6279,9 @@ Convergence.Runtime.RuntimeSaveValidationCode.ActorPendingSkillUnlockMismatch = 
 Convergence.Runtime.RuntimeSaveValidationCode.ActorPhaseDurationPhaseIdInvalid = 65 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorReferenceEntityMismatch = 30 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorRetainedDurationKindInvalid = 62 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.ActorStatStageOutOfRange = 58 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorStatModifierPolicyBindingRejected = 76 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorStatModifierPolicyResolverMissing = 75 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorStatModifierStateInvalid = 77 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorTurnDurationTickEventIdInvalid = 64 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange = 63 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.CompanionRosterCapacityExceeded = 26 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -6300,7 +6303,6 @@ Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorPendingSkill = 70 ->
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorPendingSkillChoiceToken = 69 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorResource = 36 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorShield = 45 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatStage = 43 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorStatus = 42 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge = 33 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateCompendiumEntity = 14 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -6344,7 +6346,7 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.Code.get -> Convergence.Runt
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Code.init -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.ContentId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.ContentId.init -> void
-Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path) -> void
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode) -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Equals(Convergence.Runtime.RuntimeSaveValidationDiagnostic? other) -> bool
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.InstanceId.init -> void
@@ -6352,7 +6354,9 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.Message.get -> string!
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Message.init -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Path.get -> string?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Path.init -> void
-Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null) -> void
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null) -> void
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.StatModifierCode.get -> Convergence.Runtime.StatModifierDiagnosticCode?
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.StatModifierCode.init -> void
 Convergence.Runtime.RuntimeSaveValidationException
 Convergence.Runtime.RuntimeSaveValidationException.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSaveValidationDiagnostic!>!
 Convergence.Runtime.RuntimeSaveValidationException.RuntimeSaveValidationException(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSaveValidationDiagnostic!>! diagnostics) -> void
@@ -6365,7 +6369,7 @@ Convergence.Runtime.RuntimeSaveValidationResult.RequireValidSnapshot() -> Conver
 Convergence.Runtime.RuntimeSaveValidationResult.RuntimeSaveValidationResult(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSaveValidationDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeSaveValidationResult.Snapshot.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
 Convergence.Runtime.RuntimeSaveValidator
-Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null) -> void
+Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null) -> void
 Convergence.Runtime.RuntimeSaveValidator.Validate(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSaveValidationResult!
 Convergence.Runtime.RuntimeSessionProgressSnapshot
 Convergence.Runtime.RuntimeSessionProgressSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
@@ -6399,6 +6403,7 @@ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyCy
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMissing = 3 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.MigrationRejected = 0 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected = 1 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed = 6 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreResult
 Convergence.Runtime.RuntimeSessionRestoreResult.<Clone>$() -> Convergence.Runtime.RuntimeSessionRestoreResult!
 Convergence.Runtime.RuntimeSessionRestoreResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSessionRestoreDiagnostic!>!
@@ -6409,7 +6414,7 @@ Convergence.Runtime.RuntimeSessionRestoreResult.RuntimeSessionRestoreResult(Conv
 Convergence.Runtime.RuntimeSessionRestoreResult.Session.get -> Convergence.Runtime.RuntimeRestoredSession?
 Convergence.Runtime.RuntimeSessionRestoreService
 Convergence.Runtime.RuntimeSessionRestoreService.Restore(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSessionRestoreResult!
-Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null) -> void
+Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null) -> void
 Convergence.Runtime.RuntimeShieldSnapshot
 Convergence.Runtime.RuntimeShieldSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShieldSnapshot!
 Convergence.Runtime.RuntimeShieldSnapshot.Duration.get -> Convergence.Content.DurationDefinition?

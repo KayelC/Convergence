@@ -157,11 +157,16 @@ jobs:
           echo "GODOT_BIN=$godot_bin" >> "$GITHUB_ENV"
 
       - name: Run real Godot headless smoke
-        run: >-
-          "$GODOT_BIN"
-          --headless
-          --path samples/Convergence.GodotHost
-          -- --convergence-smoke
+        run: |
+          dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj \
+            --configuration Debug \
+            --no-restore \
+            --no-incremental \
+            -warnaserror
+          "$GODOT_BIN" \
+            --headless \
+            --path samples/Convergence.GodotHost \
+            -- --convergence-smoke
 
       - name: Run Framework trimming analysis
         run: >-

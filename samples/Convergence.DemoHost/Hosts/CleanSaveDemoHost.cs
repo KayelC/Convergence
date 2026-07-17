@@ -94,8 +94,10 @@ internal sealed class CleanSaveDemoHost
         }
 
         GameDataCatalog catalog = load.Catalog;
+        var rulesetResolver = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         RuntimeSaveGameSnapshot snapshot = BuildDemoSnapshot();
-        RuntimeSaveValidator validator = new();
+        RuntimeSaveValidator validator = new(rulesetBindings: rulesetResolver);
         RuntimeSaveValidationResult before = validator.Validate(snapshot, catalog);
         if (!before.IsValid)
         {
@@ -123,7 +125,8 @@ internal sealed class CleanSaveDemoHost
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
                 validator,
                 actorFactory,
-                ActorStatRestoreProfileResolver.Instance)
+                ActorStatRestoreProfileResolver.Instance,
+                rulesetBindings: rulesetResolver)
             .Restore(restored, catalog);
         if (!aggregate.IsSuccess)
         {
@@ -456,7 +459,7 @@ internal static class CleanSaveJsonCodec
             actor.Equipment.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
-            actor.BattleStatus.StatStages.Select(stage => new HostStatStageDto(stage.ModifierTrackId.ToString(), stage.Stage, ToDto(stage.Duration))).ToArray(),
+            ToDto(actor.BattleStatus.StatModifiers),
             actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, ToDto(charge.Duration))).ToArray(),
             actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), ToDto(shield.Duration))).ToArray(),
             actor.BattleStatus.AffinityBreaks.Select(affinityBreak => new HostAffinityBreakDto(
@@ -495,7 +498,7 @@ internal static class CleanSaveJsonCodec
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
                 dto.Statuses.Select(FromDto),
-                dto.StatStages.Select(stage => new RuntimeStatStageSnapshot(Id(stage.ModifierTrackId), stage.Stage, FromDto(stage.Duration))),
+                FromDto(dto.StatModifiers),
                 dto.Charges.Select(charge => new RuntimeChargeSnapshot(Enum.Parse<ChargeKind>(charge.Kind), charge.Multiplier, FromDto(charge.Duration))),
                 dto.Shields.Select(shield => new RuntimeShieldSnapshot(Enum.Parse<ShieldKind>(shield.Kind), FromDto(shield.Duration))),
                 dto.AffinityOverrides.Select(affinity => new RuntimeAffinityOverrideSnapshot(
@@ -534,6 +537,43 @@ internal static class CleanSaveJsonCodec
 
     private static RuntimeTimedStateSnapshot FromDto(HostTimedStateDto dto) =>
         new(Id(dto.Id), FromDto(dto.Duration) ?? throw new InvalidOperationException("Timed status duration is required."), dto.IsRemovable);
+
+    private static HostStatModifierStateDto? ToDto(RuntimeStatModifierStateSnapshot? state) =>
+        state is null
+            ? null
+            : new HostStatModifierStateDto(
+                state.PolicyId.ToString(),
+                state.Tracks.Select(track => new HostStatModifierTrackDto(
+                    track.ModifierTrackId.ToString(),
+                    track.ResolvedStage,
+                    track.Contributions.Select(contribution => new HostStatModifierContributionDto(
+                        contribution.Sequence,
+                        contribution.StageDelta,
+                        ToDto(contribution.Duration),
+                        contribution.LastLifecycleBoundary is null
+                            ? null
+                            : new HostStatModifierBoundaryDto(
+                                contribution.LastLifecycleBoundary.EventId.ToString(),
+                                contribution.LastLifecycleBoundary.Sequence))).ToArray())).ToArray());
+
+    private static RuntimeStatModifierStateSnapshot? FromDto(HostStatModifierStateDto? state) =>
+        state is null
+            ? null
+            : new RuntimeStatModifierStateSnapshot(
+                Id(state.PolicyId),
+                state.Tracks.Select(track => new RuntimeStatModifierTrackSnapshot(
+                    Id(track.ModifierTrackId),
+                    track.ResolvedStage,
+                    track.Contributions.Select(contribution =>
+                        new RuntimeStatModifierContributionSnapshot(
+                            contribution.Sequence,
+                            contribution.StageDelta,
+                            FromDto(contribution.Duration),
+                            contribution.LastLifecycleBoundary is null
+                                ? null
+                                : new StatModifierLifecycleBoundary(
+                                    Id(contribution.LastLifecycleBoundary.EventId),
+                                    contribution.LastLifecycleBoundary.Sequence))))));
 
     private static HostDurationDto? ToDto(DurationDefinition? duration) => duration switch
     {
@@ -758,7 +798,7 @@ internal static class CleanSaveJsonCodec
         Dictionary<string, string> EquippedItemIds,
         HostTimedStateDto[] Ailments,
         HostTimedStateDto[] Statuses,
-        HostStatStageDto[] StatStages,
+        HostStatModifierStateDto? StatModifiers,
         HostChargeDto[] Charges,
         HostShieldDto[] Shields,
         HostAffinityBreakDto[]? AffinityBreaks,
@@ -772,7 +812,19 @@ internal static class CleanSaveJsonCodec
     private sealed record HostPendingSkillChoiceDto(long Token, int UnlockLevel, string SkillId);
     private sealed record HostReferenceDto(string InstanceId, string EntityDefinitionId, string DisplayName);
     private sealed record HostTimedStateDto(string Id, HostDurationDto Duration, bool IsRemovable);
-    private sealed record HostStatStageDto(string ModifierTrackId, int Stage, HostDurationDto? Duration);
+    private sealed record HostStatModifierStateDto(
+        string PolicyId,
+        HostStatModifierTrackDto[] Tracks);
+    private sealed record HostStatModifierTrackDto(
+        string ModifierTrackId,
+        int ResolvedStage,
+        HostStatModifierContributionDto[] Contributions);
+    private sealed record HostStatModifierContributionDto(
+        long Sequence,
+        int StageDelta,
+        HostDurationDto? Duration,
+        HostStatModifierBoundaryDto? LastLifecycleBoundary);
+    private sealed record HostStatModifierBoundaryDto(string EventId, long Sequence);
     private sealed record HostChargeDto(string Kind, decimal Multiplier, HostDurationDto? Duration);
     private sealed record HostShieldDto(string Kind, HostDurationDto? Duration);
     private sealed record HostAffinityBreakDto(string Element, HostDurationDto Duration);

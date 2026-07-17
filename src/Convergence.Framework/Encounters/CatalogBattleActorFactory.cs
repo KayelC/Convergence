@@ -36,7 +36,8 @@ public sealed record CatalogBattleActorRestoreRequest
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimePartyRosterSnapshot? partyRoster = null,
         IEnumerable<RuntimeActorState>? runtimeActors = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
+        IStatModifierPolicyService? statModifierPolicy = null)
         : this(
             snapshot,
             statSourceKind,
@@ -44,6 +45,7 @@ public sealed record CatalogBattleActorRestoreRequest
             partyRoster,
             runtimeActors,
             equipmentStatModifiers,
+            statModifierPolicy,
             preserveValidatedSnapshot: false)
     {
     }
@@ -55,6 +57,7 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimePartyRosterSnapshot? partyRoster,
         IEnumerable<RuntimeActorState>? runtimeActors,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
+        IStatModifierPolicyService? statModifierPolicy,
         bool preserveValidatedSnapshot)
     {
         if (!Enum.IsDefined(statSourceKind))
@@ -73,6 +76,7 @@ public sealed record CatalogBattleActorRestoreRequest
         PartyRoster = partyRoster;
         RuntimeActors = Array.AsReadOnly((runtimeActors ?? []).ToArray());
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
+        StatModifierPolicy = statModifierPolicy;
         PreserveValidatedSnapshot = preserveValidatedSnapshot;
     }
 
@@ -82,6 +86,7 @@ public sealed record CatalogBattleActorRestoreRequest
     public RuntimePartyRosterSnapshot? PartyRoster { get; }
     public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+    public IStatModifierPolicyService? StatModifierPolicy { get; }
     internal bool PreserveValidatedSnapshot { get; }
 
     internal static CatalogBattleActorRestoreRequest FromValidatedFrameworkSnapshot(
@@ -93,6 +98,7 @@ public sealed record CatalogBattleActorRestoreRequest
             partyRoster: null,
             runtimeActors: null,
             equipmentStatModifiers: null,
+            statModifierPolicy: null,
             preserveValidatedSnapshot: true);
 }
 
@@ -686,7 +692,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 loadout.Where(skill => skill.Activation == SkillActivation.Passive),
                 ailments.Values,
                 registeredEventIds: _durationVocabulary?.RegisteredEventIds,
-                registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds);
+                registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds,
+                statModifierPolicy: request.StatModifierPolicy);
 
             if (!request.PreserveValidatedSnapshot)
             {

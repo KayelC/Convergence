@@ -193,7 +193,8 @@ public enum RuntimeSessionRestoreDiagnosticCode
     ActorProfileResolutionFailed,
     HostedEntityDependencyMissing,
     HostedEntityDependencyCycle,
-    ActorRestoreFailed
+    ActorRestoreFailed,
+    StatModifierPolicyResolutionFailed
 }
 
 public sealed record RuntimeSessionRestoreDiagnostic(
@@ -268,17 +269,20 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
     private readonly ICatalogBattleActorFactory _actorFactory;
     private readonly IRuntimeActorRestoreProfileResolver _profileResolver;
     private readonly IRuntimeSaveMigrationService _migration;
+    private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
 
     public RuntimeSessionRestoreService(
         IRuntimeSaveValidator validator,
         ICatalogBattleActorFactory actorFactory,
         IRuntimeActorRestoreProfileResolver profileResolver,
-        IRuntimeSaveMigrationService? migration = null)
+        IRuntimeSaveMigrationService? migration = null,
+        IRuntimeRulesetBindingResolver? rulesetBindings = null)
     {
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _actorFactory = actorFactory ?? throw new ArgumentNullException(nameof(actorFactory));
         _profileResolver = profileResolver ?? throw new ArgumentNullException(nameof(profileResolver));
         _migration = migration ?? new RuntimeSaveMigrationService();
+        _rulesetBindings = rulesetBindings;
     }
 
     public RuntimeSessionRestoreResult Restore(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -325,6 +329,59 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     $"Restore profile for actor '{actor.Identity.InstanceId}' failed: {exception.Message}",
                     actor.Identity.InstanceId));
             }
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return Rejected(diagnostics);
+        }
+
+        var statModifierPolicies = new Dictionary<RuntimeInstanceId, IStatModifierPolicyService>();
+        foreach (RuntimeActorSnapshot actor in current.Actors)
+        {
+            RuntimeStatModifierStateSnapshot? state = actor.BattleStatus.StatModifiers;
+            if (state is null)
+            {
+                continue;
+            }
+
+            if (_rulesetBindings is null)
+            {
+                diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                    RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed,
+                    $"Actor '{actor.Identity.InstanceId}' retains stat modifiers, but no ruleset " +
+                    "binding resolver was supplied for restoration.",
+                    actor.Identity.InstanceId,
+                    "$.actors.battleStatus.statModifiers.policyId"));
+                continue;
+            }
+
+            RulesetBindingResult<IStatModifierPolicyService> binding =
+                _rulesetBindings.BindStatModifierPolicy(catalog, state.PolicyId);
+            if (!binding.IsSuccess || binding.Service is null)
+            {
+                diagnostics.AddRange(binding.Diagnostics.Select(issue =>
+                    new RuntimeSessionRestoreDiagnostic(
+                        RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed,
+                        issue.Message,
+                        actor.Identity.InstanceId,
+                        "$.actors.battleStatus.statModifiers.policyId")));
+                continue;
+            }
+
+            StatModifierValidationResult retainedState = binding.Service.ValidateState(state);
+            if (!retainedState.IsValid)
+            {
+                diagnostics.AddRange(retainedState.Diagnostics.Select(issue =>
+                    new RuntimeSessionRestoreDiagnostic(
+                        RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed,
+                        issue.Message,
+                        actor.Identity.InstanceId,
+                        "$.actors.battleStatus.statModifiers")));
+                continue;
+            }
+
+            statModifierPolicies.Add(actor.Identity.InstanceId, binding.Service);
         }
 
         if (diagnostics.Count > 0)
@@ -436,7 +493,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     profile.MissingHostedEntityBehavior,
                     current.PartyRoster,
                     activeHostedEntity is null ? [] : [activeHostedEntity],
-                    profile.EquipmentStatModifiers));
+                    profile.EquipmentStatModifiers,
+                    statModifierPolicies.GetValueOrDefault(actorId)));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

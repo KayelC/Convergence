@@ -17,7 +17,7 @@ but Order 1 is reopened by the approved stat-modifier policy-family work. The
 current state and review boundary are recorded under
 [Reopened Order 1](documentation-completion-roadmap.md#reopened-order-1).
 
-The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v4, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v4, and save-v10 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers bind to their authored policy during validation and restore.
 
 ## Completed Actor Design Correction
 
@@ -30,7 +30,7 @@ The ordered work and its owner decision lock are recorded in the
 [Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md).
 D1-D6 are approved and all eight checkpoints are implemented. Current source,
 tests, reviewed audience documentation, Training Annex evidence, and save
-contract v9 establish the corrected design direction.
+contract v10 establish the corrected design direction.
 
 The subsequent
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)

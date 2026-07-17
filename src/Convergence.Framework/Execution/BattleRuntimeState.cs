@@ -105,7 +105,6 @@ public sealed class RuntimeActorState
 {
     private readonly Dictionary<ContentId, BattleResourceState> _resources;
     private readonly Dictionary<ContentId, ActiveAilmentState> _ailments = [];
-    private readonly Dictionary<ContentId, BattleStatStageState> _snapshotStatStageProjection = [];
     private readonly Dictionary<ChargeKind, BattleChargeState> _charges = [];
     private readonly Dictionary<ShieldKind, BattleShieldState> _shields = [];
     private readonly Dictionary<DamageElement, BattleAffinityBreakState> _affinityBreaks = [];
@@ -222,7 +221,8 @@ public sealed class RuntimeActorState
         IEnumerable<AilmentDefinition>? ailments = null,
         IEnumerable<ContentId>? capabilityIds = null,
         IReadOnlySet<ContentId>? registeredEventIds = null,
-        IReadOnlySet<ContentId>? registeredPhaseIds = null)
+        IReadOnlySet<ContentId>? registeredPhaseIds = null,
+        IStatModifierPolicyService? statModifierPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(defenseProfile);
@@ -267,7 +267,8 @@ public sealed class RuntimeActorState
             snapshot.Equipment);
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
-            ailmentDefinitions.ToDictionary(ailment => ailment.Id));
+            ailmentDefinitions.ToDictionary(ailment => ailment.Id),
+            statModifierPolicy);
         state.RestoreBattleActivations(snapshot.BattleActivations);
         return state;
     }
@@ -306,9 +307,8 @@ public sealed class RuntimeActorState
     /// </summary>
     public RuntimeStatModifierStateSnapshot? StatModifierState => _statModifierState;
     /// <summary>
-    /// Gets an aggregate compatibility projection for combat scaling and the
-    /// pre-M1-7 save contract. Mutation is owned exclusively by the selected
-    /// stat-modifier policy.
+    /// Gets the selected policy state's aggregate projection for combat scaling.
+    /// Mutation is owned exclusively by the selected stat-modifier policy.
     /// </summary>
     public IReadOnlyDictionary<ContentId, BattleStatStageState> StatStages =>
         new ReadOnlyDictionary<ContentId, BattleStatStageState>(ProjectStatStages());
@@ -408,7 +408,7 @@ public sealed class RuntimeActorState
     {
         ArgumentNullException.ThrowIfNull(service);
         RuntimeStatModifierStateSnapshot candidate = _statModifierState ??
-            CreateStateFromSnapshotProjection(service.PolicyId);
+            new RuntimeStatModifierStateSnapshot(service.PolicyId);
         StatModifierValidationResult validation = service.ValidateState(candidate);
         if (!validation.IsValid)
         {
@@ -436,7 +436,6 @@ public sealed class RuntimeActorState
         }
 
         _statModifierState = state;
-        _snapshotStatStageProjection.Clear();
     }
 
     public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration)
@@ -847,8 +846,6 @@ public sealed class RuntimeActorState
         Dictionary<ContentId, BattleResourceState> resources = source._resources
             .ToDictionary(pair => pair.Key, pair => pair.Value.Copy());
         Dictionary<ContentId, ActiveAilmentState> ailments = new(source._ailments);
-        Dictionary<ContentId, BattleStatStageState> statStageProjection =
-            new(source._snapshotStatStageProjection);
         RuntimeStatModifierStateSnapshot? statModifierState = source._statModifierState;
         Dictionary<ChargeKind, BattleChargeState> charges = new(source._charges);
         Dictionary<ShieldKind, BattleShieldState> shields = new(source._shields);
@@ -874,7 +871,6 @@ public sealed class RuntimeActorState
         }
 
         ReplaceDictionary(_ailments, ailments);
-        ReplaceDictionary(_snapshotStatStageProjection, statStageProjection);
         _statModifierState = statModifierState;
         ReplaceDictionary(_charges, charges);
         ReplaceDictionary(_shields, shields);
@@ -1085,7 +1081,8 @@ public sealed class RuntimeActorState
 
     internal void RestoreBattleStatus(
         RuntimeBattleStatusSnapshot status,
-        IReadOnlyDictionary<ContentId, AilmentDefinition> ailments)
+        IReadOnlyDictionary<ContentId, AilmentDefinition> ailments,
+        IStatModifierPolicyService? statModifierPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(ailments);
@@ -1107,14 +1104,25 @@ public sealed class RuntimeActorState
             _otherStatuses.Add(other.Id, new BattleOtherStatusState(other.Duration, other.IsRemovable));
         }
 
-        _statModifierState = null;
-        _snapshotStatStageProjection.Clear();
-        foreach (RuntimeStatStageSnapshot stage in status.StatStages)
+        if (status.StatModifiers is RuntimeStatModifierStateSnapshot modifiers)
         {
-            _snapshotStatStageProjection.Add(
-                stage.ModifierTrackId,
-                new BattleStatStageState(stage.Stage, stage.Duration));
+            if (statModifierPolicy is null)
+            {
+                throw new ArgumentException(
+                    "Restoring retained stat modifiers requires the matching policy service.",
+                    nameof(statModifierPolicy));
+            }
+
+            StatModifierValidationResult validation = statModifierPolicy.ValidateState(modifiers);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException(
+                    $"Retained stat modifiers are incompatible with policy '{statModifierPolicy.PolicyId}': " +
+                    string.Join("; ", validation.Diagnostics.Select(value => value.Message)),
+                    nameof(status));
+            }
         }
+        _statModifierState = status.StatModifiers;
 
         _charges.Clear();
         foreach (RuntimeChargeSnapshot charge in status.Charges)
@@ -1169,10 +1177,7 @@ public sealed class RuntimeActorState
                 pair.Key,
                 pair.Value.Duration,
                 pair.Value.IsRemovable)),
-            StatStages.Select(pair => new RuntimeStatStageSnapshot(
-                pair.Key,
-                pair.Value.Stage,
-                pair.Value.Duration)),
+            _statModifierState,
             _charges.Select(pair => new RuntimeChargeSnapshot(
                 pair.Key,
                 pair.Value.Multiplier,
@@ -1188,27 +1193,11 @@ public sealed class RuntimeActorState
                 pair.Key,
                 pair.Value.Duration)));
 
-    private RuntimeStatModifierStateSnapshot CreateStateFromSnapshotProjection(ContentId policyId)
-    {
-        RuntimeStatModifierTrackSnapshot[] tracks = _snapshotStatStageProjection
-            .Where(pair => pair.Value.Stage != 0)
-            .OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal)
-            .Select((pair, index) => new RuntimeStatModifierTrackSnapshot(
-                pair.Key,
-                pair.Value.Stage,
-                [new RuntimeStatModifierContributionSnapshot(
-                    index + 1L,
-                    pair.Value.Stage,
-                    pair.Value.Duration)]))
-            .ToArray();
-        return new RuntimeStatModifierStateSnapshot(policyId, tracks);
-    }
-
     private Dictionary<ContentId, BattleStatStageState> ProjectStatStages()
     {
         if (_statModifierState is null)
         {
-            return new Dictionary<ContentId, BattleStatStageState>(_snapshotStatStageProjection);
+            return [];
         }
 
         return _statModifierState.Tracks.ToDictionary(

@@ -41,15 +41,17 @@ Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes,
 
 The framework exposes serializer-neutral runtime snapshots and restores them
 against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. Runtime
-save contract v9 stores one canonical party roster plus complete source actor
-progression, move lists, revisions, and pending skill choices.
+save contract v10 stores one canonical party roster, complete source actor
+progression and move-list state, and complete selected-policy stat-modifier
+contributions.
 
 A Godot save may wrap those snapshots with scene paths, transforms, camera
 state, UI state, and asset references. Godot recreates Nodes and applies host
 context only after the aggregate restore result succeeds, using
 `RuntimeInstanceId` to reconnect scene objects.
 
-Restoration validates the complete aggregate, resolves actor restore profiles,
+Restoration validates the complete aggregate, explicitly binds retained
+stat-modifier policies, resolves actor restore profiles,
 restores an Active Hosted Entity before its dependent Vessel, and recomposes
 the Vessel from restored source state. Rejection returns diagnostics and no
 partial live session. Any non-current save contract requires an explicit
