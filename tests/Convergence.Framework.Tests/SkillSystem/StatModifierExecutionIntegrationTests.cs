@@ -18,6 +18,282 @@ public sealed class StatModifierExecutionIntegrationTests
     private static readonly ContentId Attack = ContentId.Parse("attack");
     private static readonly ContentId Defense = ContentId.Parse("defense");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
+    private static readonly ContentId PhaseEnd = ContentId.Parse("phase_end");
+    private static readonly ContentId PlayerPhase = ContentId.Parse("player_phase");
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task SuppliedPolicies_PreserveSkillAuthorizationTargetingAndCostCommit(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        SkillDefinition skill = ActiveSkill(
+            $"{policyKind}_authorized_focus",
+            [new ModifyStatStageEffectDefinition([Attack], 1, Turns(3))],
+            [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
+        RuntimeActorState actor = Actor("actor", sp: 20, skillIds: [skill.Id]);
+        BattleActionExecutor executor = ActionExecutor(policy, [skill]);
+        var request = new BattleActionExecutionRequest(
+            new SkillBattleActionCommand(skill, [actor.InstanceId]),
+            actor,
+            [actor],
+            Environment(new StatModifierLifecycleBoundary(OwnerTurnEnd, 1)));
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal([actor.InstanceId], assessment.TargetIds);
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(17, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(-3, Assert.Single(result.CommittedCostChanges).Delta);
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(actor.InstanceId, effect.TargetId);
+        Assert.Equal(StatModifierTransitionCode.Applied,
+            Assert.Single(effect.StatModifierTransitions).Code);
+        Assert.Equal(1, actor.StatStages[Attack].Stage);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task SuppliedPolicies_CommitExactlyOneItemAfterMeaningfulApplication(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        RuntimeActorState actor = Actor("actor");
+        ItemDefinition item = Consumable(
+            $"{policyKind}_focus_tonic",
+            new ModifyStatStageEffectDefinition([Attack], 1, Turns(3)));
+        var inventory = new TestItemInventory(item.Id, 2);
+        BattleActionExecutor executor = ActionExecutor(policy);
+        var request = new BattleActionExecutionRequest(
+            new ItemBattleActionCommand(item, [actor.InstanceId]),
+            actor,
+            [actor],
+            Environment(new StatModifierLifecycleBoundary(OwnerTurnEnd, 1)),
+            inventory);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.ItemConsumption);
+        Assert.True(result.ItemConsumptionCommitted);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(1, actor.StatStages[Attack].Stage);
+        Assert.Equal(
+            [
+                BattleActionEventKind.ItemReserved,
+                BattleActionEventKind.ItemCommitted,
+                BattleActionEventKind.EffectResolved
+            ],
+            result.Events.Select(value => value.Kind));
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task SuppliedPolicies_RollBackItemAndActorWhenInventoryCommitRejects(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        RuntimeActorState actor = Actor("actor");
+        ItemDefinition item = Consumable(
+            $"{policyKind}_rejected_tonic",
+            new ModifyStatStageEffectDefinition([Attack], 1, Turns(3)));
+        var inventory = new TestItemInventory(item.Id, 2, rejectCommit: true);
+        BattleActionExecutor executor = ActionExecutor(policy);
+        var request = new BattleActionExecutionRequest(
+            new ItemBattleActionCommand(item, [actor.InstanceId]),
+            actor,
+            [actor],
+            Environment(new StatModifierLifecycleBoundary(OwnerTurnEnd, 1)),
+            inventory);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request);
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.False(result.ItemConsumptionCommitted);
+        Assert.Equal(2, inventory.Quantity);
+        Assert.Null(actor.StatModifierState);
+        Assert.Equal(
+            [BattleActionEventKind.ItemReserved, BattleActionEventKind.ItemRolledBack],
+            result.Events.Select(value => value.Kind));
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged, false)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive, false)]
+    [InlineData(SuppliedPolicyKind.TimedContribution, false)]
+    [InlineData(SuppliedPolicyKind.PersistentStaged, true)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive, true)]
+    [InlineData(SuppliedPolicyKind.TimedContribution, true)]
+    public void SuppliedPolicies_UseTypedOwnerTurnAndPhaseBoundariesForPassiveLifecycle(
+        SuppliedPolicyKind policyKind,
+        bool usePhaseBoundary)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        ContentId tickEvent = usePhaseBoundary ? PhaseEnd : OwnerTurnEnd;
+        SkillDefinition passive = PassiveSkill(
+            $"{policyKind}_{tickEvent}_focus",
+            ContentId.Parse("battle_start"),
+            new ModifyStatStageEffectDefinition(
+                [Attack],
+                1,
+                new TurnDurationDefinition(1, tickEvent, true)));
+        RuntimeActorState actor = Actor("actor", passiveSkills: [passive]);
+        BattleExecutionServices services = Services(policy);
+        var lifecycle = new BattleStatusLifecycleService(new MinimumRandomSource());
+        StatModifierLifecycleBoundary appliedAt = new(tickEvent, 1);
+
+        PassiveTriggerDispatchResult dispatch = services.PassiveTriggers.Dispatch(
+            new PassiveTriggerDispatchRequest(
+                ContentId.Parse("battle_start"),
+                actor,
+                [actor],
+                [actor],
+                Battle,
+                NormalBattle,
+                moonPhaseId: null,
+                [appliedAt]),
+            services);
+        BattleStatusLifecycleResult sameBoundary = ProcessBoundary(
+            lifecycle,
+            services,
+            actor,
+            tickEvent,
+            appliedAt,
+            usePhaseBoundary);
+        BattleStatusLifecycleResult nextBoundary = ProcessBoundary(
+            lifecycle,
+            services,
+            actor,
+            tickEvent,
+            new StatModifierLifecycleBoundary(tickEvent, 2),
+            usePhaseBoundary);
+
+        Assert.Equal(PassiveTriggerOutcome.Executed, Assert.Single(dispatch.Activations).Outcome);
+        Assert.DoesNotContain(sameBoundary.Events, value =>
+            value.ModifierEvent?.Kind == StatModifierEventKind.ContributionExpired);
+        if (policyKind == SuppliedPolicyKind.PersistentStaged)
+        {
+            Assert.Equal(1, actor.StatStages[Attack].Stage);
+            Assert.DoesNotContain(nextBoundary.Events, value => value.ModifierEvent is not null);
+        }
+        else
+        {
+            Assert.Empty(actor.StatStages);
+            Assert.Contains(nextBoundary.Events, value =>
+                value.ModifierEvent?.Kind == StatModifierEventKind.ContributionExpired);
+        }
+
+        lifecycle.Cleanup(
+            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd),
+            policy);
+        Assert.Empty(actor.StatStages);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public void SuppliedPolicies_RemovePositiveAndNegativeStateThroughTypedStatusEffects(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        var executor = new SkillExecutor(Services(policy));
+        RuntimeActorState actor = Actor("actor");
+        executor.Execute(Request(ActiveSkill(
+            $"{policyKind}_mixed_state",
+            [
+                new ModifyStatStageEffectDefinition([Attack], 1, Turns(3)),
+                new ModifyStatStageEffectDefinition([Defense], -1, Turns(3))
+            ]), actor, new StatModifierLifecycleBoundary(OwnerTurnEnd, 1)));
+
+        SkillExecutionResult positive = executor.Execute(Request(ActiveSkill(
+            $"{policyKind}_clear_positive",
+            [new RemoveStatusEffectDefinition([StatusEffectKind.Buff], [])]), actor));
+
+        Assert.Equal(EffectExecutionOutcome.Success, Assert.Single(positive.Effects).Outcome);
+        Assert.DoesNotContain(Attack, actor.StatStages.Keys);
+        Assert.Equal(-1, actor.StatStages[Defense].Stage);
+
+        SkillExecutionResult negative = executor.Execute(Request(ActiveSkill(
+            $"{policyKind}_clear_negative",
+            [new RemoveStatusEffectDefinition([StatusEffectKind.Debuff], [])]), actor));
+
+        Assert.Equal(EffectExecutionOutcome.Success, Assert.Single(negative.Effects).Outcome);
+        Assert.Empty(actor.StatStages);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.PersistentStaged)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public void SuppliedPolicies_HonorReserveSuspensionWithoutLosingBoundaryOrder(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        RuntimeActorState activeActor = Actor("reserve_actor");
+        SkillDefinition skill = ActiveSkill(
+            $"{policyKind}_reserve_focus",
+            [new ModifyStatStageEffectDefinition(
+                [Attack],
+                1,
+                new TurnDurationDefinition(3, PhaseEnd, true))]);
+        var executor = new SkillExecutor(Services(policy));
+        executor.Execute(Request(
+            skill,
+            activeActor,
+            new StatModifierLifecycleBoundary(PhaseEnd, 1)));
+        RuntimeActorSnapshot activeSnapshot = activeActor.ToSnapshot();
+        var reserveSnapshot = new RuntimeActorSnapshot(
+            activeSnapshot.Identity,
+            activeSnapshot.Affiliation,
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
+            activeSnapshot.Progression,
+            activeSnapshot.Resources,
+            activeSnapshot.Stats,
+            activeSnapshot.Skills,
+            activeSnapshot.Equipment,
+            activeSnapshot.BattleStatus,
+            activeSnapshot.BattleActivations,
+            activeSnapshot.BaseResourceValues,
+            activeSnapshot.VitalResourceId,
+            activeSnapshot.CapabilityIds);
+        RuntimeActorState actor = RuntimeActorState.Restore(
+            reserveSnapshot,
+            CombatDefenseProfile.Empty,
+            statModifierPolicy: policy);
+
+        var lifecycle = new BattleStatusLifecycleService(new MinimumRandomSource());
+        lifecycle.ProcessPhaseEnd(
+            new BattlePhaseEndLifecycleRequest(
+                [actor],
+                PlayerPhase,
+                [new StatModifierLifecycleBoundary(PhaseEnd, 2)]),
+            policy);
+
+        RuntimeStatModifierContributionSnapshot contribution = Assert.Single(
+            Assert.Single(actor.StatModifierState!.Tracks).Contributions);
+        Assert.Equal(1, actor.StatStages[Attack].Stage);
+        if (policyKind == SuppliedPolicyKind.PersistentStaged)
+        {
+            Assert.Null(contribution.Duration);
+            Assert.Null(contribution.LastLifecycleBoundary);
+        }
+        else
+        {
+            Assert.Equal(
+                new TurnDurationDefinition(3, PhaseEnd, true),
+                contribution.Duration);
+            Assert.Equal(2, contribution.LastLifecycleBoundary?.Sequence);
+        }
+    }
 
     [Fact]
     public void SkillExecution_UsesTheSelectedApplyPathAndReturnsTypedTransitions()
@@ -311,7 +587,9 @@ public sealed class StatModifierExecutionIntegrationTests
     private static RuntimeActorState Actor(
         string id,
         decimal sp = 20,
-        IEnumerable<SkillDefinition>? passiveSkills = null) =>
+        IEnumerable<SkillDefinition>? passiveSkills = null,
+        IEnumerable<ContentId>? skillIds = null,
+        bool isDeployed = true) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -319,9 +597,51 @@ public sealed class StatModifierExecutionIntegrationTests
             Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, 100, 100), new BattleResourceState(Sp, sp, 100)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: isDeployed),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam),
+            skillIds: skillIds,
             passiveSkills: passiveSkills);
+
+    private static BattleActionExecutor ActionExecutor(
+        IStatModifierPolicyService statModifiers,
+        IEnumerable<SkillDefinition>? skills = null)
+    {
+        BattleExecutionServices services = Services(statModifiers);
+        return new BattleActionExecutor(
+            new SkillExecutor(services),
+            new ItemExecutor(services),
+            services,
+            new CatalogBattleActionAuthorizationPolicy(
+                new SkillRepository(skills),
+                NoBattleBasicAttackProfileSource.Instance));
+    }
+
+    private static BattleStatusLifecycleResult ProcessBoundary(
+        BattleStatusLifecycleService lifecycle,
+        BattleExecutionServices services,
+        RuntimeActorState actor,
+        ContentId tickEvent,
+        StatModifierLifecycleBoundary boundary,
+        bool usePhaseBoundary)
+    {
+        if (usePhaseBoundary)
+        {
+            return lifecycle.ProcessPhaseEnd(
+                new BattlePhaseEndLifecycleRequest([actor], PlayerPhase, [boundary]),
+                services.StatModifiers);
+        }
+
+        BattleTurnEndLifecycleResult result = lifecycle.ProcessTurnEnd(
+            new BattleTurnEndLifecycleRequest(
+                actor,
+                [actor],
+                Battle,
+                tickEvent,
+                NormalBattle,
+                statModifierBoundary: boundary),
+            services);
+        return new BattleStatusLifecycleResult(result.Events);
+    }
 
     private static BattleExecutionServices Services(IStatModifierPolicyService statModifiers)
     {
@@ -350,6 +670,14 @@ public sealed class StatModifierExecutionIntegrationTests
         new StatModifierPolicyService(new TimedContributionStatModifierPolicy(
             ContentId.Parse("integration_timed_contribution")));
 
+    private static IStatModifierPolicyService Policy(SuppliedPolicyKind kind) => kind switch
+    {
+        SuppliedPolicyKind.PersistentStaged => PersistentPolicy(),
+        SuppliedPolicyKind.TimedExclusive => TimedExclusivePolicy(),
+        SuppliedPolicyKind.TimedContribution => TimedContributionPolicy(),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
+
     private static TurnDurationDefinition Turns(int value) =>
         new(value, OwnerTurnEnd, SuspendWhileReserve: true);
 
@@ -371,6 +699,90 @@ public sealed class StatModifierExecutionIntegrationTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class SkillRepository : ISkillDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, SkillDefinition> _skills;
+
+        internal SkillRepository(IEnumerable<SkillDefinition>? skills)
+        {
+            _skills = (skills ?? []).ToDictionary(skill => skill.Id);
+        }
+
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
+            _skills.TryGetValue(id, out definition);
+
+        public SkillDefinition GetRequiredSkill(ContentId id) =>
+            _skills.TryGetValue(id, out SkillDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class TestItemInventory : IItemActionInventory
+    {
+        private readonly ContentId _itemId;
+        private readonly bool _rejectCommit;
+
+        internal TestItemInventory(ContentId itemId, int quantity, bool rejectCommit = false)
+        {
+            _itemId = itemId;
+            Quantity = quantity;
+            _rejectCommit = rejectCommit;
+        }
+
+        internal int Quantity { get; private set; }
+
+        public bool HasAvailable(ContentId itemId, int quantity) =>
+            itemId == _itemId && quantity > 0 && Quantity >= quantity;
+
+        public IItemActionReservation Reserve(ContentId itemId, int quantity)
+        {
+            if (!HasAvailable(itemId, quantity))
+            {
+                throw new InvalidOperationException("The requested item quantity is unavailable.");
+            }
+
+            Quantity -= quantity;
+            return new Reservation(this, itemId, quantity, _rejectCommit);
+        }
+
+        private sealed class Reservation(
+            TestItemInventory inventory,
+            ContentId itemId,
+            int quantity,
+            bool rejectCommit) : IItemActionReservation
+        {
+            public ContentId ItemId { get; } = itemId;
+            public int Quantity { get; } = quantity;
+            public bool IsCommitted { get; private set; }
+            public bool IsRolledBack { get; private set; }
+
+            public ItemActionReservationTransitionResult Commit()
+            {
+                if (rejectCommit)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "Deliberate inventory commit rejection.");
+                }
+
+                IsCommitted = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+
+            public ItemActionReservationTransitionResult Rollback()
+            {
+                if (IsCommitted || IsRolledBack)
+                {
+                    return ItemActionReservationTransitionResult.Rejected(
+                        "The reservation is no longer live.");
+                }
+
+                inventory.Quantity += Quantity;
+                IsRolledBack = true;
+                return ItemActionReservationTransitionResult.Success;
+            }
+        }
     }
 
     private sealed class FirstSkillTargetPolicy : IRandomTargetSelectionPolicy
@@ -442,5 +854,12 @@ public sealed class StatModifierExecutionIntegrationTests
                 request.IsActorDeployed,
                 request.ActiveLifecycleBoundary));
         }
+    }
+
+    public enum SuppliedPolicyKind
+    {
+        PersistentStaged,
+        TimedExclusive,
+        TimedContribution
     }
 }

@@ -81,6 +81,9 @@ public sealed class GodotReferenceConsumerBoundaryTests
             "BattleEncounterRunner",
             "RuntimeSessionRestoreService",
             "RuntimeRulesetPolicyFactoryRegistry.CreateStandard()",
+            "BindStatModifierPolicy",
+            "Qualified(\"standard_stat_modifiers\")",
+            "GODOT_MODIFIER_OK",
             "GODOT_SAVE_REJECTION_OK",
             "CONVERGENCE_GODOT_SMOKE_OK"
         ];
@@ -97,6 +100,10 @@ public sealed class GodotReferenceConsumerBoundaryTests
         Assert.DoesNotContain("actorFactory.Create", save, StringComparison.Ordinal);
         Assert.DoesNotContain("actorFactory.Restore", save, StringComparison.Ordinal);
         Assert.DoesNotContain("Convergence.DemoHost", rootSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "new PersistentStagedStatModifierPolicy",
+            rootSource,
+            StringComparison.Ordinal);
     }
 
     [Fact]

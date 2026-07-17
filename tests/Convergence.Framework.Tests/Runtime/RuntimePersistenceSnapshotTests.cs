@@ -831,6 +831,72 @@ public sealed class RuntimePersistenceSnapshotTests
             diagnostic.ActorId == actor.Identity.InstanceId);
     }
 
+    [Theory]
+    [InlineData("convergence.catalog_surface_sample:persistent_staged_modifiers_sample", false)]
+    [InlineData("convergence.catalog_surface_sample:timed_exclusive_modifiers_sample", true)]
+    [InlineData("convergence.catalog_surface_sample:timed_contribution_modifiers_sample", true)]
+    public void RuntimeSessionRestoreService_RoundTripsEverySuppliedModifierPolicy(
+        string rulesetId,
+        bool retainsDuration)
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        IRuntimeRulesetBindingResolver rulesets = CreateRulesetBindings();
+        IStatModifierPolicyService policy = rulesets.BindStatModifierPolicy(
+            catalog,
+            Id(rulesetId)).RequireService();
+        RuntimeStatModifierStateSnapshot state = policy.Apply(
+            new StatModifierApplicationRequest(
+                new RuntimeStatModifierStateSnapshot(policy.PolicyId),
+                Id("attack"),
+                1,
+                new TurnDurationDefinition(3, Id("owner_turn_end"), true),
+                activeLifecycleBoundary: new StatModifierLifecycleBoundary(
+                    Id("owner_turn_end"),
+                    1))).After;
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(statModifiers: state));
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [actor, baseline.Actors[1]]);
+        var factory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog);
+        var restore = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(rulesetBindings: rulesets),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            rulesetBindings: rulesets);
+
+        RuntimeSessionRestoreResult result = restore.Restore(snapshot, catalog);
+
+        Assert.True(
+            result.IsSuccess,
+            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        RuntimeStatModifierStateSnapshot restored = Assert.IsType<RuntimeStatModifierStateSnapshot>(
+            result.RequireSession().Snapshot.Actors[0].BattleStatus.StatModifiers);
+        Assert.Equal(policy.PolicyId, restored.PolicyId);
+        RuntimeStatModifierContributionSnapshot contribution = Assert.Single(
+            Assert.Single(restored.Tracks).Contributions);
+        Assert.Equal(1, contribution.StageDelta);
+        Assert.Equal(1, Assert.Single(restored.Tracks).ResolvedStage);
+        if (retainsDuration)
+        {
+            Assert.Equal(
+                new TurnDurationDefinition(3, Id("owner_turn_end"), true),
+                contribution.Duration);
+            Assert.Equal(1, contribution.LastLifecycleBoundary?.Sequence);
+        }
+        else
+        {
+            Assert.Null(contribution.Duration);
+            Assert.Null(contribution.LastLifecycleBoundary);
+        }
+    }
+
     [Fact]
     public void RuntimeSaveValidator_AndActorRestoreAcceptEveryRetainedDurationKind()
     {

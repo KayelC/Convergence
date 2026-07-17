@@ -47,7 +47,7 @@ and reviews are complete.
 | M1-5 | `complete` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `complete` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `complete` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
-| M1-8 | `pending` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
+| M1-8 | `complete` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
 | M1-DOC | `pending` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
 | M1-CR | `pending` | Perform a fresh source-first code review of the completed family and correct substantiated findings in isolated commits. | `review: audit stat modifier policies` |
 | M1-DR | `pending` | Review documentation against corrected source, obtain owner confirmation, and only then restore `reviewed`/`complete` status. | `docs: verify stat modifier policy documentation` |
@@ -375,6 +375,28 @@ checkpoint:
   compiler warnings. Content validation loaded 6 packs, 36 documents, and 98
   qualified definitions; all four noninteractive demos, scripted Training
   Annex startup, and the real Godot 4.7.1 headless smoke passed.
+
+### M1-8 Completion Record
+
+- Added one cross-policy execution matrix covering authorized skill targeting
+  and cost commitment, exactly-one item consumption, item/actor rollback after
+  a rejected inventory commit, passive application, owner-turn and phase
+  lifecycle boundaries, positive/negative removal, reserve suspension, and
+  encounter cleanup for all three supplied policies.
+- Added aggregate save/restore conformance for persistent staged, timed
+  exclusive, and timed contribution state. Each case binds the policy from
+  authored content and verifies the restored policy ID, stage projection,
+  duration, and lifecycle cursor instead of reconstructing state through a
+  test-only policy.
+- Strengthened the Godot reference-consumer boundary to require authored
+  `standard_stat_modifiers` selection and the executable modifier/save proof,
+  while rejecting direct construction of the persistent policy in the host
+  composition root.
+- The checkpoint gate completed with 1,192 passing tests: 1,014 Framework,
+  171 DemoHost, and 7 content-validator tests, with zero failures, zero skips,
+  and zero compiler warnings. Content validation loaded 6 packs, 36 documents,
+  and 98 qualified definitions. All four noninteractive demos, scripted
+  Training Annex startup, and the real Godot 4.7.1 headless smoke passed.
 
 ## M1-8: Cross-Policy Evidence
 
