@@ -108,6 +108,9 @@ internal sealed class CleanTrainingAnnexDemoHost
         StatRulesetServices statServices = resolver
             .BindStatServices(catalog, Qualified("standard_stat"))
             .RequireService();
+        IStatModifierPolicyService statModifiers = resolver
+            .BindStatModifierPolicy(catalog, Qualified("standard_stat_modifiers"))
+            .RequireService();
         ProductionCombatRuleset damageRuleset = resolver.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
@@ -206,7 +209,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             .ConfigureAwait(false);
 
         BattleExecutionServices executionServices =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, damageRuleset);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, damageRuleset, statModifiers);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),
@@ -384,7 +387,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             ashling.State.ToSnapshot()
         ];
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.3.0"),
+            SemanticVersion.Parse("0.4.0"),
             [TrainingAnnexHostSupport.PackIdentity],
             actorSnapshots,
             partyRoster,

@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v3:entities",
+  "$id": "urn:convergence:schema:content:v4:entities",
   "type": "object", "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "entities"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v3:entities" },
-    "schemaVersion": { "const": 3 },
+    "$schema": { "const": "urn:convergence:schema:content:v4:entities" },
+    "schemaVersion": { "const": 4 },
     "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } }
   },
   "$defs": {
@@ -13,11 +13,11 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "displayName", "description", "entityKind", "raceId", "rank", "baseLevel", "capabilities", "inheritanceRules", "stats"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
-        "entityKind": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" },
-        "raceId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" },
+        "entityKind": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" },
+        "raceId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" },
         "rank": { "type": "integer", "minimum": 1 },
         "baseLevel": { "type": "integer", "minimum": 1 },
         "capabilities": {
@@ -38,34 +38,34 @@
               "required": ["mode", "groupIds"],
               "properties": {
                 "mode": { "enum": ["deny_list", "allow_list"] },
-                "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/inheritanceGroup" } }
+                "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/inheritanceGroup" } }
               }
             },
-            "blockedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" } },
-            "allowedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" } }
+            "blockedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } },
+            "allowedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } }
           }
         },
         "stats": {
           "type": "object",
-          "propertyNames": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
           "additionalProperties": { "type": "integer" }
         },
         "elementalAffinities": {
           "type": "object",
-          "propertyNames": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/damageElement" },
-          "additionalProperties": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/elementalAffinity" }
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/damageElement" },
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/elementalAffinity" }
         },
         "ailmentResistances": {
           "type": "object",
-          "propertyNames": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
-          "additionalProperties": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/resistanceLevel" }
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/resistanceLevel" }
         },
         "instantDeathResistances": {
           "type": "object",
           "propertyNames": { "enum": ["light", "dark"] },
-          "additionalProperties": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/resistanceLevel" }
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/resistanceLevel" }
         },
-        "baseSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" } },
+        "baseSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } },
         "skillUnlocks": {
           "type": "array",
           "items": {
@@ -73,7 +73,7 @@
             "required": ["level", "skillId"],
             "properties": {
               "level": { "type": "integer", "minimum": 1 },
-              "skillId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentId" }
+              "skillId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" }
             }
           }
         }

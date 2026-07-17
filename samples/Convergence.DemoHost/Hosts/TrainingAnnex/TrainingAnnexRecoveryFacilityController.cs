@@ -30,13 +30,16 @@ internal sealed class TrainingAnnexRecoveryFacilityController
 {
     private readonly IHostEventSink<string> _eventSink;
     private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commandSource;
+    private readonly IStatModifierPolicyService _statModifiers;
 
     public TrainingAnnexRecoveryFacilityController(
         IHostEventSink<string> eventSink,
-        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource)
+        IHostCommandSource<CleanTrainingAnnexPlayCommand> commandSource,
+        IStatModifierPolicyService statModifiers)
     {
         _eventSink = eventSink ?? throw new ArgumentNullException(nameof(eventSink));
         _commandSource = commandSource ?? throw new ArgumentNullException(nameof(commandSource));
+        _statModifiers = statModifiers ?? throw new ArgumentNullException(nameof(statModifiers));
     }
 
     public async ValueTask<TrainingAnnexRecoveryFacilityResult> OpenAsync(
@@ -81,7 +84,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
             return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
         }
 
-        ApplyRestoration(patient.Actor.State, restoration.AfterPatient);
+        ApplyRestoration(patient.Actor.State, restoration.AfterPatient, _statModifiers);
         wallet = restoration.AfterWallet;
         await _eventSink.PublishAsync(
             $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP {restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet {restoration.BeforeWallet.Balance}->{restoration.AfterWallet.Balance}.",
@@ -152,14 +155,17 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         return (int)value;
     }
 
-    private static void ApplyRestoration(RuntimeActorState actor, RuntimeHospitalPatientSnapshot after)
+    private static void ApplyRestoration(
+        RuntimeActorState actor,
+        RuntimeHospitalPatientSnapshot after,
+        IStatModifierPolicyService statModifiers)
     {
         actor.SetResource(StandardProgressionIds.Hp, after.CurrentHp);
         actor.SetResource(StandardProgressionIds.Sp, after.CurrentSp);
         actor.RemoveAilments(_ => true);
         new BattleStatusLifecycleService(new TrainingAnnexMinimumRandomSource()).Cleanup(
             new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.FieldTransition),
-            DemoStatModifierPolicy.CreatePersistent());
+            statModifiers);
     }
 
     private static TrainingAnnexHospitalRestorationEvidence ToEvidence(HospitalRestorationResult result) =>

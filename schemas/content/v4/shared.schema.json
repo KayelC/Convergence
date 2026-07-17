@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v3:shared",
-  "title": "Convergence content v3 shared definitions",
+  "$id": "urn:convergence:schema:content:v4:shared",
+  "title": "Convergence content v4 shared definitions",
   "$defs": {
     "localId": {
       "type": "string",

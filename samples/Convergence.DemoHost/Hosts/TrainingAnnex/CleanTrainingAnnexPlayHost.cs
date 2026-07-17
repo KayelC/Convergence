@@ -279,6 +279,21 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         StatRulesetServices statServices = statBinding.RequireService();
+        RulesetBindingResult<IStatModifierPolicyService> statModifierBinding =
+            rulesetResolver.BindStatModifierPolicy(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_stat_modifiers"));
+        if (!statModifierBinding.IsSuccess)
+        {
+            await PublishRulesetDiagnosticsAsync(
+                    "stat_modifier",
+                    statModifierBinding.Diagnostics,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return 4;
+        }
+
+        IStatModifierPolicyService statModifiers = statModifierBinding.RequireService();
         RulesetBindingResult<ProductionCombatRuleset> combatBinding =
             rulesetResolver.BindProductionCombatRuleset(
                 catalog,
@@ -344,7 +359,7 @@ internal sealed class CleanTrainingAnnexPlayHost
 
         ResourceManagementRulesetServices resourceManagement = resourceManagementBinding.RequireService();
         BattleExecutionServices executionServices =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset, statModifiers);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
         if (!rosterResult.IsSuccess)
         {
@@ -1371,7 +1386,10 @@ internal sealed class CleanTrainingAnnexPlayHost
                 case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
                     {
                         TrainingAnnexRecoveryFacilityResult recoveryResult =
-                            await new TrainingAnnexRecoveryFacilityController(_eventSink, _commandSource)
+                            await new TrainingAnnexRecoveryFacilityController(
+                                    _eventSink,
+                                    _commandSource,
+                                    statModifiers)
                                 .OpenAsync(
                                     resourceManagement.Hospital,
                                     roster.Player,

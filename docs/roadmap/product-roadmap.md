@@ -17,7 +17,7 @@ but Order 1 is reopened by the approved stat-modifier policy-family work. The
 current state and review boundary are recorded under
 [Reopened Order 1](documentation-completion-roadmap.md#reopened-order-1).
 
-The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v4, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
 
 ## Completed Actor Design Correction
 
@@ -57,8 +57,8 @@ Correct the completion-review findings in order:
 Catalyst rank shifting now uses explicit authored catalyst and target roles. It
 moves the target by an exact offset within that target's catalog race, rejects
 stale participant rank data, and returns a typed no-fusion result when an exact
-destination does not exist. Schema v3 removes the provisional generic
-rank-offset shape before the public API baseline is established.
+destination does not exist. Schema v4 retains the explicit catalyst/target
+shape introduced by schema v3 and adds authored stat-modifier policy selection.
 
 Authored rulesets now resolve through an explicit host-supplied typed factory
 registry. The standard damage factory exposes every existing combat setting,
@@ -68,7 +68,7 @@ factory. Moon phase remains absent from the standard composition.
 
 ## Completed Release Foundations
 
-The strict Draft 2020-12 schema-v3 set now covers every implemented content
+The strict Draft 2020-12 schema-v4 set now covers every implemented content
 family, the authoring validator CLI combines schema and semantic gates, the
 0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
 integration. The consolidated quality gate and independent final review are

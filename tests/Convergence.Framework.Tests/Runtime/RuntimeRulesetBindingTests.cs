@@ -53,6 +53,20 @@ public sealed class RuntimeRulesetBindingTests
             [new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 50m)]));
         Assert.Equal(40, stat.CappedValue);
 
+        IStatModifierPolicyService statModifiers = resolver.BindStatModifierPolicy(
+            catalog,
+            Qualified("persistent_staged_modifiers_sample"))
+            .RequireService();
+        Assert.Equal(
+            Qualified("persistent_staged_modifiers_sample"),
+            statModifiers.PolicyId);
+        StatModifierTransitionResult modifierResult = statModifiers.Apply(new StatModifierApplicationRequest(
+            new RuntimeStatModifierStateSnapshot(statModifiers.PolicyId),
+            Id("attack"),
+            1));
+        Assert.True(modifierResult.StateChanged);
+        Assert.Equal(1, Assert.Single(modifierResult.After.Tracks).ResolvedStage);
+
         GrowthRulesetServices growth = resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth_sample"))
@@ -107,13 +121,14 @@ public sealed class RuntimeRulesetBindingTests
         ContentId[] policyIds = registry.DamagePolicyIds
             .Concat(registry.RewardPolicyIds)
             .Concat(registry.StatPolicyIds)
+            .Concat(registry.StatModifierPolicyIds)
             .Concat(registry.GrowthPolicyIds)
             .Concat(registry.RosterCapacityPolicyIds)
             .Concat(registry.EconomyPolicyIds)
             .Concat(registry.TurnEconomyPolicyIds)
             .ToArray();
 
-        Assert.Equal(7, policyIds.Length);
+        Assert.Equal(10, policyIds.Length);
         Assert.DoesNotContain(policyIds, id => id.Value.Contains("moon_phase", StringComparison.Ordinal));
     }
 
@@ -123,6 +138,7 @@ public sealed class RuntimeRulesetBindingTests
         ContentId damagePolicyId = Id("host_damage");
         ContentId rewardPolicyId = Id("host_reward");
         ContentId statPolicyId = Id("host_stat");
+        ContentId statModifierPolicyId = Id("host_stat_modifier");
         ContentId growthPolicyId = Id("host_growth");
         ContentId rosterPolicyId = Id("host_roster");
         ContentId economyPolicyId = Id("host_economy");
@@ -133,6 +149,8 @@ public sealed class RuntimeRulesetBindingTests
         var stat = new StatRulesetServices(
             new StandardStatResolutionPolicy(),
             new StandardStatStageScalingPolicy());
+        IStatModifierPolicyService statModifiers = new StatModifierPolicyService(
+            new PersistentStagedStatModifierPolicy(Id("test.pack:host_stat_modifier_state")));
         var resourceGrowth = new StandardResourceGrowthPolicy();
         var experience = new CubicExperienceCurve();
         var growth = new GrowthRulesetServices(
@@ -158,6 +176,7 @@ public sealed class RuntimeRulesetBindingTests
             damage: [new FixedDamageFactory(damagePolicyId, combat)],
             reward: [new FixedRewardFactory(rewardPolicyId, reward)],
             stat: [new FixedStatFactory(statPolicyId, stat)],
+            statModifier: [new FixedStatModifierFactory(statModifierPolicyId, statModifiers)],
             growth: [new FixedGrowthFactory(growthPolicyId, growth)],
             rosterCapacity: [new FixedRosterFactory(rosterPolicyId, roster)],
             economy: [new FixedEconomyFactory(economyPolicyId, economy)],
@@ -167,6 +186,7 @@ public sealed class RuntimeRulesetBindingTests
             Ruleset("damage", RulesetCategory.Damage, damagePolicyId),
             Ruleset("reward", RulesetCategory.Reward, rewardPolicyId),
             Ruleset("stat", RulesetCategory.Stat, statPolicyId),
+            Ruleset("stat_modifier", RulesetCategory.StatModifier, statModifierPolicyId),
             Ruleset("growth", RulesetCategory.Growth, growthPolicyId),
             Ruleset("roster", RulesetCategory.RosterCapacity, rosterPolicyId),
             Ruleset("economy", RulesetCategory.Economy, economyPolicyId),
@@ -181,6 +201,8 @@ public sealed class RuntimeRulesetBindingTests
             catalog, Id("test.pack:reward"), combat).RequireService());
         Assert.Same(stat, resolver.BindStatServices(
             catalog, Id("test.pack:stat")).RequireService());
+        Assert.Same(statModifiers, resolver.BindStatModifierPolicy(
+            catalog, Id("test.pack:stat_modifier")).RequireService());
         Assert.Same(growth, resolver.BindGrowthServices(
             catalog, Id("test.pack:growth")).RequireService());
         Assert.Same(roster, resolver.BindRosterCapacityPolicy(
@@ -245,6 +267,7 @@ public sealed class RuntimeRulesetBindingTests
     [InlineData(RulesetCategory.Damage)]
     [InlineData(RulesetCategory.Reward)]
     [InlineData(RulesetCategory.Stat)]
+    [InlineData(RulesetCategory.StatModifier)]
     [InlineData(RulesetCategory.Growth)]
     [InlineData(RulesetCategory.RosterCapacity)]
     [InlineData(RulesetCategory.Economy)]
@@ -257,6 +280,7 @@ public sealed class RuntimeRulesetBindingTests
             damage: [factory],
             reward: [factory],
             stat: [factory],
+            statModifier: [factory],
             growth: [factory],
             rosterCapacity: [factory],
             economy: [factory],
@@ -276,6 +300,9 @@ public sealed class RuntimeRulesetBindingTests
                 definition.Id,
                 new ProductionCombatRuleset(new SequenceRandomSource())).Diagnostics),
             RulesetCategory.Stat => Assert.Single(resolver.BindStatServices(
+                catalog,
+                definition.Id).Diagnostics),
+            RulesetCategory.StatModifier => Assert.Single(resolver.BindStatModifierPolicy(
                 catalog,
                 definition.Id).Diagnostics),
             RulesetCategory.Growth => Assert.Single(resolver.BindGrowthServices(
@@ -521,6 +548,121 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
+    public void StatModifierBinding_ConstructsAllSuppliedPoliciesFromAuthoredRulesets()
+    {
+        ContentId persistentId = Id("test.pack:persistent");
+        ContentId exclusiveId = Id("test.pack:exclusive");
+        ContentId contributionId = Id("test.pack:contribution");
+        GameDataCatalog catalog = Catalog(
+            new RulesetDefinition(
+                persistentId,
+                "Persistent",
+                "Bounded encounter-persistent stages.",
+                RulesetCategory.StatModifier,
+                StandardRulesetPolicyIds.PersistentStagedStatModifier,
+                Parameters(("minimumStage", -2), ("maximumStage", 2))),
+            new RulesetDefinition(
+                exclusiveId,
+                "Exclusive",
+                "One timed signal.",
+                RulesetCategory.StatModifier,
+                StandardRulesetPolicyIds.TimedExclusiveStatModifier),
+            new RulesetDefinition(
+                contributionId,
+                "Contributions",
+                "Independently timed contributions.",
+                RulesetCategory.StatModifier,
+                StandardRulesetPolicyIds.TimedContributionStatModifier,
+                Parameters(("minimumStage", -3), ("maximumStage", 3))));
+        RuntimeRulesetBindingResolver resolver = CreateResolver();
+
+        IStatModifierPolicyService persistent = resolver
+            .BindStatModifierPolicy(catalog, persistentId)
+            .RequireService();
+        StatModifierTransitionResult persistentResult = persistent.Apply(new StatModifierApplicationRequest(
+            new RuntimeStatModifierStateSnapshot(persistent.PolicyId),
+            Id("attack"),
+            4));
+        Assert.Equal(persistentId, persistent.PolicyId);
+        Assert.Equal(2, Assert.Single(persistentResult.After.Tracks).ResolvedStage);
+
+        var duration = new TurnDurationDefinition(3, Id("owner_turn_end"), true);
+        IStatModifierPolicyService exclusive = resolver
+            .BindStatModifierPolicy(catalog, exclusiveId)
+            .RequireService();
+        StatModifierTransitionResult exclusiveResult = exclusive.Apply(new StatModifierApplicationRequest(
+            new RuntimeStatModifierStateSnapshot(exclusive.PolicyId),
+            Id("defense"),
+            2,
+            duration));
+        Assert.Equal(exclusiveId, exclusive.PolicyId);
+        Assert.Equal(2, Assert.Single(exclusiveResult.After.Tracks).ResolvedStage);
+
+        IStatModifierPolicyService contributions = resolver
+            .BindStatModifierPolicy(catalog, contributionId)
+            .RequireService();
+        RuntimeStatModifierStateSnapshot contributionState = contributions.Apply(
+            new StatModifierApplicationRequest(
+                new RuntimeStatModifierStateSnapshot(contributions.PolicyId),
+                Id("agility"),
+                1,
+                duration)).After;
+        contributionState = contributions.Apply(new StatModifierApplicationRequest(
+            contributionState,
+            Id("agility"),
+            1,
+            duration)).After;
+        RuntimeStatModifierTrackSnapshot contributionTrack = Assert.Single(contributionState.Tracks);
+        Assert.Equal(contributionId, contributions.PolicyId);
+        Assert.Equal(2, contributionTrack.ResolvedStage);
+        Assert.Equal(2, contributionTrack.Contributions.Count);
+    }
+
+    [Fact]
+    public void StatModifierBinding_RejectsMissingBoundsUnknownParametersAndWrongCategory()
+    {
+        ContentId missingBoundsId = Id("test.pack:missing_bounds");
+        ContentId unknownParameterId = Id("test.pack:unknown_parameter");
+        ContentId wrongCategoryId = Id("test.pack:wrong_modifier_category");
+        RuntimeRulesetBindingResolver resolver = CreateResolver();
+
+        RulesetBindingResult<IStatModifierPolicyService> missingBounds = resolver.BindStatModifierPolicy(
+            Catalog(new RulesetDefinition(
+                missingBoundsId,
+                "Missing Bounds",
+                "Bounds are intentionally absent.",
+                RulesetCategory.StatModifier,
+                StandardRulesetPolicyIds.PersistentStagedStatModifier)),
+            missingBoundsId);
+        RulesetBindingResult<IStatModifierPolicyService> unknownParameter = resolver.BindStatModifierPolicy(
+            Catalog(new RulesetDefinition(
+                unknownParameterId,
+                "Unknown Parameter",
+                "Exclusive signals have no policy parameters.",
+                RulesetCategory.StatModifier,
+                StandardRulesetPolicyIds.TimedExclusiveStatModifier,
+                Parameters(("duration", 3)))),
+            unknownParameterId);
+        RulesetBindingResult<IStatModifierPolicyService> wrongCategory = resolver.BindStatModifierPolicy(
+            Catalog(new RulesetDefinition(
+                wrongCategoryId,
+                "Wrong Category",
+                "A stat ruleset cannot bind as modifier lifecycle.",
+                RulesetCategory.Stat,
+                StandardRulesetPolicyIds.PersistentStagedStatModifier,
+                Parameters(("minimumStage", -4), ("maximumStage", 4)))),
+            wrongCategoryId);
+
+        Assert.False(missingBounds.IsSuccess);
+        Assert.Equal(2, missingBounds.Diagnostics.Count(diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.MissingParameter));
+        Assert.False(unknownParameter.IsSuccess);
+        Assert.Equal(RulesetBindingDiagnosticCode.UnknownParameter, Assert.Single(unknownParameter.Diagnostics).Code);
+        Assert.False(wrongCategory.IsSuccess);
+        Assert.Equal(RulesetBindingDiagnosticCode.CategoryMismatch, Assert.Single(wrongCategory.Diagnostics).Code);
+    }
+
+    [Fact]
     public void Binding_ReportsMissingWrongCategoryUnsupportedPolicyAndBadParameters()
     {
         var resolver = CreateResolver();
@@ -692,6 +834,7 @@ public sealed class RuntimeRulesetBindingTests
         IRuntimeDamageRulesetPolicyFactory,
         IRuntimeRewardRulesetPolicyFactory,
         IRuntimeStatRulesetPolicyFactory,
+        IRuntimeStatModifierRulesetPolicyFactory,
         IRuntimeGrowthRulesetPolicyFactory,
         IRuntimeRosterCapacityRulesetPolicyFactory,
         IRuntimeEconomyRulesetPolicyFactory,
@@ -711,6 +854,9 @@ public sealed class RuntimeRulesetBindingTests
 
         RulesetBindingResult<StatRulesetServices> IRuntimeStatRulesetPolicyFactory.Create(
             RulesetDefinition definition) => Fail<RulesetBindingResult<StatRulesetServices>>();
+
+        RulesetBindingResult<IStatModifierPolicyService> IRuntimeStatModifierRulesetPolicyFactory.Create(
+            RulesetDefinition definition) => Fail<RulesetBindingResult<IStatModifierPolicyService>>();
 
         RulesetBindingResult<GrowthRulesetServices> IRuntimeGrowthRulesetPolicyFactory.Create(
             RulesetDefinition definition) => Fail<RulesetBindingResult<GrowthRulesetServices>>();
@@ -745,6 +891,16 @@ public sealed class RuntimeRulesetBindingTests
         public ContentId PolicyId { get; } = policyId;
 
         public RulesetBindingResult<StatRulesetServices> Create(RulesetDefinition definition) =>
+            new(service);
+    }
+
+    private sealed class FixedStatModifierFactory(
+        ContentId policyId,
+        IStatModifierPolicyService service) : IRuntimeStatModifierRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<IStatModifierPolicyService> Create(RulesetDefinition definition) =>
             new(service);
     }
 

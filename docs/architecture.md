@@ -24,7 +24,7 @@ Session restore is aggregate and framework-owned. Hosts decode their save envelo
 ## Content Flow
 
 Host-supplied JSON is checked against the strict Draft 2020-12 contracts in
-`schemas/content/v3` before Framework deserialization and semantic catalog
+`schemas/content/v4` before Framework deserialization and semantic catalog
 validation. JSON Schema owns document shape; Framework validation owns graph,
 dependency-visibility, registration, and host-capability rules. This keeps the
 reusable assembly free of schema-evaluation and filesystem dependencies while
@@ -47,6 +47,11 @@ interface, so an authored policy cannot be resolved as an unrelated service.
 The supplied standard registry is opt-in; unknown policies fail with typed
 diagnostics and no hidden standard fallback. See
 [Ruleset Policy Contracts](ruleset-policy-contracts.md).
+
+Stat resolution/scaling and stat-modifier lifecycle are separate policy
+families. The `stat` category resolves raw values and numeric stage
+multipliers; `stat_modifier` selects how applications accumulate, expire, and
+clear. A host binds both explicitly before constructing execution services.
 
 ## Runtime Flow
 
@@ -90,7 +95,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `3` and runtime save contract version `9` are deliberate pre-release breaks with no compatibility aliases. Save v9 persists pending skill choices, derives Active Hosted Entity restoration from the canonical party roster, and derives roster capacity from the saved owner actor instead of duplicating an owner level in the roster snapshot. Save v8 and earlier require an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `4` and runtime save contract version `9` are deliberate pre-release breaks with no compatibility aliases. Save v9 persists pending skill choices, derives Active Hosted Entity restoration from the canonical party roster, and derives roster capacity from the saved owner actor instead of duplicating an owner level in the roster snapshot. Save v8 and earlier require an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

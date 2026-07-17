@@ -14,37 +14,42 @@ Every active manifest lists its documents in authored order. DemoHost preserves 
 
 ## Validation Layers
 
-The active pre-release authoring contract is schema version `3`. Versions `1` and `2` are intentionally unsupported after the Action Token and catalyst-role migrations; the validator reports an unsupported-schema diagnostic instead of translating old documents.
+The active pre-release authoring contract is schema version `4`. Versions `1`
+through `3` are intentionally unsupported after the Action Token,
+catalyst-role, and stat-modifier ruleset migrations. The validator reports an
+unsupported-schema diagnostic instead of translating old documents. Active
+example packs are version `0.4.0`; exact dependency versions advance with the
+contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.
 2. Strict deserialization validates the same fields and discriminators while mapping JSON into immutable definitions.
 3. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 4. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.
 
-## Schema v3
+## Schema v4
 
-The authored schemas live under [`../schemas/content/v3`](../schemas/content/v3).
-They use stable `urn:convergence:schema:content:v3:*` identifiers and reject
+The authored schemas live under [`../schemas/content/v4`](../schemas/content/v4).
+They use stable `urn:convergence:schema:content:v4:*` identifiers and reject
 unknown properties. Every active document must declare the schema matching its
 manifest document type:
 
 | Manifest type | `$schema` |
 |---|---|
-| `skills` | `urn:convergence:schema:content:v3:skills` |
-| `entities` | `urn:convergence:schema:content:v3:entities` |
-| `races` | `urn:convergence:schema:content:v3:races` |
-| `ailments` | `urn:convergence:schema:content:v3:ailments` |
-| `items` | `urn:convergence:schema:content:v3:items` |
-| `equipment` | `urn:convergence:schema:content:v3:equipment` |
-| `shops` | `urn:convergence:schema:content:v3:shops` |
-| `negotiations` | `urn:convergence:schema:content:v3:negotiations` |
-| `encounters` | `urn:convergence:schema:content:v3:encounters` |
-| `dungeons` | `urn:convergence:schema:content:v3:dungeons` |
-| `fusion` | `urn:convergence:schema:content:v3:fusion` |
-| `rulesets` | `urn:convergence:schema:content:v3:rulesets` |
+| `skills` | `urn:convergence:schema:content:v4:skills` |
+| `entities` | `urn:convergence:schema:content:v4:entities` |
+| `races` | `urn:convergence:schema:content:v4:races` |
+| `ailments` | `urn:convergence:schema:content:v4:ailments` |
+| `items` | `urn:convergence:schema:content:v4:items` |
+| `equipment` | `urn:convergence:schema:content:v4:equipment` |
+| `shops` | `urn:convergence:schema:content:v4:shops` |
+| `negotiations` | `urn:convergence:schema:content:v4:negotiations` |
+| `encounters` | `urn:convergence:schema:content:v4:encounters` |
+| `dungeons` | `urn:convergence:schema:content:v4:dungeons` |
+| `fusion` | `urn:convergence:schema:content:v4:fusion` |
+| `rulesets` | `urn:convergence:schema:content:v4:rulesets` |
 
-Manifests use `urn:convergence:schema:content:v3:manifest`. Shared definitions
-use `urn:convergence:schema:content:v3:shared` and are not content documents.
+Manifests use `urn:convergence:schema:content:v4:manifest`. Shared definitions
+use `urn:convergence:schema:content:v4:shared` and are not content documents.
 
 JSON Schema is the structural authoring contract: exact property names, enum
 values, discriminated unions, required members, and basic numeric/string ranges.
@@ -69,8 +74,11 @@ registry. Content registration alone does not install runtime behavior, and the
 resolver never substitutes an unregistered policy. In particular,
 `turn_economy` is the category for any `IBattleTurnEconomy` implementation;
 `standard_action_token` is the policy ID for the optional Action Token
-implementation supplied by Convergence. The supported built-in parameters are
-normatively listed in [Ruleset Policy Contracts](ruleset-policy-contracts.md).
+implementation supplied by Convergence. `stat_modifier` independently selects
+how signed stat changes accumulate, expire, and clear; it does not select the
+`stat` category's numeric stage-scaling table. The supported supplied policies
+and parameters are normatively listed in
+[Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
 Entity `skillUnlocks` are ordered authored progression records. Each row pairs a
 positive level with a skill ID. Runtime growth evaluates the rows in document

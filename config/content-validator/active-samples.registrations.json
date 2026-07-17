@@ -22,6 +22,9 @@
     "encounterEnvironments": ["entry_block", "training_annex"],
     "policies": [
       "standard_damage",
+      "persistent_staged",
+      "timed_exclusive",
+      "timed_contribution",
       "standard_reward",
       "standard_growth",
       "standard_stat",

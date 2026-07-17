@@ -27,7 +27,7 @@ confirmed mechanic direction is recorded in
 - Starting revision: `29a1d32`
 - Solution baseline: 1,054 passing tests, zero failures, zero skips
 - Build baseline: zero warnings and zero errors under strict Release build
-- Content schema: v3
+- Content schema at roadmap start: v3
 - Runtime save contract: v9
 - Public release state: guarded pre-release `0.1.0`
 
@@ -45,7 +45,7 @@ and reviews are complete.
 | M1-3 | `complete` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
 | M1-4 | `complete` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
 | M1-5 | `complete` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
-| M1-6 | `pending` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
+| M1-6 | `complete` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `pending` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
 | M1-8 | `pending` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
 | M1-DOC | `pending` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
@@ -309,6 +309,30 @@ Adding a first-class category changes the current schema-v3 ruleset enum. The
 checkpoint must decide the next schema version, update every active pack and
 strict schema together, and document the pre-release break. It must not change
 schema merely because runtime snapshot types changed.
+
+### M1-6 Completion Record
+
+- Added `stat_modifier` as an eighth typed ruleset-policy category, with
+  explicit binding through `IRuntimeRulesetBindingResolver` and no inferred or
+  fallback policy selection.
+- Registered the persistent-staged, timed-exclusive, and timed-contribution
+  supplied factories. Persistent and contribution policies require authored
+  `minimumStage` and `maximumStage` parameters; exclusive accepts no hidden
+  configuration. Host applications may register their own typed factory.
+- Bound services retain the qualified ruleset definition ID as their policy
+  identity. Two differently configured authored rulesets therefore cannot
+  restore or operate on one another's retained state accidentally.
+- Advanced the pre-release content contract to schema v4 and all six active
+  packs to `0.4.0`. Versions 1 through 3 are unsupported; all 36 active
+  documents pass both strict JSON Schema and Framework catalog validation.
+- Training Annex, its recovery facility, and the Godot reference consumer use
+  the same explicitly bound modifier service. Missing, unknown, malformed, or
+  wrong-category bindings fail before gameplay instead of selecting a default.
+- Added focused ruleset, schema, content, host-failure, and shared-service
+  evidence. The checkpoint gate completed with 1,163 passing tests, zero
+  failures, zero skips, and zero compiler warnings. Content validation loaded
+  6 packs, 36 documents, and 98 qualified definitions; every clean demo and
+  the real Godot 4.7.1 headless smoke passed.
 
 ## M1-7: Persistence And Restore
 

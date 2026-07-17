@@ -68,6 +68,9 @@ public partial class ConvergenceSmokeRoot : Node
         StatRulesetServices statServices = rulesets.BindStatServices(
             catalog,
             Qualified("standard_stat")).RequireService();
+        IStatModifierPolicyService statModifiers = rulesets.BindStatModifierPolicy(
+            catalog,
+            Qualified("standard_stat_modifiers")).RequireService();
         ProductionCombatRuleset combat = rulesets.BindProductionCombatRuleset(
             catalog,
             Qualified("standard_damage"),
@@ -160,9 +163,7 @@ public partial class ConvergenceSmokeRoot : Node
             combat,
             new FirstSkillTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            new StatModifierPolicyService(
-                new PersistentStagedStatModifierPolicy(
-                    ContentId.Parse("godot_smoke_persistent_stat_modifiers"))));
+            statModifiers);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),
@@ -234,7 +235,7 @@ public partial class ConvergenceSmokeRoot : Node
         string saveJson = GodotSaveCodec.Serialize(
             [player, enemy, hostedEntity],
             partyRoster,
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.3.0")),
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.4.0")),
             sceneInstances);
         var restoreService = new RuntimeSessionRestoreService(
             new RuntimeSaveValidator(rosterCapacity, moveListCapacity),
@@ -330,6 +331,9 @@ public partial class ConvergenceSmokeRoot : Node
                 "standard_reward",
                 "standard_growth",
                 "standard_stat",
+                "persistent_staged",
+                "timed_exclusive",
+                "timed_contribution",
                 "standard_action_token",
                 "standard_roster_capacity",
                 "standard_economy",

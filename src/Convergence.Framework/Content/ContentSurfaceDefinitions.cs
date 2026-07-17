@@ -69,7 +69,8 @@ public enum RulesetCategory
     RosterCapacity,
     Reward,
     Economy,
-    MoonPhase
+    MoonPhase,
+    StatModifier
 }
 
 public sealed record StatModifierDefinition(ContentId StatId, int Value);

@@ -1469,6 +1469,7 @@ Convergence.Content.RulesetCategory.MoonPhase = 7 -> Convergence.Content.Ruleset
 Convergence.Content.RulesetCategory.Reward = 5 -> Convergence.Content.RulesetCategory
 Convergence.Content.RulesetCategory.RosterCapacity = 4 -> Convergence.Content.RulesetCategory
 Convergence.Content.RulesetCategory.Stat = 2 -> Convergence.Content.RulesetCategory
+Convergence.Content.RulesetCategory.StatModifier = 8 -> Convergence.Content.RulesetCategory
 Convergence.Content.RulesetCategory.TurnEconomy = 3 -> Convergence.Content.RulesetCategory
 Convergence.Content.RulesetDefinition
 Convergence.Content.RulesetDefinition.<Clone>$() -> Convergence.Content.RulesetDefinition!
@@ -5094,6 +5095,7 @@ Convergence.Runtime.IRuntimeRulesetBindingResolver.BindProductionCombatRuleset(C
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
+Convergence.Runtime.IRuntimeRulesetBindingResolver.BindStatModifierPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatModifierPolicyService!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindTurnEconomy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.IRuntimeSaveMigrationService
 Convergence.Runtime.IRuntimeSaveMigrationService.MigrateToCurrent(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSaveMigrationResult!
@@ -5119,6 +5121,9 @@ Convergence.Runtime.IRuntimeSkillUnlockPlanner.Plan(Convergence.Runtime.RuntimeS
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
 Convergence.Runtime.IRuntimeStatRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory
+Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatModifierPolicyService!>!
+Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
@@ -6142,6 +6147,7 @@ Convergence.Runtime.RuntimeRulesetBindingResolver.BindProductionCombatRuleset(Co
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
+Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatModifierPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IStatModifierPolicyService!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindTurnEconomy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.RuntimeRulesetBindingResolver(Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry! factories) -> void
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry
@@ -6150,8 +6156,9 @@ Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.EconomyPolicyIds.get -> 
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.GrowthPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RewardPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RosterCapacityPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
-Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RuntimeRulesetPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory!>? damage = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory!>? reward = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatRulesetPolicyFactory!>? stat = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory!>? growth = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory!>? rosterCapacity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory!>? economy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory!>? turnEconomy = null) -> void
+Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RuntimeRulesetPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory!>? damage = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory!>? reward = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatRulesetPolicyFactory!>? stat = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory!>? growth = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory!>? rosterCapacity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory!>? economy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory!>? turnEconomy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory!>? statModifier = null) -> void
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.StatPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.StatModifierPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.TurnEconomyPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeSaveContextSnapshot
 Convergence.Runtime.RuntimeSaveContextSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeSaveContextSnapshot!
@@ -9826,6 +9833,9 @@ static Convergence.Runtime.StandardRulesetPolicyIds.StandardGrowth.get -> Conver
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardReward.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardRosterCapacity.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardStat.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardRulesetPolicyIds.PersistentStagedStatModifier.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardRulesetPolicyIds.TimedContributionStatModifier.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardRulesetPolicyIds.TimedExclusiveStatModifier.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardStatPolicyConfig.Default.get -> Convergence.Runtime.StandardStatPolicyConfig!
 static Convergence.Runtime.StandardStatPolicyConfig.operator !=(Convergence.Runtime.StandardStatPolicyConfig? left, Convergence.Runtime.StandardStatPolicyConfig? right) -> bool
 static Convergence.Runtime.StandardStatPolicyConfig.operator ==(Convergence.Runtime.StandardStatPolicyConfig? left, Convergence.Runtime.StandardStatPolicyConfig? right) -> bool

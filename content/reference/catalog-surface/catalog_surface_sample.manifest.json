@@ -1,17 +1,17 @@
 {
-  "$schema": "urn:convergence:schema:content:v3:manifest",
-  "schemaVersion": 3,
+  "$schema": "urn:convergence:schema:content:v4:manifest",
+  "schemaVersion": 4,
   "id": "convergence.catalog_surface_sample",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "displayName": "Catalog Surface Sample",
   "dependencies": [
     {
       "id": "convergence.clean_battle_demo",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "id": "convergence.shared_effects_demo",
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   ],
   "documents": [

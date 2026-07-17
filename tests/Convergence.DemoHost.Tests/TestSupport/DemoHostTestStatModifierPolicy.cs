@@ -15,10 +15,17 @@ internal static class DemoHostTestStatModifierPolicy
     internal static void ApplyPersistent(
         RuntimeActorState actor,
         ContentId modifierTrackId,
+        int stageDelta) =>
+        Apply(actor, CreatePersistent(), modifierTrackId, stageDelta);
+
+    internal static void Apply(
+        RuntimeActorState actor,
+        IStatModifierPolicyService service,
+        ContentId modifierTrackId,
         int stageDelta)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        IStatModifierPolicyService service = CreatePersistent();
+        ArgumentNullException.ThrowIfNull(service);
         RuntimeStatModifierStateSnapshot before = actor.ResolveStatModifierState(service);
         StatModifierTransitionResult result = service.Apply(
             new StatModifierApplicationRequest(before, modifierTrackId, stageDelta));

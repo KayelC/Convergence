@@ -41,10 +41,10 @@ internal static class CleanSaveTestFixture
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.3.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.3.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.3.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.3.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.4.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.4.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.4.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.4.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -233,6 +233,9 @@ internal static class CleanSaveTestFixture
                 "standard_reward",
                 "standard_growth",
                 "standard_stat",
+                "persistent_staged",
+                "timed_exclusive",
+                "timed_contribution",
                 "standard_action_token",
                 "standard_roster_capacity",
                 "standard_economy",

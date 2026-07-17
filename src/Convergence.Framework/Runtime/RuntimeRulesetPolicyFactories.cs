@@ -33,6 +33,13 @@ public interface IRuntimeStatRulesetPolicyFactory
     RulesetBindingResult<StatRulesetServices> Create(RulesetDefinition definition);
 }
 
+public interface IRuntimeStatModifierRulesetPolicyFactory
+{
+    ContentId PolicyId { get; }
+
+    RulesetBindingResult<IStatModifierPolicyService> Create(RulesetDefinition definition);
+}
+
 public interface IRuntimeGrowthRulesetPolicyFactory
 {
     ContentId PolicyId { get; }
@@ -71,6 +78,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     private readonly IReadOnlyDictionary<ContentId, IRuntimeDamageRulesetPolicyFactory> _damage;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeRewardRulesetPolicyFactory> _reward;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeStatRulesetPolicyFactory> _stat;
+    private readonly IReadOnlyDictionary<ContentId, IRuntimeStatModifierRulesetPolicyFactory> _statModifier;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeGrowthRulesetPolicyFactory> _growth;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeRosterCapacityRulesetPolicyFactory> _rosterCapacity;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeEconomyRulesetPolicyFactory> _economy;
@@ -83,11 +91,13 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
         IEnumerable<IRuntimeGrowthRulesetPolicyFactory>? growth = null,
         IEnumerable<IRuntimeRosterCapacityRulesetPolicyFactory>? rosterCapacity = null,
         IEnumerable<IRuntimeEconomyRulesetPolicyFactory>? economy = null,
-        IEnumerable<IRuntimeTurnEconomyRulesetPolicyFactory>? turnEconomy = null)
+        IEnumerable<IRuntimeTurnEconomyRulesetPolicyFactory>? turnEconomy = null,
+        IEnumerable<IRuntimeStatModifierRulesetPolicyFactory>? statModifier = null)
     {
         _damage = Snapshot(damage, factory => factory.PolicyId, nameof(damage));
         _reward = Snapshot(reward, factory => factory.PolicyId, nameof(reward));
         _stat = Snapshot(stat, factory => factory.PolicyId, nameof(stat));
+        _statModifier = Snapshot(statModifier, factory => factory.PolicyId, nameof(statModifier));
         _growth = Snapshot(growth, factory => factory.PolicyId, nameof(growth));
         _rosterCapacity = Snapshot(rosterCapacity, factory => factory.PolicyId, nameof(rosterCapacity));
         _economy = Snapshot(economy, factory => factory.PolicyId, nameof(economy));
@@ -97,6 +107,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     public IReadOnlyCollection<ContentId> DamagePolicyIds => SnapshotIds(_damage);
     public IReadOnlyCollection<ContentId> RewardPolicyIds => SnapshotIds(_reward);
     public IReadOnlyCollection<ContentId> StatPolicyIds => SnapshotIds(_stat);
+    public IReadOnlyCollection<ContentId> StatModifierPolicyIds => SnapshotIds(_statModifier);
     public IReadOnlyCollection<ContentId> GrowthPolicyIds => SnapshotIds(_growth);
     public IReadOnlyCollection<ContentId> RosterCapacityPolicyIds => SnapshotIds(_rosterCapacity);
     public IReadOnlyCollection<ContentId> EconomyPolicyIds => SnapshotIds(_economy);
@@ -107,6 +118,12 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             damage: [new StandardDamageRulesetPolicyFactory()],
             reward: [new StandardRewardRulesetPolicyFactory()],
             stat: [new StandardStatRulesetPolicyFactory()],
+            statModifier:
+            [
+                new PersistentStagedStatModifierRulesetPolicyFactory(),
+                new TimedExclusiveStatModifierRulesetPolicyFactory(),
+                new TimedContributionStatModifierRulesetPolicyFactory()
+            ],
             growth: [new StandardGrowthRulesetPolicyFactory()],
             rosterCapacity: [new StandardRosterCapacityRulesetPolicyFactory()],
             economy: [new StandardEconomyRulesetPolicyFactory()],
@@ -120,6 +137,9 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
 
     internal IRuntimeStatRulesetPolicyFactory? FindStat(ContentId policyId) =>
         Find(_stat, policyId);
+
+    internal IRuntimeStatModifierRulesetPolicyFactory? FindStatModifier(ContentId policyId) =>
+        Find(_statModifier, policyId);
 
     internal IRuntimeGrowthRulesetPolicyFactory? FindGrowth(ContentId policyId) =>
         Find(_growth, policyId);
@@ -560,6 +580,110 @@ internal sealed class StandardStatRulesetPolicyFactory : IRuntimeStatRulesetPoli
             "damage_taken" or
             "hit_chance" or
             "evasion";
+    }
+}
+
+internal abstract class BoundedStatModifierRulesetPolicyFactory : IRuntimeStatModifierRulesetPolicyFactory
+{
+    public abstract ContentId PolicyId { get; }
+
+    public RulesetBindingResult<IStatModifierPolicyService> Create(RulesetDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        var diagnostics = new List<RulesetBindingDiagnostic>();
+        foreach (string key in definition.Parameters.Keys.Where(
+                     key => key is not ("minimumStage" or "maximumStage")))
+        {
+            RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
+        }
+
+        bool hasMinimum = TryReadRequiredInt(definition, "minimumStage", diagnostics, out int minimumStage);
+        bool hasMaximum = TryReadRequiredInt(definition, "maximumStage", diagnostics, out int maximumStage);
+        if (!hasMinimum || !hasMaximum || diagnostics.Count > 0)
+        {
+            return new RulesetBindingResult<IStatModifierPolicyService>(null, diagnostics);
+        }
+
+        try
+        {
+            return new RulesetBindingResult<IStatModifierPolicyService>(
+                new StatModifierPolicyService(CreatePolicy(definition.Id, minimumStage, maximumStage)));
+        }
+        catch (ArgumentException exception)
+        {
+            RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                definition,
+                exception.Message,
+                diagnostics);
+            return new RulesetBindingResult<IStatModifierPolicyService>(null, diagnostics);
+        }
+    }
+
+    protected abstract IStatModifierPolicy CreatePolicy(
+        ContentId rulesetId,
+        int minimumStage,
+        int maximumStage);
+
+    private static bool TryReadRequiredInt(
+        RulesetDefinition definition,
+        string key,
+        List<RulesetBindingDiagnostic> diagnostics,
+        out int value)
+    {
+        value = 0;
+        if (!definition.Parameters.TryGetValue(key, out object? raw))
+        {
+            RulesetPolicyFactoryDiagnostics.MissingParameter(definition, key, diagnostics);
+            return false;
+        }
+
+        if (!RulesetPolicyFactoryParameters.TryReadInt(raw, out value))
+        {
+            RulesetPolicyFactoryDiagnostics.InvalidType(definition, key, "integer", diagnostics);
+            return false;
+        }
+
+        return true;
+    }
+}
+
+internal sealed class PersistentStagedStatModifierRulesetPolicyFactory :
+    BoundedStatModifierRulesetPolicyFactory
+{
+    public override ContentId PolicyId => StandardRulesetPolicyIds.PersistentStagedStatModifier;
+
+    protected override IStatModifierPolicy CreatePolicy(
+        ContentId rulesetId,
+        int minimumStage,
+        int maximumStage) =>
+        new PersistentStagedStatModifierPolicy(rulesetId, minimumStage, maximumStage);
+}
+
+internal sealed class TimedContributionStatModifierRulesetPolicyFactory :
+    BoundedStatModifierRulesetPolicyFactory
+{
+    public override ContentId PolicyId => StandardRulesetPolicyIds.TimedContributionStatModifier;
+
+    protected override IStatModifierPolicy CreatePolicy(
+        ContentId rulesetId,
+        int minimumStage,
+        int maximumStage) =>
+        new TimedContributionStatModifierPolicy(rulesetId, minimumStage, maximumStage);
+}
+
+internal sealed class TimedExclusiveStatModifierRulesetPolicyFactory :
+    IRuntimeStatModifierRulesetPolicyFactory
+{
+    public ContentId PolicyId => StandardRulesetPolicyIds.TimedExclusiveStatModifier;
+
+    public RulesetBindingResult<IStatModifierPolicyService> Create(RulesetDefinition definition)
+    {
+        List<RulesetBindingDiagnostic> diagnostics =
+            RulesetPolicyFactoryDiagnostics.RequireNoParameters(definition);
+        return diagnostics.Count == 0
+            ? new RulesetBindingResult<IStatModifierPolicyService>(
+                new StatModifierPolicyService(new TimedExclusiveStatModifierPolicy(definition.Id)))
+            : new RulesetBindingResult<IStatModifierPolicyService>(null, diagnostics);
     }
 }
 

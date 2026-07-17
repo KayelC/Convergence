@@ -32,7 +32,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(3, catalog.Encounters.Count);
         Assert.Single(catalog.Dungeons);
         Assert.Equal(3, catalog.FusionRecipes.Count);
-        Assert.Equal(7, catalog.Rulesets.Count);
+        Assert.Equal(8, catalog.Rulesets.Count);
         Assert.DoesNotContain(catalog.Rulesets.Values, ruleset => ruleset.Category == RulesetCategory.MoonPhase);
 
         Assert.All(catalog.Skills.Keys, AssertPackQualified);
@@ -196,6 +196,15 @@ public sealed class OriginalCleanContentSliceTests
 
         Assert.IsType<StandardStatResolutionPolicy>(stats.StatResolutionPolicy);
         Assert.IsType<StandardStatStageScalingPolicy>(stats.StageScalingPolicy);
+        IStatModifierPolicyService statModifiers = resolver.BindStatModifierPolicy(
+            catalog,
+            Qualified("standard_stat_modifiers")).RequireService();
+        Assert.Equal(Qualified("standard_stat_modifiers"), statModifiers.PolicyId);
+        StatModifierTransitionResult modifier = statModifiers.Apply(new StatModifierApplicationRequest(
+            new RuntimeStatModifierStateSnapshot(statModifiers.PolicyId),
+            ContentId.Parse("attack"),
+            5));
+        Assert.Equal(4, Assert.Single(modifier.After.Tracks).ResolvedStage);
         Assert.IsType<StandardResourceGrowthPolicy>(resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService().ResourceGrowthPolicy);
@@ -828,6 +837,9 @@ public sealed class OriginalCleanContentSliceTests
                 "standard_reward",
                 "standard_growth",
                 "standard_stat",
+                "persistent_staged",
+                "timed_exclusive",
+                "timed_contribution",
                 "standard_action_token",
                 "standard_roster_capacity",
                 "standard_economy",

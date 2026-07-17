@@ -2322,9 +2322,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 new SequenceRandomSource(),
                 stats.StageScalingPolicy)
             .RequireService();
+        IStatModifierPolicyService statModifiers = resolver
+            .BindStatModifierPolicy(catalog, Qualified("standard_stat_modifiers"))
+            .RequireService();
 
         BattleExecutionServices services =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, ruleset);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, ruleset, statModifiers);
 
         Assert.Same(ruleset, services.DamagePolicy);
         Assert.Same(ruleset, services.InstantDeathPolicy);
@@ -2713,6 +2716,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Theory]
     [InlineData("standard_damage", "standard_reward", "damage")]
     [InlineData("standard_reward", "standard_damage", "reward")]
+    [InlineData("standard_stat_modifiers", "standard_damage", "stat_modifier")]
     [InlineData("standard_action_token", "standard_damage", "action_token")]
     public async Task CleanTrainingAnnexPlay_InvalidCombatBindingFailsWithoutFallback(
         string rulesetId,
@@ -2732,6 +2736,31 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Null(host.LastSummary);
         Assert.Empty(io.Menus);
         Assert.Contains($"[{diagnosticCategory}:UnsupportedPolicy]", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, RulesetBindingDiagnosticCode.MissingRuleset)]
+    [InlineData(false, RulesetBindingDiagnosticCode.CategoryMismatch)]
+    public async Task CleanTrainingAnnexPlay_InvalidStatModifierBindingFailsBeforeSession(
+        bool removeRuleset,
+        RulesetBindingDiagnosticCode expectedCode)
+    {
+        var io = new ScriptedGameIO();
+        using var output = new StringWriter();
+        IContentPackTextSource source = removeRuleset
+            ? new RulesetRemovingContentPackTextSource(ContentRoot(), "standard_stat_modifiers")
+            : new RulesetCategoryMutatingContentPackTextSource(
+                ContentRoot(),
+                "standard_stat_modifiers",
+                "damage");
+        var host = CreateHost(io, output, source);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(4, exitCode);
+        Assert.Null(host.LastSummary);
+        Assert.Empty(io.Menus);
+        Assert.Contains($"[stat_modifier:{expectedCode}]", output.ToString(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -3084,6 +3113,10 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task TrainingAnnexRecoveryFacility_CleansLiveAilmentsAndEncounterPersistence()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
+        IStatModifierPolicyService statModifiers = new RuntimeRulesetBindingResolver(
+                RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
+            .BindStatModifierPolicy(catalog, Qualified("standard_stat_modifiers"))
+            .RequireService();
         TrainingAnnexRuntimeActor player = TrainingAnnexHostSupport.CreateActorRoster(catalog)
             .RequireRoster()
             .Player;
@@ -3091,7 +3124,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         state.SetResource(StandardProgressionIds.Hp, 70);
         state.ApplyAilment(catalog.GetRequiredAilment(Qualified("sample_poison")), Turns(3));
         state.SetGuarding(true);
-        DemoHostTestStatModifierPolicy.ApplyPersistent(state, ContentId.Parse("attack"), 1);
+        DemoHostTestStatModifierPolicy.Apply(state, statModifiers, ContentId.Parse("attack"), 1);
         state.GrantCharge(ChargeKind.Physical, 2m, Turns(1));
         state.GrantShield(ShieldKind.Physical, Turns(1));
         state.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
@@ -3101,7 +3134,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         using var output = new StringWriter();
         var controller = new TrainingAnnexRecoveryFacilityController(
             new TextWriterEventSink(output),
-            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io));
+            new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
+            statModifiers);
 
         TrainingAnnexRecoveryFacilityResult result = await controller.OpenAsync(
             new HospitalRestorationService(),

@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v3:dungeons",
-  "schemaVersion": 3,
+  "$schema": "urn:convergence:schema:content:v4:dungeons",
+  "schemaVersion": 4,
   "dungeons": [
     {
       "id": "training_annex",

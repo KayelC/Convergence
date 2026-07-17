@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v4:rulesets",
+  "title": "Convergence Content v4 Ruleset Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "rulesets"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v4:rulesets" },
+    "schemaVersion": { "const": 4 },
+    "rulesets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ruleset" }
+    }
+  },
+  "$defs": {
+    "ruleset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "category", "policyId"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "category": { "enum": ["damage", "growth", "stat", "stat_modifier", "turn_economy", "roster_capacity", "reward", "economy", "moon_phase"] },
+        "policyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+        "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+      }
+    }
+  }
+}

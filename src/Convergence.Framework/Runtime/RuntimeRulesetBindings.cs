@@ -14,6 +14,9 @@ public static class StandardRulesetPolicyIds
     public static ContentId StandardReward { get; } = ContentId.Parse("standard_reward");
     public static ContentId StandardGrowth { get; } = ContentId.Parse("standard_growth");
     public static ContentId StandardStat { get; } = ContentId.Parse("standard_stat");
+    public static ContentId PersistentStagedStatModifier { get; } = ContentId.Parse("persistent_staged");
+    public static ContentId TimedExclusiveStatModifier { get; } = ContentId.Parse("timed_exclusive");
+    public static ContentId TimedContributionStatModifier { get; } = ContentId.Parse("timed_contribution");
     public static ContentId StandardActionToken { get; } = ContentId.Parse("standard_action_token");
     public static ContentId StandardRosterCapacity { get; } = ContentId.Parse("standard_roster_capacity");
     public static ContentId StandardEconomy { get; } = ContentId.Parse("standard_economy");
@@ -111,6 +114,10 @@ public interface IRuntimeRulesetBindingResolver
         GameDataCatalog catalog,
         ContentId rulesetId);
 
+    RulesetBindingResult<IStatModifierPolicyService> BindStatModifierPolicy(
+        GameDataCatalog catalog,
+        ContentId rulesetId);
+
     RulesetBindingResult<GrowthRulesetServices> BindGrowthServices(
         GameDataCatalog catalog,
         ContentId rulesetId);
@@ -176,6 +183,16 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
             rulesetId,
             RulesetCategory.Stat,
             _factories.FindStat,
+            static (factory, definition) => factory.Create(definition));
+
+    public RulesetBindingResult<IStatModifierPolicyService> BindStatModifierPolicy(
+        GameDataCatalog catalog,
+        ContentId rulesetId) =>
+        Bind<IRuntimeStatModifierRulesetPolicyFactory, IStatModifierPolicyService>(
+            catalog,
+            rulesetId,
+            RulesetCategory.StatModifier,
+            _factories.FindStatModifier,
             static (factory, definition) => factory.Create(definition));
 
     public RulesetBindingResult<GrowthRulesetServices> BindGrowthServices(

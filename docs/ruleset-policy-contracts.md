@@ -14,13 +14,14 @@ A custom policy ID has two explicit registrations:
 2. register a factory in the matching typed registry category so runtime
    binding can construct the service.
 
-The seven factory interfaces keep service types separate:
+The eight factory interfaces keep service types separate:
 
 | Ruleset category | Factory interface | Result |
 |---|---|---|
 | `damage` | `IRuntimeDamageRulesetPolicyFactory` | `ProductionCombatRuleset` |
 | `reward` | `IRuntimeRewardRulesetPolicyFactory` | `IBattleRewardService` |
 | `stat` | `IRuntimeStatRulesetPolicyFactory` | `StatRulesetServices` |
+| `stat_modifier` | `IRuntimeStatModifierRulesetPolicyFactory` | `IStatModifierPolicyService` |
 | `growth` | `IRuntimeGrowthRulesetPolicyFactory` | `GrowthRulesetServices` |
 | `roster_capacity` | `IRuntimeRosterCapacityRulesetPolicyFactory` | `IRosterCapacityPolicy` |
 | `economy` | `IRuntimeEconomyRulesetPolicyFactory` | `ResourceManagementRulesetServices` |
@@ -31,12 +32,11 @@ raw actor stats and the `IStatStageScalingPolicy` used to interpret battle
 stages. A custom stat factory must return the pair so neither responsibility is
 silently inherited from the standard policy.
 
-Stat-modifier accumulation and duration are not currently an independently
-bound ruleset category. The approved
-[Stat Modifier Policy Roadmap](roadmap/stat-modifier-policy-roadmap.md) will add
-that separate family after introducing policy-neutral retained state. Until
-then, the existing aggregate stage/duration behavior must not be presented as
-three selectable policies. Stage scaling remains a separate responsibility.
+Stat-modifier accumulation and duration are independently selected from stat
+resolution and numeric stage scaling. The selected modifier service owns
+application, ticking, removal, cleanup, and retained-state compatibility;
+`IStatStageScalingPolicy` owns only the multiplier assigned to the resolved
+stage.
 
 `RuntimeRulesetPolicyFactoryRegistry.CreateStandard()` is an explicit
 convenience composition. A host may instead construct a registry from its own
@@ -173,6 +173,30 @@ public sealed class MyStatFactory : IRuntimeStatRulesetPolicyFactory
 Register `my_stat_policy` in both content registration and the `stat` factory
 collection of `RuntimeRulesetPolicyFactoryRegistry`. The resolver never falls
 back to `standard_stat` when a custom policy is missing or rejected.
+
+## Supplied Stat Modifier Policies
+
+Rulesets in the `stat_modifier` category select one lifecycle policy. The
+runtime policy identity is the qualified ruleset-record ID, so two packs using
+the same supplied factory with different configuration cannot restore each
+other's state accidentally.
+
+| `policyId` | Parameters | Meaning |
+|---|---|---|
+| `persistent_staged` | required integer `minimumStage` and `maximumStage` | Signed stages accumulate to authored bounds and do not expire naturally. |
+| `timed_exclusive` | none | One timed weak or strong signal occupies each track. |
+| `timed_contribution` | required integer `minimumStage` and `maximumStage` | Independently timed signed contributions resolve to an authored bounded aggregate. |
+
+For bounded policies, `minimumStage` must be negative and `maximumStage` must
+be positive. Missing bounds, unknown parameters, unsupported policy IDs, and
+wrong-category records reject the complete binding with typed diagnostics.
+Durations remain authored on effects; a factory never infers policy choice or
+duration from an effect shape, display name, or description.
+
+Training Annex explicitly binds `standard_stat_modifiers`, whose policy is
+`persistent_staged` with bounds `-4..+4`. Hosts that want timed signals or
+timed contributions select another authored ruleset record before creating
+battle execution services.
 
 ## Standard Roster Capacity
 

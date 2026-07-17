@@ -13,7 +13,7 @@ From the repository root:
 ```powershell
 dotnet run --project tools/Convergence.ContentValidator -- \
   --content-root content \
-  --schema-root schemas/content/v3 \
+  --schema-root schemas/content/v4 \
   --registrations config/content-validator/active-samples.registrations.json
 ```
 

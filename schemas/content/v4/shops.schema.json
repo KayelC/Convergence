@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v3:shops",
-  "title": "Convergence Content v3 Shop Catalog Document",
+  "$id": "urn:convergence:schema:content:v4:shops",
+  "title": "Convergence Content v4 Shop Catalog Document",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "shops"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v3:shops" },
-    "schemaVersion": { "const": 3 },
+    "$schema": { "const": "urn:convergence:schema:content:v4:shops" },
+    "schemaVersion": { "const": 4 },
     "shops": {
       "type": "array",
       "items": { "$ref": "#/$defs/shop" }
@@ -19,13 +19,13 @@
       "additionalProperties": false,
       "required": ["id", "displayName", "description", "categoryId", "offers"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
-        "categoryId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
+        "categoryId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
         "availabilityContexts": {
           "type": "array",
-          "items": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" }
+          "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" }
         },
         "offers": {
           "type": "array",
@@ -39,7 +39,7 @@
       "required": ["contentKind", "contentId", "price", "stock"],
       "properties": {
         "contentKind": { "enum": ["item", "equipment"] },
-        "contentId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/contentReference" },
+        "contentId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentReference" },
         "price": { "$ref": "#/$defs/price" },
         "stock": { "$ref": "#/$defs/stock" }
       }
@@ -53,7 +53,7 @@
           "properties": {
             "kind": { "const": "fixed" },
             "basePrice": { "type": "number", "minimum": 0 },
-            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
           }
         },
         {
@@ -62,8 +62,8 @@
           "required": ["kind", "pricingPolicyId"],
           "properties": {
             "kind": { "const": "policy" },
-            "pricingPolicyId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+            "pricingPolicyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
           }
         }
       ]
@@ -76,7 +76,7 @@
           "required": ["kind"],
           "properties": {
             "kind": { "const": "unlimited" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
           }
         },
         {
@@ -86,7 +86,7 @@
           "properties": {
             "kind": { "const": "limited" },
             "quantity": { "type": "integer", "minimum": 1 },
-            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
           }
         },
         {
@@ -95,8 +95,8 @@
           "required": ["kind", "stockPolicyId"],
           "properties": {
             "kind": { "const": "policy" },
-            "stockPolicyId": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/localId" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v3:shared#/$defs/parameters" }
+            "stockPolicyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
           }
         }
       ]

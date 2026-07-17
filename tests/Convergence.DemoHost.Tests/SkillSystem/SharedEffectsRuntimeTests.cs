@@ -24,7 +24,7 @@ public sealed class SharedEffectsRuntimeTests
         string json =
             """
             {
-              "schemaVersion": 3,
+              "schemaVersion": 4,
               "items": [
                 {
                   "id": "medicine", "displayName": "Medicine", "description": "Heal.",
