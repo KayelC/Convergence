@@ -48,6 +48,17 @@ recorded in `PublicAPI.Unshipped.txt` and reviewed.
 - This is a guarded pre-release contract, not a `1.0` stability promise.
 - Content schema and save-contract compatibility are versioned separately.
 
+### Stat Modifier Policy Migration
+
+M1-1 removes `RuntimeActorState.ChangeStatStage` from the public contract. A
+host or custom runtime module now constructs immutable modifier snapshots and
+requests, then calls `IStatModifierPolicyService`. The service validates the
+selected `IStatModifierPolicy`, contains extension faults, and returns typed
+diagnostics, ordered events, and unchanged before/after state on rejection.
+Direct live-actor commit remains Framework-owned and is completed by the M1-5
+integration checkpoint; external callers must not replace it with reflection
+or another mutable stage store.
+
 Save contract v9 removes the roster's duplicated owner level in addition to
 the actor restore profile's former duplicated Active Hosted Entity ID.
 `RuntimeSessionRestoreService` now derives that dependency from

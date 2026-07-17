@@ -3659,7 +3659,6 @@ Convergence.Execution.RuntimeActorState.BaseResourceValues.get -> System.Collect
 Convergence.Execution.RuntimeActorState.BaseStats.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Execution.RuntimeActorState.BreakAffinity(Convergence.Content.DamageElement element, Convergence.Content.DurationDefinition! duration) -> void
 Convergence.Execution.RuntimeActorState.CapabilityIds.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
-Convergence.Execution.RuntimeActorState.ChangeStatStage(Convergence.Content.ContentId id, int delta, Convergence.Content.DurationDefinition? duration) -> int
 Convergence.Execution.RuntimeActorState.Charges.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ChargeKind, Convergence.Execution.BattleChargeState!>!
 Convergence.Execution.RuntimeActorState.ClearEncounterStatuses() -> void
 Convergence.Execution.RuntimeActorState.ClearTransientStatuses() -> void
@@ -9947,3 +9946,143 @@ virtual Convergence.Execution.PartyRosterBattleActionCommand.Equals(Convergence.
 virtual Convergence.Runtime.RuntimeSkillChoiceCommand.EqualityContract.get -> System.Type!
 virtual Convergence.Runtime.RuntimeSkillChoiceCommand.Equals(Convergence.Runtime.RuntimeSkillChoiceCommand? other) -> bool
 virtual Convergence.Runtime.RuntimeSkillChoiceCommand.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Convergence.Runtime.IStatModifierPolicy
+Convergence.Runtime.IStatModifierPolicy.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.IStatModifierPolicy.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.IStatModifierPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IStatModifierPolicy.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.IStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.IStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Runtime.IStatModifierPolicyService
+Convergence.Runtime.IStatModifierPolicyService.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.IStatModifierPolicyService.AssessApplication(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.IStatModifierPolicyService.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.IStatModifierPolicyService.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IStatModifierPolicyService.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.IStatModifierPolicyService.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.IStatModifierPolicyService.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.Duration.get -> Convergence.Content.DurationDefinition?
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.RuntimeStatModifierContributionSnapshot(long sequence, int stageDelta, Convergence.Content.DurationDefinition? duration = null) -> void
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.Sequence.get -> long
+Convergence.Runtime.RuntimeStatModifierContributionSnapshot.StageDelta.get -> int
+Convergence.Runtime.RuntimeStatModifierStateSnapshot
+Convergence.Runtime.RuntimeStatModifierStateSnapshot.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeStatModifierStateSnapshot.RuntimeStatModifierStateSnapshot(Convergence.Content.ContentId policyId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatModifierTrackSnapshot!>? tracks = null) -> void
+Convergence.Runtime.RuntimeStatModifierStateSnapshot.Tracks.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeStatModifierTrackSnapshot!>!
+Convergence.Runtime.RuntimeStatModifierStateSnapshot.TryGetTrack(Convergence.Content.ContentId modifierTrackId, out Convergence.Runtime.RuntimeStatModifierTrackSnapshot? track) -> bool
+Convergence.Runtime.RuntimeStatModifierTrackSnapshot
+Convergence.Runtime.RuntimeStatModifierTrackSnapshot.Contributions.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeStatModifierContributionSnapshot!>!
+Convergence.Runtime.RuntimeStatModifierTrackSnapshot.ModifierTrackId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeStatModifierTrackSnapshot.ResolvedStage.get -> int
+Convergence.Runtime.RuntimeStatModifierTrackSnapshot.RuntimeStatModifierTrackSnapshot(Convergence.Content.ContentId modifierTrackId, int resolvedStage, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeStatModifierContributionSnapshot!>! contributions) -> void
+Convergence.Runtime.StatModifierApplicationRequest
+Convergence.Runtime.StatModifierApplicationRequest.Duration.get -> Convergence.Content.DurationDefinition?
+Convergence.Runtime.StatModifierApplicationRequest.IsActorDeployed.get -> bool
+Convergence.Runtime.StatModifierApplicationRequest.ModifierTrackId.get -> Convergence.Content.ContentId
+Convergence.Runtime.StatModifierApplicationRequest.StageDelta.get -> int
+Convergence.Runtime.StatModifierApplicationRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierApplicationRequest.StatModifierApplicationRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Content.ContentId modifierTrackId, int stageDelta, Convergence.Content.DurationDefinition? duration = null, bool isActorDeployed = true) -> void
+Convergence.Runtime.StatModifierCleanupRequest
+Convergence.Runtime.StatModifierCleanupRequest.Scope.get -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierCleanupRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierCleanupRequest.StatModifierCleanupRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Runtime.StatModifierCleanupScope scope) -> void
+Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierCleanupScope.ActorDeparture = 1 -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierCleanupScope.EncounterEnd = 2 -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierCleanupScope.FieldTransition = 3 -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierCleanupScope.Swap = 0 -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.StatModifierDiagnostic
+Convergence.Runtime.StatModifierDiagnostic.Code.get -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnostic.ContributionSequence.get -> long?
+Convergence.Runtime.StatModifierDiagnostic.Message.get -> string!
+Convergence.Runtime.StatModifierDiagnostic.ModifierTrackId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.StatModifierDiagnostic.StatModifierDiagnostic(Convergence.Runtime.StatModifierDiagnosticCode code, string! message, Convergence.Content.ContentId? modifierTrackId = null, long? contributionSequence = null) -> void
+Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.DuplicateContributionSequence = 5 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.DuplicateModifierTrack = 3 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.IncompatibleState = 15 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidCleanupScope = 10 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidContributionSequence = 4 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidDuration = 7 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidEventId = 8 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidModifierTrackId = 2 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidPolicyId = 0 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidPolicyResult = 14 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidRemovalRequest = 9 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.InvalidStageDelta = 6 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.NumericOverflow = 11 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.PolicyFaulted = 13 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.PolicyMismatch = 1 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierDiagnosticCode.PolicyRejected = 12 -> Convergence.Runtime.StatModifierDiagnosticCode
+Convergence.Runtime.StatModifierEvent
+Convergence.Runtime.StatModifierEvent.ContributionSequence.get -> long?
+Convergence.Runtime.StatModifierEvent.CurrentDuration.get -> Convergence.Content.DurationDefinition?
+Convergence.Runtime.StatModifierEvent.CurrentStage.get -> int
+Convergence.Runtime.StatModifierEvent.Kind.get -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEvent.ModifierTrackId.get -> Convergence.Content.ContentId
+Convergence.Runtime.StatModifierEvent.PreviousDuration.get -> Convergence.Content.DurationDefinition?
+Convergence.Runtime.StatModifierEvent.PreviousStage.get -> int
+Convergence.Runtime.StatModifierEvent.StageDelta.get -> int?
+Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.AggregateStageChanged = 4 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.ContributionAdded = 0 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.ContributionExpired = 3 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.ContributionRemoved = 2 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.ContributionUpdated = 1 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierEventKind.TrackRemoved = 5 -> Convergence.Runtime.StatModifierEventKind
+Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierOperationKind.Application = 0 -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierOperationKind.Cleanup = 3 -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierOperationKind.Removal = 2 -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierOperationKind.Tick = 1 -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierPolicyDecision
+Convergence.Runtime.StatModifierPolicyDecision.Accepted.get -> bool
+Convergence.Runtime.StatModifierPolicyDecision.After.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
+Convergence.Runtime.StatModifierPolicyDecision.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierDiagnostic!>!
+Convergence.Runtime.StatModifierPolicyService
+Convergence.Runtime.StatModifierPolicyService.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.StatModifierPolicyService.AssessApplication(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.StatModifierPolicyService.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.StatModifierPolicyService.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.StatModifierPolicyService.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.StatModifierPolicyService.StatModifierPolicyService(Convergence.Runtime.IStatModifierPolicy! policy) -> void
+Convergence.Runtime.StatModifierPolicyService.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierTransitionResult!
+Convergence.Runtime.StatModifierPolicyService.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalMode.All = 4 -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalMode.Negative = 1 -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalMode.Positive = 0 -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalMode.SelectedContributions = 3 -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalMode.SelectedTracks = 2 -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalRequest
+Convergence.Runtime.StatModifierRemovalRequest.ContributionSequences.get -> System.Collections.Generic.IReadOnlyList<long>!
+Convergence.Runtime.StatModifierRemovalRequest.Mode.get -> Convergence.Runtime.StatModifierRemovalMode
+Convergence.Runtime.StatModifierRemovalRequest.ModifierTrackIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.StatModifierRemovalRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierRemovalRequest.StatModifierRemovalRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Runtime.StatModifierRemovalMode mode, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? modifierTrackIds = null, System.Collections.Generic.IEnumerable<long>? contributionSequences = null) -> void
+Convergence.Runtime.StatModifierTickRequest
+Convergence.Runtime.StatModifierTickRequest.EventId.get -> Convergence.Content.ContentId
+Convergence.Runtime.StatModifierTickRequest.IsActorDeployed.get -> bool
+Convergence.Runtime.StatModifierTickRequest.State.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierTickRequest.StatModifierTickRequest(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state, Convergence.Content.ContentId eventId, bool isActorDeployed) -> void
+Convergence.Runtime.StatModifierTransitionCode
+Convergence.Runtime.StatModifierTransitionCode.Applied = 0 -> Convergence.Runtime.StatModifierTransitionCode
+Convergence.Runtime.StatModifierTransitionCode.Rejected = 2 -> Convergence.Runtime.StatModifierTransitionCode
+Convergence.Runtime.StatModifierTransitionCode.Unchanged = 1 -> Convergence.Runtime.StatModifierTransitionCode
+Convergence.Runtime.StatModifierTransitionResult
+Convergence.Runtime.StatModifierTransitionResult.Accepted.get -> bool
+Convergence.Runtime.StatModifierTransitionResult.After.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierTransitionResult.Before.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot!
+Convergence.Runtime.StatModifierTransitionResult.Code.get -> Convergence.Runtime.StatModifierTransitionCode
+Convergence.Runtime.StatModifierTransitionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierDiagnostic!>!
+Convergence.Runtime.StatModifierTransitionResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierEvent!>!
+Convergence.Runtime.StatModifierTransitionResult.Operation.get -> Convergence.Runtime.StatModifierOperationKind
+Convergence.Runtime.StatModifierTransitionResult.StateChanged.get -> bool
+Convergence.Runtime.StatModifierValidationResult
+Convergence.Runtime.StatModifierValidationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierDiagnostic!>!
+Convergence.Runtime.StatModifierValidationResult.IsValid.get -> bool
+Convergence.Runtime.StatModifierValidationResult.StatModifierValidationResult(System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierDiagnostic!>? diagnostics = null) -> void
+static Convergence.Runtime.StatModifierPolicyDecision.Accept(Convergence.Runtime.RuntimeStatModifierStateSnapshot! after) -> Convergence.Runtime.StatModifierPolicyDecision!
+static Convergence.Runtime.StatModifierPolicyDecision.Reject(Convergence.Runtime.StatModifierDiagnostic! diagnostic, params Convergence.Runtime.StatModifierDiagnostic![]! additionalDiagnostics) -> Convergence.Runtime.StatModifierPolicyDecision!
+static Convergence.Runtime.StatModifierValidationResult.Valid.get -> Convergence.Runtime.StatModifierValidationResult!

@@ -392,7 +392,7 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(removed);
     }
 
-    public int ChangeStatStage(ContentId id, int delta, DurationDefinition? duration)
+    internal int ChangeStatStage(ContentId id, int delta, DurationDefinition? duration)
     {
         int current = _statStages.TryGetValue(id, out BattleStatStageState? state) ? state.Stage : 0;
         int next = BattleStatStageRange.ApplyDelta(current, delta);

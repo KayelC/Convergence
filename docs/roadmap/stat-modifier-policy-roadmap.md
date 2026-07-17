@@ -40,7 +40,7 @@ and reviews are complete.
 | Checkpoint | State | Purpose | Suggested commit |
 |---|---|---|---|
 | M1-0 | `complete` | Confirm the policy-family decision, audit architectural feasibility, create this roadmap, and reopen inaccurate maturity/documentation claims. | `docs: define stat modifier policy family` |
-| M1-1 | `pending` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
+| M1-1 | `complete` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
 | M1-2 | `pending` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
 | M1-3 | `pending` | Confirm reapplication defaults, then implement and test the timed exclusive reference policy. | `runtime: add timed exclusive modifiers` |
 | M1-4 | `pending` | Confirm cap/opposition defaults, then implement and test independently timed contributions. | `runtime: add timed modifier contributions` |
@@ -55,6 +55,19 @@ and reviews are complete.
 Each checkpoint must be independently green. A later checkpoint may revise the
 public shape introduced by M1-1 only when source evidence demonstrates that the
 shared contract cannot support a promised policy safely.
+
+### M1-1 Completion Record
+
+- Added immutable policy state, request, decision, result, diagnostic, and
+  event contracts under `Convergence.Runtime`.
+- Added one Framework service boundary that validates neutral and
+  policy-specific state, contains custom-policy faults, derives ordered events,
+  and preserves the original snapshot on rejection.
+- Removed `RuntimeActorState.ChangeStatStage` from the public API; current
+  internal execution paths remain temporarily in place until M1-5 replaces
+  their storage and commit authority.
+- Added 12 focused contract tests. The checkpoint gate completed with 1,067
+  passing tests, zero failures, and zero skips.
 
 ## M1-1: Shared Policy-Neutral Contracts
 
