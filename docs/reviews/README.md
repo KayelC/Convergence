@@ -16,6 +16,7 @@ or implementation authority.
 - [Actors And Runtime State Collaborative Review](actors-runtime-state-collaborative-review-2026-07-16.md)
 - [Actor Runtime Completion Code Review](actor-runtime-completion-code-review-2026-07-16.md)
 - [Documentation Alignment Review, 17 July 2026](convergence-documentation-alignment-review-2026-07-17.md)
+- [Documentation Post-Correction Review, 17 July 2026](convergence-documentation-post-correction-review-2026-07-17.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
 Current implementation behavior belongs in source and executable tests.
