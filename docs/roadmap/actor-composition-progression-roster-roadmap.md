@@ -5,6 +5,13 @@
 **Completed implementation authority. D1-D6 are approved, implemented, and
 verified across Checkpoints 0-8.**
 
+**Current state:** runtime save contract v9 is authoritative; the Framework
+Capability Matrix records 23 complete, 0 partial, and 2 intentionally deferred
+capabilities. Save v8 and the temporary 20-complete/3-partial state below are
+preserved only as labelled checkpoint history. Sections written in proposal or
+future tense describe the implementation plan that produced the current code,
+not unfinished work.
+
 This roadmap converts the confirmed actor-design direction into isolated,
 reviewable implementation checkpoints. It covers:
 
@@ -31,8 +38,9 @@ rules to Framework.
 | 4. Authority and affiliation | complete | `979946d` |
 | 5. Vessel combat profiles | complete | `58a72ae` |
 | 6. Runtime skill unlocks | complete | `725c902` |
-| 7. Save v8 and restoration | complete | `35661bb` |
-| 8. Documentation and review | complete | `docs: document actor composition and progression` |
+| 7. Save v8 foundation and restoration | complete | `35661bb` |
+| 7a. Save v9 owner-derived capacity correction | complete | `864beec` |
+| 8. Documentation and review | complete | `7aefd87` |
 
 ## Why This Work Exists
 
@@ -148,7 +156,7 @@ flowchart LR
     Compose["Combat Composition Service"]
     Profile["Effective Vessel Combat Profile<br/>stats, defenses, skills, passives"]
     Encounter["Encounter Presence And Battle"]
-    Save["Save v8 Aggregate"]
+    Save["Save v9 Aggregate"]
 
     Entity --> Owned
     Owned --> Roster
@@ -540,6 +548,10 @@ Tests:
 
 **Commit:** `runtime: restore canonical actor ownership and composition`
 
+> **Historical checkpoint specification:** this section records the save-v8
+> implementation delivered by Checkpoint 7. Save v9 is current; its
+> owner-derived roster-capacity correction is recorded after Checkpoint 8.
+
 Contract changes:
 
 - bump `RuntimeSaveGameSnapshot.CurrentContractVersion` from `7` to `8`;
@@ -581,6 +593,9 @@ unless a host supplies an explicit migration step. Verification passed with
 1,014 tests (843 Framework, 164 DemoHost, 7 ContentValidator), zero skipped
 tests, zero build warnings, all DemoHost modes, scripted Training Annex exit,
 content validation, and the Godot 4.7.1 headless smoke reporting contract v8.
+
+> **Historical result:** the preceding paragraph was accurate at Checkpoint 7.
+> It is not a statement of the current save version.
 
 ### Checkpoint 8: Documentation, Samples, And Completion Review
 
@@ -633,6 +648,9 @@ verification, all DemoHost modes, scripted Training Annex exit, validation of
 6 packs/36 documents/94 definitions, and the Godot 4.7.1 headless smoke
 reporting save contract v8.
 
+> **Historical result:** this checkpoint completed against save v8 before the
+> post-completion corrections advanced the contract to v9.
+
 Remaining product choices are not defects in this roadmap:
 
 - migrations between future released save contracts remain deferred;
@@ -641,13 +659,14 @@ Remaining product choices are not defects in this roadmap:
 - documentation for unrelated capabilities remains unreviewed until each
   subsystem completes the collaborative workflow.
 
-**Post-completion review:** the source-based review of revision `7aefd87`
+**Historical intermediate review state (superseded):** the source-based review
+of revision `7aefd87`
 confirmed the D1-D6 direction but found reachable integration gaps in roster
 owner-level authority, live transition validation, high-level move-list
 capacity, stale prepared growth, direct pending-skill restore validation, and
 the Godot sample's aggregate-restore boundary.
-The executable capability matrix therefore records 20 complete, 3 partial, and
-2 deferred capabilities until those follow-ups are corrected. See the
+The executable capability matrix temporarily recorded 20 complete, 3 partial,
+and 2 deferred capabilities until those follow-ups were corrected. See the
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md).
 
 **M1 correction:** save contract v9 removes `OwnerLevel` from the canonical
