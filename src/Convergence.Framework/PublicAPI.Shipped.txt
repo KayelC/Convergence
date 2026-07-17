@@ -3450,8 +3450,7 @@ Convergence.Execution.ItemActionReservationTransitionResult.Message.init -> void
 Convergence.Execution.ItemBattleActionCommand
 Convergence.Execution.ItemBattleActionCommand.Equals(Convergence.Execution.ItemBattleActionCommand? other) -> bool
 Convergence.Execution.ItemBattleActionCommand.Item.get -> Convergence.Content.ItemDefinition!
-Convergence.Execution.ItemBattleActionCommand.ItemBattleActionCommand(Convergence.Content.ItemDefinition! item, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>? selectedTargetIds = null, int quantity = 1) -> void
-Convergence.Execution.ItemBattleActionCommand.Quantity.get -> int
+Convergence.Execution.ItemBattleActionCommand.ItemBattleActionCommand(Convergence.Content.ItemDefinition! item, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>? selectedTargetIds = null) -> void
 Convergence.Execution.ItemBattleActionCommand.SelectedTargetIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Execution.ItemConsumptionDecision
 Convergence.Execution.ItemConsumptionDecision.ConsumeOne = 1 -> Convergence.Execution.ItemConsumptionDecision

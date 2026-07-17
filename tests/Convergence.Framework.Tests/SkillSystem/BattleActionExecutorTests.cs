@@ -364,6 +364,28 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task ItemAction_AlwaysReservesAndCommitsExactlyOneItem()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        var inventory = new TestItemInventory(medicine.Id, quantity: 2);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(medicine, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(ItemConsumptionDecision.ConsumeOne, result.ItemConsumption);
+        Assert.True(result.ItemConsumptionCommitted);
+        Assert.Equal(1, inventory.LastReservedQuantity);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(40, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task ItemAction_DoesNotReserveWhenAssessmentRejects()
     {
         BattleActionExecutor executor = Executor();
@@ -779,6 +801,7 @@ public sealed class BattleActionExecutorTests
     {
         public int Quantity { get; private set; } = quantity;
         public int ReservationsCreated { get; private set; }
+        public int? LastReservedQuantity { get; private set; }
 
         public bool HasAvailable(ContentId requestedItemId, int requestedQuantity) =>
             requestedItemId == itemId && Quantity >= requestedQuantity;
@@ -791,6 +814,7 @@ public sealed class BattleActionExecutorTests
             }
 
             ReservationsCreated++;
+            LastReservedQuantity = requestedQuantity;
             return new Reservation(this, requestedItemId, requestedQuantity);
         }
 

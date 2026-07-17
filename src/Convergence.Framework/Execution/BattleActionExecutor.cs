@@ -140,22 +140,15 @@ public sealed record SkillBattleActionCommand : BattleActionCommand
 
 public sealed record ItemBattleActionCommand : BattleActionCommand
 {
-    public ItemBattleActionCommand(ItemDefinition item, IEnumerable<RuntimeInstanceId>? selectedTargetIds = null, int quantity = 1)
+    public ItemBattleActionCommand(ItemDefinition item, IEnumerable<RuntimeInstanceId>? selectedTargetIds = null)
         : base(BattleActionKind.Item)
     {
-        if (quantity <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(quantity), "Item quantity must be positive.");
-        }
-
         Item = item ?? throw new ArgumentNullException(nameof(item));
         SelectedTargetIds = Array.AsReadOnly(selectedTargetIds?.ToArray() ?? []);
-        Quantity = quantity;
     }
 
     public ItemDefinition Item { get; }
     public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
-    public int Quantity { get; }
 }
 
 public sealed record GuardBattleActionCommand() : BattleActionCommand(BattleActionKind.Guard);
@@ -432,6 +425,8 @@ public interface IBattleActionExecutor
 /// <summary>Assesses and atomically executes typed battle commands through shared effect services.</summary>
 public sealed class BattleActionExecutor : IBattleActionExecutor
 {
+    private const int ItemUseQuantity = 1;
+
     private readonly ISkillExecutor _skills;
     private readonly IItemExecutor _items;
     private readonly BattleExecutionServices _services;
@@ -642,7 +637,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             command.SelectedTargetIds));
         List<BattleActionDiagnostic> diagnostics = item.Diagnostics.Select(ToActionDiagnostic).ToList();
         if (request.ItemInventory is not null &&
-            !request.ItemInventory.HasAvailable(command.Item.Id, command.Quantity))
+            !request.ItemInventory.HasAvailable(command.Item.Id, ItemUseQuantity))
         {
             diagnostics.Add(new BattleActionDiagnostic(
                 BattleActionDiagnosticCode.ItemUnavailable,
@@ -824,7 +819,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    reservation = request.ItemInventory.Reserve(command.Item.Id, command.Quantity);
+                    reservation = request.ItemInventory.Reserve(command.Item.Id, ItemUseQuantity);
                 }
                 catch (Exception exception)
                 {
