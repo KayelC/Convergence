@@ -8,18 +8,15 @@
 
 ## Verdict
 
-The typed action and effect core is structurally healthy, host-neutral, and
-well-tested, but Documentation Order 1 is not complete. One confirmed item
-quantity defect and one incomplete reservation boundary require implementation.
-The project owner has now confirmed the inventory-port and actor-action
-authorization rules that resolve the two design questions raised by this
-review. Those decisions remain pending implementation before the capability can
-be promoted to reviewed documentation.
+The typed action and effect core is structurally healthy and host-neutral. The
+four approved corrections identified by this review are now implemented in
+separate commits: one-use item commands, reservation validation, mandatory
+inventory authority, and Framework-owned skill/basic-attack authorization.
 
-The current mechanics page also contains semantic inaccuracies. The missing
-developer guide and shallow technical overview remain correctly recorded by the
-documentation coverage matrix. This report is review evidence, not mechanics or
-design authority.
+The mechanics page has been corrected and dedicated developer and technical
+guides now exist. The implementation and new documents remain pending the
+consolidated post-correction review and owner documentation confirmation. This
+report is review evidence, not mechanics or design authority.
 
 ## Review Method
 
@@ -59,7 +56,7 @@ traced:
 
 ### O1-M1: Item quantity and consumption disagree
 
-**Status:** `open`
+**Status:** `implemented_pending_review`
 
 **Invariant:** one item action that reports `ConsumeOne` must consume exactly one
 inventory quantity.
@@ -76,6 +73,10 @@ replace the consumption contract with an explicitly reviewed multi-use model.
 The current mechanic and result vocabulary support the first option. Add a
 regression test proving exactly one unit is reserved and committed.
 
+**Implemented:** `ItemBattleActionCommand` no longer exposes quantity;
+`BattleActionExecutor` reserves the fixed quantity one; focused coverage proves
+that an inventory count of two becomes one after one successful action.
+
 **Evidence:**
 
 - `src/Convergence.Framework/Execution/BattleActionExecutor.cs`, item command
@@ -86,7 +87,7 @@ regression test proving exactly one unit is reserved and committed.
 
 ### O1-M2: The reservation returned by a host is not validated
 
-**Status:** `open`
+**Status:** `implemented_pending_review`
 
 **Invariant:** the reservation committed for an item action must be a live,
 uncompleted reservation for the requested item and requested quantity.
@@ -106,9 +107,13 @@ do not publish actor mutation when the contract is violated. Add wrong-item,
 wrong-quantity, already-committed, already-rolled-back, and null-return boundary
 tests.
 
+**Implemented:** the facade validates reservation identity, quantity, and
+lifecycle state before item effects. Invalid live reservations receive a
+rollback attempt. The five specified boundary cases have focused coverage.
+
 ### O1-D1: Inventory-backed action execution requires a port
 
-**Status:** `approved_pending_implementation`
+**Status:** `implemented_pending_review`
 
 `BattleActionExecutionRequest.ItemInventory` is nullable. With no inventory port,
 an item action can commit actor effects and return `ConsumeOne` with
@@ -120,9 +125,12 @@ for item commands and rejects before mutation when it is absent. `ItemExecutor`
 remains a lower-level typed-effect service, not a complete inventory transaction.
 The canonical facade reserves and conditionally commits exactly one item.
 
+**Implemented:** missing inventory now returns `ItemInventoryRequired` during
+assessment and cannot reach actor mutation.
+
 ### O1-D2: Framework owns actor action authorization
 
-**Status:** `approved_pending_implementation`
+**Status:** `implemented_pending_review`
 
 The direct action facade accepts a supplied `SkillDefinition` or basic-attack
 profile. It does not prove that the actor has the skill equipped or that the
@@ -140,9 +148,14 @@ authority.
 The confirmed authority is recorded in
 [Battle Action Ownership And Inventory Authority](../decisions/battle-action-ownership-and-inventory-authority.md).
 
-## Documentation Corrections Required
+**Implemented:** `CatalogBattleActionAuthorizationPolicy` validates equipped
+canonical skill identity and complete resolved basic-attack profiles at both
+assessment and execution. Equipment, natural, or other explicit profile sources
+remain supported through `IBattleBasicAttackProfileSource`.
 
-The current mechanics page must be corrected before promotion:
+## Documentation Corrections Implemented
+
+The corrected mechanics page now records that:
 
 - targeting selections are `None`, `Single`, `All`, and `Random`; there is no
   implemented `Automatic` selection;
@@ -159,11 +172,11 @@ The current mechanics page must be corrected before promotion:
 - host-mediated actions request host work; the Framework does not perform or
   roll back that external work.
 
-Order 1 must also add:
+Order 1 also added:
 
-- a developer guide showing assess, present, execute, cancellation, inventory
+- [a developer guide](../developer-guide/typed-actions-and-effects.md) showing assess, present, execute, cancellation, inventory
   reservation, effect/result consumption, and host-mediated dispatch;
-- a technical reference documenting assessment-token ownership, target
+- [a technical reference](../technical/typed-action-and-effect-execution.md) documenting assessment-token ownership, target
   preparation, stale-state checks, effect ordering, failure policies,
   transaction scope, and trusted-boundary decisions;
 - sequence diagrams for ordinary skill execution and inventory-backed item
@@ -171,15 +184,15 @@ Order 1 must also add:
 
 ## Active Correction Sequence
 
-1. Correct one-use item quantity semantics and add regression coverage.
-2. Validate host reservation identity and lifecycle state.
-3. Implement the confirmed mandatory inventory-port rule.
-4. Implement the confirmed actor action-authorization rule.
-5. Re-review the corrected source and focused tests.
-6. Rewrite the mechanics page.
-7. Add the developer and technical documents with diagrams and examples.
-8. Run documentation, subsystem, full-solution, demo, and boundary gates.
-9. Promote the three documentation audience entries only after owner
+1. [Complete] Correct one-use item quantity semantics and add regression coverage.
+2. [Complete] Validate host reservation identity and lifecycle state.
+3. [Complete] Implement the confirmed mandatory inventory-port rule.
+4. [Complete] Implement the confirmed actor action-authorization rule.
+5. [Pending] Re-review the corrected source and focused tests.
+6. [Complete] Rewrite the mechanics page.
+7. [Complete] Add the developer and technical documents with diagrams and examples.
+8. [Pending] Run documentation, subsystem, full-solution, demo, and boundary gates.
+9. [Pending] Promote the three documentation audience entries only after owner
    confirmation.
 
 ## Verification Evidence

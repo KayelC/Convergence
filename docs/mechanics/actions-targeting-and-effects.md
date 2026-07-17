@@ -1,72 +1,150 @@
 # Actions, Targeting, And Effects
 
-## Action Types
+## What An Action Represents
 
-The clean battle action surface includes basic attack, skill, item, guard, pass, analyze, Hosted Entity swap, Companion deploy, Companion recall, Companion swap, escape attempt, tactics change, negotiation, and host-special actions.
+An action is a typed request made by one runtime actor. The supplied battle
+surface includes basic attacks, skills, items, guard, pass, analyze, escape,
+Hosted Entity selection, Companion deployment/recall/swap, negotiation,
+tactics changes, and explicit host-special actions.
 
-**Framework rule:** every action is assessed before execution. Assessment and execution use the same typed command and resolved targets. A rejected or cancelled assessment causes no cost, inventory consumption, effect mutation, or turn consumption.
+Convergence separates choosing an action from resolving it:
 
-**Confirmed correction pending implementation:** the canonical battle-action
-facade will reject a skill that is not in the actor's authorized equipped action
-loadout and a basic attack that is not the actor's resolved basic-attack profile.
-The resolved profile may come from equipment, a natural attack, or another
-explicit game policy. Hosts choose among authorized actions; they do not grant
-authority by constructing arbitrary definitions.
+1. the host constructs a typed command;
+2. the Framework assesses authority, availability, costs, and targets;
+3. the host may present that assessment to a player or AI;
+4. the Framework executes that exact, single-use assessment.
+
+A rejected assessment consumes no resource, inventory item, actor state, or
+turn. Cancelling before execution has the same no-mutation result.
+
+## Which Actions An Actor May Use
+
+The canonical battle-action facade, `BattleActionExecutor`, owns action
+authorization. A menu, AI adapter, or script cannot make an action legal merely
+by constructing a definition with a matching display name or ID.
+
+- A skill command must use the canonical catalog definition and that skill must
+  be in the actor's equipped runtime skill set.
+- A basic attack must match the actor's resolved action ID, damage profile, and
+  targeting profile.
+- A basic-attack profile may come from equipment, a natural attack, or another
+  explicit game policy. Weapons are not mandatory.
+- Authorization is checked during assessment and again immediately before
+  execution. A skill removed after the menu was shown is therefore rejected.
+- Temporary or scripted exceptions must use an explicit authorization policy
+  or a host-mediated action. They are never inferred from text.
 
 ## Targeting
 
-Authored targeting defines relation, selection style, and optional count. Relations identify allies, opponents, self, or no target. Selection may be explicit, automatic, all, or random according to the definition.
+Authored targeting combines three independent choices:
 
-**Framework rule:** resolved targets are captured once for an execution attempt. Random targets are not rolled again between assessment and mutation. Target order remains deterministic where authored or caller order is meaningful.
+- relation: `None`, `Self`, `Ally`, `Enemy`, or `Any`;
+- selection: `None`, `Single`, `All`, or `Random`;
+- life state: `Alive`, `Dead`, or `Any`.
 
-Random selection has no implicit fallback. A host must explicitly supply both
-the skill-target and shared runtime-effect target policies when composing battle
-execution services. Hosts that deliberately want deterministic first-candidate
-selection may inject the supplied ordered runtime policy; the Framework never
-silently substitutes it for randomness.
+Target count and whether the acting actor may be included are additional typed
+constraints. The host may present legal targets through a Godot scene, cursor,
+menu, AI routine, or script, but it submits runtime IDs rather than deciding
+legality from names.
 
-**Host responsibility:** a UI may use buttons, scene selection, a cursor, keyboard menus, or AI to choose among legal candidates. The host submits runtime IDs; it does not decide legality by reading names.
+Resolved targets are captured once for an execution attempt. A random target
+is not rolled again between assessment and mutation. Random selection also has
+no hidden fallback: composition must provide an explicit random-target policy.
+The supplied ordered policy is available only when a game deliberately wants
+deterministic candidate order.
 
 ## Skill Costs
 
-Active skills may declare resource costs and execution contexts. Passive skills do not use the active action shape.
+Active skills may declare resource costs and valid execution contexts. Passive
+skills use lifecycle triggers rather than the active command shape.
 
-**Framework rule:** costs are assessed before mutation and committed only for an executable action. Cost modifiers are resolved through typed passive rules and relevant damage elements. A failed or cancelled action does not spend the skill cost.
+Costs are calculated during assessment and rechecked before execution. They are
+applied to staged actor state before effects, then published with the rest of
+the action transaction. Assessment rejection, cancellation, stale-state
+rejection, or an exception before commit spends nothing.
 
-## Items And Consumption
+An executable skill still pays its cost when an authored effect reports an
+ordinary failure, stops a target, stops the action, or interrupts after earlier
+effects. Those are resolved execution outcomes, not a cancelled command.
 
-Items may be consumable, key, material, or valuable. Only usable items carry contexts, targeting, and ordered effects. The Framework never owns a game's inventory object.
+## Items And Inventory
 
-Item use follows reservation semantics:
+Items may be consumables or non-usable catalog records. Only a consumable with
+a usage definition can enter the typed item-use pipeline.
 
-1. The host or inventory port reserves one quantity.
-2. Framework executes the typed item effects.
-3. Consumption commits only when at least one applicable effect succeeds meaningfully.
-4. Failure, cancellation, unavailability, or no effect rolls the reservation back.
+One `ItemBattleActionCommand` always means one attempted use of one owned item.
+The canonical battle-action facade requires an inventory port and follows this
+transaction:
 
-**Confirmed correction pending implementation:** an item command represents one
-use of one owned consumable. The canonical battle-action facade will require an
-inventory port, reserve exactly one matching item, validate the returned
-reservation, and reject without actor mutation when that contract is absent or
-invalid. Direct `ItemExecutor` use is a lower-level effect operation, not an
-owned-inventory transaction.
+1. verify that one matching item is available;
+2. reserve exactly one unit;
+3. verify that the reservation is live, unfinished, and identifies that item
+   and quantity;
+4. execute effects against staged actor state;
+5. commit the item only if at least one effect succeeds meaningfully;
+6. otherwise roll back the reservation;
+7. publish actor state only after the required inventory transition succeeds.
 
-Healing a full resource, curing no matching ailment, reviving a living target, setting an unchanged value, or removing an absent status is treated as known no effect. A multi-target item consumes once when at least one target receives a meaningful result.
+Using a healing item at full health, curing no matching ailment, reviving a
+living target, setting an unchanged value, or removing an absent status is a
+known no-effect result. A multi-target item is consumed once if at least one
+target receives a meaningful result.
+
+`ItemExecutor` is also public as a lower-level typed-effect service. It does not
+own inventory and must not be treated as the complete owned-item transaction.
 
 ## Typed Effects
 
-Supported effects include damage, instant death, resource restoration or reduction, resource assignment, ailment application/removal, status removal, revival, stat-stage changes, shields, Break, charge, escape, analysis, affinity override, skill grants, custom handlers, and host action requests.
+The implemented effect vocabulary is:
 
-**Framework rule:** effects execute in authored order. Results carry the effect index, target runtime ID, outcome, value, related typed ID, affinity/critical information where applicable, passive activations, and host action requests.
+- damage and instant death;
+- ailment application and removal;
+- resource restoration, reduction, and assignment;
+- revival;
+- stat-stage modification;
+- charge and shield grants;
+- affinity Break and affinity override;
+- status removal;
+- analysis and escape requests;
+- explicitly registered custom effects.
 
-Custom effects and host actions are explicit registered IDs. Framework never infers behavior from an action name, item description, category label, or effect text.
+Effects execute in authored order. Each effect may have a typed condition and
+an authored failure policy: continue, stop processing that target, or stop the
+action. Results retain the effect index, target runtime ID, outcome, resolved
+value, related IDs, combat details, passive activations, and any host-action
+request IDs.
 
-## Conditions
+Convergence does not currently provide a skill-grant effect. Skill acquisition
+and move-list changes belong to the progression services.
 
-Conditions are typed definitions evaluated against the execution environment. They can inspect resources, states, elements, affinities, contexts, battle metadata, and logical compositions.
+## Conditions And Extension Handlers
 
-Battle-only conditions evaluate false when field execution does not provide battle metadata. Composite `all` and `any` conditions use their authored children. Custom conditions require an explicitly registered handler.
+Conditions are typed records evaluated against actor state, targets, resources,
+elements, affinities, contexts, and battle metadata. Logical `all`, `any`, and
+`not` definitions compose them. A battle-only condition evaluates false when a
+field action does not supply the required battle metadata.
 
-## Atomicity
+Formula, custom-condition, custom-effect, and escape handlers are available
+only through explicit registered IDs. No rule examines an action name,
+description, category label, or free-form effect text.
 
-Effect execution uses transaction boundaries. If an execution path is rejected or interrupted before commitment, live state is restored. Custom-handler failures cannot leave earlier changes partially applied. Ordered effect results remain available for presentation even when the host renders them later.
+Host-mediated commands and host-action requests deliberately stop at the
+Framework boundary. Convergence reports what the host must do; it does not
+perform or roll back the external operation.
+
+## Mutation And Failure Boundaries
+
+Skills, items, basic attacks, and shared typed effects run against cloned actor
+state. The clones are copied back only after the execution path reaches its
+commit boundary. An exception before that point leaves live actor state
+unchanged.
+
+An authored interruption or failure policy is not automatically a rollback.
+It may preserve costs and successful effects that occurred earlier in the same
+resolved action. This is intentional ordered-effect behavior.
+
+Inventory atomicity depends on the host honoring the reservation contract:
+`Reserve`, `Commit`, and `Rollback` must each be atomic and report rejection
+without partial mutation. Arbitrary side effects performed by a custom or host
+callback are outside the actor transaction and cannot be undone by the
+Framework.

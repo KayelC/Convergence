@@ -21,13 +21,13 @@ Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
 The documentation matrix currently records 75 audience entries: 11 reviewed,
-37 existing_unreviewed, 20 missing, and 7 not_applicable.
+38 existing_unreviewed, 19 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
 | `reviewed` | 11 |
-| `existing_unreviewed` | 37 |
-| `missing` | 20 |
+| `existing_unreviewed` | 38 |
+| `missing` | 19 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

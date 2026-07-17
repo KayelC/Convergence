@@ -33,11 +33,13 @@ skill or cancelling the level.
 
 Typed commands cover basic attacks, skills, items, guard, pass, analyze, escape, Hosted Entity swaps, Companion deployment/recall, and host-mediated actions. Skills and items share targeting, condition evaluation, ordered effects, diagnostics, and transaction-safe inventory decisions. Behavior comes from typed definitions, not display text.
 
-The owner-approved Order 1 correction is still pending implementation: the
-canonical battle-action facade must require an exactly-one inventory
-reservation for item commands and must validate skills and resolved basic
-attacks against the actor's authorized action surface. Until those boundaries
-are implemented and re-reviewed, this capability remains `partial`.
+The canonical battle-action facade now requires an inventory reservation for
+one item use, validates the returned reservation before effect execution, and
+publishes staged actor changes only after the required inventory transition
+succeeds. It also authorizes equipped canonical skills and resolved
+basic-attack profiles during assessment and immediately before execution.
+Lower-level `SkillExecutor` and `ItemExecutor` services remain available for
+callers that deliberately own the omitted loadout or inventory boundary.
 
 ## Combat And Turn Economy
 

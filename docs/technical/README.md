@@ -21,6 +21,9 @@ Technical pages focus on:
   actor authority, roster invariants, Vessel composition, progression
   transactions, move-list decisions, save validation, and dependency-ordered
   restoration.
+- [Typed Action And Effect Execution](typed-action-and-effect-execution.md):
+  action authorization, assessment ownership, prepared targets, skill costs,
+  item reservations, ordered effects, and actor transaction boundaries.
 
 Other subsystem references remain tracked as `existing_unreviewed` or `missing`
 in the [documentation coverage matrix](../reference/documentation-coverage.md).

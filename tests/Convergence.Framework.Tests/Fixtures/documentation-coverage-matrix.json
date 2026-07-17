@@ -121,17 +121,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
-        "reason": "Inventory and actor-action authority are confirmed; implementation corrections and the remaining collaborative mechanics review are still pending."
+        "reason": "The corrected source-verified mechanics page awaits collaborative owner confirmation."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Hosts need an assess, present, execute, cancel, and event-consumption recipe."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/typed-actions-and-effects.md"],
+        "reason": "The integration recipe exists and awaits collaborative owner confirmation."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "The overview does not yet document target preparation and atomic effect execution in depth."
+        "documents": ["docs/technical/typed-action-and-effect-execution.md"],
+        "reason": "The source-based execution reference exists and awaits collaborative owner confirmation."
       }
     },
     {

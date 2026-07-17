@@ -75,8 +75,7 @@
       "hostNeutral": true,
       "optionalModule": false,
       "knownGaps": [
-        "The canonical item-action facade does not yet require and validate an exactly-one inventory reservation.",
-        "The canonical action facade does not yet validate skill and resolved basic-attack authority against the actor loadout."
+        "The implemented Order 1 action-authority and inventory corrections await consolidated source review."
       ]
     },
     {

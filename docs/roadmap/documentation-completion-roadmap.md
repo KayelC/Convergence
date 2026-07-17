@@ -94,8 +94,10 @@ social/fusion systems, authoring infrastructure, and host integration.
 
 The source-based
 [Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
-records the current correction and decision backlog. Order 1 remains active and
-its documentation matrix entries remain unreviewed.
+records the correction and decision history. The four source corrections and
+the three audience documents are implemented. Order 1 remains active while the
+consolidated source review, full quality gate, and owner documentation
+confirmation are pending.
 
 The project owner approved both authority decisions on 17 July 2026. Their
 normative record is
@@ -105,15 +107,15 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O1-M1 | `open` | Make one item action consume exactly one inventory unit. |
-| O1-M2 | `open` | Validate reservation identity, quantity, and lifecycle state. |
-| O1-D1 | `approved_pending_implementation` | Require an inventory port and exactly-one reservation for item commands. |
-| O1-D2 | `approved_pending_implementation` | Make Framework validate skill and resolved basic-attack authority. |
-| O1-DOC | `blocked_by_corrections` | Correct mechanics prose and add developer and technical documents after behavior is confirmed. |
+| O1-M1 | `implemented_pending_review` | One item action reserves and commits exactly one inventory unit. |
+| O1-M2 | `implemented_pending_review` | Reservation identity, quantity, and lifecycle state are validated before effects. |
+| O1-D1 | `implemented_pending_review` | Item commands require an inventory port and an exactly-one reservation. |
+| O1-D2 | `implemented_pending_review` | Framework validates equipped canonical skills and resolved basic attacks. |
+| O1-DOC | `written_pending_owner_confirmation` | Mechanics, developer, and technical pages agree with corrected source and await collaborative confirmation. |
 
-This active record does not promote implementation or documentation state. Code
-corrections receive separate focused commits before the documentation review
-resumes against corrected source.
+Implementation is promoted only after the consolidated source review. Audience
+documentation remains `existing_unreviewed` until the project owner confirms
+that the explanations match the intended mechanic.
 
 ## Deferred Documentation
 

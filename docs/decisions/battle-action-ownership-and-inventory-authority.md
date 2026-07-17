@@ -5,14 +5,11 @@ Date: 2026-07-17
 
 ## Context
 
-The typed battle-action facade currently accepts item commands without an
-inventory port and accepts caller-supplied skill definitions and basic-attack
-profiles without proving that the actor owns them. Those paths make a host UI,
-AI adapter, or script responsible for gameplay authorization that belongs in
-the reusable framework.
-
-The public item command also accepts arbitrary positive quantities even though
-the execution result describes one item use as `ConsumeOne`.
+The Order 1 source review found that the typed battle-action facade accepted
+item commands without inventory authority and accepted caller-supplied skill
+definitions and basic-attack profiles without proving actor authority. The
+public item command also accepted arbitrary positive quantities even though
+the result described one use as `ConsumeOne`.
 
 ## Decision
 
@@ -69,17 +66,17 @@ skills and basic attacks an actor may execute.
 
 ## Consequences
 
-- The current action facade requires a focused breaking correction before Order
-  1 documentation can be promoted.
-- Item commands become one-use commands and no longer expose arbitrary
-  quantities.
-- The action request must expose enough canonical actor-action authority to
-  validate skill definitions and basic-attack profiles without trusting host
-  display choices.
-- Existing clean hosts must build commands from the actor's authorized action
-  surface and supply inventory for item actions.
+- The focused breaking correction is implemented. Item commands are one-use
+  commands and no longer expose arbitrary quantities.
+- `BattleActionExecutor` requires explicit actor-action authority and validates
+  skill definitions and basic-attack profiles without trusting host display
+  choices.
+- Clean hosts build commands from the actor's authorized action surface and
+  supply inventory for item actions.
 - Failed authorization and reservation validation return typed diagnostics and
   consume no item, resource, effect mutation, or turn.
+- Authorization is rechecked at execution so an assessment cannot outlive a
+  changed equipped skill or basic-attack profile.
 
 ## Affected Documentation And Evidence
 
@@ -87,13 +84,11 @@ skills and basic attacks an actor may execute.
 - [Gameplay Systems](../gameplay-systems.md)
 - [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md)
 - [Order 1 Source Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
-- [Developer Guide Index](../developer-guide/README.md), pending the Order 1
-  integration guide
-- [Technical Documentation Index](../technical/README.md), pending the Order 1
-  execution reference
+- [Typed Actions And Effects](../developer-guide/typed-actions-and-effects.md)
+- [Typed Action And Effect Execution](../technical/typed-action-and-effect-execution.md)
 
-Implementation evidence must include focused tests for missing inventory,
+Implementation evidence includes focused tests for missing inventory,
 exactly-one consumption, malformed reservations, unowned skills, definition
 substitution, valid natural/equipment basic attacks, and host-mediated
-exceptions.
-
+exceptions. The corrections were committed separately as `14c7630`, `dd243fc`,
+`743396a`, and `49d04ea`.

@@ -25,10 +25,10 @@ corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full
 deterministic replay.
 
-Typed action and effect execution is temporarily partial after the Order 1
-source review confirmed two reachable authority gaps. The approved correction
-requires exactly-one inventory reservations for item actions and Framework-owned
-validation of actor skill and basic-attack authority.
+Typed action and effect execution remains temporarily partial while its Order 1
+post-correction review is completed. Exactly-one item reservations, reservation
+validation, mandatory inventory authority, and Framework-owned skill/basic
+attack authorization are implemented with focused tests.
 
 ## Authority
 

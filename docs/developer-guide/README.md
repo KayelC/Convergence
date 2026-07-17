@@ -20,6 +20,9 @@ Developer guides focus on:
 - [Actors And Runtime State](actors-and-runtime-state.md): actor creation,
   canonical party and roster ownership, Vessel composition, growth, pending
   skill choices, and aggregate restoration.
+- [Typed Actions And Effects](typed-actions-and-effects.md): canonical action
+  composition, authorization, assess/present/execute flow, item reservations,
+  cancellation, results, and host-mediated work.
 
 Other subsystem guides remain tracked as `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
