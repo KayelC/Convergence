@@ -381,7 +381,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             new CatalogEncounterStartPlanner(catalog),
             actorFactory);
         var fieldActions = new TrainingAnnexFieldActionAdapter(
-            executionServices);
+            executionServices,
+            catalog);
         var fieldPresenter = new TrainingAnnexFieldPresenter(_eventSink);
         var rewardApplicator = new TrainingAnnexBattleRewardApplicator(_eventSink, _randomSource);
         IInventoryTransitionService inventoryTransitions = resourceManagement.Inventory;

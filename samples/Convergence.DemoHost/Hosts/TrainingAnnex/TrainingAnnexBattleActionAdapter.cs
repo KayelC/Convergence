@@ -449,12 +449,27 @@ internal sealed class TrainingAnnexBattleActionAdapter
         var lifecyclePort = new TrainingAnnexBattleLifecyclePort(_statusLifecycle, _services, lifecycle);
         var skillExecutor = new SkillExecutor(_services);
         var enemySelector = new DeterministicBattleActionSelector(skillExecutor);
+        var basicAttackTargeting = new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.Single,
+            TargetLifeState.Alive,
+            AllowSelf: false);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            _catalog,
+            new EquipmentBattleBasicAttackProfileSource(
+                _catalog,
+                basicAttackTargeting,
+                _equipmentProfileResolver));
 
         var turnHandler = new TrainingAnnexManualBattleTurnHandler(
             _catalog,
             _events,
             _commands,
-            new BattleActionExecutor(skillExecutor, new ItemExecutor(_services), _services),
+            new BattleActionExecutor(
+                skillExecutor,
+                new ItemExecutor(_services),
+                _services,
+                authorization),
             enemySelector,
             _equipmentProfileResolver,
             playerBattleKnowledge,

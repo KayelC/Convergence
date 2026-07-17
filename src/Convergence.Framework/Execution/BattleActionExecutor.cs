@@ -53,7 +53,8 @@ public enum BattleActionDiagnosticCode
     ItemCommitFailed,
     ItemRollbackFailed,
     ItemReservationInvalid,
-    ItemInventoryRequired
+    ItemInventoryRequired,
+    ActionNotAuthorized
 }
 
 public enum BattleActionEventKind
@@ -432,6 +433,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     private readonly ISkillExecutor _skills;
     private readonly IItemExecutor _items;
     private readonly BattleExecutionServices _services;
+    private readonly IBattleActionAuthorizationPolicy _authorization;
     private readonly IPartyRosterTransitionService _partyRoster;
     private readonly OrderedEffectExecutor _orderedEffects;
     private readonly object _assessmentAuthority = new();
@@ -440,11 +442,13 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         ISkillExecutor skills,
         IItemExecutor items,
         BattleExecutionServices services,
+        IBattleActionAuthorizationPolicy authorization,
         IPartyRosterTransitionService? partyRoster = null)
     {
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
         _partyRoster = partyRoster ?? new PartyRosterTransitionService();
         _orderedEffects = new OrderedEffectExecutor(_services, _services.EffectExecutors);
     }
@@ -454,6 +458,14 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         ArgumentNullException.ThrowIfNull(request);
         try
         {
+            BattleActionAuthorizationResult authorization = _authorization.Authorize(
+                request.Actor,
+                request.Command);
+            if (!authorization.IsAuthorized)
+            {
+                return UnauthorizedAssessment(request, authorization);
+            }
+
             return request.Command switch
             {
                 SkillBattleActionCommand skill => AssessSkill(request, skill),
@@ -573,6 +585,27 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        BattleActionAuthorizationResult authorization;
+        try
+        {
+            authorization = _authorization.Authorize(request.Actor, request.Command);
+        }
+        catch (Exception exception)
+        {
+            return new ValueTask<BattleActionExecutionResult>(Rejected(
+                request.Command.Kind,
+                [new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.ExecutionFailed,
+                    $"Action authorization failed during execution: {exception.Message}")]));
+        }
+
+        if (!authorization.IsAuthorized)
+        {
+            return new ValueTask<BattleActionExecutionResult>(Rejected(
+                request.Command.Kind,
+                AuthorizationDiagnostics(authorization)));
+        }
+
         return new ValueTask<BattleActionExecutionResult>(request.Command switch
         {
             SkillBattleActionCommand skill => ExecuteSkill(request, skill, assessment),
@@ -1179,6 +1212,21 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             skillAssessment,
             itemAssessment,
             partyRosterTransition);
+
+    private BattleActionAssessment UnauthorizedAssessment(
+        BattleActionExecutionRequest request,
+        BattleActionAuthorizationResult authorization) =>
+        CreateAssessment(
+            request,
+            request.Command.Kind,
+            AuthorizationDiagnostics(authorization),
+            turnConsumption: ActionTurnConsumption.None);
+
+    private static IEnumerable<BattleActionDiagnostic> AuthorizationDiagnostics(
+        BattleActionAuthorizationResult authorization) =>
+        authorization.Diagnostics.Select(diagnostic => new BattleActionDiagnostic(
+            BattleActionDiagnosticCode.ActionNotAuthorized,
+            diagnostic.Message));
 
     private static BattleActionDiagnostic ToActionDiagnostic(SkillExecutionDiagnostic diagnostic) =>
         new(

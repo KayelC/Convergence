@@ -145,7 +145,10 @@ internal sealed class CleanFieldDemoHost
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
-            services);
+            services,
+            new CatalogBattleActionAuthorizationPolicy(
+                catalog,
+                NoBattleBasicAttackProfileSource.Instance));
         var inventory = catalog.Items.Keys.ToDictionary(id => id, _ => 1);
         int sequence = 1;
 

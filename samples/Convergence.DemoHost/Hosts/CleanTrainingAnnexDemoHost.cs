@@ -210,7 +210,10 @@ internal sealed class CleanTrainingAnnexDemoHost
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),
-            executionServices);
+            executionServices,
+            new CatalogBattleActionAuthorizationPolicy(
+                catalog,
+                NoBattleBasicAttackProfileSource.Instance));
         Dictionary<ContentId, int> inventory = new() { [Qualified("annex_tonic")] = 1 };
         echo.State.AddResource(Hp, -20);
         decimal damagedHp = echo.State.GetRequiredResource(Hp).Current;

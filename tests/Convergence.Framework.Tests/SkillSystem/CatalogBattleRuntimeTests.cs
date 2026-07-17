@@ -1579,7 +1579,8 @@ public sealed class CatalogBattleRuntimeTests
             new BattleActionExecutor(
                 skillExecutor,
                 new ItemExecutor(services),
-                services),
+                services,
+                AllowAllBattleActionAuthorizationPolicy.Instance),
             source);
 
     private static BattleTurnEconomyRuleset StandardTurnEconomy() =>
@@ -2084,6 +2085,20 @@ public sealed class CatalogBattleRuntimeTests
             LastRequest = request;
             return new ValueTask<AutomatedRestrictedActionSelection>(select(request));
         }
+    }
+
+    private sealed class AllowAllBattleActionAuthorizationPolicy : IBattleActionAuthorizationPolicy
+    {
+        private AllowAllBattleActionAuthorizationPolicy()
+        {
+        }
+
+        public static AllowAllBattleActionAuthorizationPolicy Instance { get; } = new();
+
+        public BattleActionAuthorizationResult Authorize(
+            RuntimeActorState actor,
+            BattleActionCommand command) =>
+            BattleActionAuthorizationResult.Authorized;
     }
 
     private sealed record LifecycleScenario(

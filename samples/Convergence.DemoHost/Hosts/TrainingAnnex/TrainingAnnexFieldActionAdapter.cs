@@ -1,3 +1,4 @@
+using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Runtime;
@@ -24,13 +25,19 @@ internal sealed class TrainingAnnexFieldActionAdapter
 
     private readonly IBattleActionExecutor _actions;
 
-    public TrainingAnnexFieldActionAdapter(BattleExecutionServices services)
+    public TrainingAnnexFieldActionAdapter(
+        BattleExecutionServices services,
+        ISkillDefinitionRepository skills)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(skills);
         _actions = new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
-            services);
+            services,
+            new CatalogBattleActionAuthorizationPolicy(
+                skills,
+                NoBattleBasicAttackProfileSource.Instance));
     }
 
     public ValueTask<TrainingAnnexFieldActionResult> UseItemAsync(

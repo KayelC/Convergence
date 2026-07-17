@@ -81,6 +81,260 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task CatalogAuthorization_AllowsCanonicalEquippedSkill()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        RuntimeActorState actor = Actor("actor", TeamA, skillIds: [skill.Id]);
+        RuntimeActorState target = Actor("target", TeamB);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([skill]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new SkillBattleActionCommand(skill, [target.InstanceId]),
+            actor,
+            [actor, target]));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(90, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsSkillThatIsNotEquipped()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([skill]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new SkillBattleActionCommand(skill, [target.InstanceId]),
+            actor,
+            [actor, target]));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.ActionNotAuthorized, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsSubstitutedSkillDefinitionWithEquippedId()
+    {
+        SkillDefinition canonical = ActiveSkill(
+            "frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        SkillDefinition substituted = ActiveSkill(
+            "frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                999,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        RuntimeActorState actor = Actor("actor", TeamA, skillIds: [canonical.Id]);
+        RuntimeActorState target = Actor("target", TeamB);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([canonical]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionAuthorizationResult direct = authorization.Authorize(
+            actor,
+            new SkillBattleActionCommand(substituted, [target.InstanceId]));
+        BattleActionExecutor executor = Executor(authorization: authorization);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new SkillBattleActionCommand(substituted, [target.InstanceId]),
+            actor,
+            [actor, target]));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.SkillDefinitionSubstituted,
+            Assert.Single(direct.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.ActionNotAuthorized, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RevalidatesEquippedSkillBeforeExecution()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "frost",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        RuntimeActorState actor = Actor("actor", TeamA, skillIds: [skill.Id]);
+        RuntimeActorState target = Actor("target", TeamB);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([skill]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        BattleActionExecutionRequest request = Request(
+            new SkillBattleActionCommand(skill, [target.InstanceId]),
+            actor,
+            [actor, target]);
+        BattleActionAssessment assessment = executor.Assess(request);
+        actor.ApplySkillState(new RuntimeSkillStateSnapshot(), []);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.ActionNotAuthorized, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_AllowsExplicitNaturalBasicAttackProfile()
+    {
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        TargetingDefinition targeting = SingleEnemy();
+        var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new FixedBasicAttackProfileSource(profile));
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new BasicAttackBattleActionCommand(
+                basicAttack,
+                targeting,
+                [target.InstanceId],
+                profile.ActionId),
+            actor,
+            [actor, target]));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(90, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsSubstitutedBasicAttackDefinition()
+    {
+        var canonical = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        TargetingDefinition targeting = SingleEnemy();
+        var profile = new BattleBasicAttackProfile(Id("natural_attack"), canonical, targeting);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new FixedBasicAttackProfileSource(profile));
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var substituted = new EquipmentBasicAttackDefinition(DamageElement.Physical, 999, 100, false);
+        var command = new BasicAttackBattleActionCommand(
+            substituted,
+            targeting,
+            [target.InstanceId],
+            profile.ActionId);
+
+        BattleActionAuthorizationResult direct = authorization.Authorize(actor, command);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            command,
+            actor,
+            [actor, target]));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.BasicAttackDefinitionMismatch,
+            Assert.Single(direct.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsBasicAttackWithoutResolvedProfile()
+    {
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        TargetingDefinition targeting = SingleEnemy();
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new BasicAttackBattleActionCommand(
+                basicAttack,
+                targeting,
+                [target.InstanceId],
+                Id("natural_attack")),
+            actor,
+            [actor, target]));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(BattleActionDiagnosticCode.ActionNotAuthorized, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsBasicAttackTargetingSubstitution()
+    {
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        TargetingDefinition targeting = SingleEnemy();
+        var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new FixedBasicAttackProfileSource(profile));
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState first = Actor("first", TeamB);
+        RuntimeActorState second = Actor("second", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            basicAttack,
+            new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.All,
+                TargetLifeState.Alive,
+                AllowSelf: false),
+            actionId: profile.ActionId);
+
+        BattleActionAuthorizationResult direct = authorization.Authorize(actor, command);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            command,
+            actor,
+            [actor, first, second]));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.BasicAttackTargetingMismatch,
+            Assert.Single(direct.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(100, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, second.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task SkillAction_RejectsStalePreparedCostWithoutMutationOrTurnConsumption()
     {
         BattleActionExecutor executor = Executor();
@@ -642,14 +896,19 @@ public sealed class BattleActionExecutorTests
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
-        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null)
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
+        IBattleActionAuthorizationPolicy? authorization = null)
     {
         BattleExecutionServices services = ExecutionServices(
             escapeRules,
             customEffects,
             randomTargetPolicy,
             runtimeRandomTargetPolicy);
-        return new BattleActionExecutor(new SkillExecutor(services), new ItemExecutor(services), services);
+        return new BattleActionExecutor(
+            new SkillExecutor(services),
+            new ItemExecutor(services),
+            services,
+            authorization ?? AllowAllBattleActionAuthorizationPolicy.Instance);
     }
 
     private static BattleExecutionServices ExecutionServices(
@@ -674,7 +933,8 @@ public sealed class BattleActionExecutorTests
         ContentId team,
         decimal hp = 100,
         decimal sp = 20,
-        CombatDefenseProfile? defense = null) =>
+        CombatDefenseProfile? defense = null,
+        IEnumerable<ContentId>? skillIds = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             Id(id + "_entity"),
@@ -690,7 +950,8 @@ public sealed class BattleActionExecutorTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 10),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Agility, 10),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Luck, 10)
-            ]);
+            ],
+            skillIds: skillIds);
 
     private static SkillDefinition ActiveSkill(
         string id,
@@ -853,6 +1114,41 @@ public sealed class BattleActionExecutorTests
     {
         public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
             throw new InvalidOperationException("Custom item effect failed deliberately.");
+    }
+
+    private sealed class AllowAllBattleActionAuthorizationPolicy : IBattleActionAuthorizationPolicy
+    {
+        private AllowAllBattleActionAuthorizationPolicy()
+        {
+        }
+
+        public static AllowAllBattleActionAuthorizationPolicy Instance { get; } = new();
+
+        public BattleActionAuthorizationResult Authorize(
+            RuntimeActorState actor,
+            BattleActionCommand command) =>
+            BattleActionAuthorizationResult.Authorized;
+    }
+
+    private sealed class TestSkillRepository(IEnumerable<SkillDefinition> skills)
+        : ISkillDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, SkillDefinition> _skills =
+            skills.ToDictionary(skill => skill.Id);
+
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
+            _skills.TryGetValue(id, out definition);
+
+        public SkillDefinition GetRequiredSkill(ContentId id) =>
+            _skills.TryGetValue(id, out SkillDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException($"Skill '{id}' was not found.");
+    }
+
+    private sealed class FixedBasicAttackProfileSource(BattleBasicAttackProfile? profile)
+        : IBattleBasicAttackProfileSource
+    {
+        public BattleBasicAttackProfile? Resolve(RuntimeActorState actor) => profile;
     }
 
     private sealed class TestItemInventory(ContentId itemId, int quantity) : IItemActionInventory

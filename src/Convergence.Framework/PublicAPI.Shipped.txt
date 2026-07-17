@@ -2757,6 +2757,22 @@ Convergence.Execution.BasicAttackBattleActionCommand.BasicAttackBattleActionComm
 Convergence.Execution.BasicAttackBattleActionCommand.Equals(Convergence.Execution.BasicAttackBattleActionCommand? other) -> bool
 Convergence.Execution.BasicAttackBattleActionCommand.SelectedTargetIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Execution.BasicAttackBattleActionCommand.Targeting.get -> Convergence.Content.TargetingDefinition!
+Convergence.Execution.BattleActionAuthorizationDiagnostic
+Convergence.Execution.BattleActionAuthorizationDiagnostic.BattleActionAuthorizationDiagnostic(Convergence.Execution.BattleActionAuthorizationDiagnosticCode code, string! message) -> void
+Convergence.Execution.BattleActionAuthorizationDiagnostic.Code.get -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnostic.Message.get -> string!
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.BasicAttackDefinitionMismatch = 5 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.BasicAttackSourceMismatch = 4 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.BasicAttackTargetingMismatch = 6 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.BasicAttackUnavailable = 3 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.SkillDefinitionMissing = 1 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.SkillDefinitionSubstituted = 2 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationDiagnosticCode.SkillNotEquipped = 0 -> Convergence.Execution.BattleActionAuthorizationDiagnosticCode
+Convergence.Execution.BattleActionAuthorizationResult
+Convergence.Execution.BattleActionAuthorizationResult.BattleActionAuthorizationResult(System.Collections.Generic.IEnumerable<Convergence.Execution.BattleActionAuthorizationDiagnostic!>? diagnostics = null) -> void
+Convergence.Execution.BattleActionAuthorizationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleActionAuthorizationDiagnostic!>!
+Convergence.Execution.BattleActionAuthorizationResult.IsAuthorized.get -> bool
 Convergence.Execution.BattleActionAssessment
 Convergence.Execution.BattleActionAssessment.<Clone>$() -> Convergence.Execution.BattleActionAssessment!
 Convergence.Execution.BattleActionAssessment.CanExecute.get -> bool
@@ -2786,6 +2802,7 @@ Convergence.Execution.BattleActionDiagnostic.Message.init -> void
 Convergence.Execution.BattleActionDiagnostic.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Execution.BattleActionDiagnostic.TargetId.init -> void
 Convergence.Execution.BattleActionDiagnosticCode
+Convergence.Execution.BattleActionDiagnosticCode.ActionNotAuthorized = 15 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.AssessmentInvalid = 8 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.EffectExecutorMissing = 4 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ExecutionFailed = 9 -> Convergence.Execution.BattleActionDiagnosticCode
@@ -2864,7 +2881,7 @@ Convergence.Execution.BattleActionExecutionStatus.Interrupted = 2 -> Convergence
 Convergence.Execution.BattleActionExecutionStatus.Rejected = 1 -> Convergence.Execution.BattleActionExecutionStatus
 Convergence.Execution.BattleActionExecutor
 Convergence.Execution.BattleActionExecutor.Assess(Convergence.Execution.BattleActionExecutionRequest! request) -> Convergence.Execution.BattleActionAssessment!
-Convergence.Execution.BattleActionExecutor.BattleActionExecutor(Convergence.Execution.ISkillExecutor! skills, Convergence.Execution.IItemExecutor! items, Convergence.Execution.BattleExecutionServices! services, Convergence.Runtime.IPartyRosterTransitionService? partyRoster = null) -> void
+Convergence.Execution.BattleActionExecutor.BattleActionExecutor(Convergence.Execution.ISkillExecutor! skills, Convergence.Execution.IItemExecutor! items, Convergence.Execution.BattleExecutionServices! services, Convergence.Execution.IBattleActionAuthorizationPolicy! authorization, Convergence.Runtime.IPartyRosterTransitionService? partyRoster = null) -> void
 Convergence.Execution.BattleActionExecutor.ExecuteAsync(Convergence.Execution.BattleActionExecutionRequest! request, Convergence.Execution.BattleActionAssessment! assessment, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Execution.BattleActionExecutionResult!>
 Convergence.Execution.BattleActionExecutor.ExecuteAsync(Convergence.Execution.BattleActionExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Execution.BattleActionExecutionResult!>
 Convergence.Execution.BattleActionKind
@@ -2882,6 +2899,19 @@ Convergence.Execution.BattleActionKind.Negotiation = 12 -> Convergence.Execution
 Convergence.Execution.BattleActionKind.Pass = 4 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.Skill = 1 -> Convergence.Execution.BattleActionKind
 Convergence.Execution.BattleActionKind.TacticsChange = 11 -> Convergence.Execution.BattleActionKind
+Convergence.Execution.BattleBasicAttackProfile
+Convergence.Execution.BattleBasicAttackProfile.ActionId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleBasicAttackProfile.BasicAttack.get -> Convergence.Content.EquipmentBasicAttackDefinition!
+Convergence.Execution.BattleBasicAttackProfile.BattleBasicAttackProfile(Convergence.Content.ContentId actionId, Convergence.Content.EquipmentBasicAttackDefinition! basicAttack, Convergence.Content.TargetingDefinition! targeting) -> void
+Convergence.Execution.BattleBasicAttackProfile.Targeting.get -> Convergence.Content.TargetingDefinition!
+Convergence.Execution.CatalogBattleActionAuthorizationPolicy
+Convergence.Execution.CatalogBattleActionAuthorizationPolicy.Authorize(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.BattleActionCommand! command) -> Convergence.Execution.BattleActionAuthorizationResult!
+Convergence.Execution.CatalogBattleActionAuthorizationPolicy.CatalogBattleActionAuthorizationPolicy(Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Execution.IBattleBasicAttackProfileSource! basicAttacks) -> void
+Convergence.Execution.EquipmentBattleBasicAttackProfileSource
+Convergence.Execution.EquipmentBattleBasicAttackProfileSource.EquipmentBattleBasicAttackProfileSource(Convergence.Catalog.IEquipmentDefinitionRepository! equipment, Convergence.Content.TargetingDefinition! targeting, Convergence.Runtime.IRuntimeEquipmentProfileResolver? profiles = null) -> void
+Convergence.Execution.EquipmentBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
+Convergence.Execution.NoBattleBasicAttackProfileSource
+Convergence.Execution.NoBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
 Convergence.Execution.BattleAffinityBreakState
 Convergence.Execution.BattleAffinityBreakState.<Clone>$() -> Convergence.Execution.BattleAffinityBreakState!
 Convergence.Execution.BattleAffinityBreakState.BattleAffinityBreakState(Convergence.Content.DurationDefinition! Duration) -> void
@@ -3359,12 +3389,16 @@ Convergence.Execution.HostMediatedBattleActionCommand.TurnConsumption.get -> Con
 Convergence.Execution.HostMediatedBattleActionCommand.TurnConsumption.init -> void
 Convergence.Execution.IAilmentApplicationPolicy
 Convergence.Execution.IAilmentApplicationPolicy.ShouldApply(Convergence.Execution.AilmentApplicationPolicyRequest! request) -> bool
+Convergence.Execution.IBattleActionAuthorizationPolicy
+Convergence.Execution.IBattleActionAuthorizationPolicy.Authorize(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.BattleActionCommand! command) -> Convergence.Execution.BattleActionAuthorizationResult!
 Convergence.Execution.IBattleActionExecutor
 Convergence.Execution.IBattleActionExecutor.Assess(Convergence.Execution.BattleActionExecutionRequest! request) -> Convergence.Execution.BattleActionAssessment!
 Convergence.Execution.IBattleActionExecutor.ExecuteAsync(Convergence.Execution.BattleActionExecutionRequest! request, Convergence.Execution.BattleActionAssessment! assessment, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Execution.BattleActionExecutionResult!>
 Convergence.Execution.IBattleActionExecutor.ExecuteAsync(Convergence.Execution.BattleActionExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Execution.BattleActionExecutionResult!>
 Convergence.Execution.IBattleAilmentApplicationService
 Convergence.Execution.IBattleAilmentApplicationService.Apply(Convergence.Execution.BattleAilmentApplicationRequest! request, Convergence.Execution.BattleExecutionServices! services) -> Convergence.Execution.BattleAilmentApplicationResult!
+Convergence.Execution.IBattleBasicAttackProfileSource
+Convergence.Execution.IBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
 Convergence.Execution.IBattleDurationLifecycleService
 Convergence.Execution.IBattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.IBattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request) -> Convergence.Execution.BattleStatusLifecycleResult!
@@ -9244,6 +9278,8 @@ static Convergence.Execution.BasicAttackBattleActionCommand.operator !=(Converge
 static Convergence.Execution.BasicAttackBattleActionCommand.operator ==(Convergence.Execution.BasicAttackBattleActionCommand? left, Convergence.Execution.BasicAttackBattleActionCommand? right) -> bool
 static Convergence.Execution.BattleActionAssessment.operator !=(Convergence.Execution.BattleActionAssessment? left, Convergence.Execution.BattleActionAssessment? right) -> bool
 static Convergence.Execution.BattleActionAssessment.operator ==(Convergence.Execution.BattleActionAssessment? left, Convergence.Execution.BattleActionAssessment? right) -> bool
+static Convergence.Execution.BattleActionAuthorizationResult.Authorized.get -> Convergence.Execution.BattleActionAuthorizationResult!
+static Convergence.Execution.BattleActionAuthorizationResult.Rejected(Convergence.Execution.BattleActionAuthorizationDiagnosticCode code, string! message) -> Convergence.Execution.BattleActionAuthorizationResult!
 static Convergence.Execution.BattleActionCommand.operator !=(Convergence.Execution.BattleActionCommand? left, Convergence.Execution.BattleActionCommand? right) -> bool
 static Convergence.Execution.BattleActionCommand.operator ==(Convergence.Execution.BattleActionCommand? left, Convergence.Execution.BattleActionCommand? right) -> bool
 static Convergence.Execution.BattleActionDiagnostic.operator !=(Convergence.Execution.BattleActionDiagnostic? left, Convergence.Execution.BattleActionDiagnostic? right) -> bool
@@ -9280,6 +9316,7 @@ static Convergence.Execution.BattlePhaseProgressPolicy.operator !=(Convergence.E
 static Convergence.Execution.BattlePhaseProgressPolicy.operator ==(Convergence.Execution.BattlePhaseProgressPolicy? left, Convergence.Execution.BattlePhaseProgressPolicy? right) -> bool
 static Convergence.Execution.BattleShieldState.operator !=(Convergence.Execution.BattleShieldState? left, Convergence.Execution.BattleShieldState? right) -> bool
 static Convergence.Execution.BattleShieldState.operator ==(Convergence.Execution.BattleShieldState? left, Convergence.Execution.BattleShieldState? right) -> bool
+static Convergence.Execution.NoBattleBasicAttackProfileSource.Instance.get -> Convergence.Execution.NoBattleBasicAttackProfileSource!
 static Convergence.Execution.BattleStatStageRange.ApplyDelta(int current, int delta) -> int
 static Convergence.Execution.BattleStatStageRange.Clamp(int stage) -> int
 static Convergence.Execution.BattleStatStageRange.Contains(int stage) -> bool
