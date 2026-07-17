@@ -8,7 +8,7 @@ are available today:
 - shared immutable policy contracts and `StatModifierPolicyService`: available;
 - `PersistentStagedStatModifierPolicy`: available;
 - `TimedExclusiveStatModifierPolicy`: available;
-- timed-contribution policy: confirmed, under active implementation;
+- `TimedContributionStatModifierPolicy`: available;
 - effect/lifecycle integration: M1-5;
 - authored ruleset selection: M1-6;
 - aggregate save and restore: M1-7.
@@ -89,6 +89,25 @@ Framework rejects before commitment.
 
 Custom timed-exclusive policies may use different coherent rules. They must use
 the shared immutable contracts and cannot add a second live actor mutation path.
+
+## Timed-Contribution Configuration
+
+`TimedContributionStatModifierPolicy` keeps one signed contribution and one
+counted duration per accepted application. The policy derives the visible
+stage by summing those retained contributions and clamping the result to its
+configured bounds.
+
+```csharp
+IStatModifierPolicy policy = new TimedContributionStatModifierPolicy(
+    ContentId.Parse("example_timed_contributions"),
+    minimumStage: -4,
+    maximumStage: 4);
+```
+
+At a same-direction cap, another application refreshes the oldest retained
+contribution of that sign. It does not create hidden stacks. Positive and
+negative contributions coexist, and each matching lifecycle clock ticks only
+the contributions that use that clock.
 
 ## Counted Duration And Clock Selection
 

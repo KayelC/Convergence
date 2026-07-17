@@ -3,8 +3,9 @@
 ## Status And Purpose
 
 This page records the confirmed player-visible design for Convergence stat
-modifiers. The persistent staged and timed-exclusive policies are implemented.
-The timed-contribution policy is a confirmed design being implemented through the
+modifiers. The persistent staged, timed-exclusive, and timed-contribution
+policies are implemented as standalone runtime authorities. Their production
+effect, lifecycle, ruleset, and persistence integration continues through the
 [Stat Modifier Policy Roadmap](../roadmap/stat-modifier-policy-roadmap.md).
 
 Stat modifiers are optional. A game selects one coherent policy for a runtime

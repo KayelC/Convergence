@@ -20,10 +20,10 @@ documentation completed an earlier review, but has returned to
 stat modifiers into three supplied lifecycle policies. It will be reviewed
 again against the implemented family rather than preserved as stale authority.
 The approved persistent, timed-exclusive, and timed-contribution designs now
-have mechanics, developer, and technical records. The timed-exclusive policy
-is now implemented, while those records remain `existing_unreviewed` until the
-timed-contribution policy, integration, persistence, and source review are
-complete. Other subsystem entries remain unreviewed until
+have mechanics, developer, and technical records. All three standalone policy
+implementations are now complete, while those records remain
+`existing_unreviewed` until production integration, persistence, and source
+review are complete. Other subsystem entries remain unreviewed until
 they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).

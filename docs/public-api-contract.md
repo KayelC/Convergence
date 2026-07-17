@@ -66,6 +66,11 @@ are idempotent, and stale ticks reject without mutation. The tick request now
 requires this typed event-and-sequence boundary; the former event-ID-only
 constructor is deliberately removed from the guarded pre-release contract.
 
+M1-4 adds `TimedContributionStatModifierPolicy`. It retains each accepted
+application as an independently timed signed contribution, derives a bounded
+aggregate, refreshes the oldest same-sign contribution at a configured cap,
+and uses the same typed lifecycle-boundary contract per contribution.
+
 Save contract v9 removes the roster's duplicated owner level in addition to
 the actor restore profile's former duplicated Active Hosted Entity ID.
 `RuntimeSessionRestoreService` now derives that dependency from

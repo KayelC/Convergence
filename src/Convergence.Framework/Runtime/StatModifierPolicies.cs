@@ -980,6 +980,62 @@ internal static class StatModifierStateEquality
               left.Sequence == right.Sequence;
 }
 
+internal static class StatModifierPolicyUtilities
+{
+    internal static bool TryAllocateSequence(
+        RuntimeStatModifierStateSnapshot state,
+        out long sequence)
+    {
+        long maximum = state.Tracks
+            .SelectMany(track => track.Contributions)
+            .Select(contribution => contribution.Sequence)
+            .DefaultIfEmpty(0)
+            .Max();
+        if (maximum == long.MaxValue)
+        {
+            sequence = 0;
+            return false;
+        }
+
+        sequence = maximum + 1;
+        return true;
+    }
+
+    internal static StatModifierLifecycleBoundary? ResolveRestartBoundary(
+        TurnDurationDefinition incomingDuration,
+        StatModifierLifecycleBoundary? activeBoundary,
+        RuntimeStatModifierContributionSnapshot? currentContribution)
+    {
+        if (activeBoundary is not null)
+        {
+            return activeBoundary;
+        }
+
+        return currentContribution?.Duration is TurnDurationDefinition currentDuration &&
+               currentDuration.TickEventId == incomingDuration.TickEventId
+            ? currentContribution.LastLifecycleBoundary
+            : null;
+    }
+
+    internal static bool HasStaleActiveBoundary(
+        RuntimeStatModifierStateSnapshot state,
+        StatModifierLifecycleBoundary? activeBoundary) =>
+        activeBoundary is not null &&
+        state.Tracks
+            .SelectMany(track => track.Contributions)
+            .Any(contribution =>
+                contribution.LastLifecycleBoundary is StatModifierLifecycleBoundary last &&
+                last.EventId == activeBoundary.EventId &&
+                activeBoundary.Sequence < last.Sequence);
+
+    internal static bool IsAlreadyObserved(
+        StatModifierLifecycleBoundary? previous,
+        StatModifierLifecycleBoundary current) =>
+        previous is not null &&
+        previous.EventId == current.EventId &&
+        previous.Sequence == current.Sequence;
+}
+
 internal static class StatModifierEventDiff
 {
     internal static StatModifierEvent[] Create(

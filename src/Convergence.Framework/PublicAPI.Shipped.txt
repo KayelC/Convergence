@@ -10116,3 +10116,13 @@ Convergence.Runtime.TimedExclusiveStatModifierPolicy.TimedExclusiveStatModifierP
 Convergence.Runtime.TimedExclusiveStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
 const Convergence.Runtime.TimedExclusiveStatModifierPolicy.MaximumSignal = 2 -> int
 const Convergence.Runtime.TimedExclusiveStatModifierPolicy.MinimumSignal = -2 -> int
+Convergence.Runtime.TimedContributionStatModifierPolicy
+Convergence.Runtime.TimedContributionStatModifierPolicy.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedContributionStatModifierPolicy.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedContributionStatModifierPolicy.MaximumStage.get -> int
+Convergence.Runtime.TimedContributionStatModifierPolicy.MinimumStage.get -> int
+Convergence.Runtime.TimedContributionStatModifierPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.TimedContributionStatModifierPolicy.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedContributionStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.TimedContributionStatModifierPolicy.TimedContributionStatModifierPolicy(Convergence.Content.ContentId policyId, int minimumStage = -4, int maximumStage = 4) -> void
+Convergence.Runtime.TimedContributionStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!

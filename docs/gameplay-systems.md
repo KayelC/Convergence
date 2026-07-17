@@ -49,11 +49,11 @@ Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment re
 
 The lifecycle service handles battle start, turn restrictions, turn end, duration ticking, reserve suspension, cleanup, ailment application, and passive trigger dispatch. Custom-handler execution is transactional. Passive modifiers support deterministic stacking and typed affinity or ailment replacements.
 
-The stat-modifier policy family separately supplies persistent staged and timed
-exclusive signal policies. Timed signals retain an explicit lifecycle-boundary
-cursor for same-boundary protection and idempotent ticking. These policies are
-available as immutable runtime services; battle effect and lifecycle paths move
-to that authority at M1-5.
+The stat-modifier policy family separately supplies persistent staged,
+timed-exclusive signal, and independently timed contribution policies. Timed
+state retains explicit lifecycle-boundary cursors for same-boundary protection
+and idempotent ticking. These policies are available as immutable runtime
+services; battle effect and lifecycle paths move to that authority at M1-5.
 
 ## Encounters, AI, Knowledge, And Rewards
 

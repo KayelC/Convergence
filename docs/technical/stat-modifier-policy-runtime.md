@@ -5,7 +5,7 @@
 This reference defines the confirmed runtime invariants for the stat-modifier
 policy family.
 
-Implemented through M1-3:
+Implemented through M1-4:
 
 - immutable neutral snapshots, requests, decisions, results, diagnostics, and
   events;
@@ -13,11 +13,11 @@ Implemented through M1-3:
 - removal of public direct stage mutation;
 - the persistent staged reference policy;
 - typed lifecycle-boundary cursors and boundary-aware events;
-- the timed-exclusive reference policy.
+- the timed-exclusive reference policy;
+- the independently timed contribution reference policy.
 
 Confirmed but not yet implemented:
 
-- the timed-contribution policy;
 - actor/effect/lifecycle commit integration;
 - authored policy binding;
 - contribution-aware aggregate persistence.

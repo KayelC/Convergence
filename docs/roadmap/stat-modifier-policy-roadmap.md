@@ -43,7 +43,7 @@ and reviews are complete.
 | M1-1 | `complete` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
 | M1-2 | `complete` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
 | M1-3 | `complete` | Implement and test the confirmed five-signal timed-exclusive reference policy and duration-clock boundary state. | `runtime: add timed exclusive modifiers` |
-| M1-4 | `pending` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
+| M1-4 | `complete` | Implement and test the confirmed independently timed contribution policy. | `runtime: add timed modifier contributions` |
 | M1-5 | `pending` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
 | M1-6 | `pending` | Add typed ruleset factory registration and explicit authored selection. Decide and apply the required schema bump without hidden defaults. | `runtime: bind stat modifier policies` |
 | M1-7 | `pending` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
@@ -217,6 +217,27 @@ The regression must assert the complete post-application sequence from the
   oldest contribution expires and the fourth is applied;
 - no shared-timer refresh;
 - `+4` remains reachable when enough contributions are active concurrently.
+
+### M1-4 Completion Record
+
+- Added `TimedContributionStatModifierPolicy` with configurable signed bounds
+  and the reference `-4..+4` defaults.
+- Each accepted application retains one independently timed signed
+  contribution. Opposite signs coexist, expiry removes only the due
+  contribution, and the bounded aggregate is recomputed from retained state.
+- At a same-direction cap, reapplication refreshes the oldest contribution of
+  that sign without adding hidden state. Multi-stage applications remain one
+  contribution with one timer.
+- Lifecycle boundaries are tracked per contribution. Matching clocks tick
+  independently, same-boundary delivery is idempotent, stale delivery rejects
+  atomically, and reserve suspension advances the observation cursor without
+  consuming duration.
+- Added focused coverage for the exact rolling-duration example, both caps,
+  cap refresh, opposite-sign reveal, multi-stage contributions, independent
+  clocks, reserve behavior, removal and cleanup scopes, malformed state,
+  immutable assessment parity, and cross-track lifecycle ordering.
+- Added 22 timed-contribution cases. The checkpoint gate completed with 1,150
+  passing tests, zero failures, zero skips, and zero compiler warnings.
 
 ## M1-5: Canonical Runtime Integration
 

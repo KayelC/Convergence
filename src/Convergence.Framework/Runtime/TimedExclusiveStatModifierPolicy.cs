@@ -84,7 +84,9 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
 
         request.State.TryGetTrack(request.ModifierTrackId, out RuntimeStatModifierTrackSnapshot? currentTrack);
         RuntimeStatModifierContributionSnapshot? currentContribution = currentTrack?.Contributions[0];
-        if (HasStaleActiveBoundary(currentContribution, request.ActiveLifecycleBoundary))
+        if (StatModifierPolicyUtilities.HasStaleActiveBoundary(
+            request.State,
+            request.ActiveLifecycleBoundary))
         {
             return Reject(
                 StatModifierDiagnosticCode.InvalidLifecycleBoundary,
@@ -95,7 +97,7 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
 
         if (currentContribution is null)
         {
-            if (!TryAllocateSequence(request.State, out long sequence))
+            if (!StatModifierPolicyUtilities.TryAllocateSequence(request.State, out long sequence))
             {
                 return Reject(
                     StatModifierDiagnosticCode.NumericOverflow,
@@ -124,7 +126,7 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
                     currentContribution.Sequence);
             }
 
-            StatModifierLifecycleBoundary? incomingBoundary = ResolveIncomingBoundary(
+            StatModifierLifecycleBoundary? incomingBoundary = StatModifierPolicyUtilities.ResolveRestartBoundary(
                 incomingDuration,
                 request.ActiveLifecycleBoundary,
                 currentContribution);
@@ -148,7 +150,10 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
             : incomingDuration;
         StatModifierLifecycleBoundary? survivingBoundary = existingSignalWins
             ? currentContribution.LastLifecycleBoundary
-            : ResolveIncomingBoundary(incomingDuration, request.ActiveLifecycleBoundary, currentContribution);
+            : StatModifierPolicyUtilities.ResolveRestartBoundary(
+                incomingDuration,
+                request.ActiveLifecycleBoundary,
+                currentContribution);
         return AcceptTrack(
             request,
             currentContribution.Sequence,
@@ -188,7 +193,9 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
             RuntimeStatModifierContributionSnapshot contribution = track.Contributions[0];
             var duration = (TurnDurationDefinition)contribution.Duration!;
             if (duration.TickEventId != request.LifecycleBoundary.EventId ||
-                IsAlreadyObserved(contribution.LastLifecycleBoundary, request.LifecycleBoundary))
+                StatModifierPolicyUtilities.IsAlreadyObserved(
+                    contribution.LastLifecycleBoundary,
+                    request.LifecycleBoundary))
             {
                 retained.Add(track);
                 continue;
@@ -286,37 +293,6 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
             state.PolicyId,
             state.Tracks.Where(track => track.ModifierTrackId != modifierTrackId));
 
-    private static StatModifierLifecycleBoundary? ResolveIncomingBoundary(
-        TurnDurationDefinition incomingDuration,
-        StatModifierLifecycleBoundary? activeBoundary,
-        RuntimeStatModifierContributionSnapshot currentContribution)
-    {
-        if (activeBoundary is not null)
-        {
-            return activeBoundary;
-        }
-
-        return currentContribution.Duration is TurnDurationDefinition currentDuration &&
-               currentDuration.TickEventId == incomingDuration.TickEventId
-            ? currentContribution.LastLifecycleBoundary
-            : null;
-    }
-
-    private static bool HasStaleActiveBoundary(
-        RuntimeStatModifierContributionSnapshot? currentContribution,
-        StatModifierLifecycleBoundary? activeBoundary) =>
-        currentContribution?.LastLifecycleBoundary is StatModifierLifecycleBoundary last &&
-        activeBoundary is not null &&
-        last.EventId == activeBoundary.EventId &&
-        activeBoundary.Sequence < last.Sequence;
-
-    private static bool IsAlreadyObserved(
-        StatModifierLifecycleBoundary? previous,
-        StatModifierLifecycleBoundary current) =>
-        previous is not null &&
-        previous.EventId == current.EventId &&
-        previous.Sequence == current.Sequence;
-
     private static bool ShouldRemove(
         RuntimeStatModifierTrackSnapshot track,
         StatModifierRemovalMode mode,
@@ -332,23 +308,6 @@ public sealed class TimedExclusiveStatModifierPolicy : IStatModifierPolicy
             StatModifierRemovalMode.All => true,
             _ => false
         };
-
-    private static bool TryAllocateSequence(RuntimeStatModifierStateSnapshot state, out long sequence)
-    {
-        long maximum = state.Tracks
-            .SelectMany(track => track.Contributions)
-            .Select(contribution => contribution.Sequence)
-            .DefaultIfEmpty(0)
-            .Max();
-        if (maximum == long.MaxValue)
-        {
-            sequence = 0;
-            return false;
-        }
-
-        sequence = maximum + 1;
-        return true;
-    }
 
     private static bool IsSignal(int stage) =>
         stage is >= MinimumSignal and <= MaximumSignal && stage != 0;

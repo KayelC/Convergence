@@ -488,6 +488,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/TimedContributionStatModifierPolicy.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/ResourceManagementServices.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

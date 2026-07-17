@@ -311,6 +311,26 @@ public sealed class TimedExclusiveStatModifierPolicyTests
     }
 
     [Fact]
+    public void Apply_RejectsBoundaryOlderThanAnotherTrackWithoutChangingState()
+    {
+        RuntimeStatModifierStateSnapshot state = State(
+            SignalTrack(1, duration: 3, sequence: 1, boundarySequence: 4, trackId: Attack),
+            SignalTrack(1, duration: 3, sequence: 2, boundarySequence: 5, trackId: Defense));
+
+        StatModifierTransitionResult result = Apply(
+            state,
+            1,
+            duration: 3,
+            activeBoundarySequence: 4);
+
+        Assert.Equal(StatModifierTransitionCode.Rejected, result.Code);
+        Assert.Equal(
+            StatModifierDiagnosticCode.InvalidLifecycleBoundary,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Same(state, result.After);
+    }
+
+    [Fact]
     public void RemoveAndCleanup_SupportEverySharedScope()
     {
         var service = Service();
