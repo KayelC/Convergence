@@ -468,6 +468,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/PersistentStagedStatModifierPolicy.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/StatStageScaling.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

@@ -41,7 +41,7 @@ and reviews are complete.
 |---|---|---|---|
 | M1-0 | `complete` | Confirm the policy-family decision, audit architectural feasibility, create this roadmap, and reopen inaccurate maturity/documentation claims. | `docs: define stat modifier policy family` |
 | M1-1 | `complete` | Introduce policy-neutral immutable contracts, retained contribution state, aggregate projection, diagnostics, events, and atomic Framework service ownership. Remove public direct-mutation authority. | `runtime: establish stat modifier policy contracts` |
-| M1-2 | `pending` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
+| M1-2 | `complete` | Implement and test the persistent staged reference policy. | `runtime: add persistent staged modifiers` |
 | M1-3 | `pending` | Confirm reapplication defaults, then implement and test the timed exclusive reference policy. | `runtime: add timed exclusive modifiers` |
 | M1-4 | `pending` | Confirm cap/opposition defaults, then implement and test independently timed contributions. | `runtime: add timed modifier contributions` |
 | M1-5 | `pending` | Route skill, item, passive, lifecycle, removal, cleanup, events, and meaningful-success decisions through the selected policy. Prove no bypass remains. | `execution: integrate stat modifier authority` |
@@ -122,8 +122,25 @@ The supplied default will:
 - preserve deterministic opposite-direction net movement.
 
 Tests cover every stage, partial clamping, extreme deltas, multi-track effects,
-explicit clearing, actor departure, encounter cleanup, snapshot round-trip, and
-item behavior at both caps.
+explicit clearing, actor departure, encounter cleanup, snapshot reconstruction,
+and unchanged transitions at both caps. Item behavior at both caps remains an
+M1-5/M1-8 integration assertion because M1-2 does not yet route effect or
+inventory execution through the new authority.
+
+### M1-2 Completion Record
+
+- Added `PersistentStagedStatModifierPolicy` with configurable signed bounds
+  and the reference `-4..+4` defaults.
+- Each track retains one stable contribution representing its net stage;
+  opposite applications move that net value deterministically and remove the
+  track when it reaches zero.
+- Authored durations are not retained by this policy, lifecycle ticks are
+  unchanged operations, swaps preserve state, and actor departure, encounter
+  end, and field transition clear it.
+- Added 16 focused cases covering bounds, overflow-safe clamping, stable
+  sequences, removals, cleanup, canonical-state validation, reconstruction,
+  and sequence exhaustion. The checkpoint gate completed with 1,083 passing
+  tests, zero failures, and zero skips.
 
 ## M1-3: Timed Exclusive Policy
 

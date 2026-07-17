@@ -10086,3 +10086,13 @@ Convergence.Runtime.StatModifierValidationResult.StatModifierValidationResult(Sy
 static Convergence.Runtime.StatModifierPolicyDecision.Accept(Convergence.Runtime.RuntimeStatModifierStateSnapshot! after) -> Convergence.Runtime.StatModifierPolicyDecision!
 static Convergence.Runtime.StatModifierPolicyDecision.Reject(Convergence.Runtime.StatModifierDiagnostic! diagnostic, params Convergence.Runtime.StatModifierDiagnostic![]! additionalDiagnostics) -> Convergence.Runtime.StatModifierPolicyDecision!
 static Convergence.Runtime.StatModifierValidationResult.Valid.get -> Convergence.Runtime.StatModifierValidationResult!
+Convergence.Runtime.PersistentStagedStatModifierPolicy
+Convergence.Runtime.PersistentStagedStatModifierPolicy.Apply(Convergence.Runtime.StatModifierApplicationRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.PersistentStagedStatModifierPolicy.Cleanup(Convergence.Runtime.StatModifierCleanupRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.PersistentStagedStatModifierPolicy.MaximumStage.get -> int
+Convergence.Runtime.PersistentStagedStatModifierPolicy.MinimumStage.get -> int
+Convergence.Runtime.PersistentStagedStatModifierPolicy.PersistentStagedStatModifierPolicy(Convergence.Content.ContentId policyId, int minimumStage = -4, int maximumStage = 4) -> void
+Convergence.Runtime.PersistentStagedStatModifierPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.PersistentStagedStatModifierPolicy.Remove(Convergence.Runtime.StatModifierRemovalRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.PersistentStagedStatModifierPolicy.Tick(Convergence.Runtime.StatModifierTickRequest! request) -> Convergence.Runtime.StatModifierPolicyDecision!
+Convergence.Runtime.PersistentStagedStatModifierPolicy.ValidateState(Convergence.Runtime.RuntimeStatModifierStateSnapshot! state) -> Convergence.Runtime.StatModifierValidationResult!
