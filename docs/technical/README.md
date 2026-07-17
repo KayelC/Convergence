@@ -25,8 +25,9 @@ Technical pages focus on:
   action authorization, assessment ownership, prepared targets, skill costs,
   item reservations, ordered effects, and actor transaction boundaries.
 
-Other subsystem references remain tracked as `existing_unreviewed` or `missing`
-in the [documentation coverage matrix](../reference/documentation-coverage.md).
+Both references above have completed collaborative review. Other subsystem
+references remain tracked as `existing_unreviewed` or `missing` in the
+[documentation coverage matrix](../reference/documentation-coverage.md).
 
 New technical pages must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

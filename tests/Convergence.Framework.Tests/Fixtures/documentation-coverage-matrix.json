@@ -119,19 +119,19 @@
     {
       "id": "typed_action_and_effect_execution",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/actions-targeting-and-effects.md"],
-        "reason": "The corrected source-verified mechanics page awaits collaborative owner confirmation."
+        "reason": "The owner-confirmed mechanics page matches the corrected source, tests, and approved action and inventory authority."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/typed-actions-and-effects.md"],
-        "reason": "The integration recipe exists and awaits collaborative owner confirmation."
+        "reason": "The owner-confirmed integration guide covers canonical composition, assessment, reservations, cancellation, and host-mediated work."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/typed-action-and-effect-execution.md"],
-        "reason": "The source-based execution reference exists and awaits collaborative owner confirmation."
+        "reason": "The owner-confirmed technical reference documents authorization, prepared targets, transactions, and ordered execution against current source."
       }
     },
     {

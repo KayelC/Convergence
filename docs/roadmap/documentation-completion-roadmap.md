@@ -22,18 +22,18 @@ At the 17 July 2026 alignment review, the matrix contained 75 audience entries:
 | `missing` | 20 |
 | `not_applicable` | 7 |
 
-Three capabilities have completed collaborative review across every applicable
-audience:
+At that alignment review, three capabilities had completed collaborative
+review across every applicable audience:
 
 - `runtime_actor_state`;
 - `progression_and_resources`;
 - `party_and_rosters`.
 
 `persistence_snapshots` has reviewed developer and technical guidance, but its
-mechanics page still requires owner confirmation. Every other implemented
-capability remains in the queue below. The implementation state in the
-[Framework Capability Matrix](framework-capability-matrix.md) is independent of
-this documentation state.
+mechanics page still requires owner confirmation. At that starting point, every
+other implemented capability remained in the queue below. The implementation
+state in the [Framework Capability Matrix](framework-capability-matrix.md) is
+independent of this documentation state.
 
 ## Review Unit
 
@@ -90,7 +90,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
-## Active Order 1 Review
+## Completed Order 1 Review
 
 The source-based
 [Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
@@ -98,7 +98,8 @@ records the correction and decision history. The four source corrections and
 the three audience documents are implemented. The consolidated source review
 and managed quality gate are complete. The local Godot project builds and its
 contract tests pass, while the installed Windows engine currently faults before
-project load. Order 1 remains active only for owner documentation confirmation.
+project load. The project owner's documentation confirmation and the final
+documentation audit close Order 1.
 
 The project owner approved both authority decisions on 17 July 2026. Their
 normative record is
@@ -112,12 +113,14 @@ Current checkpoints:
 | O1-M2 | `verified` | Reservation identity, quantity, and lifecycle state are validated before effects. |
 | O1-D1 | `verified` | Item commands require an inventory port and an exactly-one reservation. |
 | O1-D2 | `verified` | Framework validates equipped canonical skills and resolved basic attacks. |
-| O1-DOC | `written_pending_owner_confirmation` | Mechanics, developer, and technical pages agree with corrected source and await collaborative confirmation. |
+| O1-DOC | `verified` | Mechanics, developer, and technical pages agree with corrected source and have completed collaborative owner confirmation. |
 
-The implementation is promoted by the
+The implementation and its audience documentation are promoted by the
 [post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md).
-Audience documentation remains `existing_unreviewed` until the project owner
-confirms that the explanations match the intended mechanic.
+All three `typed_action_and_effect_execution` audience entries are now
+`reviewed`. The executable matrix therefore records 14 reviewed, 35
+`existing_unreviewed`, 19 missing, and 7 `not_applicable` entries. Order 2,
+`combat_resolution`, is the next collaborative documentation subject.
 
 ## Deferred Documentation
 

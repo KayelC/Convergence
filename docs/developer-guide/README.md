@@ -24,7 +24,8 @@ Developer guides focus on:
   composition, authorization, assess/present/execute flow, item reservations,
   cancellation, results, and host-mediated work.
 
-Other subsystem guides remain tracked as `existing_unreviewed` or `missing` in
+Both guides above have completed collaborative review. Other subsystem guides
+remain tracked as `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New guides must follow the

@@ -22,9 +22,8 @@ now proves skill recovery, item recovery, ailment removal, revival, escape, and
 host-action requests through actual executed results.
 
 The mechanics, developer, and technical documents accurately describe current
-source. They remain `existing_unreviewed` until the project owner confirms the
-explanation; implementation completion and collaborative documentation review
-are intentionally separate states.
+source. Following the final documentation audit and project-owner confirmation,
+all three audience entries have completed collaborative review.
 
 ## Review Method
 
@@ -143,8 +142,8 @@ The final verification gate records:
 - O1-M2: `verified`
 - O1-D1: `verified`
 - O1-D2: `verified`
-- O1-DOC: `written_pending_owner_confirmation`
+- O1-DOC: `verified`
 
-Order 1 implementation is complete. The next collaborative action is for the
-project owner to review the three audience documents before their coverage
-states are promoted from `existing_unreviewed` to `reviewed`.
+Order 1 implementation and documentation are complete. The mechanics,
+developer-guide, and technical coverage states are promoted from
+`existing_unreviewed` to `reviewed`; Order 2, `combat_resolution`, is next.

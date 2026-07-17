@@ -13,9 +13,9 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed and implemented in
 [Battle Action Ownership And Inventory Authority](../decisions/battle-action-ownership-and-inventory-authority.md),
-with implementation review complete and collaborative documentation
-confirmation tracked by the active
-[Order 1 review](documentation-completion-roadmap.md#active-order-1-review).
+with implementation review and all three audience documentation reviews
+completed by
+[Order 1](documentation-completion-roadmap.md#completed-order-1-review).
 
 The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v3, and save-v9 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, and aggregate restoration derives the Active Hosted Entity from the canonical party roster.
 
