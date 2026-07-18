@@ -224,9 +224,16 @@ flowchart TD
 ```
 
 The canonical `BattleStatusEncounterLifecyclePort` owns per-actor owner-turn
-sequences and supplies `owner_turn_end` to turn-end lifecycle processing. The
-lower-level duration lifecycle also accepts action-end and phase-end boundary
-collections from schedulers that define those clocks.
+sequences and implements `IBattleEncounterStatModifierBoundarySource`. The
+encounter runner snapshots the next owner-turn boundary before command
+execution, places it on `BattleEncounterTurnRequest`, and later supplies that
+same boundary to turn-end lifecycle processing. Framework automated actions and
+the DemoHost carry the request boundaries into `EffectExecutionEnvironment`,
+so application and completion share one identity. A custom lifecycle port that
+owns a timed clock must implement the boundary-source contract, and its turn
+handler must propagate those boundaries. The lower-level duration lifecycle
+also accepts action-end and phase-end boundary collections from schedulers that
+define those clocks.
 
 ## Lifecycle Commit And Cleanup
 

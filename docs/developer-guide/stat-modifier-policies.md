@@ -122,9 +122,15 @@ BattleTurnEndLifecycleResult result = lifecycle.ProcessTurnEnd(
 ```
 
 The supplied `BattleStatusEncounterLifecyclePort` creates owner-turn sequences
-for the canonical encounter runner. Direct action-end and phase-end lifecycle
-APIs accept their own boundaries. If a custom scheduler uses another clock, it
-must generate one monotonic sequence per clock scope and must not derive it from
+for the canonical encounter runner and implements
+`IBattleEncounterStatModifierBoundarySource`. Before each command, the runner
+snapshots that source into
+`BattleEncounterTurnRequest.ActiveStatModifierBoundaries`. A turn handler must
+pass those values into the action's `EffectExecutionEnvironment`; the supplied
+automated runner and DemoHost do this already. Direct action-end and phase-end
+lifecycle APIs accept their own boundaries. If a custom scheduler uses another
+clock, it must generate one monotonic sequence per clock scope, expose the
+currently active values to action execution, and must not derive sequences from
 frames, animations, or button presses.
 
 A boundary used during application should also be present in

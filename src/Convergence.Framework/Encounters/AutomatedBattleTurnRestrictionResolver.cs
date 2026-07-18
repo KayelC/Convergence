@@ -285,7 +285,8 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             new EffectExecutionEnvironment(
                 request.Turn.Encounter.ContextId,
                 request.Turn.Encounter.BattleKindId,
-                request.Turn.Encounter.MoonPhaseId),
+                request.Turn.Encounter.MoonPhaseId,
+                request.Turn.ActiveStatModifierBoundaries),
             selection.ItemInventory);
         cancellationToken.ThrowIfCancellationRequested();
         BattleActionAssessment assessment = _actionExecutor.Assess(executionRequest);

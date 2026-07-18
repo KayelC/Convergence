@@ -41,7 +41,28 @@ public sealed record BattleActionSelectionRequest(
     ContentId ContextId,
     ContentId BattleKindId,
     ContentId? MoonPhaseId,
-    ElementalAffinityKnowledge Knowledge);
+    ElementalAffinityKnowledge Knowledge)
+{
+    public BattleActionSelectionRequest(
+        CatalogBattleActor actor,
+        IReadOnlyList<CatalogBattleActor> participants,
+        ContentId contextId,
+        ContentId battleKindId,
+        ContentId? moonPhaseId,
+        ElementalAffinityKnowledge knowledge,
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries)
+        : this(actor, participants, contextId, battleKindId, moonPhaseId, knowledge)
+    {
+        ActiveStatModifierBoundaries = new EffectExecutionEnvironment(
+            contextId,
+            battleKindId,
+            moonPhaseId,
+            activeStatModifierBoundaries).ActiveStatModifierBoundaries;
+    }
+
+    public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; private init; } =
+        Array.Empty<StatModifierLifecycleBoundary>();
+}
 
 public interface IBattleActionSelector
 {
@@ -76,9 +97,11 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                 skill,
                 request.Actor.State,
                 states,
-                request.ContextId,
-                request.BattleKindId,
-                request.MoonPhaseId,
+                new EffectExecutionEnvironment(
+                    request.ContextId,
+                    request.BattleKindId,
+                    request.MoonPhaseId,
+                    request.ActiveStatModifierBoundaries),
                 targetIds);
             SkillExecutionAssessment assessment = _executor.Assess(executionRequest);
             if (!assessment.CanExecute)
@@ -507,7 +530,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _knowledge[actor.State.TeamId]);
+                _knowledge[actor.State.TeamId],
+                request.ActiveStatModifierBoundaries);
             BattleActionSelection selection = _selector.Select(selectionRequest);
             if (selection.Status == BattleActionSelectionStatus.Pass)
             {
@@ -550,6 +574,15 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 return FaultedAutomatedAction(
                     actor,
                     $"Selected skill '{selection.Skill.Id}' is not authorized: {diagnostic}",
+                    events);
+            }
+
+            if (!prepared.Preparation.Request.Environment.ActiveStatModifierBoundaries.SequenceEqual(
+                    request.ActiveStatModifierBoundaries))
+            {
+                return FaultedAutomatedAction(
+                    actor,
+                    "The selected automated action was prepared for another stat-modifier lifecycle boundary.",
                     events);
             }
 

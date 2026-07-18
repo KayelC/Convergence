@@ -704,7 +704,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _encounterAiKnowledge.ElementalAffinities));
+                _encounterAiKnowledge.ElementalAffinities,
+                request.ActiveStatModifierBoundaries));
             if (selection.Status == BattleActionSelectionStatus.Selected && selection.Skill is SkillDefinition skill)
             {
                 var command = new SkillBattleActionCommand(
@@ -984,7 +985,8 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 new EffectExecutionEnvironment(
                     request.Encounter.ContextId,
                     request.Encounter.BattleKindId,
-                    request.Encounter.MoonPhaseId),
+                    request.Encounter.MoonPhaseId,
+                    request.ActiveStatModifierBoundaries),
                 command is ItemBattleActionCommand ? _inventory : null);
 
         private ValueTask PublishCurrentTurnEconomyAsync(
@@ -1427,7 +1429,9 @@ internal sealed class TrainingAnnexLifecycleTracker
         };
 }
 
-internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyclePort
+internal sealed class TrainingAnnexBattleLifecyclePort :
+    IBattleEncounterLifecyclePort,
+    IBattleEncounterStatModifierBoundarySource
 {
     private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
@@ -1486,6 +1490,15 @@ internal sealed class TrainingAnnexBattleLifecyclePort : IBattleEncounterLifecyc
             request.CanRecallToRoster));
         _tracker.RecordStatusEvents(result.Events, result.Outcome);
         return new ValueTask<BattleTurnStartLifecycleResult>(result);
+    }
+
+    public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
+        BattleEncounterTurnLifecycleRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        long sequence = checked(_ownerTurnSequences.GetValueOrDefault(request.Actor.InstanceId) + 1);
+        return Array.AsReadOnly<StatModifierLifecycleBoundary>(
+            [new StatModifierLifecycleBoundary(OwnerTurnEnd, sequence)]);
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(

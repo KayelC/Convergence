@@ -8,7 +8,9 @@ namespace Convergence.Encounters;
 /// Adapts the canonical status lifecycle and passive dispatcher to the encounter runner.
 /// Hosts supply the event IDs because lifecycle vocabulary belongs to content registration.
 /// </summary>
-public sealed class BattleStatusEncounterLifecyclePort : IBattleEncounterLifecyclePort
+public sealed class BattleStatusEncounterLifecyclePort :
+    IBattleEncounterLifecyclePort,
+    IBattleEncounterStatModifierBoundarySource
 {
     private readonly IBattleStatusLifecycleService _lifecycle;
     private readonly BattleExecutionServices _executionServices;
@@ -75,6 +77,15 @@ public sealed class BattleStatusEncounterLifecyclePort : IBattleEncounterLifecyc
         cancellationToken.ThrowIfCancellationRequested();
         return new ValueTask<BattleTurnStartLifecycleResult>(_lifecycle.ProcessTurnStart(
             new BattleTurnStartLifecycleRequest(request.Actor.State, request.CanRecallToRoster)));
+    }
+
+    public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
+        BattleEncounterTurnLifecycleRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        long sequence = checked(_ownerTurnSequences.GetValueOrDefault(request.Actor.InstanceId) + 1);
+        return Array.AsReadOnly<StatModifierLifecycleBoundary>(
+            [new StatModifierLifecycleBoundary(_ownerTurnEndEventId, sequence)]);
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(

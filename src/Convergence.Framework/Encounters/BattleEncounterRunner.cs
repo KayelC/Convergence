@@ -181,6 +181,20 @@ public interface IBattleEncounterLifecyclePort
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Supplies the lifecycle boundaries that are currently active while an encounter actor executes a command.
+/// </summary>
+/// <remarks>
+/// A lifecycle port implements this interface when timed stat modifiers need to distinguish application during a
+/// boundary from the later completion of that same boundary. The encounter runner snapshots the returned values and
+/// passes them to the turn handler; it never creates lifecycle sequences itself.
+/// </remarks>
+public interface IBattleEncounterStatModifierBoundarySource
+{
+    IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
+        BattleEncounterTurnLifecycleRequest request);
+}
+
 public sealed class NoopBattleEncounterLifecyclePort : IBattleEncounterLifecyclePort
 {
     public static NoopBattleEncounterLifecyclePort Instance { get; } = new();
@@ -226,7 +240,25 @@ public sealed record BattleEncounterTurnRequest
             actor,
             participants,
             new BattleTurnStartRestriction(turnStartOutcome),
-            turnEconomyState)
+            turnEconomyState,
+            activeStatModifierBoundaries: null)
+    {
+    }
+
+    public BattleEncounterTurnRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IReadOnlyList<BattleEncounterParticipant> participants,
+        BattleTurnStartOutcome turnStartOutcome,
+        BattleTurnEconomySnapshot turnEconomyState,
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries)
+        : this(
+            encounter,
+            actor,
+            participants,
+            new BattleTurnStartRestriction(turnStartOutcome),
+            turnEconomyState,
+            activeStatModifierBoundaries)
     {
     }
 
@@ -236,6 +268,23 @@ public sealed record BattleEncounterTurnRequest
         IReadOnlyList<BattleEncounterParticipant> participants,
         BattleTurnStartRestriction turnStartRestriction,
         BattleTurnEconomySnapshot turnEconomyState)
+        : this(
+            encounter,
+            actor,
+            participants,
+            turnStartRestriction,
+            turnEconomyState,
+            activeStatModifierBoundaries: null)
+    {
+    }
+
+    public BattleEncounterTurnRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IReadOnlyList<BattleEncounterParticipant> participants,
+        BattleTurnStartRestriction turnStartRestriction,
+        BattleTurnEconomySnapshot turnEconomyState,
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries)
     {
         Encounter = encounter ?? throw new ArgumentNullException(nameof(encounter));
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
@@ -243,6 +292,17 @@ public sealed record BattleEncounterTurnRequest
             participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
         TurnStartRestriction = turnStartRestriction ?? throw new ArgumentNullException(nameof(turnStartRestriction));
         TurnEconomyState = turnEconomyState ?? throw new ArgumentNullException(nameof(turnEconomyState));
+        StatModifierLifecycleBoundary[] boundaries = (activeStatModifierBoundaries ?? []).ToArray();
+        if (boundaries.Any(boundary => boundary is null) ||
+            boundaries.Any(boundary => !boundary.EventId.IsValid || boundary.Sequence <= 0) ||
+            boundaries.Select(boundary => boundary.EventId).Distinct().Count() != boundaries.Length)
+        {
+            throw new ArgumentException(
+                "Active stat-modifier boundaries must be valid and unique by event ID.",
+                nameof(activeStatModifierBoundaries));
+        }
+
+        ActiveStatModifierBoundaries = Array.AsReadOnly(boundaries);
     }
 
     public BattleEncounterRequest Encounter { get; }
@@ -252,6 +312,7 @@ public sealed record BattleEncounterTurnRequest
     public BattleTurnStartOutcome TurnStartOutcome => TurnStartRestriction.Outcome;
     public IReadOnlyList<ContentId> AllowedActionIds => TurnStartRestriction.AllowedActionIds;
     public BattleTurnEconomySnapshot TurnEconomyState { get; }
+    public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; }
 }
 
 public sealed record BattleEncounterCommandResult
@@ -826,6 +887,21 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(
                         turnEconomy,
                         actor.InstanceId);
+                    IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
+                        services.Lifecycle is IBattleEncounterStatModifierBoundarySource boundarySource
+                            ? InvokePort(
+                                BattleEncounterFaultCode.LifecycleExecutionFailed,
+                                "stat-modifier-boundary-source",
+                                () => boundarySource.GetActiveStatModifierBoundaries(
+                                          new BattleEncounterTurnLifecycleRequest(
+                                              request,
+                                              actor,
+                                              request.Participants,
+                                              CanRecallToRoster(actor)))
+                                      ?? throw new InvalidOperationException(
+                                          "The lifecycle boundary source returned null."),
+                                actor.InstanceId)
+                            : Array.Empty<StatModifierLifecycleBoundary>();
                     BattleEncounterCommandResult command = await InvokePortAsync(
                             BattleEncounterFaultCode.TurnHandlerExecutionFailed,
                             "turn-handler",
@@ -835,7 +911,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                         actor,
                                         request.Participants,
                                         turnStart.Restriction,
-                                        beforeEconomy),
+                                        beforeEconomy,
+                                        activeStatModifierBoundaries),
                                     cancellationToken)
                                 .ConfigureAwait(false)
                                 ?? throw new InvalidOperationException("The battle turn handler returned null."),

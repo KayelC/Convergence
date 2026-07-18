@@ -2,8 +2,10 @@ using Convergence.Battle;
 using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
+using Convergence.Encounters;
 using Convergence.Hosting;
 using Convergence.Runtime;
+using Convergence.TurnEconomy;
 using Xunit;
 
 namespace Convergence.Framework.Tests.Content;
@@ -20,6 +22,49 @@ public sealed class StatModifierExecutionIntegrationTests
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
     private static readonly ContentId PhaseEnd = ContentId.Parse("phase_end");
     private static readonly ContentId PlayerPhase = ContentId.Parse("player_phase");
+
+    [Fact]
+    public async Task EncounterRunner_AnchorsTimedApplicationToItsCurrentOwnerTurnBoundary()
+    {
+        IStatModifierPolicyService policy = TimedContributionPolicy();
+        SkillDefinition skill = ActiveSkill(
+            "encounter_boundary_focus",
+            [new ModifyStatStageEffectDefinition([Attack], 1, Turns(3))]);
+        RuntimeActorState actor = Actor("encounter_actor", skillIds: [skill.Id]);
+        BattleExecutionServices executionServices = Services(policy);
+        var actionExecutor = new BattleActionExecutor(
+            new SkillExecutor(executionServices),
+            new ItemExecutor(executionServices),
+            executionServices,
+            new CatalogBattleActionAuthorizationPolicy(
+                new SkillRepository([skill]),
+                NoBattleBasicAttackProfileSource.Instance));
+        var turnHandler = new TimedModifierTurnHandler(actionExecutor, skill);
+        var completion = new CaptureTimedModifierCompletion();
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            executionServices,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd);
+        var participant = new BattleEncounterParticipant(actor, "Encounter Actor");
+
+        BattleEncounterResult result = await new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([participant], Battle, NormalBattle, null, roundLimit: 3),
+            new BattleEncounterServices(
+                new ParticipantOrderInitiativePolicy(),
+                lifecycle,
+                turnHandler,
+                completion,
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(16, 4)));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal([3, 2], completion.RemainingDurations);
+        Assert.Equal(3, turnHandler.DurationBeforeSecondAction);
+        Assert.All(turnHandler.Boundaries, boundary =>
+            Assert.Equal(OwnerTurnEnd, Assert.Single(boundary).EventId));
+        Assert.Equal([1L, 2L], turnHandler.Boundaries.Select(boundary => boundary.Single().Sequence));
+    }
 
     [Theory]
     [InlineData(SuppliedPolicyKind.PersistentStaged)]
@@ -694,6 +739,66 @@ public sealed class StatModifierExecutionIntegrationTests
         public AilmentDefinition GetRequiredAilment(ContentId id) =>
             throw new KeyNotFoundException(id.ToString());
     }
+
+    private sealed class TimedModifierTurnHandler(
+        BattleActionExecutor executor,
+        SkillDefinition skill) : IBattleEncounterTurnHandler
+    {
+        private int _turn;
+
+        internal List<IReadOnlyList<StatModifierLifecycleBoundary>> Boundaries { get; } = [];
+        internal int? DurationBeforeSecondAction { get; private set; }
+
+        public async ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
+            BattleEncounterTurnRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Boundaries.Add(request.ActiveStatModifierBoundaries);
+            _turn++;
+            if (_turn > 1)
+            {
+                DurationBeforeSecondAction = RemainingDuration(request.Actor.State);
+                return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+            }
+
+            var executionRequest = new BattleActionExecutionRequest(
+                new SkillBattleActionCommand(skill, [request.Actor.InstanceId]),
+                request.Actor.State,
+                request.Participants.Select(participant => participant.State),
+                new EffectExecutionEnvironment(
+                    request.Encounter.ContextId,
+                    request.Encounter.BattleKindId,
+                    request.Encounter.MoonPhaseId,
+                    request.ActiveStatModifierBoundaries));
+            BattleActionExecutionResult execution = await executor.ExecuteAsync(
+                executionRequest,
+                cancellationToken: cancellationToken);
+            Assert.Equal(BattleActionExecutionStatus.Executed, execution.Status);
+            return BattleEncounterCommandResult.Executed(execution.TurnConsumption);
+        }
+    }
+
+    private sealed class CaptureTimedModifierCompletion : IBattleEncounterCompletionPolicy
+    {
+        internal List<int> RemainingDurations { get; } = [];
+
+        public BattleEncounterCompletion Evaluate(BattleEncounterCompletionRequest request)
+        {
+            if (request.LastActor is null)
+            {
+                return new BattleEncounterCompletion(false);
+            }
+
+            RemainingDurations.Add(RemainingDuration(request.LastActor.State));
+            return RemainingDurations.Count == 2
+                ? new BattleEncounterCompletion(true, BattleEncounterOutcome.Draw)
+                : new BattleEncounterCompletion(false);
+        }
+    }
+
+    private static int RemainingDuration(RuntimeActorState actor) =>
+        Assert.IsType<TurnDurationDefinition>(
+            Assert.Single(Assert.Single(actor.StatModifierState!.Tracks).Contributions).Duration).Value;
 
     private sealed class MinimumRandomSource : IRandomSource
     {
