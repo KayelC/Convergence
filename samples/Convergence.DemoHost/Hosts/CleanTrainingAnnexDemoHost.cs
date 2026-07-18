@@ -216,6 +216,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             executionServices,
             new CatalogBattleActionAuthorizationPolicy(
                 catalog,
+                catalog,
                 NoBattleBasicAttackProfileSource.Instance));
         Dictionary<ContentId, int> inventory = new() { [Qualified("annex_tonic")] = 1 };
         echo.State.AddResource(Hp, -20);

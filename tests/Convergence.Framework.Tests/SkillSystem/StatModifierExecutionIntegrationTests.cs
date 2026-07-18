@@ -41,6 +41,7 @@ public sealed class StatModifierExecutionIntegrationTests
             executionServices,
             new CatalogBattleActionAuthorizationPolicy(
                 new SkillRepository([skill]),
+                new ItemRepository([]),
                 NoBattleBasicAttackProfileSource.Instance));
         var turnHandler = new TimedModifierTurnHandler(actionExecutor, skill);
         var completion = new CaptureTimedModifierCompletion();
@@ -117,7 +118,7 @@ public sealed class StatModifierExecutionIntegrationTests
             $"{policyKind}_focus_tonic",
             new ModifyStatStageEffectDefinition([Attack], 1, Turns(3)));
         var inventory = new TestItemInventory(item.Id, 2);
-        BattleActionExecutor executor = ActionExecutor(policy);
+        BattleActionExecutor executor = ActionExecutor(policy, items: [item]);
         var request = new BattleActionExecutionRequest(
             new ItemBattleActionCommand(item, [actor.InstanceId]),
             actor,
@@ -154,7 +155,7 @@ public sealed class StatModifierExecutionIntegrationTests
             $"{policyKind}_rejected_tonic",
             new ModifyStatStageEffectDefinition([Attack], 1, Turns(3)));
         var inventory = new TestItemInventory(item.Id, 2, rejectCommit: true);
-        BattleActionExecutor executor = ActionExecutor(policy);
+        BattleActionExecutor executor = ActionExecutor(policy, items: [item]);
         var request = new BattleActionExecutionRequest(
             new ItemBattleActionCommand(item, [actor.InstanceId]),
             actor,
@@ -652,7 +653,8 @@ public sealed class StatModifierExecutionIntegrationTests
 
     private static BattleActionExecutor ActionExecutor(
         IStatModifierPolicyService statModifiers,
-        IEnumerable<SkillDefinition>? skills = null)
+        IEnumerable<SkillDefinition>? skills = null,
+        IEnumerable<ItemDefinition>? items = null)
     {
         BattleExecutionServices services = Services(statModifiers);
         return new BattleActionExecutor(
@@ -661,6 +663,7 @@ public sealed class StatModifierExecutionIntegrationTests
             services,
             new CatalogBattleActionAuthorizationPolicy(
                 new SkillRepository(skills),
+                new ItemRepository(items),
                 NoBattleBasicAttackProfileSource.Instance));
     }
 
@@ -823,6 +826,24 @@ public sealed class StatModifierExecutionIntegrationTests
 
         public SkillDefinition GetRequiredSkill(ContentId id) =>
             _skills.TryGetValue(id, out SkillDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class ItemRepository : IItemDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, ItemDefinition> _items;
+
+        internal ItemRepository(IEnumerable<ItemDefinition>? items)
+        {
+            _items = (items ?? []).ToDictionary(item => item.Id);
+        }
+
+        public bool TryGetItem(ContentId id, out ItemDefinition? definition) =>
+            _items.TryGetValue(id, out definition);
+
+        public ItemDefinition GetRequiredItem(ContentId id) =>
+            _items.TryGetValue(id, out ItemDefinition? definition)
                 ? definition
                 : throw new KeyNotFoundException(id.ToString());
     }

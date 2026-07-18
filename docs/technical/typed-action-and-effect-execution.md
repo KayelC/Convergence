@@ -12,7 +12,7 @@ the external host boundary.
 | Layer | Responsibility | Deliberately does not own |
 |---|---|---|
 | `BattleActionExecutor` | command authorization, shared assessment/execution, item transaction coordination, roster commands, turn intent | presentation and external host work |
-| `CatalogBattleActionAuthorizationPolicy` | equipped canonical skill identity and resolved basic-attack identity | item inventory and target legality |
+| `CatalogBattleActionAuthorizationPolicy` | equipped canonical skill identity, canonical item identity, and resolved basic-attack identity | item inventory quantity and target legality |
 | `SkillExecutor` | active-skill availability, costs, targets, effects, skill turn outcome | actor loadout authority |
 | `ItemExecutor` | consumable usage, applicability, targets, effects, consumption decision | inventory ownership or quantity mutation |
 | `AutomatedBattleRunner` | exact selector/assessment identity, catalog-backed equipped skill authority, automated encounter execution | arbitrary skill grants or host-mediated actions |
@@ -46,17 +46,20 @@ assessments produce typed `AssessmentInvalid` diagnostics.
 
 ## Authorization And Stale State
 
-`CatalogBattleActionAuthorizationPolicy` authorizes skills and basic attacks:
+`CatalogBattleActionAuthorizationPolicy` authorizes skills, items, and basic
+attacks:
 
 - equipped skill ID must exist on `RuntimeActorState`;
 - the command skill must be the exact canonical repository object;
+- the command item must be the exact canonical repository object;
 - the resolved basic attack must exist and match action ID, damage definition,
   and targeting definition.
 
 The policy runs during assessment and again after the battle assessment token
 is consumed but before execution. This closes the stale-menu window: unequipping
-a skill or changing equipment between assessment and execution rejects the
-command without cost, effect, item, or turn mutation.
+a skill, substituting an item definition, or changing equipment between
+assessment and execution rejects the command without cost, effect, inventory,
+or turn mutation.
 
 Other command kinds are authorized by their own assessment paths. Party/roster
 commands use `IPartyRosterTransitionService`; host-mediated commands explicitly
@@ -152,10 +155,12 @@ The inventory adapter is a trusted transactional port. The Framework verifies
 observable identity and lifecycle fields, but it cannot prove or undo hidden
 adapter state. `Reserve`, `Commit`, and `Rollback` must be atomic.
 
-The item definition is also host-supplied at this boundary. The canonical
-facade validates owned identity through the inventory port's content ID but does
-not independently compare the definition object with an item repository.
-Catalog-backed hosts should always construct item commands from their catalog.
+The item definition remains host-supplied in the command, but the canonical
+authorization policy requires it to be the exact object returned by the
+injected item repository. Inventory availability and reservation then verify
+ownership and quantity for that same content ID. The lower-level `ItemExecutor`
+does not perform either check because it deliberately models typed effect
+execution rather than an owned-item transaction.
 
 ## Ordered Effects
 

@@ -12,7 +12,9 @@ public enum BattleActionAuthorizationDiagnosticCode
     BasicAttackUnavailable,
     BasicAttackSourceMismatch,
     BasicAttackDefinitionMismatch,
-    BasicAttackTargetingMismatch
+    BasicAttackTargetingMismatch,
+    ItemDefinitionMissing,
+    ItemDefinitionSubstituted
 }
 
 public sealed class BattleActionAuthorizationDiagnostic
@@ -131,13 +133,16 @@ public interface IBattleActionAuthorizationPolicy
 public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthorizationPolicy
 {
     private readonly ISkillDefinitionRepository _skills;
+    private readonly IItemDefinitionRepository _items;
     private readonly IBattleBasicAttackProfileSource _basicAttacks;
 
     public CatalogBattleActionAuthorizationPolicy(
         ISkillDefinitionRepository skills,
+        IItemDefinitionRepository items,
         IBattleBasicAttackProfileSource basicAttacks)
     {
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        _items = items ?? throw new ArgumentNullException(nameof(items));
         _basicAttacks = basicAttacks ?? throw new ArgumentNullException(nameof(basicAttacks));
     }
 
@@ -151,6 +156,7 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
         return command switch
         {
             SkillBattleActionCommand skill => AuthorizeSkill(actor, skill),
+            ItemBattleActionCommand item => AuthorizeItem(item),
             BasicAttackBattleActionCommand basicAttack => AuthorizeBasicAttack(actor, basicAttack),
             _ => BattleActionAuthorizationResult.Authorized
         };
@@ -160,6 +166,22 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
         RuntimeActorState actor,
         SkillBattleActionCommand command) =>
         CatalogSkillActionAuthorization.Authorize(actor, command.Skill, _skills);
+
+    private BattleActionAuthorizationResult AuthorizeItem(ItemBattleActionCommand command)
+    {
+        if (!_items.TryGetItem(command.Item.Id, out ItemDefinition? canonical) || canonical is null)
+        {
+            return BattleActionAuthorizationResult.Rejected(
+                BattleActionAuthorizationDiagnosticCode.ItemDefinitionMissing,
+                $"Item '{command.Item.Id}' is not available from the authorization catalog.");
+        }
+
+        return ReferenceEquals(canonical, command.Item)
+            ? BattleActionAuthorizationResult.Authorized
+            : BattleActionAuthorizationResult.Rejected(
+                BattleActionAuthorizationDiagnosticCode.ItemDefinitionSubstituted,
+                $"Item '{command.Item.Id}' is not its canonical catalog definition.");
+    }
 
     private BattleActionAuthorizationResult AuthorizeBasicAttack(
         RuntimeActorState actor,

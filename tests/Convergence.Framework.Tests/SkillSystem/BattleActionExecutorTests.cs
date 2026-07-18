@@ -96,6 +96,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState target = Actor("target", TeamB);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([skill]),
+            new TestItemRepository([]),
             NoBattleBasicAttackProfileSource.Instance);
         BattleActionExecutor executor = Executor(authorization: authorization);
 
@@ -124,6 +125,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState target = Actor("target", TeamB);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([skill]),
+            new TestItemRepository([]),
             NoBattleBasicAttackProfileSource.Instance);
         BattleActionExecutor executor = Executor(authorization: authorization);
 
@@ -162,6 +164,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState target = Actor("target", TeamB);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([canonical]),
+            new TestItemRepository([]),
             NoBattleBasicAttackProfileSource.Instance);
         BattleActionAuthorizationResult direct = authorization.Authorize(
             actor,
@@ -197,6 +200,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState target = Actor("target", TeamB);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([skill]),
+            new TestItemRepository([]),
             NoBattleBasicAttackProfileSource.Instance);
         BattleActionExecutor executor = Executor(authorization: authorization);
         BattleActionExecutionRequest request = Request(
@@ -215,6 +219,120 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task CatalogAuthorization_AllowsCanonicalOwnedItem()
+    {
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new TestItemRepository([medicine]),
+            NoBattleBasicAttackProfileSource.Instance);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(Request(
+            new ItemBattleActionCommand(medicine, [target.InstanceId]),
+            actor,
+            [actor, target],
+            inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(40, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(0, inventory.Quantity);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsItemMissingFromCatalog()
+    {
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new TestItemRepository([]),
+            NoBattleBasicAttackProfileSource.Instance);
+        var command = new ItemBattleActionCommand(medicine, [target.InstanceId]);
+
+        BattleActionAuthorizationResult direct = authorization.Authorize(actor, command);
+        BattleActionExecutionResult result = await Executor(authorization: authorization).ExecuteAsync(
+            Request(command, actor, [actor, target], inventory));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.ItemDefinitionMissing,
+            Assert.Single(direct.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RejectsSubstitutedItemDefinitionWithOwnedId()
+    {
+        ItemDefinition canonical = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        ItemDefinition substituted = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(999)));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        var inventory = new TestItemInventory(canonical.Id, quantity: 1);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new TestItemRepository([canonical]),
+            NoBattleBasicAttackProfileSource.Instance);
+        var command = new ItemBattleActionCommand(substituted, [target.InstanceId]);
+
+        BattleActionAuthorizationResult direct = authorization.Authorize(actor, command);
+        BattleActionExecutionResult result = await Executor(authorization: authorization).ExecuteAsync(
+            Request(command, actor, [actor, target], inventory));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.ItemDefinitionSubstituted,
+            Assert.Single(direct.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
+    public async Task CatalogAuthorization_RevalidatesCanonicalItemBeforeExecution()
+    {
+        ItemDefinition medicine = ConsumableItem(
+            "medicine",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamA, hp: 20);
+        var inventory = new TestItemInventory(medicine.Id, quantity: 1);
+        var repository = new MutableItemRepository(medicine);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            repository,
+            NoBattleBasicAttackProfileSource.Instance);
+        var command = new ItemBattleActionCommand(medicine, [target.InstanceId]);
+        BattleActionExecutionRequest request = Request(command, actor, [actor, target], inventory);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        BattleActionAssessment assessment = executor.Assess(request);
+        repository.Item = null;
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.True(assessment.CanExecute);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(0, inventory.ReservationsCreated);
+    }
+
+    [Fact]
     public async Task CatalogAuthorization_AllowsExplicitNaturalBasicAttackProfile()
     {
         var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
@@ -222,6 +340,7 @@ public sealed class BattleActionExecutorTests
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
+            new TestItemRepository([]),
             new FixedBasicAttackProfileSource(profile));
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -248,6 +367,7 @@ public sealed class BattleActionExecutorTests
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), canonical, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
+            new TestItemRepository([]),
             new FixedBasicAttackProfileSource(profile));
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -279,6 +399,7 @@ public sealed class BattleActionExecutorTests
         TargetingDefinition targeting = SingleEnemy();
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
+            new TestItemRepository([]),
             NoBattleBasicAttackProfileSource.Instance);
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -306,6 +427,7 @@ public sealed class BattleActionExecutorTests
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
+            new TestItemRepository([]),
             new FixedBasicAttackProfileSource(profile));
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -343,6 +465,7 @@ public sealed class BattleActionExecutorTests
         var profileSource = new MutableBasicAttackProfileSource(profile);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
+            new TestItemRepository([]),
             profileSource);
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -1175,6 +1298,37 @@ public sealed class BattleActionExecutorTests
             _skills.TryGetValue(id, out SkillDefinition? definition)
                 ? definition
                 : throw new KeyNotFoundException($"Skill '{id}' was not found.");
+    }
+
+    private sealed class TestItemRepository(IEnumerable<ItemDefinition> items)
+        : IItemDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, ItemDefinition> _items =
+            items.ToDictionary(item => item.Id);
+
+        public bool TryGetItem(ContentId id, out ItemDefinition? definition) =>
+            _items.TryGetValue(id, out definition);
+
+        public ItemDefinition GetRequiredItem(ContentId id) =>
+            _items.TryGetValue(id, out ItemDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException($"Item '{id}' was not found.");
+    }
+
+    private sealed class MutableItemRepository(ItemDefinition? item) : IItemDefinitionRepository
+    {
+        public ItemDefinition? Item { get; set; } = item;
+
+        public bool TryGetItem(ContentId id, out ItemDefinition? definition)
+        {
+            definition = Item?.Id == id ? Item : null;
+            return definition is not null;
+        }
+
+        public ItemDefinition GetRequiredItem(ContentId id) =>
+            TryGetItem(id, out ItemDefinition? definition)
+                ? definition!
+                : throw new KeyNotFoundException($"Item '{id}' was not found.");
     }
 
     private sealed class FixedBasicAttackProfileSource(BattleBasicAttackProfile? profile)

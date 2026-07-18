@@ -27,7 +27,7 @@ IBattleBasicAttackProfileSource basicAttacks =
     new EquipmentBattleBasicAttackProfileSource(catalog, basicTargeting);
 
 IBattleActionAuthorizationPolicy authorization =
-    new CatalogBattleActionAuthorizationPolicy(catalog, basicAttacks);
+    new CatalogBattleActionAuthorizationPolicy(catalog, catalog, basicAttacks);
 
 var skillExecutor = new SkillExecutor(executionServices);
 var itemExecutor = new ItemExecutor(executionServices);
@@ -108,8 +108,8 @@ ApplyTurnConsumption(result.TurnConsumption);
 
 Do not rebuild the request after assessment and do not execute one assessment
 twice. Random targets are already fixed in `TargetIds`. Execution rechecks
-target eligibility, resource affordability, equipped skills, and basic-attack
-authority before mutation.
+target eligibility, resource affordability, equipped skills, canonical item
+identity, and basic-attack authority before mutation.
 
 Cancellation is checked before action execution and before item reservation or
 commit. `OperationCanceledException` is a host cancellation signal, not a
@@ -120,9 +120,11 @@ gameplay diagnostic.
 Item commands have no quantity option: each command attempts one use. They
 require an `IItemActionInventory` on the request.
 
-Resolve the `ItemDefinition` from the host's loaded catalog before constructing
-the command. The current facade validates ownership and reservation identity by
-content ID; it does not perform a second item-repository lookup.
+Resolve the `ItemDefinition` from the same catalog supplied to
+`CatalogBattleActionAuthorizationPolicy` before constructing the command. The
+policy compares the command definition with that repository again during
+assessment and immediately before execution. The inventory port separately
+validates ownership and reservation identity by content ID.
 
 Your inventory adapter must satisfy these rules:
 

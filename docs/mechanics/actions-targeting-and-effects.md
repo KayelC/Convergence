@@ -20,12 +20,14 @@ turn. Cancelling before execution has the same no-mutation result.
 ## Which Actions An Actor May Use
 
 The canonical battle-action facade, `BattleActionExecutor`, owns the approved
-skill and basic-attack authorization rules. A menu, AI adapter, or script cannot
-make either action legal merely by constructing a definition with a matching
-display name or ID.
+skill, item, and basic-attack authorization rules. A menu, AI adapter, or
+script cannot make these actions legal merely by constructing a definition
+with a matching display name or ID.
 
 - A skill command must use the canonical catalog definition and that skill must
   be in the actor's equipped runtime skill set.
+- An item command must use the canonical catalog definition before owned
+  quantity can be reserved.
 - A basic attack must match the actor's resolved action ID, damage profile, and
   targeting profile.
 - A basic-attack profile may come from equipment, a natural attack, or another
@@ -86,11 +88,11 @@ transaction:
 6. otherwise roll back the reservation;
 7. publish actor state only after the required inventory transition succeeds.
 
-The host should obtain the item definition from its loaded catalog. The current
-item transaction treats that definition as trusted input and validates ownership
-by its content ID through the inventory port; it does not independently compare
-the item object with a catalog repository. This is distinct from equipped skill
-authorization.
+The host obtains the item definition from its loaded catalog. The canonical
+authorization policy requires the exact catalog object, while the inventory
+port independently validates ownership and reserves one unit by content ID.
+Substituting another definition with the same ID rejects before reservation or
+actor mutation.
 
 Using a healing item at full health, curing no matching ailment, reviving a
 living target, setting an unchanged value, or removing an absent status is a

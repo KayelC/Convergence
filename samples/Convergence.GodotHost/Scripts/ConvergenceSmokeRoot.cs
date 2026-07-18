@@ -170,6 +170,7 @@ public partial class ConvergenceSmokeRoot : Node
             executionServices,
             new CatalogBattleActionAuthorizationPolicy(
                 catalog,
+                catalog,
                 NoBattleBasicAttackProfileSource.Instance));
         SkillDefinition frostTip = player.ActiveSkills.Single(skill => skill.Id == Qualified("frost_tip"));
         BattleActionCommand skillCommand = new SkillBattleActionCommand(

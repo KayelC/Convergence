@@ -27,16 +27,17 @@ internal sealed class TrainingAnnexFieldActionAdapter
 
     public TrainingAnnexFieldActionAdapter(
         BattleExecutionServices services,
-        ISkillDefinitionRepository skills)
+        GameDataCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(skills);
+        ArgumentNullException.ThrowIfNull(catalog);
         _actions = new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
             services,
             new CatalogBattleActionAuthorizationPolicy(
-                skills,
+                catalog,
+                catalog,
                 NoBattleBasicAttackProfileSource.Instance));
     }
 

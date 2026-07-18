@@ -456,6 +456,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             AllowSelf: false);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             _catalog,
+            _catalog,
             new EquipmentBattleBasicAttackProfileSource(
                 _catalog,
                 basicAttackTargeting,

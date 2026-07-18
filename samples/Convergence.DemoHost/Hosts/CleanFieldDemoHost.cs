@@ -148,6 +148,7 @@ internal sealed class CleanFieldDemoHost
             services,
             new CatalogBattleActionAuthorizationPolicy(
                 catalog,
+                catalog,
                 NoBattleBasicAttackProfileSource.Instance));
         var inventory = catalog.Items.Keys.ToDictionary(id => id, _ => 1);
         int sequence = 1;
