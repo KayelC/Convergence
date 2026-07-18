@@ -137,7 +137,7 @@ The earlier
 remains evidence for the original checkpoints, not proof that the expanded M1
 scope is complete. All three `typed_action_and_effect_execution` audience
 entries have returned to `existing_unreviewed`. The executable matrix therefore
-records 11 reviewed, 38 `existing_unreviewed`, 19 missing, and 7
+records 11 reviewed, 39 `existing_unreviewed`, 18 missing, and 7
 `not_applicable` entries. Order 2, `combat_resolution`, remains queued until M1
 and the reopened Order 1 documentation gate close.
 
