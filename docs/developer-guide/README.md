@@ -27,10 +27,9 @@ Developer guides focus on:
   supplied policy models, counted lifecycle clocks, boundary sequences,
   removal, and Godot responsibilities.
 
-The actor guide has completed collaborative review. Typed action/effect and stat
-modifier guidance remains `existing_unreviewed` while the completed policy
-family receives its fresh source and documentation reviews. Other subsystem guides remain tracked as
-`existing_unreviewed` or `missing` in
+The actor and typed action/effect guides have completed collaborative review.
+That Order 1 review includes stat-modifier policy composition and integration.
+Other subsystem guides remain tracked as `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New guides must follow the

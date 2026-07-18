@@ -19,3 +19,6 @@ Documentation maturity is tracked separately through the
 framework capability may be implemented completely while its documentation still
 requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
+
+Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
+Order 2, `combat_resolution`, is the next collaborative review.

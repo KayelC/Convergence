@@ -13,28 +13,25 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The actor composition, progression, party/roster, and actor-restoration
-documentation has completed the collaborative workflow. Typed action/effect
-documentation completed an earlier review, but has returned to
-`existing_unreviewed` after the source review and owner decision that expanded
-stat modifiers into three supplied lifecycle policies. It will be reviewed
-again against the implemented family rather than preserved as stale authority.
-The approved persistent, timed-exclusive, and timed-contribution designs now
-have revised mechanics, developer, and technical records. Their production
-execution, lifecycle, ruleset, host, and save integration is complete, while
-those records remain `existing_unreviewed` until the fresh source review and
-documentation review are complete. Other subsystem entries remain unreviewed until
-they complete the same process.
+The actor composition, progression, party/roster, actor-restoration, and typed
+action/effect documentation has completed the collaborative workflow. The
+Order 1 review includes canonical action authority, prepared targets,
+exactly-one item transactions, ordered effects, and the persistent,
+timed-exclusive, and timed-contribution modifier policies. Their production
+execution, lifecycle, ruleset, host, and save integration was checked against
+current source before the project owner confirmed the explanation on 18 July
+2026. Other subsystem entries remain unreviewed until they complete the same
+process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
-The documentation matrix currently records 75 audience entries: 11 reviewed,
-39 existing_unreviewed, 18 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 14 reviewed,
+36 existing_unreviewed, 18 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 11 |
-| `existing_unreviewed` | 39 |
+| `reviewed` | 14 |
+| `existing_unreviewed` | 36 |
 | `missing` | 18 |
 | `not_applicable` | 7 |
 

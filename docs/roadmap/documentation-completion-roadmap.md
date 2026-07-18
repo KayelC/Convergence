@@ -90,7 +90,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
-## Reopened Order 1
+## Completed Order 1
 
 The source-based
 [Typed Action And Effect Execution Order 1 Review](../reviews/typed-action-and-effect-execution-order-1-review-2026-07-17.md)
@@ -100,11 +100,11 @@ that was known at the time.
 
 A later source-first
 [independent review](../reviews/typed-action-and-effect-execution-order-1-independent-review-2026-07-17.md)
-found two additional reachable paths. Automated skill authorization is now
-corrected and pending final review. The stat-modifier finding exposed a broader
-design decision: Convergence will supply three selectable modifier lifecycle
-policies rather than preserve the current accidental aggregate-duration hybrid.
-That work is controlled by the
+found two additional reachable paths. Automated skill authorization was
+corrected. The stat-modifier finding exposed a broader design decision:
+Convergence would supply three selectable modifier lifecycle policies rather
+than preserve the accidental aggregate-duration hybrid. That work was
+completed through the
 [Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md).
 
 The project owner approved both authority decisions on 17 July 2026. Their
@@ -118,28 +118,28 @@ Current checkpoints:
 | O1-M1 | `verified` | One item action reserves and commits exactly one inventory unit. |
 | O1-M2 | `verified` | Reservation identity, quantity, and lifecycle state are validated before effects. |
 | O1-D1 | `verified` | Item commands require an inventory port and an exactly-one reservation. |
-| O1-D2 | `verified` | Framework validates equipped canonical skills and resolved basic attacks. |
-| O1-IR-H1 | `implemented_pending_review` | Automated battles use the canonical skill-authorization policy. |
-| O1-IR-M1 | `implemented_pending_review` | M1-1 through M1-8 are complete; the fresh source review remains. |
-| O1-DOC | `written_pending_review` | All three audience documents are revised; source comparison and owner-confirmed documentation review remain. |
+| O1-D2 | `verified` | Framework validates equipped canonical skills, canonical catalog items, and resolved basic attacks. |
+| O1-IR-H1 | `verified` | Automated battles use the canonical skill-authorization policy. |
+| O1-IR-M1 | `verified` | M1-1 through M1-8, the fresh source review, and its substantiated corrections are complete. |
+| O1-DOC | `verified` | All three audience documents match corrected source and the project owner confirmed the explanation. |
 
 The owner confirmed the timed-exclusive signal arithmetic, rejection behavior,
 dominant-duration rule, independently timed rolling example, cap refresh,
 explicit lifecycle clocks, same-boundary protection, bonus-action handling,
-cancellation behavior, and reserve suspension on 17 July 2026. The mechanics,
-developer, and technical design records now preserve those decisions before
-runtime work continues. `O1-DOC` is written but remains unpromoted because the
-records must be checked against the completed M1 implementation before owner
-confirmation.
+cancellation behavior, and reserve suspension on 17 July 2026. A final
+source-first comparison then traced authorization, prepared assessments,
+targeting, skill costs, item reservations, actor transactions, every supplied
+modifier policy, lifecycle integration, ruleset binding, and persistence. The
+owner confirmed that resulting Order 1 explanation on 18 July 2026.
 
 The earlier
 [post-correction review](../reviews/typed-action-and-effect-execution-order-1-post-correction-review-2026-07-17.md)
-remains evidence for the original checkpoints, not proof that the expanded M1
-scope is complete. All three `typed_action_and_effect_execution` audience
-entries have returned to `existing_unreviewed`. The executable matrix therefore
-records 11 reviewed, 39 `existing_unreviewed`, 18 missing, and 7
-`not_applicable` entries. Order 2, `combat_resolution`, remains queued until M1
-and the reopened Order 1 documentation gate close.
+remains evidence for the original checkpoints. The expanded scope is closed by
+the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-07-18.md).
+All three `typed_action_and_effect_execution` audience entries are now
+`reviewed`. The executable matrix therefore records 14 reviewed, 36
+`existing_unreviewed`, 18 missing, and 7 `not_applicable` entries. Order 2,
+`combat_resolution`, is next.
 
 ## Deferred Documentation
 

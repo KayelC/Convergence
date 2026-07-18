@@ -28,10 +28,10 @@ Technical pages focus on:
   immutable policy state, signal transitions, contribution projection,
   lifecycle clocks, boundary ordering, and persistence requirements.
 
-The actor reference has completed collaborative review. Typed action/effect and
-stat modifier references remain `existing_unreviewed` while the implemented
-policy family receives its fresh source and documentation reviews. Other subsystem references
-remain tracked as `existing_unreviewed` or `missing` in the
+The actor and typed action/effect references have completed collaborative
+review. That Order 1 review includes stat-modifier runtime authority and its
+integration boundaries. Other subsystem references remain tracked as
+`existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New technical pages must follow the

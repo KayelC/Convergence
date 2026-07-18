@@ -5,11 +5,11 @@ Date: 2026-07-17
 
 ## Context
 
-The Order 1 source review found that the typed battle-action facade accepted
-item commands without inventory authority and accepted caller-supplied skill
-definitions and basic-attack profiles without proving actor authority. The
-public item command also accepted arbitrary positive quantities even though
-the result described one use as `ConsumeOne`.
+The Order 1 source reviews found that the typed battle-action facade accepted
+item commands without inventory authority and accepted caller-supplied skill,
+item, and basic-attack definitions without consistently proving canonical
+authority. The public item command also accepted arbitrary positive quantities
+even though the result described one use as `ConsumeOne`.
 
 ## Decision
 
@@ -34,13 +34,32 @@ The Framework must:
 does not constitute an inventory transaction and must not be documented as the
 canonical owned-item action path.
 
+### Canonical Item Definitions
+
+An item command must carry the exact canonical `ItemDefinition` returned by the
+catalog repository supplied to `CatalogBattleActionAuthorizationPolicy`.
+Matching an item ID is not sufficient: another definition object with the same
+ID may contain substituted targeting or effects.
+
+Canonical definition authority and inventory authority are independent checks:
+
+- the authorization policy proves which authored item definition may execute;
+- `IItemActionInventory` proves that one matching item is currently owned and
+  coordinates its reservation, commit, or rollback.
+
+Both checks run before actor mutation. Canonical item authority is rechecked
+immediately before execution so a prepared assessment cannot outlive the
+catalog-backed action surface that authorized it.
+
 ### Actor Action Authorization
 
 The Framework, not the presentation host, is the canonical authority for which
-skills and basic attacks an actor may execute.
+skills, items, and basic attacks an actor may execute.
 
 - A skill action must reference a skill in the actor's authorized equipped
   action loadout.
+- An item action must reference the canonical catalog definition; inventory
+  ownership is then validated independently by the reservation port.
 - A basic attack must reference the actor's resolved basic-attack profile.
 - A resolved basic attack may originate from equipment, an authored natural
   attack, or another explicit game policy. Equipment is not mandatory.
@@ -69,14 +88,14 @@ skills and basic attacks an actor may execute.
 - The focused breaking correction is implemented. Item commands are one-use
   commands and no longer expose arbitrary quantities.
 - `BattleActionExecutor` requires explicit actor-action authority and validates
-  skill definitions and basic-attack profiles without trusting host display
-  choices.
+  canonical skill definitions, canonical item definitions, and resolved
+  basic-attack profiles without trusting host display choices.
 - Clean hosts build commands from the actor's authorized action surface and
   supply inventory for item actions.
 - Failed authorization and reservation validation return typed diagnostics and
   consume no item, resource, effect mutation, or turn.
 - Authorization is rechecked at execution so an assessment cannot outlive a
-  changed equipped skill or basic-attack profile.
+  changed equipped skill, canonical item definition, or basic-attack profile.
 
 ## Affected Documentation And Evidence
 
@@ -88,7 +107,9 @@ skills and basic attacks an actor may execute.
 - [Typed Action And Effect Execution](../technical/typed-action-and-effect-execution.md)
 
 Implementation evidence includes focused tests for missing inventory,
-exactly-one consumption, malformed reservations, unowned skills, definition
-substitution, valid natural/equipment basic attacks, and host-mediated
-exceptions. The corrections were committed separately as `14c7630`, `dd243fc`,
-`743396a`, and `49d04ea`.
+exactly-one consumption, malformed reservations, unowned skills, canonical
+skill and item substitution, execution-time reauthorization, valid
+natural/equipment basic attacks, and host-mediated exceptions. The original
+corrections were committed separately as `14c7630`, `dd243fc`, `743396a`, and
+`49d04ea`; canonical item authorization was completed by the later Order 1
+closure corrections.

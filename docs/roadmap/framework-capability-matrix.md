@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 21 complete, 2 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v10 restoration. Its
@@ -26,13 +26,13 @@ remain save-version migration between released contracts and full
 deterministic replay.
 
 Exactly-one item reservations, reservation validation, mandatory inventory
-authority, and Framework-owned skill/basic-attack authorization remain
-implemented and covered by focused tests. The stat-modifier migration now has
-one canonical actor authority, three supplied policies, typed effect and
-lifecycle integration, authored ruleset binding, save-v10 restoration, and
-cross-policy host evidence. The executable matrix remains conservative until
-the fresh M1 source review closes any reachable integration finding and the
-documentation review confirms the public explanation.
+authority, and Framework-owned canonical skill, item, and basic-attack
+authorization are implemented and covered by focused tests. The stat-modifier
+migration has one canonical actor authority, three supplied policies, typed
+effect and lifecycle integration, authored ruleset binding, save-v10
+restoration, and cross-policy host evidence. The final source-first review found
+no remaining reachable Order 1 defect, and the project owner confirmed the
+public mechanics on 18 July 2026.
 
 ## Authority
 

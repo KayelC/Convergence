@@ -1,8 +1,10 @@
 # Stat Modifier Policy Roadmap
 
+Status: **complete, source-reviewed, and owner-confirmed as of 18 July 2026**.
+
 ## Summary
 
-This roadmap expands the open typed-effect finding M1 into a controlled
+This roadmap expanded the typed-effect finding M1 into a controlled
 policy-family migration.
 
 The objective is not merely to stop an item being consumed at a stage cap. The
@@ -10,7 +12,7 @@ objective is to make stat-modifier application, duration, expiry, removal,
 restore, and meaningful-success reporting explicitly replaceable while keeping
 one Framework authority.
 
-Three supplied policies will be implemented in separate checkpoints:
+Three supplied policies were implemented in separate checkpoints:
 
 - persistent staged modifiers;
 - timed exclusive modifiers;
@@ -31,9 +33,10 @@ confirmed mechanic direction is recorded in
 - Runtime save contract: v9
 - Public release state: guarded pre-release `0.1.0`
 
-The current source remains operational but stores one aggregate stage and one
-duration per track. M1 remains open until all policy checkpoints, integration,
-and reviews are complete.
+At the roadmap baseline, source stored one aggregate stage and one duration per
+track. The completed implementation now retains policy-owned contribution and
+lifecycle state. M1 closed after all implementation, integration, source-review,
+documentation-review, and owner-confirmation gates completed.
 
 ## Ordered Checkpoints
 
@@ -49,8 +52,8 @@ and reviews are complete.
 | M1-7 | `complete` | Advance the save contract, validate policy-compatible retained state, and restore contributions atomically. | `runtime: persist stat modifier policy state` |
 | M1-8 | `complete` | Add cross-policy conformance, content, clean host, Godot-contract, item-consumption, and end-to-end encounter evidence. | `test: prove stat modifier policy parity` |
 | M1-DOC | `complete` | Create/revise mechanics, developer, and technical documentation with diagrams and examples for all three policies. | `docs: document stat modifier policies` |
-| M1-CR | `pending` | Perform a fresh source-first code review of the completed family and correct substantiated findings in isolated commits. | `review: audit stat modifier policies` |
-| M1-DR | `pending` | Review documentation against corrected source, obtain owner confirmation, and only then restore `reviewed`/`complete` status. | `docs: verify stat modifier policy documentation` |
+| M1-CR | `complete` | A fresh source-first review traced the completed family and its substantiated findings were corrected in isolated commits. | `review: audit stat modifier policies` |
+| M1-DR | `complete` | Documentation was checked against corrected source, the owner confirmed the explanation, and maturity records were promoted. | `docs: verify stat modifier policy documentation` |
 
 Each checkpoint must be independently green. A later checkpoint may revise the
 public shape introduced by M1-1 only when source evidence demonstrates that the
@@ -505,6 +508,16 @@ M1 closes only when:
 - all three audience documents pass source review;
 - the project owner confirms the final documented defaults;
 - capability and documentation matrices are promoted honestly.
+
+## Final Completion Record
+
+The source-first [Order 1 Final Closure Review](../reviews/order-1-final-closure-review-2026-07-18.md)
+traced all three policy implementations, shared validation and transition
+authority, typed effect integration, lifecycle boundary propagation, stage
+scaling, authored ruleset binding, save validation, and aggregate restoration.
+No remaining reachable Order 1 implementation defect was found. The project
+owner confirmed that the resulting plain-language explanation matches the
+intended design. M1-CR and M1-DR are therefore complete.
 
 ## Non-Goals
 

@@ -119,28 +119,28 @@
     {
       "id": "typed_action_and_effect_execution",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/actions-targeting-and-effects.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The action page and revised modifier mechanics describe the completed integration, but both await the fresh M1 source and documentation reviews."
+        "reason": "The owner-confirmed mechanics describe canonical action authority, prepared targets, exactly-one item use, ordered effects, and all three supplied modifier policies as implemented."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/typed-actions-and-effects.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The guides now cover all supplied policies, authored selection, execution, host presentation, and persistence, but await the fresh M1 reviews."
+        "reason": "The source-reviewed guides cover canonical composition, assessment and execution, inventory reservations, policy selection, lifecycle boundaries, host presentation, and persistence."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/typed-action-and-effect-execution.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The technical references describe the canonical modifier authority and completed integrations, but require fresh source and documentation review before promotion."
+        "reason": "The source-reviewed references document authorization, single-use preparation, transaction boundaries, modifier authority, lifecycle integration, and restoration invariants."
       }
     },
     {

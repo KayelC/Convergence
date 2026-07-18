@@ -69,14 +69,12 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "The canonical stat-modifier integration is implemented; final maturity promotion awaits the fresh M1 source review."
-      ]
+      "knownGaps": []
     },
     {
       "id": "combat_resolution",
@@ -98,14 +96,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Persistent, timed-exclusive, and timed-contribution lifecycle integration is implemented; final maturity promotion awaits the fresh M1 source review."
-      ]
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",
