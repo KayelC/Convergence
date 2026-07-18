@@ -97,9 +97,12 @@ flowchart TD
 Policy exceptions other than process-fatal memory exhaustion become
 `PolicyFaulted` diagnostics. Rejection never exposes a partial `After` state.
 
-`AssessApplication` and `Apply` evaluate the same immutable policy path. Skill
-and item prepared assessments additionally compare actor revisions, prepared
-targets, definitions, context, and active boundaries before execution.
+`AssessApplication` and `Apply` evaluate the same immutable policy path. The
+skill and item execution layers do not rely on a general actor revision
+counter. They instead enforce executor-owned, single-use assessment tokens;
+the exact originating request and definition; rebound prepared target IDs;
+current catalog authorization, target eligibility, resource affordability,
+modifier applicability, execution context, and active lifecycle boundaries.
 
 ## Policy State Machines
 
@@ -179,8 +182,9 @@ sequenceDiagram
     Effects->>Modifier: apply same transition inputs
     Modifier-->>Effects: immutable state and events
     alt all commits succeed
-        Action->>Actor: commit staged actor revisions
-        Action->>Inventory: commit reservation
+        Action->>Inventory: commit required reservation
+        Inventory-->>Action: committed
+        Action->>Actor: publish staged actor state
     else any execution or inventory commit rejects
         Action->>Inventory: roll back reservation
         Action-->>Host: rejected; live actors unchanged
