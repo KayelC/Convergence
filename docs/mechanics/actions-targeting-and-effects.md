@@ -158,7 +158,8 @@ without partial mutation. Arbitrary side effects performed by a custom or host
 callback are outside the actor transaction and cannot be undone by the
 Framework.
 
-Stat-stage application is being migrated to the canonical policy family
-described in [Stat Modifier Policies](stat-modifier-policies.md). Until that
-migration reaches M1-5, this action page must not be read as proof that every
-modifier effect already uses the new authority.
+Stat-stage assessment, application, duration, removal, and cleanup use the
+selected canonical policy service described in
+[Stat Modifier Policies](stat-modifier-policies.md). Skill, item, passive, and
+encounter-lifecycle paths all operate on that policy-owned state rather than a
+second aggregate modifier model.

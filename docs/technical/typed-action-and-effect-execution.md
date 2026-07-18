@@ -205,9 +205,10 @@ their command-specific turn contract.
 
 The replacement authority for stat-stage application and duration is specified
 in [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md).
-That reference distinguishes current code from confirmed future invariants;
-M1-5 is the point at which this action pipeline must stop using the old
-aggregate mutation path.
+The action pipeline delegates modifier assessment and execution to the selected
+`IStatModifierPolicyService`, preserves its typed transitions in effect
+results, and publishes accepted policy-owned state through the same actor
+transaction as other typed effects.
 
 ## Source And Test Evidence
 

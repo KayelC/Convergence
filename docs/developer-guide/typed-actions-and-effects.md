@@ -177,9 +177,10 @@ network calls, or other side effects performed by host/custom callbacks. Keep
 such work after accepted Framework results whenever possible.
 
 For stat-stage effects, also read
-[Stat Modifier Policies](stat-modifier-policies.md). That guide separates the
-implemented persistent policy from the confirmed timed designs and identifies
-the remaining action-integration checkpoint explicitly.
+[Stat Modifier Policies](stat-modifier-policies.md). That guide explains the
+implemented persistent, timed-exclusive, and timed-contribution policies and
+how the selected policy service is shared by action execution, lifecycle
+processing, save validation, and restoration.
 
 ## Call Sequence
 
