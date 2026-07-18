@@ -1830,6 +1830,34 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_TimedModifierDoesNotExpireOnItsApplicationTurn()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 1, 2, 0, -1, 13);
+        using var output = new StringWriter();
+        var source = new TrainingAnnexLifecycleContentPackTextSource(
+            ContentRoot(),
+            hostedEntityBaseSkillIds: ["frost_tip", "echo_strike", "steady_breath", "focus_call"],
+            statModifierPolicyId: "timed_contribution",
+            focusCallDuration: 1);
+        var host = CreateHost(io, output, source);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(summary.ExecutedBattleEffectEvidence, effect =>
+            effect.SourceActionId == Qualified("focus_call") &&
+            effect.EffectKind == "modify_stat_stage");
+        Assert.Contains(summary.LifecycleEvidence, evidence =>
+            evidence.EventKind == BattleStatusLifecycleEventKind.StatModifierChanged &&
+            evidence.RelatedContentId == ContentId.Parse("attack"));
+        Assert.DoesNotContain(summary.LifecycleEvidence, evidence =>
+            evidence.EventKind == BattleStatusLifecycleEventKind.StatusExpired &&
+            evidence.RelatedContentId == ContentId.Parse("attack"));
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_BattleItemMenuExecutesSecondOwnedCatalogItem()
     {
         ContentId focusTea = Qualified("focus_tea");
@@ -4830,7 +4858,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string? unaffordableSkillId = null,
         string? affinityEntityId = null,
         string? affinityElementId = null,
-        string? affinity = null) : IContentPackTextSource
+        string? affinity = null,
+        string? statModifierPolicyId = null,
+        int? focusCallDuration = null) : IContentPackTextSource
     {
         public async ValueTask<ContentPackTextBundle> ReadAsync(
             ContentPackTextRequest request,
@@ -4861,6 +4891,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
                     {
                         text = MakeSkillUnaffordable(text, unaffordableSkillId);
                     }
+                    if (focusCallDuration is int duration)
+                    {
+                        text = MutateFocusCallDuration(text, duration);
+                    }
+                }
+                else if (path.EndsWith(".rulesets.json", StringComparison.Ordinal) &&
+                         statModifierPolicyId is not null)
+                {
+                    text = MutateStatModifierPolicy(text, statModifierPolicyId);
                 }
 
                 documents.Add(new ContentDocumentText(path, path, text));
@@ -4961,6 +5000,33 @@ public sealed class CleanTrainingAnnexPlayHostTests
             JsonObject amount = skill["costs"]?.AsArray()[0]?["amount"]?.AsObject() ??
                 throw new InvalidOperationException($"Training Annex skill '{skillId}' has no first cost amount.");
             amount["value"] = 999;
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static string MutateFocusCallDuration(string json, int duration)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skills JSON could not be parsed.");
+            JsonObject focusCall = rootNode["skills"]?.AsArray()
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == "focus_call") ??
+                throw new InvalidOperationException("Training Annex skill 'focus_call' was not found.");
+            JsonObject durationNode = focusCall["effects"]?.AsArray()[0]?["duration"]?.AsObject() ??
+                throw new InvalidOperationException("Training Annex skill 'focus_call' has no duration.");
+            durationNode["value"] = duration;
+            return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static string MutateStatModifierPolicy(string json, string policyId)
+        {
+            JsonObject rootNode = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex rulesets JSON could not be parsed.");
+            JsonObject ruleset = rootNode["rulesets"]?.AsArray()
+                .Select(node => node?.AsObject())
+                .Single(node => node?["id"]?.GetValue<string>() == "standard_stat_modifiers") ??
+                throw new InvalidOperationException(
+                    "Training Annex stat-modifier ruleset was not found.");
+            ruleset["policyId"] = policyId;
             return rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
 

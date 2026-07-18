@@ -23,10 +23,13 @@ public sealed class StatModifierExecutionIntegrationTests
     private static readonly ContentId PhaseEnd = ContentId.Parse("phase_end");
     private static readonly ContentId PlayerPhase = ContentId.Parse("player_phase");
 
-    [Fact]
-    public async Task EncounterRunner_AnchorsTimedApplicationToItsCurrentOwnerTurnBoundary()
+    [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task EncounterRunner_AnchorsTimedApplicationToItsCurrentOwnerTurnBoundary(
+        SuppliedPolicyKind policyKind)
     {
-        IStatModifierPolicyService policy = TimedContributionPolicy();
+        IStatModifierPolicyService policy = Policy(policyKind);
         SkillDefinition skill = ActiveSkill(
             "encounter_boundary_focus",
             [new ModifyStatStageEffectDefinition([Attack], 1, Turns(3))]);

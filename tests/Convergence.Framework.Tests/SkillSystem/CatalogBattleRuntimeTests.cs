@@ -963,6 +963,88 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_AutomatedSkillSelectionPreservesANewTimedModifierForItsApplicationTurn()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition focus = TimedModifierSkill("test.pack:automated_timed_focus");
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "automated_timed_player",
+            "automated_timed_player",
+            PlayerTeam,
+            [focus]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "automated_timed_enemy",
+            "automated_timed_enemy",
+            EnemyTeam);
+        var statModifiers = new RecordingStatModifierPolicyService(
+            new StatModifierPolicyService(new TimedContributionStatModifierPolicy(
+                Id("test.pack:automated_timed_contribution"))));
+        BattleExecutionServices services = Services(catalog, statModifiers: statModifiers);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        AssertSameBoundaryTickPreservedOneTurnDuration(statModifiers);
+    }
+
+    [Fact]
+    public void Runner_RestrictedSkillExecutionPreservesANewTimedModifierForItsApplicationTurn()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition focus = TimedModifierSkill("test.pack:restricted_timed_focus");
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "restricted_timed_player",
+            "restricted_timed_player",
+            PlayerTeam,
+            [focus]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "restricted_timed_enemy",
+            "restricted_timed_enemy",
+            EnemyTeam);
+        var statModifiers = new RecordingStatModifierPolicyService(
+            new StatModifierPolicyService(new TimedContributionStatModifierPolicy(
+                Id("test.pack:restricted_timed_contribution"))));
+        BattleExecutionServices services = Services(catalog, statModifiers: statModifiers);
+        var executor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                focus.Id,
+                new SkillBattleActionCommand(focus, [request.Actor.State.InstanceId])));
+        var innerLifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            Id("battle_start"),
+            Id("owner_turn_end"));
+        var lifecycle = new RestrictedBattleStatusLifecyclePort(
+            innerLifecycle,
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.LimitedAction, [focus.Id]));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services,
+            lifecycle,
+            restrictionResolver: RestrictionResolver(executor, services, source)).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(1, source.CallCount);
+        StatModifierLifecycleBoundary restrictedBoundary = Assert.Single(
+            source.LastRequest!.Turn.ActiveStatModifierBoundaries);
+        StatModifierLifecycleBoundary applicationBoundary = Assert.Single(
+            statModifiers.ApplicationBoundaries);
+        Assert.Equal(restrictedBoundary.EventId, applicationBoundary.EventId);
+        Assert.Equal(restrictedBoundary.Sequence, applicationBoundary.Sequence);
+        AssertSameBoundaryTickPreservedOneTurnDuration(statModifiers);
+    }
+
+    [Fact]
     public void Runner_SkipRestrictionConsumesTheTurnWithoutSelectingANormalAction()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -1698,7 +1780,8 @@ public sealed class CatalogBattleRuntimeTests
 
     private static BattleExecutionServices Services(
         GameDataCatalog catalog,
-        IRandomTargetSelectionPolicy? randomTargetPolicy = null) => new(
+        IRandomTargetSelectionPolicy? randomTargetPolicy = null,
+        IStatModifierPolicyService? statModifiers = null) => new(
         catalog,
         new TestDamagePolicy(),
         new NeverInstantDeathPolicy(),
@@ -1707,7 +1790,7 @@ public sealed class CatalogBattleRuntimeTests
         new TestPowerPolicy(),
         randomTargetPolicy ?? new FirstRandomTargetPolicy(),
         new OrderedRuntimeTargetSelectionPolicy(),
-        TestStatModifierPolicy.CreatePersistent());
+        statModifiers ?? TestStatModifierPolicy.CreatePersistent());
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,
@@ -1857,6 +1940,48 @@ public sealed class CatalogBattleRuntimeTests
         effects: [new DamageEffectDefinition(element, 1, 100, new NeverCriticalDefinition(), new HitCountDefinition(1, 1))],
         availability: new SkillAvailabilityDefinition([Battle]),
         costs: costs);
+
+    private static SkillDefinition TimedModifierSkill(string id) => new(
+        Id(id),
+        id,
+        id,
+        SkillActivation.Active,
+        SkillMenuGroup.Buff,
+        InheritanceGroup.Support,
+        new SkillInheritanceDefinition(true),
+        targeting: new TargetingDefinition(
+            TargetRelation.Self,
+            TargetSelection.Single,
+            TargetLifeState.Alive,
+            true),
+        effects:
+        [
+            new ModifyStatStageEffectDefinition(
+                [Id("attack")],
+                1,
+                new TurnDurationDefinition(1, Id("owner_turn_end"), true))
+        ],
+        availability: new SkillAvailabilityDefinition([Battle]));
+
+    private static void AssertSameBoundaryTickPreservedOneTurnDuration(
+        RecordingStatModifierPolicyService statModifiers)
+    {
+        (StatModifierTickRequest Request, StatModifierTransitionResult Result) tick = Assert.Single(
+            statModifiers.Ticks,
+            value => value.Request.State.Tracks.Count > 0);
+        RuntimeStatModifierContributionSnapshot before = Assert.Single(
+            Assert.Single(tick.Request.State.Tracks).Contributions);
+        RuntimeStatModifierContributionSnapshot after = Assert.Single(
+            Assert.Single(tick.Result.After.Tracks).Contributions);
+        StatModifierLifecycleBoundary applicationBoundary = Assert.IsType<StatModifierLifecycleBoundary>(
+            before.LastLifecycleBoundary);
+
+        Assert.Equal(applicationBoundary.EventId, tick.Request.LifecycleBoundary.EventId);
+        Assert.Equal(applicationBoundary.Sequence, tick.Request.LifecycleBoundary.Sequence);
+        Assert.Equal(1, Assert.IsType<TurnDurationDefinition>(before.Duration).Value);
+        Assert.Equal(1, Assert.IsType<TurnDurationDefinition>(after.Duration).Value);
+        Assert.False(tick.Result.StateChanged);
+    }
 
     private static CatalogBattleActor RuntimeCatalogActor(
         string entityId,
@@ -2220,6 +2345,92 @@ public sealed class CatalogBattleRuntimeTests
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Executed(consumption));
         }
+    }
+
+    private sealed class RecordingStatModifierPolicyService(
+        IStatModifierPolicyService inner) : IStatModifierPolicyService
+    {
+        private readonly List<StatModifierLifecycleBoundary> _applicationBoundaries = [];
+        private readonly List<(StatModifierTickRequest Request, StatModifierTransitionResult Result)> _ticks = [];
+
+        public ContentId PolicyId => inner.PolicyId;
+        public IReadOnlyList<StatModifierLifecycleBoundary> ApplicationBoundaries =>
+            _applicationBoundaries.AsReadOnly();
+        public IReadOnlyList<(StatModifierTickRequest Request, StatModifierTransitionResult Result)> Ticks =>
+            _ticks.AsReadOnly();
+
+        public StatModifierValidationResult ValidateState(RuntimeStatModifierStateSnapshot state) =>
+            inner.ValidateState(state);
+
+        public StatModifierTransitionResult AssessApplication(StatModifierApplicationRequest request) =>
+            inner.AssessApplication(request);
+
+        public StatModifierTransitionResult Apply(StatModifierApplicationRequest request)
+        {
+            if (request.ActiveLifecycleBoundary is StatModifierLifecycleBoundary boundary)
+            {
+                _applicationBoundaries.Add(boundary);
+            }
+
+            return inner.Apply(request);
+        }
+
+        public StatModifierTransitionResult Tick(StatModifierTickRequest request)
+        {
+            StatModifierTransitionResult result = inner.Tick(request);
+            _ticks.Add((request, result));
+            return result;
+        }
+
+        public StatModifierTransitionResult Remove(StatModifierRemovalRequest request) =>
+            inner.Remove(request);
+
+        public StatModifierTransitionResult Cleanup(StatModifierCleanupRequest request) =>
+            inner.Cleanup(request);
+    }
+
+    private sealed class RestrictedBattleStatusLifecyclePort(
+        BattleStatusEncounterLifecyclePort inner,
+        RuntimeInstanceId restrictedActorId,
+        BattleTurnStartRestriction restriction) :
+        IBattleEncounterLifecyclePort,
+        IBattleEncounterStatModifierBoundarySource
+    {
+        public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
+            BattleEncounterTurnLifecycleRequest request) =>
+            inner.GetActiveStatModifierBoundaries(request);
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            inner.ProcessBattleStartAsync(request, cancellationToken);
+
+        public async ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            BattleTurnStartLifecycleResult result = await inner.ProcessTurnStartAsync(request, cancellationToken);
+            return request.Actor.InstanceId == restrictedActorId
+                ? new BattleTurnStartLifecycleResult(restriction, result.Events)
+                : result;
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            inner.ProcessTurnEndAsync(request, cancellationToken);
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default) =>
+            inner.ProcessPhaseEndAsync(request, teamId, cancellationToken);
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default) =>
+            inner.ProcessBattleEndAsync(request, outcome, cancellationToken);
     }
 
     private sealed class FixedTurnRestrictionLifecyclePort : IBattleEncounterLifecyclePort
