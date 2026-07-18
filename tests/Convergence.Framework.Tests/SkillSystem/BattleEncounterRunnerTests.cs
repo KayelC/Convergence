@@ -18,6 +18,8 @@ public sealed class BattleEncounterRunnerTests
     private static readonly ContentId Sp = Id("sp");
     private static readonly ContentId PlayerTeam = Id("player_team");
     private static readonly ContentId EnemyTeam = Id("enemy_team");
+    private static readonly ContentId OwnerTurnEnd = Id("owner_turn_end");
+    private static readonly ContentId PhaseEnd = Id("phase_end");
 
     [Fact]
     public void Runner_UsesInitiativeAndOrdersLifecycleEvents()
@@ -360,6 +362,67 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(
             expectedActorId is null ? null : RuntimeInstanceId.Parse(expectedActorId),
             fault.ActorId);
+    }
+
+    [Theory]
+    [InlineData(BoundarySourceFailure.Throw)]
+    [InlineData(BoundarySourceFailure.NullResult)]
+    [InlineData(BoundarySourceFailure.InvalidBoundary)]
+    [InlineData(BoundarySourceFailure.DuplicateEvent)]
+    public void Runner_ContainsMalformedStatModifierBoundarySourcesAsLifecycleFaults(
+        BoundarySourceFailure failure)
+    {
+        var lifecycle = new BoundarySourceLifecycle(failure);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("boundary_fault_player", PlayerTeam), Participant("boundary_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.LifecycleExecutionFailed,
+            "stat-modifier-boundary-source");
+        Assert.Empty(handler.Requests);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+    }
+
+    [Fact]
+    public void Runner_DefensivelyCopiesStatModifierBoundariesBeforeCallingTheTurnHandler()
+    {
+        var mutableBoundaries = new List<StatModifierLifecycleBoundary>
+        {
+            new(OwnerTurnEnd, 1)
+        };
+        var lifecycle = new BoundarySourceLifecycle(_ => mutableBoundaries);
+        BattleEncounterTurnRequest? captured = null;
+        var handler = new QueueTurnHandler(request =>
+        {
+            mutableBoundaries.Add(new StatModifierLifecycleBoundary(PhaseEnd, 1));
+            captured = request;
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [Participant("boundary_copy_player", PlayerTeam), Participant("boundary_copy_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        BattleEncounterTurnRequest request = Assert.IsType<BattleEncounterTurnRequest>(captured);
+        StatModifierLifecycleBoundary boundary = Assert.Single(request.ActiveStatModifierBoundaries);
+        Assert.Equal(OwnerTurnEnd, boundary.EventId);
+        Assert.Equal(1, boundary.Sequence);
+        Assert.Equal(2, mutableBoundaries.Count);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<StatModifierLifecycleBoundary>)request.ActiveStatModifierBoundaries)
+            .Add(new StatModifierLifecycleBoundary(PhaseEnd, 2)));
     }
 
     [Fact]
@@ -1418,6 +1481,87 @@ public sealed class BattleEncounterRunnerTests
             BattleEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleEndEvents);
         }
+    }
+
+    public enum BoundarySourceFailure
+    {
+        Throw,
+        NullResult,
+        InvalidBoundary,
+        DuplicateEvent
+    }
+
+    private sealed class BoundarySourceLifecycle :
+        IBattleEncounterLifecyclePort,
+        IBattleEncounterStatModifierBoundarySource
+    {
+        private readonly Func<BattleEncounterTurnLifecycleRequest,
+            IReadOnlyList<StatModifierLifecycleBoundary>> _boundaries;
+
+        public BoundarySourceLifecycle(BoundarySourceFailure failure)
+            : this(_ => ResolveFailure(failure))
+        {
+        }
+
+        public BoundarySourceLifecycle(
+            Func<BattleEncounterTurnLifecycleRequest,
+                IReadOnlyList<StatModifierLifecycleBoundary>> boundaries)
+        {
+            _boundaries = boundaries;
+        }
+
+        public int BattleEndCalls { get; private set; }
+
+        public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
+            BattleEncounterTurnLifecycleRequest request) =>
+            _boundaries(request);
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []));
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default)
+        {
+            BattleEndCalls++;
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        private static IReadOnlyList<StatModifierLifecycleBoundary> ResolveFailure(
+            BoundarySourceFailure failure) => failure switch
+            {
+                BoundarySourceFailure.Throw => throw new InvalidOperationException(
+                    "Deliberate stat-modifier-boundary-source failure."),
+                BoundarySourceFailure.NullResult => null!,
+                BoundarySourceFailure.InvalidBoundary =>
+                    [new StatModifierLifecycleBoundary(default, 0)],
+                BoundarySourceFailure.DuplicateEvent =>
+                    [
+                        new StatModifierLifecycleBoundary(OwnerTurnEnd, 1),
+                        new StatModifierLifecycleBoundary(OwnerTurnEnd, 2)
+                    ],
+                _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, null)
+            };
     }
 
     public enum ThrowingLifecycleStage

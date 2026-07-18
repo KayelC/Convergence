@@ -292,17 +292,9 @@ public sealed record BattleEncounterTurnRequest
             participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
         TurnStartRestriction = turnStartRestriction ?? throw new ArgumentNullException(nameof(turnStartRestriction));
         TurnEconomyState = turnEconomyState ?? throw new ArgumentNullException(nameof(turnEconomyState));
-        StatModifierLifecycleBoundary[] boundaries = (activeStatModifierBoundaries ?? []).ToArray();
-        if (boundaries.Any(boundary => boundary is null) ||
-            boundaries.Any(boundary => !boundary.EventId.IsValid || boundary.Sequence <= 0) ||
-            boundaries.Select(boundary => boundary.EventId).Distinct().Count() != boundaries.Length)
-        {
-            throw new ArgumentException(
-                "Active stat-modifier boundaries must be valid and unique by event ID.",
-                nameof(activeStatModifierBoundaries));
-        }
-
-        ActiveStatModifierBoundaries = Array.AsReadOnly(boundaries);
+        ActiveStatModifierBoundaries = SnapshotActiveStatModifierBoundaries(
+            activeStatModifierBoundaries,
+            nameof(activeStatModifierBoundaries));
     }
 
     public BattleEncounterRequest Encounter { get; }
@@ -313,6 +305,23 @@ public sealed record BattleEncounterTurnRequest
     public IReadOnlyList<ContentId> AllowedActionIds => TurnStartRestriction.AllowedActionIds;
     public BattleTurnEconomySnapshot TurnEconomyState { get; }
     public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; }
+
+    internal static IReadOnlyList<StatModifierLifecycleBoundary> SnapshotActiveStatModifierBoundaries(
+        IEnumerable<StatModifierLifecycleBoundary>? boundaries,
+        string parameterName)
+    {
+        StatModifierLifecycleBoundary[] snapshot = (boundaries ?? []).ToArray();
+        if (snapshot.Any(boundary => boundary is null) ||
+            snapshot.Any(boundary => !boundary.EventId.IsValid || boundary.Sequence <= 0) ||
+            snapshot.Select(boundary => boundary.EventId).Distinct().Count() != snapshot.Length)
+        {
+            throw new ArgumentException(
+                "Active stat-modifier boundaries must be valid and unique by event ID.",
+                parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
 }
 
 public sealed record BattleEncounterCommandResult
@@ -892,14 +901,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             ? InvokePort(
                                 BattleEncounterFaultCode.LifecycleExecutionFailed,
                                 "stat-modifier-boundary-source",
-                                () => boundarySource.GetActiveStatModifierBoundaries(
-                                          new BattleEncounterTurnLifecycleRequest(
-                                              request,
-                                              actor,
-                                              request.Participants,
-                                              CanRecallToRoster(actor)))
-                                      ?? throw new InvalidOperationException(
-                                          "The lifecycle boundary source returned null."),
+                                () => BattleEncounterTurnRequest.SnapshotActiveStatModifierBoundaries(
+                                    boundarySource.GetActiveStatModifierBoundaries(
+                                        new BattleEncounterTurnLifecycleRequest(
+                                            request,
+                                            actor,
+                                            request.Participants,
+                                            CanRecallToRoster(actor)))
+                                    ?? throw new InvalidOperationException(
+                                        "The lifecycle boundary source returned null."),
+                                    "activeStatModifierBoundaries"),
                                 actor.InstanceId)
                             : Array.Empty<StatModifierLifecycleBoundary>();
                     BattleEncounterCommandResult command = await InvokePortAsync(
