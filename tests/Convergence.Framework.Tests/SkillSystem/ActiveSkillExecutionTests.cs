@@ -826,6 +826,32 @@ public sealed class ActiveSkillExecutionTests
         Assert.All(result.Effects, effect => Assert.Equal(EffectExecutionOutcome.Success, effect.Outcome));
     }
 
+    [Theory]
+    [InlineData(1, EffectExecutionOutcome.Success)]
+    [InlineData(0, EffectExecutionOutcome.Skipped)]
+    [InlineData(-1, EffectExecutionOutcome.Skipped)]
+    public void Execute_HasBuffConditionRequiresAPositiveResolvedStage(
+        int stage,
+        EffectExecutionOutcome expectedOutcome)
+    {
+        ContentId attack = ContentId.Parse("attack");
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        if (stage != 0)
+        {
+            TestStatModifierPolicy.ApplyPersistent(target, attack, stage);
+        }
+
+        var effect = new AnalyzeEffectDefinition(
+            [AnalysisLayer.Stats],
+            new HasBuffConditionDefinition(ConditionSubject.Target, attack));
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(ActiveSkill([effect]), actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(expectedOutcome, Assert.Single(result.Effects).Outcome);
+    }
+
     [Fact]
     public void Execute_InstantKillUsesHostPolicyAndTypedResistance()
     {

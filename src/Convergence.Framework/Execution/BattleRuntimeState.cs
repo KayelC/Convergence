@@ -335,8 +335,11 @@ public sealed class RuntimeActorState
     public bool HasAilment(ContentId id) => _ailments.ContainsKey(id);
     public bool HasSkill(ContentId id) => _skillIds.Contains(id);
     public bool HasCapability(ContentId id) => _capabilityIds.Contains(id);
+    /// <summary>
+    /// Reports whether the requested modifier track has a positive resolved stage.
+    /// </summary>
     public bool HasBuff(ContentId modifierTrackId) =>
-        StatStages.TryGetValue(modifierTrackId, out BattleStatStageState? state) && state.Stage != 0;
+        StatStages.TryGetValue(modifierTrackId, out BattleStatStageState? state) && state.Stage > 0;
 
     public ElementalAffinity GetElementalAffinity(
         DamageElement element,
