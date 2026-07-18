@@ -23,3 +23,6 @@ tests/Godot_v*-stable_mono_*/
 
 # Other common generated files
 *.log
+
+# Private local task continuity records
+/Chat Context History/
