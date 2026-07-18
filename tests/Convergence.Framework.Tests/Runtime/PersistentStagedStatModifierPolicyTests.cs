@@ -19,6 +19,10 @@ public sealed class PersistentStagedStatModifierPolicyTests
             new PersistentStagedStatModifierPolicy(PolicyId, 0, 4));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new PersistentStagedStatModifierPolicy(PolicyId, -4, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PersistentStagedStatModifierPolicy(PolicyId, -5, 4));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PersistentStagedStatModifierPolicy(PolicyId, -4, 5));
     }
 
     [Fact]

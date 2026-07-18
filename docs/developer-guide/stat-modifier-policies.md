@@ -42,6 +42,13 @@ Unknown parameters, missing bounds, a wrong ruleset category, and an
 unregistered factory ID produce binding diagnostics. There is no hidden
 fallback policy.
 
+The supplied bounded policies may narrow either side of the standard
+`-4..+4` domain, including asymmetrically, but they reject a minimum below `-4`
+or a maximum above `+4`. That guarantee keeps them compatible with the supplied
+stage-scaling tables. A game that needs a different stage domain should supply
+both its own `IStatModifierPolicy` and its own `IStatStageScalingPolicy`; the
+generic scaling request does not impose the standard four-stage range.
+
 ## Bind Once At Composition
 
 ```csharp

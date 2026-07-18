@@ -20,6 +20,10 @@ public sealed class TimedContributionStatModifierPolicyTests
             new TimedContributionStatModifierPolicy(PolicyId, 0, 4));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new TimedContributionStatModifierPolicy(PolicyId, -4, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TimedContributionStatModifierPolicy(PolicyId, -5, 4));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TimedContributionStatModifierPolicy(PolicyId, -4, 5));
     }
 
     [Fact]

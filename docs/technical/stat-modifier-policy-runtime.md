@@ -277,11 +277,15 @@ lifecycle state.
 - `stat_modifier` category;
 - registered unqualified policy-factory ID;
 - exact allowed parameter names;
-- required bounds and coherent signed range;
+- required bounds, a coherent signed range, and compatibility with the
+  supplied `-4..+4` scaling domain;
 - factory result and diagnostics.
 
 The standard registry supplies `persistent_staged`, `timed_exclusive`, and
 `timed_contribution`. There is no policy fallback after binding failure.
+`StatStageScalingRequest` itself is range-neutral so a custom modifier policy
+and custom `IStatStageScalingPolicy` can deliberately share another integer
+domain. `StandardStatStageScalingPolicy` remains table-defined for `-4..+4`.
 
 ## Save And Aggregate Restore
 

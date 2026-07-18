@@ -49,8 +49,9 @@ flowchart TD
 ## Policy One: Persistent Stages
 
 The persistent staged policy keeps one signed stage per track until explicit
-cleanup. Its supplied range is `-4..+4`; authored rulesets may choose different
-negative and positive bounds.
+cleanup. Its supplied range is `-4..+4`; authored rulesets may choose narrower
+or asymmetric negative and positive bounds within that domain. Bounds outside
+`-4..+4` require a custom modifier policy paired with a custom scaling policy.
 
 - Positive applications move toward the positive cap.
 - Negative applications move toward the negative cap.

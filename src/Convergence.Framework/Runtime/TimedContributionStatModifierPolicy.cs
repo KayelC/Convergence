@@ -1,4 +1,5 @@
 using Convergence.Content;
+using Convergence.Execution;
 
 namespace Convergence.Runtime;
 
@@ -24,12 +25,28 @@ public sealed class TimedContributionStatModifierPolicy : IStatModifierPolicy
                 nameof(minimumStage),
                 "Timed contributions require a negative minimum stage.");
         }
+        if (minimumStage < BattleStatStageRange.Minimum)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minimumStage),
+                minimumStage,
+                $"The supplied timed-contribution policy supports a minimum stage no lower than " +
+                $"{BattleStatStageRange.Minimum}.");
+        }
 
         if (maximumStage <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(maximumStage),
                 "Timed contributions require a positive maximum stage.");
+        }
+        if (maximumStage > BattleStatStageRange.Maximum)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumStage),
+                maximumStage,
+                $"The supplied timed-contribution policy supports a maximum stage no higher than " +
+                $"{BattleStatStageRange.Maximum}.");
         }
 
         PolicyId = policyId;

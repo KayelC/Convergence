@@ -662,6 +662,31 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(RulesetBindingDiagnosticCode.CategoryMismatch, Assert.Single(wrongCategory.Diagnostics).Code);
     }
 
+    [Theory]
+    [InlineData("persistent_staged", -5, 4)]
+    [InlineData("persistent_staged", -4, 5)]
+    [InlineData("timed_contribution", -5, 4)]
+    [InlineData("timed_contribution", -4, 5)]
+    public void StatModifierBinding_RejectsBoundsOutsideTheSuppliedScalingDomain(
+        string policyId,
+        int minimumStage,
+        int maximumStage)
+    {
+        ContentId rulesetId = Id("test.pack:unsupported_bounds");
+        RulesetBindingResult<IStatModifierPolicyService> result = CreateResolver().BindStatModifierPolicy(
+            Catalog(new RulesetDefinition(
+                rulesetId,
+                "Unsupported Bounds",
+                "Bounds exceed the supplied four-stage scaling domain.",
+                RulesetCategory.StatModifier,
+                Id(policyId),
+                Parameters(("minimumStage", minimumStage), ("maximumStage", maximumStage)))),
+            rulesetId);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterValue, Assert.Single(result.Diagnostics).Code);
+    }
+
     [Fact]
     public void Binding_ReportsMissingWrongCategoryUnsupportedPolicyAndBadParameters()
     {

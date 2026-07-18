@@ -90,8 +90,19 @@ public sealed record StatStageScalingTable
     public StatStageScalingChannel Channel { get; }
     public IReadOnlyList<StatStageMultiplier> Multipliers { get; }
 
-    public decimal GetMultiplier(int stage) =>
-        Multipliers.First(multiplier => multiplier.Stage == stage).Multiplier;
+    public decimal GetMultiplier(int stage)
+    {
+        if (!BattleStatStageRange.Contains(stage))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(stage),
+                stage,
+                $"The standard scaling table supports stages from {BattleStatStageRange.Minimum} " +
+                $"through {BattleStatStageRange.Maximum}.");
+        }
+
+        return Multipliers[stage - BattleStatStageRange.Minimum].Multiplier;
+    }
 }
 
 public sealed record StatStageScalingRequest
@@ -116,17 +127,6 @@ public sealed record StatStageScalingRequest
                 "Stage-scaling requests cannot contain duplicate modifier tracks.",
                 nameof(stages));
         }
-        foreach (RuntimeStatStageSnapshot stage in snapshot)
-        {
-            if (stage.Stage is < BattleStatStageRange.Minimum or > BattleStatStageRange.Maximum)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(stages),
-                    stage.Stage,
-                    $"Stage must be between {BattleStatStageRange.Minimum} and {BattleStatStageRange.Maximum}.");
-            }
-        }
-
         Channel = channel;
         Stages = Array.AsReadOnly(snapshot);
     }

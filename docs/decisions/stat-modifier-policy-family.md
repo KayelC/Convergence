@@ -29,7 +29,8 @@ Convergence will supply three neutral reference implementations:
 
 1. **Persistent staged policy**
    - signed stages move within configured minimum and maximum bounds;
-   - supplied defaults use `-4..+4`;
+   - supplied defaults use `-4..+4`, and supplied authored bounds may narrow
+     but not exceed that standard scaling domain;
    - modifiers do not expire naturally during an encounter;
    - explicit removal, actor departure policy, or encounter cleanup removes
      them;
@@ -52,10 +53,15 @@ Convergence will supply three neutral reference implementations:
    - each retained contribution has its own duration;
    - contributions tick and expire independently;
    - the resolved stage is derived from active contributions and configured
-     bounds;
+     bounds within the supplied `-4..+4` scaling domain;
    - a one-stage, three-turn application used once per turn can remain at three
       active stages because the oldest contribution expires as the newest is
       added.
+
+Custom policy families remain free to use another integer stage domain when
+they provide both the modifier-state policy and matching stage-scaling policy.
+The generic scaling request does not enforce the supplied implementation's
+four-stage table.
 
 ### Confirmed Timed-Exclusive Scale
 

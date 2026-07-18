@@ -129,6 +129,22 @@ public sealed class StatStageScalingTests
     }
 
     [Fact]
+    public void ScalingRequest_AllowsCustomPolicyToOwnANonstandardStageDomain()
+    {
+        var policy = new FiveStageScalingPolicy();
+        var request = new StatStageScalingRequest(
+            StatStageScalingChannel.PhysicalDamageDealt,
+            [new RuntimeStatStageSnapshot(StandardProgressionIds.PhysicalAttack, 5)]);
+
+        StatStageScalingResult result = policy.Resolve(request);
+
+        Assert.Equal(2.5m, result.Multiplier);
+        Assert.Equal(5, Assert.Single(result.AppliedMultipliers).Stage);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StandardStatStageScalingPolicy().Resolve(request));
+    }
+
+    [Fact]
     public void StageDuration_DoesNotChangeMagnitude()
     {
         var policy = new StandardStatStageScalingPolicy();
@@ -324,5 +340,22 @@ public sealed class StatStageScalingTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class FiveStageScalingPolicy : IStatStageScalingPolicy
+    {
+        public StatStageScalingResult Resolve(StatStageScalingRequest request)
+        {
+            RuntimeStatStageSnapshot stage = Assert.Single(request.Stages);
+            Assert.Equal(5, stage.Stage);
+            return new StatStageScalingResult(
+                request.Channel,
+                2.5m,
+                [new AppliedStatStageMultiplier(
+                    stage.ModifierTrackId,
+                    stage.Stage,
+                    request.Channel,
+                    2.5m)]);
+        }
     }
 }
