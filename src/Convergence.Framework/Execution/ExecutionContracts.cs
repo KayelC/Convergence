@@ -1,4 +1,5 @@
 using Convergence.Content;
+using Convergence.Battle;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -88,6 +89,92 @@ public sealed record ExecutionResourceChange
     public decimal Delta { get; }
 }
 
+/// <summary>Captures one attempted damage hit and its staged runtime mutation.</summary>
+public sealed class DamageHitExecutionEvidence
+{
+    public DamageHitExecutionEvidence(
+        ContentId sourceActionId,
+        RuntimeInstanceId actorId,
+        RuntimeInstanceId targetId,
+        int effectIndex,
+        DamageHitResolution resolution,
+        ElementalAffinity resolvedAffinity,
+        RuntimeInstanceId? affectedActorId = null,
+        ContentId? affectedResourceId = null,
+        decimal appliedResourceDelta = 0m)
+    {
+        if (!sourceActionId.IsValid)
+        {
+            throw new ArgumentException("Damage-hit evidence requires a valid source action ID.", nameof(sourceActionId));
+        }
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Damage-hit evidence requires a valid acting actor ID.", nameof(actorId));
+        }
+        if (!targetId.IsValid)
+        {
+            throw new ArgumentException("Damage-hit evidence requires a valid target actor ID.", nameof(targetId));
+        }
+        ArgumentOutOfRangeException.ThrowIfNegative(effectIndex);
+        Resolution = resolution ?? throw new ArgumentNullException(nameof(resolution));
+        if (!Enum.IsDefined(resolvedAffinity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(resolvedAffinity),
+                resolvedAffinity,
+                "Resolved affinity must be defined.");
+        }
+        if (affectedActorId is RuntimeInstanceId affectedActor && !affectedActor.IsValid)
+        {
+            throw new ArgumentException("Affected actor ID must be valid when supplied.", nameof(affectedActorId));
+        }
+        if (affectedResourceId is ContentId resourceId && !resourceId.IsValid)
+        {
+            throw new ArgumentException("Affected resource ID must be valid when supplied.", nameof(affectedResourceId));
+        }
+        if ((affectedActorId is null) != (affectedResourceId is null))
+        {
+            throw new ArgumentException("Affected actor and resource IDs must be supplied together.");
+        }
+        if (appliedResourceDelta != 0m && affectedActorId is null)
+        {
+            throw new ArgumentException("A nonzero resource delta requires an affected actor and resource.");
+        }
+
+        SourceActionId = sourceActionId;
+        ActorId = actorId;
+        TargetId = targetId;
+        EffectIndex = effectIndex;
+        ResolvedAffinity = resolvedAffinity;
+        AffectedActorId = affectedActorId;
+        AffectedResourceId = affectedResourceId;
+        AppliedResourceDelta = appliedResourceDelta;
+    }
+
+    public ContentId SourceActionId { get; }
+    public RuntimeInstanceId ActorId { get; }
+    public RuntimeInstanceId TargetId { get; }
+    public int EffectIndex { get; }
+    public int HitIndex => Resolution.HitIndex;
+    public bool Hit => Resolution.Hit;
+    public decimal ResolvedDamage => Resolution.Damage;
+    public bool Critical => Resolution.Critical;
+    public int? AuthoredAccuracy => Resolution.AuthoredAccuracy;
+    public int? FinalAccuracy => Resolution.FinalAccuracy;
+    public decimal? AccuracyRoll => Resolution.AccuracyRoll;
+    public bool? CriticalEligible => Resolution.CriticalEligible;
+    public CriticalEligibilityReason? CriticalEligibilityReason => Resolution.CriticalEligibilityReason;
+    public int? CriticalChance => Resolution.CriticalChance;
+    public decimal? CriticalRoll => Resolution.CriticalRoll;
+    public ElementalAffinity ResolvedAffinity { get; }
+    public ChargeKind? ChargeKind => Resolution.ChargeKind;
+    public decimal ChargeMultiplier => Resolution.ChargeMultiplier;
+    public RuntimeInstanceId? AffectedActorId { get; }
+    public ContentId? AffectedResourceId { get; }
+    public decimal AppliedResourceDelta { get; }
+    private DamageHitResolution Resolution { get; }
+}
+
 public sealed record EffectExecutionResult
 {
     private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
@@ -97,6 +184,8 @@ public sealed record EffectExecutionResult
         Array.Empty<ExecutionResourceChange>();
     private readonly IReadOnlyList<StatModifierTransitionResult> _statModifierTransitions =
         Array.Empty<StatModifierTransitionResult>();
+    private readonly IReadOnlyList<DamageHitExecutionEvidence> _damageHits =
+        Array.Empty<DamageHitExecutionEvidence>();
 
     public EffectExecutionResult(
         int EffectIndex,
@@ -111,7 +200,8 @@ public sealed record EffectExecutionResult
         IReadOnlyList<PassiveTriggerExecutionResult>? PassiveActivations = null,
         ElementalAffinity? ResolvedAffinity = null,
         IReadOnlyList<ContentId>? HostActionRequestIds = null,
-        IReadOnlyList<StatModifierTransitionResult>? StatModifierTransitions = null)
+        IReadOnlyList<StatModifierTransitionResult>? StatModifierTransitions = null,
+        IReadOnlyList<DamageHitExecutionEvidence>? DamageHits = null)
     {
         this.EffectIndex = EffectIndex;
         this.TargetId = TargetId;
@@ -127,6 +217,7 @@ public sealed record EffectExecutionResult
         this.HostActionRequestIds = Array.AsReadOnly(HostActionRequestIds?.ToArray() ?? []);
         this.ResourceChanges = [];
         this.StatModifierTransitions = StatModifierTransitions ?? [];
+        this.DamageHits = DamageHits ?? [];
     }
 
     public int EffectIndex { get; init; }
@@ -160,6 +251,12 @@ public sealed record EffectExecutionResult
     {
         get => _statModifierTransitions;
         init => _statModifierTransitions = Array.AsReadOnly(value?.ToArray() ?? []);
+    }
+    /// <summary>Gets ordered immutable evidence for every attempted damage hit.</summary>
+    public IReadOnlyList<DamageHitExecutionEvidence> DamageHits
+    {
+        get => _damageHits;
+        init => _damageHits = Array.AsReadOnly(value?.ToArray() ?? []);
     }
 }
 
@@ -276,7 +373,8 @@ public sealed record SkillExecutionResult
         IEnumerable<EffectExecutionResult> effects,
         IEnumerable<SkillExecutionDiagnostic>? diagnostics = null,
         bool costsCommitted = false,
-        IEnumerable<ExecutionResourceChange>? committedCostChanges = null)
+        IEnumerable<ExecutionResourceChange>? committedCostChanges = null,
+        TurnEconomyResolution? turnEconomy = null)
     {
         Status = status;
         Effects = Array.AsReadOnly(effects.ToArray());
@@ -288,7 +386,7 @@ public sealed record SkillExecutionResult
             Effects.SelectMany(effect => effect.PassiveActivations ?? []).ToArray());
         HostActionRequestIds = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.HostActionRequestIds ?? []).ToArray());
-        TurnEconomy = AggregateTurnEconomy(Effects);
+        TurnEconomy = turnEconomy ?? new TurnEconomyResolution(TurnEconomyOutcome.Normal, false, false);
     }
 
     public SkillExecutionStatus Status { get; }
@@ -305,27 +403,6 @@ public sealed record SkillExecutionResult
     public static SkillExecutionResult Rejected(IEnumerable<SkillExecutionDiagnostic> diagnostics) =>
         new(SkillExecutionStatus.Rejected, [], diagnostics);
 
-    private static TurnEconomyResolution AggregateTurnEconomy(IReadOnlyList<EffectExecutionResult> effects)
-    {
-        EffectExecutionResult? interruption = effects.FirstOrDefault(effect =>
-            effect.TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
-        if (interruption is not null)
-        {
-            return new TurnEconomyResolution(interruption.TurnEconomyOutcome, effects.Any(effect => effect.IsCritical), true);
-        }
-
-        TurnEconomyOutcome outcome = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Null)
-            ? TurnEconomyOutcome.Null
-            : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss)
-                ? TurnEconomyOutcome.Miss
-                : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Weakness)
-                    ? TurnEconomyOutcome.Weakness
-                    : effects.Any(effect => effect.IsCritical)
-                        ? TurnEconomyOutcome.Critical
-                        : TurnEconomyOutcome.Normal;
-
-        return new TurnEconomyResolution(outcome, effects.Any(effect => effect.IsCritical), false);
-    }
 }
 
 public sealed record SkillExecutionRequest

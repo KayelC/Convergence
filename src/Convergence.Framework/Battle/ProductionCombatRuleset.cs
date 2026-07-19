@@ -372,12 +372,84 @@ public sealed class ProductionDamageResolutionRequest
     }
 }
 
-public sealed record ProductionDamageResolutionHit(
-    bool Hit,
-    decimal Damage,
-    bool Critical,
-    int HitChance,
-    int CriticalChance);
+public sealed class ProductionDamageResolutionHit
+{
+    public ProductionDamageResolutionHit(
+        int hitIndex,
+        bool hit,
+        decimal damage,
+        bool critical,
+        HitResolutionResult hitResolution,
+        ProductionCriticalCheckResult? criticalResolution,
+        ElementalAffinity resolvedAffinity,
+        ChargeKind? chargeKind,
+        decimal chargeMultiplier)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(hitIndex);
+        HitResolution = hitResolution ?? throw new ArgumentNullException(nameof(hitResolution));
+        if (damage < 0m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(damage), damage, "Resolved damage cannot be negative.");
+        }
+        if (hitResolution.Hit != hit)
+        {
+            throw new ArgumentException("Hit evidence must agree with the resolved hit state.", nameof(hit));
+        }
+        if (!hit && (damage != 0m || criticalResolution is not null))
+        {
+            throw new ArgumentException("A missed hit cannot contain damage or critical evidence.", nameof(hit));
+        }
+        if (!Enum.IsDefined(resolvedAffinity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(resolvedAffinity),
+                resolvedAffinity,
+                "Resolved affinity must be defined.");
+        }
+        if (chargeKind is ChargeKind kind && !Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(chargeKind), chargeKind, "Charge kind must be defined.");
+        }
+        if (chargeMultiplier <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(chargeMultiplier),
+                chargeMultiplier,
+                "Charge multiplier must be positive.");
+        }
+        if (hit && criticalResolution is null)
+        {
+            throw new ArgumentNullException(
+                nameof(criticalResolution),
+                "A landed production hit requires critical eligibility evidence.");
+        }
+        if (criticalResolution is not null && criticalResolution.Critical != critical)
+        {
+            throw new ArgumentException("Critical evidence must agree with the resolved critical state.", nameof(critical));
+        }
+
+        HitIndex = hitIndex;
+        Hit = hit;
+        Damage = damage;
+        Critical = critical;
+        CriticalResolution = criticalResolution;
+        ResolvedAffinity = resolvedAffinity;
+        ChargeKind = chargeKind;
+        ChargeMultiplier = chargeMultiplier;
+    }
+
+    public int HitIndex { get; }
+    public bool Hit { get; }
+    public decimal Damage { get; }
+    public bool Critical { get; }
+    public HitResolutionResult HitResolution { get; }
+    public ProductionCriticalCheckResult? CriticalResolution { get; }
+    public int HitChance => HitResolution.FinalChance;
+    public int CriticalChance => CriticalResolution?.Chance ?? 0;
+    public ElementalAffinity ResolvedAffinity { get; }
+    public ChargeKind? ChargeKind { get; }
+    public decimal ChargeMultiplier { get; }
+}
 
 public sealed record ProductionDamageResolutionResult
 {
@@ -385,7 +457,23 @@ public sealed record ProductionDamageResolutionResult
         IEnumerable<ProductionDamageResolutionHit> hits,
         ElementalAffinity resolvedAffinity)
     {
-        Hits = Array.AsReadOnly((hits ?? throw new ArgumentNullException(nameof(hits))).ToArray());
+        ProductionDamageResolutionHit[] snapshot =
+            (hits ?? throw new ArgumentNullException(nameof(hits))).ToArray();
+        if (snapshot.Length == 0 || snapshot.Any(hit => hit is null))
+        {
+            throw new ArgumentException(
+                "Production damage resolution requires at least one non-null hit.",
+                nameof(hits));
+        }
+        if (!Enum.IsDefined(resolvedAffinity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(resolvedAffinity),
+                resolvedAffinity,
+                "Resolved affinity must be defined.");
+        }
+
+        Hits = Array.AsReadOnly(snapshot);
         ResolvedAffinity = resolvedAffinity;
     }
 
@@ -500,7 +588,21 @@ public sealed class ProductionCombatRuleset :
             request.CriticalChanceModifiers));
 
         return new DamagePolicyResolution(
-            result.Hits.Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical)),
+            result.Hits.Select(hit => new DamageHitResolution(
+                hit.HitIndex,
+                hit.Hit,
+                hit.Damage,
+                hit.Critical,
+                hit.HitResolution.AuthoredAccuracy,
+                hit.HitResolution.FinalChance,
+                hit.HitResolution.Roll,
+                hit.CriticalResolution?.Eligible,
+                hit.CriticalResolution?.EligibilityReason,
+                hit.CriticalResolution?.Chance,
+                hit.CriticalResolution?.Roll,
+                hit.ResolvedAffinity,
+                hit.ChargeKind,
+                hit.ChargeMultiplier)),
             result.ResolvedAffinity);
     }
 
@@ -566,7 +668,16 @@ public sealed class ProductionCombatRuleset :
                 request.EvasionModifiers));
             if (!hit.Hit)
             {
-                hits.Add(new ProductionDamageResolutionHit(false, 0m, false, hit.FinalChance, 0));
+                hits.Add(new ProductionDamageResolutionHit(
+                    i,
+                    false,
+                    0m,
+                    false,
+                    hit,
+                    criticalResolution: null,
+                    resolvedAffinity,
+                    request.ChargeKind,
+                    request.ChargeMultiplier));
                 continue;
             }
 
@@ -598,13 +709,17 @@ public sealed class ProductionCombatRuleset :
             damage = ApplyAffinityMultiplier(damage, resolvedAffinity);
             damage = CombatArithmetic.SaturatingMultiply(damage, request.ChargeMultiplier);
             hits.Add(new ProductionDamageResolutionHit(
+                i,
                 true,
                 Math.Floor(CombatArithmetic.SaturatingMultiply(
                     damage,
                     RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum))),
                 critical.Critical,
-                hit.FinalChance,
-                critical.Chance));
+                hit,
+                critical,
+                resolvedAffinity,
+                request.ChargeKind,
+                request.ChargeMultiplier));
         }
 
         return new ProductionDamageResolutionResult(hits, resolvedAffinity);

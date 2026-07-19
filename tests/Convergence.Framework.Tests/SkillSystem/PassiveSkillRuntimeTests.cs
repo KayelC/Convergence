@@ -473,6 +473,56 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void LastStand_DispatchesAtTheLethalHitWithinOneMultiHitAction()
+    {
+        SkillDefinition lastStand = PassiveSkill(
+            "last_stand",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    ContentId.Parse("owner_would_be_defeated"),
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [lastStand]);
+        BattleExecutionServices services = Services(damage: _ =>
+        [
+            new DamageHitResolution(true, 20),
+            new DamageHitResolution(true, 20)
+        ]);
+        SkillDefinition multiHit = new(
+            ContentId.Parse("multi_hit"),
+            "multi_hit",
+            "Test multi-hit skill.",
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            InheritanceGroup.Physical,
+            new SkillInheritanceDefinition(true),
+            targeting: SingleEnemy(),
+            effects:
+            [
+                new DamageEffectDefinition(
+                    DamageElement.Physical,
+                    10,
+                    100,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(2, 2))
+            ],
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(multiHit, actor, [actor, target], target));
+
+        Assert.True(target.IsDefeated);
+        Assert.Equal(0, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            [PassiveTriggerOutcome.Executed, PassiveTriggerOutcome.ActivationLimitReached],
+            result.PassiveActivations.Select(activation => activation.Outcome));
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal([-10m, -1m], effect.DamageHits.Select(hit => hit.AppliedResourceDelta));
+    }
+
+    [Fact]
     public void InstantDefeat_DispatchesDefeatPreventionAgainstTheStagedLethalState()
     {
         SkillDefinition lastStand = PassiveSkill(

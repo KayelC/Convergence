@@ -1066,6 +1066,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
 
         OrderedEffectExecution execution;
         RuntimeActorExecutionTransaction transaction;
+        TurnEconomyResolution turnEconomy;
         try
         {
             transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
@@ -1077,6 +1078,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 targeting,
                 selectedTargetIds);
             execution = _orderedEffects.Execute(stagedAction, effects, transaction.Map(targets));
+            turnEconomy = _services.ResolveActionOutcome(execution.Effects);
         }
         catch (Exception exception)
         {
@@ -1089,7 +1091,6 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         }
 
         transaction.Commit();
-        TurnEconomyResolution turnEconomy = AggregateTurnEconomy(execution.Effects);
         ActionTurnConsumption turn = defaultTurnKind == ActionTurnConsumptionKind.TurnEconomy
             ? ActionTurnConsumption.FromTurnEconomy(turnEconomy)
             : new ActionTurnConsumption(defaultTurnKind);
@@ -1363,28 +1364,6 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             effect.TargetId,
             sourceId,
             effect.Value)).ToArray());
-
-    private static TurnEconomyResolution AggregateTurnEconomy(IReadOnlyList<EffectExecutionResult> effects)
-    {
-        EffectExecutionResult? interruption = effects.FirstOrDefault(effect =>
-            effect.TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
-        if (interruption is not null)
-        {
-            return new TurnEconomyResolution(interruption.TurnEconomyOutcome, effects.Any(effect => effect.IsCritical), true);
-        }
-
-        TurnEconomyOutcome outcome = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Null)
-            ? TurnEconomyOutcome.Null
-            : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss)
-                ? TurnEconomyOutcome.Miss
-                : effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Weakness)
-                    ? TurnEconomyOutcome.Weakness
-                    : effects.Any(effect => effect.IsCritical)
-                        ? TurnEconomyOutcome.Critical
-                        : TurnEconomyOutcome.Normal;
-
-        return new TurnEconomyResolution(outcome, effects.Any(effect => effect.IsCritical), false);
-    }
 
     private static TargetingDefinition SingleAnyTargeting() =>
         new(TargetRelation.Any, TargetSelection.Single, TargetLifeState.Any, true);

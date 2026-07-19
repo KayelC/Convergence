@@ -95,6 +95,7 @@ public sealed class SkillExecutor : ISkillExecutor
         OrderedEffectExecution execution;
         RuntimeActorExecutionTransaction transaction;
         IReadOnlyList<ExecutionResourceChange> committedCostChanges;
+        TurnEconomyResolution turnEconomy;
         try
         {
             transaction = new RuntimeActorExecutionTransaction(request.Actor, request.Participants);
@@ -109,6 +110,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 stagedRequest.ToEffectActionRequest(),
                 request.Skill.Effects,
                 transaction.Map(preparedTargets));
+            turnEconomy = _services.ResolveActionOutcome(execution.Effects);
         }
         catch (Exception exception)
         {
@@ -126,7 +128,8 @@ public sealed class SkillExecutor : ISkillExecutor
             execution.Interrupted ? SkillExecutionStatus.Interrupted : SkillExecutionStatus.Executed,
             execution.Effects,
             costsCommitted: assessment.Costs.Count > 0,
-            committedCostChanges: committedCostChanges);
+            committedCostChanges: committedCostChanges,
+            turnEconomy: turnEconomy);
     }
 
     public SkillExecutionAssessment Assess(SkillExecutionRequest request)

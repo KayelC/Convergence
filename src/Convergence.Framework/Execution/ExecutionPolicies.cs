@@ -53,6 +53,7 @@ public sealed class DamagePolicyRequest
     public DamageEffectDefinition Effect { get; }
     public ElementalAffinity Affinity { get; }
     public decimal ChargeMultiplier { get; }
+
     public ChargeKind? ChargeKind { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
@@ -72,7 +73,161 @@ public sealed class DamagePolicyRequest
     }
 }
 
-public sealed record DamageHitResolution(bool Hit, decimal Damage, bool Critical = false);
+/// <summary>
+/// Describes one immutable hit resolved by a damage policy before runtime state is mutated.
+/// </summary>
+public sealed class DamageHitResolution
+{
+    public DamageHitResolution(bool hit, decimal damage, bool critical = false)
+        : this(
+            hitIndex: 0,
+            hit,
+            damage,
+            critical,
+            authoredAccuracy: null,
+            finalAccuracy: null,
+            accuracyRoll: null,
+            criticalEligible: null,
+            criticalEligibilityReason: null,
+            criticalChance: null,
+            criticalRoll: null,
+            resolvedAffinity: ElementalAffinity.Normal,
+            chargeKind: null,
+            chargeMultiplier: 1m)
+    {
+    }
+
+    public DamageHitResolution(
+        int hitIndex,
+        bool hit,
+        decimal damage,
+        bool critical,
+        int? authoredAccuracy,
+        int? finalAccuracy,
+        decimal? accuracyRoll,
+        bool? criticalEligible,
+        CriticalEligibilityReason? criticalEligibilityReason,
+        int? criticalChance,
+        decimal? criticalRoll,
+        ElementalAffinity resolvedAffinity,
+        ChargeKind? chargeKind,
+        decimal chargeMultiplier)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(hitIndex);
+        if (damage < 0m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(damage), damage, "Resolved damage cannot be negative.");
+        }
+        ValidateChance(authoredAccuracy, nameof(authoredAccuracy));
+        ValidateChance(finalAccuracy, nameof(finalAccuracy));
+        ValidateRoll(accuracyRoll, nameof(accuracyRoll));
+        ValidateChance(criticalChance, nameof(criticalChance));
+        ValidateRoll(criticalRoll, nameof(criticalRoll));
+        if (critical && !hit)
+        {
+            throw new ArgumentException("A missed hit cannot be critical.", nameof(critical));
+        }
+        if (!hit && damage != 0m)
+        {
+            throw new ArgumentException("A missed hit cannot resolve damage.", nameof(damage));
+        }
+        if (!hit && (criticalEligible is not null || criticalEligibilityReason is not null ||
+                     criticalChance is not null || criticalRoll is not null))
+        {
+            throw new ArgumentException("A missed hit cannot contain a critical-resolution roll.");
+        }
+        if (criticalEligibilityReason is CriticalEligibilityReason reason && !Enum.IsDefined(reason))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(criticalEligibilityReason),
+                criticalEligibilityReason,
+                "Critical eligibility reason must be defined.");
+        }
+        if (!Enum.IsDefined(resolvedAffinity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(resolvedAffinity),
+                resolvedAffinity,
+                "Resolved affinity must be defined.");
+        }
+        if (chargeKind is ChargeKind kind && !Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(chargeKind), chargeKind, "Charge kind must be defined.");
+        }
+        if (chargeMultiplier <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(chargeMultiplier),
+                chargeMultiplier,
+                "Charge multiplier must be positive.");
+        }
+
+        HitIndex = hitIndex;
+        Hit = hit;
+        Damage = damage;
+        Critical = critical;
+        AuthoredAccuracy = authoredAccuracy;
+        FinalAccuracy = finalAccuracy;
+        AccuracyRoll = accuracyRoll;
+        CriticalEligible = criticalEligible;
+        CriticalEligibilityReason = criticalEligibilityReason;
+        CriticalChance = criticalChance;
+        CriticalRoll = criticalRoll;
+        ResolvedAffinity = resolvedAffinity;
+        ChargeKind = chargeKind;
+        ChargeMultiplier = chargeMultiplier;
+    }
+
+    public int HitIndex { get; }
+    public bool Hit { get; }
+    public decimal Damage { get; }
+    public bool Critical { get; }
+    public int? AuthoredAccuracy { get; }
+    public int? FinalAccuracy { get; }
+    public decimal? AccuracyRoll { get; }
+    public bool? CriticalEligible { get; }
+    public CriticalEligibilityReason? CriticalEligibilityReason { get; }
+    public int? CriticalChance { get; }
+    public decimal? CriticalRoll { get; }
+    public ElementalAffinity ResolvedAffinity { get; }
+    public ChargeKind? ChargeKind { get; }
+    public decimal ChargeMultiplier { get; }
+
+    internal DamageHitResolution WithExecutionContext(
+        int hitIndex,
+        ElementalAffinity resolvedAffinity) =>
+        new(
+            hitIndex,
+            Hit,
+            Damage,
+            Critical,
+            AuthoredAccuracy,
+            FinalAccuracy,
+            AccuracyRoll,
+            CriticalEligible,
+            CriticalEligibilityReason,
+            CriticalChance,
+            CriticalRoll,
+            resolvedAffinity,
+            ChargeKind,
+            ChargeMultiplier);
+
+    private static void ValidateChance(int? chance, string parameterName)
+    {
+        if (chance is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(parameterName, chance, "Chances must be within 0-100.");
+        }
+    }
+
+    private static void ValidateRoll(decimal? roll, string parameterName)
+    {
+        if (roll is < 0m or >= 100m)
+        {
+            throw new ArgumentOutOfRangeException(parameterName, roll, "Probability rolls must be within [0, 100).");
+        }
+    }
+}
 
 /// <summary>
 /// Contains the complete authoritative result of resolving one typed damage effect.
@@ -92,7 +247,19 @@ public sealed class DamagePolicyResolution
                 "The resolved affinity must be a defined affinity value.");
         }
 
-        Hits = Array.AsReadOnly(hits.ToArray());
+        DamageHitResolution[] snapshot = hits.ToArray();
+        if (snapshot.Length == 0)
+        {
+            throw new ArgumentException("Damage resolutions require at least one attempted hit.", nameof(hits));
+        }
+        if (snapshot.Any(hit => hit is null))
+        {
+            throw new ArgumentException("Damage resolutions cannot contain null hits.", nameof(hits));
+        }
+
+        Hits = Array.AsReadOnly(snapshot
+            .Select((hit, index) => hit.WithExecutionContext(index, resolvedAffinity))
+            .ToArray());
         ResolvedAffinity = resolvedAffinity;
     }
 
@@ -223,7 +390,8 @@ public sealed class BattleExecutionServices
         PassiveEventPolicyRegistry? passiveEventPolicies = null,
         IPassiveTriggerDispatcher? passiveTriggers = null,
         ContentId? ownerWouldBeDefeatedEventId = null,
-        IBattleAilmentApplicationService? ailmentApplications = null)
+        IBattleAilmentApplicationService? ailmentApplications = null,
+        IActionOutcomeAggregationPolicy? actionOutcomes = null)
     {
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
         DamagePolicy = damagePolicy ?? throw new ArgumentNullException(nameof(damagePolicy));
@@ -250,6 +418,7 @@ public sealed class BattleExecutionServices
             OwnerWouldBeDefeatedEventId,
             new PassiveEventPolicy(ActivationLimitPerBattle: 1));
         PassiveTriggers = passiveTriggers ?? new PassiveTriggerDispatcher(PassiveEventPolicies);
+        ActionOutcomes = actionOutcomes ?? new StandardActionOutcomeAggregationPolicy();
     }
 
     public IAilmentDefinitionRepository Ailments { get; }
@@ -274,6 +443,21 @@ public sealed class BattleExecutionServices
     public PassiveEventPolicyRegistry PassiveEventPolicies { get; }
     public IPassiveTriggerDispatcher PassiveTriggers { get; }
     public ContentId OwnerWouldBeDefeatedEventId { get; }
+    public IActionOutcomeAggregationPolicy ActionOutcomes { get; }
+
+    internal TurnEconomyResolution ResolveActionOutcome(
+        IReadOnlyList<EffectExecutionResult> effects)
+    {
+        TurnEconomyResolution resolution = ActionOutcomes.Aggregate(effects)
+            ?? throw new InvalidOperationException("The action-outcome policy returned no resolution.");
+        if (!Enum.IsDefined(resolution.Outcome))
+        {
+            throw new InvalidOperationException(
+                $"The action-outcome policy returned undefined outcome '{resolution.Outcome}'.");
+        }
+
+        return resolution;
+    }
 
     private static IReadOnlyDictionary<ContentId, T> Snapshot<T>(
         IEnumerable<KeyValuePair<ContentId, T>>? values) where T : notnull =>

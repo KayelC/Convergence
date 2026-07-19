@@ -21,12 +21,14 @@ internal abstract class TargetedEffectExecutor
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
         ElementalAffinity? resolvedAffinity = null,
         IReadOnlyList<ExecutionResourceChange>? resourceChanges = null,
-        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null) =>
+        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null,
+        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null) =>
         new EffectExecutionResult(
             context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
             turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity,
             HostActionRequestIds: null,
-            StatModifierTransitions: statModifierTransitions)
+            StatModifierTransitions: statModifierTransitions,
+            DamageHits: damageHits)
         {
             ResourceChanges = resourceChanges ?? []
         };
@@ -37,10 +39,11 @@ internal abstract class TargetedEffectExecutor
         string? detail = null,
         ContentId? relatedId = null,
         ElementalAffinity? resolvedAffinity = null,
-        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null) =>
+        IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null,
+        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure,
             turnEconomy, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity,
-            StatModifierTransitions: statModifierTransitions);
+            StatModifierTransitions: statModifierTransitions, DamageHits: damageHits);
 
     protected static EffectExecutionResult Interrupted(
         EffectExecutionContext context,
@@ -49,11 +52,13 @@ internal abstract class TargetedEffectExecutor
         string? detail = null,
         IReadOnlyList<PassiveTriggerExecutionResult>? passiveActivations = null,
         ElementalAffinity? resolvedAffinity = null,
-        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null) =>
+        IReadOnlyList<ExecutionResourceChange>? resourceChanges = null,
+        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null) =>
         new EffectExecutionResult(
             context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Interrupted,
             turnEconomy, Value: value, Detail: detail, PassiveActivations: passiveActivations,
-            ResolvedAffinity: resolvedAffinity)
+            ResolvedAffinity: resolvedAffinity,
+            DamageHits: damageHits)
         {
             ResourceChanges = resourceChanges ?? []
         };
@@ -149,87 +154,265 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                     NumericRuleModifierType.CriticalChance,
                     attackModifierContext)));
         affinity = resolution.ResolvedAffinity;
-        DamageHitResolution[] landed = resolution.Hits.Where(hit => hit.Hit).ToArray();
-        if (landed.Length == 0)
+        DamageHitResolution[] hits = resolution.Hits.ToArray();
+        if (hits.All(hit => !hit.Hit))
         {
-            return Failure(context, TurnEconomyOutcome.Miss, "All damage hits missed.");
+            DamageHitExecutionEvidence[] misses = hits
+                .Select(hit => Evidence(context, target, hit, affinity))
+                .ToArray();
+            return Failure(
+                context,
+                TurnEconomyOutcome.Miss,
+                "All damage hits missed.",
+                resolvedAffinity: affinity,
+                damageHits: misses);
         }
 
-        decimal total = CombatArithmetic.SaturatingSum(
-            landed.Select(hit => Math.Max(0, hit.Damage)));
-        total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
-            context.Actor,
-            NumericRuleModifierType.DamageDealt,
-            total,
-            attackModifierContext));
-        total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
-            target,
-            NumericRuleModifierType.DamageTaken,
-            total,
-            defenseModifierContext));
-        bool critical = landed.Any(hit => hit.Critical);
+        bool critical = hits.Any(hit => hit.Hit && hit.Critical);
         switch (affinity)
         {
             case ElementalAffinity.Null:
-                return Failure(context, TurnEconomyOutcome.Null, "The damage was nullified.", resolvedAffinity: affinity);
+                return Failure(
+                    context,
+                    TurnEconomyOutcome.Null,
+                    "The damage was nullified.",
+                    resolvedAffinity: affinity,
+                    damageHits: hits.Select(hit => Evidence(context, target, hit, affinity)).ToArray());
             case ElementalAffinity.Repel:
-                {
-                    decimal reflectedDelta = context.Actor.AddResource(context.Actor.VitalResourceId, -total);
-                    decimal reflected = -reflectedDelta;
-                    IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, context.Actor);
-                    ExecutionResourceChange[] resourceChanges = ResourceChanges(
-                            context.Actor,
-                            context.Actor.VitalResourceId,
-                            reflectedDelta)
-                        .Concat(PassiveResourceChanges(activations))
-                        .ToArray();
-                    return Interrupted(
-                        context,
-                        TurnEconomyOutcome.Repel,
-                        reflected,
-                        "The damage was reflected.",
-                        activations,
-                        affinity,
-                        resourceChanges);
-                }
+                return ResolveReflectedHits(
+                    context,
+                    target,
+                    hits,
+                    affinity,
+                    attackModifierContext,
+                    defenseModifierContext);
             case ElementalAffinity.Absorb:
-                {
-                    decimal absorbed = target.AddResource(target.VitalResourceId, total);
-                    return Interrupted(context, TurnEconomyOutcome.Absorb, absorbed, "The damage was absorbed.",
-                        resolvedAffinity: affinity,
-                        resourceChanges: ResourceChanges(target, target.VitalResourceId, absorbed));
-                }
+                return ResolveAbsorbedHits(
+                    context,
+                    target,
+                    hits,
+                    affinity,
+                    attackModifierContext,
+                    defenseModifierContext);
             default:
-                {
-                    decimal damageDelta = target.AddResource(target.VitalResourceId, -total);
-                    decimal dealt = -damageDelta;
-                    IReadOnlyList<PassiveTriggerExecutionResult> activations = DispatchDefeatPrevention(context, target);
-                    IReadOnlyList<ExecutionResourceChange> drainChanges = ApplyDrain(
-                        definition.Drain,
-                        context.Actor,
-                        context.Services,
-                        dealt);
-                    ExecutionResourceChange[] resourceChanges = ResourceChanges(
-                            target,
-                            target.VitalResourceId,
-                            damageDelta)
-                        .Concat(PassiveResourceChanges(activations))
-                        .Concat(drainChanges)
-                        .ToArray();
-                    TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
-                        ? TurnEconomyOutcome.Weakness
-                        : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
-                    return Success(
-                        context,
-                        dealt,
-                        turnEconomy: outcome,
-                        critical: critical,
-                        passiveActivations: activations,
-                        resolvedAffinity: affinity,
-                        resourceChanges: resourceChanges);
-                }
+                return ResolveLandedHits(
+                    context,
+                    definition,
+                    target,
+                    hits,
+                    affinity,
+                    critical,
+                    attackModifierContext,
+                    defenseModifierContext);
         }
     }
+
+    private static EffectExecutionResult ResolveLandedHits(
+        EffectExecutionContext context,
+        DamageEffectDefinition definition,
+        RuntimeActorState target,
+        IReadOnlyList<DamageHitResolution> hits,
+        ElementalAffinity affinity,
+        bool critical,
+        RuleModifierContext attackModifierContext,
+        RuleModifierContext defenseModifierContext)
+    {
+        var activations = new List<PassiveTriggerExecutionResult>();
+        var changes = new List<ExecutionResourceChange>();
+        var evidence = new List<DamageHitExecutionEvidence>(hits.Count);
+        decimal totalDealt = 0m;
+
+        foreach (DamageHitResolution hit in hits)
+        {
+            if (!hit.Hit || target.IsDefeated)
+            {
+                evidence.Add(Evidence(context, target, hit, affinity));
+                continue;
+            }
+
+            decimal amount = ResolveHitDamage(
+                context,
+                target,
+                hit,
+                attackModifierContext,
+                defenseModifierContext);
+            decimal damageDelta = target.AddResource(target.VitalResourceId, -amount);
+            decimal dealt = -damageDelta;
+            totalDealt = CombatArithmetic.SaturatingAdd(totalDealt, dealt);
+            changes.AddRange(ResourceChanges(target, target.VitalResourceId, damageDelta));
+
+            IReadOnlyList<PassiveTriggerExecutionResult> hitActivations =
+                DispatchDefeatPrevention(context, target);
+            activations.AddRange(hitActivations);
+            changes.AddRange(PassiveResourceChanges(hitActivations));
+            changes.AddRange(ApplyDrain(definition.Drain, context.Actor, context.Services, dealt));
+            evidence.Add(Evidence(
+                context,
+                target,
+                hit,
+                affinity,
+                target,
+                target.VitalResourceId,
+                damageDelta));
+        }
+
+        TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
+            ? TurnEconomyOutcome.Weakness
+            : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
+        return Success(
+            context,
+            totalDealt,
+            turnEconomy: outcome,
+            critical: critical,
+            passiveActivations: Array.AsReadOnly(activations.ToArray()),
+            resolvedAffinity: affinity,
+            resourceChanges: Array.AsReadOnly(changes.ToArray()),
+            damageHits: Array.AsReadOnly(evidence.ToArray()));
+    }
+
+    private static EffectExecutionResult ResolveReflectedHits(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        IReadOnlyList<DamageHitResolution> hits,
+        ElementalAffinity affinity,
+        RuleModifierContext attackModifierContext,
+        RuleModifierContext defenseModifierContext)
+    {
+        var activations = new List<PassiveTriggerExecutionResult>();
+        var changes = new List<ExecutionResourceChange>();
+        var evidence = new List<DamageHitExecutionEvidence>(hits.Count);
+        decimal totalReflected = 0m;
+
+        foreach (DamageHitResolution hit in hits)
+        {
+            if (!hit.Hit || context.Actor.IsDefeated)
+            {
+                evidence.Add(Evidence(context, target, hit, affinity));
+                continue;
+            }
+
+            decimal amount = ResolveHitDamage(
+                context,
+                target,
+                hit,
+                attackModifierContext,
+                defenseModifierContext);
+            decimal reflectedDelta = context.Actor.AddResource(context.Actor.VitalResourceId, -amount);
+            totalReflected = CombatArithmetic.SaturatingAdd(totalReflected, -reflectedDelta);
+            changes.AddRange(ResourceChanges(context.Actor, context.Actor.VitalResourceId, reflectedDelta));
+
+            IReadOnlyList<PassiveTriggerExecutionResult> hitActivations =
+                DispatchDefeatPrevention(context, context.Actor);
+            activations.AddRange(hitActivations);
+            changes.AddRange(PassiveResourceChanges(hitActivations));
+            evidence.Add(Evidence(
+                context,
+                target,
+                hit,
+                affinity,
+                context.Actor,
+                context.Actor.VitalResourceId,
+                reflectedDelta));
+        }
+
+        return Interrupted(
+            context,
+            TurnEconomyOutcome.Repel,
+            totalReflected,
+            "The damage was reflected.",
+            Array.AsReadOnly(activations.ToArray()),
+            affinity,
+            Array.AsReadOnly(changes.ToArray()),
+            Array.AsReadOnly(evidence.ToArray()));
+    }
+
+    private static EffectExecutionResult ResolveAbsorbedHits(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        IReadOnlyList<DamageHitResolution> hits,
+        ElementalAffinity affinity,
+        RuleModifierContext attackModifierContext,
+        RuleModifierContext defenseModifierContext)
+    {
+        var changes = new List<ExecutionResourceChange>();
+        var evidence = new List<DamageHitExecutionEvidence>(hits.Count);
+        decimal totalAbsorbed = 0m;
+
+        foreach (DamageHitResolution hit in hits)
+        {
+            if (!hit.Hit)
+            {
+                evidence.Add(Evidence(context, target, hit, affinity));
+                continue;
+            }
+
+            decimal amount = ResolveHitDamage(
+                context,
+                target,
+                hit,
+                attackModifierContext,
+                defenseModifierContext);
+            decimal absorbedDelta = target.AddResource(target.VitalResourceId, amount);
+            totalAbsorbed = CombatArithmetic.SaturatingAdd(totalAbsorbed, absorbedDelta);
+            changes.AddRange(ResourceChanges(target, target.VitalResourceId, absorbedDelta));
+            evidence.Add(Evidence(
+                context,
+                target,
+                hit,
+                affinity,
+                target,
+                target.VitalResourceId,
+                absorbedDelta));
+        }
+
+        return Interrupted(
+            context,
+            TurnEconomyOutcome.Absorb,
+            totalAbsorbed,
+            "The damage was absorbed.",
+            resolvedAffinity: affinity,
+            resourceChanges: Array.AsReadOnly(changes.ToArray()),
+            damageHits: Array.AsReadOnly(evidence.ToArray()));
+    }
+
+    private static decimal ResolveHitDamage(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        DamageHitResolution hit,
+        RuleModifierContext attackModifierContext,
+        RuleModifierContext defenseModifierContext)
+    {
+        decimal amount = Math.Max(0m, hit.Damage);
+        amount = Math.Max(0m, context.Services.RuleModifiers.ResolveNumeric(
+            context.Actor,
+            NumericRuleModifierType.DamageDealt,
+            amount,
+            attackModifierContext));
+        return Math.Max(0m, context.Services.RuleModifiers.ResolveNumeric(
+            target,
+            NumericRuleModifierType.DamageTaken,
+            amount,
+            defenseModifierContext));
+    }
+
+    private static DamageHitExecutionEvidence Evidence(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        DamageHitResolution hit,
+        ElementalAffinity affinity,
+        RuntimeActorState? affectedActor = null,
+        ContentId? affectedResourceId = null,
+        decimal appliedResourceDelta = 0m) =>
+        new(
+            context.Request.SourceId,
+            context.Actor.InstanceId,
+            target.InstanceId,
+            context.EffectIndex,
+            hit,
+            affinity,
+            affectedActor?.InstanceId,
+            affectedResourceId,
+            appliedResourceDelta);
 
     private static IReadOnlyList<ExecutionResourceChange> ApplyDrain(
         DamageDrainMode drain,
@@ -311,6 +494,7 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
         {
             return Failure(
                 context,
+                TurnEconomyOutcome.Normal,
                 detail: $"The ailment application was {application.Status}.",
                 relatedId: definition.AilmentId);
         }

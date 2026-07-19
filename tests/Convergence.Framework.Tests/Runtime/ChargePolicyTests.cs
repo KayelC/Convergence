@@ -224,7 +224,9 @@ public sealed class ChargePolicyTests
         var charges = new SplitChargePolicy();
         charges.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
         var damage = new RecordingDamagePolicy(request =>
-            new DamagePolicyResolution([new DamageHitResolution(hit, 10)], request.Affinity));
+            new DamagePolicyResolution(
+                [new DamageHitResolution(hit, hit ? 10 : 0)],
+                request.Affinity));
 
         SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
             Request(DamageSkill(PhysicalDamage()), actor, [actor, target], [target.InstanceId]));

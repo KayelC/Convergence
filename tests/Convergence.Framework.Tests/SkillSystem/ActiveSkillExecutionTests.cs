@@ -276,6 +276,168 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_AppliesLandedHitsSequentiallyAndPublishesOrderedEvidence()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 25);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(4, 4))
+        ]);
+        BattleExecutionServices services = Services(damage: _ =>
+        [
+            new DamageHitResolution(false, 0),
+            new DamageHitResolution(true, 10),
+            new DamageHitResolution(true, 20),
+            new DamageHitResolution(true, 10)
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(0m, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(25m, effect.Value);
+        Assert.Equal([0, 1, 2, 3], effect.DamageHits.Select(hit => hit.HitIndex));
+        Assert.Equal([false, true, true, true], effect.DamageHits.Select(hit => hit.Hit));
+        Assert.Equal([0m, -10m, -15m, 0m], effect.DamageHits.Select(hit => hit.AppliedResourceDelta));
+        Assert.Equal([-10m, -15m], effect.ResourceChanges.Select(change => change.Delta));
+        Assert.All(effect.DamageHits, hit =>
+        {
+            Assert.Equal(skill.Id, hit.SourceActionId);
+            Assert.Equal(actor.InstanceId, hit.ActorId);
+            Assert.Equal(target.InstanceId, hit.TargetId);
+            Assert.Equal(ElementalAffinity.Normal, hit.ResolvedAffinity);
+        });
+    }
+
+    [Fact]
+    public void Execute_DamageEvidencePreservesPolicyAuthoredAccuracyCriticalAffinityAndChargeFacts()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                87,
+                new ChanceCriticalDefinition(31),
+                FixedHits())
+        ]);
+        var resolution = new DamageHitResolution(
+            hitIndex: 0,
+            hit: true,
+            damage: 17m,
+            critical: true,
+            authoredAccuracy: 87,
+            finalAccuracy: 76,
+            accuracyRoll: 12m,
+            criticalEligible: true,
+            criticalEligibilityReason: CriticalEligibilityReason.Eligible,
+            criticalChance: 31,
+            criticalRoll: 8m,
+            resolvedAffinity: ElementalAffinity.Weak,
+            chargeKind: ChargeKind.Physical,
+            chargeMultiplier: 2.5m);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damagePolicy: new FixedResolutionDamagePolicy(
+                new DamagePolicyResolution([resolution], ElementalAffinity.Weak))))
+            .Execute(Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        DamageHitExecutionEvidence evidence = Assert.Single(Assert.Single(result.Effects).DamageHits);
+        Assert.Equal(87, evidence.AuthoredAccuracy);
+        Assert.Equal(76, evidence.FinalAccuracy);
+        Assert.Equal(12m, evidence.AccuracyRoll);
+        Assert.True(evidence.CriticalEligible);
+        Assert.Equal(CriticalEligibilityReason.Eligible, evidence.CriticalEligibilityReason);
+        Assert.Equal(31, evidence.CriticalChance);
+        Assert.Equal(8m, evidence.CriticalRoll);
+        Assert.True(evidence.Critical);
+        Assert.Equal(ElementalAffinity.Weak, evidence.ResolvedAffinity);
+        Assert.Equal(ChargeKind.Physical, evidence.ChargeKind);
+        Assert.Equal(2.5m, evidence.ChargeMultiplier);
+    }
+
+    [Fact]
+    public void Execute_MultiHitDrainUsesEachCommittedHitAmount()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 50);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 100);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(2, 2),
+                DamageDrainMode.Hp)
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage: _ =>
+        [
+            new DamageHitResolution(true, 10),
+            new DamageHitResolution(true, 15)
+        ])).Execute(Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(75m, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(75m, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal([-10m, 10m, -15m, 15m], effect.ResourceChanges.Select(change => change.Delta));
+        Assert.Equal([-10m, -15m], effect.DamageHits.Select(hit => hit.AppliedResourceDelta));
+    }
+
+    [Theory]
+    [InlineData(ElementalAffinity.Repel, 15, 100, 0, 100, -10, -5)]
+    [InlineData(ElementalAffinity.Absorb, 100, 50, 100, 100, 30, 20)]
+    public void Execute_RepelAndAbsorbApplyEachHitInOrder(
+        ElementalAffinity affinity,
+        decimal actorHp,
+        decimal targetHp,
+        decimal expectedActorHp,
+        decimal expectedTargetHp,
+        decimal firstDelta,
+        decimal secondDelta)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, hp: actorHp);
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            hp: targetHp,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, affinity)]));
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(2, 2))
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage: _ =>
+        [
+            new DamageHitResolution(true, affinity == ElementalAffinity.Repel ? 10 : 30),
+            new DamageHitResolution(true, affinity == ElementalAffinity.Repel ? 10 : 30)
+        ])).Execute(Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(expectedActorHp, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(expectedTargetHp, target.GetRequiredResource(Hp).Current);
+        Assert.Equal([firstDelta, secondDelta], effect.DamageHits.Select(hit => hit.AppliedResourceDelta));
+        Assert.Equal(affinity, result.TurnEconomy.Outcome == TurnEconomyOutcome.Repel
+            ? ElementalAffinity.Repel
+            : ElementalAffinity.Absorb);
+    }
+
+    [Fact]
     public void Assess_RejectsAnUnrepresentableAggregateSkillCostWithoutMutation()
     {
         var actor = new RuntimeActorState(
@@ -407,6 +569,8 @@ public sealed class ActiveSkillExecutionTests
 
         EffectExecutionResult effect = Assert.Single(result.Effects);
         Assert.Equal(EffectExecutionOutcome.Failure, effect.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, effect.TurnEconomyOutcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
         Assert.Contains(nameof(BattleAilmentApplicationStatus.GuardBlocked), effect.Detail, StringComparison.Ordinal);
         Assert.False(target.HasAilment(Poison));
         Assert.True(target.IsGuarding);
@@ -426,7 +590,10 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(1, authority.CallCount);
         Assert.Equal(73, authority.LastRequest!.Chance);
         Assert.Equal(Poison, authority.LastRequest.Ailment.Id);
-        Assert.Equal(EffectExecutionOutcome.Failure, Assert.Single(result.Effects).Outcome);
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(EffectExecutionOutcome.Failure, effect.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, effect.TurnEconomyOutcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
         Assert.False(target.HasAilment(Poison));
     }
 
@@ -598,6 +765,96 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_MultipleTargetsPreservePerTargetAffinityAndNormalizeCriticalWithEvasion()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState weakTarget = Actor(
+            "weak_target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Ice, ElementalAffinity.Weak)]));
+        RuntimeActorState evasiveTarget = Actor("evasive_target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Ice,
+                10,
+                80,
+                new ChanceCriticalDefinition(20),
+                FixedHits())
+        ],
+        targeting: new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.All,
+            TargetLifeState.Alive,
+            AllowSelf: false));
+        BattleExecutionServices services = Services(damage: request =>
+            request.Target.InstanceId == weakTarget.InstanceId
+                ? [new DamageHitResolution(true, 10, true)]
+                : [new DamageHitResolution(false, 0)]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, weakTarget, evasiveTarget]));
+
+        Assert.Equal(2, result.Effects.Count);
+        Assert.Equal(
+            [ElementalAffinity.Weak, ElementalAffinity.Normal],
+            result.Effects.Select(effect => effect.ResolvedAffinity!.Value));
+        Assert.Equal(
+            [TurnEconomyOutcome.Weakness, TurnEconomyOutcome.Miss],
+            result.Effects.Select(effect => effect.TurnEconomyOutcome));
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
+        Assert.True(result.TurnEconomy.AnyCritical);
+        Assert.Equal(90, weakTarget.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, evasiveTarget.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public void Execute_UsesTheInjectedActionOutcomeAggregationPolicy()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var policy = new RecordingActionOutcomePolicy(
+            new TurnEconomyResolution(TurnEconomyOutcome.Absorb, false, true));
+        SkillDefinition skill = ActiveSkill([new AnalyzeEffectDefinition([AnalysisLayer.Stats])]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(actionOutcomes: policy)).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(1, policy.CallCount);
+        Assert.Equal(TurnEconomyOutcome.Absorb, result.TurnEconomy.Outcome);
+        Assert.True(result.TurnEconomy.TerminatesPhase);
+    }
+
+    [Fact]
+    public void Execute_ThrowingActionOutcomePolicyRollsBackDamageAndCosts()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+        ],
+        costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(true, 20)],
+            actionOutcomes: new ThrowingActionOutcomePolicy()))
+            .Execute(Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, Assert.Single(result.Diagnostics).Code);
+        Assert.False(result.CostsCommitted);
+        Assert.Empty(result.Effects);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(50, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Execute_ResolvesFormulaCostOnceBeforeCommit()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
@@ -647,6 +904,12 @@ public sealed class ActiveSkillExecutionTests
         ContentId attack = ContentId.Parse("attack");
         SkillDefinition skill = ActiveSkill(
         [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits()),
             new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)),
             new ApplyAilmentEffectDefinition(Poison, 100),
             new ModifyStatStageEffectDefinition([attack], 1),
@@ -684,6 +947,7 @@ public sealed class ActiveSkillExecutionTests
         Assert.Empty(target.AffinityOverrides);
         Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.Empty(result.Effects);
+        Assert.Empty(result.Effects.SelectMany(effect => effect.DamageHits));
     }
 
     [Fact]
@@ -1266,12 +1530,33 @@ public sealed class ActiveSkillExecutionTests
         {
             new(RuntimeInstanceId.Parse("replacement_target"), Hp, 4)
         };
+        var originalDamageHits = new List<DamageHitExecutionEvidence>
+        {
+            new(
+                ContentId.Parse("original_action"),
+                RuntimeInstanceId.Parse("actor"),
+                RuntimeInstanceId.Parse("target"),
+                0,
+                new DamageHitResolution(true, 5),
+                ElementalAffinity.Normal)
+        };
+        var replacementDamageHits = new List<DamageHitExecutionEvidence>
+        {
+            new(
+                ContentId.Parse("replacement_action"),
+                RuntimeInstanceId.Parse("actor"),
+                RuntimeInstanceId.Parse("target"),
+                0,
+                new DamageHitResolution(true, 7),
+                ElementalAffinity.Weak)
+        };
         var original = new EffectExecutionResult(
             0,
             RuntimeInstanceId.Parse("target"),
             EffectExecutionOutcome.Success,
             PassiveActivations: originalActivations,
-            HostActionRequestIds: originalHostRequests)
+            HostActionRequestIds: originalHostRequests,
+            DamageHits: originalDamageHits)
         {
             ResourceChanges = originalResourceChanges
         };
@@ -1281,7 +1566,8 @@ public sealed class ActiveSkillExecutionTests
             Detail = "cloned",
             PassiveActivations = replacementActivations,
             HostActionRequestIds = replacementHostRequests,
-            ResourceChanges = replacementResourceChanges
+            ResourceChanges = replacementResourceChanges,
+            DamageHits = replacementDamageHits
         };
 
         originalActivations.Clear();
@@ -1290,6 +1576,8 @@ public sealed class ActiveSkillExecutionTests
         replacementActivations.Clear();
         replacementHostRequests.Clear();
         replacementResourceChanges.Clear();
+        originalDamageHits.Clear();
+        replacementDamageHits.Clear();
 
         Assert.Equal("cloned", clone.Detail);
         Assert.Equal(originalActivation, Assert.Single(original.PassiveActivations));
@@ -1298,6 +1586,8 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(ContentId.Parse("replacement_request"), Assert.Single(clone.HostActionRequestIds));
         Assert.Equal(-5, Assert.Single(original.ResourceChanges).Delta);
         Assert.Equal(4, Assert.Single(clone.ResourceChanges).Delta);
+        Assert.Equal(5, Assert.Single(original.DamageHits).ResolvedDamage);
+        Assert.Equal(7, Assert.Single(clone.DamageHits).ResolvedDamage);
         Assert.NotSame(replacementActivations, clone.PassiveActivations);
         Assert.NotSame(replacementHostRequests, clone.HostActionRequestIds);
         Assert.Throws<NotSupportedException>(() =>
@@ -1307,6 +1597,8 @@ public sealed class ActiveSkillExecutionTests
         Assert.Throws<NotSupportedException>(() =>
             ((IList<ExecutionResourceChange>)clone.ResourceChanges).Add(
                 new ExecutionResourceChange(RuntimeInstanceId.Parse("forged_target"), Hp, 1)));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<DamageHitExecutionEvidence>)clone.DamageHits).Add(Assert.Single(original.DamageHits)));
     }
 
     [Fact]
@@ -1434,7 +1726,8 @@ public sealed class ActiveSkillExecutionTests
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditions = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
-        IBattleAilmentApplicationService? ailmentApplications = null) =>
+        IBattleAilmentApplicationService? ailmentApplications = null,
+        IActionOutcomeAggregationPolicy? actionOutcomes = null) =>
         new(
             ailments ?? new TestAilmentRepository([Ailment(Poison)]),
             damagePolicy ?? new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
@@ -1451,7 +1744,8 @@ public sealed class ActiveSkillExecutionTests
             escapeRuleHandlers: escapeRules,
             customConditionHandlers: customConditions,
             customEffectHandlers: customEffects,
-            ailmentApplications: ailmentApplications);
+            ailmentApplications: ailmentApplications,
+            actionOutcomes: actionOutcomes);
 
     private static IEnumerable<Type> PublicSignatureTypes(Type type)
     {
@@ -1510,6 +1804,12 @@ public sealed class ActiveSkillExecutionTests
             new([new DamageHitResolution(true, 10)], ElementalAffinity.Normal);
     }
 
+    private sealed class FixedResolutionDamagePolicy(DamagePolicyResolution resolution)
+        : IDamageExecutionPolicy
+    {
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) => resolution;
+    }
+
     private sealed class DelegateInstantDeathPolicy(Func<InstantDeathPolicyRequest, bool> resolve)
         : IInstantDeathExecutionPolicy
     {
@@ -1546,6 +1846,24 @@ public sealed class ActiveSkillExecutionTests
     private sealed class PowerAmountPolicy : IPowerAmountPolicy
     {
         public decimal Resolve(PowerAmountDefinition amount, AmountResolutionContext context) => amount.Power;
+    }
+
+    private sealed class RecordingActionOutcomePolicy(TurnEconomyResolution result)
+        : IActionOutcomeAggregationPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects)
+        {
+            CallCount++;
+            return result;
+        }
+    }
+
+    private sealed class ThrowingActionOutcomePolicy : IActionOutcomeAggregationPolicy
+    {
+        public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects) =>
+            throw new InvalidOperationException("Outcome aggregation failed deliberately.");
     }
 
     private sealed class DelegateRandomTargetPolicy(

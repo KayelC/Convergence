@@ -59,6 +59,31 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task BasicAttack_UsesTheInjectedActionOutcomeAggregationPolicy()
+    {
+        var policy = new RecordingActionOutcomePolicy(
+            new TurnEconomyResolution(TurnEconomyOutcome.Absorb, false, true));
+        BattleActionExecutor executor = Executor(actionOutcomes: policy);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(
+                DamageElement.Physical,
+                15,
+                100,
+                new NeverCriticalDefinition(),
+                false),
+            SingleEnemy(),
+            [target.InstanceId]);
+
+        BattleActionExecutionResult result = await Execute(executor, command, actor, [actor, target]);
+
+        Assert.Equal(1, policy.CallCount);
+        Assert.Equal(TurnEconomyOutcome.Absorb, result.TurnConsumption.TurnEconomy!.Outcome);
+        Assert.True(result.TurnConsumption.TurnEconomy.TerminatesPhase);
+    }
+
+    [Fact]
     public async Task BasicAttack_ForwardsAuthoredAccuracyAndCriticalDefinitionToDamageResolution()
     {
         var damage = new RecordingDamagePolicy();
@@ -1077,14 +1102,16 @@ public sealed class BattleActionExecutorTests
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
         IBattleActionAuthorizationPolicy? authorization = null,
-        IDamageExecutionPolicy? damagePolicy = null)
+        IDamageExecutionPolicy? damagePolicy = null,
+        IActionOutcomeAggregationPolicy? actionOutcomes = null)
     {
         BattleExecutionServices services = ExecutionServices(
             escapeRules,
             customEffects,
             randomTargetPolicy,
             runtimeRandomTargetPolicy,
-            damagePolicy);
+            damagePolicy,
+            actionOutcomes);
         return new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
@@ -1097,7 +1124,8 @@ public sealed class BattleActionExecutorTests
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
-        IDamageExecutionPolicy? damagePolicy = null) =>
+        IDamageExecutionPolicy? damagePolicy = null,
+        IActionOutcomeAggregationPolicy? actionOutcomes = null) =>
         new(
             EmptyAilments.Instance,
             damagePolicy ?? new FixedDamagePolicy(),
@@ -1110,7 +1138,8 @@ public sealed class BattleActionExecutorTests
             TestStatModifierPolicy.CreatePersistent(),
             new SplitChargePolicy(),
             escapeRuleHandlers: escapeRules,
-            customEffectHandlers: customEffects);
+            customEffectHandlers: customEffects,
+            actionOutcomes: actionOutcomes);
 
     private static RuntimeActorState Actor(
         string id,
@@ -1250,6 +1279,18 @@ public sealed class BattleActionExecutorTests
     private sealed class PowerAmountPolicy : IPowerAmountPolicy
     {
         public decimal Resolve(PowerAmountDefinition amount, AmountResolutionContext context) => amount.Power;
+    }
+
+    private sealed class RecordingActionOutcomePolicy(TurnEconomyResolution result)
+        : IActionOutcomeAggregationPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects)
+        {
+            CallCount++;
+            return result;
+        }
     }
 
     private sealed class OrderedRandomTargetPolicy : IRandomTargetSelectionPolicy

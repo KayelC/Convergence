@@ -96,6 +96,40 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
+    public void DamageResolution_PreservesOrderedHitCriticalAffinityAndChargeEvidence()
+    {
+        ProductionCombatRuleset ruleset = Rules(0.42m, 0.12m, 0.5m);
+
+        ProductionDamageResolutionResult result = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                Actor(),
+                Actor(),
+                DamageElement.Physical,
+                ElementalAffinity.Weak,
+                100,
+                80,
+                new ChanceCriticalDefinition(30),
+                new HitCountDefinition(1, 1),
+                chargeMultiplier: 2m,
+                chargeKind: ChargeKind.Physical));
+
+        ProductionDamageResolutionHit hit = Assert.Single(result.Hits);
+        Assert.Equal(0, hit.HitIndex);
+        Assert.True(hit.Hit);
+        Assert.True(hit.Critical);
+        Assert.Equal(80, hit.HitResolution.AuthoredAccuracy);
+        Assert.Equal(80, hit.HitResolution.FinalChance);
+        Assert.Equal(42m, hit.HitResolution.Roll);
+        Assert.NotNull(hit.CriticalResolution);
+        Assert.True(hit.CriticalResolution!.Eligible);
+        Assert.Equal(30, hit.CriticalResolution.Chance);
+        Assert.Equal(12m, hit.CriticalResolution.Roll);
+        Assert.Equal(ElementalAffinity.Weak, hit.ResolvedAffinity);
+        Assert.Equal(ChargeKind.Physical, hit.ChargeKind);
+        Assert.Equal(2m, hit.ChargeMultiplier);
+    }
+
+    [Fact]
     public void GuardHalvesDamageSuppressesCriticalAndNormalizesWeakness()
     {
         ProductionCombatRuleset ruleset = Rules();
@@ -122,14 +156,18 @@ public sealed class ProductionCombatRulesetTests
     {
         var source = new List<DamageHitResolution>
         {
-            new(true, 12m)
+            new(true, 12m),
+            new(false, 0m)
         };
         var result = new DamagePolicyResolution(source, ElementalAffinity.Resist);
 
         source.Add(new DamageHitResolution(true, 99m));
 
-        Assert.Single(result.Hits);
+        Assert.Equal([0, 1], result.Hits.Select(hit => hit.HitIndex));
+        Assert.All(result.Hits, hit => Assert.Equal(ElementalAffinity.Resist, hit.ResolvedAffinity));
         Assert.Equal(ElementalAffinity.Resist, result.ResolvedAffinity);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<DamageHitResolution>)result.Hits).Add(new DamageHitResolution(true, 1m)));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new DamagePolicyResolution([], (ElementalAffinity)int.MaxValue));
     }
@@ -401,10 +439,7 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(
             decimal.MaxValue,
             new ProductionDamageResolutionResult(
-                [
-                    new ProductionDamageResolutionHit(true, decimal.MaxValue, false, 100, 0),
-                    new ProductionDamageResolutionHit(true, decimal.MaxValue, false, 100, 0)
-                ],
+                [Assert.Single(damage.Hits), Assert.Single(damage.Hits)],
                 ElementalAffinity.Normal).TotalDamage);
     }
 

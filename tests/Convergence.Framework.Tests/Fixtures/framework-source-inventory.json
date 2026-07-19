@@ -313,6 +313,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Execution/ActionOutcomeAggregationPolicies.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Execution/BattleActionAuthorization.cs",
       "owner": "effect_execution",
       "publicSurface": "exported"

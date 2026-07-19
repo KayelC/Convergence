@@ -210,20 +210,11 @@ Convergence.Battle.ProductionCriticalCheckResult.Critical.get -> bool
 Convergence.Battle.ProductionCriticalCheckResult.Critical.init -> void
 Convergence.Battle.ProductionCriticalCheckResult.Equals(Convergence.Battle.ProductionCriticalCheckResult? other) -> bool
 Convergence.Battle.ProductionDamageResolutionHit
-Convergence.Battle.ProductionDamageResolutionHit.<Clone>$() -> Convergence.Battle.ProductionDamageResolutionHit!
 Convergence.Battle.ProductionDamageResolutionHit.Critical.get -> bool
-Convergence.Battle.ProductionDamageResolutionHit.Critical.init -> void
 Convergence.Battle.ProductionDamageResolutionHit.CriticalChance.get -> int
-Convergence.Battle.ProductionDamageResolutionHit.CriticalChance.init -> void
 Convergence.Battle.ProductionDamageResolutionHit.Damage.get -> decimal
-Convergence.Battle.ProductionDamageResolutionHit.Damage.init -> void
-Convergence.Battle.ProductionDamageResolutionHit.Deconstruct(out bool Hit, out decimal Damage, out bool Critical, out int HitChance, out int CriticalChance) -> void
-Convergence.Battle.ProductionDamageResolutionHit.Equals(Convergence.Battle.ProductionDamageResolutionHit? other) -> bool
 Convergence.Battle.ProductionDamageResolutionHit.Hit.get -> bool
-Convergence.Battle.ProductionDamageResolutionHit.Hit.init -> void
 Convergence.Battle.ProductionDamageResolutionHit.HitChance.get -> int
-Convergence.Battle.ProductionDamageResolutionHit.HitChance.init -> void
-Convergence.Battle.ProductionDamageResolutionHit.ProductionDamageResolutionHit(bool Hit, decimal Damage, bool Critical, int HitChance, int CriticalChance) -> void
 Convergence.Battle.ProductionDamageResolutionResult
 Convergence.Battle.ProductionDamageResolutionResult.<Clone>$() -> Convergence.Battle.ProductionDamageResolutionResult!
 Convergence.Battle.ProductionDamageResolutionResult.AnyCritical.get -> bool
@@ -3166,16 +3157,9 @@ Convergence.Execution.CustomAilmentTurnBehaviorResult.CustomAilmentTurnBehaviorR
 Convergence.Execution.CustomAilmentTurnBehaviorResult.Equals(Convergence.Execution.CustomAilmentTurnBehaviorResult? other) -> bool
 Convergence.Execution.CustomAilmentTurnBehaviorResult.Outcome.get -> Convergence.Execution.BattleTurnStartOutcome
 Convergence.Execution.DamageHitResolution
-Convergence.Execution.DamageHitResolution.<Clone>$() -> Convergence.Execution.DamageHitResolution!
 Convergence.Execution.DamageHitResolution.Critical.get -> bool
-Convergence.Execution.DamageHitResolution.Critical.init -> void
 Convergence.Execution.DamageHitResolution.Damage.get -> decimal
-Convergence.Execution.DamageHitResolution.Damage.init -> void
-Convergence.Execution.DamageHitResolution.DamageHitResolution(bool Hit, decimal Damage, bool Critical = false) -> void
-Convergence.Execution.DamageHitResolution.Deconstruct(out bool Hit, out decimal Damage, out bool Critical) -> void
-Convergence.Execution.DamageHitResolution.Equals(Convergence.Execution.DamageHitResolution? other) -> bool
 Convergence.Execution.DamageHitResolution.Hit.get -> bool
-Convergence.Execution.DamageHitResolution.Hit.init -> void
 Convergence.Execution.DamagePolicyResolution
 Convergence.Execution.DamagePolicyResolution.DamagePolicyResolution(System.Collections.Generic.IEnumerable<Convergence.Execution.DamageHitResolution!>! hits, Convergence.Content.ElementalAffinity resolvedAffinity) -> void
 Convergence.Execution.DamagePolicyResolution.Hits.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitResolution!>!
@@ -6988,9 +6972,6 @@ override Convergence.Battle.ProductionCombatStatus.ToString() -> string!
 override Convergence.Battle.ProductionCriticalCheckResult.Equals(object? obj) -> bool
 override Convergence.Battle.ProductionCriticalCheckResult.GetHashCode() -> int
 override Convergence.Battle.ProductionCriticalCheckResult.ToString() -> string!
-override Convergence.Battle.ProductionDamageResolutionHit.Equals(object? obj) -> bool
-override Convergence.Battle.ProductionDamageResolutionHit.GetHashCode() -> int
-override Convergence.Battle.ProductionDamageResolutionHit.ToString() -> string!
 override Convergence.Battle.ProductionDamageResolutionResult.Equals(object? obj) -> bool
 override Convergence.Battle.ProductionDamageResolutionResult.GetHashCode() -> int
 override Convergence.Battle.ProductionDamageResolutionResult.ToString() -> string!
@@ -7810,9 +7791,6 @@ override Convergence.Execution.CustomAilmentTurnBehaviorRequest.ToString() -> st
 override Convergence.Execution.CustomAilmentTurnBehaviorResult.Equals(object? obj) -> bool
 override Convergence.Execution.CustomAilmentTurnBehaviorResult.GetHashCode() -> int
 override Convergence.Execution.CustomAilmentTurnBehaviorResult.ToString() -> string!
-override Convergence.Execution.DamageHitResolution.Equals(object? obj) -> bool
-override Convergence.Execution.DamageHitResolution.GetHashCode() -> int
-override Convergence.Execution.DamageHitResolution.ToString() -> string!
 override Convergence.Execution.EffectActionExecutionRequest.Equals(object? obj) -> bool
 override Convergence.Execution.EffectActionExecutionRequest.GetHashCode() -> int
 override Convergence.Execution.EffectActionExecutionRequest.ToString() -> string!
@@ -8694,8 +8672,6 @@ static Convergence.Battle.ProductionCombatStatus.operator !=(Convergence.Battle.
 static Convergence.Battle.ProductionCombatStatus.operator ==(Convergence.Battle.ProductionCombatStatus? left, Convergence.Battle.ProductionCombatStatus? right) -> bool
 static Convergence.Battle.ProductionCriticalCheckResult.operator !=(Convergence.Battle.ProductionCriticalCheckResult? left, Convergence.Battle.ProductionCriticalCheckResult? right) -> bool
 static Convergence.Battle.ProductionCriticalCheckResult.operator ==(Convergence.Battle.ProductionCriticalCheckResult? left, Convergence.Battle.ProductionCriticalCheckResult? right) -> bool
-static Convergence.Battle.ProductionDamageResolutionHit.operator !=(Convergence.Battle.ProductionDamageResolutionHit? left, Convergence.Battle.ProductionDamageResolutionHit? right) -> bool
-static Convergence.Battle.ProductionDamageResolutionHit.operator ==(Convergence.Battle.ProductionDamageResolutionHit? left, Convergence.Battle.ProductionDamageResolutionHit? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionResult.operator !=(Convergence.Battle.ProductionDamageResolutionResult? left, Convergence.Battle.ProductionDamageResolutionResult? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionResult.operator ==(Convergence.Battle.ProductionDamageResolutionResult? left, Convergence.Battle.ProductionDamageResolutionResult? right) -> bool
 static Convergence.Battle.ProductionInstantDeathRequest.operator !=(Convergence.Battle.ProductionInstantDeathRequest? left, Convergence.Battle.ProductionInstantDeathRequest? right) -> bool
@@ -9219,8 +9195,6 @@ static Convergence.Execution.CustomAilmentTurnBehaviorRequest.operator !=(Conver
 static Convergence.Execution.CustomAilmentTurnBehaviorRequest.operator ==(Convergence.Execution.CustomAilmentTurnBehaviorRequest? left, Convergence.Execution.CustomAilmentTurnBehaviorRequest? right) -> bool
 static Convergence.Execution.CustomAilmentTurnBehaviorResult.operator !=(Convergence.Execution.CustomAilmentTurnBehaviorResult? left, Convergence.Execution.CustomAilmentTurnBehaviorResult? right) -> bool
 static Convergence.Execution.CustomAilmentTurnBehaviorResult.operator ==(Convergence.Execution.CustomAilmentTurnBehaviorResult? left, Convergence.Execution.CustomAilmentTurnBehaviorResult? right) -> bool
-static Convergence.Execution.DamageHitResolution.operator !=(Convergence.Execution.DamageHitResolution? left, Convergence.Execution.DamageHitResolution? right) -> bool
-static Convergence.Execution.DamageHitResolution.operator ==(Convergence.Execution.DamageHitResolution? left, Convergence.Execution.DamageHitResolution? right) -> bool
 static Convergence.Execution.EffectActionExecutionRequest.operator !=(Convergence.Execution.EffectActionExecutionRequest? left, Convergence.Execution.EffectActionExecutionRequest? right) -> bool
 static Convergence.Execution.EffectActionExecutionRequest.operator ==(Convergence.Execution.EffectActionExecutionRequest? left, Convergence.Execution.EffectActionExecutionRequest? right) -> bool
 static Convergence.Execution.EffectExecutionContext.operator !=(Convergence.Execution.EffectExecutionContext? left, Convergence.Execution.EffectExecutionContext? right) -> bool
@@ -10017,7 +9991,6 @@ Convergence.Execution.BattleTurnEndLifecycleRequest.StatModifierBoundary.get -> 
 Convergence.Execution.EffectExecutionEnvironment.ActiveStatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Execution.EffectExecutionEnvironment.EffectExecutionEnvironment(Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries = null) -> void
 Convergence.Execution.EffectExecutionEnvironment.FindStatModifierBoundary(Convergence.Content.DurationDefinition? duration) -> Convergence.Runtime.StatModifierLifecycleBoundary?
-Convergence.Execution.EffectExecutionResult.EffectExecutionResult(int EffectIndex, Convergence.Runtime.RuntimeInstanceId? TargetId, Convergence.Execution.EffectExecutionOutcome Outcome, Convergence.Execution.TurnEconomyOutcome TurnEconomyOutcome = Convergence.Execution.TurnEconomyOutcome.Normal, bool IsCritical = false, decimal? Value = null, Convergence.Content.ContentId? RelatedId = null, string? Detail = null, bool EscapeRequested = false, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>? PassiveActivations = null, Convergence.Content.ElementalAffinity? ResolvedAffinity = null, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>? HostActionRequestIds = null, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>? StatModifierTransitions = null) -> void
 Convergence.Execution.EffectExecutionResult.StatModifierTransitions.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>!
 Convergence.Execution.EffectExecutionResult.StatModifierTransitions.init -> void
 Convergence.Execution.IBattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
@@ -10038,7 +10011,6 @@ Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding
 Convergence.Content.ChargeKind.General = 2 -> Convergence.Content.ChargeKind
 Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null, Convergence.Execution.IChargePolicyService? chargePolicy = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.ChargePolicy.get -> Convergence.Execution.IChargePolicyService?
-Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, Convergence.Runtime.IStatModifierPolicyService! statModifiers, Convergence.Execution.IChargePolicyService! charges, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null) -> void
 Convergence.Execution.BattleExecutionServices.Charges.get -> Convergence.Execution.IChargePolicyService!
 Convergence.Execution.ChargeApplicationAssessment
 Convergence.Execution.ChargeApplicationAssessment.<Clone>$() -> Convergence.Execution.ChargeApplicationAssessment!
@@ -10497,3 +10469,56 @@ static Convergence.Battle.InstantDefeatResolutionResult.operator !=(Convergence.
 static Convergence.Battle.InstantDefeatResolutionResult.operator ==(Convergence.Battle.InstantDefeatResolutionResult? left, Convergence.Battle.InstantDefeatResolutionResult? right) -> bool
 static Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.operator !=(Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? left, Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? right) -> bool
 static Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.operator ==(Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? left, Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? right) -> bool
+Convergence.Battle.ProductionDamageResolutionHit.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Battle.ProductionDamageResolutionHit.ChargeMultiplier.get -> decimal
+Convergence.Battle.ProductionDamageResolutionHit.CriticalResolution.get -> Convergence.Battle.ProductionCriticalCheckResult?
+Convergence.Battle.ProductionDamageResolutionHit.HitIndex.get -> int
+Convergence.Battle.ProductionDamageResolutionHit.HitResolution.get -> Convergence.Battle.HitResolutionResult!
+Convergence.Battle.ProductionDamageResolutionHit.ProductionDamageResolutionHit(int hitIndex, bool hit, decimal damage, bool critical, Convergence.Battle.HitResolutionResult! hitResolution, Convergence.Battle.ProductionCriticalCheckResult? criticalResolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Content.ChargeKind? chargeKind, decimal chargeMultiplier) -> void
+Convergence.Battle.ProductionDamageResolutionHit.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Execution.BattleExecutionServices.ActionOutcomes.get -> Convergence.Execution.IActionOutcomeAggregationPolicy!
+Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, Convergence.Runtime.IStatModifierPolicyService! statModifiers, Convergence.Execution.IChargePolicyService! charges, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null, Convergence.Execution.IActionOutcomeAggregationPolicy? actionOutcomes = null) -> void
+Convergence.Execution.DamageHitExecutionEvidence
+Convergence.Execution.DamageHitExecutionEvidence.AccuracyRoll.get -> decimal?
+Convergence.Execution.DamageHitExecutionEvidence.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.DamageHitExecutionEvidence.AffectedActorId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Execution.DamageHitExecutionEvidence.AffectedResourceId.get -> Convergence.Content.ContentId?
+Convergence.Execution.DamageHitExecutionEvidence.AppliedResourceDelta.get -> decimal
+Convergence.Execution.DamageHitExecutionEvidence.AuthoredAccuracy.get -> int?
+Convergence.Execution.DamageHitExecutionEvidence.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.DamageHitExecutionEvidence.ChargeMultiplier.get -> decimal
+Convergence.Execution.DamageHitExecutionEvidence.Critical.get -> bool
+Convergence.Execution.DamageHitExecutionEvidence.CriticalChance.get -> int?
+Convergence.Execution.DamageHitExecutionEvidence.CriticalEligibilityReason.get -> Convergence.Battle.CriticalEligibilityReason?
+Convergence.Execution.DamageHitExecutionEvidence.CriticalEligible.get -> bool?
+Convergence.Execution.DamageHitExecutionEvidence.CriticalRoll.get -> decimal?
+Convergence.Execution.DamageHitExecutionEvidence.DamageHitExecutionEvidence(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, int effectIndex, Convergence.Execution.DamageHitResolution! resolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Runtime.RuntimeInstanceId? affectedActorId = null, Convergence.Content.ContentId? affectedResourceId = null, decimal appliedResourceDelta = 0) -> void
+Convergence.Execution.DamageHitExecutionEvidence.EffectIndex.get -> int
+Convergence.Execution.DamageHitExecutionEvidence.FinalAccuracy.get -> int?
+Convergence.Execution.DamageHitExecutionEvidence.Hit.get -> bool
+Convergence.Execution.DamageHitExecutionEvidence.HitIndex.get -> int
+Convergence.Execution.DamageHitExecutionEvidence.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Execution.DamageHitExecutionEvidence.ResolvedDamage.get -> decimal
+Convergence.Execution.DamageHitExecutionEvidence.SourceActionId.get -> Convergence.Content.ContentId
+Convergence.Execution.DamageHitExecutionEvidence.TargetId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.DamageHitResolution.AccuracyRoll.get -> decimal?
+Convergence.Execution.DamageHitResolution.AuthoredAccuracy.get -> int?
+Convergence.Execution.DamageHitResolution.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.DamageHitResolution.ChargeMultiplier.get -> decimal
+Convergence.Execution.DamageHitResolution.CriticalChance.get -> int?
+Convergence.Execution.DamageHitResolution.CriticalEligibilityReason.get -> Convergence.Battle.CriticalEligibilityReason?
+Convergence.Execution.DamageHitResolution.CriticalEligible.get -> bool?
+Convergence.Execution.DamageHitResolution.CriticalRoll.get -> decimal?
+Convergence.Execution.DamageHitResolution.DamageHitResolution(bool hit, decimal damage, bool critical = false) -> void
+Convergence.Execution.DamageHitResolution.DamageHitResolution(int hitIndex, bool hit, decimal damage, bool critical, int? authoredAccuracy, int? finalAccuracy, decimal? accuracyRoll, bool? criticalEligible, Convergence.Battle.CriticalEligibilityReason? criticalEligibilityReason, int? criticalChance, decimal? criticalRoll, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Content.ChargeKind? chargeKind, decimal chargeMultiplier) -> void
+Convergence.Execution.DamageHitResolution.FinalAccuracy.get -> int?
+Convergence.Execution.DamageHitResolution.HitIndex.get -> int
+Convergence.Execution.DamageHitResolution.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Execution.EffectExecutionResult.DamageHits.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitExecutionEvidence!>!
+Convergence.Execution.EffectExecutionResult.DamageHits.init -> void
+Convergence.Execution.EffectExecutionResult.EffectExecutionResult(int EffectIndex, Convergence.Runtime.RuntimeInstanceId? TargetId, Convergence.Execution.EffectExecutionOutcome Outcome, Convergence.Execution.TurnEconomyOutcome TurnEconomyOutcome = Convergence.Execution.TurnEconomyOutcome.Normal, bool IsCritical = false, decimal? Value = null, Convergence.Content.ContentId? RelatedId = null, string? Detail = null, bool EscapeRequested = false, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>? PassiveActivations = null, Convergence.Content.ElementalAffinity? ResolvedAffinity = null, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>? HostActionRequestIds = null, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>? StatModifierTransitions = null, System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitExecutionEvidence!>? DamageHits = null) -> void
+Convergence.Execution.IActionOutcomeAggregationPolicy
+Convergence.Execution.IActionOutcomeAggregationPolicy.Aggregate(System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! effects) -> Convergence.Execution.TurnEconomyResolution!
+Convergence.Execution.StandardActionOutcomeAggregationPolicy
+Convergence.Execution.StandardActionOutcomeAggregationPolicy.Aggregate(System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! effects) -> Convergence.Execution.TurnEconomyResolution!
+Convergence.Execution.StandardActionOutcomeAggregationPolicy.StandardActionOutcomeAggregationPolicy() -> void

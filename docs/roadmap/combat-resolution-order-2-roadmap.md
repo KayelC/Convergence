@@ -59,7 +59,7 @@ review are complete.
 | O2-C2 | `verified` | Add standard hit/evasion policy, consume passive Accuracy/Evasion modifiers, remove Luck and inert defaults, and use explicit `0..100` bounds. | `battle: implement hit and evasion policies` |
 | O2-C3 | `verified` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
 | O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
-| O2-C5 | `planned` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
+| O2-C5 | `verified` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `planned` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
 | O2-C7 | `planned` | Perform a fresh source-first review, correct substantiated findings in isolated commits, write all three documentation views, and obtain owner confirmation. | `docs: complete combat resolution order 2` |
 
@@ -272,6 +272,34 @@ typed request validation, and staged defeat prevention.
 - failed ailment/instant-defeat probability remains no effect;
 - action rollback publishes no staged resource changes or evidence as committed
   state.
+
+### Completion record
+
+O2-C5 is verified. Damage policies now publish ordered immutable hit facts with
+authored and final accuracy, hit roll, critical eligibility and roll, resolved
+affinity, charge category, charge multiplier, and resolved damage. Effect
+execution adds source, actor, target, affected resource, and actual staged
+resource-delta evidence without exposing live mutable state.
+
+Landed hits are applied one at a time inside the existing outer actor
+transaction. Drain, reflection, absorption, and defeat-prevention dispatch now
+occur at the relevant hit rather than after a collapsed total. A later failure
+still discards the complete staged action and returns no committed hit or
+resource evidence.
+
+`IActionOutcomeAggregationPolicy` is the single authority used by both skill
+execution and the battle-action facade. The supplied policy treats only an
+all-hit evasion as a missed target, does not stack repeated miss penalties,
+normalizes mixed Critical/evasion targets to normal cost, preserves Weak and
+Critical benefits without a conflicting evasion, applies Null penalties, and
+terminates phases for Repel or Absorb. Failed ailment and instant-defeat rolls
+remain typed normal-cost no-effect results.
+
+The checkpoint gate passed 1,291 tests (`1,111` Framework, `173` DemoHost, and
+`7` ContentValidator tests), with zero failures or skips. Framework and full
+solution nonincremental builds reported zero warnings, all four noninteractive
+DemoHost modes completed successfully, formatting and diff checks passed, and
+the active source inventory now accounts for 105 Framework files.
 
 ## O2-C6: Neutral Authored Combat Composition
 
