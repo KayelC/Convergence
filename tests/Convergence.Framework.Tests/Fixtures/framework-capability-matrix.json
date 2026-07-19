@@ -78,21 +78,22 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
         "CriticalResolutionPolicyTests",
+        "InstantDefeatResolutionPolicyTests",
+        "ActionOutcomeAggregationPolicyTests",
         "ProductionCombatRulesetTests",
-        "StatStageScalingTests"
+        "RuntimeRulesetBindingTests",
+        "StatStageScalingTests",
+        "ActiveSkillExecutionTests"
       ],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "Authored damage-policy factories return the concrete standard ruleset rather than a neutral replaceable combat-policy contract.",
-        "Instant-defeat resistance and multi-hit evidence/outcome semantics remain scheduled in Order 2."
-      ]
+      "knownGaps": []
     },
     {
       "id": "turn_economy",

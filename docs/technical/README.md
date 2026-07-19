@@ -27,10 +27,15 @@ Technical pages focus on:
 - [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md):
   immutable policy state, signal transitions, contribution projection,
   lifecycle clocks, boundary ordering, and persistence requirements.
+- [Combat Resolution Pipeline](combat-resolution-pipeline.md): coherent
+  authored policy composition, hit/critical sequencing, standard arithmetic,
+  charge lifetime, multi-hit mutation, outcome aggregation, and atomicity.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
-integration boundaries. Other subsystem references remain tracked as
+integration boundaries. The combat pipeline is source-reviewed and awaits
+project-owner confirmation as the final Order 2 documentation gate. Other
+subsystem references remain tracked as
 `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 

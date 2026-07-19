@@ -4,7 +4,7 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** O2-C1 charge and O2-C2 hit/evasion policies verified; remaining Order 2 checkpoints active
+**Implementation state:** O2-C1 through O2-C6 verified; O2-C7 written and pending project-owner confirmation
 
 ## Context
 
@@ -260,12 +260,39 @@ partial token first; otherwise convert one full token to one partial token.
 - Hosts receive sufficient typed facts to present combat without parsing debug
   messages or rerunning random resolution.
 
+## Implementation Result
+
+Order 2 now implements the complete confirmed policy family. The supplied
+composition includes split and unified charge policies, explicit hit/evasion,
+separate critical eligibility and chance, resistance-aware instant defeat,
+immutable per-hit evidence, sequential staged hit application, and replaceable
+action-outcome aggregation. Authored ruleset binding returns a neutral coherent
+`CombatExecutionPolicySet`; the hit, critical, and instant-defeat authorities it
+advertises are the exact authorities its executors call.
+
+Content is currently schema v5 and active packs are version `0.5.0`. Weapon
+basic attacks must declare critical behavior. Save contract v11 retains charge
+policy identity and rejects restoration under incompatible charge semantics.
+
+The final source-first review corrected active schema validation, normalized
+host-random boundaries, combat-policy composition integrity, and stale copied
+contract assets. Its evidence is recorded in the
+[Order 2 Completion Review](../reviews/combat-resolution-order-2-completion-review-2026-07-19.md).
+The code capability is complete. The three documentation audiences remain
+`existing_unreviewed` until the project owner confirms the resulting
+plain-language explanation.
+
 ## Evidence And References
 
 Implementation and verification are governed by the
 [Order 2 Combat Resolution Roadmap](../roadmap/combat-resolution-order-2-roadmap.md).
 The discrepancy that prompted this decision remains recorded in the
 [Order 2 Source Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md).
+Current audience documentation is:
+
+- [Combat, Defenses, And Turn Economy](../mechanics/combat-defenses-and-turns.md);
+- [Combat Resolution Policies](../developer-guide/combat-resolution-policies.md); and
+- [Combat Resolution Pipeline](../technical/combat-resolution-pipeline.md).
 
 External formula guides were used as comparative design evidence, not copied as
 source or treated as Convergence authority:

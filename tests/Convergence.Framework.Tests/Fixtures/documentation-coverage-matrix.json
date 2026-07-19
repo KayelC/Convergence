@@ -148,17 +148,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "Combat rules exist but require formula-by-formula owner confirmation."
+        "reason": "Current source and formulas were reviewed and corrected; the completed mechanics page awaits project-owner confirmation."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Combat ruleset binding and evidence consumption need an integration guide."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/combat-resolution-policies.md"],
+        "reason": "The source-reviewed policy binding and evidence guide awaits project-owner confirmation."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md", "docs/ruleset-policy-contracts.md"],
-        "reason": "Existing overviews do not yet form a reviewed combat pipeline reference."
+        "documents": ["docs/technical/combat-resolution-pipeline.md"],
+        "reason": "The source-reviewed pipeline and state diagrams await project-owner confirmation."
       }
     },
     {

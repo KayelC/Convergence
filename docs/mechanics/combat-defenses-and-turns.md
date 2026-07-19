@@ -34,6 +34,44 @@ application passes.
 
 Arithmetic is checked or saturating at public boundaries so extreme authored/runtime values do not wrap into negative damage or rewards.
 
+### Supplied standard damage formula
+
+The supplied `ProductionCombatRuleset` calculates each landed hit as follows.
+This is Convergence's ready-to-use default, not a requirement for custom combat
+policies.
+
+```text
+attack stat = Strength for Physical; Magic for every other damage element
+
+effective attack =
+    attack stat
+    * general outgoing-damage multiplier
+    * Physical-or-magical outgoing stage multiplier
+
+effective defense = max(1, target Vitality + target Defense)
+
+base damage = damage formula scalar * sqrt(power * effective attack / effective defense)
+
+resolved damage = floor(
+    base damage
+    * target incoming-damage multiplier
+    * critical multiplier, when critical
+    * guard multiplier, when guarding
+    * Weak-or-Resist multiplier, when applicable
+    * charge multiplier, when charged
+    * random variance)
+```
+
+The standard scalar is `5`. Its default variance is `0.95..1.05`; Critical and
+Weak are `1.5`; Resist and Guard are `0.5`. Null causes no damage, Repel applies
+each landed hit to the attacker, and Absorb restores the target. Rule modifiers
+from typed passives are applied to each hit at the execution boundary after the
+damage policy returns and before the resource mutation is committed.
+
+Damage never reads Luck. Equipment contributes to this formula only through
+the runtime fields currently composed by the actor/equipment modules. Full
+armor defense/evasion and secondary equipment behavior remain separate work.
+
 ## Accuracy And Evasion
 
 `IHitResolutionPolicy` is the hit/evasion extension boundary. The supplied
@@ -42,6 +80,20 @@ an attacker Agility contribution, subtracts a target Agility contribution, and
 applies explicit passive and stage-based Accuracy/Evasion modifiers using
 add-then-multiply stacking. Its coefficients and probability bounds are
 ruleset parameters.
+
+For the supplied policy, before explicit modifiers:
+
+```text
+accuracy score = authored accuracy + attacker Agility * 2
+evasion score  = target Agility * 2
+raw chance     = resolved accuracy score - resolved evasion score
+final chance   = floor(clamp(raw chance, configured minimum, configured maximum))
+```
+
+The coefficient `2` on each side is the supplied default and is configurable.
+Typed additive modifiers are combined before typed multiplicative modifiers.
+The policy rolls once per attempted hit only when the final chance is between
+zero and one hundred.
 
 The result exposes authored accuracy, both Agility contributions, scores before
 and after modifiers, raw and final chance, the random roll when one was needed,
@@ -106,6 +158,29 @@ matching hit and target in the committed action has resolved. Miss, Null,
 Repel, and Absorb consume it; an unexecuted or rejected action does not. Retained
 charge state includes its policy ID so a host cannot restore it under different
 semantics by accident.
+
+A split charge affects only its matching damage category. A mixed Physical and
+magical action may therefore consume both split slots when it actually resolves
+both categories. A unified charge affects every damage category in that one
+action and is consumed once. Charge duration is a fallback expiry boundary:
+turn, phase, battle, permanent, and immediate action-end shapes are supported.
+The matching attack still consumes the charge before a later duration boundary
+would expire it.
+
+## Multi-Hit And Multi-Target Outcomes
+
+Every attempted hit receives its own immutable evidence. Landed hits are
+applied in authored order to staged actor state, so drain, reflection,
+absorption, and defeat prevention occur at the hit that caused them. The host
+may animate those facts one by one without recalculating combat.
+
+Turn cost is decided once for the complete action, not once per hit. The
+supplied aggregation policy treats a target as having evaded only when all
+damage hits aimed at that target miss. Repeated misses against one target do
+not stack extra penalties. Repel or Absorb terminates the phase; Null has the
+miss-style penalty; Weak or Critical grants the configured benefit when no
+conflicting evasion exists; mixed Critical and evasion normalizes to normal
+cost. Another game may replace this aggregation policy.
 
 ## Turn Economy
 

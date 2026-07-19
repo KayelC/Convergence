@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -34,19 +34,21 @@ restoration, and cross-policy host evidence. The final source-first review found
 no remaining reachable Order 1 defect, and the project owner confirmed the
 public mechanics on 18 July 2026.
 
-The source-first Order 2 review reopened `combat_resolution` as partial. Charge
-state is now policy-owned, and the supplied hit/evasion authority consumes
-authored Accuracy/Evasion modifiers with explicit Agility coefficients, exact
-probability bounds, deterministic evidence, and no hidden Luck contribution.
-Critical eligibility and chance are now independent replaceable policies;
-supplied exact-authored and accuracy-scaled chance authorities consume explicit
-Critical Chance modifiers without Luck or hidden minimums. Schema v5 also
-requires every weapon basic attack to declare its critical behavior.
-Instant defeat now uses a replaceable policy with authored chance, explicit
-resistance multipliers, bypass semantics, one roll, and no hidden Luck or miss
-penalty. Per-hit evidence/outcome aggregation and the neutral authored
-combat-policy aggregate still require implementation before the capability can
-return to complete.
+Order 2 returned `combat_resolution` to complete after a source-first redesign
+and completion review. Charge state is policy-owned; supplied hit/evasion uses
+authored accuracy, explicit Agility coefficients, typed modifiers, exact
+probability bounds, and no hidden Luck. Critical eligibility and chance are
+separate replaceable policies. Instant defeat uses authored chance, explicit
+resistance multipliers, bypass semantics, and one roll. Schema v5 requires
+weapon basic attacks to declare critical behavior.
+
+Every attempted damage hit now carries immutable accuracy, critical, affinity,
+charge, damage, and applied-resource evidence. Landed hits mutate staged actor
+state sequentially, and a replaceable action policy derives one turn-economy
+result from the complete effect set. Authored binding returns a coherent neutral
+combat aggregate: the hit, critical, and instant-defeat authorities it exposes
+are the same authorities its executors call. The code capability is complete;
+its three documentation views remain pending project-owner confirmation.
 
 ## Authority
 

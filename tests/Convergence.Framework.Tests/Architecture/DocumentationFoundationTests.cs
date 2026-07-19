@@ -190,6 +190,62 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void CombatResolutionDocumentation_PreservesConfirmedPolicyAndExecutionBoundaries()
+    {
+        string decision = File.ReadAllText(
+            RepositoryPath("docs", "decisions", "combat-resolution-policy-family.md"));
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "combat-defenses-and-turns.md"));
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "combat-resolution-policies.md"));
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "combat-resolution-pipeline.md"));
+        string roadmap = File.ReadAllText(
+            RepositoryPath("docs", "roadmap", "combat-resolution-order-2-roadmap.md"));
+
+        string[] designTokens =
+        [
+            "Luck has no hidden combat-probability role",
+            "SplitChargePolicy",
+            "UnifiedChargePolicy",
+            "40` resolves to `60`, `40`, `20`, and `0",
+            "mixed Critical and evasion: normal cost",
+            "Passing remains owned by the Action Token economy itself"
+        ];
+        Assert.All(designTokens, token => Assert.Contains(token, decision, StringComparison.Ordinal));
+
+        string[] mechanicsTokens =
+        [
+            "base damage = damage formula scalar * sqrt(power * effective attack / effective defense)",
+            "accuracy score = authored accuracy + attacker Agility * 2",
+            "Damage never reads Luck.",
+            "Turn cost is decided once for the complete action, not once per hit."
+        ];
+        Assert.All(mechanicsTokens, token => Assert.Contains(token, mechanics, StringComparison.Ordinal));
+
+        string[] integrationTokens =
+        [
+            "ICombatDamageExecutionPolicy",
+            "ICombatInstantDefeatExecutionPolicy",
+            "NextUnitDecimal()",
+            "ChargePolicyRegistry.CreateStandard()"
+        ];
+        Assert.All(integrationTokens, token => Assert.Contains(token, developer, StringComparison.Ordinal));
+
+        string[] technicalTokens =
+        [
+            "## Composition Boundary",
+            "## Damage Sequence",
+            "## Charge State Machine",
+            "## Atomicity And Failure",
+            "```mermaid"
+        ];
+        Assert.All(technicalTokens, token => Assert.Contains(token, technical, StringComparison.Ordinal));
+
+        Assert.Contains("written_pending_owner_confirmation", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");

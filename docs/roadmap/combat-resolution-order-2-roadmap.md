@@ -24,7 +24,7 @@ override that decision record.
 - Starting commit: `0aa6c53`
 - Starting save contract: version `10`
 - Content contract: schema version `4`
-- Active pack versions: `0.5.0`
+- Active pack versions: `0.4.0`
 - Order 2 focused source-audit gate: `185` passing tests
 - Full-suite baseline inherited from Order 1: `1,214` passing tests, zero skipped
 - Framework and solution builds: zero warnings
@@ -61,7 +61,7 @@ review are complete.
 | O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `verified` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `verified` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
-| O2-C7 | `planned` | Perform a fresh source-first review, correct substantiated findings in isolated commits, write all three documentation views, and obtain owner confirmation. | `docs: complete combat resolution order 2` |
+| O2-C7 | `written_pending_owner_confirmation` | Fresh source review completed, four substantiated findings corrected independently, and all three documentation views written. Owner confirmation remains the final gate. | `docs: complete combat resolution order 2` |
 
 ## O2-C1: Charge Policy Family
 
@@ -365,6 +365,30 @@ After O2-C1 through O2-C6 are green:
    - a technical page with execution and state diagrams;
 6. update the documentation coverage matrix only after the pages match code;
 7. ask the project owner to confirm the plain-language behavior.
+
+### Completion record
+
+The source-first completion review traced the current binding, execution,
+mutation, outcome, persistence, schema, DemoHost, and Godot paths. It corrected
+four reachable defects in isolated commits:
+
+- `eb75fa0` updates active validation from retired schema v4 to schema v5;
+- `33447a2` validates every affected host-random value at its authority
+  boundary;
+- `291c93d` prevents authored combat compositions from advertising hit,
+  critical, or instant-defeat policies that their executors do not use; and
+- `021c5a8` ensures builds refresh tracked content, schema, and ledger assets
+  even when Git timestamps make an obsolete output copy appear newer.
+
+No additional reachable Order 2 defect remained after those corrections. The
+consumer mechanics page, developer integration guide, technical pipeline, and
+completion review now describe current source. The implementation capability
+is `complete`; O2-C7 remains `written_pending_owner_confirmation` until the
+project owner confirms the final explanation. The final solution gate passed
+`1,302` tests (`1,122` Framework, `173` DemoHost, and `7` ContentValidator),
+with zero failures and zero skips. Framework and solution Release builds passed
+with zero warnings; all five DemoHost modes and active content validation also
+passed.
 
 ## Explicit Boundaries
 

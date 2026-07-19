@@ -25,14 +25,19 @@ process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
+Order 2 combat resolution has completed implementation and source review. Its
+mechanics, developer, and technical pages are now present as
+`existing_unreviewed`; they become `reviewed` only after project-owner
+confirmation.
+
 The documentation matrix currently records 75 audience entries: 14 reviewed,
-36 existing_unreviewed, 18 missing, and 7 not_applicable.
+37 existing_unreviewed, 17 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
 | `reviewed` | 14 |
-| `existing_unreviewed` | 36 |
-| `missing` | 18 |
+| `existing_unreviewed` | 37 |
+| `missing` | 17 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

@@ -137,9 +137,10 @@ The earlier
 remains evidence for the original checkpoints. The expanded scope is closed by
 the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-07-18.md).
 All three `typed_action_and_effect_execution` audience entries are now
-`reviewed`. The executable matrix therefore records 14 reviewed, 36
-`existing_unreviewed`, 18 missing, and 7 `not_applicable` entries. Order 2,
-`combat_resolution`, is next.
+`reviewed`. After the source-reviewed Order 2 pages were written, the executable
+matrix records 14 reviewed, 37 `existing_unreviewed`, 17 missing, and 7
+`not_applicable` entries. Order 2, `combat_resolution`, awaits final
+project-owner confirmation.
 
 ## Active Order 2
 
@@ -158,21 +159,23 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `implemented_pending_review` | Split and Unified policies now use authored charge multipliers, reject occupied slots, consume once per committed matching action, and persist policy identity in save v11. |
-| O2-M1 | `planned` | Remove the two inert standard chance defaults while retaining explicit authored values. |
-| O2-M2 | `planned` | Consume authored Accuracy, Evasion, and Critical Chance modifiers at typed policy boundaries. |
-| O2-M3 | `planned` | Make authored combat-policy binding return a genuinely replaceable neutral aggregate. |
+| O2-H1 | `verified` | Split and Unified policies use authored charge multipliers, reject occupied slots, consume once per committed matching action, and persist policy identity in save v11. |
+| O2-M1 | `verified` | Inert standard chance defaults are removed; typed content remains authoritative. |
+| O2-M2 | `verified` | Authored Accuracy, Evasion, and Critical Chance modifiers reach their typed policy boundaries. |
+| O2-M3 | `verified` | Authored combat binding returns a coherent neutral aggregate whose exposed authorities are the executing authorities. |
 | O2-D1 | `confirmed` | Authored final-damage charge multiplier, whole-action scope, defense-attempt consumption, and mixed-category behavior. |
 | O2-D2 | `confirmed` | Authored accuracy plus Agility/evasion and explicit modifiers; Luck excluded from the supplied policy. |
 | O2-D3 | `confirmed` | Exact authored critical base, selectable chance and eligibility policies, no hidden Luck. |
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `blocked_by_corrections` | Complete and confirm all three audience documents against corrected source. |
+| O2-DOC | `written_pending_owner_confirmation` | All three audience documents match corrected source; project-owner confirmation remains. |
 
-Until these checkpoints close, `combat_resolution` remains `partial` and its
-documentation entries remain unreviewed or missing. The active overview pages
-are evidence to revise, not confirmed combat authority.
+The `combat_resolution` implementation is now `complete`. Its mechanics,
+developer, and technical documentation remains `existing_unreviewed` until the
+project owner confirms the final explanation. The active pages are accurate
+source-reviewed evidence, but owner confirmation is still required by the
+documentation promotion rule.
 
 ## Deferred Documentation
 

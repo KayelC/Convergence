@@ -26,10 +26,15 @@ Developer guides focus on:
 - [Stat Modifier Policies](stat-modifier-policies.md): modifier authority,
   supplied policy models, counted lifecycle clocks, boundary sequences,
   removal, and Godot responsibilities.
+- [Combat Resolution Policies](combat-resolution-policies.md): authored combat
+  binding, execution-service composition, typed hit evidence, random-source
+  contracts, replacement policies, and retained charge state.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
-Other subsystem guides remain tracked as `existing_unreviewed` or `missing` in
+The combat guide is source-reviewed and awaits project-owner confirmation as
+the final Order 2 documentation gate. Other subsystem guides remain tracked as
+`existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New guides must follow the

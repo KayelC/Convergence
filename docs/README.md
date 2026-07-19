@@ -16,6 +16,8 @@ This directory is the active documentation authority for Convergence Framework.
 6. [Gameplay Systems](gameplay-systems.md): implemented framework capabilities and composition points.
 7. [Documentation Coverage](reference/documentation-coverage.md): honest audience-by-capability documentation status.
 8. [Stat Modifier Policies](mechanics/stat-modifier-policies.md): confirmed persistent, timed-exclusive, and independently timed modifier rules.
+9. [Combat Resolution Policies](developer-guide/combat-resolution-policies.md): bind or replace combat math, hit, critical, charge, instant-defeat, and outcome policies.
+10. [Combat Resolution Pipeline](technical/combat-resolution-pipeline.md): staged execution, random boundaries, evidence, atomicity, and persistence.
 
 ## Documentation Audiences
 
