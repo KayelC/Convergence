@@ -20,7 +20,7 @@ tests/Convergence.Framework.Tests/  framework-only tests
 tests/Convergence.DemoHost.Tests/   example-host tests
 tests/Convergence.ContentValidator.Tests/ validator tests
 content/                            generic reference and demo content
-schemas/content/v4/                 Draft 2020-12 authoring contracts
+schemas/content/v5/                 Draft 2020-12 authoring contracts
 docs/                               active product documentation
 ```
 
@@ -87,7 +87,7 @@ dotnet restore Convergence.sln
 dotnet format Convergence.sln --no-restore --verify-no-changes
 dotnet build Convergence.sln --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true
 dotnet test Convergence.sln --configuration Release --no-build --no-restore
-dotnet run --project tools/Convergence.ContentValidator -- --content-root content --schema-root schemas/content/v4 --registrations config/content-validator/active-samples.registrations.json
+dotnet run --project tools/Convergence.ContentValidator -- --content-root content --schema-root schemas/content/v5 --registrations config/content-validator/active-samples.registrations.json
 dotnet run --project samples/Convergence.DemoHost -- --help
 ```
 

@@ -59,6 +59,7 @@ public sealed class ProductBoundaryTests
             "XPlat Code Coverage",
             "Assert-CoberturaCoverage.ps1",
             "Convergence.ContentValidator.csproj",
+            "--schema-root schemas/content/v5",
             "--clean-battle-demo",
             "--clean-field-demo",
             "--clean-save-demo",
@@ -77,6 +78,7 @@ public sealed class ProductBoundaryTests
 
         Assert.DoesNotContain("ArchiveDocs", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("continue-on-error: true", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("schemas/content/v4", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
