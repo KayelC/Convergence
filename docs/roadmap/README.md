@@ -10,6 +10,7 @@ records. It does not define individual mechanics.
 - [Product Roadmap](product-roadmap.md)
 - [Actor Composition, Progression, Roster, And Stage Roadmap](actor-composition-progression-roster-roadmap.md)
 - [Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md)
+- [Order 2 Combat Resolution Roadmap](combat-resolution-order-2-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)

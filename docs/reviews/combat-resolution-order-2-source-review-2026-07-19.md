@@ -317,6 +317,20 @@ claim that those profiles affect combat today.
 5. owner confirmation of the plain-language behavior;
 6. focused and full tests, strict builds, documentation links, and diff checks.
 
+## Owner Resolution
+
+The project owner confirmed O2-D1 through O2-D6 on 19 July 2026. The decisions
+are recorded normatively in
+[Combat Resolution Policy Family](../decisions/combat-resolution-policy-family.md),
+and their isolated implementation sequence is tracked by the
+[Order 2 Combat Resolution Roadmap](../roadmap/combat-resolution-order-2-roadmap.md).
+
+This review remains the source-derived discrepancy record. It is not amended to
+describe unimplemented behavior as current behavior. Its findings advance from
+`source_confirmed` to `planned`; the combat capability remains `partial` until
+the roadmap implementation, fresh source review, and three-audience
+documentation gate are complete.
+
 ## Baseline Verification
 
 The initial focused Order 2 filter passed 185 tests covering production combat,
@@ -324,4 +338,3 @@ stage scaling, active execution, action execution, ruleset binding, and passive
 runtime behavior. No failure exposed the findings because the missing charge,
 inert parameter, inert passive-modifier, and custom-factory cases do not yet
 have assertions for their promised behavior.
-
