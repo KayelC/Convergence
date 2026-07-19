@@ -251,11 +251,9 @@ Convergence.Battle.ProductionInstantDeathResult
 Convergence.Battle.ProductionInstantDeathResult.<Clone>$() -> Convergence.Battle.ProductionInstantDeathResult!
 Convergence.Battle.ProductionInstantDeathResult.Chance.get -> int
 Convergence.Battle.ProductionInstantDeathResult.Chance.init -> void
-Convergence.Battle.ProductionInstantDeathResult.Deconstruct(out bool Defeated, out int Chance) -> void
 Convergence.Battle.ProductionInstantDeathResult.Defeated.get -> bool
 Convergence.Battle.ProductionInstantDeathResult.Defeated.init -> void
 Convergence.Battle.ProductionInstantDeathResult.Equals(Convergence.Battle.ProductionInstantDeathResult? other) -> bool
-Convergence.Battle.ProductionInstantDeathResult.ProductionInstantDeathResult(bool Defeated, int Chance) -> void
 Convergence.Catalog.CatalogLoadDiagnostic
 Convergence.Catalog.CatalogLoadDiagnostic.<Clone>$() -> Convergence.Catalog.CatalogLoadDiagnostic!
 Convergence.Catalog.CatalogLoadDiagnostic.CatalogLoadDiagnostic(Convergence.Catalog.CatalogLoadDiagnosticCode Code, string? PackId, string! SourceName, string! JsonPath, string! Message, string? RecordType = null, Convergence.Content.ContentId? RecordId = null, Convergence.Validation.ContentValidationErrorCode? ValidationCode = null, string? Suggestion = null) -> void
@@ -10367,7 +10365,6 @@ Convergence.Battle.PhysicalOnlyCriticalEligibilityPolicy.Assess(Convergence.Batt
 Convergence.Battle.PhysicalOnlyCriticalEligibilityPolicy.PhysicalOnlyCriticalEligibilityPolicy() -> void
 Convergence.Battle.ProductionCombatRuleset.CriticalChancePolicy.get -> Convergence.Battle.ICriticalChancePolicy!
 Convergence.Battle.ProductionCombatRuleset.CriticalEligibilityPolicy.get -> Convergence.Battle.ICriticalEligibilityPolicy!
-Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null, Convergence.Runtime.IStatStageScalingPolicy? stageScaling = null, Convergence.Battle.IHitResolutionPolicy? hitPolicy = null, Convergence.Battle.ICriticalEligibilityPolicy? criticalEligibilityPolicy = null, Convergence.Battle.ICriticalChancePolicy? criticalChancePolicy = null) -> void
 Convergence.Battle.ProductionCriticalCheckRequest.AuthoredAccuracy.get -> int
 Convergence.Battle.ProductionCriticalCheckRequest.CriticalChanceModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
 Convergence.Battle.ProductionCriticalCheckRequest.FinalHitChance.get -> int
@@ -10406,3 +10403,97 @@ static Convergence.Battle.CriticalEligibilityRequest.operator !=(Convergence.Bat
 static Convergence.Battle.CriticalEligibilityRequest.operator ==(Convergence.Battle.CriticalEligibilityRequest? left, Convergence.Battle.CriticalEligibilityRequest? right) -> bool
 static Convergence.Battle.CriticalEligibilityResult.operator !=(Convergence.Battle.CriticalEligibilityResult? left, Convergence.Battle.CriticalEligibilityResult? right) -> bool
 static Convergence.Battle.CriticalEligibilityResult.operator ==(Convergence.Battle.CriticalEligibilityResult? left, Convergence.Battle.CriticalEligibilityResult? right) -> bool
+Convergence.Battle.IInstantDefeatResolutionPolicy
+Convergence.Battle.IInstantDefeatResolutionPolicy.Resolve(Convergence.Battle.InstantDefeatResolutionRequest! request) -> Convergence.Battle.InstantDefeatResolutionResult!
+Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.InstantDefeatResolutionReason.Defeated = 0 -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.InstantDefeatResolutionReason.ProbabilityFailed = 1 -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.InstantDefeatResolutionReason.ResistanceBlocked = 2 -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.InstantDefeatResolutionRequest
+Convergence.Battle.InstantDefeatResolutionRequest.<Clone>$() -> Convergence.Battle.InstantDefeatResolutionRequest!
+Convergence.Battle.InstantDefeatResolutionRequest.AuthoredChance.get -> int
+Convergence.Battle.InstantDefeatResolutionRequest.BypassesResistance.get -> bool
+Convergence.Battle.InstantDefeatResolutionRequest.Equals(Convergence.Battle.InstantDefeatResolutionRequest? other) -> bool
+Convergence.Battle.InstantDefeatResolutionRequest.InstantDefeatResolutionRequest(int authoredChance, Convergence.Content.ResistanceLevel? resistance, bool bypassesResistance = false) -> void
+Convergence.Battle.InstantDefeatResolutionRequest.Resistance.get -> Convergence.Content.ResistanceLevel?
+Convergence.Battle.InstantDefeatResolutionResult
+Convergence.Battle.InstantDefeatResolutionResult.<Clone>$() -> Convergence.Battle.InstantDefeatResolutionResult!
+Convergence.Battle.InstantDefeatResolutionResult.AuthoredChance.get -> int
+Convergence.Battle.InstantDefeatResolutionResult.AuthoredChance.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.BypassedResistance.get -> bool
+Convergence.Battle.InstantDefeatResolutionResult.BypassedResistance.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.Deconstruct(out bool Defeated, out int AuthoredChance, out Convergence.Content.ResistanceLevel? Resistance, out bool BypassedResistance, out decimal ResistanceMultiplier, out decimal ResolvedChance, out int FinalChance, out decimal? Roll, out Convergence.Battle.InstantDefeatResolutionReason Reason) -> void
+Convergence.Battle.InstantDefeatResolutionResult.Defeated.get -> bool
+Convergence.Battle.InstantDefeatResolutionResult.Defeated.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.Equals(Convergence.Battle.InstantDefeatResolutionResult? other) -> bool
+Convergence.Battle.InstantDefeatResolutionResult.FinalChance.get -> int
+Convergence.Battle.InstantDefeatResolutionResult.FinalChance.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.InstantDefeatResolutionResult(bool Defeated, int AuthoredChance, Convergence.Content.ResistanceLevel? Resistance, bool BypassedResistance, decimal ResistanceMultiplier, decimal ResolvedChance, int FinalChance, decimal? Roll, Convergence.Battle.InstantDefeatResolutionReason Reason) -> void
+Convergence.Battle.InstantDefeatResolutionResult.Reason.get -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.InstantDefeatResolutionResult.Reason.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.Resistance.get -> Convergence.Content.ResistanceLevel?
+Convergence.Battle.InstantDefeatResolutionResult.Resistance.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.ResistanceMultiplier.get -> decimal
+Convergence.Battle.InstantDefeatResolutionResult.ResistanceMultiplier.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.ResolvedChance.get -> decimal
+Convergence.Battle.InstantDefeatResolutionResult.ResolvedChance.init -> void
+Convergence.Battle.InstantDefeatResolutionResult.Roll.get -> decimal?
+Convergence.Battle.InstantDefeatResolutionResult.Roll.init -> void
+Convergence.Battle.ProductionCombatRuleset.InstantDefeatPolicy.get -> Convergence.Battle.IInstantDefeatResolutionPolicy!
+Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null, Convergence.Runtime.IStatStageScalingPolicy? stageScaling = null, Convergence.Battle.IHitResolutionPolicy? hitPolicy = null, Convergence.Battle.ICriticalEligibilityPolicy? criticalEligibilityPolicy = null, Convergence.Battle.ICriticalChancePolicy? criticalChancePolicy = null, Convergence.Battle.IInstantDefeatResolutionPolicy? instantDefeatPolicy = null) -> void
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathImmuneMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathImmuneMultiplier.init -> void
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathNormalMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathNormalMultiplier.init -> void
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathResistantMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathResistantMultiplier.init -> void
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathVulnerableMultiplier.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathVulnerableMultiplier.init -> void
+Convergence.Battle.ProductionInstantDeathResult.BypassedResistance.get -> bool
+Convergence.Battle.ProductionInstantDeathResult.BypassedResistance.init -> void
+Convergence.Battle.ProductionInstantDeathResult.Deconstruct(out bool Defeated, out int Chance, out decimal? Roll, out Convergence.Content.ResistanceLevel? Resistance, out bool BypassedResistance, out decimal ResistanceMultiplier, out decimal ResolvedChance, out Convergence.Battle.InstantDefeatResolutionReason Reason) -> void
+Convergence.Battle.ProductionInstantDeathResult.ProductionInstantDeathResult(bool Defeated, int Chance, decimal? Roll, Convergence.Content.ResistanceLevel? Resistance, bool BypassedResistance, decimal ResistanceMultiplier, decimal ResolvedChance, Convergence.Battle.InstantDefeatResolutionReason Reason) -> void
+Convergence.Battle.ProductionInstantDeathResult.Reason.get -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Battle.ProductionInstantDeathResult.Reason.init -> void
+Convergence.Battle.ProductionInstantDeathResult.Resistance.get -> Convergence.Content.ResistanceLevel?
+Convergence.Battle.ProductionInstantDeathResult.Resistance.init -> void
+Convergence.Battle.ProductionInstantDeathResult.ResistanceMultiplier.get -> decimal
+Convergence.Battle.ProductionInstantDeathResult.ResistanceMultiplier.init -> void
+Convergence.Battle.ProductionInstantDeathResult.ResolvedChance.get -> decimal
+Convergence.Battle.ProductionInstantDeathResult.ResolvedChance.init -> void
+Convergence.Battle.ProductionInstantDeathResult.Roll.get -> decimal?
+Convergence.Battle.ProductionInstantDeathResult.Roll.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicy
+Convergence.Battle.StandardInstantDefeatResolutionPolicy.Resolve(Convergence.Battle.InstantDefeatResolutionRequest! request) -> Convergence.Battle.InstantDefeatResolutionResult!
+Convergence.Battle.StandardInstantDefeatResolutionPolicy.StandardInstantDefeatResolutionPolicy(Convergence.Hosting.IRandomSource! random, Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? config = null) -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.<Clone>$() -> Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig!
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.Equals(Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? other) -> bool
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.ImmuneMultiplier.get -> decimal
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.ImmuneMultiplier.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.MaximumChance.get -> int
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.MaximumChance.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.MinimumChance.get -> int
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.MinimumChance.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.NormalMultiplier.get -> decimal
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.NormalMultiplier.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.ResistantMultiplier.get -> decimal
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.ResistantMultiplier.init -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.StandardInstantDefeatResolutionPolicyConfig() -> void
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.VulnerableMultiplier.get -> decimal
+Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.VulnerableMultiplier.init -> void
+override Convergence.Battle.InstantDefeatResolutionRequest.Equals(object? obj) -> bool
+override Convergence.Battle.InstantDefeatResolutionRequest.GetHashCode() -> int
+override Convergence.Battle.InstantDefeatResolutionRequest.ToString() -> string!
+override Convergence.Battle.InstantDefeatResolutionResult.Equals(object? obj) -> bool
+override Convergence.Battle.InstantDefeatResolutionResult.GetHashCode() -> int
+override Convergence.Battle.InstantDefeatResolutionResult.ToString() -> string!
+override Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.Equals(object? obj) -> bool
+override Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.GetHashCode() -> int
+override Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.ToString() -> string!
+static Convergence.Battle.InstantDefeatResolutionRequest.operator !=(Convergence.Battle.InstantDefeatResolutionRequest? left, Convergence.Battle.InstantDefeatResolutionRequest? right) -> bool
+static Convergence.Battle.InstantDefeatResolutionRequest.operator ==(Convergence.Battle.InstantDefeatResolutionRequest? left, Convergence.Battle.InstantDefeatResolutionRequest? right) -> bool
+static Convergence.Battle.InstantDefeatResolutionResult.operator !=(Convergence.Battle.InstantDefeatResolutionResult? left, Convergence.Battle.InstantDefeatResolutionResult? right) -> bool
+static Convergence.Battle.InstantDefeatResolutionResult.operator ==(Convergence.Battle.InstantDefeatResolutionResult? left, Convergence.Battle.InstantDefeatResolutionResult? right) -> bool
+static Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.operator !=(Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? left, Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? right) -> bool
+static Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig.operator ==(Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? left, Convergence.Battle.StandardInstantDefeatResolutionPolicyConfig? right) -> bool

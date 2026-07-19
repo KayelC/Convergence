@@ -81,6 +81,14 @@ Ailment resistance is keyed by ailment `ContentId`. Instant-death resistance use
 
 Missing ailment or instant-death entries resolve to Normal. An explicit instant-death bypass mode ignores channel resistance but still delegates success probability to the active policy.
 
+The supplied instant-defeat policy starts from the effect's authored chance and
+applies configurable resistance multipliers. Its defaults are `1.5` for
+Vulnerable, `1` for Normal, `0.5` for Resistant, and `0` for Immune. It then
+performs at most one probability roll. Bypass uses multiplier `1` regardless of
+the target's resistance, but it does not guarantee success. Luck is not part of
+this supplied policy. A blocked or unsuccessful attempt is a normal-cost typed
+no-effect result, not an accuracy miss.
+
 ## Guard, Charge, Shields, Overrides, And Break
 
 Guard is executable runtime state and may reduce damage or normalize weakness according to the selected combat policy. Shields, affinity overrides, and Break have typed duration state. Duration ticking and cleanup are handled by the lifecycle service rather than display code.

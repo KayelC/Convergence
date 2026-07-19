@@ -58,7 +58,7 @@ review are complete.
 | O2-C1 | `verified` | Add split and unified charge policies, explicit state identity, duplicate rejection, authored final-damage multipliers, and once-per-action consumption. | `runtime: implement charge policy family` |
 | O2-C2 | `verified` | Add standard hit/evasion policy, consume passive Accuracy/Evasion modifiers, remove Luck and inert defaults, and use explicit `0..100` bounds. | `battle: implement hit and evasion policies` |
 | O2-C3 | `verified` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
-| O2-C4 | `planned` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
+| O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `planned` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `planned` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
 | O2-C7 | `planned` | Perform a fresh source-first review, correct substantiated findings in isolated commits, write all three documentation views, and obtain owner confirmation. | `docs: complete combat resolution order 2` |
@@ -221,6 +221,29 @@ reported as a successful headless smoke.
 - no Luck effect and no second hit roll;
 - failed/blocked attempts do not receive an evasion token penalty;
 - defeat prevention still receives the staged lethal mutation.
+
+### Completion record
+
+`StandardInstantDefeatResolutionPolicy` now owns authored chance, resistance
+multipliers, bypass handling, chance bounds, deterministic rolling, and typed
+resolution evidence. The supplied defaults resolve a `40` authored chance to
+`60/40/20/0` for Vulnerable, Normal, Resistant, and Immune. Bypass ignores the
+resistance multiplier but still performs the same one chance roll. Luck no
+longer participates, and the former hidden `5..95` defaults are now explicit
+`0..100` bounds.
+
+Effect execution maps a blocked or unsuccessful attempt to a normal-cost typed
+failure rather than an accuracy miss. Successful resolution still applies its
+lethal resource mutation in staged actor state before defeat-prevention
+passives are dispatched. The standard ruleset factory exposes all four
+resistance multipliers and both optional bounds without adding a content-schema
+change.
+
+The checkpoint gate passed 1,269 tests (`1,089` Framework, `173` DemoHost, and
+`7` ContentValidator tests), with zero failures or skips. Focused coverage
+includes configurable multipliers, bypass against every resistance, exact zero
+and one hundred, one-roll accounting, Luck independence, normal-cost no effect,
+typed request validation, and staged defeat prevention.
 
 ## O2-C5: Hit Evidence And Turn-Outcome Mapping
 

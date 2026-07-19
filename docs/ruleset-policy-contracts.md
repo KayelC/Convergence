@@ -64,8 +64,12 @@ binding rather than producing a partial service.
 | `hitTargetAgilityCoefficient` | decimal | `2` | nonnegative |
 | `hitChanceMinimum` | integer | `0` | `0..100`; no greater than maximum |
 | `hitChanceMaximum` | integer | `100` | `0..100`; no less than minimum |
-| `instantDeathChanceMinimum` | integer | `5` | `0..100`; no greater than maximum |
-| `instantDeathChanceMaximum` | integer | `95` | `0..100`; no less than minimum |
+| `instantDeathChanceMinimum` | integer | `0` | `0..100`; no greater than maximum |
+| `instantDeathChanceMaximum` | integer | `100` | `0..100`; no less than minimum |
+| `instantDeathVulnerableMultiplier` | decimal | `1.5` | nonnegative |
+| `instantDeathNormalMultiplier` | decimal | `1` | nonnegative |
+| `instantDeathResistantMultiplier` | decimal | `0.5` | nonnegative |
+| `instantDeathImmuneMultiplier` | decimal | `0` | nonnegative |
 | `enemiesPerLevelForExperience` | decimal | `50` | positive |
 | `expectedStatLevelMultiplier` | decimal | `3` | nonnegative |
 | `expectedStatBase` | decimal | `15` | nonnegative |

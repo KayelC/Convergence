@@ -273,6 +273,22 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                     config = ReadInt(definition, key, value, diagnostics, config,
                         (current, parsed) => current with { InstantDeathChanceMaximum = parsed });
                     break;
+                case "instantDeathVulnerableMultiplier":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { InstantDeathVulnerableMultiplier = parsed });
+                    break;
+                case "instantDeathNormalMultiplier":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { InstantDeathNormalMultiplier = parsed });
+                    break;
+                case "instantDeathResistantMultiplier":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { InstantDeathResistantMultiplier = parsed });
+                    break;
+                case "instantDeathImmuneMultiplier":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { InstantDeathImmuneMultiplier = parsed });
+                    break;
                 case "defaultInstantDeathChance":
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;

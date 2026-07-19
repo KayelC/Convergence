@@ -473,6 +473,45 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void InstantDefeat_DispatchesDefeatPreventionAgainstTheStagedLethalState()
+    {
+        SkillDefinition lastStand = PassiveSkill(
+            "last_stand",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    ContentId.Parse("owner_would_be_defeated"),
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, passiveSkills: [lastStand]);
+        SkillDefinition instantDefeat = new(
+            ContentId.Parse("instant_defeat"),
+            "Instant Defeat",
+            "Test instant-defeat skill.",
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            InheritanceGroup.Light,
+            new SkillInheritanceDefinition(true),
+            targeting: SingleEnemy(),
+            effects:
+            [
+                new InstantKillEffectDefinition(
+                    100,
+                    new NoInstantDeathResistanceCheckDefinition())
+            ],
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(instantDefeat, actor, [actor, target], target));
+
+        Assert.False(target.IsDefeated);
+        Assert.Equal(1, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(PassiveTriggerOutcome.Executed, Assert.Single(result.PassiveActivations).Outcome);
+        Assert.Equal(EffectExecutionOutcome.Success, Assert.Single(result.Effects).Outcome);
+    }
+
+    [Fact]
     public void AffinityReplacements_RespectShieldBreakOverrideAndAlmightyRules()
     {
         SkillDefinition nullFire = PassiveSkill(

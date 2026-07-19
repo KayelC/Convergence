@@ -42,9 +42,11 @@ Critical eligibility and chance are now independent replaceable policies;
 supplied exact-authored and accuracy-scaled chance authorities consume explicit
 Critical Chance modifiers without Luck or hidden minimums. Schema v5 also
 requires every weapon basic attack to declare its critical behavior.
-Instant-defeat resistance, per-hit evidence/outcome aggregation, and the
-neutral authored combat-policy aggregate still require implementation before
-the capability can return to complete.
+Instant defeat now uses a replaceable policy with authored chance, explicit
+resistance multipliers, bypass semantics, one roll, and no hidden Luck or miss
+penalty. Per-hit evidence/outcome aggregation and the neutral authored
+combat-policy aggregate still require implementation before the capability can
+return to complete.
 
 ## Authority
 

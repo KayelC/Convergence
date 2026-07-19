@@ -206,7 +206,33 @@ public sealed class ProductionCombatRulesetTests
         Assert.False(immune.Defeated);
         Assert.Equal(0, immune.Chance);
         Assert.True(bypass.Defeated);
-        Assert.Equal(95, bypass.Chance);
+        Assert.Equal(100, bypass.Chance);
+        Assert.True(bypass.BypassedResistance);
+        Assert.Equal(InstantDefeatResolutionReason.Defeated, bypass.Reason);
+    }
+
+    [Fact]
+    public void InstantDefeatChance_DoesNotUseAttackerOrTargetLuck()
+    {
+        var lowAttackerLuck = new ProductionCombatRuleset(new SequenceRandomSource([0.3m]));
+        var highAttackerLuck = new ProductionCombatRuleset(new SequenceRandomSource([0.3m]));
+
+        ProductionInstantDeathResult first = lowAttackerLuck.ResolveInstantDeath(
+            new ProductionInstantDeathRequest(
+                Actor(stats: new ProductionCombatStats(10, 10, 10, 10, 1)),
+                Actor(stats: new ProductionCombatStats(10, 10, 10, 10, 99)),
+                BaseChance: 40,
+                ResistanceLevel.Normal));
+        ProductionInstantDeathResult second = highAttackerLuck.ResolveInstantDeath(
+            new ProductionInstantDeathRequest(
+                Actor(stats: new ProductionCombatStats(10, 10, 10, 10, 99)),
+                Actor(stats: new ProductionCombatStats(10, 10, 10, 10, 1)),
+                BaseChance: 40,
+                ResistanceLevel.Normal));
+
+        Assert.Equal(40, first.Chance);
+        Assert.Equal(first.Chance, second.Chance);
+        Assert.Equal(first.Defeated, second.Defeated);
     }
 
     [Fact]

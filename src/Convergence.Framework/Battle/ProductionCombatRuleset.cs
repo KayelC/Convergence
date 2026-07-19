@@ -18,8 +18,12 @@ public sealed record ProductionCombatRulesetConfig
     public decimal HitTargetAgilityCoefficient { get; init; } = 2m;
     public int HitChanceMinimum { get; init; }
     public int HitChanceMaximum { get; init; } = 100;
-    public int InstantDeathChanceMinimum { get; init; } = 5;
-    public int InstantDeathChanceMaximum { get; init; } = 95;
+    public int InstantDeathChanceMinimum { get; init; }
+    public int InstantDeathChanceMaximum { get; init; } = 100;
+    public decimal InstantDeathVulnerableMultiplier { get; init; } = 1.5m;
+    public decimal InstantDeathNormalMultiplier { get; init; } = 1m;
+    public decimal InstantDeathResistantMultiplier { get; init; } = 0.5m;
+    public decimal InstantDeathImmuneMultiplier { get; init; }
     public decimal EnemiesPerLevelForExperience { get; init; } = 50m;
     public decimal ExpectedStatLevelMultiplier { get; init; } = 3m;
     public decimal ExpectedStatBase { get; init; } = 15m;
@@ -56,6 +60,10 @@ public sealed record ProductionCombatRulesetConfig
             InstantDeathChanceMaximum,
             nameof(InstantDeathChanceMinimum),
             nameof(InstantDeathChanceMaximum));
+        RequireNonNegative(InstantDeathVulnerableMultiplier, nameof(InstantDeathVulnerableMultiplier));
+        RequireNonNegative(InstantDeathNormalMultiplier, nameof(InstantDeathNormalMultiplier));
+        RequireNonNegative(InstantDeathResistantMultiplier, nameof(InstantDeathResistantMultiplier));
+        RequireNonNegative(InstantDeathImmuneMultiplier, nameof(InstantDeathImmuneMultiplier));
         RequirePositive(EnemiesPerLevelForExperience, nameof(EnemiesPerLevelForExperience));
         RequireNonNegative(ExpectedStatLevelMultiplier, nameof(ExpectedStatLevelMultiplier));
         RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
@@ -395,7 +403,15 @@ public sealed record ProductionInstantDeathRequest(
     ResistanceLevel? Resistance,
     bool BypassesResistance = false);
 
-public sealed record ProductionInstantDeathResult(bool Defeated, int Chance);
+public sealed record ProductionInstantDeathResult(
+    bool Defeated,
+    int Chance,
+    decimal? Roll,
+    ResistanceLevel? Resistance,
+    bool BypassedResistance,
+    decimal ResistanceMultiplier,
+    decimal ResolvedChance,
+    InstantDefeatResolutionReason Reason);
 
 public sealed record ProductionAilmentApplicationRequest(
     ProductionCombatantProfile Attacker,
@@ -418,6 +434,7 @@ public sealed class ProductionCombatRuleset :
     private readonly IHitResolutionPolicy _hitPolicy;
     private readonly ICriticalEligibilityPolicy _criticalEligibilityPolicy;
     private readonly ICriticalChancePolicy _criticalChancePolicy;
+    private readonly IInstantDefeatResolutionPolicy _instantDefeatPolicy;
 
     public ProductionCombatRuleset(
         IRandomSource random,
@@ -425,7 +442,8 @@ public sealed class ProductionCombatRuleset :
         IStatStageScalingPolicy? stageScaling = null,
         IHitResolutionPolicy? hitPolicy = null,
         ICriticalEligibilityPolicy? criticalEligibilityPolicy = null,
-        ICriticalChancePolicy? criticalChancePolicy = null)
+        ICriticalChancePolicy? criticalChancePolicy = null,
+        IInstantDefeatResolutionPolicy? instantDefeatPolicy = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? new ProductionCombatRulesetConfig();
@@ -442,6 +460,17 @@ public sealed class ProductionCombatRuleset :
             });
         _criticalEligibilityPolicy = criticalEligibilityPolicy ?? new PhysicalOnlyCriticalEligibilityPolicy();
         _criticalChancePolicy = criticalChancePolicy ?? new AuthoredCriticalChancePolicy(_random);
+        _instantDefeatPolicy = instantDefeatPolicy ?? new StandardInstantDefeatResolutionPolicy(
+            _random,
+            new StandardInstantDefeatResolutionPolicyConfig
+            {
+                VulnerableMultiplier = _config.InstantDeathVulnerableMultiplier,
+                NormalMultiplier = _config.InstantDeathNormalMultiplier,
+                ResistantMultiplier = _config.InstantDeathResistantMultiplier,
+                ImmuneMultiplier = _config.InstantDeathImmuneMultiplier,
+                MinimumChance = _config.InstantDeathChanceMinimum,
+                MaximumChance = _config.InstantDeathChanceMaximum
+            });
     }
 
     public ProductionCombatRulesetConfig Config => _config;
@@ -449,6 +478,7 @@ public sealed class ProductionCombatRuleset :
     public IHitResolutionPolicy HitPolicy => _hitPolicy;
     public ICriticalEligibilityPolicy CriticalEligibilityPolicy => _criticalEligibilityPolicy;
     public ICriticalChancePolicy CriticalChancePolicy => _criticalChancePolicy;
+    public IInstantDefeatResolutionPolicy InstantDefeatPolicy => _instantDefeatPolicy;
 
     public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
@@ -643,19 +673,23 @@ public sealed class ProductionCombatRuleset :
     public ProductionInstantDeathResult ResolveInstantDeath(ProductionInstantDeathRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Attacker);
+        ArgumentNullException.ThrowIfNull(request.Target);
 
-        if (!request.BypassesResistance && request.Resistance == ResistanceLevel.Immune)
-        {
-            return new ProductionInstantDeathResult(false, 0);
-        }
-
-        decimal chance = CombatArithmetic.SaturatingAdd(
-            request.BaseChance,
-            CombatArithmetic.SaturatingSubtract(
-                request.Attacker.Stats.Luck,
-                request.Target.Stats.Luck));
-        int clamped = ClampPercent(chance, _config.InstantDeathChanceMinimum, _config.InstantDeathChanceMaximum);
-        return new ProductionInstantDeathResult(RollPercent(clamped), clamped);
+        InstantDefeatResolutionResult result = _instantDefeatPolicy.Resolve(
+            new InstantDefeatResolutionRequest(
+                request.BaseChance,
+                request.Resistance,
+                request.BypassesResistance));
+        return new ProductionInstantDeathResult(
+            result.Defeated,
+            result.FinalChance,
+            result.Roll,
+            result.Resistance,
+            result.BypassedResistance,
+            result.ResistanceMultiplier,
+            result.ResolvedChance,
+            result.Reason);
     }
 
     public ProductionAilmentApplicationResult ResolveAilmentApplication(ProductionAilmentApplicationRequest request)

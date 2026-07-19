@@ -265,7 +265,7 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             new InstantDeathPolicyRequest(context.Actor, target, definition, resistance));
         if (!success)
         {
-            return Failure(context, TurnEconomyOutcome.Miss, "The instant-death attempt failed.");
+            return Failure(context, TurnEconomyOutcome.Normal, "The instant-death attempt had no effect.");
         }
 
         decimal resourceDelta = target.SetResource(target.VitalResourceId, 0);

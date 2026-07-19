@@ -508,6 +508,8 @@ public sealed class ActiveSkillExecutionTests
 
         Assert.Single(result.Effects);
         Assert.Equal(EffectExecutionOutcome.Failure, result.Effects[0].Outcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.Effects[0].TurnEconomyOutcome);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
         Assert.Equal(40, target.GetRequiredResource(Hp).Current);
         Assert.Equal(SkillExecutionStatus.Executed, result.Status);
     }

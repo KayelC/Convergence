@@ -390,6 +390,10 @@ public sealed class RuntimeRulesetBindingTests
                 ("hitChanceMaximum", 97),
                 ("instantDeathChanceMinimum", 4),
                 ("instantDeathChanceMaximum", 90),
+                ("instantDeathVulnerableMultiplier", 1.75m),
+                ("instantDeathNormalMultiplier", 0.9m),
+                ("instantDeathResistantMultiplier", 0.4m),
+                ("instantDeathImmuneMultiplier", 0.05m),
                 ("enemiesPerLevelForExperience", 60m),
                 ("expectedStatLevelMultiplier", 4m),
                 ("expectedStatBase", 20m),
@@ -420,6 +424,10 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(97, config.HitChanceMaximum);
         Assert.Equal(4, config.InstantDeathChanceMinimum);
         Assert.Equal(90, config.InstantDeathChanceMaximum);
+        Assert.Equal(1.75m, config.InstantDeathVulnerableMultiplier);
+        Assert.Equal(0.9m, config.InstantDeathNormalMultiplier);
+        Assert.Equal(0.4m, config.InstantDeathResistantMultiplier);
+        Assert.Equal(0.05m, config.InstantDeathImmuneMultiplier);
         Assert.Equal(60m, config.EnemiesPerLevelForExperience);
         Assert.Equal(4m, config.ExpectedStatLevelMultiplier);
         Assert.Equal(20m, config.ExpectedStatBase);
