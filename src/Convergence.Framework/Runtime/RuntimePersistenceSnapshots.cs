@@ -5,6 +5,7 @@ using Convergence.Knowledge;
 using Convergence.TurnEconomy;
 using Convergence.Fusion;
 using Convergence.Internal;
+using Convergence.Execution;
 
 namespace Convergence.Runtime;
 
@@ -85,7 +86,10 @@ public enum RuntimeSaveValidationCode
     ActorMoveListCapacityRejected,
     ActorStatModifierPolicyResolverMissing,
     ActorStatModifierPolicyBindingRejected,
-    ActorStatModifierStateInvalid
+    ActorStatModifierStateInvalid,
+    ActorChargePolicyResolverMissing,
+    ActorChargePolicyBindingRejected,
+    ActorChargeStateInvalid
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -94,7 +98,8 @@ public sealed record RuntimeSaveValidationDiagnostic(
     RuntimeInstanceId? InstanceId = null,
     ContentId? ContentId = null,
     string? Path = null,
-    StatModifierDiagnosticCode? StatModifierCode = null);
+    StatModifierDiagnosticCode? StatModifierCode = null,
+    ChargePolicyDiagnosticCode? ChargePolicyCode = null);
 
 public sealed class RuntimeSaveValidationException : InvalidOperationException
 {
@@ -262,7 +267,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 10;
+    public const int CurrentContractVersion = 11;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -322,16 +327,19 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private readonly IRosterCapacityPolicy _rosterCapacityPolicy;
     private readonly IRuntimeMoveListCapacityPolicy _moveListCapacityPolicy;
     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
+    private readonly IChargePolicyResolver? _chargePolicies;
 
     public RuntimeSaveValidator(
         IRosterCapacityPolicy? rosterCapacityPolicy = null,
         IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null,
-        IRuntimeRulesetBindingResolver? rulesetBindings = null)
+        IRuntimeRulesetBindingResolver? rulesetBindings = null,
+        IChargePolicyResolver? chargePolicies = null)
     {
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
         _moveListCapacityPolicy = moveListCapacityPolicy ??
             new SharedRuntimeMoveListCapacityPolicy();
         _rulesetBindings = rulesetBindings;
+        _chargePolicies = chargePolicies;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -740,6 +748,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
 
         ValidateActorStatModifiers(actor, catalog, diagnostics, actorIndex);
+        ValidateActorCharges(actor, diagnostics, actorIndex);
 
         ValidateActorSkillCatalogReferences(
             actor.Skills.LearnedSkillIds,
@@ -994,6 +1003,54 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         return contributionIndex < 0
             ? trackPath + ".contributions"
             : $"{trackPath}.contributions[{contributionIndex}]";
+    }
+
+    private void ValidateActorCharges(
+        RuntimeActorSnapshot actor,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
+        int actorIndex)
+    {
+        RuntimeChargeStateSnapshot? state = actor.BattleStatus.ChargeState;
+        if (state is null)
+        {
+            return;
+        }
+
+        string rootPath = $"$.actors[{actorIndex}].battleStatus.chargeState";
+        if (_chargePolicies is null)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorChargePolicyResolverMissing,
+                "Retained charge state requires an explicit charge-policy resolver during save validation.",
+                actor.Identity.InstanceId,
+                state.PolicyId,
+                rootPath + ".policyId"));
+            return;
+        }
+
+        if (!_chargePolicies.TryResolve(state.PolicyId, out IChargePolicyService? policy) ||
+            policy is null)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorChargePolicyBindingRejected,
+                $"No charge policy is registered for '{state.PolicyId}'.",
+                actor.Identity.InstanceId,
+                state.PolicyId,
+                rootPath + ".policyId"));
+            return;
+        }
+
+        ChargePolicyValidationResult validation = policy.ValidateState(state);
+        foreach (ChargePolicyDiagnostic issue in validation.Diagnostics)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorChargeStateInvalid,
+                issue.Message,
+                actor.Identity.InstanceId,
+                state.PolicyId,
+                rootPath,
+                ChargePolicyCode: issue.Code));
+        }
     }
 
     private static string ActorPath(int actorIndex, string relativePath) =>

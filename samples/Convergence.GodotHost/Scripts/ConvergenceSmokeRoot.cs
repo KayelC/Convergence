@@ -163,7 +163,8 @@ public partial class ConvergenceSmokeRoot : Node
             combat,
             new FirstSkillTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            statModifiers);
+            statModifiers,
+            new SplitChargePolicy());
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),
@@ -261,11 +262,17 @@ public partial class ConvergenceSmokeRoot : Node
             partyRoster,
             new ContentPackIdentity(PackId, SemanticVersion.Parse("0.4.0")),
             sceneInstances);
+        ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(
-            new RuntimeSaveValidator(rosterCapacity, moveListCapacity, rulesets),
+            new RuntimeSaveValidator(
+                rosterCapacity,
+                moveListCapacity,
+                rulesets,
+                chargePolicies),
             actorFactory,
             GodotActorRestoreProfileResolver.Instance,
-            rulesetBindings: rulesets);
+            rulesetBindings: rulesets,
+            chargePolicies: chargePolicies);
         GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(
             saveJson,
             catalog,

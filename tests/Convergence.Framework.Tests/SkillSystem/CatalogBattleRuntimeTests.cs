@@ -1790,7 +1790,8 @@ public sealed class CatalogBattleRuntimeTests
         new TestPowerPolicy(),
         randomTargetPolicy ?? new FirstRandomTargetPolicy(),
         new OrderedRuntimeTargetSelectionPolicy(),
-        statModifiers ?? TestStatModifierPolicy.CreatePersistent());
+        statModifiers ?? TestStatModifierPolicy.CreatePersistent(),
+        new SplitChargePolicy());
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,

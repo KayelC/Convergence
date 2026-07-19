@@ -42,10 +42,14 @@ public sealed class ActiveSkillExecutionTests
         System.Reflection.ParameterInfo statModifierPolicy = Assert.Single(
             constructor.GetParameters(),
             parameter => parameter.Name == "statModifiers");
+        System.Reflection.ParameterInfo chargePolicy = Assert.Single(
+            constructor.GetParameters(),
+            parameter => parameter.Name == "charges");
 
         Assert.False(skillPolicy.IsOptional);
         Assert.False(runtimePolicy.IsOptional);
         Assert.False(statModifierPolicy.IsOptional);
+        Assert.False(chargePolicy.IsOptional);
 
         Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
             new TestAilmentRepository([Ailment(Poison)]),
@@ -56,7 +60,8 @@ public sealed class ActiveSkillExecutionTests
             new PowerAmountPolicy(),
             null!,
             new OrderedRuntimeTargetSelectionPolicy(),
-            TestStatModifierPolicy.CreatePersistent()));
+            TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy()));
         Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
             new TestAilmentRepository([Ailment(Poison)]),
             new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
@@ -66,7 +71,8 @@ public sealed class ActiveSkillExecutionTests
             new PowerAmountPolicy(),
             new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
             null!,
-            TestStatModifierPolicy.CreatePersistent()));
+            TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy()));
         Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
             new TestAilmentRepository([Ailment(Poison)]),
             new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
@@ -76,6 +82,18 @@ public sealed class ActiveSkillExecutionTests
             new PowerAmountPolicy(),
             new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
             new OrderedRuntimeTargetSelectionPolicy(),
+            null!,
+            new SplitChargePolicy()));
+        Assert.Throws<ArgumentNullException>(() => new BattleExecutionServices(
+            new TestAilmentRepository([Ailment(Poison)]),
+            new DelegateDamagePolicy(_ => [new DamageHitResolution(true, 1)]),
+            new DelegateInstantDeathPolicy(_ => false),
+            new AlwaysApplyAilmentPolicy(),
+            new AlwaysChancePolicy(),
+            new PowerAmountPolicy(),
+            new DelegateRandomTargetPolicy((candidates, count, _) => candidates.Take(count.Minimum).ToArray()),
+            new OrderedRuntimeTargetSelectionPolicy(),
+            TestStatModifierPolicy.CreatePersistent(),
             null!));
     }
 
@@ -1426,6 +1444,7 @@ public sealed class ActiveSkillExecutionTests
                 candidates.Take(count.Minimum).ToArray())),
             new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy(),
             formulaHandlers: formulas,
             escapeRuleHandlers: escapeRules,
             customConditionHandlers: customConditions,

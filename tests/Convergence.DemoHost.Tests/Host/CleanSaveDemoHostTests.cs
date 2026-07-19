@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Convergence.DemoHost.Tests.TestSupport;
 using Convergence.Content;
 using Convergence.DemoHost;
+using Convergence.Execution;
 using Convergence.Runtime;
 using Xunit;
 
@@ -136,6 +137,9 @@ public sealed class CleanSaveDemoHostTests
                                         4))
                             ])
                     ]),
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m)]),
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(
@@ -182,6 +186,10 @@ public sealed class CleanSaveDemoHostTests
             Assert.Single(modifiers.Tracks).Contributions);
         Assert.IsType<TurnDurationDefinition>(contribution.Duration);
         Assert.Equal(4, contribution.LastLifecycleBoundary?.Sequence);
+        RuntimeChargeStateSnapshot charges = Assert.IsType<RuntimeChargeStateSnapshot>(
+            restoredActor.BattleStatus.ChargeState);
+        Assert.Equal(StandardChargePolicyIds.Split, charges.PolicyId);
+        Assert.Equal(2.5m, Assert.Single(charges.Charges).Multiplier);
         Assert.IsType<TurnDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Duration);
         Assert.Equal(DamageElement.Fire, Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Element);
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
@@ -215,6 +223,26 @@ public sealed class CleanSaveDemoHostTests
     public void CleanSaveJsonCodec_RejectsMalformedHostOwnedJson()
     {
         Assert.Throws<JsonException>(() => CleanSaveJsonCodec.Deserialize("{"));
+    }
+
+    [Fact]
+    public void CleanSaveJsonCodec_RejectsRetainedChargesWithoutPolicyIdentity()
+    {
+        JsonObject root = JsonNode.Parse(CleanSaveJsonCodec.Serialize(
+            CleanSaveTestFixture.CreateSaveSnapshot()))?.AsObject()
+            ?? throw new InvalidOperationException("Save JSON did not produce an object.");
+        JsonObject actor = root["Actors"]?.AsArray()[0]?.AsObject()
+            ?? throw new InvalidOperationException("Save JSON did not contain an actor.");
+        actor["ChargePolicyId"] = null;
+        actor["Charges"] = new JsonArray(
+            new JsonObject
+            {
+                ["Kind"] = ChargeKind.Physical.ToString(),
+                ["Multiplier"] = 2m,
+                ["Duration"] = null
+            });
+
+        Assert.Throws<JsonException>(() => CleanSaveJsonCodec.Deserialize(root.ToJsonString()));
     }
 
     [Fact]

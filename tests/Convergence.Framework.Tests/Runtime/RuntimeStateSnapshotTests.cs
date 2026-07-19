@@ -539,7 +539,9 @@ public sealed class RuntimeStateSnapshotTests
                             2,
                             [new RuntimeStatModifierContributionSnapshot(1, 2, Turns(3))])
                     ]),
-                charges: [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))],
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))]),
                 shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, Turns(1))],
                 affinityOverrides: [new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Normal, Turns(2))],
                 affinityBreaks: [new RuntimeAffinityBreakSnapshot(DamageElement.Ice, Turns(2))],
@@ -582,7 +584,8 @@ public sealed class RuntimeStateSnapshotTests
                 new AilmentRecoveryDefinition())],
             statModifierPolicy: new StatModifierPolicyService(
                 new TimedContributionStatModifierPolicy(
-                    Id("test.pack:timed_contribution"))));
+                    Id("test.pack:timed_contribution"))),
+            chargePolicy: new SplitChargePolicy());
 
     private static TurnDurationDefinition Turns(int value) =>
         new(value, Id("owner_turn_end"), false);

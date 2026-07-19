@@ -101,6 +101,7 @@ internal sealed record GodotSaveActor(
     IReadOnlyList<GodotSaveTimedState> Ailments,
     IReadOnlyList<GodotSaveTimedState> Statuses,
     GodotSaveStatModifierState? StatModifiers,
+    string? ChargePolicyId,
     IReadOnlyList<GodotSaveCharge> Charges,
     IReadOnlyList<GodotSaveShield> Shields,
     IReadOnlyList<GodotSaveAffinityBreak> AffinityBreaks,
@@ -282,6 +283,7 @@ internal static class GodotSaveCodec
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
             ToDto(actor.BattleStatus.StatModifiers),
+            actor.BattleStatus.ChargeState?.PolicyId.ToString(),
             actor.BattleStatus.Charges.Select(charge => new GodotSaveCharge(
                 charge.Kind.ToString(),
                 charge.Multiplier,
@@ -356,10 +358,7 @@ internal static class GodotSaveCodec
                 actor.Ailments.Select(FromDto),
                 actor.Statuses.Select(FromDto),
                 FromDto(actor.StatModifiers),
-                actor.Charges.Select(charge => new RuntimeChargeSnapshot(
-                    Enum.Parse<ChargeKind>(charge.Kind),
-                    charge.Multiplier,
-                    FromDto(charge.Duration))),
+                FromDto(actor.ChargePolicyId, actor.Charges),
                 actor.Shields.Select(shield => new RuntimeShieldSnapshot(
                     Enum.Parse<ShieldKind>(shield.Kind),
                     FromDto(shield.Duration))),
@@ -428,6 +427,29 @@ internal static class GodotSaveCodec
                                 : new StatModifierLifecycleBoundary(
                                     Id(contribution.LastLifecycleBoundary.EventId),
                                     contribution.LastLifecycleBoundary.Sequence))))));
+
+    private static RuntimeChargeStateSnapshot? FromDto(
+        string? policyId,
+        IReadOnlyList<GodotSaveCharge> charges)
+    {
+        ArgumentNullException.ThrowIfNull(charges);
+        if (policyId is null)
+        {
+            if (charges.Count > 0)
+            {
+                throw new JsonException("Retained charges require a charge-policy ID.");
+            }
+
+            return null;
+        }
+
+        return new RuntimeChargeStateSnapshot(
+            Id(policyId),
+            charges.Select(charge => new RuntimeChargeSnapshot(
+                Enum.Parse<ChargeKind>(charge.Kind),
+                charge.Multiplier,
+                FromDto(charge.Duration))));
+    }
 
     private static GodotSavePartyRoster ToDto(RuntimePartyRosterSnapshot roster) =>
         new(

@@ -22,7 +22,7 @@ override that decision record.
 
 - Branch: `main`
 - Starting commit: `0aa6c53`
-- Save contract: version `10`
+- Starting save contract: version `10`
 - Content contract: schema version `4`
 - Active pack versions: `0.4.0`
 - Order 2 focused source-audit gate: `185` passing tests
@@ -54,8 +54,8 @@ review are complete.
 
 | ID | State | Scope | Intended commit |
 |---|---|---|---|
-| O2-C0 | `in_progress` | Record confirmed formulas, policy choices, Luck boundary, examples, and this implementation sequence. | `docs: define combat resolution policies` |
-| O2-C1 | `planned` | Add split and unified charge policies, explicit state identity, duplicate rejection, authored final-damage multipliers, and once-per-action consumption. | `runtime: implement charge policy family` |
+| O2-C0 | `verified` | Record confirmed formulas, policy choices, Luck boundary, examples, and this implementation sequence. | `docs: define combat resolution policies` |
+| O2-C1 | `verified` | Add split and unified charge policies, explicit state identity, duplicate rejection, authored final-damage multipliers, and once-per-action consumption. | `runtime: implement charge policy family` |
 | O2-C2 | `planned` | Add standard hit/evasion policy, consume passive Accuracy/Evasion modifiers, remove Luck and inert defaults, and use explicit `0..100` bounds. | `battle: implement hit and evasion policies` |
 | O2-C3 | `planned` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
 | O2-C4 | `planned` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
@@ -94,6 +94,21 @@ review are complete.
 - duration expiry remains valid;
 - snapshot round-trip, duplicate-state rejection, and policy mismatch rejection;
 - no mutation escapes a rejected staged action.
+
+### Completion record
+
+O2-C1 is verified. `SplitChargePolicy` and `UnifiedChargePolicy` now own charge
+assessment, application, damage modifiers, whole-action consumption, and
+retained-state validation. Direct actor mutation and the hidden global damage
+multiplier were removed. Save contract v11 records charge-policy identity and
+requires an explicit matching resolver during validation and restoration.
+
+The checkpoint gate passed 1,231 tests (`1,051` Framework, `173` DemoHost, and
+`7` content-validator tests), with zero failures or skips. Framework and
+solution builds completed with zero warnings. The charge-focused suite covers
+split and unified state, duplicate rejection, mixed damage, multi-target use,
+miss and defensive-affinity consumption, rejection rollback, immutable ordered
+snapshots, host JSON round-trip, and aggregate restoration.
 
 ## O2-C2: Hit, Evasion, And Probability
 

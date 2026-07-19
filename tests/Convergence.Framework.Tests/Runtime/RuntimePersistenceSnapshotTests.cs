@@ -358,13 +358,81 @@ public sealed class RuntimePersistenceSnapshotTests
                 new RuntimeSaveValidator(),
                 factory,
                 profiles,
-                new RuntimeSaveMigrationService([new FixedMigrationStep(8, 10, migratedSnapshot)]))
+                new RuntimeSaveMigrationService(
+                    [new FixedMigrationStep(8, RuntimeSaveGameSnapshot.CurrentContractVersion, migratedSnapshot)]))
             .Restore(oldSnapshot, catalog);
 
         Assert.True(migrated.IsSuccess, string.Join(Environment.NewLine, migrated.Diagnostics.Select(item => item.Message)));
         Assert.Equal(
             RuntimeSaveGameSnapshot.CurrentContractVersion,
             migrated.RequireSession().Snapshot.ContractVersion);
+    }
+
+    [Fact]
+    public void RetainedChargeState_RequiresMatchingPolicyForValidationAndAggregateRestore()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot chargedActor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [new RuntimeChargeSnapshot(ChargeKind.Physical, 2m)])));
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [chargedActor, baseline.Actors[1]]);
+        ChargePolicyRegistry policies = ChargePolicyRegistry.CreateStandard();
+
+        RuntimeSaveValidationResult missingResolver = new RuntimeSaveValidator()
+            .Validate(snapshot, catalog);
+        Assert.Contains(missingResolver.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorChargePolicyResolverMissing &&
+            diagnostic.Path == "$.actors[0].battleStatus.chargeState.policyId");
+
+        RuntimeActorSnapshot incompatibleActor = CopyActor(
+            chargedActor,
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [new RuntimeChargeSnapshot(ChargeKind.General, 2m)])));
+        RuntimeSaveValidationResult incompatible = new RuntimeSaveValidator(chargePolicies: policies)
+            .Validate(Copy(baseline, actors: [incompatibleActor, baseline.Actors[1]]), catalog);
+        Assert.Contains(incompatible.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.ActorChargeStateInvalid &&
+            diagnostic.ChargePolicyCode == ChargePolicyDiagnosticCode.UnsupportedChargeKind);
+
+        var actorFactory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog);
+        var profiles = new DelegateActorRestoreProfileResolver(_ => ActorProfile());
+        RuntimeSaveValidator validator = new(chargePolicies: policies);
+
+        RuntimeSessionRestoreResult unresolved = new RuntimeSessionRestoreService(
+                validator,
+                actorFactory,
+                profiles)
+            .Restore(snapshot, catalog);
+        Assert.False(unresolved.IsSuccess);
+        Assert.Contains(unresolved.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed &&
+            diagnostic.ActorId == chargedActor.Identity.InstanceId);
+
+        RuntimeSessionRestoreResult restored = new RuntimeSessionRestoreService(
+                validator,
+                actorFactory,
+                profiles,
+                chargePolicies: policies)
+            .Restore(snapshot, catalog);
+        Assert.True(restored.IsSuccess, string.Join(
+            Environment.NewLine,
+            restored.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        CatalogBattleActor restoredActor = restored.RequireSession().ActorsByInstanceId[
+            chargedActor.Identity.InstanceId];
+        Assert.Equal(StandardChargePolicyIds.Split, restoredActor.State.ChargePolicyId);
+        Assert.Equal(2m, restoredActor.State.Charges[ChargeKind.Physical].Multiplier);
     }
 
     [Fact]
@@ -554,11 +622,12 @@ public sealed class RuntimePersistenceSnapshotTests
                             1,
                             [new RuntimeStatModifierContributionSnapshot(2, 1)])
                     ]),
-                charges:
-                [
-                    new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
-                    new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration)
-                ],
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [
+                        new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
+                        new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration)
+                    ]),
                 shields:
                 [
                     new RuntimeShieldSnapshot(ShieldKind.Physical, duration),
@@ -978,13 +1047,14 @@ public sealed class RuntimePersistenceSnapshotTests
                                     new TurnDurationDefinition(1, default, false))
                             ])
                     ]),
-                charges:
-                [
-                    new RuntimeChargeSnapshot(
-                        ChargeKind.Physical,
-                        2m,
-                        new PhaseDurationDefinition(default))
-                ],
+                chargeState: new RuntimeChargeStateSnapshot(
+                    StandardChargePolicyIds.Split,
+                    [
+                        new RuntimeChargeSnapshot(
+                            ChargeKind.Physical,
+                            2m,
+                            new PhaseDurationDefinition(default))
+                    ]),
                 shields:
                 [
                     new RuntimeShieldSnapshot(
@@ -2566,10 +2636,27 @@ public sealed class RuntimePersistenceSnapshotTests
             snapshot,
             RuntimeStatSourceKind.Actor,
             MissingHostedEntityBehavior.UseActorBaseStats,
-            statModifierPolicy: ModifierPolicy(snapshot));
+            statModifierPolicy: ModifierPolicy(snapshot),
+            chargePolicy: ChargePolicy(snapshot));
 
     private static RuntimeSaveValidator CreateModifierAwareValidator() =>
-        new(rulesetBindings: CreateRulesetBindings());
+        new(
+            rulesetBindings: CreateRulesetBindings(),
+            chargePolicies: ChargePolicyRegistry.CreateStandard());
+
+    private static IChargePolicyService? ChargePolicy(RuntimeActorSnapshot snapshot)
+    {
+        RuntimeChargeStateSnapshot? state = snapshot.BattleStatus.ChargeState;
+        if (state is null)
+        {
+            return null;
+        }
+
+        ChargePolicyRegistry registry = ChargePolicyRegistry.CreateStandard();
+        return registry.TryResolve(state.PolicyId, out IChargePolicyService? service)
+            ? service
+            : null;
+    }
 
     private static IRuntimeRulesetBindingResolver CreateRulesetBindings() =>
         new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());

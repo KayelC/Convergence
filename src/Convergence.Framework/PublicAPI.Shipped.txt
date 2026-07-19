@@ -36,7 +36,6 @@ const Convergence.Execution.BattleStatStageRange.Minimum = -4 -> int
 const Convergence.Runtime.RuntimeActorNumericDomain.MaximumStatValue = 2147483647 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumBaseResourceValue = 0 -> decimal
 const Convergence.Runtime.RuntimeActorNumericDomain.MinimumStatValue = 0 -> decimal
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 10 -> int
 const Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.StandardCapacity = 8 -> int
 Convergence.Battle.AilmentResistanceResolver
 Convergence.Battle.CombatDefenseProfile
@@ -132,8 +131,6 @@ Convergence.Battle.ProductionCombatRuleset.ShouldDefeat(Convergence.Execution.In
 Convergence.Battle.ProductionCombatRuleset.StageScalingPolicy.get -> Convergence.Runtime.IStatStageScalingPolicy!
 Convergence.Battle.ProductionCombatRulesetConfig
 Convergence.Battle.ProductionCombatRulesetConfig.<Clone>$() -> Convergence.Battle.ProductionCombatRulesetConfig!
-Convergence.Battle.ProductionCombatRulesetConfig.ChargeMultiplier.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.ChargeMultiplier.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.CriticalChanceBase.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.CriticalChanceBase.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.CriticalChanceMaximum.get -> int
@@ -210,17 +207,11 @@ Convergence.Battle.ProductionCombatStats.Vitality.get -> decimal
 Convergence.Battle.ProductionCombatStats.Vitality.init -> void
 Convergence.Battle.ProductionCombatStatus
 Convergence.Battle.ProductionCombatStatus.<Clone>$() -> Convergence.Battle.ProductionCombatStatus!
-Convergence.Battle.ProductionCombatStatus.Deconstruct(out bool IsGuarding, out bool IsRigidBody, out bool HasPhysicalCharge, out bool HasMagicalCharge) -> void
 Convergence.Battle.ProductionCombatStatus.Equals(Convergence.Battle.ProductionCombatStatus? other) -> bool
-Convergence.Battle.ProductionCombatStatus.HasMagicalCharge.get -> bool
-Convergence.Battle.ProductionCombatStatus.HasMagicalCharge.init -> void
-Convergence.Battle.ProductionCombatStatus.HasPhysicalCharge.get -> bool
-Convergence.Battle.ProductionCombatStatus.HasPhysicalCharge.init -> void
 Convergence.Battle.ProductionCombatStatus.IsGuarding.get -> bool
 Convergence.Battle.ProductionCombatStatus.IsGuarding.init -> void
 Convergence.Battle.ProductionCombatStatus.IsRigidBody.get -> bool
 Convergence.Battle.ProductionCombatStatus.IsRigidBody.init -> void
-Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding = false, bool IsRigidBody = false, bool HasPhysicalCharge = false, bool HasMagicalCharge = false) -> void
 Convergence.Battle.ProductionCriticalCheckRequest
 Convergence.Battle.ProductionCriticalCheckRequest.<Clone>$() -> Convergence.Battle.ProductionCriticalCheckRequest!
 Convergence.Battle.ProductionCriticalCheckRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
@@ -268,7 +259,6 @@ Convergence.Battle.ProductionDamageResolutionRequest.Attacker.get -> Convergence
 Convergence.Battle.ProductionDamageResolutionRequest.Attacker.init -> void
 Convergence.Battle.ProductionDamageResolutionRequest.Critical.get -> Convergence.Content.CriticalDefinition!
 Convergence.Battle.ProductionDamageResolutionRequest.Critical.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Deconstruct(out Convergence.Battle.ProductionCombatantProfile! Attacker, out Convergence.Battle.ProductionCombatantProfile! Target, out Convergence.Content.DamageElement Element, out Convergence.Content.ElementalAffinity Affinity, out int Power, out int Accuracy, out Convergence.Content.CriticalDefinition! Critical, out Convergence.Content.HitCountDefinition! Hits) -> void
 Convergence.Battle.ProductionDamageResolutionRequest.Element.get -> Convergence.Content.DamageElement
 Convergence.Battle.ProductionDamageResolutionRequest.Element.init -> void
 Convergence.Battle.ProductionDamageResolutionRequest.Equals(Convergence.Battle.ProductionDamageResolutionRequest? other) -> bool
@@ -276,7 +266,6 @@ Convergence.Battle.ProductionDamageResolutionRequest.Hits.get -> Convergence.Con
 Convergence.Battle.ProductionDamageResolutionRequest.Hits.init -> void
 Convergence.Battle.ProductionDamageResolutionRequest.Power.get -> int
 Convergence.Battle.ProductionDamageResolutionRequest.Power.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.ProductionDamageResolutionRequest(Convergence.Battle.ProductionCombatantProfile! Attacker, Convergence.Battle.ProductionCombatantProfile! Target, Convergence.Content.DamageElement Element, Convergence.Content.ElementalAffinity Affinity, int Power, int Accuracy, Convergence.Content.CriticalDefinition! Critical, Convergence.Content.HitCountDefinition! Hits) -> void
 Convergence.Battle.ProductionDamageResolutionRequest.Target.get -> Convergence.Battle.ProductionCombatantProfile!
 Convergence.Battle.ProductionDamageResolutionRequest.Target.init -> void
 Convergence.Battle.ProductionDamageResolutionResult
@@ -2388,7 +2377,6 @@ Convergence.Encounters.CatalogBattleActorFactory.Create(Convergence.Encounters.C
 Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.CatalogBattleActorRestoreRequest! request) -> Convergence.Encounters.CatalogBattleActorCreationResult!
 Convergence.Encounters.CatalogBattleActorRestoreRequest
 Convergence.Encounters.CatalogBattleActorRestoreRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorRestoreRequest!
-Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Equals(Convergence.Encounters.CatalogBattleActorRestoreRequest? other) -> bool
 Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
@@ -3262,8 +3250,6 @@ Convergence.Execution.DamagePolicyRequest.Actor.get -> Convergence.Execution.Run
 Convergence.Execution.DamagePolicyRequest.Actor.init -> void
 Convergence.Execution.DamagePolicyRequest.Affinity.get -> Convergence.Content.ElementalAffinity
 Convergence.Execution.DamagePolicyRequest.Affinity.init -> void
-Convergence.Execution.DamagePolicyRequest.DamagePolicyRequest(Convergence.Execution.RuntimeActorState! Actor, Convergence.Execution.RuntimeActorState! Target, Convergence.Content.DamageEffectDefinition! Effect, Convergence.Content.ElementalAffinity Affinity) -> void
-Convergence.Execution.DamagePolicyRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out Convergence.Execution.RuntimeActorState! Target, out Convergence.Content.DamageEffectDefinition! Effect, out Convergence.Content.ElementalAffinity Affinity) -> void
 Convergence.Execution.DamagePolicyRequest.Effect.get -> Convergence.Content.DamageEffectDefinition!
 Convergence.Execution.DamagePolicyRequest.Effect.init -> void
 Convergence.Execution.DamagePolicyRequest.Equals(Convergence.Execution.DamagePolicyRequest? other) -> bool
@@ -3655,7 +3641,6 @@ Convergence.Execution.RuntimeActorState.ExpirePhaseDurations(Convergence.Content
 Convergence.Execution.RuntimeActorState.GetAnalysis(Convergence.Runtime.RuntimeInstanceId targetInstanceId) -> System.Collections.Generic.IReadOnlySet<Convergence.Content.AnalysisLayer>!
 Convergence.Execution.RuntimeActorState.GetElementalAffinity(Convergence.Content.DamageElement element, System.Collections.Generic.IEnumerable<Convergence.Content.ElementalAffinity>? passiveReplacements = null) -> Convergence.Content.ElementalAffinity
 Convergence.Execution.RuntimeActorState.GetRequiredResource(Convergence.Content.ContentId id) -> Convergence.Execution.BattleResourceState!
-Convergence.Execution.RuntimeActorState.GrantCharge(Convergence.Content.ChargeKind kind, decimal multiplier, Convergence.Content.DurationDefinition? duration) -> void
 Convergence.Execution.RuntimeActorState.GrantShield(Convergence.Content.ShieldKind kind, Convergence.Content.DurationDefinition? duration) -> void
 Convergence.Execution.RuntimeActorState.HasAilment(Convergence.Content.ContentId id) -> bool
 Convergence.Execution.RuntimeActorState.HasBuff(Convergence.Content.ContentId modifierTrackId) -> bool
@@ -5651,7 +5636,6 @@ Convergence.Runtime.RuntimeBattleStatusSnapshot.Analysis.get -> System.Collectio
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Charges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeChargeSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Equals(Convergence.Runtime.RuntimeBattleStatusSnapshot? other) -> bool
 Convergence.Runtime.RuntimeBattleStatusSnapshot.IsGuarding.get -> bool
-Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, Convergence.Runtime.RuntimeStatModifierStateSnapshot? statModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeChargeSnapshot!>? charges = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalysisSnapshot!>? analysis = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Shields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeShieldSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.StatModifiers.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Statuses.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeTimedStateSnapshot!>!
@@ -6192,7 +6176,6 @@ Convergence.Runtime.RuntimeSaveGameSnapshot.HostContext.get -> System.Collection
 Convergence.Runtime.RuntimeSaveGameSnapshot.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Knowledge.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 10) -> void
 Convergence.Runtime.RuntimeSaveGameSnapshot.Session.get -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeSaveKind
@@ -6356,7 +6339,6 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.Code.get -> Convergence.Runt
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Code.init -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.ContentId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.ContentId.init -> void
-Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode) -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Equals(Convergence.Runtime.RuntimeSaveValidationDiagnostic? other) -> bool
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.InstanceId.init -> void
@@ -6364,7 +6346,6 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.Message.get -> string!
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Message.init -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Path.get -> string?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Path.init -> void
-Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null) -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.StatModifierCode.get -> Convergence.Runtime.StatModifierDiagnosticCode?
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.StatModifierCode.init -> void
 Convergence.Runtime.RuntimeSaveValidationException
@@ -6379,7 +6360,6 @@ Convergence.Runtime.RuntimeSaveValidationResult.RequireValidSnapshot() -> Conver
 Convergence.Runtime.RuntimeSaveValidationResult.RuntimeSaveValidationResult(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeSaveValidationDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeSaveValidationResult.Snapshot.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
 Convergence.Runtime.RuntimeSaveValidator
-Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null) -> void
 Convergence.Runtime.RuntimeSaveValidator.Validate(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSaveValidationResult!
 Convergence.Runtime.RuntimeSessionProgressSnapshot
 Convergence.Runtime.RuntimeSessionProgressSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
@@ -6424,7 +6404,6 @@ Convergence.Runtime.RuntimeSessionRestoreResult.RuntimeSessionRestoreResult(Conv
 Convergence.Runtime.RuntimeSessionRestoreResult.Session.get -> Convergence.Runtime.RuntimeRestoredSession?
 Convergence.Runtime.RuntimeSessionRestoreService
 Convergence.Runtime.RuntimeSessionRestoreService.Restore(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSessionRestoreResult!
-Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null) -> void
 Convergence.Runtime.RuntimeShieldSnapshot
 Convergence.Runtime.RuntimeShieldSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShieldSnapshot!
 Convergence.Runtime.RuntimeShieldSnapshot.Duration.get -> Convergence.Content.DurationDefinition?
@@ -10125,7 +10104,6 @@ Convergence.Execution.BattleActionEndLifecycleRequest.StatModifierBoundaries.get
 Convergence.Execution.BattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, Convergence.Runtime.IStatModifierPolicyService! statModifiers, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null) -> void
 Convergence.Execution.BattleExecutionServices.StatModifiers.get -> Convergence.Runtime.IStatModifierPolicyService!
 Convergence.Execution.BattlePhaseEndLifecycleRequest.BattlePhaseEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId phaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? statModifierBoundaries = null) -> void
 Convergence.Execution.BattlePhaseEndLifecycleRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
@@ -10157,3 +10135,169 @@ Convergence.Execution.RuntimeActorState.StatModifierState.get -> Convergence.Run
 Convergence.Execution.SkillExecutionDiagnosticCode.AssessmentInvalid = 14 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.ExecutionFailed = 15 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.NoApplicableEffect = 13 -> Convergence.Execution.SkillExecutionDiagnosticCode
+abstract Convergence.Execution.ChargePolicyServiceBase.Match(Convergence.Content.DamageElement element) -> Convergence.Content.ChargeKind?
+abstract Convergence.Execution.ChargePolicyServiceBase.Normalize(Convergence.Content.ChargeKind requested) -> Convergence.Content.ChargeKind?
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 11 -> int
+Convergence.Battle.ProductionCombatStatus.Deconstruct(out bool IsGuarding, out bool IsRigidBody) -> void
+Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding = false, bool IsRigidBody = false) -> void
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeKind.init -> void
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeMultiplier.get -> decimal
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeMultiplier.init -> void
+Convergence.Battle.ProductionDamageResolutionRequest.Deconstruct(out Convergence.Battle.ProductionCombatantProfile! Attacker, out Convergence.Battle.ProductionCombatantProfile! Target, out Convergence.Content.DamageElement Element, out Convergence.Content.ElementalAffinity Affinity, out int Power, out int Accuracy, out Convergence.Content.CriticalDefinition! Critical, out Convergence.Content.HitCountDefinition! Hits, out decimal ChargeMultiplier, out Convergence.Content.ChargeKind? ChargeKind) -> void
+Convergence.Battle.ProductionDamageResolutionRequest.ProductionDamageResolutionRequest(Convergence.Battle.ProductionCombatantProfile! Attacker, Convergence.Battle.ProductionCombatantProfile! Target, Convergence.Content.DamageElement Element, Convergence.Content.ElementalAffinity Affinity, int Power, int Accuracy, Convergence.Content.CriticalDefinition! Critical, Convergence.Content.HitCountDefinition! Hits, decimal ChargeMultiplier = 1, Convergence.Content.ChargeKind? ChargeKind = null) -> void
+Convergence.Content.ChargeKind.General = 2 -> Convergence.Content.ChargeKind
+Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null, Convergence.Execution.IChargePolicyService? chargePolicy = null) -> void
+Convergence.Encounters.CatalogBattleActorRestoreRequest.ChargePolicy.get -> Convergence.Execution.IChargePolicyService?
+Convergence.Execution.BattleExecutionServices.BattleExecutionServices(Convergence.Catalog.IAilmentDefinitionRepository! ailments, Convergence.Execution.IDamageExecutionPolicy! damagePolicy, Convergence.Execution.IInstantDeathExecutionPolicy! instantDeathPolicy, Convergence.Execution.IAilmentApplicationPolicy! ailmentPolicy, Convergence.Execution.IChanceExecutionPolicy! chancePolicy, Convergence.Execution.IPowerAmountPolicy! powerAmountPolicy, Convergence.Execution.IRandomTargetSelectionPolicy! randomTargetPolicy, Convergence.Execution.IRuntimeRandomTargetSelectionPolicy! runtimeRandomTargetPolicy, Convergence.Runtime.IStatModifierPolicyService! statModifiers, Convergence.Execution.IChargePolicyService! charges, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IFormulaAmountHandler!>>? formulaHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.IEscapeRuleHandler!>>? escapeRuleHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomConditionHandler!>>? customConditionHandlers = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomEffectHandler!>>? customEffectHandlers = null, Convergence.Content.ContentId? hpResourceId = null, Convergence.Content.ContentId? spResourceId = null, Convergence.Execution.EffectExecutorRegistry? effectExecutors = null, Convergence.Execution.RuleModifierResolver? ruleModifiers = null, Convergence.Execution.PassiveEventPolicyRegistry? passiveEventPolicies = null, Convergence.Execution.IPassiveTriggerDispatcher? passiveTriggers = null, Convergence.Content.ContentId? ownerWouldBeDefeatedEventId = null, Convergence.Execution.IBattleAilmentApplicationService? ailmentApplications = null) -> void
+Convergence.Execution.BattleExecutionServices.Charges.get -> Convergence.Execution.IChargePolicyService!
+Convergence.Execution.ChargeApplicationAssessment
+Convergence.Execution.ChargeApplicationAssessment.<Clone>$() -> Convergence.Execution.ChargeApplicationAssessment!
+Convergence.Execution.ChargeApplicationAssessment.CanApply.get -> bool
+Convergence.Execution.ChargeApplicationAssessment.ChargeApplicationAssessment(bool canApply, Convergence.Content.ChargeKind? storedChargeKind = null, System.Collections.Generic.IEnumerable<Convergence.Execution.ChargePolicyDiagnostic!>? diagnostics = null) -> void
+Convergence.Execution.ChargeApplicationAssessment.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ChargePolicyDiagnostic!>!
+Convergence.Execution.ChargeApplicationAssessment.Equals(Convergence.Execution.ChargeApplicationAssessment? other) -> bool
+Convergence.Execution.ChargeApplicationAssessment.StoredChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.ChargeApplicationRequest
+Convergence.Execution.ChargeApplicationRequest.<Clone>$() -> Convergence.Execution.ChargeApplicationRequest!
+Convergence.Execution.ChargeApplicationRequest.ChargeApplicationRequest(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ChargeKind chargeKind, decimal multiplier, Convergence.Content.DurationDefinition? duration = null) -> void
+Convergence.Execution.ChargeApplicationRequest.ChargeKind.get -> Convergence.Content.ChargeKind
+Convergence.Execution.ChargeApplicationRequest.Duration.get -> Convergence.Content.DurationDefinition?
+Convergence.Execution.ChargeApplicationRequest.Equals(Convergence.Execution.ChargeApplicationRequest? other) -> bool
+Convergence.Execution.ChargeApplicationRequest.Multiplier.get -> decimal
+Convergence.Execution.ChargeApplicationRequest.Target.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Execution.ChargeApplicationResult
+Convergence.Execution.ChargeApplicationResult.<Clone>$() -> Convergence.Execution.ChargeApplicationResult!
+Convergence.Execution.ChargeApplicationResult.After.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
+Convergence.Execution.ChargeApplicationResult.Applied.get -> bool
+Convergence.Execution.ChargeApplicationResult.Before.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
+Convergence.Execution.ChargeApplicationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ChargePolicyDiagnostic!>!
+Convergence.Execution.ChargeApplicationResult.Equals(Convergence.Execution.ChargeApplicationResult? other) -> bool
+Convergence.Execution.ChargeConsumptionResult
+Convergence.Execution.ChargeConsumptionResult.<Clone>$() -> Convergence.Execution.ChargeConsumptionResult!
+Convergence.Execution.ChargeConsumptionResult.After.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
+Convergence.Execution.ChargeConsumptionResult.Before.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
+Convergence.Execution.ChargeConsumptionResult.ConsumedChargeKinds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ChargeKind>!
+Convergence.Execution.ChargeConsumptionResult.Equals(Convergence.Execution.ChargeConsumptionResult? other) -> bool
+Convergence.Execution.ChargeConsumptionResult.StateChanged.get -> bool
+Convergence.Execution.ChargeDamageModifier
+Convergence.Execution.ChargeDamageModifier.<Clone>$() -> Convergence.Execution.ChargeDamageModifier!
+Convergence.Execution.ChargeDamageModifier.ChargeDamageModifier(decimal multiplier, Convergence.Content.ChargeKind? chargeKind = null) -> void
+Convergence.Execution.ChargeDamageModifier.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.ChargeDamageModifier.Equals(Convergence.Execution.ChargeDamageModifier? other) -> bool
+Convergence.Execution.ChargeDamageModifier.IsCharged.get -> bool
+Convergence.Execution.ChargeDamageModifier.Multiplier.get -> decimal
+Convergence.Execution.ChargePolicyDiagnostic
+Convergence.Execution.ChargePolicyDiagnostic.<Clone>$() -> Convergence.Execution.ChargePolicyDiagnostic!
+Convergence.Execution.ChargePolicyDiagnostic.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.ChargePolicyDiagnostic.ChargePolicyDiagnostic(Convergence.Execution.ChargePolicyDiagnosticCode code, string! message, Convergence.Content.ChargeKind? chargeKind = null) -> void
+Convergence.Execution.ChargePolicyDiagnostic.Code.get -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyDiagnostic.Equals(Convergence.Execution.ChargePolicyDiagnostic? other) -> bool
+Convergence.Execution.ChargePolicyDiagnostic.Message.get -> string!
+Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyDiagnosticCode.AlreadyInEffect = 2 -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyDiagnosticCode.IncompatibleState = 3 -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyDiagnosticCode.PolicyMismatch = 0 -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyDiagnosticCode.UnsupportedChargeKind = 1 -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Execution.ChargePolicyRegistry
+Convergence.Execution.ChargePolicyRegistry.ChargePolicyRegistry(System.Collections.Generic.IEnumerable<Convergence.Execution.IChargePolicyService!>! services) -> void
+Convergence.Execution.ChargePolicyRegistry.TryResolve(Convergence.Content.ContentId policyId, out Convergence.Execution.IChargePolicyService? service) -> bool
+Convergence.Execution.ChargePolicyServiceBase
+Convergence.Execution.ChargePolicyServiceBase.Apply(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationResult!
+Convergence.Execution.ChargePolicyServiceBase.Assess(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationAssessment!
+Convergence.Execution.ChargePolicyServiceBase.ChargePolicyServiceBase(Convergence.Content.ContentId policyId) -> void
+Convergence.Execution.ChargePolicyServiceBase.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! resolvedDamageElements) -> Convergence.Execution.ChargeConsumptionResult!
+Convergence.Execution.ChargePolicyServiceBase.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Execution.ChargePolicyServiceBase.ResolveDamageModifier(Convergence.Execution.RuntimeActorState! actor, Convergence.Content.DamageElement element) -> Convergence.Execution.ChargeDamageModifier!
+Convergence.Execution.ChargePolicyServiceBase.ValidateState(Convergence.Runtime.RuntimeChargeStateSnapshot! state) -> Convergence.Execution.ChargePolicyValidationResult!
+Convergence.Execution.ChargePolicyValidationResult
+Convergence.Execution.ChargePolicyValidationResult.<Clone>$() -> Convergence.Execution.ChargePolicyValidationResult!
+Convergence.Execution.ChargePolicyValidationResult.ChargePolicyValidationResult(System.Collections.Generic.IEnumerable<Convergence.Execution.ChargePolicyDiagnostic!>? diagnostics = null) -> void
+Convergence.Execution.ChargePolicyValidationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ChargePolicyDiagnostic!>!
+Convergence.Execution.ChargePolicyValidationResult.Equals(Convergence.Execution.ChargePolicyValidationResult? other) -> bool
+Convergence.Execution.ChargePolicyValidationResult.IsValid.get -> bool
+Convergence.Execution.DamagePolicyRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.DamagePolicyRequest.ChargeKind.init -> void
+Convergence.Execution.DamagePolicyRequest.ChargeMultiplier.get -> decimal
+Convergence.Execution.DamagePolicyRequest.ChargeMultiplier.init -> void
+Convergence.Execution.DamagePolicyRequest.DamagePolicyRequest(Convergence.Execution.RuntimeActorState! Actor, Convergence.Execution.RuntimeActorState! Target, Convergence.Content.DamageEffectDefinition! Effect, Convergence.Content.ElementalAffinity Affinity, decimal ChargeMultiplier = 1, Convergence.Content.ChargeKind? ChargeKind = null) -> void
+Convergence.Execution.DamagePolicyRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out Convergence.Execution.RuntimeActorState! Target, out Convergence.Content.DamageEffectDefinition! Effect, out Convergence.Content.ElementalAffinity Affinity, out decimal ChargeMultiplier, out Convergence.Content.ChargeKind? ChargeKind) -> void
+Convergence.Execution.IChargePolicyResolver
+Convergence.Execution.IChargePolicyResolver.TryResolve(Convergence.Content.ContentId policyId, out Convergence.Execution.IChargePolicyService? service) -> bool
+Convergence.Execution.IChargePolicyService
+Convergence.Execution.IChargePolicyService.Apply(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationResult!
+Convergence.Execution.IChargePolicyService.Assess(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationAssessment!
+Convergence.Execution.IChargePolicyService.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! resolvedDamageElements) -> Convergence.Execution.ChargeConsumptionResult!
+Convergence.Execution.IChargePolicyService.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Execution.IChargePolicyService.ResolveDamageModifier(Convergence.Execution.RuntimeActorState! actor, Convergence.Content.DamageElement element) -> Convergence.Execution.ChargeDamageModifier!
+Convergence.Execution.IChargePolicyService.ValidateState(Convergence.Runtime.RuntimeChargeStateSnapshot! state) -> Convergence.Execution.ChargePolicyValidationResult!
+Convergence.Execution.RuntimeActorState.ChargePolicyId.get -> Convergence.Content.ContentId?
+Convergence.Execution.SplitChargePolicy
+Convergence.Execution.SplitChargePolicy.SplitChargePolicy(Convergence.Content.ContentId? policyId = null) -> void
+Convergence.Execution.StandardChargePolicyIds
+Convergence.Execution.UnifiedChargePolicy
+Convergence.Execution.UnifiedChargePolicy.UnifiedChargePolicy(Convergence.Content.ContentId? policyId = null) -> void
+Convergence.Runtime.RuntimeBattleStatusSnapshot.ChargeState.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
+Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, Convergence.Runtime.RuntimeStatModifierStateSnapshot? statModifiers = null, Convergence.Runtime.RuntimeChargeStateSnapshot? chargeState = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalysisSnapshot!>? analysis = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
+Convergence.Runtime.RuntimeChargeStateSnapshot
+Convergence.Runtime.RuntimeChargeStateSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeChargeStateSnapshot!
+Convergence.Runtime.RuntimeChargeStateSnapshot.Charges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeChargeSnapshot!>!
+Convergence.Runtime.RuntimeChargeStateSnapshot.Equals(Convergence.Runtime.RuntimeChargeStateSnapshot? other) -> bool
+Convergence.Runtime.RuntimeChargeStateSnapshot.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeChargeStateSnapshot.RuntimeChargeStateSnapshot(Convergence.Content.ContentId policyId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeChargeSnapshot!>? charges = null) -> void
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 11) -> void
+Convergence.Runtime.RuntimeSaveValidationCode.ActorChargePolicyBindingRejected = 79 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorChargePolicyResolverMissing = 78 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ActorChargeStateInvalid = 80 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.get -> Convergence.Execution.ChargePolicyDiagnosticCode?
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.init -> void
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode, out Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode) -> void
+Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null, Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode = null) -> void
+Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
+Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed = 7 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
+override Convergence.Execution.ChargeApplicationAssessment.Equals(object? obj) -> bool
+override Convergence.Execution.ChargeApplicationAssessment.GetHashCode() -> int
+override Convergence.Execution.ChargeApplicationAssessment.ToString() -> string!
+override Convergence.Execution.ChargeApplicationRequest.Equals(object? obj) -> bool
+override Convergence.Execution.ChargeApplicationRequest.GetHashCode() -> int
+override Convergence.Execution.ChargeApplicationRequest.ToString() -> string!
+override Convergence.Execution.ChargeApplicationResult.Equals(object? obj) -> bool
+override Convergence.Execution.ChargeApplicationResult.GetHashCode() -> int
+override Convergence.Execution.ChargeApplicationResult.ToString() -> string!
+override Convergence.Execution.ChargeConsumptionResult.Equals(object? obj) -> bool
+override Convergence.Execution.ChargeConsumptionResult.GetHashCode() -> int
+override Convergence.Execution.ChargeConsumptionResult.ToString() -> string!
+override Convergence.Execution.ChargeDamageModifier.Equals(object? obj) -> bool
+override Convergence.Execution.ChargeDamageModifier.GetHashCode() -> int
+override Convergence.Execution.ChargeDamageModifier.ToString() -> string!
+override Convergence.Execution.ChargePolicyDiagnostic.Equals(object? obj) -> bool
+override Convergence.Execution.ChargePolicyDiagnostic.GetHashCode() -> int
+override Convergence.Execution.ChargePolicyDiagnostic.ToString() -> string!
+override Convergence.Execution.ChargePolicyValidationResult.Equals(object? obj) -> bool
+override Convergence.Execution.ChargePolicyValidationResult.GetHashCode() -> int
+override Convergence.Execution.ChargePolicyValidationResult.ToString() -> string!
+override Convergence.Runtime.RuntimeChargeStateSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeChargeStateSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimeChargeStateSnapshot.ToString() -> string!
+static Convergence.Execution.ChargeApplicationAssessment.operator !=(Convergence.Execution.ChargeApplicationAssessment? left, Convergence.Execution.ChargeApplicationAssessment? right) -> bool
+static Convergence.Execution.ChargeApplicationAssessment.operator ==(Convergence.Execution.ChargeApplicationAssessment? left, Convergence.Execution.ChargeApplicationAssessment? right) -> bool
+static Convergence.Execution.ChargeApplicationRequest.operator !=(Convergence.Execution.ChargeApplicationRequest? left, Convergence.Execution.ChargeApplicationRequest? right) -> bool
+static Convergence.Execution.ChargeApplicationRequest.operator ==(Convergence.Execution.ChargeApplicationRequest? left, Convergence.Execution.ChargeApplicationRequest? right) -> bool
+static Convergence.Execution.ChargeApplicationResult.operator !=(Convergence.Execution.ChargeApplicationResult? left, Convergence.Execution.ChargeApplicationResult? right) -> bool
+static Convergence.Execution.ChargeApplicationResult.operator ==(Convergence.Execution.ChargeApplicationResult? left, Convergence.Execution.ChargeApplicationResult? right) -> bool
+static Convergence.Execution.ChargeConsumptionResult.operator !=(Convergence.Execution.ChargeConsumptionResult? left, Convergence.Execution.ChargeConsumptionResult? right) -> bool
+static Convergence.Execution.ChargeConsumptionResult.operator ==(Convergence.Execution.ChargeConsumptionResult? left, Convergence.Execution.ChargeConsumptionResult? right) -> bool
+static Convergence.Execution.ChargeDamageModifier.operator !=(Convergence.Execution.ChargeDamageModifier? left, Convergence.Execution.ChargeDamageModifier? right) -> bool
+static Convergence.Execution.ChargeDamageModifier.operator ==(Convergence.Execution.ChargeDamageModifier? left, Convergence.Execution.ChargeDamageModifier? right) -> bool
+static Convergence.Execution.ChargePolicyDiagnostic.operator !=(Convergence.Execution.ChargePolicyDiagnostic? left, Convergence.Execution.ChargePolicyDiagnostic? right) -> bool
+static Convergence.Execution.ChargePolicyDiagnostic.operator ==(Convergence.Execution.ChargePolicyDiagnostic? left, Convergence.Execution.ChargePolicyDiagnostic? right) -> bool
+static Convergence.Execution.ChargePolicyRegistry.CreateStandard() -> Convergence.Execution.ChargePolicyRegistry!
+static Convergence.Execution.ChargePolicyValidationResult.operator !=(Convergence.Execution.ChargePolicyValidationResult? left, Convergence.Execution.ChargePolicyValidationResult? right) -> bool
+static Convergence.Execution.ChargePolicyValidationResult.operator ==(Convergence.Execution.ChargePolicyValidationResult? left, Convergence.Execution.ChargePolicyValidationResult? right) -> bool
+static Convergence.Execution.ChargePolicyValidationResult.Valid.get -> Convergence.Execution.ChargePolicyValidationResult!
+static Convergence.Execution.StandardChargePolicyIds.Split.get -> Convergence.Content.ContentId
+static Convergence.Execution.StandardChargePolicyIds.Unified.get -> Convergence.Content.ContentId
+static Convergence.Runtime.RuntimeChargeStateSnapshot.operator !=(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeChargeStateSnapshot.operator ==(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool
+Convergence.Execution.ChargePolicyDiagnosticCode.InvalidDuration = 4 -> Convergence.Execution.ChargePolicyDiagnosticCode

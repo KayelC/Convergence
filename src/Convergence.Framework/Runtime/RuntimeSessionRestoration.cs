@@ -194,7 +194,8 @@ public enum RuntimeSessionRestoreDiagnosticCode
     HostedEntityDependencyMissing,
     HostedEntityDependencyCycle,
     ActorRestoreFailed,
-    StatModifierPolicyResolutionFailed
+    StatModifierPolicyResolutionFailed,
+    ChargePolicyResolutionFailed
 }
 
 public sealed record RuntimeSessionRestoreDiagnostic(
@@ -270,19 +271,22 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
     private readonly IRuntimeActorRestoreProfileResolver _profileResolver;
     private readonly IRuntimeSaveMigrationService _migration;
     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
+    private readonly IChargePolicyResolver? _chargePolicies;
 
     public RuntimeSessionRestoreService(
         IRuntimeSaveValidator validator,
         ICatalogBattleActorFactory actorFactory,
         IRuntimeActorRestoreProfileResolver profileResolver,
         IRuntimeSaveMigrationService? migration = null,
-        IRuntimeRulesetBindingResolver? rulesetBindings = null)
+        IRuntimeRulesetBindingResolver? rulesetBindings = null,
+        IChargePolicyResolver? chargePolicies = null)
     {
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _actorFactory = actorFactory ?? throw new ArgumentNullException(nameof(actorFactory));
         _profileResolver = profileResolver ?? throw new ArgumentNullException(nameof(profileResolver));
         _migration = migration ?? new RuntimeSaveMigrationService();
         _rulesetBindings = rulesetBindings;
+        _chargePolicies = chargePolicies;
     }
 
     public RuntimeSessionRestoreResult Restore(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -329,6 +333,48 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     $"Restore profile for actor '{actor.Identity.InstanceId}' failed: {exception.Message}",
                     actor.Identity.InstanceId));
             }
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return Rejected(diagnostics);
+        }
+
+        var chargePolicies = new Dictionary<RuntimeInstanceId, IChargePolicyService>();
+        foreach (RuntimeActorSnapshot actor in current.Actors)
+        {
+            RuntimeChargeStateSnapshot? state = actor.BattleStatus.ChargeState;
+            if (state is null)
+            {
+                continue;
+            }
+
+            if (_chargePolicies is null ||
+                !_chargePolicies.TryResolve(state.PolicyId, out IChargePolicyService? policy) ||
+                policy is null)
+            {
+                diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                    RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed,
+                    $"Actor '{actor.Identity.InstanceId}' retains charge state for policy " +
+                    $"'{state.PolicyId}', but no matching charge policy was supplied.",
+                    actor.Identity.InstanceId,
+                    "$.actors.battleStatus.chargeState.policyId"));
+                continue;
+            }
+
+            ChargePolicyValidationResult retainedState = policy.ValidateState(state);
+            if (!retainedState.IsValid)
+            {
+                diagnostics.AddRange(retainedState.Diagnostics.Select(issue =>
+                    new RuntimeSessionRestoreDiagnostic(
+                        RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed,
+                        issue.Message,
+                        actor.Identity.InstanceId,
+                        "$.actors.battleStatus.chargeState")));
+                continue;
+            }
+
+            chargePolicies.Add(actor.Identity.InstanceId, policy);
         }
 
         if (diagnostics.Count > 0)
@@ -494,7 +540,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     current.PartyRoster,
                     activeHostedEntity is null ? [] : [activeHostedEntity],
                     profile.EquipmentStatModifiers,
-                    statModifierPolicies.GetValueOrDefault(actorId)));
+                    statModifierPolicies.GetValueOrDefault(actorId),
+                    chargePolicies.GetValueOrDefault(actorId)));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

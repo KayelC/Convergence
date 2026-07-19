@@ -92,7 +92,11 @@ public sealed class RuntimeEnumBoundaryTests
                 Id("convergence.clean_battle_demo:frost_duelist_demo")),
             CombatDefenseProfile.Empty);
         var duration = new PermanentDurationDefinition();
-        AssertUndefined("kind", () => actor.GrantCharge(Undefined<ChargeKind>(), 2m, duration));
+        AssertUndefined("chargeKind", () => new ChargeApplicationRequest(
+            actor,
+            Undefined<ChargeKind>(),
+            2m,
+            duration));
         AssertUndefined("kind", () => actor.GrantShield(Undefined<ShieldKind>(), duration));
         AssertUndefined("element", () => actor.BreakAffinity(Undefined<DamageElement>(), duration));
         AssertUndefined("element", () => actor.OverrideAffinity(
@@ -169,13 +173,14 @@ public sealed class RuntimeEnumBoundaryTests
                 [Undefined<EquipmentSlot>()] = Id("convergence.catalog_surface_sample:shortsword_sample")
             });
         RuntimeBattleStatusSnapshot malformedStatus = new(
-            charges:
-            [
-                CloneWithProperty(
-                    new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
-                    nameof(RuntimeChargeSnapshot.Kind),
-                    Undefined<ChargeKind>())
-            ],
+            chargeState: new RuntimeChargeStateSnapshot(
+                StandardChargePolicyIds.Split,
+                [
+                    CloneWithProperty(
+                        new RuntimeChargeSnapshot(ChargeKind.Physical, 2m, duration),
+                        nameof(RuntimeChargeSnapshot.Kind),
+                        Undefined<ChargeKind>())
+                ]),
             shields:
             [
                 CloneWithProperty(

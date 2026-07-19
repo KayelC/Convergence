@@ -47,7 +47,16 @@ Missing ailment or instant-death entries resolve to Normal. An explicit instant-
 
 ## Guard, Charge, Shields, Overrides, And Break
 
-Guard is executable runtime state and may reduce damage or normalize weakness according to the selected combat policy. Charges, shields, affinity overrides, and Break have typed duration state. Duration ticking and cleanup are handled by the lifecycle service rather than display code.
+Guard is executable runtime state and may reduce damage or normalize weakness according to the selected combat policy. Shields, affinity overrides, and Break have typed duration state. Duration ticking and cleanup are handled by the lifecycle service rather than display code.
+
+Charge behavior is selected explicitly. `SplitChargePolicy` provides separate
+Physical and Magical slots; `UnifiedChargePolicy` provides one General slot.
+Applying an occupied slot is rejected as already in effect. A matching charge
+uses its authored multiplier on final damage and is consumed once after every
+matching hit and target in the committed action has resolved. Miss, Null,
+Repel, and Absorb consume it; an unexecuted or rejected action does not. Retained
+charge state includes its policy ID so a host cannot restore it under different
+semantics by accident.
 
 ## Turn Economy
 

@@ -5,6 +5,7 @@ using Convergence.Validation;
 using Convergence.Hosting;
 using Convergence.Fusion;
 using Convergence.Encounters;
+using Convergence.Execution;
 using Convergence.Runtime;
 
 namespace Convergence.DemoHost;
@@ -97,7 +98,10 @@ internal sealed class CleanSaveDemoHost
         var rulesetResolver = new RuntimeRulesetBindingResolver(
             RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         RuntimeSaveGameSnapshot snapshot = BuildDemoSnapshot();
-        RuntimeSaveValidator validator = new(rulesetBindings: rulesetResolver);
+        ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
+        RuntimeSaveValidator validator = new(
+            rulesetBindings: rulesetResolver,
+            chargePolicies: chargePolicies);
         RuntimeSaveValidationResult before = validator.Validate(snapshot, catalog);
         if (!before.IsValid)
         {
@@ -126,7 +130,8 @@ internal sealed class CleanSaveDemoHost
                 validator,
                 actorFactory,
                 ActorStatRestoreProfileResolver.Instance,
-                rulesetBindings: rulesetResolver)
+                rulesetBindings: rulesetResolver,
+                chargePolicies: chargePolicies)
             .Restore(restored, catalog);
         if (!aggregate.IsSuccess)
         {
@@ -460,6 +465,7 @@ internal static class CleanSaveJsonCodec
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
             ToDto(actor.BattleStatus.StatModifiers),
+            actor.BattleStatus.ChargeState?.PolicyId.ToString(),
             actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, ToDto(charge.Duration))).ToArray(),
             actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), ToDto(shield.Duration))).ToArray(),
             actor.BattleStatus.AffinityBreaks.Select(affinityBreak => new HostAffinityBreakDto(
@@ -499,7 +505,7 @@ internal static class CleanSaveJsonCodec
                 dto.Ailments.Select(FromDto),
                 dto.Statuses.Select(FromDto),
                 FromDto(dto.StatModifiers),
-                dto.Charges.Select(charge => new RuntimeChargeSnapshot(Enum.Parse<ChargeKind>(charge.Kind), charge.Multiplier, FromDto(charge.Duration))),
+                FromDto(dto.ChargePolicyId, dto.Charges),
                 dto.Shields.Select(shield => new RuntimeShieldSnapshot(Enum.Parse<ShieldKind>(shield.Kind), FromDto(shield.Duration))),
                 dto.AffinityOverrides.Select(affinity => new RuntimeAffinityOverrideSnapshot(
                     Enum.Parse<DamageElement>(affinity.Element),
@@ -574,6 +580,29 @@ internal static class CleanSaveJsonCodec
                                 : new StatModifierLifecycleBoundary(
                                     Id(contribution.LastLifecycleBoundary.EventId),
                                     contribution.LastLifecycleBoundary.Sequence))))));
+
+    private static RuntimeChargeStateSnapshot? FromDto(
+        string? policyId,
+        IReadOnlyList<HostChargeDto> charges)
+    {
+        ArgumentNullException.ThrowIfNull(charges);
+        if (policyId is null)
+        {
+            if (charges.Count > 0)
+            {
+                throw new JsonException("Retained charges require a charge-policy ID.");
+            }
+
+            return null;
+        }
+
+        return new RuntimeChargeStateSnapshot(
+            Id(policyId),
+            charges.Select(charge => new RuntimeChargeSnapshot(
+                Enum.Parse<ChargeKind>(charge.Kind),
+                charge.Multiplier,
+                FromDto(charge.Duration))));
+    }
 
     private static HostDurationDto? ToDto(DurationDefinition? duration) => duration switch
     {
@@ -799,6 +828,7 @@ internal static class CleanSaveJsonCodec
         HostTimedStateDto[] Ailments,
         HostTimedStateDto[] Statuses,
         HostStatModifierStateDto? StatModifiers,
+        string? ChargePolicyId,
         HostChargeDto[] Charges,
         HostShieldDto[] Shields,
         HostAffinityBreakDto[]? AffinityBreaks,

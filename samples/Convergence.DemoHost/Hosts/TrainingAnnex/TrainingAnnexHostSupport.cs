@@ -228,7 +228,8 @@ internal static class TrainingAnnexHostSupport
             combatRuleset,
             new TrainingAnnexFirstTargetSelectionPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            statModifiers);
+            statModifiers,
+            new SplitChargePolicy());
 
     public static TrainingAnnexActorRosterResult CreateActorRoster(GameDataCatalog catalog)
     {

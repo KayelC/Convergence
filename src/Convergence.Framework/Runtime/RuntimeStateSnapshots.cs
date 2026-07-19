@@ -328,6 +328,26 @@ public sealed record RuntimeChargeSnapshot
     public DurationDefinition? Duration { get; }
 }
 
+public sealed record RuntimeChargeStateSnapshot
+{
+    public RuntimeChargeStateSnapshot(
+        ContentId policyId,
+        IEnumerable<RuntimeChargeSnapshot>? charges = null)
+    {
+        if (!policyId.IsValid)
+        {
+            throw new ArgumentException("Charge policy ID cannot be empty.", nameof(policyId));
+        }
+
+        PolicyId = policyId;
+        IReadOnlyList<RuntimeChargeSnapshot> snapshot = RuntimeSnapshotCollections.List(charges);
+        Charges = RuntimeSnapshotCollections.List(snapshot.OrderBy(charge => charge.Kind));
+    }
+
+    public ContentId PolicyId { get; }
+    public IReadOnlyList<RuntimeChargeSnapshot> Charges { get; }
+}
+
 public sealed record RuntimeShieldSnapshot
 {
     public RuntimeShieldSnapshot(ShieldKind kind, DurationDefinition? duration = null)
@@ -397,7 +417,7 @@ public sealed record RuntimeBattleStatusSnapshot
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null,
         IEnumerable<RuntimeTimedStateSnapshot>? statuses = null,
         RuntimeStatModifierStateSnapshot? statModifiers = null,
-        IEnumerable<RuntimeChargeSnapshot>? charges = null,
+        RuntimeChargeStateSnapshot? chargeState = null,
         IEnumerable<RuntimeShieldSnapshot>? shields = null,
         IEnumerable<RuntimeAffinityOverrideSnapshot>? affinityOverrides = null,
         bool isGuarding = false,
@@ -407,7 +427,7 @@ public sealed record RuntimeBattleStatusSnapshot
         Ailments = RuntimeSnapshotCollections.List(ailments);
         Statuses = RuntimeSnapshotCollections.List(statuses);
         StatModifiers = statModifiers;
-        Charges = RuntimeSnapshotCollections.List(charges);
+        ChargeState = chargeState;
         Shields = RuntimeSnapshotCollections.List(shields);
         AffinityOverrides = RuntimeSnapshotCollections.List(affinityOverrides);
         AffinityBreaks = RuntimeSnapshotCollections.List(affinityBreaks);
@@ -418,7 +438,9 @@ public sealed record RuntimeBattleStatusSnapshot
     public IReadOnlyList<RuntimeTimedStateSnapshot> Ailments { get; }
     public IReadOnlyList<RuntimeTimedStateSnapshot> Statuses { get; }
     public RuntimeStatModifierStateSnapshot? StatModifiers { get; }
-    public IReadOnlyList<RuntimeChargeSnapshot> Charges { get; }
+    public RuntimeChargeStateSnapshot? ChargeState { get; }
+    public IReadOnlyList<RuntimeChargeSnapshot> Charges =>
+        ChargeState?.Charges ?? Array.Empty<RuntimeChargeSnapshot>();
     public IReadOnlyList<RuntimeShieldSnapshot> Shields { get; }
     public IReadOnlyList<RuntimeAffinityOverrideSnapshot> AffinityOverrides { get; }
     public IReadOnlyList<RuntimeAffinityBreakSnapshot> AffinityBreaks { get; }

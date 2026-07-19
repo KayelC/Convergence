@@ -10,7 +10,9 @@ public sealed record DamagePolicyRequest(
     RuntimeActorState Actor,
     RuntimeActorState Target,
     DamageEffectDefinition Effect,
-    ElementalAffinity Affinity);
+    ElementalAffinity Affinity,
+    decimal ChargeMultiplier = 1m,
+    ChargeKind? ChargeKind = null);
 
 public sealed record DamageHitResolution(bool Hit, decimal Damage, bool Critical = false);
 
@@ -151,6 +153,7 @@ public sealed class BattleExecutionServices
         IRandomTargetSelectionPolicy randomTargetPolicy,
         IRuntimeRandomTargetSelectionPolicy runtimeRandomTargetPolicy,
         IStatModifierPolicyService statModifiers,
+        IChargePolicyService charges,
         IEnumerable<KeyValuePair<ContentId, IFormulaAmountHandler>>? formulaHandlers = null,
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRuleHandlers = null,
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditionHandlers = null,
@@ -173,6 +176,7 @@ public sealed class BattleExecutionServices
         RandomTargetPolicy = randomTargetPolicy ?? throw new ArgumentNullException(nameof(randomTargetPolicy));
         RuntimeRandomTargetPolicy = runtimeRandomTargetPolicy ?? throw new ArgumentNullException(nameof(runtimeRandomTargetPolicy));
         StatModifiers = statModifiers ?? throw new ArgumentNullException(nameof(statModifiers));
+        Charges = charges ?? throw new ArgumentNullException(nameof(charges));
         FormulaHandlers = Snapshot(formulaHandlers);
         EscapeRuleHandlers = Snapshot(escapeRuleHandlers);
         CustomConditionHandlers = Snapshot(customConditionHandlers);
@@ -199,6 +203,7 @@ public sealed class BattleExecutionServices
     public IRandomTargetSelectionPolicy RandomTargetPolicy { get; }
     public IRuntimeRandomTargetSelectionPolicy RuntimeRandomTargetPolicy { get; }
     public IStatModifierPolicyService StatModifiers { get; }
+    public IChargePolicyService Charges { get; }
     public IReadOnlyDictionary<ContentId, IFormulaAmountHandler> FormulaHandlers { get; }
     public IReadOnlyDictionary<ContentId, IEscapeRuleHandler> EscapeRuleHandlers { get; }
     public IReadOnlyDictionary<ContentId, ICustomConditionHandler> CustomConditionHandlers { get; }

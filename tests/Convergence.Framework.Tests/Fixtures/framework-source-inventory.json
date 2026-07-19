@@ -318,6 +318,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Execution/ChargePolicies.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Execution/ConditionAndTargetResolution.cs",
       "owner": "effect_execution",
       "publicSurface": "internal_only"

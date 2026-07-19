@@ -147,7 +147,8 @@ public enum DamageDrainMode
 public enum ChargeKind
 {
     Physical,
-    Magical
+    Magical,
+    General
 }
 
 public enum ShieldKind

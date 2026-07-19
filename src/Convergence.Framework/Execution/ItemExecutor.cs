@@ -494,6 +494,12 @@ public sealed class ItemExecutor : IItemExecutor
                     modify,
                     environment,
                     _services.StatModifiers) is { Accepted: true, StateChanged: true },
+            GrantChargeEffectDefinition charge =>
+                _services.Charges.Assess(new ChargeApplicationRequest(
+                    target,
+                    charge.Charge,
+                    charge.Multiplier,
+                    charge.Duration)).CanApply,
             RemoveStatusEffectDefinition remove => HasRemovableStatus(remove, target),
             _ => true
         };

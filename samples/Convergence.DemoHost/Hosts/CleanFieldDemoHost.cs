@@ -277,6 +277,7 @@ internal sealed class CleanFieldDemoHost
             new DemoRandomTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             DemoStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy(),
             escapeRuleHandlers:
             [
                 new KeyValuePair<ContentId, IEscapeRuleHandler>(

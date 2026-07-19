@@ -872,7 +872,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
                     RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
                         rosterCapacityPolicy,
-                        rulesetBindings: rulesetResolver).Validate(
+                        rulesetBindings: rulesetResolver,
+                        chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(
                         TrainingAnnexPersistenceController.BuildCurrentSaveSnapshot(
                             roster,
                             partyRoster,

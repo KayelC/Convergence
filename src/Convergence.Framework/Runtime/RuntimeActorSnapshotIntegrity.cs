@@ -397,6 +397,13 @@ internal static class RuntimeActorSnapshotIntegrity
                 }
             }
         }
+        if (snapshot.BattleStatus.ChargeState is RuntimeChargeStateSnapshot chargeState)
+        {
+            ValidateContentId(
+                chargeState.PolicyId,
+                "$.battleStatus.chargeState.policyId",
+                diagnostics);
+        }
         for (int index = 0; index < snapshot.BattleStatus.Analysis.Count; index++)
         {
             ValidateRuntimeInstanceId(snapshot.BattleStatus.Analysis[index].TargetInstanceId,

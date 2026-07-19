@@ -249,5 +249,6 @@ internal sealed class CleanBattleDemoHost
             new DemoPowerAmountPolicy(),
             new DemoRandomTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            DemoStatModifierPolicy.CreatePersistent());
+            DemoStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy());
 }

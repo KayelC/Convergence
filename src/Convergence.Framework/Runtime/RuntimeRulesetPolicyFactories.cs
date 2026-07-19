@@ -225,8 +225,10 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                         (current, parsed) => current with { DamageVarianceMaximum = parsed });
                     break;
                 case "chargeMultiplier":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { ChargeMultiplier = parsed });
+                    RulesetPolicyFactoryDiagnostics.UnknownParameter(
+                        definition,
+                        key,
+                        diagnostics);
                     break;
                 case "criticalDamageMultiplier":
                     config = ReadDecimal(definition, key, value, diagnostics, config,

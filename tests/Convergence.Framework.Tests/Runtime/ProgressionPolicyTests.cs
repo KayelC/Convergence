@@ -966,7 +966,8 @@ public sealed class ProgressionPolicyTests
             ruleset,
             new FirstTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            TestStatModifierPolicy.CreatePersistent());
+            TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy());
     }
 
     private static void AssertAllowed(Type type, IReadOnlyList<string> forbidden)

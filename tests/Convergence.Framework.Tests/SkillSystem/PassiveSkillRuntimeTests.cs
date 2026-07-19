@@ -686,6 +686,7 @@ public sealed class PassiveSkillRuntimeTests
             new FirstTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy(),
             customEffectHandlers: customEffects);
 
     private sealed class TestAilmentRepository(IEnumerable<AilmentDefinition> ailments)

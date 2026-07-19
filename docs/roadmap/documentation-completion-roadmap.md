@@ -158,7 +158,7 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `planned` | Use authoritative charge data through Split and Unified policies with once-per-action consumption. |
+| O2-H1 | `implemented_pending_review` | Split and Unified policies now use authored charge multipliers, reject occupied slots, consume once per committed matching action, and persist policy identity in save v11. |
 | O2-M1 | `planned` | Remove the two inert standard chance defaults while retaining explicit authored values. |
 | O2-M2 | `planned` | Consume authored Accuracy, Evasion, and Critical Chance modifiers at typed policy boundaries. |
 | O2-M3 | `planned` | Make authored combat-policy binding return a genuinely replaceable neutral aggregate. |

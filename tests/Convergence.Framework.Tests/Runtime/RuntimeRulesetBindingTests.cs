@@ -380,7 +380,6 @@ public sealed class RuntimeRulesetBindingTests
                 ("damageFormulaScalar", 6m),
                 ("damageVarianceMinimum", 0.8m),
                 ("damageVarianceMaximum", 1.2m),
-                ("chargeMultiplier", 2m),
                 ("criticalDamageMultiplier", 1.7m),
                 ("weakDamageMultiplier", 1.8m),
                 ("resistDamageMultiplier", 0.4m),
@@ -414,7 +413,6 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(6m, config.DamageFormulaScalar);
         Assert.Equal(0.8m, config.DamageVarianceMinimum);
         Assert.Equal(1.2m, config.DamageVarianceMaximum);
-        Assert.Equal(2m, config.ChargeMultiplier);
         Assert.Equal(1.7m, config.CriticalDamageMultiplier);
         Assert.Equal(1.8m, config.WeakDamageMultiplier);
         Assert.Equal(0.4m, config.ResistDamageMultiplier);

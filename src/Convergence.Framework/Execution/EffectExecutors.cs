@@ -111,8 +111,17 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             target,
             definition.Element,
             new RuleModifierContext(defenseConditionContext, context.Request.Skill));
+        ChargeDamageModifier charge = context.Services.Charges.ResolveDamageModifier(
+            context.Actor,
+            definition.Element);
         DamagePolicyResolution resolution = context.Services.DamagePolicy.Resolve(
-            new DamagePolicyRequest(context.Actor, target, definition, affinity));
+            new DamagePolicyRequest(
+                context.Actor,
+                target,
+                definition,
+                affinity,
+                charge.Multiplier,
+                charge.ChargeKind));
         affinity = resolution.ResolvedAffinity;
         DamageHitResolution[] landed = resolution.Hits.Where(hit => hit.Hit).ToArray();
         if (landed.Length == 0)
@@ -428,8 +437,17 @@ internal sealed class GrantChargeEffectExecutor : TargetedEffectExecutor, IEffec
 {
     public EffectExecutionResult Execute(GrantChargeEffectDefinition definition, EffectExecutionContext context)
     {
-        Target(context).GrantCharge(definition.Charge, definition.Multiplier, definition.Duration);
-        return Success(context, definition.Multiplier, detail: definition.Charge.ToString());
+        ChargeApplicationResult result = context.Services.Charges.Apply(new ChargeApplicationRequest(
+            Target(context),
+            definition.Charge,
+            definition.Multiplier,
+            definition.Duration));
+        return result.Applied
+            ? Success(context, definition.Multiplier, detail: definition.Charge.ToString())
+            : Failure(
+                context,
+                TurnEconomyOutcome.Normal,
+                string.Join("; ", result.Diagnostics.Select(diagnostic => diagnostic.Message)));
     }
 }
 

@@ -10,7 +10,6 @@ public sealed record ProductionCombatRulesetConfig
     public decimal DamageFormulaScalar { get; init; } = 5.0m;
     public decimal DamageVarianceMinimum { get; init; } = 0.95m;
     public decimal DamageVarianceMaximum { get; init; } = 1.05m;
-    public decimal ChargeMultiplier { get; init; } = 1.9m;
     public decimal CriticalDamageMultiplier { get; init; } = 1.5m;
     public decimal WeakDamageMultiplier { get; init; } = 1.5m;
     public decimal ResistDamageMultiplier { get; init; } = 0.5m;
@@ -44,7 +43,6 @@ public sealed record ProductionCombatRulesetConfig
             DamageVarianceMaximum,
             nameof(DamageVarianceMinimum),
             nameof(DamageVarianceMaximum));
-        RequireNonNegative(ChargeMultiplier, nameof(ChargeMultiplier));
         RequireNonNegative(CriticalDamageMultiplier, nameof(CriticalDamageMultiplier));
         RequireNonNegative(WeakDamageMultiplier, nameof(WeakDamageMultiplier));
         RequireNonNegative(ResistDamageMultiplier, nameof(ResistDamageMultiplier));
@@ -153,9 +151,7 @@ public sealed record ProductionCombatStats(
 
 public sealed record ProductionCombatStatus(
     bool IsGuarding = false,
-    bool IsRigidBody = false,
-    bool HasPhysicalCharge = false,
-    bool HasMagicalCharge = false);
+    bool IsRigidBody = false);
 
 public sealed record ProductionCombatModifiers(
     decimal DamageDealtMultiplier = 1m,
@@ -240,7 +236,9 @@ public sealed record ProductionDamageResolutionRequest(
     int Power,
     int Accuracy,
     CriticalDefinition Critical,
-    HitCountDefinition Hits);
+    HitCountDefinition Hits,
+    decimal ChargeMultiplier = 1m,
+    ChargeKind? ChargeKind = null);
 
 public sealed record ProductionDamageResolutionHit(
     bool Hit,
@@ -320,7 +318,9 @@ public sealed class ProductionCombatRuleset :
             request.Effect.Power,
             request.Effect.Accuracy,
             request.Effect.Critical,
-            request.Effect.Hits));
+            request.Effect.Hits,
+            request.ChargeMultiplier,
+            request.ChargeKind));
 
         return new DamagePolicyResolution(
             result.Hits.Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical)),
@@ -363,6 +363,16 @@ public sealed class ProductionCombatRuleset :
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentOutOfRangeException.ThrowIfNegative(request.Power);
+        if (request.ChargeMultiplier <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                "Charge multiplier must be positive.");
+        }
+        if (request.ChargeKind is ChargeKind chargeKind && !Enum.IsDefined(chargeKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Charge kind must be defined.");
+        }
 
         int hitCount = ResolveHitCount(request.Hits);
         List<ProductionDamageResolutionHit> hits = new(hitCount);
@@ -404,6 +414,7 @@ public sealed class ProductionCombatRuleset :
             }
 
             damage = ApplyAffinityMultiplier(damage, resolvedAffinity);
+            damage = CombatArithmetic.SaturatingMultiply(damage, request.ChargeMultiplier);
             hits.Add(new ProductionDamageResolutionHit(
                 true,
                 Math.Floor(CombatArithmetic.SaturatingMultiply(
@@ -620,15 +631,6 @@ public sealed class ProductionCombatRuleset :
             IsPhysical(element)
                 ? attacker.Modifiers.PhysicalDamageDealtMultiplier
                 : attacker.Modifiers.MagicalDamageDealtMultiplier);
-        if (IsPhysical(element) && attacker.Status.HasPhysicalCharge)
-        {
-            attack = CombatArithmetic.SaturatingMultiply(attack, _config.ChargeMultiplier);
-        }
-        else if (!IsPhysical(element) && attacker.Status.HasMagicalCharge)
-        {
-            attack = CombatArithmetic.SaturatingMultiply(attack, _config.ChargeMultiplier);
-        }
-
         decimal ratio = CombatArithmetic.SaturatingDivide(attack, defense);
         // The formula already requires a square root; multiplying in double avoids a decimal-only overflow before it.
         double radicand = (double)power * (double)ratio;
@@ -702,8 +704,6 @@ public sealed class ProductionCombatRuleset :
         decimal vitality = actor.Stats.GetValueOrDefault(StandardProgressionIds.Vitality);
         decimal agility = actor.Stats.GetValueOrDefault(StandardProgressionIds.Agility);
         decimal luck = actor.Stats.GetValueOrDefault(StandardProgressionIds.Luck);
-        bool physicalCharge = actor.Charges.ContainsKey(ChargeKind.Physical);
-        bool magicalCharge = actor.Charges.ContainsKey(ChargeKind.Magical);
         decimal damageDealt = 1m;
         RuntimeStatStageSnapshot[] stages = actor.StatStages
             .Select(pair => new RuntimeStatStageSnapshot(pair.Key, pair.Value.Stage, pair.Value.Duration))
@@ -748,9 +748,7 @@ public sealed class ProductionCombatRuleset :
             new ProductionCombatStats(strength, magic, vitality, agility, luck),
             new ProductionCombatStatus(
                 IsGuarding: actor.IsGuarding,
-                IsRigidBody: rigid,
-                HasPhysicalCharge: physicalCharge,
-                HasMagicalCharge: magicalCharge),
+                IsRigidBody: rigid),
             new ProductionCombatModifiers(
                 DamageDealtMultiplier: damageDealt,
                 DamageTakenMultiplier: damageTaken,

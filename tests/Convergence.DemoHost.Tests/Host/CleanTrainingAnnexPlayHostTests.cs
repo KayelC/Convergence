@@ -3153,7 +3153,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         state.ApplyAilment(catalog.GetRequiredAilment(Qualified("sample_poison")), Turns(3));
         state.SetGuarding(true);
         DemoHostTestStatModifierPolicy.Apply(state, statModifiers, ContentId.Parse("attack"), 1);
-        state.GrantCharge(ChargeKind.Physical, 2m, Turns(1));
+        Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
+            state,
+            ChargeKind.Physical,
+            2m,
+            Turns(1))).Applied);
         state.GrantShield(ShieldKind.Physical, Turns(1));
         state.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
         state.AddOtherStatus(ContentId.Parse("training_annex_recovery_mark"), Turns(1));

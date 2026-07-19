@@ -344,7 +344,8 @@ public sealed class OriginalCleanContentSliceTests
             new FlatPowerPolicy(),
             new FirstBattleTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            TestStatModifierPolicy.CreatePersistent());
+            TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy());
         var skills = new SkillExecutor(services);
         var items = new ItemExecutor(services);
         RuntimeActorState actor = Actor("echo", "player", 60, 100, 8, 20);

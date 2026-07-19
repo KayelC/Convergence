@@ -80,7 +80,7 @@ Action execution reuses typed targeting, conditions, effects, lifecycle rules, a
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-Runtime save contract v10 is a deliberately broad interoperability aggregate,
+Runtime save contract v11 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
@@ -95,7 +95,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `4` and runtime save contract version `10` are deliberate pre-release breaks with no compatibility aliases. Save v10 retains pending skill choices and canonical roster restoration while adding complete policy-owned stat-modifier state: policy identity, ordered contributions, durations, and lifecycle boundaries. Save validation and aggregate restoration must bind that policy explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `4` and runtime save contract version `11` are deliberate pre-release breaks with no compatibility aliases. Save v11 retains the actor, move-list, canonical-roster, and policy-owned stat-modifier state established by v10, and adds the selected charge-policy ID beside retained charge entries. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

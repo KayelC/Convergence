@@ -37,7 +37,8 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimePartyRosterSnapshot? partyRoster = null,
         IEnumerable<RuntimeActorState>? runtimeActors = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
-        IStatModifierPolicyService? statModifierPolicy = null)
+        IStatModifierPolicyService? statModifierPolicy = null,
+        IChargePolicyService? chargePolicy = null)
         : this(
             snapshot,
             statSourceKind,
@@ -46,6 +47,7 @@ public sealed record CatalogBattleActorRestoreRequest
             runtimeActors,
             equipmentStatModifiers,
             statModifierPolicy,
+            chargePolicy,
             preserveValidatedSnapshot: false)
     {
     }
@@ -58,6 +60,7 @@ public sealed record CatalogBattleActorRestoreRequest
         IEnumerable<RuntimeActorState>? runtimeActors,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
         IStatModifierPolicyService? statModifierPolicy,
+        IChargePolicyService? chargePolicy,
         bool preserveValidatedSnapshot)
     {
         if (!Enum.IsDefined(statSourceKind))
@@ -77,6 +80,7 @@ public sealed record CatalogBattleActorRestoreRequest
         RuntimeActors = Array.AsReadOnly((runtimeActors ?? []).ToArray());
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
         StatModifierPolicy = statModifierPolicy;
+        ChargePolicy = chargePolicy;
         PreserveValidatedSnapshot = preserveValidatedSnapshot;
     }
 
@@ -87,6 +91,7 @@ public sealed record CatalogBattleActorRestoreRequest
     public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
     public IStatModifierPolicyService? StatModifierPolicy { get; }
+    public IChargePolicyService? ChargePolicy { get; }
     internal bool PreserveValidatedSnapshot { get; }
 
     internal static CatalogBattleActorRestoreRequest FromValidatedFrameworkSnapshot(
@@ -99,6 +104,7 @@ public sealed record CatalogBattleActorRestoreRequest
             runtimeActors: null,
             equipmentStatModifiers: null,
             statModifierPolicy: null,
+            chargePolicy: null,
             preserveValidatedSnapshot: true);
 }
 
@@ -693,7 +699,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 ailments.Values,
                 registeredEventIds: _durationVocabulary?.RegisteredEventIds,
                 registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds,
-                statModifierPolicy: request.StatModifierPolicy);
+                statModifierPolicy: request.StatModifierPolicy,
+                chargePolicy: request.ChargePolicy);
 
             if (!request.PreserveValidatedSnapshot)
             {

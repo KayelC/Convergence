@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `4`, and active runtime snapshots use save contract version `10`. Save v10 retains the actor, move-list, and canonical-roster authorities established by v9 and additionally persists the selected stat-modifier policy with its ordered contributions, durations, and lifecycle boundaries. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
+Active content uses schema version `4`, and active runtime snapshots use save contract version `11`. Save v11 retains the actor, move-list, canonical-roster, and stat-modifier authorities established by v10 and additionally persists the selected charge policy beside retained charge state. That identity prevents split Physical/Magical charges from being restored under the unified charge policy, or the reverse. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

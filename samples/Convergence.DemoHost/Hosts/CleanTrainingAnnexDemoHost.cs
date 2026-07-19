@@ -342,7 +342,8 @@ internal sealed class CleanTrainingAnnexDemoHost
                     visitedNodeIds: [Qualified("annex_entrance"), Qualified("annex_floor_2")],
                     unlockedCheckpointIds: [Qualified("annex_lobby_checkpoint")])));
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
-            rulesetBindings: resolver).Validate(save, catalog);
+            rulesetBindings: resolver,
+            chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(save, catalog);
         await PrintAsync(
             sequence++,
             "save",

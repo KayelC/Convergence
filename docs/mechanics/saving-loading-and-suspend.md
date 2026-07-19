@@ -8,13 +8,13 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `10`.
+The current runtime save contract is version `11`.
 
 `RuntimeSaveGameSnapshot` contains:
 
 - runtime actors, including learned skills, equipped skills, pending
   skill-choice tokens, skill revisions, and complete selected-policy
-  stat-modifier state;
+  stat-modifier state and retained charge-policy identity;
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory and equipped items;
 - wallet;
@@ -25,7 +25,7 @@ The current runtime save contract is version `10`.
 - checkpoint breadcrumbs;
 - optional host context.
 
-These fields describe the shape of save contract v10; they do not activate every
+These fields describe the shape of save contract v11; they do not activate every
 listed mechanic. Hosts that use Framework persistence provide neutral snapshots
 for required modules they do not use:
 
@@ -45,12 +45,17 @@ all.
 
 Catalog definitions are not copied into a save. Saves retain qualified content IDs and are restored against a supplied `GameDataCatalog`.
 
+Retained charge state includes the ID of the charge policy that created it. A
+host restoring an actor with active charges must supply that exact policy through
+its charge-policy resolver. This prevents a split Physical/Magical charge from
+being silently reinterpreted as one unified General charge, or vice versa.
+
 The party roster is the one ownership and placement authority. Actor snapshots
 do not contain duplicate owned rosters or active/reserve placement.
 
 ## Validation Before Restore
 
-The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers. When an actor retains stat modifiers, validation also requires an explicit ruleset-binding resolver and checks the complete state against its authored policy.
+The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers. When an actor retains stat modifiers or charge state, validation also requires the corresponding explicit policy resolver and checks the complete state against its authored policy.
 
 An invalid snapshot cannot produce a valid restore token.
 `IRuntimeSessionRestoreService` first runs an explicit migration service,

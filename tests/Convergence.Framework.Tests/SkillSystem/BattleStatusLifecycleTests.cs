@@ -495,7 +495,11 @@ public sealed class BattleStatusLifecycleTests
         RuntimeActorState actor = Actor("actor");
         actor.SetGuarding(true);
         actor.GrantShield(ShieldKind.Physical, Turns(1));
-        actor.GrantCharge(ChargeKind.Physical, 2, Turns(1));
+        Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
+            actor,
+            ChargeKind.Physical,
+            2,
+            Turns(1))).Applied);
         TestStatModifierPolicy.ApplyPersistent(actor, ContentId.Parse("attack"), 1);
         actor.BreakAffinity(DamageElement.Fire, Turns(1));
         actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
@@ -628,7 +632,11 @@ public sealed class BattleStatusLifecycleTests
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
         RuntimeActorState actor = Actor("actor");
         actor.SetGuarding(true);
-        actor.GrantCharge(ChargeKind.Physical, 2m, new PermanentDurationDefinition());
+        Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
+            actor,
+            ChargeKind.Physical,
+            2m,
+            new PermanentDurationDefinition())).Applied);
         actor.GrantShield(ShieldKind.Physical, new PermanentDurationDefinition());
 
         service.Cleanup(
@@ -728,7 +736,11 @@ public sealed class BattleStatusLifecycleTests
                 $"ailment_{suffix}",
                 new NormalAilmentTurnBehaviorDefinition()),
             duration);
-        actor.GrantCharge(ChargeKind.Physical, 2m, duration);
+        Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
+            actor,
+            ChargeKind.Physical,
+            2m,
+            duration)).Applied);
         actor.GrantShield(ShieldKind.Physical, duration);
         actor.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Resist, duration);
         actor.BreakAffinity(DamageElement.Fire, duration);
@@ -824,6 +836,7 @@ public sealed class BattleStatusLifecycleTests
             new FirstTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy(),
             formulaHandlers:
             [
                 new KeyValuePair<ContentId, IFormulaAmountHandler>(

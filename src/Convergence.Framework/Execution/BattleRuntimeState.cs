@@ -117,6 +117,7 @@ public sealed class RuntimeActorState
     private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
     private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
     private RuntimeStatModifierStateSnapshot? _statModifierState;
+    private ContentId? _chargePolicyId;
     public RuntimeActorState(
         RuntimeInstanceId instanceId,
         ContentId entityId,
@@ -222,7 +223,8 @@ public sealed class RuntimeActorState
         IEnumerable<ContentId>? capabilityIds = null,
         IReadOnlySet<ContentId>? registeredEventIds = null,
         IReadOnlySet<ContentId>? registeredPhaseIds = null,
-        IStatModifierPolicyService? statModifierPolicy = null)
+        IStatModifierPolicyService? statModifierPolicy = null,
+        IChargePolicyService? chargePolicy = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(defenseProfile);
@@ -268,7 +270,8 @@ public sealed class RuntimeActorState
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
             ailmentDefinitions.ToDictionary(ailment => ailment.Id),
-            statModifierPolicy);
+            statModifierPolicy,
+            chargePolicy);
         state.RestoreBattleActivations(snapshot.BattleActivations);
         return state;
     }
@@ -314,6 +317,7 @@ public sealed class RuntimeActorState
         new ReadOnlyDictionary<ContentId, BattleStatStageState>(ProjectStatStages());
     public IReadOnlyDictionary<ChargeKind, BattleChargeState> Charges =>
         new ReadOnlyDictionary<ChargeKind, BattleChargeState>(_charges);
+    public ContentId? ChargePolicyId => _chargePolicyId;
     public IReadOnlyDictionary<ShieldKind, BattleShieldState> Shields =>
         new ReadOnlyDictionary<ShieldKind, BattleShieldState>(_shields);
     public IReadOnlyDictionary<DamageElement, BattleAffinityBreakState> AffinityBreaks =>
@@ -441,10 +445,49 @@ public sealed class RuntimeActorState
         _statModifierState = state;
     }
 
-    public void GrantCharge(ChargeKind kind, decimal multiplier, DurationDefinition? duration)
+    internal RuntimeChargeStateSnapshot? CaptureChargeState()
     {
+        return _chargePolicyId is ContentId policyId
+            ? new RuntimeChargeStateSnapshot(
+            policyId,
+            _charges.Select(pair => new RuntimeChargeSnapshot(
+                pair.Key,
+                pair.Value.Multiplier,
+                pair.Value.Duration)))
+            : null;
+    }
+
+    internal void AddCharge(ContentId policyId, ChargeKind kind, BattleChargeState state)
+    {
+        if (!policyId.IsValid)
+        {
+            throw new ArgumentException("Charge policy ID cannot be empty.", nameof(policyId));
+        }
         EnumDomain.RequireDefined(kind, nameof(kind));
-        _charges[kind] = new BattleChargeState(multiplier, duration);
+        ArgumentNullException.ThrowIfNull(state);
+        if (_chargePolicyId is ContentId active && active != policyId)
+        {
+            throw new InvalidOperationException(
+                $"Actor '{InstanceId}' charge state belongs to policy '{active}', not '{policyId}'.");
+        }
+        if (_charges.ContainsKey(kind))
+        {
+            throw new InvalidOperationException($"Charge '{kind}' is already in effect.");
+        }
+
+        _chargePolicyId = policyId;
+        _charges.Add(kind, state);
+    }
+
+    internal void RemoveCharge(ContentId policyId, ChargeKind kind)
+    {
+        if (_chargePolicyId is ContentId active && active != policyId)
+        {
+            throw new InvalidOperationException(
+                $"Actor '{InstanceId}' charge state belongs to policy '{active}', not '{policyId}'.");
+        }
+
+        _charges.Remove(kind);
     }
 
     public void GrantShield(ShieldKind kind, DurationDefinition? duration)
@@ -850,6 +893,7 @@ public sealed class RuntimeActorState
             .ToDictionary(pair => pair.Key, pair => pair.Value.Copy());
         Dictionary<ContentId, ActiveAilmentState> ailments = new(source._ailments);
         RuntimeStatModifierStateSnapshot? statModifierState = source._statModifierState;
+        ContentId? chargePolicyId = source._chargePolicyId;
         Dictionary<ChargeKind, BattleChargeState> charges = new(source._charges);
         Dictionary<ShieldKind, BattleShieldState> shields = new(source._shields);
         Dictionary<DamageElement, BattleAffinityBreakState> affinityBreaks =
@@ -875,6 +919,7 @@ public sealed class RuntimeActorState
 
         ReplaceDictionary(_ailments, ailments);
         _statModifierState = statModifierState;
+        _chargePolicyId = chargePolicyId;
         ReplaceDictionary(_charges, charges);
         ReplaceDictionary(_shields, shields);
         ReplaceDictionary(_affinityBreaks, affinityBreaks);
@@ -1085,7 +1130,8 @@ public sealed class RuntimeActorState
     internal void RestoreBattleStatus(
         RuntimeBattleStatusSnapshot status,
         IReadOnlyDictionary<ContentId, AilmentDefinition> ailments,
-        IStatModifierPolicyService? statModifierPolicy = null)
+        IStatModifierPolicyService? statModifierPolicy = null,
+        IChargePolicyService? chargePolicy = null)
     {
         ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(ailments);
@@ -1127,7 +1173,27 @@ public sealed class RuntimeActorState
         }
         _statModifierState = status.StatModifiers;
 
+        if (status.ChargeState is RuntimeChargeStateSnapshot chargeState)
+        {
+            if (chargePolicy is null)
+            {
+                throw new ArgumentException(
+                    "Restoring retained charge state requires the matching charge policy service.",
+                    nameof(chargePolicy));
+            }
+
+            ChargePolicyValidationResult validation = chargePolicy.ValidateState(chargeState);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException(
+                    $"Retained charge state is incompatible with policy '{chargePolicy.PolicyId}': " +
+                    string.Join("; ", validation.Diagnostics.Select(value => value.Message)),
+                    nameof(status));
+            }
+        }
+
         _charges.Clear();
+        _chargePolicyId = status.ChargeState?.PolicyId;
         foreach (RuntimeChargeSnapshot charge in status.Charges)
         {
             _charges.Add(charge.Kind, new BattleChargeState(charge.Multiplier, charge.Duration));
@@ -1181,10 +1247,14 @@ public sealed class RuntimeActorState
                 pair.Value.Duration,
                 pair.Value.IsRemovable)),
             _statModifierState,
-            _charges.Select(pair => new RuntimeChargeSnapshot(
-                pair.Key,
-                pair.Value.Multiplier,
-                pair.Value.Duration)),
+            _chargePolicyId is ContentId chargePolicyId
+                ? new RuntimeChargeStateSnapshot(
+                    chargePolicyId,
+                    _charges.Select(pair => new RuntimeChargeSnapshot(
+                        pair.Key,
+                        pair.Value.Multiplier,
+                        pair.Value.Duration)))
+                : null,
             _shields.Select(pair => new RuntimeShieldSnapshot(pair.Key, pair.Value.Duration)),
             _affinityOverrides.Select(pair => new RuntimeAffinityOverrideSnapshot(
                 pair.Key,

@@ -76,7 +76,8 @@ internal sealed class TrainingAnnexPersistenceController
             compendium);
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
                 _rosterCapacityPolicy,
-                rulesetBindings: _rulesetBindings)
+                rulesetBindings: _rulesetBindings,
+                chargePolicies: ChargePolicyRegistry.CreateStandard())
             .Validate(snapshot, catalog);
         if (!validation.IsValid)
         {
@@ -132,7 +133,8 @@ internal sealed class TrainingAnnexPersistenceController
 
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
                 _rosterCapacityPolicy,
-                rulesetBindings: _rulesetBindings)
+                rulesetBindings: _rulesetBindings,
+                chargePolicies: ChargePolicyRegistry.CreateStandard())
             .Validate(record!.Snapshot, catalog);
         if (!validation.IsValid)
         {
@@ -296,10 +298,12 @@ internal sealed class TrainingAnnexPersistenceController
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
                 new RuntimeSaveValidator(
                     _rosterCapacityPolicy,
-                    rulesetBindings: _rulesetBindings),
+                    rulesetBindings: _rulesetBindings,
+                    chargePolicies: ChargePolicyRegistry.CreateStandard()),
                 actorFactory,
                 profileResolver,
-                rulesetBindings: _rulesetBindings)
+                rulesetBindings: _rulesetBindings,
+                chargePolicies: ChargePolicyRegistry.CreateStandard())
             .Restore(snapshot, catalog);
         if (!aggregate.IsSuccess)
         {

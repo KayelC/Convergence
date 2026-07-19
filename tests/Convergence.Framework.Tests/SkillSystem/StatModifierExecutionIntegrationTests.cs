@@ -706,7 +706,8 @@ public sealed class StatModifierExecutionIntegrationTests
             ruleset,
             new FirstSkillTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
-            statModifiers);
+            statModifiers,
+            new SplitChargePolicy());
     }
 
     private static IStatModifierPolicyService PersistentPolicy() =>

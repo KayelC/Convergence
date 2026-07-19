@@ -19,7 +19,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
-model, stage scaling, live skill choices, and save v10 restoration. Its
+model, stage scaling, live skill choices, and save v11 restoration. Its
 independent completion review found six reachable integration gaps; all are
 corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full
@@ -29,17 +29,18 @@ Exactly-one item reservations, reservation validation, mandatory inventory
 authority, and Framework-owned canonical skill, item, and basic-attack
 authorization are implemented and covered by focused tests. The stat-modifier
 migration has one canonical actor authority, three supplied policies, typed
-effect and lifecycle integration, authored ruleset binding, save-v10
+effect and lifecycle integration, authored ruleset binding, save-v11
 restoration, and cross-policy host evidence. The final source-first review found
 no remaining reachable Order 1 defect, and the project owner confirmed the
 public mechanics on 18 July 2026.
 
 The source-first Order 2 review reopened `combat_resolution` as partial. The
-standard arithmetic remains usable, but authored charge execution, three
-passive combat modifier kinds, two inert configuration values, and the authored
-combat-policy replacement boundary require correction. Critical, instant-death
-resistance, chance-range, and multi-hit semantics require owner confirmation
-before the capability can return to complete.
+standard arithmetic remains usable and authored charge execution is
+policy-owned, but three passive combat modifier kinds, two inert configuration
+values, and the authored combat-policy replacement boundary require correction.
+Critical, instant-defeat resistance, chance-range, and multi-hit semantics are
+confirmed in the active decision record and still require implementation before
+the capability can return to complete.
 
 ## Authority
 

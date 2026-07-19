@@ -56,7 +56,6 @@ binding rather than producing a partial service.
 | `damageFormulaScalar` | decimal | `5.0` | positive |
 | `damageVarianceMinimum` | decimal | `0.95` | nonnegative; no greater than maximum |
 | `damageVarianceMaximum` | decimal | `1.05` | nonnegative; no less than minimum |
-| `chargeMultiplier` | decimal | `1.9` | nonnegative |
 | `criticalDamageMultiplier` | decimal | `1.5` | nonnegative |
 | `weakDamageMultiplier` | decimal | `1.5` | nonnegative |
 | `resistDamageMultiplier` | decimal | `0.5` | nonnegative |
@@ -85,6 +84,14 @@ binding rather than producing a partial service.
 Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
+
+Charge is not a hidden parameter of `standard_damage`. A host supplies an
+`IChargePolicyService` to `BattleExecutionServices`; the standard choices are
+`SplitChargePolicy` and `UnifiedChargePolicy`. The authored `grant_charge`
+effect supplies the multiplier, while the selected policy owns slot
+compatibility and consumption. The later neutral combat-policy aggregate will
+make that selection available through authored ruleset composition without
+putting a global multiplier back into damage configuration.
 
 ## Standard Stats And Stage Tables
 

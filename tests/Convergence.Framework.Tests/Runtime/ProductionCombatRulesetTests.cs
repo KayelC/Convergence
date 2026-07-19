@@ -73,6 +73,29 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
+    public void AuthoredChargeMultiplier_AppliesToEveryResolvedHitAfterBaseDamage()
+    {
+        ProductionCombatRuleset ruleset = Rules();
+
+        ProductionDamageResolutionResult result = ruleset.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                Actor(),
+                Actor(),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                100,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(3, 3),
+                ChargeMultiplier: 2.5m,
+                ChargeKind: ChargeKind.Physical));
+
+        Assert.Equal(3, result.Hits.Count);
+        Assert.All(result.Hits, hit => Assert.Equal(125m, hit.Damage));
+        Assert.Equal(375m, result.TotalDamage);
+    }
+
+    [Fact]
     public void GuardHalvesDamageSuppressesCriticalAndNormalizesWeakness()
     {
         ProductionCombatRuleset ruleset = Rules();
@@ -285,7 +308,6 @@ public sealed class ProductionCombatRulesetTests
             DamageFormulaScalar = decimal.MaxValue,
             DamageVarianceMinimum = decimal.MaxValue,
             DamageVarianceMaximum = decimal.MaxValue,
-            ChargeMultiplier = decimal.MaxValue,
             CriticalDamageMultiplier = decimal.MaxValue,
             WeakDamageMultiplier = decimal.MaxValue,
             ResistDamageMultiplier = decimal.MaxValue,
@@ -302,7 +324,6 @@ public sealed class ProductionCombatRulesetTests
                 decimal.MaxValue,
                 decimal.MaxValue,
                 decimal.MaxValue),
-            status: new ProductionCombatStatus(HasPhysicalCharge: true),
             modifiers: new ProductionCombatModifiers(
                 decimal.MaxValue,
                 decimal.MaxValue,
@@ -329,7 +350,9 @@ public sealed class ProductionCombatRulesetTests
                 int.MaxValue,
                 100,
                 new ChanceCriticalDefinition(100),
-                new HitCountDefinition(1, 1)));
+                new HitCountDefinition(1, 1),
+                decimal.MaxValue,
+                ChargeKind.Physical));
         ProductionHitCheckResult lowestHitChance = ruleset.CheckHit(
             new ProductionHitCheckRequest(target, attacker, 0));
 

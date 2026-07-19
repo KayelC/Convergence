@@ -244,6 +244,7 @@ public sealed class SkillExecutor : ISkillExecutor
         }
 
         AddStatModifierApplicabilityDiagnostic(request, targets?.Targets, diagnostics);
+        AddChargeApplicabilityDiagnostic(request, targets?.Targets, diagnostics);
 
         return diagnostics;
     }
@@ -381,6 +382,7 @@ public sealed class SkillExecutor : ISkillExecutor
         }
 
         AddStatModifierApplicabilityDiagnostic(request, preparedTargets.Targets, diagnostics);
+        AddChargeApplicabilityDiagnostic(request, preparedTargets.Targets, diagnostics);
 
         return diagnostics;
     }
@@ -412,6 +414,36 @@ public sealed class SkillExecutor : ISkillExecutor
             diagnostics.Add(new SkillExecutionDiagnostic(
                 SkillExecutionDiagnosticCode.NoApplicableEffect,
                 $"Skill '{request.Skill.Id}' would not change the selected target modifier state."));
+        }
+    }
+
+    private void AddChargeApplicabilityDiagnostic(
+        SkillExecutionRequest request,
+        IEnumerable<RuntimeActorState>? targets,
+        ICollection<SkillExecutionDiagnostic> diagnostics)
+    {
+        GrantChargeEffectDefinition[] chargeEffects = request.Skill.Effects
+            .OfType<GrantChargeEffectDefinition>()
+            .ToArray();
+        if (chargeEffects.Length == 0 ||
+            chargeEffects.Length != request.Skill.Effects.Count ||
+            targets is null)
+        {
+            return;
+        }
+
+        RuntimeActorState[] targetSnapshot = targets.ToArray();
+        bool applicable = chargeEffects.Any(effect => targetSnapshot.Any(target =>
+            _services.Charges.Assess(new ChargeApplicationRequest(
+                target,
+                effect.Charge,
+                effect.Multiplier,
+                effect.Duration)).CanApply));
+        if (!applicable)
+        {
+            diagnostics.Add(new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.NoApplicableEffect,
+                $"Skill '{request.Skill.Id}' would not change the selected target charge state."));
         }
     }
 

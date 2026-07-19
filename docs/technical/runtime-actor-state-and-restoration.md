@@ -18,7 +18,7 @@ The source-based
 confirmed the composition, skill-choice, stage, and original save-v8
 transaction design. Subsequent corrections advanced actor restoration through
 save v9, and the stat-modifier policy migration advances the current contract
-to save v10.
+to save v11.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives

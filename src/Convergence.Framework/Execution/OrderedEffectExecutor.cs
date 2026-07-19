@@ -21,7 +21,7 @@ internal sealed record OrderedEffectExecution(
 
 internal sealed class OrderedEffectExecutor
 {
-    private static readonly AsyncLocal<ActionDurationScope?> CurrentDurationScope = new();
+    private static readonly AsyncLocal<ActionExecutionScope?> CurrentExecutionScope = new();
     private static readonly IBattleDurationLifecycleService DurationLifecycle =
         new BattleDurationLifecycleService();
 
@@ -45,12 +45,12 @@ internal sealed class OrderedEffectExecutor
         ArgumentNullException.ThrowIfNull(effects);
         ArgumentNullException.ThrowIfNull(targets);
 
-        ActionDurationScope? scope = CurrentDurationScope.Value;
+        ActionExecutionScope? scope = CurrentExecutionScope.Value;
         bool ownsScope = scope is null;
         if (ownsScope)
         {
-            scope = new ActionDurationScope();
-            CurrentDurationScope.Value = scope;
+            scope = new ActionExecutionScope();
+            CurrentExecutionScope.Value = scope;
         }
 
         scope!.Track(request.Actor);
@@ -67,13 +67,19 @@ internal sealed class OrderedEffectExecutor
             {
                 try
                 {
+                    foreach ((RuntimeActorState actor, IReadOnlyList<DamageElement> elements) in
+                             scope.ResolvedDamageElements)
+                    {
+                        _services.Charges.CompleteAction(actor, elements);
+                    }
+
                     DurationLifecycle.ProcessActionEnd(
                         new BattleActionEndLifecycleRequest(scope.Actors),
                         _services.StatModifiers);
                 }
                 finally
                 {
-                    CurrentDurationScope.Value = null;
+                    CurrentExecutionScope.Value = null;
                 }
             }
         }
@@ -123,6 +129,11 @@ internal sealed class OrderedEffectExecutor
 
                 EffectExecutionResult result = _effectExecutors.Execute(effect, context);
                 results.Add(result);
+                if (effect is DamageEffectDefinition damageEffect &&
+                    result.Outcome != EffectExecutionOutcome.Skipped)
+                {
+                    CurrentExecutionScope.Value!.TrackResolvedDamage(request.Actor, damageEffect.Element);
+                }
 
                 if (result.Outcome == EffectExecutionOutcome.Interrupted)
                 {
@@ -163,12 +174,18 @@ internal sealed class OrderedEffectExecutor
             targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
     }
 
-    private sealed class ActionDurationScope
+    private sealed class ActionExecutionScope
     {
         private readonly List<RuntimeActorState> _actors = [];
         private readonly HashSet<RuntimeInstanceId> _knownActorIds = [];
+        private readonly Dictionary<RuntimeActorState, HashSet<DamageElement>> _resolvedDamageElements = [];
 
         public IReadOnlyList<RuntimeActorState> Actors => _actors;
+        public IReadOnlyDictionary<RuntimeActorState, IReadOnlyList<DamageElement>> ResolvedDamageElements =>
+            new System.Collections.ObjectModel.ReadOnlyDictionary<RuntimeActorState, IReadOnlyList<DamageElement>>(
+                _resolvedDamageElements.ToDictionary(
+                    pair => pair.Key,
+                    pair => (IReadOnlyList<DamageElement>)Array.AsReadOnly(pair.Value.Order().ToArray())));
 
         public void Track(RuntimeActorState actor)
         {
@@ -184,6 +201,18 @@ internal sealed class OrderedEffectExecutor
             {
                 Track(actor);
             }
+        }
+
+        public void TrackResolvedDamage(RuntimeActorState actor, DamageElement element)
+        {
+            Track(actor);
+            if (!_resolvedDamageElements.TryGetValue(actor, out HashSet<DamageElement>? elements))
+            {
+                elements = [];
+                _resolvedDamageElements.Add(actor, elements);
+            }
+
+            elements.Add(element);
         }
     }
 }

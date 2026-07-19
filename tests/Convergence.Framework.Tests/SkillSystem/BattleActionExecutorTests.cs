@@ -1080,6 +1080,7 @@ public sealed class BattleActionExecutorTests
             randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
             runtimeRandomTargetPolicy ?? new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
+            new SplitChargePolicy(),
             escapeRuleHandlers: escapeRules,
             customEffectHandlers: customEffects);
 
