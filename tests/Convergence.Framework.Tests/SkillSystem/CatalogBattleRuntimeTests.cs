@@ -1157,7 +1157,7 @@ public sealed class CatalogBattleRuntimeTests
             AutomatedRestrictedActionSelection.Selected(
                 Id("basic_attack"),
                 new BasicAttackBattleActionCommand(
-                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 10, 100, false),
+                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 10, 100, new NeverCriticalDefinition(), false),
                     new TargetingDefinition(
                         TargetRelation.Enemy,
                         TargetSelection.Single,
@@ -1196,7 +1196,7 @@ public sealed class CatalogBattleRuntimeTests
             AutomatedRestrictedActionSelection.Selected(
                 Id("confused_attack"),
                 new BasicAttackBattleActionCommand(
-                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 7, 100, false),
+                    new EquipmentBasicAttackDefinition(DamageElement.Physical, 7, 100, new NeverCriticalDefinition(), false),
                     new TargetingDefinition(
                         TargetRelation.Any,
                         TargetSelection.Single,

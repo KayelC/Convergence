@@ -4570,6 +4570,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                         ["element"] = "physical",
                         ["power"] = 4,
                         ["accuracy"] = 88,
+                        ["critical"] = new JsonObject { ["mode"] = "never" },
                         ["isLongRange"] = false
                     }
                 }

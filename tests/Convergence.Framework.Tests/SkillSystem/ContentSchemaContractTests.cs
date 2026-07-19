@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v4:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v5:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -92,6 +92,10 @@ public sealed class ContentSchemaContractTests
     {
         JsonObject skill = LoadObject("demos", "clean-battle", "clean_battle_demo.skills.json");
         JsonObject item = LoadObject("original", "training-annex", "training_annex_slice.items.json");
+        JsonObject equipment = LoadObject(
+            "original",
+            "training-annex",
+            "training_annex_slice.equipment.json");
 
         JsonObject unknownField = skill.DeepClone().AsObject();
         unknownField["unexpected"] = true;
@@ -114,6 +118,11 @@ public sealed class ContentSchemaContractTests
         JsonObject invalidItemUsage = item.DeepClone().AsObject();
         invalidItemUsage["items"]![0]!["itemKind"] = "valuable";
 
+        JsonObject missingBasicAttackCritical = equipment.DeepClone().AsObject();
+        missingBasicAttackCritical["equipment"]![0]!["weapon"]!["basicAttack"]!
+            .AsObject()
+            .Remove("critical");
+
         JsonObject ambiguousCondition = skill.DeepClone().AsObject();
         JsonObject firstSkill = ambiguousCondition["skills"]![0]!.AsObject();
         firstSkill["effects"]![0]!["when"] = new JsonObject
@@ -131,6 +140,7 @@ public sealed class ContentSchemaContractTests
             { "skills", wrongSchema.ToJsonString() },
             { "skills", malformedActive.ToJsonString() },
             { "items", invalidItemUsage.ToJsonString() },
+            { "equipment", missingBasicAttackCritical.ToJsonString() },
             { "skills", ambiguousCondition.ToJsonString() }
         };
     }
@@ -255,7 +265,7 @@ public sealed class ContentSchemaContractTests
             $"{{\"id\":\"active_skill\",\"displayName\":\"Active\",\"description\":\"\",\"activation\":\"active\",\"menuGroup\":\"offense\",\"inheritanceGroupId\":\"physical\",\"inheritance\":{{\"isInheritable\":true}},\"targeting\":{sharedTargeting},\"effects\":[{damage}],\"availability\":{{\"contexts\":[\"battle\"]}}}}",
             """{"id":"passive_skill","displayName":"Passive","description":"","activation":"passive","inheritanceGroupId":"passive","inheritance":{"isInheritable":true},"triggers":[{"event":"owner_turn_end","effects":[{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":1}}]}]}""");
         Add(variants, SchemaPrefix + "equipment#/$defs/equipmentRecord",
-            """{"id":"weapon","displayName":"Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"isLongRange":false}}}""",
+            """{"id":"weapon","displayName":"Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"chance","chance":10},"isLongRange":false}}}""",
             """{"id":"armor","displayName":"Armor","description":"","slot":"armor","baseValue":1,"armor":{"defense":2,"evasion":0}}""",
             """{"id":"boots","displayName":"Boots","description":"","slot":"boots","baseValue":1,"boots":{"evasion":2}}""",
             """{"id":"accessory","displayName":"Accessory","description":"","slot":"accessory","baseValue":1,"accessory":{"statModifiers":[{"statId":"luck","value":1}]}}""");
@@ -276,7 +286,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v4");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v5");
 
     private static string Describe(EvaluationResults result)
     {

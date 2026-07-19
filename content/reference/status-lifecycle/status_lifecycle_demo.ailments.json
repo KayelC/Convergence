@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:ailments",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:ailments",
+  "schemaVersion": 5,
   "ailments": [
     {
       "id": "poison",

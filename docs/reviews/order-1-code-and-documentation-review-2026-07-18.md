@@ -85,7 +85,7 @@ does not expose this case.
 - [`BattleRuntimeState.cs`](../../src/Convergence.Framework/Execution/BattleRuntimeState.cs#L335)
 - [`ConditionAndTargetResolution.cs`](../../src/Convergence.Framework/Execution/ConditionAndTargetResolution.cs#L57)
 - [`Conditions.cs`](../../src/Convergence.Framework/Content/Conditions.cs#L54)
-- [`shared.schema.json`](../../schemas/content/v4/shared.schema.json#L225)
+- [`shared.schema.json`](../../schemas/content/v5/shared.schema.json#L225)
 - [`ActiveSkillExecutionTests.cs`](../../tests/Convergence.Framework.Tests/SkillSystem/ActiveSkillExecutionTests.cs#L774)
 
 **Required correction:** make `has_buff` require a positive resolved stage and

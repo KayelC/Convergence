@@ -45,7 +45,7 @@ public sealed class BattleActionExecutorTests
             defense: new CombatDefenseProfile(
                 [new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Physical, ElementalAffinity.Weak)]));
         var command = new BasicAttackBattleActionCommand(
-            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false),
             SingleEnemy(),
             [target.InstanceId]);
 
@@ -59,21 +59,28 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
-    public async Task BasicAttack_ForwardsTheAuthoredEquipmentAccuracyToDamageResolution()
+    public async Task BasicAttack_ForwardsAuthoredAccuracyAndCriticalDefinitionToDamageResolution()
     {
         var damage = new RecordingDamagePolicy();
         BattleActionExecutor executor = Executor(damagePolicy: damage);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
         var command = new BasicAttackBattleActionCommand(
-            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 37, false),
+            new EquipmentBasicAttackDefinition(
+                DamageElement.Physical,
+                15,
+                37,
+                new ChanceCriticalDefinition(23),
+                false),
             SingleEnemy(),
             [target.InstanceId]);
 
         BattleActionExecutionResult result = await Execute(executor, command, actor, [actor, target]);
 
         Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
-        Assert.Equal(37, Assert.Single(damage.Requests).Effect.Accuracy);
+        DamageEffectDefinition effect = Assert.Single(damage.Requests).Effect;
+        Assert.Equal(37, effect.Accuracy);
+        Assert.Equal(23, Assert.IsType<ChanceCriticalDefinition>(effect.Critical).Chance);
     }
 
     [Fact]
@@ -353,7 +360,7 @@ public sealed class BattleActionExecutorTests
     [Fact]
     public async Task CatalogAuthorization_AllowsExplicitNaturalBasicAttackProfile()
     {
-        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false);
         TargetingDefinition targeting = SingleEnemy();
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
@@ -380,7 +387,7 @@ public sealed class BattleActionExecutorTests
     [Fact]
     public async Task CatalogAuthorization_RejectsSubstitutedBasicAttackDefinition()
     {
-        var canonical = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        var canonical = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false);
         TargetingDefinition targeting = SingleEnemy();
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), canonical, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
@@ -390,7 +397,7 @@ public sealed class BattleActionExecutorTests
         BattleActionExecutor executor = Executor(authorization: authorization);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
-        var substituted = new EquipmentBasicAttackDefinition(DamageElement.Physical, 999, 100, false);
+        var substituted = new EquipmentBasicAttackDefinition(DamageElement.Physical, 999, 100, new NeverCriticalDefinition(), false);
         var command = new BasicAttackBattleActionCommand(
             substituted,
             targeting,
@@ -413,7 +420,7 @@ public sealed class BattleActionExecutorTests
     [Fact]
     public async Task CatalogAuthorization_RejectsBasicAttackWithoutResolvedProfile()
     {
-        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false);
         TargetingDefinition targeting = SingleEnemy();
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([]),
@@ -440,7 +447,7 @@ public sealed class BattleActionExecutorTests
     [Fact]
     public async Task CatalogAuthorization_RejectsBasicAttackTargetingSubstitution()
     {
-        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false);
         TargetingDefinition targeting = SingleEnemy();
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
@@ -477,7 +484,7 @@ public sealed class BattleActionExecutorTests
     [Fact]
     public async Task CatalogAuthorization_RevalidatesBasicAttackProfileBeforeExecution()
     {
-        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false);
+        var basicAttack = new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false);
         TargetingDefinition targeting = SingleEnemy();
         var profile = new BattleBasicAttackProfile(Id("natural_attack"), basicAttack, targeting);
         var profileSource = new MutableBasicAttackProfileSource(profile);
@@ -601,7 +608,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState first = Actor("first", TeamB);
         RuntimeActorState second = Actor("second", TeamB);
         var command = new BasicAttackBattleActionCommand(
-            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false),
             RandomEnemy());
         BattleActionExecutionRequest request = Request(command, actor, [actor, first, second]);
 
@@ -627,7 +634,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState first = Actor("first", TeamB);
         RuntimeActorState second = Actor("second", TeamB);
         var command = new BasicAttackBattleActionCommand(
-            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false),
             RandomEnemy());
         BattleActionExecutionRequest request = Request(command, actor, [actor, first, second]);
         BattleActionAssessment assessment = executor.Assess(request);
@@ -750,7 +757,7 @@ public sealed class BattleActionExecutorTests
         RuntimeActorState first = Actor("first", TeamB);
         RuntimeActorState second = Actor("second", TeamB);
         var command = new BasicAttackBattleActionCommand(
-            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, false),
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 100, new NeverCriticalDefinition(), false),
             RandomEnemy());
         BattleActionExecutionRequest assessedRequest = Request(command, actor, [actor, first, second]);
         BattleActionExecutionRequest differentRequest = Request(command, actor, [actor, first, second]);

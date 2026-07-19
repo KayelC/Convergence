@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:entities",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:entities",
+  "schemaVersion": 5,
   "entities": [
     {
       "id": "field_medic_demo",

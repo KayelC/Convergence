@@ -18,9 +18,6 @@ public sealed record ProductionCombatRulesetConfig
     public decimal HitTargetAgilityCoefficient { get; init; } = 2m;
     public int HitChanceMinimum { get; init; }
     public int HitChanceMaximum { get; init; } = 100;
-    public int CriticalChanceMinimum { get; init; } = 2;
-    public int CriticalChanceMaximum { get; init; } = 40;
-    public int CriticalChanceBase { get; init; } = 5;
     public int InstantDeathChanceMinimum { get; init; } = 5;
     public int InstantDeathChanceMaximum { get; init; } = 95;
     public decimal EnemiesPerLevelForExperience { get; init; } = 50m;
@@ -54,12 +51,6 @@ public sealed record ProductionCombatRulesetConfig
             HitChanceMaximum,
             nameof(HitChanceMinimum),
             nameof(HitChanceMaximum));
-        RequireOrderedPercentRange(
-            CriticalChanceMinimum,
-            CriticalChanceMaximum,
-            nameof(CriticalChanceMinimum),
-            nameof(CriticalChanceMaximum));
-        RequirePercent(CriticalChanceBase, nameof(CriticalChanceBase));
         RequireOrderedPercentRange(
             InstantDeathChanceMinimum,
             InstantDeathChanceMaximum,
@@ -249,13 +240,69 @@ public sealed class ProductionHitCheckRequest
     }
 }
 
-public sealed record ProductionCriticalCheckRequest(
-    ProductionCombatantProfile Attacker,
-    ProductionCombatantProfile Target,
-    DamageElement Element,
-    CriticalDefinition Critical);
+public sealed class ProductionCriticalCheckRequest
+{
+    public ProductionCriticalCheckRequest(
+        ProductionCombatantProfile attacker,
+        ProductionCombatantProfile target,
+        DamageElement element,
+        CriticalDefinition critical,
+        int authoredAccuracy,
+        int finalHitChance,
+        IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers = null)
+    {
+        Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
+        Target = target ?? throw new ArgumentNullException(nameof(target));
+        if (!Enum.IsDefined(element))
+        {
+            throw new ArgumentOutOfRangeException(nameof(element), element, "Damage element must be defined.");
+        }
+        Critical = critical ?? throw new ArgumentNullException(nameof(critical));
+        if (authoredAccuracy is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(authoredAccuracy));
+        }
+        if (finalHitChance is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(finalHitChance));
+        }
 
-public sealed record ProductionCriticalCheckResult(bool Critical, int Chance);
+        Element = element;
+        AuthoredAccuracy = authoredAccuracy;
+        FinalHitChance = finalHitChance;
+        CriticalChanceModifiers = Snapshot(criticalChanceModifiers);
+    }
+
+    public ProductionCombatantProfile Attacker { get; }
+    public ProductionCombatantProfile Target { get; }
+    public DamageElement Element { get; }
+    public CriticalDefinition Critical { get; }
+    public int AuthoredAccuracy { get; }
+    public int FinalHitChance { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> CriticalChanceModifiers { get; }
+
+    private static IReadOnlyList<NumericRuleModifierDefinition> Snapshot(
+        IEnumerable<NumericRuleModifierDefinition>? modifiers)
+    {
+        NumericRuleModifierDefinition[] snapshot = modifiers?.ToArray() ?? [];
+        if (snapshot.Any(modifier => modifier is null))
+        {
+            throw new ArgumentException(
+                "Critical chance modifiers cannot contain null entries.",
+                nameof(modifiers));
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
+}
+
+public sealed record ProductionCriticalCheckResult(
+    bool Critical,
+    bool Eligible,
+    int Chance,
+    decimal? Roll,
+    CriticalEligibilityReason EligibilityReason,
+    bool GuaranteedByRigidState = false);
 
 public sealed class ProductionDamageResolutionRequest
 {
@@ -271,7 +318,8 @@ public sealed class ProductionDamageResolutionRequest
         decimal chargeMultiplier = 1m,
         ChargeKind? chargeKind = null,
         IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
-        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null)
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null,
+        IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers = null)
     {
         Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
         Target = target ?? throw new ArgumentNullException(nameof(target));
@@ -285,6 +333,7 @@ public sealed class ProductionDamageResolutionRequest
         ChargeKind = chargeKind;
         AccuracyModifiers = Snapshot(accuracyModifiers, nameof(accuracyModifiers));
         EvasionModifiers = Snapshot(evasionModifiers, nameof(evasionModifiers));
+        CriticalChanceModifiers = Snapshot(criticalChanceModifiers, nameof(criticalChanceModifiers));
     }
 
     public ProductionCombatantProfile Attacker { get; }
@@ -299,6 +348,7 @@ public sealed class ProductionDamageResolutionRequest
     public ChargeKind? ChargeKind { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> CriticalChanceModifiers { get; }
 
     private static IReadOnlyList<NumericRuleModifierDefinition> Snapshot(
         IEnumerable<NumericRuleModifierDefinition>? modifiers,
@@ -366,12 +416,16 @@ public sealed class ProductionCombatRuleset :
     private readonly ProductionCombatRulesetConfig _config;
     private readonly IStatStageScalingPolicy _stageScaling;
     private readonly IHitResolutionPolicy _hitPolicy;
+    private readonly ICriticalEligibilityPolicy _criticalEligibilityPolicy;
+    private readonly ICriticalChancePolicy _criticalChancePolicy;
 
     public ProductionCombatRuleset(
         IRandomSource random,
         ProductionCombatRulesetConfig? config = null,
         IStatStageScalingPolicy? stageScaling = null,
-        IHitResolutionPolicy? hitPolicy = null)
+        IHitResolutionPolicy? hitPolicy = null,
+        ICriticalEligibilityPolicy? criticalEligibilityPolicy = null,
+        ICriticalChancePolicy? criticalChancePolicy = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? new ProductionCombatRulesetConfig();
@@ -386,11 +440,15 @@ public sealed class ProductionCombatRuleset :
                 MinimumChance = _config.HitChanceMinimum,
                 MaximumChance = _config.HitChanceMaximum
             });
+        _criticalEligibilityPolicy = criticalEligibilityPolicy ?? new PhysicalOnlyCriticalEligibilityPolicy();
+        _criticalChancePolicy = criticalChancePolicy ?? new AuthoredCriticalChancePolicy(_random);
     }
 
     public ProductionCombatRulesetConfig Config => _config;
     public IStatStageScalingPolicy StageScalingPolicy => _stageScaling;
     public IHitResolutionPolicy HitPolicy => _hitPolicy;
+    public ICriticalEligibilityPolicy CriticalEligibilityPolicy => _criticalEligibilityPolicy;
+    public ICriticalChancePolicy CriticalChancePolicy => _criticalChancePolicy;
 
     public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
@@ -408,7 +466,8 @@ public sealed class ProductionCombatRuleset :
             request.ChargeMultiplier,
             request.ChargeKind,
             request.AccuracyModifiers,
-            request.EvasionModifiers));
+            request.EvasionModifiers,
+            request.CriticalChanceModifiers));
 
         return new DamagePolicyResolution(
             result.Hits.Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical)),
@@ -485,7 +544,10 @@ public sealed class ProductionCombatRuleset :
                 request.Attacker,
                 request.Target,
                 request.Element,
-                request.Critical));
+                request.Critical,
+                request.Accuracy,
+                hit.FinalChance,
+                request.CriticalChanceModifiers));
             decimal damage = CalculateBaseDamage(
                 request.Attacker,
                 request.Target,
@@ -537,54 +599,45 @@ public sealed class ProductionCombatRuleset :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!IsPhysical(request.Element) || request.Target.Status.IsGuarding)
+        CriticalEligibilityResult eligibility = _criticalEligibilityPolicy.Assess(
+            new CriticalEligibilityRequest(
+                request.Element,
+                request.Critical,
+                request.Target.Status.IsGuarding,
+                request.Target.Status.IsRigidBody));
+        if (!eligibility.Eligible)
         {
-            return new ProductionCriticalCheckResult(false, 0);
+            return new ProductionCriticalCheckResult(
+                false,
+                false,
+                0,
+                null,
+                eligibility.Reason);
         }
-        if (request.Target.Status.IsRigidBody)
+        if (eligibility.GuaranteedByRigidState)
         {
-            return new ProductionCriticalCheckResult(true, 100);
-        }
-        if (request.Critical is NeverCriticalDefinition)
-        {
-            return new ProductionCriticalCheckResult(false, 0);
-        }
-
-        decimal baseChance = CombatArithmetic.SaturatingAdd(
-            CombatArithmetic.SaturatingDivide(
-                CombatArithmetic.SaturatingSubtract(
-                    request.Attacker.Stats.Luck,
-                    request.Target.Stats.Luck),
-                2m),
-            _config.CriticalChanceBase);
-        baseChance = CombatArithmetic.SaturatingAdd(
-            baseChance,
-            request.Target.Modifiers.CriticalChanceTakenBonus);
-        if (request.Critical is ChanceCriticalDefinition chanceCritical)
-        {
-            baseChance = Math.Max(baseChance, chanceCritical.Chance);
+            return new ProductionCriticalCheckResult(
+                true,
+                true,
+                100,
+                null,
+                eligibility.Reason,
+                true);
         }
 
-        baseChance = CombatArithmetic.SaturatingMultiply(
-            baseChance,
-            request.Attacker.Modifiers.CriticalChanceMultiplier);
-        int clamped = ClampPercent(baseChance, _config.CriticalChanceMinimum, _config.CriticalChanceMaximum);
-        return new ProductionCriticalCheckResult(RollPercent(clamped), clamped);
-    }
-
-    public int CalculateCriticalChance(ProductionCombatantProfile attacker, ProductionCombatantProfile target)
-    {
-        ArgumentNullException.ThrowIfNull(attacker);
-        ArgumentNullException.ThrowIfNull(target);
-
-        decimal chance = CombatArithmetic.SaturatingMultiply(
-            CombatArithmetic.SaturatingAdd(
-                CombatArithmetic.SaturatingDivide(
-                    CombatArithmetic.SaturatingSubtract(attacker.Stats.Luck, target.Stats.Luck),
-                    2m),
-                _config.CriticalChanceBase),
-            attacker.Modifiers.CriticalChanceMultiplier);
-        return ClampPercent(chance, _config.CriticalChanceMinimum, _config.CriticalChanceMaximum);
+        CriticalChanceResult chance = _criticalChancePolicy.Resolve(new CriticalChanceRequest(
+            request.Critical,
+            request.AuthoredAccuracy,
+            request.FinalHitChance,
+            request.Attacker.Modifiers.CriticalChanceMultiplier,
+            request.Target.Modifiers.CriticalChanceTakenBonus,
+            request.CriticalChanceModifiers));
+        return new ProductionCriticalCheckResult(
+            chance.Critical,
+            true,
+            chance.FinalChance,
+            chance.Roll,
+            eligibility.Reason);
     }
 
     public ProductionInstantDeathResult ResolveInstantDeath(ProductionInstantDeathRequest request)

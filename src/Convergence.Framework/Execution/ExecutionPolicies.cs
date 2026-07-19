@@ -16,7 +16,8 @@ public sealed class DamagePolicyRequest
         decimal chargeMultiplier = 1m,
         ChargeKind? chargeKind = null,
         IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
-        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null)
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null,
+        IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers = null)
     {
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
         Target = target ?? throw new ArgumentNullException(nameof(target));
@@ -42,6 +43,9 @@ public sealed class DamagePolicyRequest
         ChargeKind = chargeKind;
         AccuracyModifiers = SnapshotModifiers(accuracyModifiers, nameof(accuracyModifiers));
         EvasionModifiers = SnapshotModifiers(evasionModifiers, nameof(evasionModifiers));
+        CriticalChanceModifiers = SnapshotModifiers(
+            criticalChanceModifiers,
+            nameof(criticalChanceModifiers));
     }
 
     public RuntimeActorState Actor { get; }
@@ -52,6 +56,7 @@ public sealed class DamagePolicyRequest
     public ChargeKind? ChargeKind { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> CriticalChanceModifiers { get; }
 
     private static IReadOnlyList<NumericRuleModifierDefinition> SnapshotModifiers(
         IEnumerable<NumericRuleModifierDefinition>? modifiers,

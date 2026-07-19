@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:negotiations",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:negotiations",
+  "schemaVersion": 5,
   "negotiations": [
     {
       "id": "steady_sample",

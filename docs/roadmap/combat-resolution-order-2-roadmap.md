@@ -24,7 +24,7 @@ override that decision record.
 - Starting commit: `0aa6c53`
 - Starting save contract: version `10`
 - Content contract: schema version `4`
-- Active pack versions: `0.4.0`
+- Active pack versions: `0.5.0`
 - Order 2 focused source-audit gate: `185` passing tests
 - Full-suite baseline inherited from Order 1: `1,214` passing tests, zero skipped
 - Framework and solution builds: zero warnings
@@ -56,8 +56,8 @@ review are complete.
 |---|---|---|---|
 | O2-C0 | `verified` | Record confirmed formulas, policy choices, Luck boundary, examples, and this implementation sequence. | `docs: define combat resolution policies` |
 | O2-C1 | `verified` | Add split and unified charge policies, explicit state identity, duplicate rejection, authored final-damage multipliers, and once-per-action consumption. | `runtime: implement charge policy family` |
-| O2-C2 | `planned` | Add standard hit/evasion policy, consume passive Accuracy/Evasion modifiers, remove Luck and inert defaults, and use explicit `0..100` bounds. | `battle: implement hit and evasion policies` |
-| O2-C3 | `planned` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
+| O2-C2 | `verified` | Add standard hit/evasion policy, consume passive Accuracy/Evasion modifiers, remove Luck and inert defaults, and use explicit `0..100` bounds. | `battle: implement hit and evasion policies` |
+| O2-C3 | `verified` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
 | O2-C4 | `planned` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `planned` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `planned` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
@@ -175,6 +175,31 @@ warnings.
 - strict schema rejection of the old equipment shape and successful loading of
   every migrated active pack;
 - Godot and DemoHost content loading remains green.
+
+### Completion record
+
+Exact-authored and accuracy-scaled critical policies now resolve chance without
+Luck or a hidden minimum, while separate physical-only and all-damage policies
+decide eligibility. Hit resolution occurs first, misses never spend a critical
+roll, guard rejects criticals, and rigid state guarantees a critical only after
+the selected eligibility policy accepts the attack. Passive Critical Chance
+modifiers and explicit target vulnerability modifiers are included as typed
+evidence.
+
+Equipment basic attacks must now author `never` or `chance` critical metadata.
+That public content-contract change advanced active documents to schema v5 and
+active packs to `0.5.0`; schema v4 equipment is rejected instead of receiving a
+hidden default. All 6 active packs, 36 documents, and 98 qualified definitions
+passed schema, semantic, dependency, registration, and catalog validation.
+
+The checkpoint gate passed 1,255 tests (`1,075` Framework, `173` DemoHost, and
+`7` ContentValidator tests), with zero failures or skips. The complete solution,
+including the Godot source-reference sample, built with zero warnings, all four
+noninteractive DemoHost modes exited successfully, formatting and diff checks
+passed, and Godot contract/content tests remained green. The local Godot 4.7.1
+Windows executable still encounters its previously observed native startup
+crash before loading the project; this machine-level engine result is not
+reported as a successful headless smoke.
 
 ## O2-C4: Instant-Defeat Completion
 

@@ -166,6 +166,7 @@ internal static class SkillSystemDtoMapper
                     dto.Weapon.BasicAttack.Element,
                     dto.Weapon.BasicAttack.Power,
                     dto.Weapon.BasicAttack.Accuracy,
+                    MapCritical(dto.Weapon.BasicAttack.Critical),
                     dto.Weapon.BasicAttack.IsLongRange)),
             dto.Armor is null
                 ? null

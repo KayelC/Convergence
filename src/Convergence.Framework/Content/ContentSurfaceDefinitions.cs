@@ -79,6 +79,7 @@ public sealed record EquipmentBasicAttackDefinition(
     DamageElement Element,
     int Power,
     int Accuracy,
+    CriticalDefinition Critical,
     bool IsLongRange);
 
 public sealed record EquipmentWeaponProfileDefinition(EquipmentBasicAttackDefinition BasicAttack);

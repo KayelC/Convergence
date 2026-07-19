@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v4:ailments",
+  "$id": "urn:convergence:schema:content:v5:ailments",
   "type": "object", "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "ailments"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v4:ailments" },
-    "schemaVersion": { "const": 4 },
+    "$schema": { "const": "urn:convergence:schema:content:v5:ailments" },
+    "schemaVersion": { "const": 5 },
     "ailments": { "type": "array", "items": { "$ref": "#/$defs/ailment" } }
   },
   "$defs": {
@@ -21,7 +21,7 @@
           "required": ["type", "allowedActionIds"],
           "properties": {
             "type": { "const": "limited_actions" },
-            "allowedActionIds": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } }
+            "allowedActionIds": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" } }
           }
         },
         {
@@ -47,8 +47,8 @@
           "required": ["type", "handlerId"],
           "properties": {
             "type": { "const": "custom" },
-            "handlerId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+            "handlerId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
           }
         }
       ]
@@ -57,12 +57,12 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "displayName", "description", "defaultDuration", "turnBehavior", "modifiers", "recovery"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
-        "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } },
-        "exclusivityGroupId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" },
-        "defaultDuration": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/duration" },
+        "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" } },
+        "exclusivityGroupId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" },
+        "defaultDuration": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/duration" },
         "turnBehavior": { "$ref": "#/$defs/turnBehavior" },
         "modifiers": {
           "type": "object", "additionalProperties": false,
@@ -75,7 +75,7 @@
             "isRigidBody": { "type": "boolean" }
           }
         },
-        "triggers": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/passiveTrigger" } },
+        "triggers": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/passiveTrigger" } },
         "recovery": {
           "type": "object", "additionalProperties": false,
           "properties": {
@@ -84,11 +84,11 @@
               "required": ["baseChance", "statId", "statMultiplier"],
               "properties": {
                 "baseChance": { "type": "integer", "minimum": 0, "maximum": 100 },
-                "statId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" },
+                "statId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" },
                 "statMultiplier": { "type": "number" }
               }
             },
-            "removeOnEvents": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } }
+            "removeOnEvents": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" } }
           }
         }
       }

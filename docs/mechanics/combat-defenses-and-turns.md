@@ -48,6 +48,23 @@ The supplied policy does not read Luck. Its standard range is `0..100`: zero
 cannot hit and one hundred cannot miss. A game that wants Luck or another
 formula supplies another hit policy rather than relying on a hidden modifier.
 
+## Critical Hits
+
+Critical eligibility is separate from critical chance. The standard
+`PhysicalOnlyCriticalEligibilityPolicy` allows only Physical damage whose
+effect explicitly authors `chance`; the optional
+`AllDamageCriticalEligibilityPolicy` permits any damage element with that same
+explicit declaration. Guard blocks criticals. Rigid state guarantees one only
+when the selected eligibility policy accepts the attack.
+
+The standard `AuthoredCriticalChancePolicy` uses the exact authored chance,
+then applies explicit target vulnerability, actor, and passive Critical Chance
+modifiers. The optional `AccuracyScaledCriticalChancePolicy` scales the
+authored chance by `final hit chance / authored accuracy` first. Luck is absent
+from both supplied policies, there is no hidden minimum, and critical chance is
+rolled only after the corresponding hit lands. Schema-v5 weapon profiles must
+author `never` or `chance`; basic attacks do not receive a runtime default.
+
 ## Elemental Defense
 
 The elemental outcomes are Weak, Normal, Resist, Null, Repel, and Absorb. Missing entries resolve to Normal. Almighty always resolves normally and does not consult authored affinity maps.

@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v4:manifest",
+  "$id": "urn:convergence:schema:content:v5:manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "id", "version", "displayName", "documents"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v4:manifest" },
-    "schemaVersion": { "const": 4 },
-    "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/packId" },
-    "version": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/semanticVersion" },
-    "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
+    "$schema": { "const": "urn:convergence:schema:content:v5:manifest" },
+    "schemaVersion": { "const": 5 },
+    "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/packId" },
+    "version": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/semanticVersion" },
+    "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
     "description": { "type": "string" },
     "dependencies": {
       "type": "array",
@@ -17,8 +17,8 @@
         "type": "object", "additionalProperties": false,
         "required": ["id", "version"],
         "properties": {
-          "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/packId" },
-          "version": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/semanticVersion" }
+          "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/packId" },
+          "version": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/semanticVersion" }
         }
       }
     },
@@ -29,7 +29,7 @@
         "required": ["type", "path"],
         "properties": {
           "type": { "enum": ["skills", "entities", "races", "ailments", "items", "equipment", "shops", "negotiations", "encounters", "dungeons", "fusion", "rulesets"] },
-          "path": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/documentPath" }
+          "path": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/documentPath" }
         }
       }
     }

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v5:races",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "races"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v5:races" },
+    "schemaVersion": { "const": 5 },
+    "races": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "displayName"],
+        "properties": {
+          "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+          "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
+          "alignmentIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" } },
+          "negotiationPersonalityId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" }
+        }
+      }
+    }
+  }
+}

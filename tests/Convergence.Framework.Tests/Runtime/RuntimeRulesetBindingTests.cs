@@ -388,9 +388,6 @@ public sealed class RuntimeRulesetBindingTests
                 ("hitTargetAgilityCoefficient", 1.75m),
                 ("hitChanceMinimum", 3),
                 ("hitChanceMaximum", 97),
-                ("criticalChanceMinimum", 1),
-                ("criticalChanceMaximum", 45),
-                ("criticalChanceBase", 7),
                 ("instantDeathChanceMinimum", 4),
                 ("instantDeathChanceMaximum", 90),
                 ("enemiesPerLevelForExperience", 60m),
@@ -421,9 +418,6 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(1.75m, config.HitTargetAgilityCoefficient);
         Assert.Equal(3, config.HitChanceMinimum);
         Assert.Equal(97, config.HitChanceMaximum);
-        Assert.Equal(1, config.CriticalChanceMinimum);
-        Assert.Equal(45, config.CriticalChanceMaximum);
-        Assert.Equal(7, config.CriticalChanceBase);
         Assert.Equal(4, config.InstantDeathChanceMinimum);
         Assert.Equal(90, config.InstantDeathChanceMaximum);
         Assert.Equal(60m, config.EnemiesPerLevelForExperience);
@@ -442,6 +436,9 @@ public sealed class RuntimeRulesetBindingTests
     [Theory]
     [InlineData("defaultHitAccuracy")]
     [InlineData("defaultInstantDeathChance")]
+    [InlineData("criticalChanceMinimum")]
+    [InlineData("criticalChanceMaximum")]
+    [InlineData("criticalChanceBase")]
     public void DamageBinding_RejectsRemovedProbabilityDefaults(string parameterName)
     {
         ContentId rulesetId = Id("test.pack:removed_probability_default");

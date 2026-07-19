@@ -14,11 +14,11 @@ Every active manifest lists its documents in authored order. DemoHost preserves 
 
 ## Validation Layers
 
-The active pre-release authoring contract is schema version `4`. Versions `1`
-through `3` are intentionally unsupported after the Action Token,
-catalyst-role, and stat-modifier ruleset migrations. The validator reports an
+The active pre-release authoring contract is schema version `5`. Versions `1`
+through `4` are intentionally unsupported after the Action Token,
+catalyst-role, stat-modifier, and explicit weapon-critical migrations. The validator reports an
 unsupported-schema diagnostic instead of translating old documents. Active
-example packs are version `0.4.0`; exact dependency versions advance with the
+example packs are version `0.5.0`; exact dependency versions advance with the
 contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.
@@ -26,30 +26,35 @@ contract.
 3. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 4. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.
 
-## Schema v4
+## Schema v5
 
-The authored schemas live under [`../schemas/content/v4`](../schemas/content/v4).
-They use stable `urn:convergence:schema:content:v4:*` identifiers and reject
+The authored schemas live under [`../schemas/content/v5`](../schemas/content/v5).
+They use stable `urn:convergence:schema:content:v5:*` identifiers and reject
 unknown properties. Every active document must declare the schema matching its
 manifest document type:
 
 | Manifest type | `$schema` |
 |---|---|
-| `skills` | `urn:convergence:schema:content:v4:skills` |
-| `entities` | `urn:convergence:schema:content:v4:entities` |
-| `races` | `urn:convergence:schema:content:v4:races` |
-| `ailments` | `urn:convergence:schema:content:v4:ailments` |
-| `items` | `urn:convergence:schema:content:v4:items` |
-| `equipment` | `urn:convergence:schema:content:v4:equipment` |
-| `shops` | `urn:convergence:schema:content:v4:shops` |
-| `negotiations` | `urn:convergence:schema:content:v4:negotiations` |
-| `encounters` | `urn:convergence:schema:content:v4:encounters` |
-| `dungeons` | `urn:convergence:schema:content:v4:dungeons` |
-| `fusion` | `urn:convergence:schema:content:v4:fusion` |
-| `rulesets` | `urn:convergence:schema:content:v4:rulesets` |
+| `skills` | `urn:convergence:schema:content:v5:skills` |
+| `entities` | `urn:convergence:schema:content:v5:entities` |
+| `races` | `urn:convergence:schema:content:v5:races` |
+| `ailments` | `urn:convergence:schema:content:v5:ailments` |
+| `items` | `urn:convergence:schema:content:v5:items` |
+| `equipment` | `urn:convergence:schema:content:v5:equipment` |
+| `shops` | `urn:convergence:schema:content:v5:shops` |
+| `negotiations` | `urn:convergence:schema:content:v5:negotiations` |
+| `encounters` | `urn:convergence:schema:content:v5:encounters` |
+| `dungeons` | `urn:convergence:schema:content:v5:dungeons` |
+| `fusion` | `urn:convergence:schema:content:v5:fusion` |
+| `rulesets` | `urn:convergence:schema:content:v5:rulesets` |
 
-Manifests use `urn:convergence:schema:content:v4:manifest`. Shared definitions
-use `urn:convergence:schema:content:v4:shared` and are not content documents.
+Manifests use `urn:convergence:schema:content:v5:manifest`. Shared definitions
+use `urn:convergence:schema:content:v5:shared` and are not content documents.
+
+Every weapon basic attack must explicitly author its critical behavior with the
+same `never` or `chance` definition used by typed damage effects. Schema v5
+rejects the pre-release shape that omitted this decision; the runtime never
+invents a weapon critical chance.
 
 JSON Schema is the structural authoring contract: exact property names, enum
 values, discriminated unions, required members, and basic numeric/string ranges.

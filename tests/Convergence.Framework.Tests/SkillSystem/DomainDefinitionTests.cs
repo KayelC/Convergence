@@ -191,7 +191,7 @@ public sealed class DomainDefinitionTests
             ContentId.Parse("companion"),
             ContentId.Parse("spirit"),
             1,
-            4,
+            5,
             new EntityCapabilitiesDefinition(true, true, true),
             new EntityInheritanceRulesDefinition(
                 new InheritanceGroupPolicyDefinition(

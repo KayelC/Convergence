@@ -122,6 +122,7 @@ public sealed class OriginalCleanContentSliceTests
 
         Assert.Equal(EquipmentSlot.Weapon, weapon.Slot);
         Assert.Equal(DamageElement.Physical, weapon.Weapon!.BasicAttack.Element);
+        Assert.IsType<NeverCriticalDefinition>(weapon.Weapon.BasicAttack.Critical);
         Assert.Equal(Id("training_supply"), shop.CategoryId);
         Assert.Equal(4, shop.Offers.Count);
         Assert.Equal(Id("steady_sample"), negotiation.PersonalityId);
@@ -187,7 +188,7 @@ public sealed class OriginalCleanContentSliceTests
                     3,
                     5,
                     3,
-                    4,
+            5,
                     3)
             ],
             [new BattleRewardRecipientSnapshot(Qualified("echo_adept"), IsAlive: true, HasActiveHostedEntity: true)]));

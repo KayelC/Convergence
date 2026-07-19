@@ -138,6 +138,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Battle/CriticalResolutionPolicies.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Battle/ElementalAffinityResolver.cs",
       "owner": "combat_rules",
       "publicSurface": "exported"

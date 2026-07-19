@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:equipment",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:equipment",
+  "schemaVersion": 5,
   "equipment": [
     {
       "id": "shortsword_sample",
@@ -13,6 +13,9 @@
           "element": "physical",
           "power": 20,
           "accuracy": 92,
+          "critical": {
+            "mode": "never"
+          },
           "isLongRange": false
         }
       }

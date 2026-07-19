@@ -29,7 +29,7 @@ public sealed class SchemaDeserializationTests
             File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
-        Assert.Equal(4, manifest.SchemaVersion);
+        Assert.Equal(5, manifest.SchemaVersion);
         Assert.Equal(3, manifest.Documents.Count);
         SkillDefinition iceBoost = Assert.Single(skills.Records);
         EntityDefinition cinder = Assert.Single(entities.Records);
@@ -197,6 +197,46 @@ public sealed class SchemaDeserializationTests
     }
 
     [Fact]
+    public void EquipmentBasicAttack_RequiresAndMapsExplicitCriticalDefinition()
+    {
+        const string valid = """
+        {
+          "schemaVersion": 5,
+          "equipment": [{
+            "id": "blade", "displayName": "Blade", "description": "",
+            "slot": "weapon", "baseValue": 1,
+            "weapon": { "basicAttack": {
+              "element": "physical", "power": 10, "accuracy": 95,
+              "critical": { "mode": "chance", "chance": 12 },
+              "isLongRange": false
+            }}
+          }]
+        }
+        """;
+        const string oldShape = """
+        {
+          "schemaVersion": 5,
+          "equipment": [{
+            "id": "blade", "displayName": "Blade", "description": "",
+            "slot": "weapon", "baseValue": 1,
+            "weapon": { "basicAttack": {
+              "element": "physical", "power": 10, "accuracy": 95,
+              "isLongRange": false
+            }}
+          }]
+        }
+        """;
+
+        EquipmentDefinition equipment = Assert.Single(
+            _deserializer.DeserializeEquipment(valid, "equipment.json").Records);
+
+        Assert.Equal(12, Assert.IsType<ChanceCriticalDefinition>(
+            equipment.Weapon!.BasicAttack.Critical).Chance);
+        Assert.Throws<ContentDeserializationException>(() =>
+            _deserializer.DeserializeEquipment(oldShape, "old-equipment.json"));
+    }
+
+    [Fact]
     public void PassiveSkill_MapsTriggersAndAllModifierFamilies()
     {
         string json = WrapSkill(
@@ -253,7 +293,7 @@ public sealed class SchemaDeserializationTests
     {
         string json = $$"""
         {
-          "schemaVersion": 4,
+          "schemaVersion": 5,
           "ailments": [
             {
               "id": "test_ailment", "displayName": "Test", "description": "Test ailment.",
@@ -320,11 +360,11 @@ public sealed class SchemaDeserializationTests
     }
 
     [Theory]
-    [InlineData("{ /* comment */ \"schemaVersion\": 4, \"skills\": [] }", "comment.json")]
-    [InlineData("{ \"schemaVersion\": 4, \"skills\": [], }", "trailing-comma.json")]
+    [InlineData("{ /* comment */ \"schemaVersion\": 5, \"skills\": [] }", "comment.json")]
+    [InlineData("{ \"schemaVersion\": 5, \"skills\": [], }", "trailing-comma.json")]
     [InlineData("{ \"SchemaVersion\": 3, \"skills\": [] }", "case-mismatch.json")]
-    [InlineData("{ \"schemaVersion\": 4, \"skills\": \"wrong\" }", "wrong-token.json")]
-    [InlineData("{ \"schemaVersion\": 4, \"skills\": null }", "null-collection.json")]
+    [InlineData("{ \"schemaVersion\": 5, \"skills\": \"wrong\" }", "wrong-token.json")]
+    [InlineData("{ \"schemaVersion\": 5, \"skills\": null }", "null-collection.json")]
     public void StrictReader_RejectsNonCanonicalJson(string json, string sourceName)
     {
         ContentDeserializationException error = Assert.Throws<ContentDeserializationException>(
@@ -345,7 +385,7 @@ public sealed class SchemaDeserializationTests
             "\"inheritance\": null",
             StringComparison.Ordinal));
         const string nullRecord = """
-            { "schemaVersion": 4, "skills": [null] }
+            { "schemaVersion": 5, "skills": [null] }
             """;
         string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
 
@@ -457,7 +497,7 @@ public sealed class SchemaDeserializationTests
     }
 
     private static string WrapSkill(string record) => $$"""
-    { "schemaVersion": 4, "skills": [ {{record}} ] }
+    { "schemaVersion": 5, "skills": [ {{record}} ] }
     """;
 
     private static string MinimalPassiveRecord() =>

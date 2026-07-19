@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:races",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:races",
+  "schemaVersion": 5,
   "races": [
     {
       "id": "demo_spirit",

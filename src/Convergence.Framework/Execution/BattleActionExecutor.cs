@@ -1397,6 +1397,6 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             basicAttack.Element,
             basicAttack.Power,
             basicAttack.Accuracy,
-            new NeverCriticalDefinition(),
+            basicAttack.Critical,
             new HitCountDefinition(1, 1));
 }

@@ -265,18 +265,6 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                     config = ReadInt(definition, key, value, diagnostics, config,
                         (current, parsed) => current with { HitChanceMaximum = parsed });
                     break;
-                case "criticalChanceMinimum":
-                    config = ReadInt(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CriticalChanceMinimum = parsed });
-                    break;
-                case "criticalChanceMaximum":
-                    config = ReadInt(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CriticalChanceMaximum = parsed });
-                    break;
-                case "criticalChanceBase":
-                    config = ReadInt(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CriticalChanceBase = parsed });
-                    break;
                 case "instantDeathChanceMinimum":
                     config = ReadInt(definition, key, value, diagnostics, config,
                         (current, parsed) => current with { InstantDeathChanceMinimum = parsed });

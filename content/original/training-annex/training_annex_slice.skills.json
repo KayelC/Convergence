@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:skills",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:skills",
+  "schemaVersion": 5,
   "skills": [
     {
       "id": "echo_strike",

@@ -168,6 +168,7 @@ internal sealed class EquipmentBasicAttackDto
     public required DamageElement Element { get; init; }
     public required int Power { get; init; }
     public required int Accuracy { get; init; }
+    public required CriticalDto Critical { get; init; }
     public required bool IsLongRange { get; init; }
 }
 

@@ -373,6 +373,7 @@ public sealed class ResourceManagementServiceTests
                                 DamageElement.Physical,
                                 10,
                                 95,
+                                new NeverCriticalDefinition(),
                                 false))))
             ]);
         var itemOffer = new ShopOfferDefinition(
@@ -553,7 +554,12 @@ public sealed class ResourceManagementServiceTests
             EquipmentSlot.Weapon,
             baseValue: 10,
             weapon: new EquipmentWeaponProfileDefinition(
-                new EquipmentBasicAttackDefinition(DamageElement.Physical, power, accuracy, IsLongRange: false)));
+                new EquipmentBasicAttackDefinition(
+                    DamageElement.Physical,
+                    power,
+                    accuracy,
+                    new NeverCriticalDefinition(),
+                    IsLongRange: false)));
 
     private static EquipmentDefinition Accessory(ContentId id, params StatModifierDefinition[] modifiers) =>
         new(

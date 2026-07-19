@@ -24,7 +24,7 @@ Framework coverage is collected independently with Coverlet's Cobertura output. 
 
 ## Content And Host Gate
 
-`Convergence.ContentValidator` validates every active JSON document against schema v4 and the Framework's deserialization, semantic, dependency, registration, and catalog rules. The gate then runs all four noninteractive DemoHost modes and a scripted `--clean-training-annex-play` session.
+`Convergence.ContentValidator` validates every active JSON document against schema v5 and the Framework's deserialization, semantic, dependency, registration, and catalog rules. The gate then runs all four noninteractive DemoHost modes and a scripted `--clean-training-annex-play` session.
 
 The Godot gate downloads the official Godot 4.7.1 .NET Linux artifact into the CI runner's temporary directory, verifies SHA-256 `6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6`, and runs `samples/Convergence.GodotHost` headlessly. Success requires the marker `CONVERGENCE_GODOT_SMOKE_OK` and process exit code `0`.
 
@@ -36,7 +36,7 @@ godot --headless --path samples/Convergence.GodotHost -- --convergence-smoke
 ```
 
 An unpacked repository-local copy may also be placed at
-`tests/Godot_v4.7.1-stable_mono_win64/` and invoked with its console executable.
+`tests/Godot_v5.7.1-stable_mono_win64/` and invoked with its console executable.
 That versioned directory is ignored by Git. The official distribution is about
 256 MiB and CI downloads and verifies its own platform-specific copy, so
 committing the engine would inflate every clone without improving verification.

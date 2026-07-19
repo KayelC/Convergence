@@ -144,12 +144,16 @@ public sealed class ProductionCombatRulesetTests
             Actor(),
             target,
             DamageElement.Physical,
-            new ChanceCriticalDefinition(1)));
+            new ChanceCriticalDefinition(1),
+            authoredAccuracy: 100,
+            finalHitChance: 100));
         ProductionCriticalCheckResult magical = ruleset.CheckCritical(new ProductionCriticalCheckRequest(
             Actor(),
             target,
             DamageElement.Fire,
-            new ChanceCriticalDefinition(100)));
+            new ChanceCriticalDefinition(100),
+            authoredAccuracy: 100,
+            finalHitChance: 100));
 
         Assert.True(physical.Critical);
         Assert.Equal(100, physical.Chance);
@@ -157,7 +161,7 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
-    public void HitCheckUsesAccuracyAgilityLuckMultipliersAndRigidBypass()
+    public void HitCheckUsesAccuracyAgilityMultipliersAndRigidBypass()
     {
         ProductionCombatRuleset ruleset = Rules(0.5m);
         var attacker = Actor(stats: new ProductionCombatStats(20, 20, 20, 20, 20));
@@ -235,7 +239,6 @@ public sealed class ProductionCombatRulesetTests
             new() { StatDensityDivisor = 0 },
             new() { HitChanceMinimum = 90, HitChanceMaximum = 10 },
             new() { DamageVarianceMinimum = 1.1m, DamageVarianceMaximum = 0.9m },
-            new() { CriticalChanceMaximum = 101 },
             new() { GuardDamageMultiplier = -0.1m }
         ];
 
@@ -360,8 +363,14 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(decimal.MaxValue, damage.TotalDamage);
         Assert.Equal(config.HitChanceMinimum, lowestHitChance.FinalChance);
         Assert.Equal(
-            config.CriticalChanceMaximum,
-            ruleset.CalculateCriticalChance(attacker, target));
+            100,
+            ruleset.CheckCritical(new ProductionCriticalCheckRequest(
+                attacker,
+                target,
+                DamageElement.Physical,
+                new ChanceCriticalDefinition(100),
+                authoredAccuracy: 100,
+                finalHitChance: 100)).Chance);
         Assert.True(ruleset.RollInitiative(decimal.MaxValue, decimal.MaxValue));
         Assert.Equal(
             decimal.MaxValue,

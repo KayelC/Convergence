@@ -4,7 +4,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 4;
+    private const int SupportedSchemaVersion = 5;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
@@ -709,6 +709,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     "Weapon power");
                 RequirePercentage(source, weapon.BasicAttack.Accuracy, source.Path + ".weapon.basicAttack.accuracy",
                     "Weapon accuracy");
+                ValidateCritical(source, weapon.BasicAttack.Critical, source.Path + ".weapon.basicAttack.critical");
             }
 
             if (equipment.Armor is EquipmentArmorProfileDefinition armor)
@@ -955,7 +956,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Schema v4 fusion recipes require exactly two parents.");
+                    "Schema v5 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
@@ -1031,7 +1032,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         recipe.Path + ".parents",
                         ContentValidationErrorCode.FusionRecipeAmbiguous,
                         $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
-                        "Make the parent selectors non-overlapping; schema v4 has no recipe-priority field.");
+                        "Make the parent selectors non-overlapping; schema v5 has no recipe-priority field.");
                     break;
                 }
             }

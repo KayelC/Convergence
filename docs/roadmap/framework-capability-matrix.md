@@ -38,10 +38,13 @@ The source-first Order 2 review reopened `combat_resolution` as partial. Charge
 state is now policy-owned, and the supplied hit/evasion authority consumes
 authored Accuracy/Evasion modifiers with explicit Agility coefficients, exact
 probability bounds, deterministic evidence, and no hidden Luck contribution.
-Critical Chance is not yet wired through its approved policy family, and
-instant-defeat resistance, per-hit evidence/outcome aggregation, and the neutral
-authored combat-policy aggregate still require implementation before the
-capability can return to complete.
+Critical eligibility and chance are now independent replaceable policies;
+supplied exact-authored and accuracy-scaled chance authorities consume explicit
+Critical Chance modifiers without Luck or hidden minimums. Schema v5 also
+requires every weapon basic attack to declare its critical behavior.
+Instant-defeat resistance, per-hit evidence/outcome aggregation, and the
+neutral authored combat-policy aggregate still require implementation before
+the capability can return to complete.
 
 ## Authority
 

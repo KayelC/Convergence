@@ -143,7 +143,11 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 context.Services.RuleModifiers.GetApplicableNumericModifiers(
                     target,
                     NumericRuleModifierType.Evasion,
-                    defenseModifierContext)));
+                    defenseModifierContext),
+                context.Services.RuleModifiers.GetApplicableNumericModifiers(
+                    context.Actor,
+                    NumericRuleModifierType.CriticalChance,
+                    attackModifierContext)));
         affinity = resolution.ResolvedAffinity;
         DamageHitResolution[] landed = resolution.Hits.Where(hit => hit.Hit).ToArray();
         if (landed.Length == 0)

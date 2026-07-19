@@ -86,7 +86,7 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
-    public void DamageExecution_ForwardsApplicableAccuracyAndEvasionPassivesToTheHitAuthority()
+    public void DamageExecution_ForwardsApplicableProbabilityPassivesToTheirAuthorities()
     {
         SkillDefinition accuracy = PassiveSkill(
             "accuracy",
@@ -106,7 +106,16 @@ public sealed class PassiveSkillRuntimeTests
                     ModifierOperation.Multiply,
                     1.25m)
             ]);
-        RuntimeActorState actor = Actor("actor", PlayerTeam, passiveSkills: [accuracy]);
+        SkillDefinition critical = PassiveSkill(
+            "critical",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.CriticalChance,
+                    ModifierOperation.Add,
+                    7m)
+            ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, passiveSkills: [accuracy, critical]);
         RuntimeActorState target = Actor("target", EnemyTeam, passiveSkills: [evasion]);
         DamagePolicyRequest? captured = null;
         BattleExecutionServices services = Services(request =>
@@ -129,6 +138,9 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(
             NumericRuleModifierType.Evasion,
             Assert.Single(captured.EvasionModifiers).ModifierType);
+        Assert.Equal(
+            NumericRuleModifierType.CriticalChance,
+            Assert.Single(captured.CriticalChanceModifiers).ModifierType);
     }
 
     [Fact]

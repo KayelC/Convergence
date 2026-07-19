@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v4:equipment",
+  "$id": "urn:convergence:schema:content:v5:equipment",
   "type": "object", "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "equipment"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v4:equipment" },
-    "schemaVersion": { "const": 4 },
+    "$schema": { "const": "urn:convergence:schema:content:v5:equipment" },
+    "schemaVersion": { "const": 5 },
     "equipment": { "type": "array", "items": { "$ref": "#/$defs/equipmentRecord" } }
   },
   "$defs": {
@@ -13,22 +13,23 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "displayName", "description", "slot", "baseValue"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
         "slot": { "enum": ["weapon", "armor", "boots", "accessory"] },
         "baseValue": { "type": "number", "minimum": 0 },
-        "grantedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" } },
+        "grantedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" } },
         "weapon": {
           "type": "object", "additionalProperties": false, "required": ["basicAttack"],
           "properties": {
             "basicAttack": {
               "type": "object", "additionalProperties": false,
-              "required": ["element", "power", "accuracy", "isLongRange"],
+              "required": ["element", "power", "accuracy", "critical", "isLongRange"],
               "properties": {
-                "element": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/damageElement" },
+                "element": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/damageElement" },
                 "power": { "type": "integer", "minimum": 0 },
                 "accuracy": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "critical": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/critical" },
                 "isLongRange": { "type": "boolean" }
               }
             }
@@ -50,7 +51,7 @@
               "items": {
                 "type": "object", "additionalProperties": false,
                 "required": ["statId", "value"],
-                "properties": { "statId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentId" }, "value": { "type": "integer" } }
+                "properties": { "statId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentId" }, "value": { "type": "integer" } }
               }
             }
           }

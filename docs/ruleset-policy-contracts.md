@@ -64,9 +64,6 @@ binding rather than producing a partial service.
 | `hitTargetAgilityCoefficient` | decimal | `2` | nonnegative |
 | `hitChanceMinimum` | integer | `0` | `0..100`; no greater than maximum |
 | `hitChanceMaximum` | integer | `100` | `0..100`; no less than minimum |
-| `criticalChanceMinimum` | integer | `2` | `0..100`; no greater than maximum |
-| `criticalChanceMaximum` | integer | `40` | `0..100`; no less than minimum |
-| `criticalChanceBase` | integer | `5` | `0..100` |
 | `instantDeathChanceMinimum` | integer | `5` | `0..100`; no greater than maximum |
 | `instantDeathChanceMaximum` | integer | `95` | `0..100`; no less than minimum |
 | `enemiesPerLevelForExperience` | decimal | `50` | positive |
@@ -105,6 +102,21 @@ neither guarantee consumes a random roll. A rigid target is an explicit
 always-hit exception and reports a final chance of one hundred. A game may
 replace `IHitResolutionPolicy` if it wants another formula or a deliberate Luck
 contribution.
+
+Critical eligibility and chance are independent extension boundaries. The
+supplied `PhysicalOnlyCriticalEligibilityPolicy` permits explicitly critical
+Physical damage; `AllDamageCriticalEligibilityPolicy` is the opt-in reference
+alternative. Guard rejects eligibility, while rigid state guarantees a
+critical only after the selected eligibility policy accepts the attack.
+
+`AuthoredCriticalChancePolicy` starts from the exact `chance` in the typed
+effect or weapon basic-attack profile. `AccuracyScaledCriticalChancePolicy`
+instead multiplies that value by `final hit chance / authored accuracy`.
+Target vulnerability bonuses, actor critical multipliers, and applicable
+passive Critical Chance modifiers are then applied explicitly. Both policies
+clamp to `0..100`; neither reads Luck or introduces a nonzero minimum. The
+retired `criticalChanceMinimum`, `criticalChanceMaximum`, and
+`criticalChanceBase` ruleset parameters are rejected as unknown.
 
 Charge is not a hidden parameter of `standard_damage`. A host supplies an
 `IChargePolicyService` to `BattleExecutionServices`; the standard choices are

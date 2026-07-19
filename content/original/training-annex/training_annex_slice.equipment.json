@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v4:equipment",
-  "schemaVersion": 4,
+  "$schema": "urn:convergence:schema:content:v5:equipment",
+  "schemaVersion": 5,
   "equipment": [
     {
       "id": "practice_blade",
@@ -13,6 +13,9 @@
           "element": "physical",
           "power": 12,
           "accuracy": 95,
+          "critical": {
+            "mode": "never"
+          },
           "isLongRange": false
         }
       }

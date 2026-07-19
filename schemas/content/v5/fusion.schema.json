@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v4:fusion",
-  "title": "Convergence Content v4 Fusion Recipe Document",
+  "$id": "urn:convergence:schema:content:v5:fusion",
+  "title": "Convergence Content v5 Fusion Recipe Document",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "fusionRecipes"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v4:fusion" },
-    "schemaVersion": { "const": 4 },
+    "$schema": { "const": "urn:convergence:schema:content:v5:fusion" },
+    "schemaVersion": { "const": 5 },
     "fusionRecipes": {
       "type": "array",
       "items": { "$ref": "#/$defs/recipe" }
@@ -19,8 +19,8 @@
       "additionalProperties": false,
       "required": ["id", "displayName", "description", "parents", "result"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
         "parents": {
           "type": "array",
@@ -29,8 +29,8 @@
           "items": { "$ref": "#/$defs/parent" }
         },
         "result": { "$ref": "#/$defs/result" },
-        "accidentPolicyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-        "mutationPolicyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" }
+        "accidentPolicyId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+        "mutationPolicyId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" }
       }
     },
     "parent": {
@@ -39,7 +39,7 @@
       "required": ["kind", "id", "role"],
       "properties": {
         "kind": { "enum": ["entity", "race"] },
-        "id": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentReference" },
+        "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentReference" },
         "role": { "enum": ["participant", "catalyst", "rank_shift_target"] }
       }
     },
@@ -51,8 +51,8 @@
           "required": ["operation", "resultEntityId"],
           "properties": {
             "operation": { "const": "create_entity" },
-            "resultEntityId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/contentReference" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+            "resultEntityId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/contentReference" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
           }
         },
         {
@@ -62,7 +62,7 @@
           "properties": {
             "operation": { "const": "catalyst_rank_shift" },
             "rankShift": { "type": "integer", "not": { "const": 0 } },
-            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+            "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
           }
         },
         {
@@ -71,8 +71,8 @@
           "required": ["operation", "policyId"],
           "properties": {
             "operation": { "const": "stat_boost" },
-            "policyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+            "policyId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
           }
         },
         {
@@ -81,8 +81,8 @@
           "required": ["operation", "policyId"],
           "properties": {
             "operation": { "const": "special" },
-            "policyId": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/localId" },
-            "parameters": { "$ref": "urn:convergence:schema:content:v4:shared#/$defs/parameters" }
+            "policyId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
           }
         }
       ]
